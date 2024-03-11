@@ -1,0 +1,38 @@
+repos:
+#####
+# Basic file cleanliness
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+    -   id: check-added-large-files
+    -   id: check-yaml
+    -   id: check-toml
+    -   id: end-of-file-fixer
+    -   id: mixed-line-ending
+    -   id: trailing-whitespace
+#####
+# Python
+-   repo: https://github.com/psf/black
+    rev: 23.10.0
+    hooks:
+    -   id: black
+        args: ['--line-length', '79']
+-   repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+    -   id: isort
+        args: ['--profile', 'black',
+               '--line-length', '79']
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.1.0
+  hooks:
+    - id: ruff
+#####
+# Secrets
+-   repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+    -   id: detect-secrets
+        args: ['--baseline', '.secrets.baseline',
+               '--exclude-files', 'model/docs/pyrenew_demo.ipynb']
+        exclude: package.lock.json

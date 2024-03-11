@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "pipeline"
+version = "0.1.0"
+description = "pipeline: a package for running models in Azure Batch"
+authors = ["Nathan McIntosh <ute2@cdc.gov>"]
+license = "Apache 2.0"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.0.1"
+ruff = "^0.2.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
