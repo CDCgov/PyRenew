@@ -21,7 +21,8 @@ class HospitalizationsModel(BasicRenewalModel):
         Rt_process=RtRandomWalkProcess(),
         hosp_observation_model=PoissonObservation(),
     ) -> None:
-        self.baseline = BasicRenewalModel(infections_obs, Rt_process)
+        BasicRenewalModel.__init__(self, infections_obs, Rt_process)
+        # self.baseline = BasicRenewalModel(infections_obs, Rt_process)
 
         self.validate(hospitalizations_obs, hosp_observation_model)
 
@@ -55,7 +56,7 @@ class HospitalizationsModel(BasicRenewalModel):
         if data is None:
             data = dict()
 
-        Rt, infections = self.baseline.model(data=data)
+        Rt, infections = BasicRenewalModel.model(self, data=data)
 
         IHR, pred_hosps = self.sample_hospitalizations(
             data=data, Rt=Rt, infections=infections
