@@ -1,20 +1,20 @@
 #!/usr/bin/env/python
 # -*- coding: utf-8 -*-
 
-import jax.numpy as jnp
+from pyrenew.metaclasses import Model
 import numpyro as npro
-import numpyro.distributions as dist
-import pyrenew.infection as inf
+import jax.numpy as jnp
+from pyrenew.transform import LogTransform
+import pyrenew.observations.infection as inf
 from pyrenew.distutil import (
     reverse_discrete_dist_vector,
     validate_discrete_dist_vector,
 )
-from pyrenew.observation import PoissonObservation
-from pyrenew.process import SimpleRandomWalk
-from pyrenew.transform import LogTransform
+import numpyro.distributions as dist
+from pyrenew.observations import PoissonObservation
+from pyrenew.processes import SimpleRandomWalkProcess
 
-
-class BasicRenewalModel:
+class BasicRenewalModel(Model):
     """
     Implementation of a basic
     renewal model, not abstracted
@@ -67,7 +67,7 @@ class BasicRenewalModel:
         Rt0 = npro.sample("Rt0", self.Rt0_dist, obs=data.get("Rt0", None))
 
         Rt0_trans = self.Rt_transform(Rt0)
-        Rt_trans_proc = SimpleRandomWalk(self.Rt_rw_dist)
+        Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)
         Rt_trans_ts = Rt_trans_proc.sample(
             duration=n_timepoints, name="Rt_transformed_rw", init=Rt0_trans
         )
