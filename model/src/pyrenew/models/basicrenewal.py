@@ -1,18 +1,19 @@
 #!/usr/bin/env/python
 # -*- coding: utf-8 -*-
 
-from pyrenew.metaclasses import Model
-import numpyro as npro
 import jax.numpy as jnp
-from pyrenew.transform import LogTransform
+import numpyro as npro
+import numpyro.distributions as dist
 import pyrenew.observations.infection as inf
 from pyrenew.distutil import (
     reverse_discrete_dist_vector,
     validate_discrete_dist_vector,
 )
-import numpyro.distributions as dist
+from pyrenew.metaclasses import Model
 from pyrenew.observations import PoissonObservation
 from pyrenew.processes import SimpleRandomWalkProcess
+from pyrenew.transform import LogTransform
+
 
 class BasicRenewalModel(Model):
     """

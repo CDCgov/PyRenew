@@ -7,12 +7,12 @@ process
 Pyrenew classes for common
 stochastic processes
 """
-from pyrenew.metaclasses import RandomProcess
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax import lax
 from numpy.typing import ArrayLike
+from pyrenew.metaclasses import RandomProcess
 
 
 class ARProcess(RandomProcess):
@@ -46,7 +46,6 @@ class ARProcess(RandomProcess):
 
         last, ts = lax.scan(_ar_scanner, inits - self.mean, noise)
         return self.mean + ts.flatten()
-    
+
     def validate(self):
         return None
-

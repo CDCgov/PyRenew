@@ -5,11 +5,10 @@
 Observation helper classes
 """
 
-from pyrenew.metaclasses import RandomProcess
-
 import numpyro
 import numpyro.distributions as dist
-from numpy.typing import ArrayLike
+from pyrenew.metaclasses import RandomProcess
+
 
 class NegativeBinomialObservation(RandomProcess):
     def __init__(

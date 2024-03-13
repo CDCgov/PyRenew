@@ -9,6 +9,7 @@ from abc import ABCMeta, abstractmethod
 import jax
 import jax.numpy as jnp
 
+
 class AbstractTransform(metaclass=ABCMeta):
     """
     Abstract base class for transformations

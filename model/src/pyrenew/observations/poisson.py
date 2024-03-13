@@ -1,10 +1,10 @@
 #!/usr/bin/env/python
 # -*- coding: utf-8 -*-
 
-from pyrenew.metaclasses import RandomProcess
-
 import numpyro
 import numpyro.distributions as dist
+from pyrenew.metaclasses import RandomProcess
+
 
 class PoissonObservation(RandomProcess):
     """
@@ -15,8 +15,6 @@ class PoissonObservation(RandomProcess):
         return numpyro.sample(
             parameter_name, dist.Poisson(rate=predicted_value), obs=obs
         )
-    
+
     def validate(self):
         None
-
-

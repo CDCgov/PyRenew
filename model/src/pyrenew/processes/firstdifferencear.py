@@ -7,11 +7,10 @@ process
 Pyrenew classes for common
 stochastic processes
 """
+import jax.numpy as jnp
 from pyrenew.metaclasses import RandomProcess
 from pyrenew.processes import ARProcess
-import jax.numpy as jnp
 
-from numpy.typing import ArrayLike
 
 class FirstDifferenceARProcess(RandomProcess):
     """
@@ -34,6 +33,6 @@ class FirstDifferenceARProcess(RandomProcess):
             duration, inits=init_rate_of_change, name=name + "_rate_of_change"
         )
         return init_val + jnp.cumsum(rocs.flatten())
-    
+
     def validate(self):
         return None

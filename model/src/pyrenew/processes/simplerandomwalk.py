@@ -1,7 +1,8 @@
-from pyrenew.metaclasses import RandomProcess
+import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-import jax.numpy as jnp
+from pyrenew.metaclasses import RandomProcess
+
 
 class SimpleRandomWalkProcess(RandomProcess):
     """
@@ -21,6 +22,6 @@ class SimpleRandomWalkProcess(RandomProcess):
         )
 
         return init + jnp.cumsum(jnp.pad(diffs, [1, 0], constant_values=0))
-    
+
     def validate(self):
         return None

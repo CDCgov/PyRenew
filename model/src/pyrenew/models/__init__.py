@@ -1,1 +1,1 @@
-from pyrenew.models.basicrenewal import BasicRenewalModel # noqa: F401
+from pyrenew.models.basicrenewal import BasicRenewalModel  # noqa: F401

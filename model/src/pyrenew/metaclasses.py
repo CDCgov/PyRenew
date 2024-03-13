@@ -6,10 +6,10 @@ Observation helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from numpy.typing import ArrayLike
-import numpyro as npro
-from numpyro.infer import MCMC, NUTS
+
 import jax
+from numpy.typing import ArrayLike
+from numpyro.infer import MCMC, NUTS
 
 
 class RandomProcess(metaclass=ABCMeta):
@@ -40,11 +40,11 @@ class RandomProcess(metaclass=ABCMeta):
     def validate(self):
         pass
 
-class Model(metaclass=ABCMeta):
 
+class Model(metaclass=ABCMeta):
     kernel = None
     mcmc = None
-    
+
     @abstractmethod
     def __init__(self):
         pass
@@ -54,12 +54,12 @@ class Model(metaclass=ABCMeta):
         pass
 
     def _init_model(
-            self,
-            num_warmup,
-            num_samples,
-            nuts_args : dict = dict(),
-            mcmc_args : dict = dict(),
-            ) -> None:
+        self,
+        num_warmup,
+        num_samples,
+        nuts_args: dict = dict(),
+        mcmc_args: dict = dict(),
+    ) -> None:
         """Creates the NUTS kernel and MCMC model
 
         Args:
@@ -69,31 +69,30 @@ class Model(metaclass=ABCMeta):
         Returns:
             _type_: _description_
         """
-        
+
         self.kernel = NUTS(
             model=self.model,
             **nuts_args,
-            )
-        
+        )
+
         self.mcmc = MCMC(
             self.kernel,
             num_warmup=num_warmup,
             num_samples=num_samples,
             **mcmc_args,
-            )
-        
-        return None
+        )
 
+        return None
 
     def run(
         self,
         num_warmup,
         num_samples,
-        rng_key : jax.random.PRNGKey = jax.random.PRNGKey(54),
+        rng_key: jax.random.PRNGKey = jax.random.PRNGKey(54),
         data=None,
-        nuts_args : dict = dict(),
-        mcmc_args : dict = dict(),
-        ) -> None:
+        nuts_args: dict = dict(),
+        mcmc_args: dict = dict(),
+    ) -> None:
         """Runs the model
 
         Args:
@@ -104,14 +103,14 @@ class Model(metaclass=ABCMeta):
             None
         """
 
-        if (self.mcmc == None):
+        if self.mcmc is None:
             self._init_model(
                 num_warmup=num_warmup,
                 num_samples=num_samples,
                 nuts_args=nuts_args,
                 mcmc_args=mcmc_args,
-                )
-        
+            )
+
         self.mcmc.run(rng_key=rng_key, data=data)
 
         return None
