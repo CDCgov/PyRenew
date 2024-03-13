@@ -1,3 +1,6 @@
+from pyrenew.observations.hospitalizations import (  # noqa: F401
+    HospitalizationsObservation,
+)
 from pyrenew.observations.infection_functions import (  # noqa: F401
     logistic_susceptibility_adjustment,
     sample_infections_rt,

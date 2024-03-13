@@ -50,6 +50,11 @@ class Model(metaclass=ABCMeta):
     def __init__(self):
         pass
 
+    @staticmethod
+    @abstractmethod
+    def validate():
+        pass
+
     @abstractmethod
     def model(self, data):
         pass
