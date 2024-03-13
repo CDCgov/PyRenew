@@ -4,11 +4,7 @@
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-import pyrenew.observations.infection as inf
-from pyrenew.distutil import (
-    reverse_discrete_dist_vector,
-    validate_discrete_dist_vector,
-)
+from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.metaclasses import Model
 from pyrenew.observations import PoissonObservation
 from pyrenew.processes import RtRandomWalkProcess
@@ -23,26 +19,18 @@ class BasicRenewalModel(Model):
 
     def __init__(
         self,
+        infections_obs,
         Rt_process=RtRandomWalkProcess(),
-        I0_dist=None,
         IHR_dist=None,
-        gen_int=None,
         inf_hosp_int=None,
         hosp_observation_model=None,
     ):
         self.Rt_process = Rt_process
-
-        if I0_dist is None:
-            I0_dist = dist.LogNormal(2, 0.25)
-        self.I0_dist = I0_dist
+        self.infections_obs = infections_obs
 
         if IHR_dist is None:
             IHR_dist = dist.LogNormal(jnp.log(0.05), 0.05)
         self.IHR_dist = IHR_dist
-
-        self.gen_int_rev = reverse_discrete_dist_vector(
-            validate_discrete_dist_vector(gen_int)
-        )
         self.inf_hosp = validate_discrete_dist_vector(inf_hosp_int)
 
         if hosp_observation_model is None:
@@ -53,15 +41,7 @@ class BasicRenewalModel(Model):
         return self.Rt_process.sample(data)
 
     def sample_infections(self, data, Rt):
-        I0 = npro.sample("I0", self.I0_dist, obs=data.get("I0", None))
-
-        n_lead = self.gen_int_rev.size - 1
-        I0_vec = jnp.hstack([jnp.zeros(n_lead), I0])
-
-        all_infections = inf.sample_infections_rt(I0_vec, Rt, self.gen_int_rev)
-        npro.deterministic("incidence", all_infections)
-
-        return all_infections
+        return self.infections_obs.sample(data, Rt)
 
     def sample_hospitalizations(self, data=None, Rt=None, infections=None):
         IHR = npro.sample("IHR", self.IHR_dist, obs=data.get("IHR", None))
