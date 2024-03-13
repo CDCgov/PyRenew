@@ -1,7 +1,7 @@
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.metaclasses import RandomProcess
-from pyrenew.processes import SimpleRandomWalkProcess
+from pyrenew.processes.simplerandomwalk import SimpleRandomWalkProcess
 from pyrenew.transform import AbstractTransform, LogTransform
 
 
@@ -24,8 +24,8 @@ class RtRandomWalkProcess(RandomProcess):
 
     @staticmethod
     def validate(Rt0_dist, Rt_transform, Rt_rw_dist):
-        assert isinstance(Rt0_dist, AbstractTransform)
-        assert isinstance(Rt_transform, dist.Distribution)
+        assert isinstance(Rt0_dist, dist.Distribution)
+        assert isinstance(Rt_transform, AbstractTransform)
         assert isinstance(Rt_rw_dist, dist.Distribution)
 
     def sample(self, data):
