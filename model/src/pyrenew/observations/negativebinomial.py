@@ -50,5 +50,6 @@ class NegativeBinomialObservation(RandomProcess):
             obs=obs,
         )
 
-    def validate(self):
+    @staticmethod
+    def validate():
         return None

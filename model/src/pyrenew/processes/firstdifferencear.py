@@ -34,5 +34,6 @@ class FirstDifferenceARProcess(RandomProcess):
         )
         return init_val + jnp.cumsum(rocs.flatten())
 
-    def validate(self):
+    @staticmethod
+    def validate():
         return None

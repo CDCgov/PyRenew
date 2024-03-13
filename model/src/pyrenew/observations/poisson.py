@@ -16,5 +16,6 @@ class PoissonObservation(RandomProcess):
             parameter_name, dist.Poisson(rate=predicted_value), obs=obs
         )
 
-    def validate(self):
+    @staticmethod
+    def validate():
         None

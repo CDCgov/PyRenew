@@ -36,8 +36,9 @@ class RandomProcess(metaclass=ABCMeta):
         """
         pass
 
+    @staticmethod
     @abstractmethod
-    def validate(self):
+    def validate():
         pass
 
 

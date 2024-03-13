@@ -11,8 +11,7 @@ from pyrenew.distutil import (
 )
 from pyrenew.metaclasses import Model
 from pyrenew.observations import PoissonObservation
-from pyrenew.processes import SimpleRandomWalkProcess
-from pyrenew.transform import LogTransform
+from pyrenew.processes import RtRandomWalkProcess
 
 
 class BasicRenewalModel(Model):
@@ -24,26 +23,14 @@ class BasicRenewalModel(Model):
 
     def __init__(
         self,
-        Rt0_dist=None,
-        Rt_transform=None,
-        Rt_rw_dist=None,
+        Rt_process=RtRandomWalkProcess(),
         I0_dist=None,
         IHR_dist=None,
         gen_int=None,
         inf_hosp_int=None,
         hosp_observation_model=None,
     ):
-        if Rt_transform is None:
-            Rt_transform = LogTransform()
-        self.Rt_transform = Rt_transform
-
-        if Rt0_dist is None:
-            Rt0_dist = dist.TruncatedNormal(loc=1.2, scale=0.2, low=0)
-        self.Rt0_dist = Rt0_dist
-
-        if Rt_rw_dist is None:
-            Rt_rw_dist = dist.Normal(0, 0.025)
-        self.Rt_rw_dist = Rt_rw_dist
+        self.Rt_process = Rt_process
 
         if I0_dist is None:
             I0_dist = dist.LogNormal(2, 0.25)
@@ -63,19 +50,7 @@ class BasicRenewalModel(Model):
         self.hosp_observation_model = hosp_observation_model
 
     def sample_rt(self, data):
-        n_timepoints = data["n_timepoints"]
-
-        Rt0 = npro.sample("Rt0", self.Rt0_dist, obs=data.get("Rt0", None))
-
-        Rt0_trans = self.Rt_transform(Rt0)
-        Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)
-        Rt_trans_ts = Rt_trans_proc.sample(
-            duration=n_timepoints, name="Rt_transformed_rw", init=Rt0_trans
-        )
-
-        Rt = npro.deterministic("Rt", self.Rt_transform.inverse(Rt_trans_ts))
-
-        return Rt
+        return self.Rt_process.sample(data)
 
     def sample_infections(self, data, Rt):
         I0 = npro.sample("I0", self.I0_dist, obs=data.get("I0", None))

@@ -23,5 +23,6 @@ class SimpleRandomWalkProcess(RandomProcess):
 
         return init + jnp.cumsum(jnp.pad(diffs, [1, 0], constant_values=0))
 
-    def validate(self):
+    @staticmethod
+    def validate():
         return None

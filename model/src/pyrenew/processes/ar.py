@@ -47,5 +47,6 @@ class ARProcess(RandomProcess):
         last, ts = lax.scan(_ar_scanner, inits - self.mean, noise)
         return self.mean + ts.flatten()
 
-    def validate(self):
+    @staticmethod
+    def validate():
         return None
