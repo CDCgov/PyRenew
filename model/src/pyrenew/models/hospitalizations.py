@@ -22,7 +22,6 @@ class HospitalizationsModel(BasicRenewalModel):
         hosp_observation_model=PoissonObservation(),
     ) -> None:
         BasicRenewalModel.__init__(self, infections_obs, Rt_process)
-        # self.baseline = BasicRenewalModel(infections_obs, Rt_process)
 
         self.validate(hospitalizations_obs, hosp_observation_model)
 
