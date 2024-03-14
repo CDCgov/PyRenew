@@ -17,6 +17,21 @@ class InfectionsObservation(RandomProcess):
         I0_dist: dist.Distribution = dist.LogNormal(2, 0.25),
         inf_observation_model: dist.Distribution = None,
     ):
+        """
+        Observation of Infections given Rt (Random Process)
+
+        :param gen_int: A vector representing the pmf of the generation interval
+        :type gen_int: ArrayLike
+        :param I0_dist: Distribution from where to sample the baseline number of
+            infections, defaults to dist.LogNormal(2, 0.25)
+        :type I0_dist: dist.Distribution, optional
+        :param inf_observation_model:  Distribution representing an observation
+            process in which the deterministic number of infections is used as a
+            parameter, defaults to None.
+        :type inf_observation_model: dist.Distribution, optional
+        :return: A RandomProcess
+        :rtype: pyrenew.metaclasses.RandomProcess()
+        """
         self.validate(I0_dist, gen_int)
 
         self.I0_dist = I0_dist
@@ -41,7 +56,18 @@ class InfectionsObservation(RandomProcess):
 
         return None
 
-    def sample(self, data, Rt, obs=None):
+    def sample(self, Rt, data: dict = dict(), obs=None):
+        """Samples infections given Rt
+
+        :param data: A dictionary possibly containing `I0`. Defaults to dict().
+        :type data: _type_
+        :param Rt: A vector containing an observed `Rt` sequence.
+        :type Rt: _type_
+        :param obs: Observed vector of infections, defaults to None
+        :type obs: _type_, optional
+        :return: _description_
+        :rtype: _type_
+        """
         I0 = npro.sample("I0", self.I0_dist, obs=data.get("I0", None))
 
         n_lead = self.gen_int_rev.size - 1
