@@ -11,9 +11,13 @@ class PoissonObservation(RandomProcess):
     Poisson observation process
     """
 
-    def sample(self, parameter_name, predicted_value, data=None, obs=None):
+    def __init__(self, parameter_name="poisson_rv") -> None:
+        self.parameter_name = parameter_name
+        return None
+
+    def sample(self, predicted_value, data=None, obs=None):
         return numpyro.sample(
-            parameter_name, dist.Poisson(rate=predicted_value), obs=obs
+            self.parameter_name, dist.Poisson(rate=predicted_value), obs=obs
         )
 
     @staticmethod

@@ -15,6 +15,7 @@ class NegativeBinomialObservation(RandomProcess):
         self,
         concentration_prior: dist.Distribution,
         concentration_suffix: str = "_concentration",
+        parameter_name="negbinom_rv",
     ):
         """
         Default constructor
@@ -34,16 +35,17 @@ class NegativeBinomialObservation(RandomProcess):
             imply a greater degree of dispersion.
         """
         self.concentration_prior = concentration_prior
+        self.parameter_name = parameter_name
         self.concentration_suffix = concentration_suffix
 
-    def sample(self, parameter_name, predicted_value, data=None, obs=None):
+    def sample(self, predicted_value, data=None, obs=None):
         concentration_parameter = numpyro.sample(
-            parameter_name + self.concentration_suffix,
+            self.parameter_name + self.concentration_suffix,
             self.concentration_prior,
         )
 
         return numpyro.sample(
-            parameter_name,
+            self.parameter_name,
             dist.NegativeBinomial2(
                 mean=predicted_value, concentration=concentration_parameter
             ),

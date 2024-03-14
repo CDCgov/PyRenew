@@ -45,7 +45,6 @@ class HospitalizationsModel(BasicRenewalModel):
         self, data=None, Rt=None, infections=None, IHR=None, pred_hosps=None
     ):
         return self.hosp_observation_model.sample(
-            parameter_name="hospitalizations",
             predicted_value=pred_hosps,
             data=data,
             obs=data.get("observed_hospitalizations", None),

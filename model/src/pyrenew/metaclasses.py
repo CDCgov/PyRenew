@@ -10,6 +10,7 @@ from abc import ABCMeta, abstractmethod
 import jax
 from numpy.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS
+from pyrenew.mcmcutils import spread_draws
 
 
 class RandomProcess(metaclass=ABCMeta):
@@ -121,8 +122,21 @@ class Model(metaclass=ABCMeta):
 
         return None
 
-    def print_summary(self, kargs=dict()):
-        self.mcmc.print_summary(**kargs)
+    def print_summary(
+        self,
+        prob: float = 0.9,
+        exclude_deterministic: bool = True,
+    ) -> None:
+        """A wrapper of MCMC.print_summary.
+
+        Args:
+            prob (float, optional): _description_. Defaults to 0.9.
+            exclude_deterministic (bool, optional): _description_. Defaults to True.
+        """
+        return self.mcmc.print_summary(prob, exclude_deterministic)
 
     def plot(self):
         pass
+
+    def spread_draws(self, variables_names):
+        return spread_draws(self.mcmc.get_samples(), variables_names)

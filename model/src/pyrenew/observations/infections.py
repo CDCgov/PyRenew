@@ -15,11 +15,22 @@ class InfectionsObservation(RandomProcess):
         self,
         gen_int: ArrayLike,
         I0_dist: dist.Distribution = dist.LogNormal(2, 0.25),
+        inf_observation_model: dist.Distribution = None,
     ):
         self.validate(I0_dist, gen_int)
 
         self.I0_dist = I0_dist
         self.gen_int_rev = reverse_discrete_dist_vector(gen_int)
+
+        if inf_observation_model is not None:
+            self.obs_model = (
+                lambda predicted_value, obs: inf_observation_model.sample(
+                    predicted_value=predicted_value,
+                    obs=obs,
+                )
+            )
+        else:
+            self.obs_model = lambda predicted_value, obs: predicted_value
 
         return None
 
@@ -30,7 +41,7 @@ class InfectionsObservation(RandomProcess):
 
         return None
 
-    def sample(self, data, Rt):
+    def sample(self, data, Rt, obs=None):
         I0 = npro.sample("I0", self.I0_dist, obs=data.get("I0", None))
 
         n_lead = self.gen_int_rev.size - 1
@@ -38,4 +49,10 @@ class InfectionsObservation(RandomProcess):
 
         all_infections = inf.sample_infections_rt(I0_vec, Rt, self.gen_int_rev)
         npro.deterministic("incidence", all_infections)
-        return all_infections
+
+        observed = self.obs_model(
+            all_infections,
+            obs=obs,
+        )
+
+        return observed
