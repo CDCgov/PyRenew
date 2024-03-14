@@ -34,15 +34,14 @@ class HospitalizationsModel(BasicRenewalModel):
         assert isinstance(hosp_observation_model, RandomProcess)
         return None
 
-    def sample_hospitalizations(self, data=None, Rt=None, infections=None):
+    def sample_hospitalizations(self, data=None, infections=None):
         return self.hospitalizations_obs.sample(
             data=data,
-            Rt=Rt,
             infections=infections,
         )
 
     def observe_hospitalizations(
-        self, data=None, Rt=None, infections=None, IHR=None, pred_hosps=None
+        self, data=None, infections=None, IHR=None, pred_hosps=None
     ):
         return self.hosp_observation_model.sample(
             predicted_value=pred_hosps,
@@ -57,12 +56,11 @@ class HospitalizationsModel(BasicRenewalModel):
         Rt, infections = BasicRenewalModel.model(self, data=data)
 
         IHR, pred_hosps = self.sample_hospitalizations(
-            data=data, Rt=Rt, infections=infections
+            data=data, infections=infections
         )
 
         obs_hosps = self.observe_hospitalizations(
             data=data,
-            Rt=Rt,
             infections=infections,
             IHR=IHR,
             pred_hosps=pred_hosps + 1e-20,

@@ -56,7 +56,7 @@ class InfectionsObservation(RandomProcess):
 
         return None
 
-    def sample(self, Rt, data: dict = dict(), obs=None):
+    def sample(self, Rt, data: dict = dict(), obs=dict()):
         """Samples infections given Rt
 
         :param data: A dictionary possibly containing `I0`. Defaults to dict().
