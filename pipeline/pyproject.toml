@@ -10,10 +10,14 @@ readme = "README.md"
 python = "^3.12"
 
 
-[tool.poetry.group.test.dependencies]
-pytest = "^8.0.1"
-ruff = "^0.2.2"
+[tool.poetry.group.dev.dependencies]
+pytest = "*"
+ruff = "*"
+pre-commit = "^3.6.2"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 79
