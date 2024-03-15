@@ -1,9 +1,8 @@
 #!/usr/bin/env/python
 # -*- coding: utf-8 -*-
 
-from pyrenew.metaclasses import RandomProcess
 from pyrenew.models.basicrenewal import BasicRenewalModel
-from pyrenew.observations import PoissonObservation
+from pyrenew.observations import HospitalizationsObservation
 from pyrenew.processes import RtRandomWalkProcess
 
 
@@ -17,53 +16,56 @@ class HospitalizationsModel(BasicRenewalModel):
     def __init__(
         self,
         infections_obs,
-        hospitalizations_obs,
+        inf_hosp_ini,  # inf_hosp_int: pmf for reporting (informing) hospitalizations.
         Rt_process=RtRandomWalkProcess(),
-        hosp_observation_model=PoissonObservation(),
+        hosp_dist=None,
+        IHR_dist=None,
     ) -> None:
         BasicRenewalModel.__init__(self, infections_obs, Rt_process)
 
-        self.validate(hospitalizations_obs, hosp_observation_model)
-
-        self.hospitalizations_obs = hospitalizations_obs
-        self.hosp_observation_model = hosp_observation_model
-
-    @staticmethod
-    def validate(hospitalizations_obs, hosp_observation_model) -> None:
-        assert isinstance(hospitalizations_obs, RandomProcess)
-        assert isinstance(hosp_observation_model, RandomProcess)
-        return None
-
-    def sample_hospitalizations(self, data=None, infections=None):
-        return self.hospitalizations_obs.sample(
-            data=data,
-            infections=infections,
+        self.hosp_sampler = HospitalizationsObservation(
+            inf_hosp_int=inf_hosp_ini,
+            hosp_dist=hosp_dist,
+            IHR_dist=None,
         )
 
+    @staticmethod
+    def validate() -> None:
+        return None
+
+    def sample_hospitalizations(self, obs: dict, data: dict = dict()):
+        """Sample number of hospitalizations
+
+        :param obs: A dictionary containing `infections` passed to the specified
+            sampler.
+        :type obs: dict
+        :param data: _description_, defaults to dict()
+        :type data: dict, optional
+        :return: _description_
+        :rtype: _type_
+        """
+
+        return self.hosp_sampler.sample(obs=obs, data=data)
+
     def observe_hospitalizations(
-        self, data=None, infections=None, IHR=None, pred_hosps=None
+        self,
+        infections=None,
+        IHR=None,
+        pred_hosps=None,
+        obs=dict(),
+        data=dict(),
     ):
         return self.hosp_observation_model.sample(
             predicted_value=pred_hosps,
+            obs=dict(obs.get("observed_hospitalizations", None)),
             data=data,
-            obs=data.get("observed_hospitalizations", None),
         )
 
-    def model(self, data=None):
-        if data is None:
-            data = dict()
-
+    def model(self, obs=dict(), data=dict()):
         Rt, infections = BasicRenewalModel.model(self, data=data)
 
-        IHR, pred_hosps = self.sample_hospitalizations(
-            data=data, infections=infections
+        IHR, pred_hosps, samp_hosp = self.sample_hospitalizations(
+            obs=obs, data={**data, **dict(infections=infections)}
         )
 
-        obs_hosps = self.observe_hospitalizations(
-            data=data,
-            infections=infections,
-            IHR=IHR,
-            pred_hosps=pred_hosps + 1e-20,
-        )
-
-        return Rt, infections, IHR, pred_hosps, obs_hosps
+        return Rt, infections, IHR, pred_hosps, samp_hosp

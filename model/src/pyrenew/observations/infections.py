@@ -38,14 +38,14 @@ class InfectionsObservation(RandomProcess):
         self.gen_int_rev = reverse_discrete_dist_vector(gen_int)
 
         if inf_observation_model is not None:
-            self.obs_model = (
-                lambda predicted_value, obs: inf_observation_model.sample(
-                    predicted_value=predicted_value,
-                    obs=obs,
-                )
+            self.obs_model = lambda obs, data: inf_observation_model.sample(
+                obs=obs,
+                data=data,
             )
         else:
-            self.obs_model = lambda predicted_value, obs: predicted_value
+            self.obs_model = lambda obs, data: obs.get(
+                "counts", obs.get("rate")
+            )
 
         return None
 
@@ -56,29 +56,41 @@ class InfectionsObservation(RandomProcess):
 
         return None
 
-    def sample(self, Rt, data: dict = dict(), obs=dict()):
+    def sample(
+        self,
+        obs: dict,
+        data: dict = dict(),
+    ):
         """Samples infections given Rt
 
-        :param data: A dictionary possibly containing `I0`. Defaults to dict().
-        :type data: _type_
-        :param Rt: A vector containing an observed `Rt` sequence.
-        :type Rt: _type_
-        :param obs: Observed vector of infections, defaults to None
-        :type obs: _type_, optional
+        :param obs: A dictionary containing an observed `Rt` sequence passed to
+            `sample_infections_rt()`. It can also contain `infections` and `I0`,
+            both passed to `obs` in `numpyro.sample()`.
+        :type obs: dict, optional
+        :param data: Ignored
+        :type data: dict
         :return: _description_
         :rtype: _type_
         """
-        I0 = npro.sample("I0", self.I0_dist, obs=data.get("I0", None))
+        I0 = npro.sample("I0", self.I0_dist, obs=obs.get("I0", None))
 
         n_lead = self.gen_int_rev.size - 1
         I0_vec = jnp.hstack([jnp.zeros(n_lead), I0])
 
-        all_infections = inf.sample_infections_rt(I0_vec, Rt, self.gen_int_rev)
+        all_infections = inf.sample_infections_rt(
+            I0=I0_vec,
+            Rt=obs.get("Rt"),
+            reversed_generation_interval_pmf=self.gen_int_rev,
+        )
+
         npro.deterministic("incidence", all_infections)
 
         observed = self.obs_model(
-            all_infections,
-            obs=obs,
+            obs=dict(
+                rate=all_infections,
+                counts=obs.get("infections", None),
+            ),
+            data=data,
         )
 
         return observed

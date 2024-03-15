@@ -8,7 +8,6 @@ Observation helper classes
 from abc import ABCMeta, abstractmethod
 
 import jax
-from numpy.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS
 from pyrenew.mcmcutils import spread_draws
 
@@ -28,12 +27,17 @@ class RandomProcess(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def sample(
-        self, parameter_name, predicted_value: ArrayLike, data=None, obs=None
-    ):
-        """
-        Sampling method that concrete
-        versions should implement.
+    def sample(self, obs: dict = dict(), data: dict = dict(), **kargs):
+        """Sample method of the process
+
+        The method desing in the class should have `obs` and `data` by default.
+        The observed data (`obs`) should be contained in a dictionary. The
+        `data` argument should be used for additional paramters.
+
+        :param obs: _description_, defaults to None
+        :type obs: _type_, optional
+        :param data: _description_, defaults to None
+        :type data: _type_, optional
         """
         pass
 
@@ -96,7 +100,8 @@ class Model(metaclass=ABCMeta):
         num_warmup,
         num_samples,
         rng_key: jax.random.PRNGKey = jax.random.PRNGKey(54),
-        data=None,
+        obs: dict = dict(),
+        data: dict = dict(),
         nuts_args: dict = dict(),
         mcmc_args: dict = dict(),
     ) -> None:
@@ -118,7 +123,7 @@ class Model(metaclass=ABCMeta):
                 mcmc_args=mcmc_args,
             )
 
-        self.mcmc.run(rng_key=rng_key, data=data)
+        self.mcmc.run(rng_key=rng_key, obs=obs, data=data)
 
         return None
 

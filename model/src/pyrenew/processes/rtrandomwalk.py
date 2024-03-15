@@ -43,9 +43,10 @@ class RtRandomWalkProcess(RandomProcess):
         assert isinstance(Rt_transform, AbstractTransform)
         assert isinstance(Rt_rw_dist, dist.Distribution)
 
-    def sample(self, data: dict):
+    def sample(self, obs: dict = dict(), data: dict = dict()):
         """Generate samples from the process
 
+        :param data: A dictionary containing
         :param data: A dictionary containing `n_timepoints` and optionally
             `Rt0`.
         :type data: _type_
@@ -54,7 +55,7 @@ class RtRandomWalkProcess(RandomProcess):
         """
         n_timepoints = data.get("n_timepoints")
 
-        Rt0 = npro.sample("Rt0", self.Rt0_dist, obs=data.get("Rt0", None))
+        Rt0 = npro.sample("Rt0", self.Rt0_dist, obs=obs.get("Rt0", None))
 
         Rt0_trans = self.Rt_transform(Rt0)
         Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)

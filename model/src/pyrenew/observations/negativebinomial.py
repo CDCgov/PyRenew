@@ -53,25 +53,27 @@ class NegativeBinomialObservation(RandomProcess):
         self.concentration_suffix = concentration_suffix
 
     def sample(
-        self, predicted_value: ArrayLike, data: dict = dict(), obs=None
+        self,
+        obs: dict,
+        data: dict = dict(),
     ):
         """Sample from the negative binomial distribution
 
-        :param predicted_value: Mean parameter of the negative binomial
-        :type predicted_value: ArrayLike
-        :param data: Ignored, defaults to dict()
+        :param obs: A dictionary containing the `mean` parameter, and possibly
+            containing `counts`, which is passed to `obs` `numpyro.sample()`.
+        :type obs: dict, optional
+        :param data: Ignored, defaults to dict().
         :type data: dict, optional
-        :param obs: _description_, defaults to None
-        :type obs: _type_, optional
         :return: _description_
         :rtype: _type_
         """
         return numpyro.sample(
             self.parameter_name,
             dist.NegativeBinomial2(
-                mean=predicted_value, concentration=self.sample_prior()
+                mean=obs.get("mean"),
+                concentration=self.sample_prior(),
             ),
-            obs=obs,
+            obs=obs.get("counts", None),
         )
 
     @staticmethod

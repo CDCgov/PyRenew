@@ -25,29 +25,23 @@ class BasicRenewalModel(Model):
         """
         self.infections_obs = infections_obs
         self.Rt_process = Rt_process
-        self.observed_infections = dict()
 
     @staticmethod
     def validate(infections_obs, hospitalizations_obs) -> None:
         return None
 
-    def sample_rt(self, data):
-        return self.Rt_process.sample(data)
+    def sample_rt(self, obs=dict(), data=dict()):
+        return self.Rt_process.sample(obs=obs, data=data)
 
-    def sample_infections(self, data, Rt, obs=None):
-        return self.infections_obs.sample(data=data, Rt=Rt, obs=obs)
+    def sample_infections(self, obs=dict(), data=dict()):
+        return self.infections_obs.sample(obs=obs, data=data)
 
-    def set_observed_infections(self, obs: dict):
-        self.observed_infections = obs
-
-    def model(self, data=None):
-        if data is None:
-            data = dict()
-
-        Rt = self.sample_rt(data=data)
+    def model(self, obs=dict(), data=dict()):
+        Rt = self.sample_rt(obs=obs, data=data)
 
         infections = self.sample_infections(
-            data=data, Rt=Rt, obs=self.observed_infections
+            obs={**obs, **dict(Rt=Rt)},
+            data=data,
         )
 
         return Rt, infections
