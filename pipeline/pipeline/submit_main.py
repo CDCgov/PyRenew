@@ -45,7 +45,7 @@ def main(input_config_path: Path, azure_config_path: Path):
 
     # Fail early if don't have necessary keys
     necessary_keys = set(["model", "post_production"])
-    if any(necessary_keys.difference(config.keys())):
+    if necessary_keys.difference(config.keys()) == necessary_keys:
         msg = (
             "Require at least one of 'model' or 'post_production' at top"
             + " level of config file"
