@@ -1,8 +1,9 @@
 import json
 from pathlib import Path
-from pipeline.submit_main import main
 
 import pytest
+
+from pipeline.submit_main import main
 
 
 @pytest.mark.skip("Not written yet")
@@ -23,6 +24,7 @@ def test_fails_on_bad_config_file(tmp_path):
 
     with pytest.raises(KeyError):
         main(bad_file, Path("/made/up/path"))
+
 
 def test_warns_on_missing_model(tmp_path, caplog):
     # Write an empty dictionary to a json file
