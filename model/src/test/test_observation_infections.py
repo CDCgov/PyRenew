@@ -19,10 +19,10 @@ def test_infections_as_deterministic():
 
     inf1 = InfectionsObservation(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    i0 = dict(I0=10)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        inf_sampled1 = inf1.sample(Rt=sim_rt, data=i0)
-        inf_sampled2 = inf1.sample(Rt=sim_rt, data=i0)
+        obs = dict(Rt=sim_rt, I0=10)
+        inf_sampled1 = inf1.sample(random_variables=obs)
+        inf_sampled2 = inf1.sample(random_variables=obs)
 
     # Should match!
     testing.assert_array_equal(inf_sampled1, inf_sampled2)
@@ -41,12 +41,15 @@ def test_infections_as_random():
         inf_observation_model=PoissonObservation(),
     )
 
-    i0 = dict(I0=10)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        inf_sampled0 = inf1.sample(Rt=sim_rt, data=i0)
+        obs = dict(Rt=sim_rt, I0=10)
+        inf_sampled0 = inf1.sample(random_variables=obs)
 
-        inf_sampled1 = inf1.sample(Rt=sim_rt, data=i0, obs=inf_sampled0)
-        inf_sampled2 = inf1.sample(Rt=sim_rt, data=i0, obs=inf_sampled0)
+        obs = {**obs, **dict(infections=inf_sampled0)}
+
+        inf_sampled1 = inf1.sample(random_variables=obs)
+        inf_sampled2 = inf1.sample(random_variables=obs)
 
     # Should match!
-    testing.assert_array_equal(inf_sampled1, inf_sampled2)
+    testing.assert_array_equal(inf_sampled1[0], inf_sampled2[0])
+    testing.assert_array_equal(inf_sampled1[1], inf_sampled2[1])

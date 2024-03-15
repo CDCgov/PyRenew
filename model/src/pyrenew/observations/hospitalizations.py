@@ -33,14 +33,18 @@ class HospitalizationsObservation(RandomProcess):
         """
         self.validate(hosp_dist, IHR_dist)
 
-        if hosp_dist is None:
-            self.sample_hosp = lambda obs, data: npro.sample(
+        self.hosp_dist = hosp_dist
+
+        if hosp_dist is not None:
+            self.sample_hosp = lambda random_variables, constants: npro.sample(
                 name="sampled_hospitalizations",
-                fn=self.hosp_dist(obs.get("predicted_hospitalizations")),
-                obs=obs.get("observed_hospitalizations"),
+                fn=self.hosp_dist(
+                    random_variables.get("predicted_hospitalizations")
+                ),
+                obs=random_variables.get("observed_hospitalizations"),
             )
         else:
-            self.sample_hosp = lambda obs, data: None
+            self.sample_hosp = lambda random_variables, constants: None
 
         self.IHR_dist = IHR_dist
         self.inf_hosp = validate_discrete_dist_vector(inf_hosp_int)
@@ -56,20 +60,30 @@ class HospitalizationsObservation(RandomProcess):
 
     def sample(
         self,
-        obs: dict,
-        data: dict,
+        random_variables: dict = None,
+        constants: dict = None,
     ):
         """Samples from the observation process
-        :param obs: A dictionary with `IHR` passed to `obs` in `npyro.sample()`.
-        :type obs: dict
-        :param data: A dictionary with observed `infections`.
-        :type data: dict, optional
+        :param random_variables: A dictionary with `IHR` passed to `obs` in
+            `npyro.sample()`.
+        :type random_variables: dict
+        :param constants: A dictionary with observed `infections`.
+        :type constants: dict, optional
         :return: _description_
         :rtype: _type_
         """
-        IHR = npro.sample("IHR", self.IHR_dist, obs=obs.get("IHR", None))
 
-        IHR_t = IHR * data.get("infections")
+        if random_variables is None:
+            random_variables = dict()
+
+        if constants is None:
+            constants = dict()
+
+        IHR = npro.sample(
+            "IHR", self.IHR_dist, obs=random_variables.get("IHR", None)
+        )
+
+        IHR_t = IHR * constants.get("infections")
 
         pred_hosps = jnp.convolve(IHR_t, self.inf_hosp, mode="full")[
             : IHR_t.shape[0]
@@ -78,8 +92,8 @@ class HospitalizationsObservation(RandomProcess):
         npro.deterministic("predicted_hospitalizations", pred_hosps)
 
         sampled_hosps = self.sample_hosp(
-            obs=dict(predicted_hospitalizations=pred_hosps),
-            data=data,
+            random_variables=dict(predicted_hospitalizations=pred_hosps),
+            constants=constants,
         )
 
         return IHR, pred_hosps, sampled_hosps

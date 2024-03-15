@@ -14,8 +14,9 @@ def test_negativebinom_deterministic_obs():
     np.random.seed(223)
     rates = np.random.randint(1, 5, size=10)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_pois1 = negb.sample(rates, obs=rates)
-        sim_pois2 = negb.sample(rates, obs=rates)
+        dat = dict(mean=rates, counts=rates)
+        sim_pois1 = negb.sample(random_variables=dat)
+        sim_pois2 = negb.sample(random_variables=dat)
 
     testing.assert_array_equal(
         sim_pois1,
@@ -33,8 +34,9 @@ def test_negativebinom_random_obs():
     np.random.seed(223)
     rates = np.repeat(5, 20000)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_pois1 = negb.sample(rates)
-        sim_pois2 = negb.sample(rates)
+        dat = dict(mean=rates)
+        sim_pois1 = negb.sample(random_variables=dat)
+        sim_pois2 = negb.sample(random_variables=dat)
 
     testing.assert_array_almost_equal(
         np.mean(sim_pois1),

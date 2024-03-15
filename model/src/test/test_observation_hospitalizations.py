@@ -25,7 +25,7 @@ def test_hospitalizations_sample():
 
     i0 = dict(I0=10)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        inf_sampled1 = inf1.sample(Rt=sim_rt, data=i0)
+        inf_sampled1 = inf1.sample(random_variables=dict(Rt=sim_rt, data=i0))
 
     # Testing the hospitalizations
     hosp1 = HospitalizationsObservation(
@@ -35,9 +35,9 @@ def test_hospitalizations_sample():
     )
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_hosp_1 = hosp1.sample(infections=inf_sampled1)
+        sim_hosp_1 = hosp1.sample(constants=dict(infections=inf_sampled1[1]))
 
     testing.assert_array_less(
         sim_hosp_1[1],
-        inf_sampled1,
+        inf_sampled1[1],
     )

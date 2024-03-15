@@ -30,18 +30,47 @@ class BasicRenewalModel(Model):
     def validate(infections_obs, hospitalizations_obs) -> None:
         return None
 
-    def sample_rt(self, obs=dict(), data=dict()):
-        return self.Rt_process.sample(obs=obs, data=data)
-
-    def sample_infections(self, obs=dict(), data=dict()):
-        return self.infections_obs.sample(obs=obs, data=data)
-
-    def model(self, obs=dict(), data=dict()):
-        Rt = self.sample_rt(obs=obs, data=data)
-
-        infections = self.sample_infections(
-            obs={**obs, **dict(Rt=Rt)},
-            data=data,
+    def sample_rt(self, random_variables: dict = None, constants: dict = None):
+        return self.Rt_process.sample(
+            random_variables=random_variables,
+            constants=constants,
         )
 
-        return Rt, infections
+    def sample_infections(
+        self, random_variables: dict = None, constants: dict = None
+    ):
+        return self.infections_obs.sample(
+            random_variables=random_variables,
+            constants=constants,
+        )
+
+    def model(
+        self,
+        random_variables: dict = None,
+        constants: dict = None,
+    ):
+        """_summary_
+
+        :param random_variables: A dictionary containing `infections` and/or
+            `Rt` (optional).
+        :type random_variables: dict, optional
+        :param constants: A dictionary containing `n_timepoints`.
+        :type constants: dict, optional
+        :return: _description_
+        :rtype: _type_
+        """
+
+        Rt = self.sample_rt(
+            random_variables=random_variables,
+            constants=constants,
+        )
+
+        if random_variables is None:
+            random_variables = dict()
+
+        infect_sampled, infect_expected = self.sample_infections(
+            random_variables={**random_variables, **dict(Rt=Rt)},
+            constants=constants,
+        )
+
+        return Rt, infect_sampled, infect_expected

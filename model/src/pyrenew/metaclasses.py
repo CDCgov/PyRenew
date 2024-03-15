@@ -20,24 +20,29 @@ class RandomProcess(metaclass=ABCMeta):
     such as observation noise
     """
 
-    def __init__(self):
+    def __init__(self, **kwargs):
         """
         Default constructor
         """
         pass
 
     @abstractmethod
-    def sample(self, obs: dict = dict(), data: dict = dict(), **kargs):
+    def sample(
+        self,
+        random_variables: dict = None,
+        constants: dict = None,
+        **kwargs,
+    ):
         """Sample method of the process
 
         The method desing in the class should have `obs` and `data` by default.
         The observed data (`obs`) should be contained in a dictionary. The
         `data` argument should be used for additional paramters.
 
-        :param obs: _description_, defaults to None
-        :type obs: _type_, optional
-        :param data: _description_, defaults to None
-        :type data: _type_, optional
+        :param random_variables: _description_, defaults to None
+        :type random_variables: _type_, optional
+        :param constants: _description_, defaults to None
+        :type constants: _type_, optional
         """
         pass
 
@@ -48,6 +53,7 @@ class RandomProcess(metaclass=ABCMeta):
 
 
 class Model(metaclass=ABCMeta):
+    # Since initialized in none, values not shared across instances
     kernel = None
     mcmc = None
 
@@ -68,8 +74,8 @@ class Model(metaclass=ABCMeta):
         self,
         num_warmup,
         num_samples,
-        nuts_args: dict = dict(),
-        mcmc_args: dict = dict(),
+        nuts_args: dict = None,
+        mcmc_args: dict = None,
     ) -> None:
         """Creates the NUTS kernel and MCMC model
 
@@ -80,6 +86,12 @@ class Model(metaclass=ABCMeta):
         Returns:
             _type_: _description_
         """
+
+        if nuts_args is None:
+            nuts_args = dict()
+
+        if mcmc_args is None:
+            mcmc_args = dict()
 
         self.kernel = NUTS(
             model=self.model,
@@ -100,8 +112,8 @@ class Model(metaclass=ABCMeta):
         num_warmup,
         num_samples,
         rng_key: jax.random.PRNGKey = jax.random.PRNGKey(54),
-        obs: dict = dict(),
-        data: dict = dict(),
+        random_variables: dict = dict(),
+        constants: dict = dict(),
         nuts_args: dict = dict(),
         mcmc_args: dict = dict(),
     ) -> None:
@@ -115,6 +127,12 @@ class Model(metaclass=ABCMeta):
             None
         """
 
+        if random_variables is None:
+            random_variables = dict()
+
+        if constants is None:
+            constants = dict()
+
         if self.mcmc is None:
             self._init_model(
                 num_warmup=num_warmup,
@@ -123,7 +141,11 @@ class Model(metaclass=ABCMeta):
                 mcmc_args=mcmc_args,
             )
 
-        self.mcmc.run(rng_key=rng_key, obs=obs, data=data)
+        self.mcmc.run(
+            rng_key=rng_key,
+            random_variables=random_variables,
+            constants=constants,
+        )
 
         return None
 
