@@ -51,8 +51,8 @@ class HospitalizationsObservation(RandomProcess):
 
     @staticmethod
     def validate(hosp_dist, IHR_dist) -> None:
-        if hosp_dist is not None:
-            assert isinstance(hosp_dist, dist.Distribution)
+        # if hosp_dist is not None:
+        #     assert isinstance(hosp_dist, dist.Distribution)
 
         assert isinstance(IHR_dist, dist.Distribution)
 

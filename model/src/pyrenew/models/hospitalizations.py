@@ -1,6 +1,8 @@
 #!/usr/bin/env/python
 # -*- coding: utf-8 -*-
 
+from collections import namedtuple
+
 from pyrenew.models.basicrenewal import BasicRenewalModel
 from pyrenew.processes import RtRandomWalkProcess
 
@@ -67,4 +69,15 @@ class HospitalizationsModel(BasicRenewalModel):
             constants={**constants, **dict(infections=infect_sampled)},
         )
 
-        return Rt, infect_sampled, IHR, pred_hosps, samp_hosp
+        HospSample = namedtuple(
+            "HospSample",
+            ["Rt", "infect_sampled", "IHR", "pred_hosps", "samp_hosp"],
+        )
+
+        return HospSample(
+            Rt=Rt,
+            infect_sampled=infect_sampled,
+            IHR=IHR,
+            pred_hosps=pred_hosps,
+            samp_hosp=samp_hosp,
+        )
