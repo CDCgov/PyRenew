@@ -8,6 +8,7 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.12"
+cfa-azure = {git = "https://github.com/cdcgov/cfa_azure", rev = "e13907f"}
 
 
 [tool.poetry.group.dev.dependencies]
