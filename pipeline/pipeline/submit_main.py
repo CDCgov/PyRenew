@@ -40,8 +40,29 @@ def main(input_config_path: Path, azure_config_path: Path):
     None
     """
     # === Read config file ====================================================
-    config = json.loads(input_config_path.read_text())
+    config: dict = json.loads(input_config_path.read_text())
     logger.debug(f"Read primary config from {input_config_path}")
+
+    # Fail early if don't have necessary keys
+    necessary_keys = set(["model", "post_production"])
+    if any(necessary_keys.difference(config.keys())):
+        msg = (
+            "Require at least one of 'model' or 'post_production' at top"
+            + " level of config file"
+        )
+        logger.error(msg)
+        raise KeyError(msg)
+
+    # Warn if don't find one or another of the top level keys
+    if "model" not in config.keys():
+        logger.warning(
+            f"Could not find a 'model' key at top level of {input_config_path}"
+        )
+
+    if "post_production" not in config.keys():
+        logger.warning(
+            f"Could not find a 'post_production' key at the top level of {input_config_path}"
+        )
 
     # === Prep Azure client ===================================================
     client = AzureClient(config_path=str(azure_config_path))
@@ -56,63 +77,69 @@ def main(input_config_path: Path, azure_config_path: Path):
     logger.info("Azure client configured")
 
     # === Prep individual configs and docker commands =========================
-    model_configs: list[dict[str, Any]] = config["model"]
-    model_docker_cmds: list[list[str]] = [
-        create_docker_cmd(mcfg) for mcfg in model_configs
-    ]
+    if "model" in config.keys():
+        model_configs: list[dict[str, Any]] = config["model"]
+        model_docker_cmds: list[list[str]] = [
+            create_docker_cmd(mcfg) for mcfg in model_configs
+        ]
 
-    model_config_file_names: list[Path] = [
-        create_mdl_cfg_filename(mcfg) for mcfg in model_configs
-    ]
+        model_config_file_names: list[Path] = [
+            create_mdl_cfg_filename(mcfg) for mcfg in model_configs
+        ]
 
-    # === Kick off model tasks ================================================
-    logger.info("Submiting Modeling tasks")
-    model_task_ids: list = []
-    for mcfg, dckr_cmd, cfg_fname in zip(
-        model_configs, model_docker_cmds, model_config_file_names
-    ):
-        logger.info(json.dumps(mcfg))
-        # Create the config file to upload to blob storage
-        cfg_fname.write_text(json.dumps(mcfg))
-        logger.debug(f"Wrote model config file {cfg_fname}")
+        # === Kick off model tasks ============================================
+        logger.info("Submiting Modeling tasks")
+        model_task_ids: list[str] | None = []
+        for mcfg, dckr_cmd, cfg_fname in zip(
+            model_configs, model_docker_cmds, model_config_file_names
+        ):
+            logger.info(json.dumps(mcfg))
+            # Create the config file to upload to blob storage
+            cfg_fname.write_text(json.dumps(mcfg))
+            logger.debug(f"Wrote model config file {cfg_fname}")
 
-        # Submit the task
-        tid = client.add_task(
-            job_id=job_id, docker_cmd=dckr_cmd, input_files=[str(cfg_fname)]
-        )
-        logger.debug(f"Submitted task {tid}")
-        model_task_ids.append(tid)
+            # Submit the task
+            tid = client.add_task(
+                job_id=job_id,
+                docker_cmd=dckr_cmd,
+                input_files=[str(cfg_fname)],
+            )
+            logger.debug(f"Submitted task {tid}")
+            model_task_ids.append(tid)
+    else:
+        model_task_ids = None
 
-    # === Prep individual configs and docker commands =========================
-    pp_configs: list[dict[str, Any]] = config["post_production"]
-    pp_docker_cmds: list[list[str]] = [
-        create_docker_cmd(ppcfg) for ppcfg in pp_configs
-    ]
+    if "post_production" in config.keys():
+        # === Prep individual configs and docker commands =====================
+        pp_configs: list[dict[str, Any]] = config["post_production"]
+        pp_docker_cmds: list[list[str]] = [
+            create_docker_cmd(ppcfg) for ppcfg in pp_configs
+        ]
 
-    pp_config_file_names: list[Path] = [
-        create_pp_cfg_filename(ppcfg) for ppcfg in pp_configs
-    ]
+        pp_config_file_names: list[Path] = [
+            create_pp_cfg_filename(ppcfg) for ppcfg in pp_configs
+        ]
 
-    # === Kick off post processing ============================================
-    logger.info("Submitting Post Processing tasks")
-    for ppcfg, dckr_cmd, cfg_fname in zip(
-        pp_configs, pp_docker_cmds, pp_config_file_names
-    ):
-        logger.info(json.dumps(ppcfg))
-        # Create the config file to upload to blog storage
-        cfg_fname.write_text(json.dumps(ppcfg))
-        logger.debug(f"Wrote post processing config file {cfg_fname}")
+        # === Kick off post processing ========================================
+        logger.info("Submitting Post Processing tasks")
+        for ppcfg, dckr_cmd, cfg_fname in zip(
+            pp_configs, pp_docker_cmds, pp_config_file_names
+        ):
+            logger.info(json.dumps(ppcfg))
+            # Create the config file to upload to blog storage
+            cfg_fname.write_text(json.dumps(ppcfg))
+            logger.debug(f"Wrote post processing config file {cfg_fname}")
 
-        # Submit the task
-        tid = client.add_task(
-            job_id=job_id,
-            docker_cmd=dckr_cmd,
-            input_files=[str(cfg_fname)],
-            depends_on=model_task_ids,
-        )
-        logger.debug(f"Submitted task {tid}")
+            # Submit the task
+            tid = client.add_task(
+                job_id=job_id,
+                docker_cmd=dckr_cmd,
+                input_files=[str(cfg_fname)],
+                depends_on=model_task_ids,
+            )
+            logger.debug(f"Submitted task {tid}")
 
-    logger.info("All tasks submitted. Waiting for completion")
+        logger.info("All tasks submitted. Waiting for completion")
 
     # === Make sure all jobs are cleaned up ===================================
     client.monitor_job(job_id)
