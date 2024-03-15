@@ -3,7 +3,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Any
 
 from cfa_azure.clients import AzureClient
 
@@ -76,74 +75,133 @@ def main(input_config_path: Path, azure_config_path: Path):
     logger.debug("Created job")
     logger.info("Azure client configured")
 
-    # === Prep individual configs and docker commands =========================
     if "model" in config.keys():
-        model_configs: list[dict[str, Any]] = config["model"]
-        model_docker_cmds: list[list[str]] = [
-            create_docker_cmd(mcfg) for mcfg in model_configs
-        ]
-
-        model_config_file_names: list[Path] = [
-            create_mdl_cfg_filename(mcfg) for mcfg in model_configs
-        ]
-
-        # === Kick off model tasks ============================================
-        logger.info("Submiting Modeling tasks")
-        model_task_ids: list[str] | None = []
-        for mcfg, dckr_cmd, cfg_fname in zip(
-            model_configs, model_docker_cmds, model_config_file_names
-        ):
-            logger.info(json.dumps(mcfg))
-            # Create the config file to upload to blob storage
-            cfg_fname.write_text(json.dumps(mcfg))
-            logger.debug(f"Wrote model config file {cfg_fname}")
-
-            # Submit the task
-            tid = client.add_task(
-                job_id=job_id,
-                docker_cmd=dckr_cmd,
-                input_files=[str(cfg_fname)],
-            )
-            logger.debug(f"Submitted task {tid}")
-            model_task_ids.append(tid)
+        model_task_ids = submit_model_tasks(client, job_id, config["model"])
     else:
         model_task_ids = None
 
     if "post_production" in config.keys():
-        # === Prep individual configs and docker commands =====================
-        pp_configs: list[dict[str, Any]] = config["post_production"]
-        pp_docker_cmds: list[list[str]] = [
-            create_docker_cmd(ppcfg) for ppcfg in pp_configs
-        ]
+        submit_post_production_tasks(
+            client,
+            job_id,
+            post_prod_config=config["post_production"],
+            depends_on=model_task_ids,
+        )
 
-        pp_config_file_names: list[Path] = [
-            create_pp_cfg_filename(ppcfg) for ppcfg in pp_configs
-        ]
-
-        # === Kick off post processing ========================================
-        logger.info("Submitting Post Processing tasks")
-        for ppcfg, dckr_cmd, cfg_fname in zip(
-            pp_configs, pp_docker_cmds, pp_config_file_names
-        ):
-            logger.info(json.dumps(ppcfg))
-            # Create the config file to upload to blog storage
-            cfg_fname.write_text(json.dumps(ppcfg))
-            logger.debug(f"Wrote post processing config file {cfg_fname}")
-
-            # Submit the task
-            tid = client.add_task(
-                job_id=job_id,
-                docker_cmd=dckr_cmd,
-                input_files=[str(cfg_fname)],
-                depends_on=model_task_ids,
-            )
-            logger.debug(f"Submitted task {tid}")
-
-        logger.info("All tasks submitted. Waiting for completion")
+    logger.info("All tasks submitted. Waiting for completion")
 
     # === Make sure all jobs are cleaned up ===================================
     client.monitor_job(job_id)
     client.delete_job(job_id)
+
+
+def submit_model_tasks(
+    client: AzureClient, job_id: str, model_config: list[dict]
+) -> list[str]:
+    """
+    Submit all the model tasks specified in `model_config` to the `job_id`.
+
+    Parameters
+    ----------
+    client :
+        The client object for interacting with the job submission system.
+    job_id : str
+        The ID of the job to which model tasks will be submitted.
+    model_config : list[dict]
+        A list of dictionaries representing model configurations to be
+        submitted as tasks.
+
+    Returns
+    -------
+    list[str]
+        A list of task IDs corresponding to the submitted model tasks.
+    """
+    # === Prep individual configs and docker commands =========================
+    model_docker_cmds: list[list[str]] = [
+        create_docker_cmd(mcfg) for mcfg in model_config
+    ]
+
+    model_config_file_names: list[Path] = [
+        create_mdl_cfg_filename(mcfg) for mcfg in model_config
+    ]
+
+    # === Kick off model tasks ================================================
+    logger.info("Submiting Modeling tasks")
+    model_task_ids: list[str] | None = []
+    for mcfg, dckr_cmd, cfg_fname in zip(
+        model_config, model_docker_cmds, model_config_file_names
+    ):
+        logger.info(json.dumps(mcfg))
+        # Create the config file to upload to blob storage
+        cfg_fname.write_text(json.dumps(mcfg))
+        logger.debug(f"Wrote model config file {cfg_fname}")
+
+        # Submit the task
+        tid = client.add_task(
+            job_id=job_id,
+            docker_cmd=dckr_cmd,
+            input_files=[str(cfg_fname)],
+        )
+        logger.debug(f"Submitted task {tid}")
+        model_task_ids.append(tid)
+
+    return model_task_ids
+
+
+def submit_post_production_tasks(
+    client: AzureClient,
+    job_id: str,
+    post_prod_config: list[dict],
+    depends_on: list[str] | None = None,
+):
+    """
+    Submit all the post-production tasks specified in `post_prod_config` to the
+    `job_id`.
+
+    Parameters
+    ----------
+    client :
+        The client object for interacting with the job submission system.
+    job_id : str
+        The ID of the job to which post-production tasks will be submitted.
+    post_prod_config : list[dict]
+        A list of dictionaries representing specifications for post-production
+        tasks.
+    depends_on : list[str] or None, optional
+        A list of task IDs that these tasks must wait on before execution.
+        Default is None.
+
+    Returns
+    -------
+    None
+    """
+    # === Prep individual configs and docker commands =========================
+    pp_docker_cmds: list[list[str]] = [
+        create_docker_cmd(ppcfg) for ppcfg in post_prod_config
+    ]
+
+    pp_config_file_names: list[Path] = [
+        create_pp_cfg_filename(ppcfg) for ppcfg in post_prod_config
+    ]
+
+    # === Kick off post processing ============================================
+    logger.info("Submitting Post Processing tasks")
+    for ppcfg, dckr_cmd, cfg_fname in zip(
+        post_prod_config, pp_docker_cmds, pp_config_file_names
+    ):
+        logger.info(json.dumps(ppcfg))
+        # Create the config file to upload to blog storage
+        cfg_fname.write_text(json.dumps(ppcfg))
+        logger.debug(f"Wrote post processing config file {cfg_fname}")
+
+        # Submit the task
+        tid = client.add_task(
+            job_id=job_id,
+            docker_cmd=dckr_cmd,
+            input_files=[str(cfg_fname)],
+            depends_on=depends_on,
+        )
+        logger.debug(f"Submitted task {tid}")
 
 
 if __name__ == "__main__":
