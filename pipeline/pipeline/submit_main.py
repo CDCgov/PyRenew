@@ -3,13 +3,14 @@ import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 from cfa_azure.clients import AzureClient
 
 logger = logging.getLogger(__name__)
 
 
-def main(input_config_path: Path, azure_config_path: Path):
+def main(input_config_path: Path, client: AzureClient):
     """
     Kick off the submission of tasks based on the contents of the file at
     `input_config_path`.
@@ -28,11 +29,8 @@ def main(input_config_path: Path, azure_config_path: Path):
         If 'post_production' is present, it should contain a list of
         specifications for each post-production run.
 
-    azure_config_path : Path
-        The path to the Azure configuration file.
-
-        This file should contain all necessary fields for connecting with Azure
-        Batch, creating pools, submitting jobs, and accessing storage.
+    client: AzureClient
+        An AzureClient as created from a configuration file.
 
     Returns
     -------
@@ -64,8 +62,6 @@ def main(input_config_path: Path, azure_config_path: Path):
         )
 
     # === Prep Azure client ===================================================
-    client = AzureClient(config_path=str(azure_config_path))
-    logger.debug("Azure client config initialized")
     # TODO: enter actual pool name
     pool_name = "POOL_NAME"
     client.use_pool(pool_name=pool_name)
@@ -204,8 +200,37 @@ def submit_post_production_tasks(
         logger.debug(f"Submitted task {tid}")
 
 
+def create_docker_cmd(config: dict[str, Any]) -> list[str]:
+    """
+    For a given configuration, build a command to pass to docker
+    """
+    # TODO: fill this out
+    return list()
+
+
+def create_mdl_cfg_filename(config: dict[str, Any]) -> Path:
+    """
+    For a given configuration, create the Path to the file name for that model
+    run.
+    """
+    # TODO: fill this out
+    return Path("somemodel.json")
+
+
+def create_pp_cfg_filename(config: dict[str, Any]) -> Path:
+    """
+    For a given configuration, create the Path to the file name for that post
+    production run.
+    """
+    # TODO: fill this out
+    return Path("somepostprod.json")
+
+
 if __name__ == "__main__":
     import argparse
+    from datetime import datetime, timedelta
+
+    start_time = datetime.now()
 
     # Get log level from environemnt. Set to debug if not found.
     LOGLEVEL = os.environ.get("LOGLEVEL", "DEBUG").upper()
@@ -220,9 +245,7 @@ if __name__ == "__main__":
         "primary_config", help="Path to primary config file", type=Path
     )
 
-    parser.add_argument(
-        "azure_config", help="Path to Azure config file", type=Path
-    )
+    parser.add_argument("azure_config", help="Path to Azure config file")
 
     parser.add_argument(
         "--log_file",
@@ -246,4 +269,14 @@ if __name__ == "__main__":
     logger.info(f"Using primary config file {args.primary_config}")
     logger.info(f"Using Azure config file {args.azure_config}")
 
-    main(args.primary_config, args.azure_config)
+    # Create the client outside main because it is easier to test main() when
+    # it is passed a client object, rather than a file
+    client = AzureClient(args.azure_config)
+    logger.info("Created AzureClient")
+
+    main(args.primary_config, client)
+
+    # Calculate run time, rounded to nearest second
+    run_time = datetime.now() - start_time
+    run_time = timedelta(seconds=round(run_time.total_seconds()))
+    logger.info(f"Total runtime was {run_time}")
