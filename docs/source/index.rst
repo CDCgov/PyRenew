@@ -3,16 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to CFA Multisignal Renewal's documentation!
-===================================================
+CFA Multisignal Renewal Documentation
+=====================================
+
+Welcome, CFA wishes you a nice day!
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
+   msei_reference/index
 
 
-Indices and tables
+Indices And Tables
 ==================
 
 * :ref:`genindex`
