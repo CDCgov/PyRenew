@@ -1,0 +1,7 @@
+Math Utility Module
+===================
+
+.. automodule:: pyrenew.math
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,7 @@
+Infection Module
+================
+
+.. automodule:: pyrenew.infection
+   :members:
+   :undoc-members:
+   :show-inheritance:
