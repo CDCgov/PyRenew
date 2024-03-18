@@ -10,6 +10,7 @@ from pyrenew.processes import RtRandomWalkProcess
 BasicModelSample = namedtuple(
     "InfectModelSample",
     ["Rt", "infect_predicted", "infect_observed"],
+    defaults=[None, None, None],
 )
 """Output from BasicRenewalModel.model()"""
 
@@ -28,17 +29,24 @@ class BasicRenewalModel(Model):
     ) -> None:
         """Default constructor
 
-        :param infections_obs: Infections observation process (e.g.,
+        Parameters
+        ----------
+        infections_obs : RandomProcess
+            Infections observation process (e.g.,
             pyrenew.observations.InfectionsObservation.)
-        :type infections_obs: RandomProcess
-        :param Rt_process: Rt sampled, defaults to
-            `pyrenew.processes.RtRandomWalkProcess()`. The sample function of
-            the process should return a tuple where the first element is the
-            drawn Rt.
-        :type Rt_process: RandomProcess, optional
+        Rt_process : RandomProcess, optional
+            The sample function of the process should return a tuple where the
+            first element is the drawn Rt., by default RtRandomWalkProcess()
+
+        Returns
+        -------
+        None
         """
 
-        self.validate(infections_obs, Rt_process)
+        BasicRenewalModel.validate(
+            infections_obs=infections_obs,
+            Rt_process=Rt_process,
+        )
 
         self.infections_obs = infections_obs
         self.Rt_process = Rt_process
@@ -76,13 +84,16 @@ class BasicRenewalModel(Model):
     ) -> BasicModelSample:
         """_summary_
 
-        :param random_variables: A dictionary containing `infections` and/or
-            `Rt` (optional).
-        :type random_variables: dict, optional
-        :param constants: A dictionary containing `n_timepoints`.
-        :type constants: dict, optional
-        :return: _description_
-        :rtype: _type_
+        Parameters
+        ----------
+        random_variables : dict, optional
+            A dictionary containing `infections` and/or `Rt` (optional).
+        constants : dict, optional
+            A dictionary containing `n_timepoints`.
+
+        Returns
+        -------
+        BasicModelSample
         """
 
         if random_variables is None:

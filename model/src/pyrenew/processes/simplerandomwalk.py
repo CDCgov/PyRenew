@@ -15,14 +15,41 @@ class SimpleRandomWalkProcess(RandomProcess):
         self,
         error_distribution: dist.Distribution,
     ) -> None:
+        """Default constructor
+
+        Parameters
+        ----------
+        error_distribution : dist.Distribution
+            Passed to numpyro.sample.
+
+        Returns
+        -------
+        None
+        """
         self.error_distribution = error_distribution
 
     def sample(
         self,
-        duration,
-        name="randomwalk",
-        init=None,
+        duration: int,
+        name: str = "randomwalk",
+        init: float = None,
     ) -> tuple:
+        """Samples from the randomwalk
+
+        Parameters
+        ----------
+        duration : int
+            Length of the walk.
+        name : str, optional
+            Passed to numpyro.sample, by default "randomwalk"
+        init : float, optional
+            Initial point of the walk, by default None
+
+        Returns
+        -------
+        tuple
+        """
+
         if init is None:
             init = npro.sample(name + "_init", self.error_distribution)
         diffs = npro.sample(

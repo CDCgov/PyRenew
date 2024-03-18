@@ -13,26 +13,27 @@ class PoissonObservation(RandomProcess):
 
     def __init__(
         self,
-        parameter_name="poisson_rv",
-        rate_varname="rate",
-        counts_varname="counts",
-        eps=1e-8,
+        parameter_name: str = "poisson_rv",
+        rate_varname: str = "rate",
+        counts_varname: str = "counts",
+        eps: float = 1e-8,
     ) -> None:
         """Default Constructor
 
-        :param parameter_name: Passed to numpyro.sample, defaults to
-            "poisson_rv"
-        :type parameter_name: str, optional
-        :param rate_varname: Name of the element in `random_variables` that will
-            hold the rate when calling `PoissonObservation.sample()`. Defaults
-            to 'rate'.
-        :type rate_varname: str, optional
-        :param counts_varname: Name of the element in `random_variables` that will
-            hold the observed count when calling `PoissonObservation.sample()`.
-            Defaults to 'counts'.
-        :type counts_varname: str, optional
-        :return: _description_
-        :rtype: _type_
+        Parameters
+        ----------
+        parameter_name : str, optional
+            Passed to numpyro.sample.
+        rate_varname : str, optional
+            Name of the element in `random_variables` that will hold the rate
+            when calling `PoissonObservation.sample()`.
+        counts_varname : str, optional
+            Name of the element in `random_variables` that will hold the
+            observed count when calling `PoissonObservation.sample()`.
+
+        Returns
+        -------
+        None
         """
 
         self.parameter_name = parameter_name
@@ -46,17 +47,21 @@ class PoissonObservation(RandomProcess):
         self,
         random_variables: dict,
         constants: dict = None,
-    ):
+    ) -> tuple:
         """Sample from the Poisson process
 
-        :param random_variables: A dictionary containing the rate parameter
-            passed to `numpyro.distributions.Poisson()`, and possible containing
-            `counts` passed to `obs` in `numpyro.sample()`.
-        :type random_variables: _type_, optional
-        :param constants: Ignored, defaults to None
-        :type constants: _type_, optional
-        :return: _description_
-        :rtype: _type_
+        Parameters
+        ----------
+        random_variables : dict, optional
+            A dictionary containing the rate parameter passed to
+            `numpyro.distributions.Poisson()`, and possible containing `counts`
+            passed to `obs` in `numpyro.sample()`.
+        constants : dict, optional
+            Ignored.
+
+        Returns
+        -------
+        tuple
         """
         return (
             numpyro.sample(

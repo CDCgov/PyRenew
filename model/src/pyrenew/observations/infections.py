@@ -11,7 +11,11 @@ from pyrenew.distutil import (
 )
 from pyrenew.metaclasses import RandomProcess
 
-InfecitonsSample = namedtuple("InfecitonsSample", ["predicted", "observed"])
+InfectionsSample = namedtuple(
+    "InfectionsSample",
+    ["predicted", "observed"],
+    defaults=[None, None],
+)
 """Output from InfectionsObservation.sample()"""
 
 
@@ -28,31 +32,35 @@ class InfectionsObservation(RandomProcess):
     ) -> None:
         """Observation of Infections given Rt (Random Process)
 
-        :param gen_int: A vector representing the pmf of the generation interval
-        :type gen_int: ArrayLike
-        :param I0_varname: Name of the element in `random_variables` that will
-            hold the value of 'I0'.
-        :type I0_varname: str.
-        :param Rt_varname: Name of the element in `random_variables` that will
-            hold the value of 'Rt'.
-        :type Rt_varname: str.
-        :param infections_mean_varname: Name of the element in `random_variables`
-            that will hold the value of mean 'infections'.
-        :type infections_mean_varname: str.
-        :param infections_obs_varname: Name of the element in `random_variables`
-            that will hold the value of observed 'infections'.
-        :type infections_obs_varname: str.
-        :param I0_dist: Distribution from where to sample the baseline number of
-            infections, defaults to dist.LogNormal(2, 0.25)
-        :type I0_dist: dist.Distribution, optional
-        :param inf_observation_model: RandomProcess representing an observation
-            process in which the deterministic number of infections is used as a
-            parameter, defaults to None.
-        :type inf_observation_model: RandomProcess, optional
-        :return: A RandomProcess
-        :rtype: pyrenew.metaclasses.RandomProcess()
+        Parameters
+        ----------
+        gen_int: ArrayLike
+            A vector representing the pmf of the generation interval
+        I0_varname : str.
+            Name of the element in `random_variables` that will hold the value
+            of 'I0'.
+        Rt_varname : str.
+            Name of the element in `random_variables` that will hold the value
+            of 'Rt'.
+        infections_mean_varname : str.
+            Name of the element in `random_variables` that will hold the value
+            of mean 'infections'.
+        infections_obs_varname : str.
+            Name of the element in `random_variables` that will hold the value
+            of observed 'infections'.
+        I0_dist : dist.Distribution, optional
+            Distribution from where to sample the baseline number of infections.
+
+        inf_observation_model : RandomProcess, optional
+            RandomProcess representing an observation process in which the
+            deterministic number of infections is used as a parameter, defaults
+            to None.
+
+        Returns
+        -------
+        RandomProcess
         """
-        self.validate(I0_dist, gen_int)
+        InfectionsObservation.validate(I0_dist, gen_int)
 
         self.I0_dist = I0_dist
         self.gen_int_rev = reverse_discrete_dist_vector(gen_int)
@@ -85,17 +93,21 @@ class InfectionsObservation(RandomProcess):
         self,
         random_variables: dict,
         constants: dict = None,
-    ) -> InfecitonsSample:
+    ) -> InfectionsSample:
         """Samples infections given Rt
 
-        :param random_variables: A dictionary containing an observed `Rt`
-            sequence passed to `sample_infections_rt()`. It can also contain
-            `infections` and `I0`, both passed to `obs` in `numpyro.sample()`.
-        :type obs: random_variables, optional
-        :param constants: Ignored
-        :type constants: dict
-        :return: _description_
-        :rtype: _type_
+        Parameters
+        ----------
+        obs : random_variables, optional
+            A dictionary containing an observed `Rt` sequence passed to
+            `sample_infections_rt()`. It can also contain `infections` and `I0`,
+            both passed to `obs` in `numpyro.sample()`.
+        constants : dict
+            Possible dictionary of constants.
+
+        Returns
+        -------
+        InfectionsSample
         """
         I0 = npro.sample(
             name="I0",
@@ -126,4 +138,4 @@ class InfectionsObservation(RandomProcess):
             constants=constants,
         )
 
-        return InfecitonsSample(all_infections, observed)
+        return InfectionsSample(all_infections, observed)

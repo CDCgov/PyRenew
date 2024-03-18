@@ -6,7 +6,6 @@ Observation helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from collections import namedtuple
 
 import jax
 from numpyro.infer import MCMC, NUTS
@@ -25,23 +24,28 @@ def _assert_sample_and_rtype(
     :type fn: RandomProcess
     :raises Exception: _description_
     :raises Exception: _description_
-    :return: _description_
+    :return: None
     :rtype: _type_
     """
 
+    # Addressing the None case
     if (fn is None) and (not skip_if_none):
         Exception(
             "The passed object cannot be None. It should be RandomProcess"
         )
+    elif skip_if_none and (fn is None):
+        return None
 
     if not isinstance(fn, RandomProcess):
-        raise Exception(f"{fn.__name__} is not an instance of RandomProcess.")
+        raise Exception(f"{fn} is not an instance of RandomProcess.")
 
+    # Otherwise, checking for the sample function (must have one)
+    # with a defined rtype.
     try:
         sfun = fn.sample
     except Exception:
         raise Exception(
-            f"The RandomProcess {fn.__name__} does not have a sample function."
+            f"The RandomProcess {fn} does not have a sample function."
         )  # noqa: E722
 
     # Getting the return annotation (if any)
@@ -49,14 +53,21 @@ def _assert_sample_and_rtype(
 
     if rettype is None:
         raise Exception(
-            f"The RandomProcess {fn.__name__} does not have return type "
+            f"The RandomProcess {fn} does not have return type "
             + "annotation."
         )
 
-    if not isinstance(rettype(), (tuple, namedtuple)):
+    try:
+        if not isinstance(rettype(), tuple):
+            raise Exception(
+                f"The RandomProcess {fn}'s return type annotation is not"
+                + "a tuple"
+            )
+    except Exception:
         raise Exception(
-            f"The RandomProcess {fn.__name__}'s return type annotation is not"
-            + "a tuple"
+            f"There was a problem when trying to initialize {rettype}."
+            + "the rtype of the random process should be a tuple or a namedtuple"
+            + " with default values."
         )
 
     return None

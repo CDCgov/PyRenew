@@ -13,6 +13,7 @@ from pyrenew.metaclasses import RandomProcess, _assert_sample_and_rtype
 HospSampledObs = namedtuple(
     "HospSampledObs",
     ["IHR", "predicted", "sampled"],
+    defaults=[None, None, None],
 )
 """Output from HospitalizationsObservation.sample()"""
 
@@ -32,18 +33,23 @@ class HospitalizationsObservation(RandomProcess):
     ) -> None:
         """Default constructor
 
-        :param inf_hosp_int: pmf for reporting (informing) hospitalizations.
-        :type inf_hosp_int: ArrayLike
-        :param hosp_dist: If not None, a count distribution receiving a single
+        Parameters
+        ----------
+        inf_hosp_int : ArrayLike
+            pmf for reporting (informing) hospitalizations.
+        hosp_dist : dist.Distribution, optional
+            If not None, a count distribution receiving a single
             paramater (e.g., `counts` or `rate`.) When specified, the model will
             sample observed hospitalizations from that distribution using the
             predicted hospitalizations as parameter.
-        :type hosp_dist: dist.Distribution, optional
-        :param IHR_dist: Infection to hospitalization rate pmf, defaults to
-            dist.LogNormal(jnp.log(0.05), 0.05)
-        :type IHR_dist: dist.Distribution, optional
+        IHR_dist : dist.Distribution, optional
+            Infection to hospitalization rate pmf.
+
+        Returns
+        -------
+        None
         """
-        self.validate(hosp_dist, IHR_dist)
+        HospitalizationsObservation.validate(hosp_dist, IHR_dist)
 
         self.hosp_dist = hosp_dist
         self.IHR_obs_varname = IHR_obs_varname

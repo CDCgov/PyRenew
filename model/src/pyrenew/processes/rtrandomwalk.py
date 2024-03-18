@@ -18,18 +18,22 @@ class RtRandomWalkProcess(RandomProcess):
     ) -> None:
         """Default constructor
 
-        :param Rt0_dist: Baseline distributiono of Rt, defaults to
+        Parameters
+        ----------
+        Rt0_dist : dist.Distribution, optional
+            Baseline distributiono of Rt, defaults to
             dist.TruncatedNormal( loc=1.2, scale=0.2, low=0 )
-        :type Rt0_dist: dist.Distribution, optional
-        :param Rt_transform: Transformation applied to the sampled Rt0, defaults
-            to LogTransform()
-        :type Rt_transform: AbstractTransform, optional
-        :param Rt_rw_dist: Randomwalk process, defaults to dist.Normal(0, 0.025)
-        :type Rt_rw_dist: dist.Distribution, optional
-        :return: _description_
-        :rtype: _type_
+        Rt_transform : AbstractTransform, optional
+            Transformation applied to the sampled Rt0, defaults
+            to LogTransform().
+        Rt_rw_dist : dist.Distribution, optional
+            Randomwalk process, defaults to dist.Normal(0, 0.025)
+
+        Returns
+        -------
+        None
         """
-        self.validate(Rt0_dist, Rt_transform, Rt_rw_dist)
+        RtRandomWalkProcess.validate(Rt0_dist, Rt_transform, Rt_rw_dist)
 
         self.Rt0_dist = Rt0_dist
         self.Rt_transform = Rt_transform
@@ -50,12 +54,16 @@ class RtRandomWalkProcess(RandomProcess):
     ) -> tuple:
         """Generate samples from the process
 
-        :param random_variables: A dictionary containing `Rt0` (optional).
-        :type random_variables: dict
-        :param constants: A dictionary containing `n_timepoints`.
-        :param constants: dict.
-        :return: _description_
-        :rtype: _type_
+        Parameters
+        ----------
+        random_variables : dict
+            A dictionary containing `Rt0` (optional).
+        constants : dict.
+            A dictionary containing `n_timepoints`.
+
+        Returns
+        -------
+        tuple
         """
 
         if random_variables is None:

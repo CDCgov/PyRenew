@@ -20,36 +20,35 @@ class NegativeBinomialObservation(RandomProcess):
         parameter_name="negbinom_rv",
         mean_varname="mean",
         counts_varname="counts",
-    ):
+    ) -> None:
         """Default constructor
 
-        :param concentration_prior: dist.Distribution
-            Numpyro distribution from which to
-            sample the positive concentration
-            parameter of the negative binomial.
-            This parameter is sometimes called
-            k, phi, or the "dispersion"
-            or "overdispersion" parameter,
-            despite the fact that larger values
-            imply that the distribution becomes
-            more Poissonian, while smaller ones
-            imply a greater degree of dispersion.
-        :type concentration_prior: dist.Distribution
-        :param concentration_suffix: _description_, defaults to "_concentration"
-        :type concentration_suffix: str, optional
-        :param parameter_name: _description_, defaults to "negbinom_rv"
-        :type parameter_name: str, optional
-        :param mean_varname: Name of the element in `random_variables` that will
-            hold the rate when calling `PoissonObservation.sample()`. Defaults
-            to 'mean'.
-        :type mean_varname: str, optional
-        :param counts_varname: Name of the element in `random_variables` that will
-            hold the observed count when calling `PoissonObservation.sample()`.
-            Defaults to 'counts'.
-        :type counts_varname: str, optional
+        Parameters
+        ----------
+        concentration_prior : dist.Distribution
+            Numpyro distribution from which to sample the positive concentration
+            parameter of the negative binomial. This parameter is sometimes
+            called k, phi, or the "dispersion" or "overdispersion" parameter,
+            despite the fact that larger values imply that the distribution
+            becomes more Poissonian, while smaller ones imply a greater degree
+            of dispersion.
+        concentration_suffix : str, optional
+            Suffix for the numpy variable.
+        parameter_name : str, optional
+            Name for the numpy variable.
+        mean_varname : str, optional
+            Name of the element in `random_variables` that will hold the rate
+            when calling `PoissonObservation.sample()`.
+        counts_varname: str, optional
+            Name of the element in `random_variables` that will hold the
+            observed count when calling `PoissonObservation.sample()`.
+
+        Returns
+        -------
+        None
         """
 
-        self.validate(concentration_prior)
+        NegativeBinomialObservation.validate(concentration_prior)
 
         if isinstance(concentration_prior, dist.Distribution):
             self.sample_prior = lambda: numpyro.sample(
@@ -68,17 +67,20 @@ class NegativeBinomialObservation(RandomProcess):
         self,
         random_variables: dict,
         constants: dict = None,
-    ):
+    ) -> tuple:
         """Sample from the negative binomial distribution
 
-        :param random_variables: A dictionary containing the `mean` parameter,
-            and possibly containing `counts`, which is passed to `obs`
-            `numpyro.sample()`.
-        :type random_variables: dict, optional
-        :param constants: Ignored, defaults to dict().
-        :type constants: dict, optional
-        :return: _description_
-        :rtype: _type_
+        Parameters
+        ----------
+        random_variables : dict, optional
+            A dictionary containing the `mean` parameter, and possibly
+            containing `counts`, which is passed to `obs` `numpyro.sample()`.
+        constants : dict, optional
+            Ignored, defaults to dict().
+
+        Returns
+        -------
+        tuple
         """
         return (
             numpyro.sample(

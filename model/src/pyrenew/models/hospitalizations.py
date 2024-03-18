@@ -10,6 +10,7 @@ from pyrenew.processes import RtRandomWalkProcess
 HospModelSample = namedtuple(
     "HospModelSample",
     ["Rt", "infect_sampled", "IHR", "pred_hosps", "samp_hosp"],
+    defaults=[None, None, None, None, None],
 )
 """Output from HospitalizationsModel.model()
 """
@@ -25,26 +26,31 @@ class HospitalizationsModel(BasicRenewalModel):
 
     def __init__(
         self,
-        infections_obs: RandomProcess,
         hosp_obs: RandomProcess,
+        infections_obs: RandomProcess,
         Rt_process: RandomProcess = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
 
-        :param infections_obs: The infections observation process.
-        :type infections_obs: RandomProcess
-        :param hosp_obs: _description_
-        :type hosp_obs: RandomProcess
-        :param Rt_process: _description_, defaults to RtRandomWalkProcess()
-        :type Rt_process: RandomProcess, optional
-        """
-        self.validate(infections_obs, hosp_obs, Rt_process)
+        Parameters
+        ----------
+        type hosp_obs : RandomProcess
+            Observation process for the hospitalizations.
+        type infections_obs : RandomProcess
+            The infections observation process (passed to BasicRenewalModel).
+        Rt_process : RandomProcess, optional
+            Rt process  (passed to BasicRenewalModel).
 
-        BasicRenewalModel.__init__(
-            self,
+        Returns
+        -------
+        None
+        """
+        super().__init__(
             infections_obs=infections_obs,
             Rt_process=Rt_process,
         )
+
+        HospitalizationsModel.validate(infections_obs, hosp_obs, Rt_process)
 
         self.hosp_obs = hosp_obs
 
@@ -62,13 +68,17 @@ class HospitalizationsModel(BasicRenewalModel):
     ) -> tuple:
         """Sample number of hospitalizations
 
-        :param random_variables: A dictionary containing `infections` passed to
-            the specified sampler.
-        :type random_variables: dict
-        :param constants: _description_, defaults to None.
-        :type constants: dict, optional
-        :return: _description_
-        :rtype: _type_
+        Parameters
+        ----------
+        random_variables : dict
+            A dictionary containing `infections` passed to the specified
+            sampler.
+        constants : dict, optional
+            Possible constants for the model.
+
+        Returns
+        -------
+        tuple
         """
 
         return self.hosp_obs.sample(
@@ -83,14 +93,17 @@ class HospitalizationsModel(BasicRenewalModel):
     ) -> HospModelSample:
         """Hospitalizations model
 
-        :param random_variables: A dictionary with random variables passed to
-            `pyrenew.models.BasicRenewalModel` and `sample_hospitalizations`;
-            defaults to None.
-        :type random_variables: dict, optional
-        :param constants: _description_, defaults to None
-        :type constants: dict, optional
-        :return: _description_
-        :rtype: HospModelSample
+        Parameters
+        ----------
+        random_variables : dict, optional
+            A dictionary with random variables passed to
+            `pyrenew.models.BasicRenewalModel` and `sample_hospitalizations`.
+        constants : dict, optional
+            Possible constants for the model.
+
+        Returns
+        -------
+        HospModelSample
         """
         if random_variables is None:
             random_variables = dict()
@@ -98,9 +111,7 @@ class HospitalizationsModel(BasicRenewalModel):
         if constants is None:
             constants = dict()
 
-        Rt, infect_sampled, *_ = BasicRenewalModel.model(
-            self, constants=constants
-        )
+        Rt, infect_sampled, *_ = super().model(constants=constants)
 
         IHR, pred_hosps, samp_hosp, *_ = self.sample_hospitalizations(
             random_variables={

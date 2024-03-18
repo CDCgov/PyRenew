@@ -27,20 +27,43 @@ class FirstDifferenceARProcess(RandomProcess):
     ) -> None:
         """Default constructor
 
-        :param autoreg: Process parameters pyrenew.processesARprocess.
-        :type autoreg: ArrayLike
-        :param noise_sd: Error passed to pyrenew.processes.ARProcess
-        :type noise_sd: float
+        Parameters
+        ----------
+        autoreg : ArrayLike
+            Process parameters pyrenew.processesARprocess.
+        noise_sd : float
+            Error passed to pyrenew.processes.ARProcess.
+
+        Returns
+        -------
+        None
         """
         self.rate_of_change_proc = ARProcess(0, jnp.array([autoreg]), noise_sd)
 
     def sample(
         self,
-        duration,
+        duration: int,
         init_val: ArrayLike = None,
         init_rate_of_change: ArrayLike = None,
         name: str = "trend_rw",
     ) -> tuple:
+        """Sample from the process
+
+        Parameters
+        ----------
+        duration : int
+            Passed to ARProcess.sample().s
+        init_val : ArrayLike, optional
+            Starting point of the AR process, by default None.
+        init_rate_of_change : ArrayLike, optional
+            Passed to ARProcess.sample, by default None.
+        name : str, optional
+            Passed to ARProcess.sample(), by default "trend_rw"
+
+        Returns
+        -------
+        tuple
+        """
         rocs, *_ = self.rate_of_change_proc.sample(
             duration, inits=init_rate_of_change, name=name + "_rate_of_change"
         )
