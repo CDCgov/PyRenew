@@ -24,8 +24,8 @@ class InfectionsObservation(RandomProcess):
         infections_mean_varname: str = "infections_mean",
         infections_obs_varname: str = "infections_obs",
         I0_dist: dist.Distribution = dist.LogNormal(2, 0.25),
-        inf_observation_model: dist.Distribution = None,
-    ):
+        inf_observation_model: RandomProcess = None,
+    ) -> None:
         """Observation of Infections given Rt (Random Process)
 
         :param gen_int: A vector representing the pmf of the generation interval
@@ -45,10 +45,10 @@ class InfectionsObservation(RandomProcess):
         :param I0_dist: Distribution from where to sample the baseline number of
             infections, defaults to dist.LogNormal(2, 0.25)
         :type I0_dist: dist.Distribution, optional
-        :param inf_observation_model:  Distribution representing an observation
+        :param inf_observation_model: RandomProcess representing an observation
             process in which the deterministic number of infections is used as a
             parameter, defaults to None.
-        :type inf_observation_model: dist.Distribution, optional
+        :type inf_observation_model: RandomProcess, optional
         :return: A RandomProcess
         :rtype: pyrenew.metaclasses.RandomProcess()
         """
@@ -63,10 +63,8 @@ class InfectionsObservation(RandomProcess):
                 constants=constants,
             )
         else:
-            self.obs_model = (
-                lambda random_variables, constants: random_variables.get(
-                    self.infections_obs_varname
-                )
+            self.obs_model = lambda random_variables, constants: (
+                random_variables.get(self.infections_obs_varname),
             )
 
         self.I0_varname = I0_varname
@@ -123,7 +121,7 @@ class InfectionsObservation(RandomProcess):
             self.infections_obs_varname, None
         )
 
-        observed = self.obs_model(
+        observed, *_ = self.obs_model(
             random_variables=rvars,
             constants=constants,
         )

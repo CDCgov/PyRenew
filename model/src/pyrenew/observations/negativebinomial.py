@@ -80,13 +80,15 @@ class NegativeBinomialObservation(RandomProcess):
         :return: _description_
         :rtype: _type_
         """
-        return numpyro.sample(
-            self.parameter_name,
-            dist.NegativeBinomial2(
-                mean=random_variables.get(self.mean_varname),
-                concentration=self.sample_prior(),
+        return (
+            numpyro.sample(
+                self.parameter_name,
+                dist.NegativeBinomial2(
+                    mean=random_variables.get(self.mean_varname),
+                    concentration=self.sample_prior(),
+                ),
+                obs=random_variables.get(self.counts_varname, None),
             ),
-            obs=random_variables.get(self.counts_varname, None),
         )
 
     @staticmethod

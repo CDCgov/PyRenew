@@ -19,7 +19,7 @@ def test_hospitalizations_sample():
     np.random.seed(223)
     rt = RtRandomWalkProcess()
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt = rt.sample(constants={"n_timepoints": 30})
+        sim_rt, *_ = rt.sample(constants={"n_timepoints": 30})
 
     inf1 = InfectionsObservation(jnp.array([0.25, 0.25, 0.25, 0.25]))
 

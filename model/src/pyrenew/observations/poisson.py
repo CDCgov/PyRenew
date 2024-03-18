@@ -58,12 +58,14 @@ class PoissonObservation(RandomProcess):
         :return: _description_
         :rtype: _type_
         """
-        return numpyro.sample(
-            self.parameter_name,
-            dist.Poisson(
-                rate=random_variables.get(self.rate_varname) + self.eps
+        return (
+            numpyro.sample(
+                self.parameter_name,
+                dist.Poisson(
+                    rate=random_variables.get(self.rate_varname) + self.eps
+                ),
+                obs=random_variables.get(self.counts_varname, None),
             ),
-            obs=random_variables.get(self.counts_varname, None),
         )
 
     @staticmethod

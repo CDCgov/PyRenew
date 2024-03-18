@@ -6,10 +6,60 @@ Observation helper classes
 """
 
 from abc import ABCMeta, abstractmethod
+from collections import namedtuple
 
 import jax
 from numpyro.infer import MCMC, NUTS
 from pyrenew.mcmcutils import spread_draws
+
+
+def _assert_sample_and_rtype(
+    fn: "RandomProcess", skip_if_none: bool = True
+) -> None:
+    """Return type-checking for RandomProcess's sample function
+
+    Objects passed as `RandomProcess` should (a) have a `sample()` method that
+    (b) returns either a tuple or a named tuple.
+
+    :param fn: _description_
+    :type fn: RandomProcess
+    :raises Exception: _description_
+    :raises Exception: _description_
+    :return: _description_
+    :rtype: _type_
+    """
+
+    if (fn is None) and (not skip_if_none):
+        Exception(
+            "The passed object cannot be None. It should be RandomProcess"
+        )
+
+    if not isinstance(fn, RandomProcess):
+        raise Exception(f"{fn.__name__} is not an instance of RandomProcess.")
+
+    try:
+        sfun = fn.sample
+    except Exception:
+        raise Exception(
+            f"The RandomProcess {fn.__name__} does not have a sample function."
+        )  # noqa: E722
+
+    # Getting the return annotation (if any)
+    rettype = sfun.__annotations__.get("return", None)
+
+    if rettype is None:
+        raise Exception(
+            f"The RandomProcess {fn.__name__} does not have return type "
+            + "annotation."
+        )
+
+    if not isinstance(rettype(), (tuple, namedtuple)):
+        raise Exception(
+            f"The RandomProcess {fn.__name__}'s return type annotation is not"
+            + "a tuple"
+        )
+
+    return None
 
 
 class RandomProcess(metaclass=ABCMeta):
@@ -27,22 +77,22 @@ class RandomProcess(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def sample(
-        self,
-        random_variables: dict = None,
-        constants: dict = None,
-        **kwargs,
-    ):
+    def sample(self, random_variables: dict = None, constants: dict = None):
         """Sample method of the process
 
-        The method desing in the class should have `obs` and `data` by default.
-        The observed data (`obs`) should be contained in a dictionary. The
-        `data` argument should be used for additional paramters.
+        The method desing in the class should have two dictionaries:
+        `random_variables` and `constants`.
+
+        - `randon_variables`: This dictionary contains any data that sample
+          function may pass to `numpyro.sample(obs=...)`.
+
+        - `constants`: Contains any data that the sample function does not pass
+          to `numpyro.sample(obs=...)`.
 
         :param random_variables: _description_, defaults to None
-        :type random_variables: _type_, optional
+        :type random_variables: dict, optional
         :param constants: _description_, defaults to None
-        :type constants: _type_, optional
+        :type constants: dict, optional
         """
         pass
 
@@ -67,7 +117,11 @@ class Model(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def model(self, data):
+    def model(
+        self,
+        random_variables: dict = None,
+        constants: dict = None,
+    ):
         pass
 
     def _init_model(
@@ -112,10 +166,10 @@ class Model(metaclass=ABCMeta):
         num_warmup,
         num_samples,
         rng_key: jax.random.PRNGKey = jax.random.PRNGKey(54),
-        random_variables: dict = dict(),
-        constants: dict = dict(),
-        nuts_args: dict = dict(),
-        mcmc_args: dict = dict(),
+        random_variables: dict = None,
+        constants: dict = None,
+        nuts_args: dict = None,
+        mcmc_args: dict = None,
     ) -> None:
         """Runs the model
 

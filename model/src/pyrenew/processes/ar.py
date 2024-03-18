@@ -22,7 +22,12 @@ class ARProcess(RandomProcess):
     Numpyro
     """
 
-    def __init__(self, mean: float, autoreg: ArrayLike, noise_sd: float):
+    def __init__(
+        self,
+        mean: float,
+        autoreg: ArrayLike,
+        noise_sd: float,
+    ):
         """Default constructor
 
         :param mean: Mean parameter.
@@ -71,7 +76,7 @@ class ARProcess(RandomProcess):
         )
 
         last, ts = lax.scan(_ar_scanner, inits - self.mean, noise)
-        return self.mean + ts.flatten()
+        return (self.mean + ts.flatten(),)
 
     @staticmethod
     def validate():

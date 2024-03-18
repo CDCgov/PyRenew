@@ -3,7 +3,7 @@
 
 from collections import namedtuple
 
-from pyrenew.metaclasses import Model, RandomProcess
+from pyrenew.metaclasses import Model, RandomProcess, _assert_sample_and_rtype
 from pyrenew.processes import RtRandomWalkProcess
 
 # Output class of the BasicRenewalModel
@@ -31,25 +31,39 @@ class BasicRenewalModel(Model):
         :param infections_obs: Infections observation process (e.g.,
             pyrenew.observations.InfectionsObservation.)
         :type infections_obs: RandomProcess
-        :param Rt_process: Rt sampled, defaults to RtRandomWalkProcess()
+        :param Rt_process: Rt sampled, defaults to
+            `pyrenew.processes.RtRandomWalkProcess()`. The sample function of
+            the process should return a tuple where the first element is the
+            drawn Rt.
         :type Rt_process: RandomProcess, optional
         """
+
+        self.validate(infections_obs, Rt_process)
+
         self.infections_obs = infections_obs
         self.Rt_process = Rt_process
 
     @staticmethod
-    def validate(infections_obs, hospitalizations_obs) -> None:
+    def validate(infections_obs, Rt_process) -> None:
+        _assert_sample_and_rtype(infections_obs, skip_if_none=False)
+        _assert_sample_and_rtype(Rt_process, skip_if_none=False)
         return None
 
-    def sample_rt(self, random_variables: dict = None, constants: dict = None):
+    def sample_rt(
+        self,
+        random_variables: dict = None,
+        constants: dict = None,
+    ) -> tuple:
         return self.Rt_process.sample(
             random_variables=random_variables,
             constants=constants,
         )
 
     def sample_infections(
-        self, random_variables: dict = None, constants: dict = None
-    ):
+        self,
+        random_variables: dict = None,
+        constants: dict = None,
+    ) -> tuple:
         return self.infections_obs.sample(
             random_variables=random_variables,
             constants=constants,
@@ -79,14 +93,14 @@ class BasicRenewalModel(Model):
 
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomProcess) object.)
-        Rt = self.sample_rt(
+        Rt, *_ = self.sample_rt(
             random_variables=random_variables,
             constants=constants,
         )
 
         # Sampling infections. Possibly, if infections are passed via
         # `random_variables`, the model will pass that to numpyro.sample.
-        infect_predicted, infect_observed = self.sample_infections(
+        infect_predicted, infect_observed, *_ = self.sample_infections(
             random_variables={**random_variables, **dict(Rt=Rt)},
             constants=constants,
         )

@@ -8,7 +8,7 @@ import numpyro as npro
 import numpyro.distributions as dist
 from numpy.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
-from pyrenew.metaclasses import RandomProcess
+from pyrenew.metaclasses import RandomProcess, _assert_sample_and_rtype
 
 HospSampledObs = namedtuple(
     "HospSampledObs",
@@ -60,16 +60,14 @@ class HospitalizationsObservation(RandomProcess):
                 )
             )
         else:
-            self.sample_hosp = lambda random_variables, constants: None
+            self.sample_hosp = lambda random_variables, constants: (None,)
 
         self.IHR_dist = IHR_dist
         self.inf_hosp = validate_discrete_dist_vector(inf_hosp_int)
 
     @staticmethod
     def validate(hosp_dist, IHR_dist) -> None:
-        # if hosp_dist is not None:
-        #     assert isinstance(hosp_dist, dist.Distribution)
-
+        _assert_sample_and_rtype(hosp_dist)
         assert isinstance(IHR_dist, dist.Distribution)
 
         return None
@@ -116,7 +114,7 @@ class HospitalizationsObservation(RandomProcess):
             self.hospitalizations_obs_varname, None
         )
 
-        sampled_hosps = self.sample_hosp(
+        sampled_hosps, *_ = self.sample_hosp(
             random_variables=rvars,
             constants=constants,
         )

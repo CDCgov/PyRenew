@@ -30,7 +30,7 @@ def test_rw_samples_correctly_distributed():
         rw_normal = SimpleRandomWalkProcess(dist.Normal(step_mean, step_sd))
 
         with numpyro.handlers.seed(rng_seed=62):
-            samples = rw_normal.sample(n_samples, init=jnp.array([50.0]))
+            samples, *_ = rw_normal.sample(n_samples, init=jnp.array([50.0]))
 
             # diffs should not be greater than
             # 4 sigma

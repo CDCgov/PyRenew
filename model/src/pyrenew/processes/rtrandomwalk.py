@@ -47,7 +47,7 @@ class RtRandomWalkProcess(RandomProcess):
         self,
         random_variables: dict = None,
         constants: dict = None,
-    ):
+    ) -> tuple:
         """Generate samples from the process
 
         :param random_variables: A dictionary containing `Rt0` (optional).
@@ -72,10 +72,10 @@ class RtRandomWalkProcess(RandomProcess):
 
         Rt0_trans = self.Rt_transform(Rt0)
         Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)
-        Rt_trans_ts = Rt_trans_proc.sample(
+        Rt_trans_ts, *_ = Rt_trans_proc.sample(
             duration=n_timepoints, name="Rt_transformed_rw", init=Rt0_trans
         )
 
         Rt = npro.deterministic("Rt", self.Rt_transform.inverse(Rt_trans_ts))
 
-        return Rt
+        return (Rt,)
