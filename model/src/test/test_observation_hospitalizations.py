@@ -19,7 +19,7 @@ def test_hospitalizations_sample():
     np.random.seed(223)
     rt = RtRandomWalkProcess()
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt = rt.sample(data={"n_timepoints": 30})
+        sim_rt = rt.sample(constants={"n_timepoints": 30})
 
     inf1 = InfectionsObservation(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
@@ -35,9 +35,11 @@ def test_hospitalizations_sample():
     )
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_hosp_1 = hosp1.sample(constants=dict(infections=inf_sampled1[1]))
+        sim_hosp_1 = hosp1.sample(
+            random_variables=dict(infections_obs=inf_sampled1.predicted)
+        )
 
     testing.assert_array_less(
-        sim_hosp_1[1],
-        inf_sampled1[1],
+        sim_hosp_1.predicted,
+        inf_sampled1.predicted,
     )

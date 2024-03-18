@@ -18,6 +18,8 @@ class NegativeBinomialObservation(RandomProcess):
         concentration_prior: dist.Distribution | ArrayLike,
         concentration_suffix: str = "_concentration",
         parameter_name="negbinom_rv",
+        mean_varname="mean",
+        counts_varname="counts",
     ):
         """Default constructor
 
@@ -37,6 +39,14 @@ class NegativeBinomialObservation(RandomProcess):
         :type concentration_suffix: str, optional
         :param parameter_name: _description_, defaults to "negbinom_rv"
         :type parameter_name: str, optional
+        :param mean_varname: Name of the element in `random_variables` that will
+            hold the rate when calling `PoissonObservation.sample()`. Defaults
+            to 'mean'.
+        :type mean_varname: str, optional
+        :param counts_varname: Name of the element in `random_variables` that will
+            hold the observed count when calling `PoissonObservation.sample()`.
+            Defaults to 'counts'.
+        :type counts_varname: str, optional
         """
 
         self.validate(concentration_prior)
@@ -51,6 +61,8 @@ class NegativeBinomialObservation(RandomProcess):
 
         self.parameter_name = parameter_name
         self.concentration_suffix = concentration_suffix
+        self.mean_varname = mean_varname
+        self.counts_varname = counts_varname
 
     def sample(
         self,
@@ -71,10 +83,10 @@ class NegativeBinomialObservation(RandomProcess):
         return numpyro.sample(
             self.parameter_name,
             dist.NegativeBinomial2(
-                mean=random_variables.get("mean"),
+                mean=random_variables.get(self.mean_varname),
                 concentration=self.sample_prior(),
             ),
-            obs=random_variables.get("counts", None),
+            obs=random_variables.get(self.counts_varname, None),
         )
 
     @staticmethod

@@ -3,8 +3,16 @@
 
 from collections import namedtuple
 
+from pyrenew.metaclasses import RandomProcess
 from pyrenew.models.basicrenewal import BasicRenewalModel
 from pyrenew.processes import RtRandomWalkProcess
+
+HospModelSample = namedtuple(
+    "HospModelSample",
+    ["Rt", "infect_sampled", "IHR", "pred_hosps", "samp_hosp"],
+)
+"""Output from HospitalizationsModel.model()
+"""
 
 
 class HospitalizationsModel(BasicRenewalModel):
@@ -16,10 +24,12 @@ class HospitalizationsModel(BasicRenewalModel):
 
     def __init__(
         self,
-        infections_obs,
-        hosp_obs,
-        Rt_process=RtRandomWalkProcess(),
+        infections_obs: RandomProcess,
+        hosp_obs: RandomProcess,
+        Rt_process: RandomProcess = RtRandomWalkProcess(),
     ) -> None:
+        self.validate(hosp_obs)
+
         BasicRenewalModel.__init__(
             self,
             infections_obs=infections_obs,
@@ -29,7 +39,8 @@ class HospitalizationsModel(BasicRenewalModel):
         self.hosp_obs = hosp_obs
 
     @staticmethod
-    def validate() -> None:
+    def validate(hosp_obs) -> None:
+        assert isinstance(hosp_obs, RandomProcess)
         return None
 
     def sample_hospitalizations(
@@ -53,7 +64,9 @@ class HospitalizationsModel(BasicRenewalModel):
             constants=constants,
         )
 
-    def model(self, random_variables: dict = None, constants: dict = None):
+    def model(
+        self, random_variables: dict = None, constants: dict = None
+    ) -> HospModelSample:
         if random_variables is None:
             random_variables = dict()
 
@@ -65,16 +78,14 @@ class HospitalizationsModel(BasicRenewalModel):
         )
 
         IHR, pred_hosps, samp_hosp = self.sample_hospitalizations(
-            random_variables=random_variables,
-            constants={**constants, **dict(infections=infect_sampled)},
+            random_variables={
+                **random_variables,
+                **dict(infections=infect_sampled),
+            },
+            constants=constants,
         )
 
-        HospSample = namedtuple(
-            "HospSample",
-            ["Rt", "infect_sampled", "IHR", "pred_hosps", "samp_hosp"],
-        )
-
-        return HospSample(
+        return HospModelSample(
             Rt=Rt,
             infect_sampled=infect_sampled,
             IHR=IHR,

@@ -6,6 +6,13 @@ from collections import namedtuple
 from pyrenew.metaclasses import Model, RandomProcess
 from pyrenew.processes import RtRandomWalkProcess
 
+# Output class of the BasicRenewalModel
+BasicModelSample = namedtuple(
+    "InfectModelSample",
+    ["Rt", "infect_predicted", "infect_observed"],
+)
+"""Output from BasicRenewalModel.model()"""
+
 
 class BasicRenewalModel(Model):
     """
@@ -50,7 +57,7 @@ class BasicRenewalModel(Model):
         self,
         random_variables: dict = None,
         constants: dict = None,
-    ):
+    ) -> BasicModelSample:
         """_summary_
 
         :param random_variables: A dictionary containing `infections` and/or
@@ -70,17 +77,13 @@ class BasicRenewalModel(Model):
         if random_variables is None:
             random_variables = dict()
 
-        infect_sampled, infect_expected = self.sample_infections(
+        infect_predicted, infect_observed = self.sample_infections(
             random_variables={**random_variables, **dict(Rt=Rt)},
             constants=constants,
         )
 
-        InfectSample = namedtuple(
-            "InfectSample", ["Rt", "infect_sampled", "infect_expected"]
-        )
-
-        return InfectSample(
+        return BasicModelSample(
             Rt=Rt,
-            infect_sampled=infect_sampled,
-            infect_expected=infect_expected,
+            infect_predicted=infect_predicted,
+            infect_observed=infect_observed,
         )

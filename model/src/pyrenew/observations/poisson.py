@@ -11,17 +11,35 @@ class PoissonObservation(RandomProcess):
     Poisson observation process
     """
 
-    def __init__(self, parameter_name="poisson_rv") -> None:
+    def __init__(
+        self,
+        parameter_name="poisson_rv",
+        rate_varname="rate",
+        counts_varname="counts",
+        eps=1e-8,
+    ) -> None:
         """Constructor
 
         :param parameter_name: Passed to numpyro.sample, defaults to
             "poisson_rv"
         :type parameter_name: str, optional
+        :param rate_varname: Name of the element in `random_variables` that will
+            hold the rate when calling `PoissonObservation.sample()`. Defaults
+            to 'rate'.
+        :type rate_varname: str, optional
+        :param counts_varname: Name of the element in `random_variables` that will
+            hold the observed count when calling `PoissonObservation.sample()`.
+            Defaults to 'counts'.
+        :type counts_varname: str, optional
         :return: _description_
         :rtype: _type_
         """
 
         self.parameter_name = parameter_name
+        self.rate_varname = rate_varname
+        self.counts_varname = counts_varname
+        self.eps = eps
+
         return None
 
     def sample(
@@ -42,8 +60,10 @@ class PoissonObservation(RandomProcess):
         """
         return numpyro.sample(
             self.parameter_name,
-            dist.Poisson(rate=random_variables.get("rate")),
-            obs=random_variables.get("counts", None),
+            dist.Poisson(
+                rate=random_variables.get(self.rate_varname) + self.eps
+            ),
+            obs=random_variables.get(self.counts_varname, None),
         )
 
     @staticmethod

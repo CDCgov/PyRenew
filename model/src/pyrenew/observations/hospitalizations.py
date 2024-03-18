@@ -1,12 +1,20 @@
 #!/usr/bin/env/python
 # -*- coding: utf-8 -*-
 
+from collections import namedtuple
+
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
 from numpy.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.metaclasses import RandomProcess
+
+HospSampledObs = namedtuple(
+    "HospSampledObs",
+    ["IHR", "predicted", "sampled"],
+)
+"""Output from HospitalizationsObservation.sample()"""
 
 
 class HospitalizationsObservation(RandomProcess):
@@ -15,7 +23,11 @@ class HospitalizationsObservation(RandomProcess):
     def __init__(
         self,
         inf_hosp_int: ArrayLike,
-        hosp_dist: dist.Distribution = None,
+        IHR_obs_varname: str = "IHR_obs",
+        infections_obs_varname: str = "infections_obs",
+        hospitalizations_predicted_varname: str = "hospitalizations_predicted",
+        hospitalizations_obs_varname: str = "hospitalizations_obs",
+        hosp_dist: RandomProcess = None,
         IHR_dist: dist.Distribution = dist.LogNormal(jnp.log(0.05), 0.05),
     ) -> None:
         """Default constructor
@@ -34,14 +46,18 @@ class HospitalizationsObservation(RandomProcess):
         self.validate(hosp_dist, IHR_dist)
 
         self.hosp_dist = hosp_dist
+        self.IHR_obs_varname = IHR_obs_varname
+        self.infections_obs_varname = infections_obs_varname
+        self.hospitalizations_predicted_varname = (
+            hospitalizations_predicted_varname
+        )
+        self.hospitalizations_obs_varname = hospitalizations_obs_varname
 
         if hosp_dist is not None:
-            self.sample_hosp = lambda random_variables, constants: npro.sample(
-                name="sampled_hospitalizations",
-                fn=self.hosp_dist(
-                    random_variables.get("predicted_hospitalizations")
-                ),
-                obs=random_variables.get("observed_hospitalizations"),
+            self.sample_hosp = (
+                lambda random_variables, constants: self.hosp_dist.sample(
+                    random_variables=random_variables, constants=constants
+                )
             )
         else:
             self.sample_hosp = lambda random_variables, constants: None
@@ -62,7 +78,7 @@ class HospitalizationsObservation(RandomProcess):
         self,
         random_variables: dict = None,
         constants: dict = None,
-    ):
+    ) -> HospSampledObs:
         """Samples from the observation process
         :param random_variables: A dictionary with `IHR` passed to `obs` in
             `npyro.sample()`.
@@ -80,20 +96,29 @@ class HospitalizationsObservation(RandomProcess):
             constants = dict()
 
         IHR = npro.sample(
-            "IHR", self.IHR_dist, obs=random_variables.get("IHR", None)
+            "IHR",
+            self.IHR_dist,
+            obs=random_variables.get(self.IHR_obs_varname, None),
         )
 
-        IHR_t = IHR * constants.get("infections")
+        IHR_t = IHR * random_variables.get(self.infections_obs_varname)
 
         pred_hosps = jnp.convolve(IHR_t, self.inf_hosp, mode="full")[
             : IHR_t.shape[0]
         ]
 
-        npro.deterministic("predicted_hospitalizations", pred_hosps)
+        npro.deterministic(self.hospitalizations_predicted_varname, pred_hosps)
+
+        # Preparing dict
+        rvars = dict()
+        rvars[self.hospitalizations_predicted_varname] = pred_hosps
+        rvars[self.hospitalizations_obs_varname] = random_variables.get(
+            self.hospitalizations_obs_varname, None
+        )
 
         sampled_hosps = self.sample_hosp(
-            random_variables=dict(predicted_hospitalizations=pred_hosps),
+            random_variables=rvars,
             constants=constants,
         )
 
-        return IHR, pred_hosps, sampled_hosps
+        return HospSampledObs(IHR, pred_hosps, sampled_hosps)

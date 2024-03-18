@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
@@ -9,11 +11,18 @@ from pyrenew.distutil import (
 )
 from pyrenew.metaclasses import RandomProcess
 
+InfecitonsSample = namedtuple("InfecitonsSample", ["predicted", "observed"])
+"""Output from InfectionsObservation.sample()"""
+
 
 class InfectionsObservation(RandomProcess):
     def __init__(
         self,
         gen_int: ArrayLike,
+        I0_varname: str = "I0",
+        Rt_varname: str = "Rt",
+        infections_mean_varname: str = "infections_mean",
+        infections_obs_varname: str = "infections_obs",
         I0_dist: dist.Distribution = dist.LogNormal(2, 0.25),
         inf_observation_model: dist.Distribution = None,
     ):
@@ -22,6 +31,18 @@ class InfectionsObservation(RandomProcess):
 
         :param gen_int: A vector representing the pmf of the generation interval
         :type gen_int: ArrayLike
+        :param I0_varname: Name of the element in `random_variables` that will
+            hold the value of 'I0'.
+        :type I0_varname: str.
+        :param Rt_varname: Name of the element in `random_variables` that will
+            hold the value of 'Rt'.
+        :type Rt_varname: str.
+        :param infections_mean_varname: Name of the element in `random_variables`
+            that will hold the value of mean 'infections'.
+        :type infections_mean_varname: str.
+        :param infections_obs_varname: Name of the element in `random_variables`
+            that will hold the value of observed 'infections'.
+        :type infections_obs_varname: str.
         :param I0_dist: Distribution from where to sample the baseline number of
             infections, defaults to dist.LogNormal(2, 0.25)
         :type I0_dist: dist.Distribution, optional
@@ -45,11 +66,14 @@ class InfectionsObservation(RandomProcess):
         else:
             self.obs_model = (
                 lambda random_variables, constants: random_variables.get(
-                    "counts", None
+                    self.infections_obs_varname
                 )
-                if (random_variables.get("counts", None) is not None)
-                else random_variables.get("rate")
             )
+
+        self.I0_varname = I0_varname
+        self.Rt_varname = Rt_varname
+        self.infections_mean_varname = infections_mean_varname
+        self.infections_obs_varname = infections_obs_varname
 
         return None
 
@@ -64,7 +88,7 @@ class InfectionsObservation(RandomProcess):
         self,
         random_variables: dict,
         constants: dict = None,
-    ):
+    ) -> InfecitonsSample:
         """Samples infections given Rt
 
         :param random_variables: A dictionary containing an observed `Rt`
@@ -79,7 +103,7 @@ class InfectionsObservation(RandomProcess):
         I0 = npro.sample(
             name="I0",
             fn=self.I0_dist,
-            obs=random_variables.get("I0", None),
+            obs=random_variables.get(self.I0_varname, None),
         )
 
         n_lead = self.gen_int_rev.size - 1
@@ -87,18 +111,22 @@ class InfectionsObservation(RandomProcess):
 
         all_infections = inf.sample_infections_rt(
             I0=I0_vec,
-            Rt=random_variables.get("Rt"),
+            Rt=random_variables.get(self.Rt_varname),
             reversed_generation_interval_pmf=self.gen_int_rev,
         )
 
-        npro.deterministic("incidence", all_infections)
+        npro.deterministic(self.infections_mean_varname, all_infections)
+
+        # If specified, building the rv
+        rvars = dict()
+        rvars[self.infections_mean_varname] = all_infections
+        rvars[self.infections_obs_varname] = random_variables.get(
+            self.infections_obs_varname, None
+        )
 
         observed = self.obs_model(
-            random_variables=dict(
-                rate=all_infections,
-                counts=random_variables.get("infections", None),
-            ),
+            random_variables=rvars,
             constants=constants,
         )
 
-        return observed, all_infections
+        return InfecitonsSample(all_infections, observed)

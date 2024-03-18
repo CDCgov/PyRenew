@@ -15,7 +15,7 @@ def test_infections_as_deterministic():
     np.random.seed(223)
     rt = RtRandomWalkProcess()
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt = rt.sample(data={"n_timepoints": 30})
+        sim_rt = rt.sample(constants={"n_timepoints": 30})
 
     inf1 = InfectionsObservation(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
@@ -25,7 +25,8 @@ def test_infections_as_deterministic():
         inf_sampled2 = inf1.sample(random_variables=obs)
 
     # Should match!
-    testing.assert_array_equal(inf_sampled1, inf_sampled2)
+    testing.assert_array_equal(inf_sampled1.predicted, inf_sampled2.predicted)
+    testing.assert_array_equal(inf_sampled1.observed, inf_sampled2.observed)
 
 
 def test_infections_as_random():
@@ -34,11 +35,13 @@ def test_infections_as_random():
     np.random.seed(223)
     rt = RtRandomWalkProcess()
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt = rt.sample(data={"n_timepoints": 30})
+        sim_rt = rt.sample(constants={"n_timepoints": 30})
 
     inf1 = InfectionsObservation(
         jnp.array([0.25, 0.25, 0.25, 0.25]),
-        inf_observation_model=PoissonObservation(),
+        inf_observation_model=PoissonObservation(
+            rate_varname="infections_mean"
+        ),
     )
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
@@ -50,6 +53,6 @@ def test_infections_as_random():
         inf_sampled1 = inf1.sample(random_variables=obs)
         inf_sampled2 = inf1.sample(random_variables=obs)
 
-    # Should match!
-    testing.assert_array_equal(inf_sampled1[0], inf_sampled2[0])
-    testing.assert_array_equal(inf_sampled1[1], inf_sampled2[1])
+    # Observed shouldn't match (bc/sampled)!
+    testing.assert_array_equal(inf_sampled1.predicted, inf_sampled2.predicted)
+    assert not all(inf_sampled1.observed == inf_sampled2.observed)
