@@ -44,3 +44,4 @@ todo_include_todos = True
 
 html_theme = 'classic'
 html_static_path = ['_static']
+html_css_files = ['msei.css']

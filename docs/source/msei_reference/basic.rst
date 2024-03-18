@@ -5,3 +5,5 @@ Basic Renewal Model Module
    :members:
    :undoc-members:
    :show-inheritance:
+
+..todo:: Describe `basic` in greater detail. 

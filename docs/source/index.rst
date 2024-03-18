@@ -8,20 +8,27 @@ CFA Multisignal Renewal Documentation
 
 Welcome, CFA wishes you a nice day!
 
+
+Documentation Components
+========================
+
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 1
 
    msei_reference/index
    test_reference/index
 
-
 Indices And Tables
 ==================
 
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
+.. toctree::
+   :maxdepth: 1
+ 
+   genindex
+   modindex
+   search
+   glossary
+   ctoc
 
 Meta Information 
 ================
