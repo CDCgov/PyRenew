@@ -15,9 +15,10 @@ BasicModelSample = namedtuple(
 
 
 class BasicRenewalModel(Model):
-    """
-    Implementation of a basic
-    renewal model.
+    """Basic Renewal Model (Infections + Rt)
+
+    The basic renewal model consists of a sampler of two steps: Sample from
+    Rt and then used that to sample the infections.
     """
 
     def __init__(
@@ -25,12 +26,13 @@ class BasicRenewalModel(Model):
         infections_obs: RandomProcess,
         Rt_process: RandomProcess = RtRandomWalkProcess(),
     ) -> None:
-        """_summary_
+        """Default constructor
 
-        Args:
-            infections_obs (RandomProcess): Observation process of infections.
-            Rt_process (RandomProcess, optional): _description_. Defaults to
-            RtRandomWalkProcess().
+        :param infections_obs: Infections observation process (e.g.,
+            pyrenew.observations.InfectionsObservation.)
+        :type infections_obs: RandomProcess
+        :param Rt_process: Rt sampled, defaults to RtRandomWalkProcess()
+        :type Rt_process: RandomProcess, optional
         """
         self.infections_obs = infections_obs
         self.Rt_process = Rt_process
@@ -69,14 +71,21 @@ class BasicRenewalModel(Model):
         :rtype: _type_
         """
 
+        if random_variables is None:
+            random_variables = dict()
+
+        if constants is None:
+            constants = dict()
+
+        # Sampling from Rt (possibly with a given Rt, depending on
+        # the Rt_process (RandomProcess) object.)
         Rt = self.sample_rt(
             random_variables=random_variables,
             constants=constants,
         )
 
-        if random_variables is None:
-            random_variables = dict()
-
+        # Sampling infections. Possibly, if infections are passed via
+        # `random_variables`, the model will pass that to numpyro.sample.
         infect_predicted, infect_observed = self.sample_infections(
             random_variables={**random_variables, **dict(Rt=Rt)},
             constants=constants,

@@ -16,10 +16,11 @@ HospModelSample = namedtuple(
 
 
 class HospitalizationsModel(BasicRenewalModel):
-    """
-    Implementation of a basic
-    renewal model, not abstracted
-    or modular, just for testing
+    """Hospitalizations Model (BasicRenewal + Hospitalizations)
+
+    This class inherits from pyrenew.models.BasicRenewalModel. It extends the
+    basic renewal model by adding a hospitalization module, e.g.,
+    pyrenew.observations.HospitalizationsObservation.
     """
 
     def __init__(
@@ -28,6 +29,15 @@ class HospitalizationsModel(BasicRenewalModel):
         hosp_obs: RandomProcess,
         Rt_process: RandomProcess = RtRandomWalkProcess(),
     ) -> None:
+        """Default constructor
+
+        :param infections_obs: The infections observation process.
+        :type infections_obs: RandomProcess
+        :param hosp_obs: _description_
+        :type hosp_obs: RandomProcess
+        :param Rt_process: _description_, defaults to RtRandomWalkProcess()
+        :type Rt_process: RandomProcess, optional
+        """
         self.validate(hosp_obs)
 
         BasicRenewalModel.__init__(
