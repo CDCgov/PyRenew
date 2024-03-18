@@ -26,8 +26,7 @@ class InfectionsObservation(RandomProcess):
         I0_dist: dist.Distribution = dist.LogNormal(2, 0.25),
         inf_observation_model: dist.Distribution = None,
     ):
-        """
-        Observation of Infections given Rt (Random Process)
+        """Observation of Infections given Rt (Random Process)
 
         :param gen_int: A vector representing the pmf of the generation interval
         :type gen_int: ArrayLike

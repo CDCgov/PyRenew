@@ -18,7 +18,7 @@ class PoissonObservation(RandomProcess):
         counts_varname="counts",
         eps=1e-8,
     ) -> None:
-        """Constructor
+        """Default Constructor
 
         :param parameter_name: Passed to numpyro.sample, defaults to
             "poisson_rv"

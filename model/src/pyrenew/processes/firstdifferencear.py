@@ -20,6 +20,13 @@ class FirstDifferenceARProcess(RandomProcess):
     """
 
     def __init__(self, autoreg, noise_sd):
+        """Default constructor
+
+        :param autoreg: Process parameters pyrenew.processesARprocess.
+        :type autoreg: _type_
+        :param noise_sd: Error passed to pyrenew.processes.ARProcess
+        :type noise_sd: _type_
+        """
         self.rate_of_change_proc = ARProcess(0, jnp.array([autoreg]), noise_sd)
 
     def sample(
