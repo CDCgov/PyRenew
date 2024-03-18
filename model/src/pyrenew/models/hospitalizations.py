@@ -3,7 +3,7 @@
 
 from collections import namedtuple
 
-from pyrenew.metaclasses import RandomProcess, _assert_sample_and_rtype
+from pyrenew.metaclasses import Model, RandomProcess, _assert_sample_and_rtype
 from pyrenew.models.basicrenewal import BasicRenewalModel
 from pyrenew.processes import RtRandomWalkProcess
 
@@ -12,14 +12,14 @@ HospModelSample = namedtuple(
     ["Rt", "infect_sampled", "IHR", "pred_hosps", "samp_hosp"],
     defaults=[None, None, None, None, None],
 )
-"""Output from HospitalizationsModel.model()
+"""Output from HospitalizationsModel.sample()
 """
 
 
-class HospitalizationsModel(BasicRenewalModel):
+class HospitalizationsModel(Model):
     """Hospitalizations Model (BasicRenewal + Hospitalizations)
 
-    This class inherits from pyrenew.models.BasicRenewalModel. It extends the
+    This class inherits from pyrenew.models.Model. It extends the
     basic renewal model by adding a hospitalization module, e.g.,
     pyrenew.observations.HospitalizationsObservation.
     """
@@ -45,7 +45,7 @@ class HospitalizationsModel(BasicRenewalModel):
         -------
         None
         """
-        super().__init__(
+        self.basic_renewal = BasicRenewalModel(
             infections_obs=infections_obs,
             Rt_process=Rt_process,
         )
@@ -86,12 +86,12 @@ class HospitalizationsModel(BasicRenewalModel):
             constants=constants,
         )
 
-    def model(
+    def sample(
         self,
         random_variables: dict = None,
         constants: dict = None,
     ) -> HospModelSample:
-        """Hospitalizations model
+        """Sample from the Hospitalizations model
 
         Parameters
         ----------
@@ -111,7 +111,7 @@ class HospitalizationsModel(BasicRenewalModel):
         if constants is None:
             constants = dict()
 
-        Rt, infect_sampled, *_ = super().model(constants=constants)
+        Rt, infect_sampled, *_ = self.basic_renewal.sample(constants=constants)
 
         IHR, pred_hosps, samp_hosp, *_ = self.sample_hospitalizations(
             random_variables={

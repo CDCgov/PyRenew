@@ -25,7 +25,7 @@ class NegativeBinomialObservation(RandomProcess):
 
         Parameters
         ----------
-        concentration_prior : dist.Distribution
+        concentration_prior : dist.Distribution | nummbers.nums
             Numpyro distribution from which to sample the positive concentration
             parameter of the negative binomial. This parameter is sometimes
             called k, phi, or the "dispersion" or "overdispersion" parameter,

@@ -8,44 +8,49 @@ Observation helper classes
 from abc import ABCMeta, abstractmethod
 
 import jax
+import polars as pl
 from numpyro.infer import MCMC, NUTS
 from pyrenew.mcmcutils import spread_draws
 
 
 def _assert_sample_and_rtype(
-    fn: "RandomProcess", skip_if_none: bool = True
+    rp: "RandomProcess", skip_if_none: bool = True
 ) -> None:
     """Return type-checking for RandomProcess's sample function
 
     Objects passed as `RandomProcess` should (a) have a `sample()` method that
     (b) returns either a tuple or a named tuple.
 
-    :param fn: _description_
-    :type fn: RandomProcess
-    :raises Exception: _description_
-    :raises Exception: _description_
-    :return: None
-    :rtype: _type_
+    Parameters
+    ----------
+    rp : RandomProcess
+        Random process to check.
+    skip_if_none: bool
+        When `True` it returns if `rp` is None.
+
+    Returns
+    -------
+    None
     """
 
     # Addressing the None case
-    if (fn is None) and (not skip_if_none):
+    if (rp is None) and (not skip_if_none):
         Exception(
             "The passed object cannot be None. It should be RandomProcess"
         )
-    elif skip_if_none and (fn is None):
+    elif skip_if_none and (rp is None):
         return None
 
-    if not isinstance(fn, RandomProcess):
-        raise Exception(f"{fn} is not an instance of RandomProcess.")
+    if not isinstance(rp, RandomProcess):
+        raise Exception(f"{rp} is not an instance of RandomProcess.")
 
     # Otherwise, checking for the sample function (must have one)
     # with a defined rtype.
     try:
-        sfun = fn.sample
+        sfun = rp.sample
     except Exception:
         raise Exception(
-            f"The RandomProcess {fn} does not have a sample function."
+            f"The RandomProcess {rp} does not have a sample function."
         )  # noqa: E722
 
     # Getting the return annotation (if any)
@@ -53,14 +58,14 @@ def _assert_sample_and_rtype(
 
     if rettype is None:
         raise Exception(
-            f"The RandomProcess {fn} does not have return type "
+            f"The RandomProcess {rp} does not have return type "
             + "annotation."
         )
 
     try:
         if not isinstance(rettype(), tuple):
             raise Exception(
-                f"The RandomProcess {fn}'s return type annotation is not"
+                f"The RandomProcess {rp}'s return type annotation is not"
                 + "a tuple"
             )
     except Exception:
@@ -88,7 +93,11 @@ class RandomProcess(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def sample(self, random_variables: dict = None, constants: dict = None):
+    def sample(
+        self,
+        random_variables: dict = None,
+        constants: dict = None,
+    ) -> tuple:
         """Sample method of the process
 
         The method desing in the class should have two dictionaries:
@@ -100,16 +109,22 @@ class RandomProcess(metaclass=ABCMeta):
         - `constants`: Contains any data that the sample function does not pass
           to `numpyro.sample(obs=...)`.
 
-        :param random_variables: _description_, defaults to None
-        :type random_variables: dict, optional
-        :param constants: _description_, defaults to None
-        :type constants: dict, optional
+        Parameters
+        ----------
+        random_variables : dict, optional
+            Dictionary of random variables, defaults to None
+        constants : dict, optional
+            Dictionary of constants
+
+        Returns
+        -------
+        tuple
         """
         pass
 
     @staticmethod
     @abstractmethod
-    def validate():
+    def validate(**kwargs) -> None:
         pass
 
 
@@ -119,20 +134,20 @@ class Model(metaclass=ABCMeta):
     mcmc = None
 
     @abstractmethod
-    def __init__(self):
+    def __init__(self, **kwargs) -> None:
         pass
 
     @staticmethod
     @abstractmethod
-    def validate():
+    def validate() -> None:
         pass
 
     @abstractmethod
-    def model(
+    def sample(
         self,
         random_variables: dict = None,
         constants: dict = None,
-    ):
+    ) -> tuple:
         pass
 
     def _init_model(
@@ -144,12 +159,17 @@ class Model(metaclass=ABCMeta):
     ) -> None:
         """Creates the NUTS kernel and MCMC model
 
-        Args:
-            nuts_args (dict, optional): _description_. Defaults to None.
-            mcmc_args (dict, optional): _description_. Defaults to None.
+        Parameters
+        ----------
+        nuts_args : dict, optional
+            Dictionary of arguments passed to NUTS. Defaults to None.
+        mcmc_args : dict, optional
+            Dictionary of arguments passed to the MCMC sampler. Defaults to
+            None.
 
-        Returns:
-            _type_: _description_
+        Returns
+        -------
+        None
         """
 
         if nuts_args is None:
@@ -159,7 +179,7 @@ class Model(metaclass=ABCMeta):
             mcmc_args = dict()
 
         self.kernel = NUTS(
-            model=self.model,
+            model=self.sample,
             **nuts_args,
         )
 
@@ -184,11 +204,15 @@ class Model(metaclass=ABCMeta):
     ) -> None:
         """Runs the model
 
-        Args:
-            nuts_args (dict, optional): _description_. Defaults to None.
-            mcmc_args (dict, optional): _description_. Defaults to None.
+        Parameters
+        ----------
+        nuts_args : dict, optional
+            Dictionary of arguments passed to the NUTS. Defaults to None.
+        mcmc_args : dict, optional
+            Dictionary of passed to the MCMC sampler. Defaults to None.
 
-        Returns:
+        Returns
+        -------
             None
         """
 
@@ -219,16 +243,9 @@ class Model(metaclass=ABCMeta):
         prob: float = 0.9,
         exclude_deterministic: bool = True,
     ) -> None:
-        """A wrapper of MCMC.print_summary.
-
-        Args:
-            prob (float, optional): _description_. Defaults to 0.9.
-            exclude_deterministic (bool, optional): _description_. Defaults to True.
-        """
+        """A wrapper of MCMC.print_summary"""
         return self.mcmc.print_summary(prob, exclude_deterministic)
 
-    def plot(self):
-        pass
-
-    def spread_draws(self, variables_names):
+    def spread_draws(self, variables_names: list) -> pl.DataFrame:
+        """A wrapper of mcmcutils.spread_draws"""
         return spread_draws(self.mcmc.get_samples(), variables_names)

@@ -11,3 +11,13 @@ from pyrenew.observations.negativebinomial import (  # noqa: F401
     NegativeBinomialObservation,
 )
 from pyrenew.observations.poisson import PoissonObservation  # noqa: F401
+
+__all__ = [
+    "HospitalizationsObservation",
+    "logistic_susceptibility_adjustment",
+    "sample_infections_rt",
+    "sample_infections_with_feedback",
+    "InfectionsObservation",
+    "NegativeBinomialObservation",
+    "PoissonObservation",
+]

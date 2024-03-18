@@ -8,7 +8,7 @@ import polars as pl
 
 def spread_draws(
     posteriors: dict,
-    variable_names: list,
+    variables_names: list,
 ) -> pl.DataFrame:
     """Get nicely shaped draws from the posterior
 
@@ -22,7 +22,7 @@ def spread_draws(
         A dictionary of posteriors with variable names as keys and numpy
         ndarrays as values (with the first axis corresponding to the posterior
         draw number.
-    variable_names: list[str] | list[tuple]
+    variables_names: list[str] | list[tuple]
         list of strings or of tuples identifying which variables to retrieve.
 
     Returns
@@ -30,7 +30,7 @@ def spread_draws(
     polars.DataFrame
     """
 
-    for i_var, v in enumerate(variable_names):
+    for i_var, v in enumerate(variables_names):
         if isinstance(v, str):
             v_dims = None
         else:

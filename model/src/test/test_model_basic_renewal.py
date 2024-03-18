@@ -22,7 +22,7 @@ def test_model_basicrenewal_no_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model0_samp = model0.model(constants={"n_timepoints": 30})
+        model0_samp = model0.sample(constants={"n_timepoints": 30})
 
     model0.run(
         num_warmup=500,
@@ -63,7 +63,7 @@ def test_model_basicrenewal_with_obs_model():
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.model(constants={"n_timepoints": 30})
+        model1_samp = model1.sample(constants={"n_timepoints": 30})
 
     model1.run(
         num_warmup=500,

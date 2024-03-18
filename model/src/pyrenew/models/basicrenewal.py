@@ -12,7 +12,7 @@ BasicModelSample = namedtuple(
     ["Rt", "infect_predicted", "infect_observed"],
     defaults=[None, None, None],
 )
-"""Output from BasicRenewalModel.model()"""
+"""Output from BasicRenewalModel.sample()"""
 
 
 class BasicRenewalModel(Model):
@@ -77,12 +77,12 @@ class BasicRenewalModel(Model):
             constants=constants,
         )
 
-    def model(
+    def sample(
         self,
         random_variables: dict = None,
         constants: dict = None,
     ) -> BasicModelSample:
-        """_summary_
+        """Sample from the Basic Renewal Model
 
         Parameters
         ----------
