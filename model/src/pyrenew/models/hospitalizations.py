@@ -21,13 +21,15 @@ class HospitalizationsModel(Model):
 
     This class inherits from pyrenew.models.Model. It extends the
     basic renewal model by adding a hospitalization module, e.g.,
-    pyrenew.observations.HospitalizationsObservation.
+    pyrenew.observations.Hospitalizations.
     """
 
     def __init__(
         self,
+        hosp_latent: RandomProcess,
         hosp_obs: RandomProcess,
-        infections_obs: RandomProcess,
+        infections_latent: RandomProcess,
+        infections_obs: RandomProcess = None,
         Rt_process: RandomProcess = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
@@ -46,22 +48,33 @@ class HospitalizationsModel(Model):
         None
         """
         self.basic_renewal = BasicRenewalModel(
+            infections_latent=infections_latent,
             infections_obs=infections_obs,
             Rt_process=Rt_process,
         )
 
-        HospitalizationsModel.validate(infections_obs, hosp_obs, Rt_process)
+        HospitalizationsModel.validate(hosp_latent, hosp_obs)
 
+        self.hosp_latent = hosp_latent
         self.hosp_obs = hosp_obs
 
     @staticmethod
-    def validate(infections_obs, hosp_obs, Rt_process) -> None:
-        _assert_sample_and_rtype(infections_obs)
-        _assert_sample_and_rtype(hosp_obs)
-        _assert_sample_and_rtype(Rt_process)
+    def validate(hosp_latent, hosp_obs) -> None:
+        _assert_sample_and_rtype(hosp_latent, skip_if_none=False)
+        _assert_sample_and_rtype(hosp_obs, skip_if_none=True)
         return None
 
-    def sample_hospitalizations(
+    def sample_hospitalizations_latent(
+        self,
+        random_variables: dict,
+        constants: dict = None,
+    ) -> tuple:
+        return self.hosp_latent.sample(
+            random_variables=random_variables,
+            constants=constants,
+        )
+
+    def sample_hospitalizations_obs(
         self,
         random_variables: dict,
         constants: dict = None,

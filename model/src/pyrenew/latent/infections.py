@@ -1,9 +1,7 @@
-from collections import namedtuple
-
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-import pyrenew.observations.infection_functions as inf
+import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
 from pyrenew.distutil import (
     reverse_discrete_dist_vector,
@@ -11,15 +9,8 @@ from pyrenew.distutil import (
 )
 from pyrenew.metaclasses import RandomProcess
 
-InfectionsSample = namedtuple(
-    "InfectionsSample",
-    ["predicted", "observed"],
-    defaults=[None, None],
-)
-"""Output from InfectionsObservation.sample()"""
 
-
-class InfectionsObservation(RandomProcess):
+class Infections(RandomProcess):
     def __init__(
         self,
         gen_int: ArrayLike,
@@ -28,7 +19,6 @@ class InfectionsObservation(RandomProcess):
         infections_mean_varname: str = "infections_mean",
         infections_obs_varname: str = "infections_obs",
         I0_dist: dist.Distribution = dist.LogNormal(2, 0.25),
-        inf_observation_model: RandomProcess = None,
     ) -> None:
         """Observation of Infections given Rt (Random Process)
 
@@ -51,29 +41,14 @@ class InfectionsObservation(RandomProcess):
         I0_dist : dist.Distribution, optional
             Distribution from where to sample the baseline number of infections.
 
-        inf_observation_model : RandomProcess, optional
-            RandomProcess representing an observation process in which the
-            deterministic number of infections is used as a parameter, defaults
-            to None.
-
         Returns
         -------
         RandomProcess
         """
-        InfectionsObservation.validate(I0_dist, gen_int)
+        Infections.validate(I0_dist, gen_int)
 
         self.I0_dist = I0_dist
         self.gen_int_rev = reverse_discrete_dist_vector(gen_int)
-
-        if inf_observation_model is not None:
-            self.obs_model = lambda random_variables, constants: inf_observation_model.sample(
-                random_variables=random_variables,
-                constants=constants,
-            )
-        else:
-            self.obs_model = lambda random_variables, constants: (
-                random_variables.get(self.infections_obs_varname),
-            )
 
         self.I0_varname = I0_varname
         self.Rt_varname = Rt_varname
@@ -93,7 +68,7 @@ class InfectionsObservation(RandomProcess):
         self,
         random_variables: dict,
         constants: dict = None,
-    ) -> InfectionsSample:
+    ) -> tuple:
         """Samples infections given Rt
 
         Parameters
@@ -107,7 +82,7 @@ class InfectionsObservation(RandomProcess):
 
         Returns
         -------
-        InfectionsSample
+        tuple
         """
         I0 = npro.sample(
             name="I0",
@@ -126,16 +101,4 @@ class InfectionsObservation(RandomProcess):
 
         npro.deterministic(self.infections_mean_varname, all_infections)
 
-        # If specified, building the rv
-        rvars = dict()
-        rvars[self.infections_mean_varname] = all_infections
-        rvars[self.infections_obs_varname] = random_variables.get(
-            self.infections_obs_varname, None
-        )
-
-        observed, *_ = self.obs_model(
-            random_variables=rvars,
-            constants=constants,
-        )
-
-        return InfectionsSample(all_infections, observed)
+        return (all_infections,)

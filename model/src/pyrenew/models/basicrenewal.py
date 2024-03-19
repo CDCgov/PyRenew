@@ -24,16 +24,20 @@ class BasicRenewalModel(Model):
 
     def __init__(
         self,
-        infections_obs: RandomProcess,
+        infections_latent: RandomProcess,
+        infections_obs: RandomProcess = None,
         Rt_process: RandomProcess = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
 
         Parameters
         ----------
-        infections_obs : RandomProcess
+        infections_latent : RandomProcess
+            Infections latent process (e.g.,
+            pyrenew.latent.Infections.)
+        infections_obs : RandomProcess, optional
             Infections observation process (e.g.,
-            pyrenew.observations.InfectionsObservation.)
+            pyrenew.observations.Poisson.)
         Rt_process : RandomProcess, optional
             The sample function of the process should return a tuple where the
             first element is the drawn Rt., by default RtRandomWalkProcess()
@@ -44,16 +48,28 @@ class BasicRenewalModel(Model):
         """
 
         BasicRenewalModel.validate(
+            infections_latent=infections_latent,
             infections_obs=infections_obs,
             Rt_process=Rt_process,
         )
 
-        self.infections_obs = infections_obs
+        self.infections_latent = infections_latent
+
+        if infections_obs is not None:
+            self.infections_obs = (
+                lambda random_variables, constants: infections_obs.sample(
+                    random_variables, constants
+                )
+            )
+        else:
+            self.infections_obs = lambda random_variables, constants: (None,)
+
         self.Rt_process = Rt_process
 
     @staticmethod
-    def validate(infections_obs, Rt_process) -> None:
-        _assert_sample_and_rtype(infections_obs, skip_if_none=False)
+    def validate(infections_latent, infections_obs, Rt_process) -> None:
+        _assert_sample_and_rtype(infections_latent, skip_if_none=False)
+        _assert_sample_and_rtype(infections_obs, skip_if_none=True)
         _assert_sample_and_rtype(Rt_process, skip_if_none=False)
         return None
 
@@ -67,7 +83,17 @@ class BasicRenewalModel(Model):
             constants=constants,
         )
 
-    def sample_infections(
+    def sample_infections_latent(
+        self,
+        random_variables: dict = None,
+        constants: dict = None,
+    ) -> tuple:
+        return self.infections_latent.sample(
+            random_variables=random_variables,
+            constants=constants,
+        )
+
+    def sample_infections_obs(
         self,
         random_variables: dict = None,
         constants: dict = None,
@@ -111,8 +137,16 @@ class BasicRenewalModel(Model):
 
         # Sampling infections. Possibly, if infections are passed via
         # `random_variables`, the model will pass that to numpyro.sample.
-        infect_predicted, infect_observed, *_ = self.sample_infections(
+        infect_predicted, *_ = self.sample_infections_latent(
             random_variables={**random_variables, **dict(Rt=Rt)},
+            constants=constants,
+        )
+
+        infect_observed, *_ = self.sample_infections_latent(
+            random_variables={
+                **random_variables,
+                **dict(infect_predicted=infect_predicted),
+            },
             constants=constants,
         )
 

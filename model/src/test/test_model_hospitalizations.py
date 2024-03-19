@@ -5,8 +5,8 @@ import numpyro as npro
 import polars as pl
 from pyrenew.models import HospitalizationsModel
 from pyrenew.observations import (
-    HospitalizationsObservation,
-    InfectionsObservation,
+    Hospitalizations,
+    Infections,
     PoissonObservation,
 )
 from pyrenew.processes import RtRandomWalkProcess
@@ -18,9 +18,9 @@ def test_model_hosp_no_obs_model():
     Hospitalization model runs
     """
 
-    infections_obs = InfectionsObservation(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    infections_obs = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
     Rt_process = RtRandomWalkProcess()
-    hosp_obs = HospitalizationsObservation(
+    hosp_obs = Hospitalizations(
         inf_hosp_int=jnp.array(
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.1, 0.1, 0.05],
         ),
@@ -61,9 +61,9 @@ def test_model_hosp_with_obs_model():
     Checks that the random Hospitalization model runs
     """
 
-    infections_obs = InfectionsObservation(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    infections_obs = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
     Rt_process = RtRandomWalkProcess()
-    hosp_obs = HospitalizationsObservation(
+    hosp_obs = Hospitalizations(
         inf_hosp_int=jnp.array(
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.1, 0.1, 0.05],
         ),

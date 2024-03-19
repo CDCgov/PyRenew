@@ -4,7 +4,7 @@ import numpy as np
 import numpyro as npro
 import polars as pl
 from pyrenew.models import BasicRenewalModel
-from pyrenew.observations import InfectionsObservation, PoissonObservation
+from pyrenew.observations import Infections, PoissonObservation
 
 
 def test_model_basicrenewal_no_obs_model():
@@ -13,7 +13,7 @@ def test_model_basicrenewal_no_obs_model():
     from the perspective of the infections. It returns expected, not sampled.
     """
 
-    infections_obs0 = InfectionsObservation(
+    infections_obs0 = Infections(
         gen_int=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
@@ -50,7 +50,7 @@ def test_model_basicrenewal_with_obs_model():
     from the perspective of the infections. It returns sampled, not expected.
     """
 
-    infections_obs1 = InfectionsObservation(
+    infections_obs1 = Infections(
         gen_int=jnp.array([0.25, 0.25, 0.25, 0.25]),
         inf_observation_model=PoissonObservation(
             rate_varname="infections_mean",

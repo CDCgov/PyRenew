@@ -2,10 +2,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
-from pyrenew.observations import (
-    HospitalizationsObservation,
-    InfectionsObservation,
-)
+from pyrenew.observations import Hospitalizations, Infections
 from pyrenew.processes import RtRandomWalkProcess
 
 
@@ -21,14 +18,14 @@ def test_hospitalizations_sample():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_rt, *_ = rt.sample(constants={"n_timepoints": 30})
 
-    inf1 = InfectionsObservation(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    inf1 = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     i0 = dict(I0=10)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         inf_sampled1 = inf1.sample(random_variables=dict(Rt=sim_rt, data=i0))
 
     # Testing the hospitalizations
-    hosp1 = HospitalizationsObservation(
+    hosp1 = Hospitalizations(
         inf_hosp_int=jnp.array(
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.1, 0.1, 0.05]
         )

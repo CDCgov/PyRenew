@@ -2,7 +2,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
-from pyrenew.observations import InfectionsObservation, PoissonObservation
+from pyrenew.observations import Infections, PoissonObservation
 from pyrenew.processes import RtRandomWalkProcess
 
 
@@ -17,7 +17,7 @@ def test_infections_as_deterministic():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_rt, *_ = rt.sample(constants={"n_timepoints": 30})
 
-    inf1 = InfectionsObservation(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    inf1 = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         obs = dict(Rt=sim_rt, I0=10)
@@ -37,7 +37,7 @@ def test_infections_as_random():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_rt, *_ = rt.sample(constants={"n_timepoints": 30})
 
-    inf1 = InfectionsObservation(
+    inf1 = Infections(
         jnp.array([0.25, 0.25, 0.25, 0.25]),
         inf_observation_model=PoissonObservation(
             rate_varname="infections_mean"
