@@ -1,4 +1,4 @@
-from pyrenew.models.basicrenewal import BasicRenewalModel
 from pyrenew.models.hospitalizations import HospitalizationsModel
+from pyrenew.models.rtinfectionsrenewal import RtInfectionsRenewalModel
 
-__all__ = ["BasicRenewalModel", "HospitalizationsModel"]
+__all__ = ["RtInfectionsRenewalModel", "HospitalizationsModel"]

@@ -24,8 +24,7 @@ class Infections(RandomProcess):
         gen_int: ArrayLike,
         I0_varname: str = "I0",
         Rt_varname: str = "Rt",
-        infections_mean_varname: str = "infections_mean",
-        infections_obs_varname: str = "observed_infections",
+        infections_mean_varname: str = "latent_infections",
         I0_dist: dist.Distribution = dist.LogNormal(2, 0.25),
     ) -> None:
         """Observation of Infections given Rt (Random Process)
@@ -43,9 +42,6 @@ class Infections(RandomProcess):
         infections_mean_varname : str.
             Name of the element in `random_variables` that will hold the value
             of mean 'infections'.
-        infections_obs_varname : str.
-            Name of the element in `random_variables` that will hold the value
-            of observed 'infections'.
         I0_dist : dist.Distribution, optional
             Distribution from where to sample the baseline number of infections.
 
@@ -61,7 +57,6 @@ class Infections(RandomProcess):
         self.I0_varname = I0_varname
         self.Rt_varname = Rt_varname
         self.infections_mean_varname = infections_mean_varname
-        self.infections_obs_varname = infections_obs_varname
 
         return None
 

@@ -10,15 +10,15 @@ from numpy.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.metaclasses import RandomProcess
 
-HopsSampleLatent = namedtuple(
-    "HopsSampleLatent",
+HospAdmissionsSample = namedtuple(
+    "HospAdmissionsSample",
     ["IHR", "predicted"],
     defaults=[None, None],
 )
-"""Output from Hospitalizations.sample()"""
+"""Output from HospitalAdmissions.sample()"""
 
 
-class Hospitalizations(RandomProcess):
+class HospitalAdmissions(RandomProcess):
     """Observed hospitalizations random process"""
 
     def __init__(
@@ -51,7 +51,7 @@ class Hospitalizations(RandomProcess):
         -------
         None
         """
-        Hospitalizations.validate(IHR_dist)
+        HospitalAdmissions.validate(IHR_dist)
 
         self.IHR_obs_varname = IHR_obs_varname
         self.infections_varname = infections_varname
@@ -72,7 +72,7 @@ class Hospitalizations(RandomProcess):
         self,
         random_variables: dict = None,
         constants: dict = None,
-    ) -> HopsSampleLatent:
+    ) -> HospAdmissionsSample:
         """Samples from the observation process
 
         Parameters
@@ -85,7 +85,7 @@ class Hospitalizations(RandomProcess):
 
         Returns
         -------
-        HopsSampleLatent
+        HospAdmissionsSample
         """
 
         if random_variables is None:
@@ -110,4 +110,4 @@ class Hospitalizations(RandomProcess):
             self.hospitalizations_predicted_varname, predicted_hospitalizations
         )
 
-        return HopsSampleLatent(IHR, predicted_hospitalizations)
+        return HospAdmissionsSample(IHR, predicted_hospitalizations)

@@ -2,7 +2,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
-from pyrenew.latent import Hospitalizations, Infections
+from pyrenew.latent import HospitalAdmissions, Infections
 from pyrenew.processes import RtRandomWalkProcess
 
 
@@ -25,7 +25,7 @@ def test_hospitalizations_sample():
         inf_sampled1 = inf1.sample(random_variables=dict(Rt=sim_rt, data=i0))
 
     # Testing the hospitalizations
-    hosp1 = Hospitalizations(
+    hosp1 = HospitalAdmissions(
         inf_hosp_int=jnp.array(
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.1, 0.1, 0.05]
         )

@@ -3,7 +3,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
 import polars as pl
-from pyrenew.latent import Hospitalizations, Infections
+from pyrenew.latent import HospitalAdmissions, Infections
 from pyrenew.models import HospitalizationsModel
 from pyrenew.observations import PoissonObservation
 from pyrenew.processes import RtRandomWalkProcess
@@ -17,7 +17,7 @@ def test_model_hosp_no_obs_model():
 
     latent_infections = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
     Rt_process = RtRandomWalkProcess()
-    latent_hospitalizations = Hospitalizations(
+    latent_hospitalizations = HospitalAdmissions(
         inf_hosp_int=jnp.array(
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.1, 0.1, 0.05],
         ),
@@ -25,17 +25,11 @@ def test_model_hosp_no_obs_model():
         hospitalizations_predicted_varname="observed_hospitalizations",
     )
 
-    observed_hospitalizations = PoissonObservation(
-        parameter_name="hospitalizations_rv",
-        rate_varname="predicted_hospitalizations",
-        counts_varname="observed_hospitalizations",
-    )
-
     model0 = HospitalizationsModel(
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        observed_hospitalizations=None,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -47,9 +41,7 @@ def test_model_hosp_no_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        random_variables=dict(
-            observed_hospitalizations=model0_samp.sampled_hosp
-        ),
+        random_variables=dict(observed_hospitalizations=model0_samp.sampled),
         constants=dict(n_timepoints=30),
     )
 
@@ -73,16 +65,11 @@ def test_model_hosp_with_obs_model():
     latent_infections = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
     Rt_process = RtRandomWalkProcess()
     observed_hospitalizations = PoissonObservation(
-        parameter_name="observed_hospitalizations",
-        rate_varname="predicted_hospitalizations",
+        rate_varname="latent",
         counts_varname="observed_hospitalizations",
     )
-    observed_infections = PoissonObservation(
-        parameter_name="observed_infections",
-        rate_varname="predicted_infections",
-        counts_varname="infections",
-    )
-    latent_hospitalizations = Hospitalizations(
+
+    latent_hospitalizations = HospitalAdmissions(
         inf_hosp_int=jnp.array(
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.1, 0.1, 0.05],
         ),
@@ -93,7 +80,6 @@ def test_model_hosp_with_obs_model():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_infections=observed_infections,
         observed_hospitalizations=observed_hospitalizations,
     )
 
@@ -107,8 +93,8 @@ def test_model_hosp_with_obs_model():
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
         random_variables=dict(
-            observed_hospitalizations=model1_samp.sampled_hosp,
-            infections=model1_samp.infect_sampled,
+            observed_hospitalizations=model1_samp.sampled,
+            infections=model1_samp.infections,
         ),
         constants=dict(n_timepoints=30),
     )

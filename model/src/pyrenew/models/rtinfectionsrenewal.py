@@ -6,16 +6,16 @@ from collections import namedtuple
 from pyrenew.metaclasses import Model, RandomProcess, _assert_sample_and_rtype
 from pyrenew.processes import RtRandomWalkProcess
 
-# Output class of the BasicRenewalModel
-BasicModelSample = namedtuple(
+# Output class of the RtInfectionsRenewalModel
+RtInfectionsRenewalSample = namedtuple(
     "InfectModelSample",
-    ["Rt", "predicted_infections", "observed_infections"],
+    ["Rt", "latent", "observed"],
     defaults=[None, None, None],
 )
-"""Output from BasicRenewalModel.sample()"""
+"""Output from RtInfectionsRenewalModel.sample()"""
 
 
-class BasicRenewalModel(Model):
+class RtInfectionsRenewalModel(Model):
     """Basic Renewal Model (Infections + Rt)
 
     The basic renewal model consists of a sampler of two steps: Sample from
@@ -37,7 +37,8 @@ class BasicRenewalModel(Model):
             pyrenew.latent.Infections.)
         observed_infections : RandomProcess, optional
             Infections observation process (e.g.,
-            pyrenew.observations.Poisson.)
+            pyrenew.observations.Poisson.) It should receive the sampled Rt
+            via `random_variables`.
         Rt_process : RandomProcess, optional
             The sample function of the process should return a tuple where the
             first element is the drawn Rt., by default RtRandomWalkProcess()
@@ -47,7 +48,7 @@ class BasicRenewalModel(Model):
         None
         """
 
-        BasicRenewalModel.validate(
+        RtInfectionsRenewalModel.validate(
             latent_infections=latent_infections,
             observed_infections=observed_infections,
             Rt_process=Rt_process,
@@ -101,7 +102,7 @@ class BasicRenewalModel(Model):
         self,
         random_variables: dict = None,
         constants: dict = None,
-    ) -> BasicModelSample:
+    ) -> RtInfectionsRenewalSample:
         """Sample from the Basic Renewal Model
 
         Parameters
@@ -113,7 +114,7 @@ class BasicRenewalModel(Model):
 
         Returns
         -------
-        BasicModelSample
+        RtInfectionsRenewalSample
         """
 
         if random_variables is None:
@@ -129,23 +130,23 @@ class BasicRenewalModel(Model):
             constants=constants,
         )
 
-        # Sampling infections. Possibly, if infections are passed via
-        # `random_variables`, the model will pass that to numpyro.sample.
-        predicted_infections, *_ = self.sample_infections_latent(
+        # Sampling from the latent process
+        latent, *_ = self.sample_infections_latent(
             random_variables={**random_variables, **dict(Rt=Rt)},
             constants=constants,
         )
 
-        observed_infections, *_ = self.sample_infections_obs(
+        # Using the predicted infections to sample from the observation process
+        observed, *_ = self.sample_infections_obs(
             random_variables={
                 **random_variables,
-                **dict(predicted_infections=predicted_infections),
+                **dict(latent=latent),
             },
             constants=constants,
         )
 
-        return BasicModelSample(
+        return RtInfectionsRenewalSample(
             Rt=Rt,
-            predicted_infections=predicted_infections,
-            observed_infections=observed_infections,
+            latent=latent,
+            observed=observed,
         )

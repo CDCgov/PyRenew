@@ -4,17 +4,17 @@
 from collections import namedtuple
 
 from pyrenew.metaclasses import Model, RandomProcess, _assert_sample_and_rtype
-from pyrenew.models.basicrenewal import BasicRenewalModel
+from pyrenew.models.rtinfectionsrenewal import RtInfectionsRenewalModel
 from pyrenew.processes import RtRandomWalkProcess
 
 HospModelSample = namedtuple(
     "HospModelSample",
     [
         "Rt",
-        "infect_sampled",
+        "infections",
         "IHR",
-        "predicted_hospitalizations",
-        "sampled_hosp",
+        "latent",
+        "sampled",
     ],
     defaults=[None, None, None, None, None],
 )
@@ -23,19 +23,18 @@ HospModelSample = namedtuple(
 
 
 class HospitalizationsModel(Model):
-    """Hospitalizations Model (BasicRenewal + Hospitalizations)
+    """HospitalAdmissions Model (BasicRenewal + HospitalAdmissions)
 
     This class inherits from pyrenew.models.Model. It extends the
     basic renewal model by adding a hospitalization module, e.g.,
-    pyrenew.observations.Hospitalizations.
+    pyrenew.observations.HospitalAdmissions.
     """
 
     def __init__(
         self,
         latent_hospitalizations: RandomProcess,
-        observed_hospitalizations: RandomProcess,
         latent_infections: RandomProcess,
-        observed_infections: RandomProcess = None,
+        observed_hospitalizations: RandomProcess = None,
         Rt_process: RandomProcess = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
@@ -47,19 +46,17 @@ class HospitalizationsModel(Model):
         observed_hospitalizations : RandomProcess
             Observation process for the hospitalizations.
         latent_infections : RandomProcess
-            The infections latent process (passed to BasicRenewalModel).
-        observed_infections : RandomProcess, optional
-            The infections observation process (passed to BasicRenewalModel).
+            The infections latent process (passed to RtInfectionsRenewalModel).
         Rt_process : RandomProcess, optional
-            Rt process  (passed to BasicRenewalModel).
+            Rt process  (passed to RtInfectionsRenewalModel).
 
         Returns
         -------
         None
         """
-        self.basic_renewal = BasicRenewalModel(
+        self.basic_renewal = RtInfectionsRenewalModel(
             latent_infections=latent_infections,
-            observed_infections=observed_infections,
+            observed_infections=None,
             Rt_process=Rt_process,
         )
 
@@ -106,6 +103,9 @@ class HospitalizationsModel(Model):
         tuple
         """
 
+        if self.observed_hospitalizations is None:
+            return (None,)
+
         return self.observed_hospitalizations.sample(
             random_variables=random_variables,
             constants=constants,
@@ -116,13 +116,13 @@ class HospitalizationsModel(Model):
         random_variables: dict = None,
         constants: dict = None,
     ) -> HospModelSample:
-        """Sample from the Hospitalizations model
+        """Sample from the HospitalAdmissions model
 
         Parameters
         ----------
         random_variables : dict, optional
             A dictionary with random variables passed to
-            `pyrenew.models.BasicRenewalModel` and `sample_hospitalizations`.
+            `pyrenew.models.RtInfectionsRenewalModel` and `sample_hospitalizations`.
         constants : dict, optional
             Possible constants for the model.
 
@@ -136,35 +136,38 @@ class HospitalizationsModel(Model):
         if constants is None:
             constants = dict()
 
-        Rt, infect_sampled, *_ = self.basic_renewal.sample(
+        # Getting the basline quantities from the basic model
+        Rt, infections, *_ = self.basic_renewal.sample(
             constants=constants,
             random_variables=random_variables,
         )
 
+        # Sampling the latent hospitalizations
         (
             IHR,
-            predicted_hospitalizations,
+            latent,
             *_,
         ) = self.sample_hospitalizations_latent(
             random_variables={
                 **random_variables,
-                **dict(infections=infect_sampled),
+                **dict(infections=infections),
             },
             constants=constants,
         )
 
-        sampled_hosp, *_ = self.sample_hospitalizations_obs(
+        # Sampling the hospitalizations
+        sampled, *_ = self.sample_hospitalizations_obs(
             random_variables={
                 **random_variables,
-                **dict(predicted_hospitalizations=predicted_hospitalizations),
+                **dict(latent=latent),
             },
             constants=constants,
         )
 
         return HospModelSample(
             Rt=Rt,
-            infect_sampled=infect_sampled,
+            infections=infections,
             IHR=IHR,
-            predicted_hospitalizations=predicted_hospitalizations,
-            sampled_hosp=sampled_hosp,
+            latent=latent,
+            sampled=sampled,
         )

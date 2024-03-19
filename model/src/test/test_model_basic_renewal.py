@@ -4,7 +4,7 @@ import numpy as np
 import numpyro as npro
 import polars as pl
 from pyrenew.latent import Infections
-from pyrenew.models import BasicRenewalModel
+from pyrenew.models import RtInfectionsRenewalModel
 from pyrenew.observations import PoissonObservation
 
 
@@ -18,7 +18,7 @@ def test_model_basicrenewal_no_obs_model():
         gen_int=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    model0 = BasicRenewalModel(latent_infections=latent_infections)
+    model0 = RtInfectionsRenewalModel(latent_infections=latent_infections)
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
@@ -29,16 +29,14 @@ def test_model_basicrenewal_no_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        random_variables=dict(
-            observed_infections=model0_samp.observed_infections
-        ),
+        random_variables=dict(observed_infections=model0_samp.observed),
         constants=dict(n_timepoints=30),
     )
 
-    inf = model0.spread_draws(["infections_mean"])
+    inf = model0.spread_draws(["latent_infections"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("infections_mean").mean())
+        .agg(pl.col("latent_infections").mean())
         .sort(pl.col("draw"))
     )
 
@@ -58,11 +56,11 @@ def test_model_basicrenewal_with_obs_model():
     )
 
     observed_infections = PoissonObservation(
-        rate_varname="predicted_infections",
+        rate_varname="latent",
         counts_varname="observed_infections",
     )
 
-    model1 = BasicRenewalModel(
+    model1 = RtInfectionsRenewalModel(
         latent_infections=latent_infections,
         observed_infections=observed_infections,
     )
@@ -76,16 +74,14 @@ def test_model_basicrenewal_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
-        random_variables=dict(
-            observed_infections=model1_samp.observed_infections
-        ),
+        random_variables=dict(observed_infections=model1_samp.observed),
         constants=dict(n_timepoints=30),
     )
 
-    inf = model1.spread_draws(["infections_mean"])
+    inf = model1.spread_draws(["latent_infections"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("infections_mean").mean())
+        .agg(pl.col("latent_infections").mean())
         .sort(pl.col("draw"))
     )
 
