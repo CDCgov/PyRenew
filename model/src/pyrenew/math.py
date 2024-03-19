@@ -1,6 +1,3 @@
-#!/usr/bin/env/python
-# -*- coding: utf-8 -*-
-
 """
 Helper functions for doing analytical
 and/or numerical calculations about

@@ -12,10 +12,10 @@ import numpyro
 import numpyro.distributions as dist
 from jax import lax
 from numpy.typing import ArrayLike
-from pyrenew.metaclasses import RandomProcess
+from pyrenew.metaclasses import RandomVariable
 
 
-class ARProcess(RandomProcess):
+class ARProcess(RandomVariable):
     """
     Object to represent
     an AR(p) process in

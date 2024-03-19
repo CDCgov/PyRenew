@@ -1,12 +1,9 @@
-#!/usr/bin/env/python
-# -*- coding: utf-8 -*-
-
 import numpyro
 import numpyro.distributions as dist
-from pyrenew.metaclasses import RandomProcess
+from pyrenew.metaclasses import RandomVariable
 
 
-class PoissonObservation(RandomProcess):
+class PoissonObservation(RandomVariable):
     """
     Poisson observation process
     """

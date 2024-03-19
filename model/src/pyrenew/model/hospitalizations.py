@@ -1,11 +1,8 @@
-#!/usr/bin/env/python
-# -*- coding: utf-8 -*-
-
 from collections import namedtuple
 
-from pyrenew.metaclasses import Model, RandomProcess, _assert_sample_and_rtype
-from pyrenew.models.rtinfectionsrenewal import RtInfectionsRenewalModel
-from pyrenew.processes import RtRandomWalkProcess
+from pyrenew.metaclasses import Model, RandomVariable, _assert_sample_and_rtype
+from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
+from pyrenew.process import RtRandomWalkProcess
 
 HospModelSample = namedtuple(
     "HospModelSample",
@@ -32,22 +29,22 @@ class HospitalizationsModel(Model):
 
     def __init__(
         self,
-        latent_hospitalizations: RandomProcess,
-        latent_infections: RandomProcess,
-        observed_hospitalizations: RandomProcess = None,
-        Rt_process: RandomProcess = RtRandomWalkProcess(),
+        latent_hospitalizations: RandomVariable,
+        latent_infections: RandomVariable,
+        observed_hospitalizations: RandomVariable = None,
+        Rt_process: RandomVariable = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
 
         Parameters
         ----------
-        latent_hospitalizations : RandomProcess
+        latent_hospitalizations : RandomVariable
             Latent process for the hospitalizations.
-        observed_hospitalizations : RandomProcess
+        observed_hospitalizations : RandomVariable
             Observation process for the hospitalizations.
-        latent_infections : RandomProcess
+        latent_infections : RandomVariable
             The infections latent process (passed to RtInfectionsRenewalModel).
-        Rt_process : RandomProcess, optional
+        Rt_process : RandomVariable, optional
             Rt process  (passed to RtInfectionsRenewalModel).
 
         Returns

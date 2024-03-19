@@ -1,7 +1,7 @@
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
-from pyrenew.processes import SimpleRandomWalkProcess
+from pyrenew.process import SimpleRandomWalkProcess
 
 
 def test_rw_can_be_sampled():

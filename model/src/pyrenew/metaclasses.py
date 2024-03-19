@@ -1,6 +1,3 @@
-#!/usr/bin/env/python
-# -*- coding: utf-8 -*-
-
 """
 Observation helper classes
 """
@@ -14,17 +11,17 @@ from pyrenew.mcmcutils import spread_draws
 
 
 def _assert_sample_and_rtype(
-    rp: "RandomProcess", skip_if_none: bool = True
+    rp: "RandomVariable", skip_if_none: bool = True
 ) -> None:
-    """Return type-checking for RandomProcess's sample function
+    """Return type-checking for RandomVariable's sample function
 
-    Objects passed as `RandomProcess` should (a) have a `sample()` method that
+    Objects passed as `RandomVariable` should (a) have a `sample()` method that
     (b) returns either a tuple or a named tuple.
 
     Parameters
     ----------
-    rp : RandomProcess
-        Random process to check.
+    rp : RandomVariable
+        Random variable to check.
     skip_if_none: bool
         When `True` it returns if `rp` is None.
 
@@ -36,13 +33,13 @@ def _assert_sample_and_rtype(
     # Addressing the None case
     if (rp is None) and (not skip_if_none):
         Exception(
-            "The passed object cannot be None. It should be RandomProcess"
+            "The passed object cannot be None. It should be RandomVariable"
         )
     elif skip_if_none and (rp is None):
         return None
 
-    if not isinstance(rp, RandomProcess):
-        raise Exception(f"{rp} is not an instance of RandomProcess.")
+    if not isinstance(rp, RandomVariable):
+        raise Exception(f"{rp} is not an instance of RandomVariable.")
 
     # Otherwise, checking for the sample function (must have one)
     # with a defined rtype.
@@ -50,7 +47,7 @@ def _assert_sample_and_rtype(
         sfun = rp.sample
     except Exception:
         raise Exception(
-            f"The RandomProcess {rp} does not have a sample function."
+            f"The RandomVariable {rp} does not have a sample function."
         )  # noqa: E722
 
     # Getting the return annotation (if any)
@@ -58,32 +55,29 @@ def _assert_sample_and_rtype(
 
     if rettype is None:
         raise Exception(
-            f"The RandomProcess {rp} does not have return type "
+            f"The RandomVariable {rp} does not have return type "
             + "annotation."
         )
 
     try:
         if not isinstance(rettype(), tuple):
             raise Exception(
-                f"The RandomProcess {rp}'s return type annotation is not"
+                f"The RandomVariable {rp}'s return type annotation is not"
                 + "a tuple"
             )
     except Exception:
         raise Exception(
             f"There was a problem when trying to initialize {rettype}."
-            + "the rtype of the random process should be a tuple or a namedtuple"
+            + "the rtype of the random variable should be a tuple or a namedtuple"
             + " with default values."
         )
 
     return None
 
 
-class RandomProcess(metaclass=ABCMeta):
+class RandomVariable(metaclass=ABCMeta):
     """
-    Abstract base class for an observation
-    with a single predicted value and optional
-    auxiliary parameters governing properties
-    such as observation noise
+    Abstract base class for latent and observed random variables.
     """
 
     def __init__(self, **kwargs):

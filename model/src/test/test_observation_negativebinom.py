@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
-from pyrenew.observations import NegativeBinomialObservation
+from pyrenew.observation import NegativeBinomialObservation
 
 
 def test_negativebinom_deterministic_obs():

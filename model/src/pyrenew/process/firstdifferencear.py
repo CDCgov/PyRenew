@@ -9,11 +9,11 @@ stochastic processes
 """
 import jax.numpy as jnp
 from numpy.typing import ArrayLike
-from pyrenew.metaclasses import RandomProcess
-from pyrenew.processes import ARProcess
+from pyrenew.metaclasses import RandomVariable
+from pyrenew.process import ARProcess
 
 
-class FirstDifferenceARProcess(RandomProcess):
+class FirstDifferenceARProcess(RandomVariable):
     """
     Class for a stochastic process
     with an AR(1) process on the first

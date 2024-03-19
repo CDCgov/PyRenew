@@ -9,7 +9,7 @@ from pyrenew.distutil import (
     reverse_discrete_dist_vector,
     validate_discrete_dist_vector,
 )
-from pyrenew.metaclasses import RandomProcess
+from pyrenew.metaclasses import RandomVariable
 
 InfectionsSample = namedtuple(
     "InfectionsSample",
@@ -18,7 +18,9 @@ InfectionsSample = namedtuple(
 )
 
 
-class Infections(RandomProcess):
+class Infections(RandomVariable):
+    """Latent infections"""
+
     def __init__(
         self,
         gen_int: ArrayLike,
@@ -27,7 +29,7 @@ class Infections(RandomProcess):
         infections_mean_varname: str = "latent_infections",
         I0_dist: dist.Distribution = dist.LogNormal(2, 0.25),
     ) -> None:
-        """Observation of Infections given Rt (Random Process)
+        """Default constructor
 
         Parameters
         ----------
@@ -47,7 +49,7 @@ class Infections(RandomProcess):
 
         Returns
         -------
-        RandomProcess
+        RandomVariable
         """
         Infections.validate(I0_dist, gen_int)
 

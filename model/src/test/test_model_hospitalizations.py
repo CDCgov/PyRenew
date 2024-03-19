@@ -4,9 +4,9 @@ import numpy as np
 import numpyro as npro
 import polars as pl
 from pyrenew.latent import HospitalAdmissions, Infections
-from pyrenew.models import HospitalizationsModel
-from pyrenew.observations import PoissonObservation
-from pyrenew.processes import RtRandomWalkProcess
+from pyrenew.model import HospitalizationsModel
+from pyrenew.observation import PoissonObservation
+from pyrenew.process import RtRandomWalkProcess
 
 
 def test_model_hosp_no_obs_model():

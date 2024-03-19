@@ -2,7 +2,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
-from pyrenew.observations import PoissonObservation
+from pyrenew.observation import PoissonObservation
 
 
 def test_poisson_obs():

@@ -3,7 +3,7 @@ import numpy as np
 import numpy.testing as testing
 import numpyro as npro
 from pyrenew.latent import HospitalAdmissions, Infections
-from pyrenew.processes import RtRandomWalkProcess
+from pyrenew.process import RtRandomWalkProcess
 
 
 def test_hospitalizations_sample():

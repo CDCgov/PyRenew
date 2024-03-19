@@ -1,6 +1,6 @@
 import jax.numpy as jnp
 import numpyro
-from pyrenew.processes import ARProcess
+from pyrenew.process import ARProcess
 
 
 def test_ar_can_be_sampled():

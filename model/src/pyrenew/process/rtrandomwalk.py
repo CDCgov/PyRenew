@@ -1,11 +1,11 @@
 import numpyro as npro
 import numpyro.distributions as dist
-from pyrenew.metaclasses import RandomProcess
-from pyrenew.processes.simplerandomwalk import SimpleRandomWalkProcess
+from pyrenew.metaclasses import RandomVariable
+from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
 from pyrenew.transform import AbstractTransform, LogTransform
 
 
-class RtRandomWalkProcess(RandomProcess):
+class RtRandomWalkProcess(RandomVariable):
     """Rt Randomwalk Process"""
 
     def __init__(
