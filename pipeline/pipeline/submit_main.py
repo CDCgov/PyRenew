@@ -62,8 +62,7 @@ def main(input_config_path: Path, client: AzureClient):
         )
 
     # === Prep Azure client ===================================================
-    # TODO: enter actual pool name
-    pool_name = "POOL_NAME"
+    pool_name = "multisignal-epi-inference"
     client.use_pool(pool_name=pool_name)
     logger.debug(f"Using pool {pool_name}")
     job_id = "multisignal-epi-inference-prod"
