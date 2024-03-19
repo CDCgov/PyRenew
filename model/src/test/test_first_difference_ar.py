@@ -3,7 +3,7 @@
 
 import jax.numpy as jnp
 import numpyro
-from pyrenew.process import FirstDifferenceARProcess
+from pyrenew.processes import FirstDifferenceARProcess
 
 
 def test_fd_ar_can_be_sampled():
