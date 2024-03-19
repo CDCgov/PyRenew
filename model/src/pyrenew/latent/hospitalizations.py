@@ -10,8 +10,8 @@ from numpy.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.metaclasses import RandomProcess
 
-HospSampledObs = namedtuple(
-    "HospSampledObs",
+HopsSampleLatent = namedtuple(
+    "HopsSampleLatent",
     ["IHR", "predicted"],
     defaults=[None, None],
 )
@@ -72,15 +72,20 @@ class Hospitalizations(RandomProcess):
         self,
         random_variables: dict = None,
         constants: dict = None,
-    ) -> HospSampledObs:
+    ) -> HopsSampleLatent:
         """Samples from the observation process
-        :param random_variables: A dictionary with `IHR` passed to `obs` in
-            `npyro.sample()`.
-        :type random_variables: dict
-        :param constants: A dictionary with observed `infections`.
-        :type constants: dict, optional
-        :return: _description_
-        :rtype: _type_
+
+        Parameters
+        ----------
+        random_variables : dict
+            A dictionary `self.infections_varname` with the observed
+            infections. Optionally, with IHR passed to obs in npyro.sample().
+        constants : dict, optional
+            Ignored.
+
+        Returns
+        -------
+        HopsSampleLatent
         """
 
         if random_variables is None:
@@ -105,4 +110,4 @@ class Hospitalizations(RandomProcess):
             self.hospitalizations_predicted_varname, predicted_hospitalizations
         )
 
-        return HospSampledObs(IHR, predicted_hospitalizations)
+        return HopsSampleLatent(IHR, predicted_hospitalizations)
