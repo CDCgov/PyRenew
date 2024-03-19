@@ -9,7 +9,13 @@ from pyrenew.processes import RtRandomWalkProcess
 
 HospModelSample = namedtuple(
     "HospModelSample",
-    ["Rt", "infect_sampled", "IHR", "pred_hosps", "samp_hosp"],
+    [
+        "Rt",
+        "infect_sampled",
+        "IHR",
+        "predicted_hospitalizations",
+        "sampled_hosp",
+    ],
     defaults=[None, None, None, None, None],
 )
 """Output from HospitalizationsModel.sample()
@@ -26,19 +32,23 @@ class HospitalizationsModel(Model):
 
     def __init__(
         self,
-        hosp_latent: RandomProcess,
-        hosp_obs: RandomProcess,
-        infections_latent: RandomProcess,
-        infections_obs: RandomProcess = None,
+        latent_hospitalizations: RandomProcess,
+        observed_hospitalizations: RandomProcess,
+        latent_infections: RandomProcess,
+        observed_infections: RandomProcess = None,
         Rt_process: RandomProcess = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
 
         Parameters
         ----------
-        type hosp_obs : RandomProcess
+        latent_hospitalizations : RandomProcess
+            Latent process for the hospitalizations.
+        observed_hospitalizations : RandomProcess
             Observation process for the hospitalizations.
-        type infections_obs : RandomProcess
+        latent_infections : RandomProcess
+            The infections latent process (passed to BasicRenewalModel).
+        observed_infections : RandomProcess, optional
             The infections observation process (passed to BasicRenewalModel).
         Rt_process : RandomProcess, optional
             Rt process  (passed to BasicRenewalModel).
@@ -48,20 +58,22 @@ class HospitalizationsModel(Model):
         None
         """
         self.basic_renewal = BasicRenewalModel(
-            infections_latent=infections_latent,
-            infections_obs=infections_obs,
+            latent_infections=latent_infections,
+            observed_infections=observed_infections,
             Rt_process=Rt_process,
         )
 
-        HospitalizationsModel.validate(hosp_latent, hosp_obs)
+        HospitalizationsModel.validate(
+            latent_hospitalizations, observed_hospitalizations
+        )
 
-        self.hosp_latent = hosp_latent
-        self.hosp_obs = hosp_obs
+        self.latent_hospitalizations = latent_hospitalizations
+        self.observed_hospitalizations = observed_hospitalizations
 
     @staticmethod
-    def validate(hosp_latent, hosp_obs) -> None:
-        _assert_sample_and_rtype(hosp_latent, skip_if_none=False)
-        _assert_sample_and_rtype(hosp_obs, skip_if_none=True)
+    def validate(latent_hospitalizations, observed_hospitalizations) -> None:
+        _assert_sample_and_rtype(latent_hospitalizations, skip_if_none=False)
+        _assert_sample_and_rtype(observed_hospitalizations, skip_if_none=True)
         return None
 
     def sample_hospitalizations_latent(
@@ -69,7 +81,7 @@ class HospitalizationsModel(Model):
         random_variables: dict,
         constants: dict = None,
     ) -> tuple:
-        return self.hosp_latent.sample(
+        return self.latent_hospitalizations.sample(
             random_variables=random_variables,
             constants=constants,
         )
@@ -94,7 +106,7 @@ class HospitalizationsModel(Model):
         tuple
         """
 
-        return self.hosp_obs.sample(
+        return self.observed_hospitalizations.sample(
             random_variables=random_variables,
             constants=constants,
         )
@@ -124,12 +136,27 @@ class HospitalizationsModel(Model):
         if constants is None:
             constants = dict()
 
-        Rt, infect_sampled, *_ = self.basic_renewal.sample(constants=constants)
+        Rt, infect_sampled, *_ = self.basic_renewal.sample(
+            constants=constants,
+            random_variables=random_variables,
+        )
 
-        IHR, pred_hosps, samp_hosp, *_ = self.sample_hospitalizations(
+        (
+            IHR,
+            predicted_hospitalizations,
+            *_,
+        ) = self.sample_hospitalizations_latent(
             random_variables={
                 **random_variables,
                 **dict(infections=infect_sampled),
+            },
+            constants=constants,
+        )
+
+        sampled_hosp, *_ = self.sample_hospitalizations_obs(
+            random_variables={
+                **random_variables,
+                **dict(predicted_hospitalizations=predicted_hospitalizations),
             },
             constants=constants,
         )
@@ -138,6 +165,6 @@ class HospitalizationsModel(Model):
             Rt=Rt,
             infect_sampled=infect_sampled,
             IHR=IHR,
-            pred_hosps=pred_hosps,
-            samp_hosp=samp_hosp,
+            predicted_hospitalizations=predicted_hospitalizations,
+            sampled_hosp=sampled_hosp,
         )

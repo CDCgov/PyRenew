@@ -2,7 +2,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
-from pyrenew.observations import Hospitalizations, Infections
+from pyrenew.latent import Hospitalizations, Infections
 from pyrenew.processes import RtRandomWalkProcess
 
 
@@ -33,10 +33,10 @@ def test_hospitalizations_sample():
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_hosp_1 = hosp1.sample(
-            random_variables=dict(infections_obs=inf_sampled1.predicted)
+            random_variables=dict(infections=inf_sampled1[0])
         )
 
     testing.assert_array_less(
         sim_hosp_1.predicted,
-        inf_sampled1.predicted,
+        inf_sampled1[0],
     )

@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
@@ -9,6 +11,12 @@ from pyrenew.distutil import (
 )
 from pyrenew.metaclasses import RandomProcess
 
+InfectionsSample = namedtuple(
+    "InfectionsSample",
+    ["infections"],
+    defaults=[None],
+)
+
 
 class Infections(RandomProcess):
     def __init__(
@@ -17,7 +25,7 @@ class Infections(RandomProcess):
         I0_varname: str = "I0",
         Rt_varname: str = "Rt",
         infections_mean_varname: str = "infections_mean",
-        infections_obs_varname: str = "infections_obs",
+        infections_obs_varname: str = "observed_infections",
         I0_dist: dist.Distribution = dist.LogNormal(2, 0.25),
     ) -> None:
         """Observation of Infections given Rt (Random Process)
@@ -82,7 +90,8 @@ class Infections(RandomProcess):
 
         Returns
         -------
-        tuple
+        InfectionsSample
+            Named tuple with "infections".
         """
         I0 = npro.sample(
             name="I0",
@@ -101,4 +110,4 @@ class Infections(RandomProcess):
 
         npro.deterministic(self.infections_mean_varname, all_infections)
 
-        return (all_infections,)
+        return InfectionsSample(all_infections)

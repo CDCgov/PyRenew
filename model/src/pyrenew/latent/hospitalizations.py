@@ -26,7 +26,7 @@ class Hospitalizations(RandomProcess):
         inf_hosp_int: ArrayLike,
         infections_varname: str = "infections",
         IHR_obs_varname: str = "IHR",
-        hospitalizations_predicted_varname: str = "hospitalizations_predicted",
+        hospitalizations_predicted_varname: str = "predicted_hospitalizations",
         IHR_dist: dist.Distribution = dist.LogNormal(jnp.log(0.05), 0.05),
     ) -> None:
         """Default constructor
@@ -97,10 +97,12 @@ class Hospitalizations(RandomProcess):
 
         IHR_t = IHR * random_variables.get(self.infections_varname)
 
-        pred_hosps = jnp.convolve(IHR_t, self.inf_hosp, mode="full")[
-            : IHR_t.shape[0]
-        ]
+        predicted_hospitalizations = jnp.convolve(
+            IHR_t, self.inf_hosp, mode="full"
+        )[: IHR_t.shape[0]]
 
-        npro.deterministic(self.hospitalizations_predicted_varname, pred_hosps)
+        npro.deterministic(
+            self.hospitalizations_predicted_varname, predicted_hospitalizations
+        )
 
-        return HospSampledObs(IHR, pred_hosps)
+        return HospSampledObs(IHR, predicted_hospitalizations)

@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import jax.numpy as jnp
-from pyrenew.observations.infection_functions import (
-    logistic_susceptibility_adjustment,
-)
+from pyrenew.latent import logistic_susceptibility_adjustment
 
 
 def test_logistic_susceptibility_adjustment():

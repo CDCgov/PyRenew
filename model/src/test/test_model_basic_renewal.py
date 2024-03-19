@@ -3,8 +3,9 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
 import polars as pl
+from pyrenew.latent import Infections
 from pyrenew.models import BasicRenewalModel
-from pyrenew.observations import Infections, PoissonObservation
+from pyrenew.observations import PoissonObservation
 
 
 def test_model_basicrenewal_no_obs_model():
@@ -13,11 +14,11 @@ def test_model_basicrenewal_no_obs_model():
     from the perspective of the infections. It returns expected, not sampled.
     """
 
-    infections_obs0 = Infections(
+    latent_infections = Infections(
         gen_int=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    model0 = BasicRenewalModel(infections_obs=infections_obs0)
+    model0 = BasicRenewalModel(latent_infections=latent_infections)
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
@@ -28,7 +29,9 @@ def test_model_basicrenewal_no_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        random_variables=dict(infections_obs=model0_samp.infect_observed),
+        random_variables=dict(
+            observed_infections=model0_samp.observed_infections
+        ),
         constants=dict(n_timepoints=30),
     )
 
@@ -50,15 +53,19 @@ def test_model_basicrenewal_with_obs_model():
     from the perspective of the infections. It returns sampled, not expected.
     """
 
-    infections_obs1 = Infections(
+    latent_infections = Infections(
         gen_int=jnp.array([0.25, 0.25, 0.25, 0.25]),
-        inf_observation_model=PoissonObservation(
-            rate_varname="infections_mean",
-            counts_varname="infections_obs",
-        ),
     )
 
-    model1 = BasicRenewalModel(infections_obs=infections_obs1)
+    observed_infections = PoissonObservation(
+        rate_varname="predicted_infections",
+        counts_varname="observed_infections",
+    )
+
+    model1 = BasicRenewalModel(
+        latent_infections=latent_infections,
+        observed_infections=observed_infections,
+    )
 
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
@@ -69,7 +76,9 @@ def test_model_basicrenewal_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
-        random_variables=dict(infections_obs=model1_samp.infect_observed),
+        random_variables=dict(
+            observed_infections=model1_samp.observed_infections
+        ),
         constants=dict(n_timepoints=30),
     )
 
