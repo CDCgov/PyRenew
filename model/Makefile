@@ -12,4 +12,4 @@ docs/pyrenew_demo.md: docs/pyrenew_demo.qmd
 docs/getting-started.md: docs/getting-started.qmd
 	quarto render docs/getting-started.qmd
 
-.PHONY: install test
+.PHONY: install test docs
