@@ -73,3 +73,32 @@ class LogitTransform(AbstractTransform):
 
     def inverse(self, x):
         return jax.scipy.special.expit(x)
+
+
+class ScaledLogitTransform(AbstractTransform):
+    """
+    Scaled logistic transformation from the
+    interval (0, X_max) to the interval
+    (-infinity, +infinity).
+    It's inverse is the inverse logit or
+    'expit' function multiplied by X_max
+    f(x) = log(x/X_max) - log(1 - x/X_max)
+    f^-1(x) = X_max / (1 + exp(-x))
+    """
+
+    def __init__(self, x_max: float):
+        """
+        Default constructor
+        Parameters
+        ----------
+        x_max : float
+            Maximum value on the untransformed scale
+            (will be transformed to +infinity)
+        """
+        self.x_max = x_max
+
+    def transform(self, x):
+        return jax.scipy.special.logit(x / self.x_max)
+
+    def inverse(self, x):
+        return self.x_max * jax.scipy.special.expit(x)
