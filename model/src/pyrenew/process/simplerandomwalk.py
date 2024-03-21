@@ -1,10 +1,12 @@
+# -*- coding: utf-8 -*-
+
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-from pyrenew.metaclasses import RandomProcess
+from pyrenew.metaclasses import RandomVariable
 
 
-class SimpleRandomWalkProcess(RandomProcess):
+class SimpleRandomWalkProcess(RandomVariable):
     """
     Class for a Markovian
     random walk with an a

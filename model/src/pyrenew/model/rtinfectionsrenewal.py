@@ -1,10 +1,9 @@
-#!/usr/bin/env/python
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
 
-from pyrenew.metaclasses import Model, RandomProcess, _assert_sample_and_rtype
-from pyrenew.processes import RtRandomWalkProcess
+from pyrenew.metaclasses import Model, RandomVariable, _assert_sample_and_rtype
+from pyrenew.process import RtRandomWalkProcess
 
 # Output class of the RtInfectionsRenewalModel
 RtInfectionsRenewalSample = namedtuple(
@@ -24,22 +23,22 @@ class RtInfectionsRenewalModel(Model):
 
     def __init__(
         self,
-        latent_infections: RandomProcess,
-        observed_infections: RandomProcess = None,
-        Rt_process: RandomProcess = RtRandomWalkProcess(),
+        latent_infections: RandomVariable,
+        observed_infections: RandomVariable = None,
+        Rt_process: RandomVariable = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
 
         Parameters
         ----------
-        latent_infections : RandomProcess
+        latent_infections : RandomVariable
             Infections latent process (e.g.,
             pyrenew.latent.Infections.)
-        observed_infections : RandomProcess, optional
+        observed_infections : RandomVariable, optional
             Infections observation process (e.g.,
             pyrenew.observations.Poisson.) It should receive the sampled Rt
             via `random_variables`.
-        Rt_process : RandomProcess, optional
+        Rt_process : RandomVariable, optional
             The sample function of the process should return a tuple where the
             first element is the drawn Rt., by default RtRandomWalkProcess()
 
@@ -124,7 +123,7 @@ class RtInfectionsRenewalModel(Model):
             constants = dict()
 
         # Sampling from Rt (possibly with a given Rt, depending on
-        # the Rt_process (RandomProcess) object.)
+        # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.sample_rt(
             random_variables=random_variables,
             constants=constants,

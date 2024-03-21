@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 """
 Utilities to deal with MCMC outputs
 """

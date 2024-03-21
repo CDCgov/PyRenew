@@ -1,11 +1,13 @@
+# -*- coding: utf-8 -*-
+
 import jax
 import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
 import polars as pl
 from pyrenew.latent import Infections
-from pyrenew.models import RtInfectionsRenewalModel
-from pyrenew.observations import PoissonObservation
+from pyrenew.model import RtInfectionsRenewalModel
+from pyrenew.observation import PoissonObservation
 
 
 def test_model_basicrenewal_no_obs_model():

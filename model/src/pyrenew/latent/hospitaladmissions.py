@@ -1,4 +1,3 @@
-#!/usr/bin/env/python
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
@@ -8,7 +7,7 @@ import numpyro as npro
 import numpyro.distributions as dist
 from numpy.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
-from pyrenew.metaclasses import RandomProcess
+from pyrenew.metaclasses import RandomVariable
 
 HospAdmissionsSample = namedtuple(
     "HospAdmissionsSample",
@@ -18,8 +17,8 @@ HospAdmissionsSample = namedtuple(
 """Output from HospitalAdmissions.sample()"""
 
 
-class HospitalAdmissions(RandomProcess):
-    """Observed hospitalizations random process"""
+class HospitalAdmissions(RandomVariable):
+    """Latent hospital admissions"""
 
     def __init__(
         self,
