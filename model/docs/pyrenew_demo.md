@@ -124,14 +124,15 @@ hospmodel.run(
 
 
       0%|          | 0/2000 [00:00<?, ?it/s]
-    warmup:   0%|          | 1/2000 [00:02<1:08:12,  2.05s/it, 1 steps of size 2.34e+00. acc. prob=0.00]
-    warmup:  17%|#6        | 332/2000 [00:02<00:07, 216.32it/s, 7 steps of size 4.64e-01. acc. prob=0.78]
-    warmup:  33%|###3      | 663/2000 [00:02<00:02, 479.93it/s, 7 steps of size 3.64e-01. acc. prob=0.79]
-    warmup:  46%|####6     | 920/2000 [00:02<00:01, 704.02it/s, 7 steps of size 5.84e-01. acc. prob=0.79]
-    sample:  59%|#####8    | 1174/2000 [00:02<00:00, 943.69it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
-    sample:  74%|#######4  | 1485/2000 [00:02<00:00, 1289.04it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
-    sample:  91%|######### | 1818/2000 [00:02<00:00, 1667.61it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
-    sample: 100%|##########| 2000/2000 [00:02<00:00, 738.21it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
+    warmup:   0%|          | 1/2000 [00:02<1:09:42,  2.09s/it, 1 steps of size 2.34e+00. acc. prob=0.00]
+    warmup:  13%|#2        | 259/2000 [00:02<00:10, 165.29it/s, 31 steps of size 3.56e-01. acc. prob=0.78]
+    warmup:  21%|##        | 418/2000 [00:02<00:05, 284.44it/s, 7 steps of size 5.41e-01. acc. prob=0.79]
+    warmup:  30%|###       | 609/2000 [00:02<00:03, 457.85it/s, 7 steps of size 7.79e-01. acc. prob=0.79]
+    warmup:  45%|####4     | 892/2000 [00:02<00:01, 771.56it/s, 7 steps of size 6.15e-01. acc. prob=0.79]
+    sample:  58%|#####8    | 1167/2000 [00:02<00:00, 1085.49it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
+    sample:  71%|#######1  | 1426/2000 [00:02<00:00, 1363.51it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
+    sample:  87%|########7 | 1748/2000 [00:02<00:00, 1750.81it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
+    sample: 100%|##########| 2000/2000 [00:02<00:00, 695.78it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
 
 ``` python
 hospmodel.print_summary()

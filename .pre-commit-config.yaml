@@ -34,5 +34,5 @@ repos:
     hooks:
     -   id: detect-secrets
         args: ['--baseline', '.secrets.baseline',
-               '--exclude-files', 'model/docs/']
+               '--exclude-files', 'model/docs/*_cache']
         exclude: package.lock.json
