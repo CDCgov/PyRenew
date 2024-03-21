@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from pyrenew.latent.hospitaladmissions import HospitalAdmissions
 from pyrenew.latent.infection_functions import (
     logistic_susceptibility_adjustment,

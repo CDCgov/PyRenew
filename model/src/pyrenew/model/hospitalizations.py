@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 from collections import namedtuple
 
 from pyrenew.metaclasses import Model, RandomVariable, _assert_sample_and_rtype

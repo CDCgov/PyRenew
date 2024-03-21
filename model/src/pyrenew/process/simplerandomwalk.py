@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist

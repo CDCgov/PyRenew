@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import numpyro
 import numpyro.distributions as dist
 from pyrenew.metaclasses import RandomVariable

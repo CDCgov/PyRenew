@@ -1,12 +1,5 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""
-process
-
-Pyrenew classes for common
-stochastic processes
-"""
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist

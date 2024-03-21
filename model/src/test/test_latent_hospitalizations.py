@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
