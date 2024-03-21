@@ -1,0 +1,185 @@
+---
+title: "Getting started with pyrenew"
+format: gfm
+engine: knitr
+---
+
+This document illustrates two features of `pyrenew`: (a) the set of included `RandomVariable`es, and (b) model composition.
+
+## Hospitalizations model
+
+`pyrenew` has five main components:
+
+- Utilitiy and math functions,
+- The `processes` sub-module,
+- The `observations` sub-module,
+- The `latent` sub-module, and
+- The `models` sub-module
+
+All three of `process`, `observation`, and `latent` contain classes that inherit from the meta class `RandomVariable`. The classes under `model` inherit from the meta class `Model`. The following diagram illustrates the composition the model `pyrenew.models.HospitalizationsModel`:
+
+```{mermaid}
+%%| label: overview-of-hospitalizationsmodel
+flowchart TB
+
+    subgraph randprocmod["Processes module"]
+        direction TB
+        simprw["SimpleRandomWalkProcess"]
+        rtrw["RtRandomWalkProcess"]
+    end
+
+    subgraph latentmod["Latent module"]
+        direction TB
+        hosp_latent["Hospitalizations"]
+        inf_latent["Infections"]
+    end
+
+    subgraph obsmod["Observations module"]
+        direction TB
+        pois["PoissonObservation"]
+        nb["NegativeBinomialObservation"]
+    end
+
+    subgraph models["Models module"]
+        direction TB
+        basic["RtInfectionsRenewalModel"]
+        hosp["HospitalizationsModel"]
+    end
+
+    rp(("RandomVariable")) --> |Inherited by| randprocmod
+    rp -->|Inherited by| latentmod
+    rp -->|Inherited by| obsmod
+
+
+    model(("Model")) -->|Inherited by| models
+
+    simprw -->|Composes| rtrw
+    rtrw -->|Composes| basic
+    inf_latent -->|Composes| basic
+    basic -->|Composes| hosp
+
+
+    obsmod -->|Composes|models
+    hosp_latent -->|Composes| hosp
+
+    %% Metaclasses
+    classDef Metaclass color:black,fill:white
+    class rp,model Metaclass
+
+    %% Random process
+    classDef Randproc fill:purple,color:white
+    class rtrw,simprw Randproc
+
+    %% Models
+    classDef Models fill:teal,color:white
+    class basic,hosp Models
+```
+
+We start by loading the needed components to build a basic renewal model:
+
+
+```{python}
+#| label: loading-pkgs
+import jax.numpy as jnp
+import numpy as np
+import numpyro as npro
+from pyrenew.process import RtRandomWalkProcess
+from pyrenew.latent import Infections
+from pyrenew.observation import PoissonObservation
+from pyrenew.model import RtInfectionsRenewalModel
+```
+
+In the basic renewal model we can define three components: Rt, latent infections, and observed infections.
+
+```{python}
+#| label: creating-elements
+latent_infections = Infections(
+    gen_int=jnp.array([0.25, 0.25, 0.25, 0.25]),
+    )
+
+observed_infections = PoissonObservation(
+    rate_varname='latent',
+    counts_varname='observed_infections',
+    )
+
+rt_proc = RtRandomWalkProcess()
+```
+
+With observation process for the latent infections, we can build the basic renewal model, and generate a sample calling the `sample()` method:
+
+
+```{python}
+#| label: model-creation
+model1 = RtInfectionsRenewalModel(
+    Rt_process=rt_proc,
+    latent_infections=latent_infections,
+    observed_infections=observed_infections,
+    )
+
+np.random.seed(223)
+with npro.handlers.seed(rng_seed=np.random.randint(1, 60)):
+    sim_data = model1.sample(constants=dict(n_timepoints=30))
+
+sim_data
+```
+
+The `sample()` method of the `RtInfectionsRenewalModel` returns a list composed of the `Rt` and `infections` sequences.
+
+
+```{python}
+#| label: basic-fig
+import matplotlib.pyplot as plt
+
+fig, axs = plt.subplots(1, 2)
+
+# Rt plot
+axs[0].plot(range(0, 31), sim_data[0])
+axs[0].set_ylabel('Rt')
+
+# Infections plot
+axs[1].plot(range(0, 31), sim_data[1])
+axs[1].set_ylabel('Infections')
+
+fig.suptitle('Basic renewal model')
+fig.supxlabel('Time')
+plt.tight_layout()
+plt.show()
+```
+
+Let's see how the estimation would go
+
+
+```{python}
+#| label: model-fit
+import jax
+
+model_data = {'n_timepoints': len(sim_data[1])-1}
+
+model1.run(
+    num_warmup=2000,
+    num_samples=1000,
+    random_variables=dict(observed_infections=sim_data.observed),
+    constants=model_data,
+    rng_key=jax.random.PRNGKey(54)
+    )
+```
+
+Now, let's investigate the output
+
+```{python}
+#| label: output-rt
+import polars as pl
+samps = model1.spread_draws([('Rt', 'time')])
+
+fig, ax = plt.subplots(figsize=[4, 5])
+
+ax.plot(sim_data[0])
+samp_ids = np.random.randint(size=25, low=0, high=999)
+for samp_id in samp_ids:
+    sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
+    ax.plot(sub_samps.select("time").to_numpy(),
+            sub_samps.select("Rt").to_numpy(), color="darkblue", alpha=0.1)
+ax.set_ylim([0.4, 1/.4])
+ax.set_yticks([0.5, 1, 2])
+ax.set_yscale("log")
+```
