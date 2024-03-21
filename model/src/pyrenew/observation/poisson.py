@@ -2,7 +2,7 @@
 
 import numpyro
 import numpyro.distributions as dist
-from pyrenew.metaclasses import RandomVariable
+from pyrenew.metaclass import RandomVariable
 
 
 class PoissonObservation(RandomVariable):
