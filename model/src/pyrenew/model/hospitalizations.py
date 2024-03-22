@@ -135,7 +135,7 @@ class HospitalizationsModel(Model):
         if constants is None:
             constants = dict()
 
-        # Getting the basline quantities from the basic model
+        # Getting the baseline quantities from the basic model
         Rt, infections, *_ = self.basic_renewal.sample(
             constants=constants,
             random_variables=random_variables,

@@ -10,7 +10,7 @@ class SimpleRandomWalkProcess(RandomVariable):
     """
     Class for a Markovian
     random walk with an a
-    abitrary step distribution
+    arbitrary step distribution
     """
 
     def __init__(
