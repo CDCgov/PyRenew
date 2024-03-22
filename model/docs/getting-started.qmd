@@ -10,7 +10,7 @@ This document illustrates two features of `pyrenew`: (a) the set of included `Ra
 
 `pyrenew` has five main components:
 
-- Utilitiy and math functions,
+- Utility and math functions,
 - The `processes` sub-module,
 - The `observations` sub-module,
 - The `latent` sub-module, and

@@ -8,7 +8,7 @@ included `RandomVariable`es, and (b) model composition.
 
 `pyrenew` has five main components:
 
-- Utilitiy and math functions,
+- Utility and math functions,
 - The `processes` sub-module,
 - The `observations` sub-module,
 - The `latent` sub-module, and
