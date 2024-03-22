@@ -11,7 +11,7 @@ from pyrenew.distutil import (
     reverse_discrete_dist_vector,
     validate_discrete_dist_vector,
 )
-from pyrenew.metaclasses import RandomVariable
+from pyrenew.metaclass import RandomVariable
 
 InfectionsSample = namedtuple(
     "InfectionsSample",

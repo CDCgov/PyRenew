@@ -36,3 +36,9 @@ repos:
         args: ['--baseline', '.secrets.baseline',
                '--exclude-files', 'model/docs/*_cache']
         exclude: package.lock.json
+####
+# Typos
+-   repo: https://github.com/crate-ci/typos
+    rev: v1.19.0
+    hooks:
+    -   id: typos

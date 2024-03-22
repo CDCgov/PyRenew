@@ -3,14 +3,14 @@
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-from pyrenew.metaclasses import RandomVariable
+from pyrenew.metaclass import RandomVariable
 
 
 class SimpleRandomWalkProcess(RandomVariable):
     """
     Class for a Markovian
     random walk with an a
-    abitrary step distribution
+    arbitrary step distribution
     """
 
     def __init__(

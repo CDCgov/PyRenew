@@ -5,7 +5,7 @@ import numpyro
 import numpyro.distributions as dist
 from jax import lax
 from numpy.typing import ArrayLike
-from pyrenew.metaclasses import RandomVariable
+from pyrenew.metaclass import RandomVariable
 
 
 class ARProcess(RandomVariable):

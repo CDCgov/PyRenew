@@ -2,7 +2,7 @@
 
 import numpyro as npro
 import numpyro.distributions as dist
-from pyrenew.metaclasses import RandomVariable
+from pyrenew.metaclass import RandomVariable
 from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
 from pyrenew.transform import AbstractTransform, LogTransform
 
