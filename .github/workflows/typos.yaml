@@ -8,3 +8,8 @@ jobs:
     steps:
     - name: Checkout Actions Repository
       uses: actions/checkout@v4
+
+    - name: Writes changes in the local checkout
+      uses: crate-ci/typos@master
+      with: 
+        write_changes: true
