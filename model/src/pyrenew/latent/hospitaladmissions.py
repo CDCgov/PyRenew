@@ -32,7 +32,7 @@ class HospitalAdmissions(RandomVariable):
     Following other semi-mechanistic renewal frameworks, we model the _expected_
     hospital admissions per capita :math:`H(t)` as a convolution of the
     _expected_ latent incident infections per capita :math:`I(t)`, and a
-    discrete infection to hospitalization distribution :math:`d(\tau)`, scaled
+    discrete infection to hospitalization distribution :math:`d(\\tau)`, scaled
     by the probability of being hospitalized :math:`p_\mathrm{hosp}(t)`.
 
     To account for day-of-week effects in hospital reporting, we use an
@@ -42,7 +42,7 @@ class HospitalAdmissions(RandomVariable):
 
     .. math::
 
-        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
+        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\\tau = 0}^{T_d} d(\\tau) I(t-\\tau)
 
     Where :math:`T_d` is the maximum delay from infection to hospitalization
     that we consider.
