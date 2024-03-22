@@ -11,5 +11,5 @@ jobs:
 
     - name: Writes changes in the local checkout
       uses: crate-ci/typos@master
-      with: 
+      with:
         write_changes: true
