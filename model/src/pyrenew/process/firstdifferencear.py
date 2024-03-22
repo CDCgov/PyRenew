@@ -2,7 +2,7 @@
 
 import jax.numpy as jnp
 from numpy.typing import ArrayLike
-from pyrenew.metaclasses import RandomVariable
+from pyrenew.metaclass import RandomVariable
 from pyrenew.process import ARProcess
 
 

@@ -2,7 +2,7 @@
 
 from collections import namedtuple
 
-from pyrenew.metaclasses import Model, RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
 from pyrenew.process import RtRandomWalkProcess
 
