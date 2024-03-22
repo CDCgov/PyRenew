@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Observation helper classes
+pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod

@@ -7,7 +7,7 @@ import numpyro as npro
 import numpyro.distributions as dist
 from numpy.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
-from pyrenew.metaclasses import RandomVariable
+from pyrenew.metaclass import RandomVariable
 
 HospAdmissionsSample = namedtuple(
     "HospAdmissionsSample",
