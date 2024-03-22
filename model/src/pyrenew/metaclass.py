@@ -96,7 +96,7 @@ class RandomVariable(metaclass=ABCMeta):
     ) -> tuple:
         """Sample method of the process
 
-        The method desing in the class should have two dictionaries:
+        The method design in the class should have two dictionaries:
         `random_variables` and `constants`.
 
         - `randon_variables`: This dictionary contains any data that sample
