@@ -56,15 +56,49 @@ Where $X$ and $Z$ are the design matrices for fixed and random effects, respecti
 
 ### Generation interval and delay to reporting time of reference
 
+In our epidemiological modelling we represent connected events with delayed cause and effect as having delay distributions. Delay distributions represent the chance of paired events with a *primary* time $s$ and a *secondary* time $t \geq s$. Example distributions in this form:
+
+-   **The generation interval.** This models the delay between infection time (primmary) and infectee time (secondary).
+-   **The incubation period**. This models the delay between infection time (primary) and the onset-of-symptoms time (secondary).
+-   **The reporting delay.** This models the delay between an onset time/specimen time (primary) and the reporting time (secondary).
+
 1. The generation interval is the random time between the infection of an index infection and the infection of a secondary infection.
 2. The reporting reference time delay is the random time between infection of an eventual case and the reference time of the case ascertainment (see [Epinowcast definition](https://package.epinowcast.org/dev/articles/model.html#decomposition-into-expected-final-notifications-and-report-delay-components)).
 
-This is a discrete time model, likely to use daily dynamics. Therefore, the distributions of the random time intervals above must be expressed as discrete probability mass functions (PMFs) over discrete time lags.
+We intend to use discrete time models, likely daily dynamics. However, delay distributions are often reported in the literature as *continuous distributions*, either because the underlying data was on a fine-grained scale or because of analytic convenience. Additionally, if we are making inference on these distributions rather than using literature estimates it might be more convenient to use a parametric form of a continuous distribution (e.g. a Log-Normal distribution).
 
-Options for discretisation:
-- User defined PMF (see [EpiSewer](https://github.com/adrian-lison/EpiSewer/blob/main/vignettes/model-definition.md) or wastewater model)
+Apart from user defined probability mass functions (PMFs) as in [EpiSewer](https://github.com/adrian-lison/EpiSewer/blob/main/vignettes/model-definition.md), creating consistent usage of discrete distributions based on associated continuous distributions is discussed by Park et al[^1]. The approach in Park et al is to treat the continuous representation of the delay distribution as generating the discrete representation through *interval censoring*. Interval censoring happens when an event time (either primary, secondary or both) are only known to occur within an interval.
 
-- Discretized PMF from a continuous distribution for the generation interval, (see [preprint](https://www.medrxiv.org/content/10.1101/2024.01.12.24301247v1)).
+[^1]: [Park, SW, et al *Medrxiv* 2024](https://www.medrxiv.org/content/10.1101/2024.01.12.24301247v1)
+
+### Interval censoring in days with uniform primary event time
+
+Most of our use-cases will use double censoring of events into days; that is both primary and secondary events are censored onto a day. In a slight abuse of notation, we can treat $s,t$ as determining days *and* the continuous time earliest time point in a day. Let the continuous delay distribution have a density function $f$. Then, as per Park *et al*, the probability that the secondary event time $S$ occurs in day $t$ (i.e. \$ S \\in \[t, t+1)\$), given that the primary event time $P$ occurred in day $s$ (i.e. $P\in[s, s)$) is,
+
+$$
+\mathbb{P}(S = t| P = s) = \int_s^{s+1} \int_t^{t+1} g_P(x) f(y-x) \text{d}y \text{d}x.
+$$ 
+
+Where $g_P(x)$ is the density of the primary time conditioned to be within $[s, s+1)$ and $f(\tau) = 0$ for $\tau < 0$ is understood.
+
+This equation is tricky to implement numerically for two reasons:
+
+-   In general, double integrals are numerically unstable in a number of cases.
+-   $g_P$ is not specified.
+
+One option, which was assessed as robust in Park *et al*, is to approximate $g_P$ as uniform within the interval $[s, s+1)$. Using this approximation we can rewrite,
+
+$$
+\mathbb{P}(S = t| P = s) = \int_0^{1} \int_{t-s}^{t -s +1} f(y-x) \text{d}y \text{d}x.
+$$
+
+Which shows that, as expected, the discrete delay probability only depends on the day difference $T = t-s = \tau$. Finally, we can swap the integrals and use the [PDF of sum random variables identity](https://en.wikipedia.org/wiki/Convolution_of_probability_distributions) to write,
+
+$$
+\mathbb{P}(T = \tau) = F_{T+U}(\tau+1) - F_{T+U}(\tau).
+$$
+
+Where $F_{T+U}$ is the cumulative probabilty function of the delay $T$ with density $f$ and $U \sim \mathcal{U}[0,1]$. Calculating $F_{T+U}$ for any analytical distribution and value of $\tau = 0, 1, 2,...$ is a _single integral_ which has stable numerical quadrature properties. See [here](https://github.com/CDCgov/Rt-without-renewal/blob/401e028600cecebc76682023eb215d31ead6326d/EpiAware/src/EpiAwareUtils/censored_pmf.jl#L63C1-L75C4) for an example implementation.
 
 ### Reporting delay between the time of reference and the time of report
 
@@ -91,8 +125,6 @@ $$
 The [hazard](https://en.wikipedia.org/wiki/Proportional_hazards_model) of a survival model with time-varying covariates, $W_{t,d}$, is given by,
 
 $$h_{t,d} = P(\text{delay}=d|\text{delay} \geq d, W_{t,d}).$$
-
-
 
 ## Signals
 
