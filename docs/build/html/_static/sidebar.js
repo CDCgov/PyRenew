@@ -22,9 +22,9 @@
  */
 
 const initialiseSidebar = () => {
-  
-    
-  
+
+
+
 
   // global elements used by the functions.
   const bodyWrapper = document.getElementsByClassName("bodywrapper")[0]

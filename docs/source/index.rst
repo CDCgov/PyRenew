@@ -56,37 +56,36 @@ Documentation Components
 
    msei_reference/index
    test_reference/index
-   state 
-   faq
-   usage
-   
+   general/state
+   general/faq
+   general/usage
+
 
 Indices And Tables
 ==================
 
 .. toctree::
    :maxdepth: 1
- 
+
    genindex
    modindex
    search
-   glossary
-   ctoc
+   general/glossary
+   general/ctoc
 
-Meta Information 
+Meta Information
 ================
 
 .. toctree::
    :maxdepth: 1
- 
-   contribute
-   bugs
-   license
-   notices
 
-.. todo:: Have docs folder exist in main, deploy using GHA. 
+   general/contribute
+   general/bugs
+   general/license
+   general/notices
 
-.. todo:: Add [State, Usage, Help, Tutorials/index, FAQ, HOWTOs/index] pages in Documentation Components. 
+.. todo:: Have docs folder exist in main, deploy using GHA.
 
-.. todo:: Add [About, History, Download, Copyright] pages in Meta Information. 
+.. todo:: Add [State, Usage, Help, Tutorials/index, FAQ, HOWTOs/index] pages in Documentation Components.
 
+.. todo:: Add [About, History, Download, Copyright] pages in Meta Information.

@@ -1,4 +1,4 @@
-Transform Utility Module 
+Transform Utility Module
 ========================
 
 .. automodule:: pyrenew.transform

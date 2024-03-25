@@ -1,4 +1,4 @@
-General Index 
+General Index
 =============
 
 :ref:`genindex`
