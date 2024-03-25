@@ -99,9 +99,9 @@ Where $F_{T+U}$ is the cumulative probability function of the delay $T$ with den
 
 In applied modelling we need $p_d$ to be finite length, which we do by conditioning $T\leq T_{max}$ for some value of $T_{max}$, this is commonly call _right truncation_ of the distribution. The right truncated PMF we use in modelling given a continuous distribution for $S-P$ and $T_{max}$ is:
 
-$$
-p_d(\tau) = {\mathbb{P}(T = \tau) \over \sum_{\tau' = 0}^{T_{max}} \mathbb{P}(T = \tau')} \qquad \forall \tau = 0, \dots, T_{max}.
-$$
+```math
+p_d(\tau) = \mathbb{P}(T = \tau) \Big/ \sum_{\tau' = 0}^{T_{max}} \mathbb{P}(T = \tau') \qquad \forall \tau = 0, \dots, T_{max}.
+```
 
 Calculating $F_{T+U}$ for any analytical distribution and value of $\tau = 0, 1, 2,...$ is a _single integral_ which has stable numerical quadrature properties. See [here](https://github.com/CDCgov/Rt-without-renewal/blob/401e028600cecebc76682023eb215d31ead6326d/EpiAware/src/EpiAwareUtils/censored_pmf.jl#L63C1-L75C4) for an example implementation.
 
@@ -114,7 +114,7 @@ The reason for this is that if we allow zero delay infections, then consistently
 For the discretised generation interval the pmf vector is,
 
 $$
-p_d(\tau) = {\mathbb{P}(T = \tau) \over \sum_{\tau' = 1}^{T_{max}} \mathbb{P}(T = \tau')} \qquad \forall \tau = 1, \dots, T_{max}.
+p_d(\tau) = \mathbb{P}(T = \tau) \Big/ \sum_{\tau' = 1}^{T_{max}} \mathbb{P}(T = \tau') \qquad \forall \tau = 1, \dots, T_{max}.
 $$
 
 ### Reporting delay between the time of reference and the time of report
