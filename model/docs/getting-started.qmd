@@ -4,7 +4,7 @@ format: gfm
 engine: jupyter
 ---
 
-This document illustrates two features of `pyrenew`: (a) the set of included `RandomVariable`es, and (b) model composition.
+This document illustrates two features of `pyrenew`: (a) the set of included `RandomVariable`s, and (b) model composition.
 
 ## Hospitalizations model
 
