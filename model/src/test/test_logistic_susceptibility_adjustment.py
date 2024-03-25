@@ -1,8 +1,7 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import jax.numpy as jnp
-from pyrenew.infection import logistic_susceptibility_adjustment
+from pyrenew.latent import logistic_susceptibility_adjustment
 
 
 def test_logistic_susceptibility_adjustment():

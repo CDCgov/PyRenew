@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import jax
@@ -52,7 +51,9 @@ def sample_infections_rt(
 
 
 def logistic_susceptibility_adjustment(
-    I_raw_t: float, frac_susceptible: float, n_population: float
+    I_raw_t: float,
+    frac_susceptible: float,
+    n_population: float,
 ):
     """
     Apply the logistic susceptibility

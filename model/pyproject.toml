@@ -13,6 +13,7 @@ jax = "^0.4.24"
 numpy = "^1.26.4"
 polars = "^0.20.13"
 matplotlib = "^3.8.3"
+ipykernel = "^6.29.3"
 
 
 [tool.poetry.group.test.dependencies]
