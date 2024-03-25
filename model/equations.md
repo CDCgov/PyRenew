@@ -62,22 +62,19 @@ In our epidemiological modelling we represent connected events with delayed caus
 -   **The incubation period**. This models the delay between infection time (primary) and the onset-of-symptoms time (secondary).
 -   **The reporting delay.** This models the delay between an onset time/specimen time (primary) and the reporting time (secondary).
 
-1. The generation interval is the random time between the infection of an index infection and the infection of a secondary infection.
-2. The reporting reference time delay is the random time between infection of an eventual case and the reference time of the case ascertainment (see [Epinowcast definition](https://package.epinowcast.org/dev/articles/model.html#decomposition-into-expected-final-notifications-and-report-delay-components)).
-
 We intend to use discrete time models, likely daily dynamics. However, delay distributions are often reported in the literature as *continuous distributions*, either because the underlying data was on a fine-grained scale or because of analytic convenience. Additionally, if we are making inference on these distributions rather than using literature estimates it might be more convenient to use a parametric form of a continuous distribution (e.g. a Log-Normal distribution).
 
 Apart from user defined probability mass functions (PMFs) as in [EpiSewer](https://github.com/adrian-lison/EpiSewer/blob/main/vignettes/model-definition.md), creating consistent usage of discrete distributions based on associated continuous distributions is discussed by Park et al[^1]. The approach in Park et al is to treat the continuous representation of the delay distribution as generating the discrete representation through *interval censoring*. Interval censoring happens when an event time (either primary, secondary or both) are only known to occur within an interval.
 
 [^1]: [Park, SW, et al *Medrxiv* 2024](https://www.medrxiv.org/content/10.1101/2024.01.12.24301247v1)
 
-### Interval censoring in days with uniform primary event time
+### Interval censoring in days with uniform primary event time and right truncation
 
 Most of our use-cases will use double censoring of events into days; that is both primary and secondary events are censored onto a day. In a slight abuse of notation, we can treat $s,t$ as determining days *and* the continuous time earliest time point in a day. Let the continuous delay distribution have a density function $f$. Then, as per Park *et al*, the probability that the secondary event time $S$ occurs in day $t$ (i.e. \$ S \\in \[t, t+1)\$), given that the primary event time $P$ occurred in day $s$ (i.e. $P\in[s, s)$) is,
 
 $$
 \mathbb{P}(S = t| P = s) = \int_s^{s+1} \int_t^{t+1} g_P(x) f(y-x) \text{d}y \text{d}x.
-$$ 
+$$
 
 Where $g_P(x)$ is the density of the primary time conditioned to be within $[s, s+1)$ and $f(\tau) = 0$ for $\tau < 0$ is understood.
 
@@ -92,13 +89,33 @@ $$
 \mathbb{P}(S = t| P = s) = \int_0^{1} \int_{t-s}^{t -s +1} f(y-x) \text{d}y \text{d}x.
 $$
 
-Which shows that, as expected, the discrete delay probability only depends on the day difference $T = t-s = \tau$. Finally, we can swap the integrals and use the [PDF of sum random variables identity](https://en.wikipedia.org/wiki/Convolution_of_probability_distributions) to write,
+Which shows that, as expected, the discrete delay probability only depends on the day difference $T = t-s = \tau$. Finally, we can swap the integrals and use the [PDF of summed random variables identity](https://en.wikipedia.org/wiki/Convolution_of_probability_distributions) to write,
 
 $$
 \mathbb{P}(T = \tau) = F_{T+U}(\tau+1) - F_{T+U}(\tau).
 $$
 
-Where $F_{T+U}$ is the cumulative probabilty function of the delay $T$ with density $f$ and $U \sim \mathcal{U}[0,1]$. Calculating $F_{T+U}$ for any analytical distribution and value of $\tau = 0, 1, 2,...$ is a _single integral_ which has stable numerical quadrature properties. See [here](https://github.com/CDCgov/Rt-without-renewal/blob/401e028600cecebc76682023eb215d31ead6326d/EpiAware/src/EpiAwareUtils/censored_pmf.jl#L63C1-L75C4) for an example implementation.
+Where $F_{T+U}$ is the cumulative probability function of the delay $T$ with density $f$ and $U \sim \mathcal{U}[0,1]$. The vector $[\mathbb{P}(T = \tau)]_{\tau=0,1,\dots}$ is a discretised PMF associated with the continuous delay distribution for $S - P$.
+
+In applied modelling we need $p_d$ to be finite length, which we do by conditioning $T\leq T_{max}$ for some value of $T_{max}$, this is commonly call _right truncation_ of the distribution. The right truncated PMF we use in modelling given a continuous distribution for $S-P$ and $T_{max}$ is:
+
+$$
+p_d(\tau) = {\mathbb{P}(T = \tau) \over \sum_{\tau' = 0}^{T_{max}} \mathbb{P}(T = \tau')} \qquad \forall \tau = 0, \dots, T_{max}.
+$$
+
+Calculating $F_{T+U}$ for any analytical distribution and value of $\tau = 0, 1, 2,...$ is a _single integral_ which has stable numerical quadrature properties. See [here](https://github.com/CDCgov/Rt-without-renewal/blob/401e028600cecebc76682023eb215d31ead6326d/EpiAware/src/EpiAwareUtils/censored_pmf.jl#L63C1-L75C4) for an example implementation.
+
+### Left truncation for the generation interval
+
+It is typical to also condition on the delay between infector and infectee being at least one day; that is if $T$ models the generation interval delay then $T>0$.
+
+The reason for this is that if we allow zero delay infections, then consistently we should also model subsequent new infections from those new infections that also happen to occur with zero delay, and so on. This leads to requiring tracking of infection generations within a single time step. **If we consider same-day infection-infector events to be epidemiologically reasonable for a pathogen of interest it would be preferable to model using a shorter than daily time step.**
+
+For the discretised generation interval the pmf vector is,
+
+$$
+p_d(\tau) = {\mathbb{P}(T = \tau) \over \sum_{\tau' = 1}^{T_{max}} \mathbb{P}(T = \tau')} \qquad \forall \tau = 1, \dots, T_{max}.
+$$
 
 ### Reporting delay between the time of reference and the time of report
 
