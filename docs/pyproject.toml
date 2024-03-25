@@ -13,6 +13,7 @@ jax = "^0.4.25"
 jaxlib = "^0.4.25"
 numpyro = "^0.14.0"
 sphinxcontrib-mermaid = "^0.9.2"
+polars = "^0.20.16"
 
 
 [build-system]

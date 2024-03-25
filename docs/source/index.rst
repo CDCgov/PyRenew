@@ -56,11 +56,10 @@ Documentation Components
 
    msei_reference/index
    test_reference/index
-   state
+   state 
+   faq
    usage
-   help
-   tutorials/index
-   howtos/index
+   
 
 Indices And Tables
 ==================
@@ -82,12 +81,12 @@ Meta Information
  
    contribute
    bugs
-   about
-   history
    license
-   copyright
-   download
-
+   notices
 
 .. todo:: Have docs folder exist in main, deploy using GHA. 
+
+.. todo:: Add [State, Usage, Help, Tutorials/index, FAQ, HOWTOs/index] pages in Documentation Components. 
+
+.. todo:: Add [About, History, Download, Copyright] pages in Meta Information. 
 
