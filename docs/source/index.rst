@@ -6,12 +6,12 @@
 CFA Multisignal Renewal Documentation
 =====================================
 
-Welcome to the CFA's Multisignal Epidemiological Inference (abbreviated henceforth as MSEI) project (*a.k.a.* signal fusion project), which consists of an internal forecasting model that leverages multiple data sources for enhancing epidemiological modeling of infectious disease outbreaks.
+Welcome to the CFA's `Multisignal Epidemiological Inference <https://github.com/CDCgov/multisignal-epi-inference>`_ (MSEI) project (*a.k.a.* signal fusion project), which consists of an internal forecasting model that leverages multiple data sources for enhancing epidemiological modeling of infectious disease outbreaks.
 
 This repository is composed of two parts:
 
-1.  **Model development** [(**model** folder)](https://github.com/CDCgov/multisignal-epi-inference/blob/main/model).
-2.  **Analysis pipeline** [(**pipeline** folder)](https://github.com/CDCgov/multisignal-epi-inference/blob/main/pipeline).
+1.  **Model development** (`model folder <https://github.com/CDCgov/multisignal-epi-inference/blob/main/model>`_).
+2.  **Analysis pipeline** (`pipeline folder <https://github.com/CDCgov/multisignal-epi-inference/blob/main/pipeline>`_).
 
 Overview of the project follows:
 
@@ -48,18 +48,19 @@ Overview of the project follows:
       classDef tealNode fill:teal,color:white,stroke:white;
       class io,model,etl,run,postp,retro,bench,project,process tealNode;
 
-
-
-
 Documentation Components
 ========================
 
 .. toctree::
    :maxdepth: 1
 
-   state
    msei_reference/index
    test_reference/index
+   state
+   usage
+   help
+   tutorials/index
+   howtos/index
 
 Indices And Tables
 ==================
@@ -80,4 +81,13 @@ Meta Information
    :maxdepth: 1
  
    contribute
+   bugs
+   about
+   history
+   license
+   copyright
+   download
+
+
+.. todo:: Have docs folder exist in main, deploy using GHA. 
 
