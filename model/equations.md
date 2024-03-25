@@ -10,7 +10,7 @@ Eventually, it should incorporate information about the software implementation 
     - [Latent processes for reproductive number](#latent-processes-for-reproductive-number)
     - [Generation interval and delay to reporting time of reference](#generation-interval-and-delay-to-reporting-time-of-reference)
       - [Interval censoring in days with uniform primary event time and right truncation](#interval-censoring-in-days-with-uniform-primary-event-time-and-right-truncation)
-      - [Left truncation for the generation interval](#left-truncation-for-the-generation interval)
+      - [Left truncation for the generation interval](#left-truncation-for-the-generation-interval)
       - [Reporting delay between the time of reference and the time of report](#reporting-delay-between-the-time-of-reference-and-the-time-of-report)
   - [Signals](#signals)
     - [Hospitalizations](#hospitalizations)
