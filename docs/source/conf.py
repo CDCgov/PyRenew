@@ -23,13 +23,14 @@ extensions = [
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.autosummary',
     'sphinx.ext.doctest',
-    'sphinx.ext.napoleon',
+    'sphinx.ext.napoleon', # numpydoc
     'sphinx.ext.duration',
     'sphinx.ext.githubpages',
     'sphinx.ext.inheritance_diagram',
     'sphinx.ext.todo',
     'sphinx.ext.viewcode',
     'sphinx.ext.mathjax',
+    'sphinxcontrib.mermaid',
 ]
 
 templates_path = ['_templates']

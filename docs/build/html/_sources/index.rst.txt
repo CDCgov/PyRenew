@@ -15,6 +15,7 @@ Documentation Components
 .. toctree::
    :maxdepth: 1
 
+   state
    msei_reference/index
    test_reference/index
 
@@ -32,4 +33,11 @@ Indices And Tables
 
 Meta Information 
 ================
+
+.. toctree::
+   :maxdepth: 1
+ 
+   contribute
+
+
 
