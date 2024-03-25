@@ -1,0 +1,122 @@
+---
+title: Pyrenew demo
+format: gfm
+engine: jupyter
+---
+
+This demo simulates some basic renewal process data and then fits to it using `pyrenew`.
+
+You'll need to install `pyrenew` first. You'll also need working installations of `matplotlib`, `numpy`, `jax`, `numpyro`, and `polars`
+
+```{python}
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+import jax
+import jax.numpy as jnp
+import numpy as np
+from numpyro.handlers import seed
+import numpyro.distributions as dist
+```
+
+```{python}
+from pyrenew.process import SimpleRandomWalkProcess
+```
+
+```{python}
+#| label: fig-randwalk
+np.random.seed(3312)
+q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
+with seed(rng_seed=np.random.randint(0,1000)):
+    q_samp = q.sample(duration=100)
+
+plt.plot(np.exp(q_samp[0]))
+```
+
+```{python}
+from pyrenew.latent import Infections, HospitalAdmissions
+from pyrenew.observation import PoissonObservation
+
+from pyrenew.model import HospitalizationsModel
+from pyrenew.process import RtRandomWalkProcess
+
+# Initializing model parameters
+latent_infections = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
+latent_hospitalizations = HospitalAdmissions(
+    inf_hosp_int=jnp.array(
+        [0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05],
+        )
+    )
+observed_hospitalizations = PoissonObservation(
+    rate_varname='latent',
+    counts_varname='observed_hospitalizations',
+    )
+Rt_process = RtRandomWalkProcess()
+
+# Initializing the model
+hospmodel = HospitalizationsModel(
+    latent_hospitalizations=latent_hospitalizations,
+    observed_hospitalizations=observed_hospitalizations,
+    latent_infections=latent_infections,
+    Rt_process=Rt_process
+    )
+```
+
+
+```{python}
+with seed(rng_seed=np.random.randint(1, 60)):
+    x = hospmodel.sample(constants=dict(n_timepoints=30))
+x
+```
+
+```{python}
+#| label: fig-hosp
+fig, ax = plt.subplots(nrows=3, sharex=True)
+ax[0].plot(x.infections)
+ax[0].set_ylim([1/5, 5])
+ax[1].plot(x.latent)
+ax[2].plot(x.sampled, 'o')
+for axis in ax[:-1]:
+    axis.set_yscale("log")
+```
+
+```{python}
+sim_dat={"observed_hospitalizations": x.sampled}
+constants = {"n_timepoints":len(x.sampled)-1}
+
+# from numpyro.infer import MCMC, NUTS
+hospmodel.run(
+    num_warmup=1000,
+    num_samples=1000,
+    random_variables=sim_dat,
+    constants=constants,
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
+    )
+```
+
+```{python}
+hospmodel.print_summary()
+```
+
+```{python}
+from pyrenew.mcmcutils import spread_draws
+samps = spread_draws(hospmodel.mcmc.get_samples(), [("Rt", "time")])
+```
+
+```{python}
+#| label: fig-sampled-rt
+import numpy as np
+import polars as pl
+fig, ax = plt.subplots(figsize=[4, 5])
+
+ax.plot(x[0])
+samp_ids = np.random.randint(size=25, low=0, high=999)
+for samp_id in samp_ids:
+    sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
+    ax.plot(sub_samps.select("time").to_numpy(),
+            sub_samps.select("Rt").to_numpy(), color="darkblue", alpha=0.1)
+ax.set_ylim([0.4, 1/.4])
+ax.set_yticks([0.5, 1, 2])
+ax.set_yscale("log")
+```
