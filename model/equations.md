@@ -70,7 +70,7 @@ Apart from user defined probability mass functions (PMFs) as in [EpiSewer](https
 
 ### Interval censoring in days with uniform primary event time and right truncation
 
-Most of our use-cases will use double censoring of events into days; that is both primary and secondary events are censored onto a day. In a slight abuse of notation, we can treat $s,t$ as determining days *and* the continuous time earliest time point in a day. Let the continuous delay distribution have a density function $f$. Then, as per Park *et al*, the probability that the secondary event time $S$ occurs in day $t$ (i.e. \$ S \\in \[t, t+1)\$), given that the primary event time $P$ occurred in day $s$ (i.e. $P\in[s, s)$) is,
+Most of our use-cases will use double censoring of events into days; that is both primary and secondary events are censored onto a day. In a slight abuse of notation, we can treat $s,t$ as determining days *and* the continuous time earliest time point in a day. Let the continuous delay distribution have a density function $f$. Then, as per Park *et al*, the probability that the secondary event time $S$ occurs in day $t$ (i.e. $S \in [t, t+1)$), given that the primary event time $P$ occurred in day $s$ (i.e. $P\in[s, s)$) is,
 
 $$
 \mathbb{P}(S = t| P = s) = \int_s^{s+1} \int_t^{t+1} g_P(x) f(y-x) \text{d}y \text{d}x.
