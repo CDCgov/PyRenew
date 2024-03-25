@@ -9,7 +9,9 @@ Eventually, it should incorporate information about the software implementation 
     - [Infections](#infections)
     - [Latent processes for reproductive number](#latent-processes-for-reproductive-number)
     - [Generation interval and delay to reporting time of reference](#generation-interval-and-delay-to-reporting-time-of-reference)
-    - [Reporting delay between the time of reference and the time of report](#reporting-delay-between-the-time-of-reference-and-the-time-of-report)
+      - [Interval censoring in days with uniform primary event time and right truncation](#interval-censoring-in-days-with-uniform-primary-event-time-and-right-truncation)
+      - [Left truncation for the generation interval](#left-truncation-for-the-generation interval)
+      - [Reporting delay between the time of reference and the time of report](#reporting-delay-between-the-time-of-reference-and-the-time-of-report)
   - [Signals](#signals)
     - [Hospitalizations](#hospitalizations)
     - [Wastewater](#wastewater)
@@ -68,7 +70,7 @@ Apart from user defined probability mass functions (PMFs) as in [EpiSewer](https
 
 [^1]: [Park, SW, et al *Medrxiv* 2024](https://www.medrxiv.org/content/10.1101/2024.01.12.24301247v1)
 
-### Interval censoring in days with uniform primary event time and right truncation
+#### Interval censoring in days with uniform primary event time and right truncation
 
 Most of our use-cases will use double censoring of events into days; that is both primary and secondary events are censored onto a day. In a slight abuse of notation, we can treat $s,t$ as determining days *and* the continuous time earliest time point in a day. Let the continuous delay distribution have a density function $f$. Then, as per Park *et al*, the probability that the secondary event time $S$ occurs in day $t$ (i.e. $S \in [t, t+1)$), given that the primary event time $P$ occurred in day $s$ (i.e. $P\in[s, s)$) is,
 
@@ -105,7 +107,7 @@ p_d(\tau) = \mathbb{P}(T = \tau) \Big/ \sum_{\tau' = 0}^{T_{max}} \mathbb{P}(T =
 
 Calculating $F_{T+U}$ for any analytical distribution and value of $\tau = 0, 1, 2,...$ is a _single integral_ which has stable numerical quadrature properties. See [here](https://github.com/CDCgov/Rt-without-renewal/blob/401e028600cecebc76682023eb215d31ead6326d/EpiAware/src/EpiAwareUtils/censored_pmf.jl#L63C1-L75C4) for an example implementation.
 
-### Left truncation for the generation interval
+#### Left truncation for the generation interval
 
 It is typical to also condition on the delay between infector and infectee being at least one day; that is if $T$ models the generation interval delay then $T>0$.
 
@@ -117,7 +119,7 @@ $$
 p_d(\tau) = \mathbb{P}(T = \tau) \Big/ \sum_{\tau' = 1}^{T_{max}} \mathbb{P}(T = \tau') \qquad \forall \tau = 1, \dots, T_{max}.
 $$
 
-### Reporting delay between the time of reference and the time of report
+#### Reporting delay between the time of reference and the time of report
 
 The reporting delay is the random time between the time of reference of a case and the time of report when the data of that case becomes available to analysts (see [Epinowcast definition](https://package.epinowcast.org/dev/articles/model.html#decomposition-into-expected-final-notifications-and-report-delay-components)).
 
