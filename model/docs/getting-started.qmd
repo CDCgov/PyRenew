@@ -1,7 +1,7 @@
 ---
 title: "Getting started with pyrenew"
 format: gfm
-engine: knitr
+engine: jupyter
 ---
 
 This document illustrates two features of `pyrenew`: (a) the set of included `RandomVariable`es, and (b) model composition.
@@ -160,7 +160,8 @@ model1.run(
     num_samples=1000,
     random_variables=dict(observed_infections=sim_data.observed),
     constants=model_data,
-    rng_key=jax.random.PRNGKey(54)
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
     )
 ```
 

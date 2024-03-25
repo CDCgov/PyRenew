@@ -50,12 +50,14 @@ flowchart TB
     rp -->|Inherited by| latentmod
     rp -->|Inherited by| obsmod
 
+
     model(("Model")) -->|Inherited by| models
 
     simprw -->|Composes| rtrw
     rtrw -->|Composes| basic
     inf_latent -->|Composes| basic
     basic -->|Composes| hosp
+
 
     obsmod -->|Composes|models
     hosp_latent -->|Composes| hosp
@@ -81,15 +83,14 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
 from pyrenew.process import RtRandomWalkProcess
-```
-
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
-``` python
 from pyrenew.latent import Infections
 from pyrenew.observation import PoissonObservation
 from pyrenew.model import RtInfectionsRenewalModel
 ```
+
+    /home/xrd4/.cache/pypoetry/virtualenvs/pyrenew-B3vwhbMF-py3.10/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
 
 In the basic renewal model we can define three components: Rt, latent
 infections, and observed infections.
@@ -161,7 +162,9 @@ plt.tight_layout()
 plt.show()
 ```
 
-![](getting-started_files/figure-commonmark/basic-fig-1.png)
+<img
+src="getting-started_files/figure-commonmark/basic-fig-output-1.png"
+id="basic-fig" />
 
 Let’s see how the estimation would go
 
@@ -175,27 +178,10 @@ model1.run(
     num_samples=1000,
     random_variables=dict(observed_infections=sim_data.observed),
     constants=model_data,
-    rng_key=jax.random.PRNGKey(54)
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
     )
 ```
-
-
-      0%|          | 0/3000 [00:00<?, ?it/s]
-    warmup:   0%|          | 1/3000 [00:01<1:18:25,  1.57s/it, 1 steps of size 2.34e+00. acc. prob=0.00]
-    warmup:   6%|6         | 183/3000 [00:01<00:18, 152.43it/s, 255 steps of size 2.82e-02. acc. prob=0.77]
-    warmup:  12%|#2        | 374/3000 [00:01<00:07, 339.58it/s, 127 steps of size 3.98e-02. acc. prob=0.78]
-    warmup:  19%|#9        | 581/3000 [00:01<00:04, 567.93it/s, 127 steps of size 4.12e-02. acc. prob=0.78]
-    warmup:  27%|##7       | 821/3000 [00:01<00:02, 858.39it/s, 63 steps of size 5.81e-02. acc. prob=0.79]
-    warmup:  35%|###4      | 1039/3000 [00:02<00:01, 1101.95it/s, 127 steps of size 3.26e-02. acc. prob=0.79]
-    warmup:  43%|####2     | 1280/3000 [00:02<00:01, 1374.32it/s, 63 steps of size 4.97e-02. acc. prob=0.79]
-    warmup:  51%|#####     | 1523/3000 [00:02<00:00, 1615.94it/s, 63 steps of size 4.24e-02. acc. prob=0.79]
-    warmup:  59%|#####8    | 1761/3000 [00:02<00:00, 1804.39it/s, 37 steps of size 3.88e-02. acc. prob=0.79]
-    warmup:  66%|######6   | 1990/3000 [00:02<00:00, 1920.65it/s, 127 steps of size 4.13e-02. acc. prob=0.79]
-    sample:  74%|#######3  | 2217/3000 [00:02<00:00, 1948.52it/s, 127 steps of size 3.43e-02. acc. prob=0.93]
-    sample:  81%|########1 | 2437/3000 [00:02<00:00, 1944.18it/s, 127 steps of size 3.43e-02. acc. prob=0.93]
-    sample:  88%|########8 | 2649/3000 [00:02<00:00, 1926.81it/s, 127 steps of size 3.43e-02. acc. prob=0.93]
-    sample:  95%|#########5| 2854/3000 [00:02<00:00, 1926.79it/s, 127 steps of size 3.43e-02. acc. prob=0.94]
-    sample: 100%|##########| 3000/3000 [00:03<00:00, 995.42it/s, 127 steps of size 3.43e-02. acc. prob=0.93]
 
 Now, let’s investigate the output
 
@@ -212,13 +198,10 @@ for samp_id in samp_ids:
     ax.plot(sub_samps.select("time").to_numpy(),
             sub_samps.select("Rt").to_numpy(), color="darkblue", alpha=0.1)
 ax.set_ylim([0.4, 1/.4])
-```
-
-    (0.4, 2.5)
-
-``` python
 ax.set_yticks([0.5, 1, 2])
 ax.set_yscale("log")
 ```
 
-![](getting-started_files/figure-commonmark/output-rt-3.png)
+<img
+src="getting-started_files/figure-commonmark/output-rt-output-1.png"
+id="output-rt" />

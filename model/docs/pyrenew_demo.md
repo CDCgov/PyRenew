@@ -22,8 +22,6 @@ import numpyro.distributions as dist
 from pyrenew.process import SimpleRandomWalkProcess
 ```
 
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
 ``` python
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
@@ -33,10 +31,11 @@ with seed(rng_seed=np.random.randint(0,1000)):
 plt.plot(np.exp(q_samp[0]))
 ```
 
-![](pyrenew_demo_files/figure-commonmark/unnamed-chunk-3-1.png)
+<img
+src="pyrenew_demo_files/figure-commonmark/fig-randwalk-output-1.png"
+id="fig-randwalk" />
 
 ``` python
-# %%
 from pyrenew.latent import Infections, HospitalAdmissions
 from pyrenew.observation import PoissonObservation
 
@@ -95,18 +94,14 @@ x
 fig, ax = plt.subplots(nrows=3, sharex=True)
 ax[0].plot(x.infections)
 ax[0].set_ylim([1/5, 5])
-```
-
-    (0.2, 5.0)
-
-``` python
 ax[1].plot(x.latent)
 ax[2].plot(x.sampled, 'o')
 for axis in ax[:-1]:
     axis.set_yscale("log")
 ```
 
-![](pyrenew_demo_files/figure-commonmark/unnamed-chunk-6-3.png)
+<img src="pyrenew_demo_files/figure-commonmark/fig-hosp-output-1.png"
+id="fig-hosp" />
 
 ``` python
 sim_dat={"observed_hospitalizations": x.sampled}
@@ -119,20 +114,9 @@ hospmodel.run(
     random_variables=sim_dat,
     constants=constants,
     rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
     )
 ```
-
-
-      0%|          | 0/2000 [00:00<?, ?it/s]
-    warmup:   0%|          | 1/2000 [00:02<1:09:42,  2.09s/it, 1 steps of size 2.34e+00. acc. prob=0.00]
-    warmup:  13%|#2        | 259/2000 [00:02<00:10, 165.29it/s, 31 steps of size 3.56e-01. acc. prob=0.78]
-    warmup:  21%|##        | 418/2000 [00:02<00:05, 284.44it/s, 7 steps of size 5.41e-01. acc. prob=0.79]
-    warmup:  30%|###       | 609/2000 [00:02<00:03, 457.85it/s, 7 steps of size 7.79e-01. acc. prob=0.79]
-    warmup:  45%|####4     | 892/2000 [00:02<00:01, 771.56it/s, 7 steps of size 6.15e-01. acc. prob=0.79]
-    sample:  58%|#####8    | 1167/2000 [00:02<00:00, 1085.49it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
-    sample:  71%|#######1  | 1426/2000 [00:02<00:00, 1363.51it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
-    sample:  87%|########7 | 1748/2000 [00:02<00:00, 1750.81it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
-    sample: 100%|##########| 2000/2000 [00:02<00:00, 695.78it/s, 7 steps of size 5.03e-01. acc. prob=0.89]
 
 ``` python
 hospmodel.print_summary()
@@ -140,39 +124,39 @@ hospmodel.print_summary()
 
 
                                      mean       std    median      5.0%     95.0%     n_eff     r_hat
-                             I0      7.14      1.75      6.83      4.19      9.62   1169.36      1.00
-                            IHR      0.05      0.00      0.05      0.05      0.05   1844.78      1.00
-                            Rt0      1.13      0.12      1.13      0.92      1.31   1060.51      1.00
-     Rt_transformed_rw_diffs[0]     -0.00      0.02     -0.00     -0.04      0.04   1417.77      1.00
-     Rt_transformed_rw_diffs[1]     -0.00      0.02      0.00     -0.04      0.04   1715.37      1.00
-     Rt_transformed_rw_diffs[2]     -0.00      0.02     -0.00     -0.04      0.04   1720.77      1.00
-     Rt_transformed_rw_diffs[3]     -0.00      0.02     -0.00     -0.04      0.04   2099.10      1.00
-     Rt_transformed_rw_diffs[4]     -0.00      0.02     -0.00     -0.04      0.04   1791.33      1.00
-     Rt_transformed_rw_diffs[5]      0.00      0.03     -0.00     -0.04      0.04   1621.04      1.00
-     Rt_transformed_rw_diffs[6]      0.00      0.02     -0.00     -0.04      0.04   1397.93      1.00
-     Rt_transformed_rw_diffs[7]     -0.00      0.02     -0.00     -0.04      0.04   2398.75      1.00
-     Rt_transformed_rw_diffs[8]     -0.00      0.03     -0.00     -0.04      0.04   1937.88      1.00
-     Rt_transformed_rw_diffs[9]      0.00      0.02      0.00     -0.04      0.04   1550.47      1.00
-    Rt_transformed_rw_diffs[10]     -0.00      0.02      0.00     -0.04      0.04   1920.45      1.00
-    Rt_transformed_rw_diffs[11]     -0.00      0.03      0.00     -0.04      0.04   1398.49      1.00
-    Rt_transformed_rw_diffs[12]      0.00      0.02      0.00     -0.04      0.04   1999.04      1.00
-    Rt_transformed_rw_diffs[13]     -0.00      0.03     -0.00     -0.04      0.04   1311.56      1.00
-    Rt_transformed_rw_diffs[14]     -0.00      0.03     -0.00     -0.04      0.04   1890.45      1.00
-    Rt_transformed_rw_diffs[15]     -0.00      0.03     -0.00     -0.04      0.04   2231.58      1.00
-    Rt_transformed_rw_diffs[16]     -0.00      0.02     -0.00     -0.03      0.04   1518.33      1.00
-    Rt_transformed_rw_diffs[17]     -0.00      0.03     -0.00     -0.04      0.04   1446.16      1.00
-    Rt_transformed_rw_diffs[18]      0.00      0.02      0.00     -0.04      0.04   1736.23      1.00
-    Rt_transformed_rw_diffs[19]      0.00      0.03      0.00     -0.04      0.04   2007.75      1.00
-    Rt_transformed_rw_diffs[20]     -0.00      0.02     -0.00     -0.04      0.04   1826.47      1.00
-    Rt_transformed_rw_diffs[21]      0.00      0.02      0.00     -0.03      0.04   1937.41      1.00
-    Rt_transformed_rw_diffs[22]     -0.00      0.03     -0.00     -0.04      0.04   1695.53      1.00
-    Rt_transformed_rw_diffs[23]     -0.00      0.02      0.00     -0.05      0.03   1960.93      1.00
-    Rt_transformed_rw_diffs[24]      0.00      0.02      0.00     -0.05      0.03   1960.69      1.00
-    Rt_transformed_rw_diffs[25]     -0.00      0.02     -0.00     -0.04      0.04   1612.60      1.00
-    Rt_transformed_rw_diffs[26]      0.00      0.03      0.00     -0.04      0.04   1477.00      1.00
-    Rt_transformed_rw_diffs[27]     -0.00      0.03     -0.00     -0.05      0.04   1528.14      1.00
-    Rt_transformed_rw_diffs[28]     -0.00      0.02     -0.00     -0.04      0.04   1986.09      1.00
-    Rt_transformed_rw_diffs[29]     -0.00      0.03     -0.00     -0.04      0.04   1651.67      1.00
+                             I0      7.15      1.69      6.87      4.50      9.76   1597.65      1.00
+                            IHR      0.05      0.00      0.05      0.05      0.05   1957.10      1.00
+                            Rt0      1.13      0.12      1.13      0.92      1.31   1204.75      1.00
+     Rt_transformed_rw_diffs[0]     -0.00      0.02     -0.00     -0.04      0.04   1543.92      1.00
+     Rt_transformed_rw_diffs[1]     -0.00      0.03      0.00     -0.04      0.05   1624.77      1.00
+     Rt_transformed_rw_diffs[2]     -0.00      0.02     -0.00     -0.04      0.04   1906.13      1.00
+     Rt_transformed_rw_diffs[3]     -0.00      0.02     -0.00     -0.04      0.04   2581.47      1.00
+     Rt_transformed_rw_diffs[4]     -0.00      0.02     -0.00     -0.04      0.04   2354.67      1.00
+     Rt_transformed_rw_diffs[5]      0.00      0.03      0.00     -0.05      0.04   2350.32      1.00
+     Rt_transformed_rw_diffs[6]      0.00      0.02      0.00     -0.04      0.04   1942.94      1.00
+     Rt_transformed_rw_diffs[7]     -0.00      0.02     -0.00     -0.04      0.04   2280.75      1.00
+     Rt_transformed_rw_diffs[8]     -0.00      0.03     -0.00     -0.04      0.04   1875.19      1.00
+     Rt_transformed_rw_diffs[9]      0.00      0.03      0.00     -0.04      0.04   2007.68      1.00
+    Rt_transformed_rw_diffs[10]     -0.00      0.02     -0.00     -0.04      0.04   2108.68      1.00
+    Rt_transformed_rw_diffs[11]     -0.00      0.03      0.00     -0.04      0.04   1479.90      1.00
+    Rt_transformed_rw_diffs[12]      0.00      0.02      0.00     -0.04      0.04   2256.27      1.00
+    Rt_transformed_rw_diffs[13]     -0.00      0.03     -0.00     -0.04      0.04   1261.43      1.00
+    Rt_transformed_rw_diffs[14]     -0.00      0.03     -0.00     -0.04      0.04   1974.44      1.00
+    Rt_transformed_rw_diffs[15]     -0.00      0.03     -0.00     -0.04      0.04   2245.66      1.00
+    Rt_transformed_rw_diffs[16]     -0.00      0.02      0.00     -0.04      0.04   1630.22      1.00
+    Rt_transformed_rw_diffs[17]      0.00      0.03      0.00     -0.04      0.04   1756.48      1.00
+    Rt_transformed_rw_diffs[18]      0.00      0.02     -0.00     -0.04      0.04   1706.49      1.00
+    Rt_transformed_rw_diffs[19]      0.00      0.03     -0.00     -0.04      0.04   2176.36      1.00
+    Rt_transformed_rw_diffs[20]      0.00      0.02     -0.00     -0.04      0.04   2021.24      1.00
+    Rt_transformed_rw_diffs[21]      0.00      0.02      0.00     -0.04      0.04   2242.62      1.00
+    Rt_transformed_rw_diffs[22]      0.00      0.03      0.00     -0.04      0.04   1988.97      1.00
+    Rt_transformed_rw_diffs[23]      0.00      0.02      0.00     -0.04      0.03   2113.37      1.00
+    Rt_transformed_rw_diffs[24]      0.00      0.02      0.00     -0.04      0.04   2179.13      1.00
+    Rt_transformed_rw_diffs[25]     -0.00      0.02     -0.00     -0.04      0.03   1770.54      1.00
+    Rt_transformed_rw_diffs[26]      0.00      0.03      0.00     -0.04      0.05   2101.45      1.00
+    Rt_transformed_rw_diffs[27]     -0.00      0.03      0.00     -0.04      0.04   1752.68      1.00
+    Rt_transformed_rw_diffs[28]     -0.00      0.02     -0.00     -0.04      0.04   1537.43      1.00
+    Rt_transformed_rw_diffs[29]     -0.00      0.03     -0.00     -0.04      0.04   1837.84      1.00
 
     Number of divergences: 0
 
@@ -193,13 +177,10 @@ for samp_id in samp_ids:
     ax.plot(sub_samps.select("time").to_numpy(),
             sub_samps.select("Rt").to_numpy(), color="darkblue", alpha=0.1)
 ax.set_ylim([0.4, 1/.4])
-```
-
-    (0.4, 2.5)
-
-``` python
 ax.set_yticks([0.5, 1, 2])
 ax.set_yscale("log")
 ```
 
-![](pyrenew_demo_files/figure-commonmark/unnamed-chunk-10-5.png)
+<img
+src="pyrenew_demo_files/figure-commonmark/fig-sampled-rt-output-1.png"
+id="fig-sampled-rt" />

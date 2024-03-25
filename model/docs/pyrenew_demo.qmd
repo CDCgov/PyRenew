@@ -1,7 +1,7 @@
 ---
 title: Pyrenew demo
 format: gfm
-engine: knitr
+engine: jupyter
 ---
 
 This demo simulates some basic renewal process data and then fits to it using `pyrenew`.
@@ -24,6 +24,7 @@ from pyrenew.process import SimpleRandomWalkProcess
 ```
 
 ```{python}
+#| label: fig-randwalk
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
 with seed(rng_seed=np.random.randint(0,1000)):
@@ -33,7 +34,6 @@ plt.plot(np.exp(q_samp[0]))
 ```
 
 ```{python}
-# %%
 from pyrenew.latent import Infections, HospitalAdmissions
 from pyrenew.observation import PoissonObservation
 
@@ -70,6 +70,7 @@ x
 ```
 
 ```{python}
+#| label: fig-hosp
 fig, ax = plt.subplots(nrows=3, sharex=True)
 ax[0].plot(x.infections)
 ax[0].set_ylim([1/5, 5])
@@ -90,6 +91,7 @@ hospmodel.run(
     random_variables=sim_dat,
     constants=constants,
     rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
     )
 ```
 
@@ -103,6 +105,7 @@ samps = spread_draws(hospmodel.mcmc.get_samples(), [("Rt", "time")])
 ```
 
 ```{python}
+#| label: fig-sampled-rt
 import numpy as np
 import polars as pl
 fig, ax = plt.subplots(figsize=[4, 5])
