@@ -1,0 +1,39 @@
+# name: "Sphinx: Render docs"
+
+# on: push
+
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     permissions:
+#       contents: write
+#     steps:
+#     - uses: actions/checkout@v4
+#     # - name: Build HTML
+#     #   uses: ammaraskar/sphinx-action@master
+#     - name: Set up Python
+#       uses: actions/setup-python@v2
+#       with:
+#         python-version: '3.11'
+#     # - uses: abatilo/actions-poetry@v3.0.0
+#     - name: Install Poetry
+#       run: pip install poetry
+#     - name: Install dependencies with Poetry
+#       run: |
+#         cd docs
+#         poetry install
+#     - name: Build HTML using Poetry
+#       run: |
+#         cd docs
+#         poetry run sphinx-build -M html source/ build/
+#     - name: Upload artifacts
+#       uses: actions/upload-artifact@v4
+#       with:
+#         name: html-docs
+#         path: docs/build/html/
+#     - name: Deploy
+#       uses: peaceiris/actions-gh-pages@v3
+#       if: github.ref == 'refs/heads/main'
+#       with:
+#         github_token: ${{ secrets.GITHUB_TOKEN }}
+#         publish_dir: docs/build/html
