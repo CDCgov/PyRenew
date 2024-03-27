@@ -9,9 +9,11 @@ This demo simulates some basic renewal process data and then fits to it using `p
 You'll need to install `pyrenew` first. You'll also need working installations of `matplotlib`, `numpy`, `jax`, `numpyro`, and `polars`
 
 ```{python}
+#| output: false
+#| label: loading-pkgs
+#| warning: false
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
 import jax
 import jax.numpy as jnp
 import numpy as np

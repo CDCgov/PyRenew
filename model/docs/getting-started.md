@@ -1,82 +1,19 @@
 # Getting started with pyrenew
 
 
-This document illustrates two features of `pyrenew`: (a) the set of
-included `RandomVariable`s, and (b) model composition.
+`pyrenew` is a flexible tool for simulation and inference of
+epidemiological models with an emphasis on renewal models. Built on top
+of `numpyro`, `pyrenew` provides core components for model building as
+well as pre-defined models for processing various types of observational
+processes. This document illustrates how `pyrenew` can be used to build
+a basic renwal model.
 
-## Hospitalizations model
+## ‘Hello world’ model
 
-`pyrenew` has five main components:
-
-- Utility and math functions,
-- The `processes` sub-module,
-- The `observations` sub-module,
-- The `latent` sub-module, and
-- The `models` sub-module
-
-All three of `process`, `observation`, and `latent` contain classes that
-inherit from the meta class `RandomVariable`. The classes under `model`
-inherit from the meta class `Model`. The following diagram illustrates
-the composition the model `pyrenew.models.HospitalizationsModel`:
-
-``` mermaid
-flowchart TB
-
-    subgraph randprocmod["Processes module"]
-        direction TB
-        simprw["SimpleRandomWalkProcess"]
-        rtrw["RtRandomWalkProcess"]
-    end
-
-    subgraph latentmod["Latent module"]
-        direction TB
-        hosp_latent["Hospitalizations"]
-        inf_latent["Infections"]
-    end
-
-    subgraph obsmod["Observations module"]
-        direction TB
-        pois["PoissonObservation"]
-        nb["NegativeBinomialObservation"]
-    end
-
-    subgraph models["Models module"]
-        direction TB
-        basic["RtInfectionsRenewalModel"]
-        hosp["HospitalizationsModel"]
-    end
-
-    rp(("RandomVariable")) --> |Inherited by| randprocmod
-    rp -->|Inherited by| latentmod
-    rp -->|Inherited by| obsmod
-
-
-    model(("Model")) -->|Inherited by| models
-
-    simprw -->|Composes| rtrw
-    rtrw -->|Composes| basic
-    inf_latent -->|Composes| basic
-    basic -->|Composes| hosp
-
-
-    obsmod -->|Composes|models
-    hosp_latent -->|Composes| hosp
-
-    %% Metaclasses
-    classDef Metaclass color:black,fill:white
-    class rp,model Metaclass
-
-    %% Random process
-    classDef Randproc fill:purple,color:white
-    class rtrw,simprw Randproc
-
-    %% Models
-    classDef Models fill:teal,color:white
-    class basic,hosp Models
-```
-
-We start by loading the needed components to build a basic renewal
-model:
+In this section, we will show the steps to build a simple renewal model
+featuring a latent infection process, a random walk Rt process, and an
+observation process for the reported infections. We start by loading the
+needed components to build a basic renewal model:
 
 ``` python
 import jax.numpy as jnp
@@ -88,32 +25,30 @@ from pyrenew.observation import PoissonObservation, DeterministicObs
 from pyrenew.model import RtInfectionsRenewalModel
 ```
 
-    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-      from .autonotebook import tqdm as notebook_tqdm
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
 In the basic renewal model we can define three components: Rt, latent
 infections, and observed infections.
 
 ``` python
-# Fixed quantities can be passed using DeterministicObs
-gen_int_rev = DeterministicObs(
+# (1) The generation interval for the latent infection process is
+# deterministic
+gen_int = DeterministicObs(
     (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     validate_pmf=True
 )
-latent_infections = Infections(gen_int=gen_int_rev)
 
+latent_infections = Infections(gen_int=gen_int)
+
+# (2) The observed infections process
 observed_infections = PoissonObservation(
     rate_varname='latent',
     counts_varname='observed_infections',
     )
 
+# (3) The random process for Rt
 rt_proc = RtRandomWalkProcess()
 ```
 
-With observation process for the latent infections, we can build the
-basic renewal model, and generate a sample calling the `sample()`
-method:
+With these three (four) pieces, we can build the basic renewal model:
 
 ``` python
 model1 = RtInfectionsRenewalModel(
@@ -121,7 +56,33 @@ model1 = RtInfectionsRenewalModel(
     latent_infections=latent_infections,
     observed_infections=observed_infections,
     )
+```
 
+The following diagram summarizes how the modules interact via
+composition; notably, `rt_proc`, `observed_infections`,
+`latent_infections`, and `gen_int` are instances of `RandomVariable`,
+which means these can be easily replaced to generate different version
+of `RtInfectionsRenewalModel`:
+
+``` mermaid
+flowchart TB
+    genint["gen_int\n(DeterministicObs)"]
+    rt["(3) rt_proc\n(RtRandomWalkProcess)"]
+    obs["(2) observed_infections\n(PoissonObservation)"]
+    inf["(1) latent_infections\n(Infections)"]
+
+    model1["model1\n(RtInfectionsRenewalModel)"]
+
+    genint-->|Composes|inf
+    rt-->|Composes|model1
+    obs-->|Composes|model1
+    inf-->|Composes|model1
+```
+
+Using `numpyro`, we can simulate data using the `sample()` member
+function of `RtInfectionsRenewalModel`:
+
+``` python
 np.random.seed(223)
 with npro.handlers.seed(rng_seed=np.random.randint(1, 60)):
     sim_data = model1.sample(constants=dict(n_timepoints=30))
@@ -169,7 +130,9 @@ plt.show()
 src="getting-started_files/figure-commonmark/basic-fig-output-1.png"
 id="basic-fig" />
 
-Let’s see how the estimation would go
+To fit the model, we can use the `run()` method of the model
+`RtInfectionsRenewalModel`; an inherited method from the metaclass
+`Model`:
 
 ``` python
 import jax
@@ -186,7 +149,8 @@ model1.run(
     )
 ```
 
-Now, let’s investigate the output
+Now, let’s investigate the output, particularly, the posterior
+distribution of the Rt estimates:
 
 ``` python
 import polars as pl
@@ -208,3 +172,55 @@ ax.set_yscale("log")
 <img
 src="getting-started_files/figure-commonmark/output-rt-output-1.png"
 id="output-rt" />
+
+## Architecture of pyrenew
+
+`pyrenew` leverages `numpyro`’s flexibility to build models via
+composition. As a principle, most objects in `pyrenew` can be treated as
+random variables from which we can sample. At the top-level `pyrenew`
+has two metaclass from which most objects inherit: `RandomVariable` and
+`Model`. From them, the following four sub-modules arise:
+
+- The `process` sub-module,
+- The `observation` sub-module,
+- The `latent` sub-module, and
+- The `models` sub-module
+
+Where the first three are collections of instances of `RandomVariable`
+and the last one a collection of instances of `Model`. The following
+diagram shows a detailed view of how meta classes, modules, and classes
+interact to create the `RtInfectionsRenewalModel` instantiated in the
+previous section:
+
+``` mermaid
+flowchart TB
+    rand((RandomVariable\nmetaclass))
+    models((Model\nmetaclass))
+
+    subgraph observations[Observations module]
+        genint["gen_int\n(DeterministicObs)"]
+        obs["observed_infections\n(PoissonObservation)"]
+    end
+
+    subgraph latent[Latent module]
+        inf["latent_infections\n(Infections)"]
+    end
+
+    subgraph process[Process module]
+        rt["rt_proc\n(RtRandomWalkProcess)"]
+    end
+
+    subgraph model[Model module]
+        model1["model1\n(RtInfectionsRenewalModel)"]
+    end
+
+    rand-->|Inherited by|observations
+    rand-->|Inherited by|process
+    rand-->|Inherited by|latent
+    models-->|Inherited by|model
+
+    genint-->|Composes|inf
+    rt-->|Composes|model1
+    obs-->|Composes|model1
+    inf-->|Composes|model1
+```
