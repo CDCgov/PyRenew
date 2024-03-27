@@ -2,7 +2,7 @@
 
 
 This document illustrates two features of `pyrenew`: (a) the set of
-included `RandomVariable`es, and (b) model composition.
+included `RandomVariable`s, and (b) model composition.
 
 ## Hospitalizations model
 
@@ -84,11 +84,11 @@ import numpy as np
 import numpyro as npro
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import Infections
-from pyrenew.observation import PoissonObservation
+from pyrenew.observation import PoissonObservation, DeterministicObs
 from pyrenew.model import RtInfectionsRenewalModel
 ```
 
-    /home/xrd4/.cache/pypoetry/virtualenvs/pyrenew-B3vwhbMF-py3.10/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
       from .autonotebook import tqdm as notebook_tqdm
     An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
 
@@ -96,9 +96,12 @@ In the basic renewal model we can define three components: Rt, latent
 infections, and observed infections.
 
 ``` python
-latent_infections = Infections(
-    gen_int=jnp.array([0.25, 0.25, 0.25, 0.25]),
-    )
+# Fixed quantities can be passed using DeterministicObs
+gen_int_rev = DeterministicObs(
+    (jnp.array([0.25, 0.25, 0.25, 0.25]),),
+    validate_pmf=True
+)
+latent_infections = Infections(gen_int=gen_int_rev)
 
 observed_infections = PoissonObservation(
     rate_varname='latent',

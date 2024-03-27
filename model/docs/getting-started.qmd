@@ -85,7 +85,7 @@ import numpy as np
 import numpyro as npro
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import Infections
-from pyrenew.observation import PoissonObservation
+from pyrenew.observation import PoissonObservation, DeterministicObs
 from pyrenew.model import RtInfectionsRenewalModel
 ```
 
@@ -93,9 +93,13 @@ In the basic renewal model we can define three components: Rt, latent infections
 
 ```{python}
 #| label: creating-elements
-latent_infections = Infections(
-    gen_int=jnp.array([0.25, 0.25, 0.25, 0.25]),
-    )
+
+# Fixed quantities can be passed using DeterministicObs
+gen_int_rev = DeterministicObs(
+    (jnp.array([0.25, 0.25, 0.25, 0.25]),),
+    validate_pmf=True
+)
+latent_infections = Infections(gen_int=gen_int_rev)
 
 observed_infections = PoissonObservation(
     rate_varname='latent',

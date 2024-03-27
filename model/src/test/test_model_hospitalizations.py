@@ -7,7 +7,7 @@ import numpyro as npro
 import polars as pl
 from pyrenew.latent import HospitalAdmissions, Infections
 from pyrenew.model import HospitalizationsModel
-from pyrenew.observation import PoissonObservation
+from pyrenew.observation import DeterministicObs, PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
 
 
@@ -17,12 +17,41 @@ def test_model_hosp_no_obs_model():
     Hospitalization model runs
     """
 
-    latent_infections = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicObs(
+        (jnp.array([0.25, 0.25, 0.25, 0.25]),), validate_pmf=True
+    )
+
+    latent_infections = Infections(gen_int=gen_int)
     Rt_process = RtRandomWalkProcess()
-    latent_hospitalizations = HospitalAdmissions(
-        inf_hosp_int=jnp.array(
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.1, 0.1, 0.05],
+    inf_hosp = DeterministicObs(
+        (
+            jnp.array(
+                [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0.25,
+                    0.5,
+                    0.1,
+                    0.1,
+                    0.05,
+                ],
+            ),
         ),
+        validate_pmf=True,
+    )
+    latent_hospitalizations = HospitalAdmissions(
+        inf_hosp_int=inf_hosp,
         infections_varname="infections",
         hospitalizations_predicted_varname="observed_hospitalizations",
     )
@@ -64,17 +93,47 @@ def test_model_hosp_with_obs_model():
     Checks that the random Hospitalization model runs
     """
 
-    latent_infections = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicObs(
+        (jnp.array([0.25, 0.25, 0.25, 0.25]),), validate_pmf=True
+    )
+
+    latent_infections = Infections(gen_int=gen_int)
     Rt_process = RtRandomWalkProcess()
     observed_hospitalizations = PoissonObservation(
         rate_varname="latent",
         counts_varname="observed_hospitalizations",
     )
 
-    latent_hospitalizations = HospitalAdmissions(
-        inf_hosp_int=jnp.array(
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.1, 0.1, 0.05],
+    inf_hosp = DeterministicObs(
+        (
+            jnp.array(
+                [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0.25,
+                    0.5,
+                    0.1,
+                    0.1,
+                    0.05,
+                ],
+            ),
         ),
+        validate_pmf=True,
+    )
+
+    latent_hospitalizations = HospitalAdmissions(
+        inf_hosp_int=inf_hosp,
         infections_varname="infections",
     )
 

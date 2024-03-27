@@ -5,8 +5,6 @@ from collections import namedtuple
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-from numpy.typing import ArrayLike
-from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.metaclass import RandomVariable
 
 HospAdmissionsSample = namedtuple(
@@ -50,7 +48,7 @@ class HospitalAdmissions(RandomVariable):
 
     def __init__(
         self,
-        inf_hosp_int: ArrayLike,
+        inf_hosp_int: RandomVariable,
         infections_varname: str = "infections",
         infect_hosp_rate_varname: str = "IHR",
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
@@ -62,8 +60,9 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        inf_hosp_int : ArrayLike
-            pmf for reporting (informing) hospitalizations.
+        inf_hosp_int : RandomVariable
+            pmf for reporting (informing) hospitalizations (see
+            pyrenew.observations.DeterministicObs).
         infections_varname : str
             Name of the entry in random_variables that holds the vector of
             infections.
@@ -90,7 +89,7 @@ class HospitalAdmissions(RandomVariable):
         )
 
         self.infect_hosp_rate_dist = infect_hosp_rate_dist
-        self.inf_hosp = validate_discrete_dist_vector(inf_hosp_int)
+        self.inf_hosp = inf_hosp_int
 
     @staticmethod
     def validate(infect_hosp_rate_dist) -> None:
@@ -132,8 +131,13 @@ class HospitalAdmissions(RandomVariable):
 
         IHR_t = IHR * random_variables.get(self.infections_varname)
 
+        inf_hosp, *_ = self.inf_hosp.sample(
+            random_variables=random_variables,
+            constants=constants,
+        )
+
         predicted_hospitalizations = jnp.convolve(
-            IHR_t, self.inf_hosp, mode="full"
+            IHR_t, inf_hosp, mode="full"
         )[: IHR_t.shape[0]]
 
         npro.deterministic(
