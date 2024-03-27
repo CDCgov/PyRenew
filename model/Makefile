@@ -14,7 +14,7 @@ docs/getting-started.md: docs/getting-started.qmd
 
 clean:
 	rm -rf docs/*_files/
-	rm -f docs/getting-started.ipyn
-	rm -f docs/pyrenew_demo.ipnb
+	rm -f docs/getting-started.ipynb
+	rm -f docs/pyrenew_demo.ipynb
 
 .PHONY: install test docs clean

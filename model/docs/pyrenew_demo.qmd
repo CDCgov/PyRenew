@@ -36,7 +36,6 @@ plt.plot(np.exp(q_samp[0]))
 ```{python}
 from pyrenew.latent import Infections, HospitalAdmissions
 from pyrenew.observation import PoissonObservation, DeterministicObs
-
 from pyrenew.model import HospitalizationsModel
 from pyrenew.process import RtRandomWalkProcess
 

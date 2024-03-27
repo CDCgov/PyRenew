@@ -93,7 +93,6 @@ In the basic renewal model we can define three components: Rt, latent infections
 
 ```{python}
 #| label: creating-elements
-
 # Fixed quantities can be passed using DeterministicObs
 gen_int_rev = DeterministicObs(
     (jnp.array([0.25, 0.25, 0.25, 0.25]),),
