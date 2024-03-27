@@ -1,4 +1,4 @@
-Complete Table Of Contents 
+Complete Table Of Contents
 ==========================
 
 .. toctree::
@@ -13,9 +13,9 @@ Complete Table Of Contents
    glossary
    license
    notices
-   state 
+   state
    usage
-   contribute 
+   contribute
    bugs
 
 .. todo:: Change order and naming of these toctree entities

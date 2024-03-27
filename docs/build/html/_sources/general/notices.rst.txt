@@ -30,8 +30,8 @@ Please refer to `CDC's Template Repository <https://github.com/CDCgov/template>`
 Final Notes
 -----------
 
-Please refer, under Meta Information, the License and Reporting Issues pages for other standard notices. 
+Please refer, under Meta Information, the License and Reporting Issues pages for other standard notices.
 
 Note: [this page is a work in progress; the above text was taken from `https://github.com/CDCgov/multisignal-epi-inference <https://github.com/CDCgov/multisignal-epi-inference>`_ on 2024/03/25]
 
-.. todo:: Get baseline, accurate version of the Notices page. 
+.. todo:: Get baseline, accurate version of the Notices page.

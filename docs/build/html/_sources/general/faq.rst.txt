@@ -1,4 +1,4 @@
-FAQ 
+FAQ
 ===
 
 Note: [this page is a work in progress; this page is a placeholder]

@@ -49,4 +49,4 @@ Related documents
 
 Note: [this page is a work in progress; the above text was taken from `https://github.com/CDCgov/multisignal-epi-inference <https://github.com/CDCgov/multisignal-epi-inference>`_ on 2024/03/25]
 
-.. todo:: Get baseline, accurate version of the Reporting Issues page. 
+.. todo:: Get baseline, accurate version of the Reporting Issues page.

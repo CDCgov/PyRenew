@@ -25,4 +25,4 @@ Infection Functions
    :undoc-members:
    :show-inheritance:
 
-.. todo:: Determine and naming order of these modules. 
+.. todo:: Determine and naming order of these modules.

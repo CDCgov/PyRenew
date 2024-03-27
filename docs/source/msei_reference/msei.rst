@@ -1,4 +1,4 @@
-General MSEI Support 
+General MSEI Support
 ====================
 
 Metaclass Module
@@ -9,7 +9,7 @@ Metaclass Module
    :undoc-members:
    :show-inheritance:
 
-Convolution Utility Module 
+Convolution Utility Module
 --------------------------
 
 .. automodule:: pyrenew.convolve
@@ -17,7 +17,7 @@ Convolution Utility Module
    :undoc-members:
    :show-inheritance:
 
-Mathematics Utilities Module 
+Mathematics Utilities Module
 ----------------------------
 
 .. automodule:: pyrenew.math
@@ -58,4 +58,4 @@ Distributions Utility Module
    :undoc-members:
    :show-inheritance:
 
-.. todo:: Determine and naming order of these modules. 
+.. todo:: Determine and naming order of these modules.

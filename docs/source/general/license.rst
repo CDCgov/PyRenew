@@ -14,4 +14,4 @@ The source code forked from other open source projects will inherit its license.
 
 Note: [this page is a work in progress; the above text was taken from `https://github.com/CDCgov/multisignal-epi-inference <https://github.com/CDCgov/multisignal-epi-inference>`_ on 2024/03/25]
 
-.. todo:: Get baseline, accurate version of the License page. 
+.. todo:: Get baseline, accurate version of the License page.
