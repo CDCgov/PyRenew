@@ -14,6 +14,61 @@ HospAdmissionsSample = namedtuple(
 )
 """Output from HospitalAdmissions.sample()"""
 
+InfectHospRateSample = namedtuple(
+    "InfectHospRateSample",
+    ["IHR"],
+    defaults=[None],
+)
+
+
+class InfectHospRate(RandomVariable):
+    """Infection to Hospitalization Rate"""
+
+    def __init__(
+        self,
+        varname: str = "IHR",
+        dist: dist.Distribution = dist.LogNormal(jnp.log(0.05), 0.05),
+    ) -> None:
+        """Default constructor
+
+        Parameters
+        ----------
+        varname : str, optional
+            Name of the random_variable that may hold observed IHR, by default
+            "IHR"
+        dist : dist.Distribution, optional
+            Prior distribution of the IHR, by default
+            dist.LogNormal(jnp.log(0.05), 0.05)
+
+        Returns
+        -------
+        None
+        """
+
+        self.validate(dist)
+
+        self.dist = dist
+        self.varname = varname
+
+        return None
+
+    @staticmethod
+    def validate(distr: dist.Distribution) -> None:
+        assert isinstance(distr, dist.Distribution)
+
+    def sample(
+        self,
+        random_variables: dict = None,
+        constants: dict = None,
+    ) -> InfectHospRateSample:
+        return InfectHospRateSample(
+            npro.sample(
+                "IHR",
+                self.dist,
+                obs=random_variables.get(self.varname, None),
+            )
+        )
+
 
 class HospitalAdmissions(RandomVariable):
     """Latent hospital admissions
@@ -50,11 +105,8 @@ class HospitalAdmissions(RandomVariable):
         self,
         inf_hosp_int: RandomVariable,
         infections_varname: str = "infections",
-        infect_hosp_rate_varname: str = "IHR",
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
-        infect_hosp_rate_dist: dist.Distribution = dist.LogNormal(
-            jnp.log(0.05), 0.05
-        ),
+        infect_hosp_rate_dist: RandomVariable = InfectHospRate("IHR"),
     ) -> None:
         """Default constructor
 
@@ -73,7 +125,7 @@ class HospitalAdmissions(RandomVariable):
         hospitalizations_predicted_varname : str
             Name to assign to the deterministic component in numpyro of
             predicted hospitalizations.
-        infect_hosp_rate_dist : dist.Distribution, optional
+        infect_hosp_rate_dist : RandomVariable, optional
             Infection to hospitalization rate pmf.
 
         Returns
@@ -82,7 +134,6 @@ class HospitalAdmissions(RandomVariable):
         """
         HospitalAdmissions.validate(infect_hosp_rate_dist)
 
-        self.infect_hosp_rate_varname = infect_hosp_rate_varname
         self.infections_varname = infections_varname
         self.hospitalizations_predicted_varname = (
             hospitalizations_predicted_varname
@@ -93,7 +144,7 @@ class HospitalAdmissions(RandomVariable):
 
     @staticmethod
     def validate(infect_hosp_rate_dist) -> None:
-        assert isinstance(infect_hosp_rate_dist, dist.Distribution)
+        assert isinstance(infect_hosp_rate_dist, RandomVariable)
 
         return None
 
@@ -123,10 +174,9 @@ class HospitalAdmissions(RandomVariable):
         if constants is None:
             constants = dict()
 
-        IHR = npro.sample(
-            "IHR",
-            self.infect_hosp_rate_dist,
-            obs=random_variables.get(self.infect_hosp_rate_varname, None),
+        IHR, *_ = self.infect_hosp_rate_dist.sample(
+            random_variables=random_variables,
+            constants=constants,
         )
 
         IHR_t = IHR * random_variables.get(self.infections_varname)
