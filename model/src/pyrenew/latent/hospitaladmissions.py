@@ -6,6 +6,7 @@ import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.metaclass import RandomVariable
+from pyrenew.observation import DeterministicObs
 
 HospAdmissionsSample = namedtuple(
     "HospAdmissionsSample",
@@ -107,6 +108,8 @@ class HospitalAdmissions(RandomVariable):
         infections_varname: str = "infections",
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
         infect_hosp_rate_dist: RandomVariable = InfectHospRate("IHR"),
+        weekday_effect_dist: RandomVariable = DeterministicObs((1,)),
+        p_hosp_dist: RandomVariable = DeterministicObs((1,)),
     ) -> None:
         """Default constructor
 
@@ -127,12 +130,20 @@ class HospitalAdmissions(RandomVariable):
             predicted hospitalizations.
         infect_hosp_rate_dist : RandomVariable, optional
             Infection to hospitalization rate pmf.
+        weekday_effect_dist : RandomVariable, optional
+            Weekday effect.
+        p_hosp_dist : RandomVariable, optional
+            Hospitalization probability.
 
         Returns
         -------
         None
         """
-        HospitalAdmissions.validate(infect_hosp_rate_dist)
+        HospitalAdmissions.validate(
+            infect_hosp_rate_dist,
+            weekday_effect_dist,
+            p_hosp_dist,
+        )
 
         self.infections_varname = infections_varname
         self.hospitalizations_predicted_varname = (
@@ -140,11 +151,17 @@ class HospitalAdmissions(RandomVariable):
         )
 
         self.infect_hosp_rate_dist = infect_hosp_rate_dist
+        self.weekday_effect_dist = weekday_effect_dist
+        self.p_hosp_dist = p_hosp_dist
         self.inf_hosp = inf_hosp_int
 
     @staticmethod
-    def validate(infect_hosp_rate_dist) -> None:
+    def validate(
+        infect_hosp_rate_dist, weekday_effect_dist, p_hosp_dist
+    ) -> None:
         assert isinstance(infect_hosp_rate_dist, RandomVariable)
+        assert isinstance(weekday_effect_dist, RandomVariable)
+        assert isinstance(p_hosp_dist, RandomVariable)
 
         return None
 
@@ -189,6 +206,24 @@ class HospitalAdmissions(RandomVariable):
         predicted_hospitalizations = jnp.convolve(
             IHR_t, inf_hosp, mode="full"
         )[: IHR_t.shape[0]]
+
+        # Applying weekday effect
+        predicted_hospitalizations = (
+            predicted_hospitalizations
+            * self.weekday_effect_dist.sample(
+                random_variables=random_variables,
+                constants=constants,
+            )[0]
+        )
+
+        # Applying probability of hospitalization effect
+        predicted_hospitalizations = (
+            predicted_hospitalizations
+            * self.p_hosp_dist.sample(
+                random_variables=random_variables,
+                constants=constants,
+            )[0]
+        )
 
         npro.deterministic(
             self.hospitalizations_predicted_varname, predicted_hospitalizations
