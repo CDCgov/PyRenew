@@ -43,7 +43,7 @@ jobs:
     - name: Upload artifacts
       uses: actions/upload-pages-artifact@v3
       with:
-        name: html-docs
+        name: github-pages-test
         path: docs/build/html/
 
   deploy:
