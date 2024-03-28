@@ -9,31 +9,50 @@ jobs:
       contents: write
     steps:
     - uses: actions/checkout@v4
-    # - name: Build HTML
-    #   uses: ammaraskar/sphinx-action@master
+
+    # Setting up the environment
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
     - name: Set up Python
       uses: actions/setup-python@v2
       with:
         python-version: '3.11'
-    # - uses: abatilo/actions-poetry@v3.0.0
+
     - name: Install Poetry
       run: pip install poetry
+
     - name: Install dependencies with Poetry
       run: |
         cd docs
         poetry install
+
+    # Building
     - name: Build HTML using Poetry
       run: |
         cd docs
         poetry run sphinx-build -M html source/ build/
+
+  deploy:
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+  
+    permissions:
+      pages: write      # to deploy to Pages
+      id-token: write   # to verify the deployment originates from an appropriate source
+      
+    steps:
+    # Upload and deploy
     - name: Upload artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-pages-artifact@v4
       with:
         name: html-docs
         path: docs/build/html/
-    - name: Deploy
-      uses: peaceiris/actions-gh-pages@v3
-      if: github.ref == 'refs/heads/main'
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: docs/build/html
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
