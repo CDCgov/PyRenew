@@ -22,7 +22,7 @@ def test_hospitalizations_sample():
         sim_rt, *_ = rt.sample(constants={"n_timepoints": 30})
 
     gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),), validate_pmf=True
+        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
     inf1 = Infections(gen_int=gen_int)
 
@@ -56,7 +56,6 @@ def test_hospitalizations_sample():
                 ]
             ),
         ),
-        validate_pmf=True,
     )
     hosp1 = HospitalAdmissions(inf_hosp_int=inf_hosp)
 

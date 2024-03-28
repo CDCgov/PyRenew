@@ -5,7 +5,7 @@ from collections import namedtuple
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-from pyrenew.deterministic import Deterministic
+from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 
 HospAdmissionsSample = namedtuple(
@@ -72,7 +72,7 @@ class InfectHospRate(RandomVariable):
 
 
 class HospitalAdmissions(RandomVariable):
-    """Latent hospital admissions
+    r"""Latent hospital admissions
 
     Implements a renewal process for the expected number of hospitalizations.
 
@@ -86,7 +86,7 @@ class HospitalAdmissions(RandomVariable):
     Following other semi-mechanistic renewal frameworks, we model the _expected_
     hospital admissions per capita :math:`H(t)` as a convolution of the
     _expected_ latent incident infections per capita :math:`I(t)`, and a
-    discrete infection to hospitalization distribution :math:`d(\\tau)`, scaled
+    discrete infection to hospitalization distribution :math:`d(\tau)`, scaled
     by the probability of being hospitalized :math:`p_\mathrm{hosp}(t)`.
 
     To account for day-of-week effects in hospital reporting, we use an
@@ -96,7 +96,7 @@ class HospitalAdmissions(RandomVariable):
 
     .. math::
 
-        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\\tau = 0}^{T_d} d(\\tau) I(t-\\tau)
+        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\\tau = 0}^{T_d} d(\tau) I(t-\tau)
 
     Where :math:`T_d` is the maximum delay from infection to hospitalization
     that we consider.
@@ -108,8 +108,8 @@ class HospitalAdmissions(RandomVariable):
         infections_varname: str = "infections",
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
         infect_hosp_rate_dist: RandomVariable = InfectHospRate("IHR"),
-        weekday_effect_dist: RandomVariable = Deterministic((1,)),
-        p_hosp_dist: RandomVariable = Deterministic((1,)),
+        weekday_effect_dist: RandomVariable = DeterministicVariable((1,)),
+        p_hosp_dist: RandomVariable = DeterministicVariable((1,)),
     ) -> None:
         """Default constructor
 

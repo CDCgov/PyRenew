@@ -1,4 +1,6 @@
+# -*- coding: utf-8 -*-
+
 from pyrenew.deterministic.deterministic import DeterministicVariable
-from pyrenew.deterministic.pmf import DeterministicPMF
+from pyrenew.deterministic.deterministicpmf import DeterministicPMF
 
 __all__ = ["DeterministicVariable", "DeterministicPMF"]

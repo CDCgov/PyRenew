@@ -2,6 +2,7 @@
 
 from collections import namedtuple
 
+from pyrenew.latent import Infections0
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
 from pyrenew.process import RtRandomWalkProcess
@@ -33,6 +34,8 @@ class HospitalizationsModel(Model):
         self,
         latent_hospitalizations: RandomVariable,
         latent_infections: RandomVariable,
+        gen_int: RandomVariable,
+        i0: RandomVariable = Infections0(),
         observed_hospitalizations: RandomVariable = None,
         Rt_process: RandomVariable = RtRandomWalkProcess(),
     ) -> None:
@@ -54,6 +57,7 @@ class HospitalizationsModel(Model):
         None
         """
         self.basic_renewal = RtInfectionsRenewalModel(
+            I0=i0,
             latent_infections=latent_infections,
             observed_infections=None,
             Rt_process=Rt_process,

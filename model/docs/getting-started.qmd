@@ -18,7 +18,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
 from pyrenew.process import RtRandomWalkProcess
-from pyrenew.latent import Infections
+from pyrenew.latent import Infections, Infections0
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
@@ -34,7 +34,9 @@ gen_int = DeterministicPMF(
     (jnp.array([0.25, 0.25, 0.25, 0.25]),),
 )
 
-latent_infections = Infections(gen_int=gen_int)
+I0 = Infections0()
+
+latent_infections = Infections()
 
 # (2) The observed infections process
 observed_infections = PoissonObservation(
@@ -51,6 +53,8 @@ With these three (four) pieces, we can build the basic renewal model:
 ```{python}
 #| label: model-creation
 model1 = RtInfectionsRenewalModel(
+    gen_int=gen_int,
+    I0=I0,
     Rt_process=rt_proc,
     latent_infections=latent_infections,
     observed_infections=observed_infections,

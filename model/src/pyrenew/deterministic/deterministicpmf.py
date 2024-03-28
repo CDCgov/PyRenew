@@ -1,11 +1,12 @@
+# -*- coding: utf-8 -*-
+
 from pyrenew.deterministic.deterministic import DeterministicVariable
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.metaclass import RandomVariable
 
 
 class DeterministicPMF(RandomVariable):
-    """A wrapper instance of RandomVariable that allows pass deterministic
-    quantities"""
+    """A deterministic (degenerate) random variable that represents a PMF."""
 
     def __init__(
         self,
@@ -15,16 +16,19 @@ class DeterministicPMF(RandomVariable):
     ) -> None:
         """Default constructor
 
+        It automatically checks that the elements in `vars` can be indeed
+        consireded to be a PMF by calling
+        pyrenew.distutil.validate_discrete_dist_vector on each one of its
+        entries.
+
         Parameters
         ----------
         vars : tuple
             A tuple with arraylike objects.
         label : str
             A label to assign to the process.
-        validate_pmf : bool
-            When True, it will create of copy of vars and call
-            pyrenew.distutil.validate_discrete_dist_vector on each one of its
-            entries.
+        tol : float
+            Passed to pyrenew.distutil.validate_discrete_dist_vector
 
         Returns
         -------
@@ -51,6 +55,22 @@ class DeterministicPMF(RandomVariable):
         random_variables: dict = None,
         constants: dict = None,
     ) -> tuple:
+        """Retrieves the deterministic PMF
+
+        Parameters
+        ----------
+
+        random_variables : dict
+            Ignored. Default None.
+        constants : dict
+            Ignored. Default None.
+
+        Returns
+        -------
+        tuple
+            Containing the stored values during construction.
+        """
+
         return self.basevar.sample(
             random_variables=random_variables,
             constants=constants,

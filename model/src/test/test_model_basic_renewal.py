@@ -5,9 +5,10 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
 import polars as pl
+from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import Infections
 from pyrenew.model import RtInfectionsRenewalModel
-from pyrenew.observation import DeterministicObs, PoissonObservation
+from pyrenew.observation import PoissonObservation
 
 
 def test_model_basicrenewal_no_obs_model():
@@ -16,9 +17,8 @@ def test_model_basicrenewal_no_obs_model():
     from the perspective of the infections. It returns expected, not sampled.
     """
 
-    gen_int = DeterministicObs(
+    gen_int = DeterministicPMF(
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-        validate_pmf=True,
     )
 
     latent_infections = Infections(gen_int=gen_int)
@@ -56,9 +56,8 @@ def test_model_basicrenewal_with_obs_model():
     from the perspective of the infections. It returns sampled, not expected.
     """
 
-    gen_int = DeterministicObs(
+    gen_int = DeterministicPMF(
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-        validate_pmf=True,
     )
 
     latent_infections = Infections(gen_int=gen_int)

@@ -6,7 +6,7 @@ epidemiological models with an emphasis on renewal models. Built on top
 of `numpyro`, `pyrenew` provides core components for model building as
 well as pre-defined models for processing various types of observational
 processes. This document illustrates how `pyrenew` can be used to build
-a basic renwal model.
+a basic renewal model.
 
 ## ‘Hello world’ model
 
@@ -21,7 +21,8 @@ import numpy as np
 import numpyro as npro
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import Infections
-from pyrenew.observation import PoissonObservation, DeterministicObs
+from pyrenew.observation import PoissonObservation
+from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
 ```
 
@@ -31,9 +32,8 @@ infections, and observed infections.
 ``` python
 # (1) The generation interval for the latent infection process is
 # deterministic
-gen_int = DeterministicObs(
+gen_int = DeterministicPMF(
     (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    validate_pmf=True
 )
 
 latent_infections = Infections(gen_int=gen_int)
@@ -66,7 +66,7 @@ of `RtInfectionsRenewalModel`:
 
 ``` mermaid
 flowchart TB
-    genint["gen_int\n(DeterministicObs)"]
+    genint["gen_int\n(DetermnisticPMF)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     obs["(2) observed_infections\n(PoissonObservation)"]
     inf["(1) latent_infections\n(Infections)"]
@@ -198,7 +198,7 @@ flowchart TB
     models((Model\nmetaclass))
 
     subgraph observations[Observations module]
-        genint["gen_int\n(DeterministicObs)"]
+        genint["gen_int\n(DetermnisticPMF)"]
         obs["observed_infections\n(PoissonObservation)"]
     end
 

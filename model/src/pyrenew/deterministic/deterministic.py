@@ -1,12 +1,16 @@
+# -*- coding: utf-8 -*-
+
 from pyrenew.metaclass import RandomVariable
 
 
 class DeterministicVariable(RandomVariable):
+    """A deterministic (degenerate) random variable. Useful to pass fixed
+    quantities."""
+
     def __init__(
         self,
         vars: tuple,
         label: str = "a_random_variable",
-        validate_pmf: bool = False,
     ) -> None:
         """Default constructor
 
@@ -16,10 +20,6 @@ class DeterministicVariable(RandomVariable):
             A tuple with arraylike objects.
         label : str
             A label to assign to the process.
-        validate_pmf : bool
-            When True, it will create of copy of vars and call
-            pyrenew.distutil.validate_discrete_dist_vector on each one of its
-            entries.
 
         Returns
         -------
@@ -27,11 +27,13 @@ class DeterministicVariable(RandomVariable):
         """
 
         self.validate(vars)
+        self.vars = vars
         self.label = label
 
         return None
 
-    def validate(self, vars: tuple) -> None:
+    @staticmethod
+    def validate(vars: tuple) -> None:
         if not isinstance(vars, tuple):
             raise Exception("vars is not a tuple")
 
@@ -46,16 +48,16 @@ class DeterministicVariable(RandomVariable):
 
         Parameters
         ----------
-        random_variables : dict
-            Ignored.
 
+        random_variables : dict
+            Ignored. Default None.
         constants : dict
-            Ignored.
+            Ignored. Default None.
 
         Returns
         -------
         tuple
-            A tuple with the stored arrays during construction.
+            Containing the stored values during construction.
         """
 
         return self.vars
