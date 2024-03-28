@@ -13,7 +13,7 @@ from pyrenew.observation import DeterministicObs, PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
 
 
-class Prob(RandomVariable):
+class UniformProbForTest(RandomVariable):
     def __init__(self, pname: str):
         self.name = pname
 
@@ -240,8 +240,8 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     weekday = jnp.tile(weekday, 10)
     weekday = weekday[:31]
 
-    p_hosp = Prob("p_hosp")
-    weekday = Prob("weekday")
+    p_hosp = UniformProbForTest("p_hosp")
+    weekday = UniformProbForTest("weekday")
 
     latent_hospitalizations = HospitalAdmissions(
         inf_hosp_int=inf_hosp,
