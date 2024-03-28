@@ -33,11 +33,19 @@ jobs:
         cd docs
         poetry run sphinx-build -M html source/ build/
 
+    # Upload
+    - name: Upload artifacts
+      uses: actions/upload-pages-artifact@v4
+      with:
+        name: html-docs
+        path: docs/build/html/
+
   deploy:
     # Deploy to the github-pages environment
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
 
     needs: build
 
@@ -49,12 +57,6 @@ jobs:
       id-token: write   # to verify the deployment originates from an appropriate source
 
     steps:
-    # Upload and deploy
-    - name: Upload artifacts
-      uses: actions/upload-pages-artifact@v4
-      with:
-        name: html-docs
-        path: docs/build/html/
     - name: Deploy to GitHub Pages
       id: deployment
       uses: actions/deploy-pages@v4
