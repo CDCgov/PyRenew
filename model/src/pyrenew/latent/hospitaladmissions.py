@@ -5,8 +5,8 @@ from collections import namedtuple
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
+from pyrenew.deterministic import Deterministic
 from pyrenew.metaclass import RandomVariable
-from pyrenew.observation import DeterministicObs
 
 HospAdmissionsSample = namedtuple(
     "HospAdmissionsSample",
@@ -108,8 +108,8 @@ class HospitalAdmissions(RandomVariable):
         infections_varname: str = "infections",
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
         infect_hosp_rate_dist: RandomVariable = InfectHospRate("IHR"),
-        weekday_effect_dist: RandomVariable = DeterministicObs((1,)),
-        p_hosp_dist: RandomVariable = DeterministicObs((1,)),
+        weekday_effect_dist: RandomVariable = Deterministic((1,)),
+        p_hosp_dist: RandomVariable = Deterministic((1,)),
     ) -> None:
         """Default constructor
 
@@ -117,7 +117,7 @@ class HospitalAdmissions(RandomVariable):
         ----------
         inf_hosp_int : RandomVariable
             pmf for reporting (informing) hospitalizations (see
-            pyrenew.observations.DeterministicObs).
+            pyrenew.observations.Deterministic).
         infections_varname : str
             Name of the entry in random_variables that holds the vector of
             infections.

@@ -46,7 +46,7 @@ class Infections(RandomVariable):
 
         Returns
         -------
-        RandomVariable
+        None
         """
         Infections.validate(I0_dist, gen_int)
 

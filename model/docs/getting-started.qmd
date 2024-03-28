@@ -19,7 +19,8 @@ import numpy as np
 import numpyro as npro
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import Infections
-from pyrenew.observation import PoissonObservation, DeterministicObs
+from pyrenew.observation import PoissonObservation
+from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
 ```
 
@@ -29,9 +30,8 @@ In the basic renewal model we can define three components: Rt, latent infections
 #| label: creating-elements
 # (1) The generation interval for the latent infection process is
 # deterministic
-gen_int = DeterministicObs(
+gen_int = DeterministicPMF(
     (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    validate_pmf=True
 )
 
 latent_infections = Infections(gen_int=gen_int)
@@ -62,7 +62,7 @@ The following diagram summarizes how the modules interact via composition; notab
 ```{mermaid}
 %%| label: overview-of-RtInfectionsRenewalModel
 flowchart TB
-    genint["gen_int\n(DeterministicObs)"]
+    genint["gen_int\n(DetermnisticPMF)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     obs["(2) observed_infections\n(PoissonObservation)"]
     inf["(1) latent_infections\n(Infections)"]
@@ -164,7 +164,7 @@ flowchart TB
     models((Model\nmetaclass))
 
     subgraph observations[Observations module]
-        genint["gen_int\n(DeterministicObs)"]
+        genint["gen_int\n(DetermnisticPMF)"]
         obs["observed_infections\n(PoissonObservation)"]
     end
 

@@ -6,10 +6,11 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 import polars as pl
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HospitalAdmissions, Infections
 from pyrenew.metaclass import RandomVariable
 from pyrenew.model import HospitalizationsModel
-from pyrenew.observation import DeterministicObs, PoissonObservation
+from pyrenew.observation import PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
 
 
@@ -35,13 +36,13 @@ def test_model_hosp_no_obs_model():
     Hospitalization model runs
     """
 
-    gen_int = DeterministicObs(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),), validate_pmf=True
+    gen_int = DeterministicPMF(
+        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
     latent_infections = Infections(gen_int=gen_int)
     Rt_process = RtRandomWalkProcess()
-    inf_hosp = DeterministicObs(
+    inf_hosp = DeterministicPMF(
         (
             jnp.array(
                 [
@@ -66,7 +67,6 @@ def test_model_hosp_no_obs_model():
                 ],
             ),
         ),
-        validate_pmf=True,
     )
     latent_hospitalizations = HospitalAdmissions(
         inf_hosp_int=inf_hosp,
@@ -111,8 +111,8 @@ def test_model_hosp_with_obs_model():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicObs(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),), validate_pmf=True
+    gen_int = DeterministicPMF(
+        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
     latent_infections = Infections(gen_int=gen_int)
@@ -122,7 +122,7 @@ def test_model_hosp_with_obs_model():
         counts_varname="observed_hospitalizations",
     )
 
-    inf_hosp = DeterministicObs(
+    inf_hosp = DeterministicPMF(
         (
             jnp.array(
                 [
@@ -147,7 +147,6 @@ def test_model_hosp_with_obs_model():
                 ],
             ),
         ),
-        validate_pmf=True,
     )
 
     latent_hospitalizations = HospitalAdmissions(
@@ -195,8 +194,8 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicObs(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),), validate_pmf=True
+    gen_int = DeterministicPMF(
+        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
     latent_infections = Infections(gen_int=gen_int)
@@ -206,7 +205,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         counts_varname="observed_hospitalizations",
     )
 
-    inf_hosp = DeterministicObs(
+    inf_hosp = DeterministicPMF(
         (
             jnp.array(
                 [
@@ -231,7 +230,6 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
                 ],
             ),
         ),
-        validate_pmf=True,
     )
 
     # Other random components
@@ -290,8 +288,8 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicObs(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),), validate_pmf=True
+    gen_int = DeterministicPMF(
+        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
     latent_infections = Infections(gen_int=gen_int)
@@ -301,7 +299,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         counts_varname="observed_hospitalizations",
     )
 
-    inf_hosp = DeterministicObs(
+    inf_hosp = DeterministicPMF(
         (
             jnp.array(
                 [
@@ -326,7 +324,6 @@ def test_model_hosp_with_obs_model_weekday_phosp():
                 ],
             ),
         ),
-        validate_pmf=True,
     )
 
     # Other random components
@@ -335,8 +332,8 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = jnp.tile(weekday, 10)
     weekday = weekday[:31]
 
-    p_hosp = DeterministicObs((weekday,))
-    weekday = DeterministicObs((weekday,))
+    p_hosp = DeterministicVariable((weekday,))
+    weekday = DeterministicVariable((weekday,))
 
     latent_hospitalizations = HospitalAdmissions(
         inf_hosp_int=inf_hosp,

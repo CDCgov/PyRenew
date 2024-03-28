@@ -4,8 +4,8 @@ import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
+from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import HospitalAdmissions, Infections
-from pyrenew.observation import DeterministicObs
 from pyrenew.process import RtRandomWalkProcess
 
 
@@ -21,7 +21,7 @@ def test_hospitalizations_sample():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_rt, *_ = rt.sample(constants={"n_timepoints": 30})
 
-    gen_int = DeterministicObs(
+    gen_int = DeterministicPMF(
         (jnp.array([0.25, 0.25, 0.25, 0.25]),), validate_pmf=True
     )
     inf1 = Infections(gen_int=gen_int)
@@ -31,7 +31,7 @@ def test_hospitalizations_sample():
         inf_sampled1 = inf1.sample(random_variables=dict(Rt=sim_rt, data=i0))
 
     # Testing the hospitalizations
-    inf_hosp = DeterministicObs(
+    inf_hosp = DeterministicPMF(
         (
             jnp.array(
                 [

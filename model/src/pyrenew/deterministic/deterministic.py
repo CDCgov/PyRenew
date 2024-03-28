@@ -1,11 +1,7 @@
-from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.metaclass import RandomVariable
 
 
-class DeterministicObs(RandomVariable):
-    """A wrapper instance of RandomVariable that allows pass deterministic
-    quantities"""
-
+class DeterministicVariable(RandomVariable):
     def __init__(
         self,
         vars: tuple,
@@ -31,14 +27,6 @@ class DeterministicObs(RandomVariable):
         """
 
         self.validate(vars)
-
-        if validate_pmf:
-            vars2 = list(vars)
-            for i in range(0, len(vars2)):
-                vars2[i] = validate_discrete_dist_vector(vars2[i])
-            self.vars = tuple(vars2)
-        else:
-            self.vars = vars
         self.label = label
 
         return None

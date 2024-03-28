@@ -1,8 +1,9 @@
+from pyrenew.deterministic.deterministic import DeterministicVariable
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.metaclass import RandomVariable
 
 
-class DeterministicProcess(RandomVariable):
+class DeterministicPMF(RandomVariable):
     """A wrapper instance of RandomVariable that allows pass deterministic
     quantities"""
 
@@ -10,7 +11,7 @@ class DeterministicProcess(RandomVariable):
         self,
         vars: tuple,
         label: str = "a_random_variable",
-        validate_pmf: bool = False,
+        tol: float = 1e-20,
     ) -> None:
         """Default constructor
 
@@ -30,23 +31,19 @@ class DeterministicProcess(RandomVariable):
         None
         """
 
-        self.validate(vars)
+        vars2 = list(vars)
+        for i in range(0, len(vars2)):
+            vars2[i] = validate_discrete_dist_vector(
+                discrete_dist=vars2[i],
+                tol=tol,
+            )
 
-        if validate_pmf:
-            vars2 = list(vars)
-            for i in range(0, len(vars2)):
-                vars2[i] = validate_discrete_dist_vector(vars2[i])
-            self.vars = tuple(vars2)
-        else:
-            self.vars = vars
-        self.label = label
+        self.basevar = DeterministicVariable(tuple(vars2), label)
 
         return None
 
-    def validate(self, vars: tuple) -> None:
-        if not isinstance(vars, tuple):
-            raise Exception("vars is not a dictionary")
-
+    @staticmethod
+    def validate(vars: tuple) -> None:
         return None
 
     def sample(
@@ -54,20 +51,7 @@ class DeterministicProcess(RandomVariable):
         random_variables: dict = None,
         constants: dict = None,
     ) -> tuple:
-        """Retrieve the value of the deterministic Rv
-
-        Parameters
-        ----------
-        random_variables : dict
-            Ignored.
-
-        constants : dict
-            Ignored.
-
-        Returns
-        -------
-        tuple
-            A tuple with the stored arrays during construction.
-        """
-
-        return self.vars
+        return self.basevar.sample(
+            random_variables=random_variables,
+            constants=constants,
+        )
