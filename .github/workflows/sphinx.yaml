@@ -33,7 +33,7 @@ jobs:
 
     # Building
     - name: Build HTML using Poetry
-      run: poetry run -C docs sphinx-build -M html source/ build/
+      run: poetry run -C docs sphinx-build -M html docs/source/ docs/build/
 
     # Upload
     - name: Upload artifacts
