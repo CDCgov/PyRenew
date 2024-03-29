@@ -184,7 +184,7 @@ class RtInfectionsRenewalModel(Model):
         latent, *_ = self.sample_infections_latent(
             random_variables={
                 **random_variables,
-                **dict(Rt=Rt, gen_int=gen_int, i0=i0),
+                **dict(Rt=Rt, gen_int=gen_int, I0=i0),
             },
             constants=constants,
         )

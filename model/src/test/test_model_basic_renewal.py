@@ -6,7 +6,7 @@ import numpy as np
 import numpyro as npro
 import polars as pl
 from pyrenew.deterministic import DeterministicPMF
-from pyrenew.latent import Infections
+from pyrenew.latent import Infections, Infections0
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
 
@@ -21,9 +21,13 @@ def test_model_basicrenewal_no_obs_model():
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
-    latent_infections = Infections(gen_int=gen_int)
+    I0 = Infections0()
 
-    model0 = RtInfectionsRenewalModel(latent_infections=latent_infections)
+    latent_infections = Infections()
+
+    model0 = RtInfectionsRenewalModel(
+        gen_int=gen_int, I0=I0, latent_infections=latent_infections
+    )
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
@@ -60,7 +64,9 @@ def test_model_basicrenewal_with_obs_model():
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
-    latent_infections = Infections(gen_int=gen_int)
+    I0 = Infections0()
+
+    latent_infections = Infections()
 
     observed_infections = PoissonObservation(
         rate_varname="latent",
@@ -68,6 +74,8 @@ def test_model_basicrenewal_with_obs_model():
     )
 
     model1 = RtInfectionsRenewalModel(
+        I0=I0,
+        gen_int=gen_int,
         latent_infections=latent_infections,
         observed_infections=observed_infections,
     )

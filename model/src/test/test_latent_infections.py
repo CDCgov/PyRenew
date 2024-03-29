@@ -4,7 +4,6 @@ import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
-from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import Infections
 from pyrenew.process import RtRandomWalkProcess
 
@@ -20,12 +19,12 @@ def test_infections_as_deterministic():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_rt, *_ = rt.sample(constants={"n_timepoints": 30})
 
-    gen_int = DeterministicPMF((jnp.array([0.25, 0.25, 0.25, 0.25]),))
+    gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
 
-    inf1 = Infections(gen_int=gen_int)
+    inf1 = Infections()
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        obs = dict(Rt=sim_rt, I0=10)
+        obs = dict(Rt=sim_rt, I0=10, gen_int=gen_int)
         inf_sampled1 = inf1.sample(random_variables=obs)
         inf_sampled2 = inf1.sample(random_variables=obs)
 

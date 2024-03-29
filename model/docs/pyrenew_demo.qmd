@@ -36,7 +36,7 @@ plt.plot(np.exp(q_samp[0]))
 ```
 
 ```{python}
-from pyrenew.latent import Infections, HospitalAdmissions
+from pyrenew.latent import Infections, HospitalAdmissions, Infections0
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalizationsModel
@@ -45,12 +45,15 @@ from pyrenew.process import RtRandomWalkProcess
 # Initializing model components:
 
 # A deterministic generation time
-gen_time = DeterministicPMF(
+gen_int = DeterministicPMF(
     (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
+# Baseline infections
+I0 = Infections0()
+
 # The latent infections process
-latent_infections = Infections(gen_int=gen_time)
+latent_infections = Infections()
 
 # A deterministic infection to hosp pmf
 inf_hosp_int = DeterministicPMF(
@@ -72,6 +75,8 @@ Rt_process = RtRandomWalkProcess()
 
 # Initializing the model
 hospmodel = HospitalizationsModel(
+    gen_int=gen_int,
+    i0=I0,
     latent_hospitalizations=latent_hospitalizations,
     observed_hospitalizations=observed_hospitalizations,
     latent_infections=latent_infections,

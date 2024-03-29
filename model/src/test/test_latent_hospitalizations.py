@@ -21,14 +21,15 @@ def test_hospitalizations_sample():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_rt, *_ = rt.sample(constants={"n_timepoints": 30})
 
-    gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
-    inf1 = Infections(gen_int=gen_int)
+    gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
+    i0 = 10
 
-    i0 = dict(I0=10)
+    inf1 = Infections()
+
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        inf_sampled1 = inf1.sample(random_variables=dict(Rt=sim_rt, data=i0))
+        inf_sampled1 = inf1.sample(
+            random_variables=dict(Rt=sim_rt, gen_int=gen_int, I0=i0),
+        )
 
     # Testing the hospitalizations
     inf_hosp = DeterministicPMF(

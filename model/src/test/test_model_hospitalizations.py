@@ -7,7 +7,7 @@ import numpyro as npro
 import numpyro.distributions as dist
 import polars as pl
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import HospitalAdmissions, Infections
+from pyrenew.latent import HospitalAdmissions, Infections, Infections0
 from pyrenew.metaclass import RandomVariable
 from pyrenew.model import HospitalizationsModel
 from pyrenew.observation import PoissonObservation
@@ -40,7 +40,9 @@ def test_model_hosp_no_obs_model():
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
-    latent_infections = Infections(gen_int=gen_int)
+    I0 = Infections0()
+
+    latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
     inf_hosp = DeterministicPMF(
         (
@@ -75,6 +77,8 @@ def test_model_hosp_no_obs_model():
     )
 
     model0 = HospitalizationsModel(
+        gen_int=gen_int,
+        I0=I0,
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
@@ -115,7 +119,9 @@ def test_model_hosp_with_obs_model():
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
-    latent_infections = Infections(gen_int=gen_int)
+    I0 = Infections0()
+
+    latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
     observed_hospitalizations = PoissonObservation(
         rate_varname="latent",
@@ -155,6 +161,8 @@ def test_model_hosp_with_obs_model():
     )
 
     model1 = HospitalizationsModel(
+        gen_int=gen_int,
+        I0=I0,
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
@@ -198,7 +206,9 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
-    latent_infections = Infections(gen_int=gen_int)
+    I0 = Infections0()
+
+    latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
     observed_hospitalizations = PoissonObservation(
         rate_varname="latent",
@@ -249,6 +259,8 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     )
 
     model1 = HospitalizationsModel(
+        I0=I0,
+        gen_int=gen_int,
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
@@ -292,7 +304,9 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
-    latent_infections = Infections(gen_int=gen_int)
+    I0 = Infections0()
+
+    latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
     observed_hospitalizations = PoissonObservation(
         rate_varname="latent",
@@ -343,6 +357,8 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
 
     model1 = HospitalizationsModel(
+        I0=I0,
+        gen_int=gen_int,
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,

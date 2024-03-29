@@ -35,7 +35,7 @@ class HospitalizationsModel(Model):
         latent_hospitalizations: RandomVariable,
         latent_infections: RandomVariable,
         gen_int: RandomVariable,
-        i0: RandomVariable = Infections0(),
+        I0: RandomVariable = Infections0(),
         observed_hospitalizations: RandomVariable = None,
         Rt_process: RandomVariable = RtRandomWalkProcess(),
     ) -> None:
@@ -45,10 +45,14 @@ class HospitalizationsModel(Model):
         ----------
         latent_hospitalizations : RandomVariable
             Latent process for the hospitalizations.
-        observed_hospitalizations : RandomVariable
-            Observation process for the hospitalizations.
         latent_infections : RandomVariable
             The infections latent process (passed to RtInfectionsRenewalModel).
+        gen_int : RandomVariable
+            Generation time (passed to RtInfectionsRenewalModel)
+        I0 : RandomVariable
+            Baseline infections (passed to RtInfectionsRenewalModel)
+        observed_hospitalizations : RandomVariable
+            Observation process for the hospitalizations.
         Rt_process : RandomVariable, optional
             Rt process  (passed to RtInfectionsRenewalModel).
 
@@ -57,7 +61,8 @@ class HospitalizationsModel(Model):
         None
         """
         self.basic_renewal = RtInfectionsRenewalModel(
-            I0=i0,
+            gen_int=gen_int,
+            I0=I0,
             latent_infections=latent_infections,
             observed_infections=None,
             Rt_process=Rt_process,

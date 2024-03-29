@@ -20,38 +20,44 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
 from pyrenew.process import RtRandomWalkProcess
-from pyrenew.latent import Infections
+from pyrenew.latent import Infections, Infections0
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
 ```
 
-In the basic renewal model we can define three components: Rt, latent
-infections, and observed infections.
+In the basic renewal model we can define five components: generation
+interval, baseline infections, Rt, latent infections, and observed
+infections.
 
 ``` python
-# (1) The generation interval for the latent infection process is
-# deterministic
+# (1) The generation interval (deterministic)
 gen_int = DeterministicPMF(
     (jnp.array([0.25, 0.25, 0.25, 0.25]),),
 )
 
-latent_infections = Infections(gen_int=gen_int)
+# (2) Baseline infections (inferred with a prior)
+I0 = Infections0()
 
-# (2) The observed infections process
+# (3) The random process for Rt
+rt_proc = RtRandomWalkProcess()
+
+# (4) Latent infection process (which will use 1 and 2)
+latent_infections = Infections()
+
+# (5) The observed infections process (with mean at the latent infections)
 observed_infections = PoissonObservation(
     rate_varname='latent',
     counts_varname='observed_infections',
     )
-
-# (3) The random process for Rt
-rt_proc = RtRandomWalkProcess()
 ```
 
-With these three (four) pieces, we can build the basic renewal model:
+With these five pieces, we can build the basic renewal model:
 
 ``` python
 model1 = RtInfectionsRenewalModel(
+    gen_int=gen_int,
+    I0=I0,
     Rt_process=rt_proc,
     latent_infections=latent_infections,
     observed_infections=observed_infections,
@@ -59,21 +65,23 @@ model1 = RtInfectionsRenewalModel(
 ```
 
 The following diagram summarizes how the modules interact via
-composition; notably, `rt_proc`, `observed_infections`,
-`latent_infections`, and `gen_int` are instances of `RandomVariable`,
-which means these can be easily replaced to generate different version
-of `RtInfectionsRenewalModel`:
+composition; notably, `gen_int`, `I0`, `rt_proc`, `latent_infections`,
+and `observed_infections` are instances of `RandomVariable`, which means
+these can be easily replaced to generate different version of
+`RtInfectionsRenewalModel`:
 
 ``` mermaid
 flowchart TB
-    genint["gen_int\n(DetermnisticPMF)"]
+    genint["(1) gen_int\n(DetermnisticPMF)"]
+    i0["(2) I0\n(Infections0)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
-    obs["(2) observed_infections\n(PoissonObservation)"]
-    inf["(1) latent_infections\n(Infections)"]
+    inf["(4) latent_infections\n(Infections)"]
+    obs["(5) observed_infections\n(PoissonObservation)"]
 
     model1["model1\n(RtInfectionsRenewalModel)"]
 
-    genint-->|Composes|inf
+    i0-->|Composes|model1
+    genint-->|Composes|model1
     rt-->|Composes|model1
     obs-->|Composes|model1
     inf-->|Composes|model1
@@ -95,14 +103,14 @@ sim_data
            1.271196 , 1.3189521, 1.3054799, 1.3165426, 1.291952 , 1.3026639,
            1.2619467, 1.2852622, 1.3121517, 1.2888998, 1.2641873, 1.2580931,
            1.2545817, 1.3092988, 1.2488269, 1.2397509, 1.2071848, 1.2334517,
-           1.21868  ], dtype=float32), latent=Array([ 3.7023427,  4.850682 ,  6.4314823,  8.26245  ,  6.9874763,
-            7.940377 ,  9.171101 , 10.051114 , 10.633459 , 11.729475 ,
-           12.559867 , 13.422887 , 15.364211 , 17.50132  , 19.206314 ,
-           21.556652 , 23.78112  , 26.719398 , 28.792412 , 32.40454  ,
-           36.641006 , 40.135487 , 43.60607  , 48.055103 , 52.829704 ,
-           60.43277  , 63.97854  , 69.82776  , 74.564415 , 82.88904  ,
-           88.73811  ], dtype=float32), observed=Array([ 4,  3,  6,  5,  7,  7, 10, 11,  6,  9,  7, 13, 16, 19, 20, 27, 23,
-           31, 28, 30, 43, 42, 55, 57, 44, 52, 64, 52, 77, 85, 94],      dtype=int32))
+           1.21868  ], dtype=float32), latent=Array([ 2.3215084,  3.0415602,  4.0327816,  5.180868 ,  4.381411 ,
+            4.978916 ,  5.750626 ,  6.3024273,  6.66758  ,  7.354823 ,
+            7.8755097,  8.416656 ,  9.63394  , 10.973988 , 12.043082 ,
+           13.516833 , 14.911659 , 16.75407  , 18.053928 , 20.318869 ,
+           22.975292 , 25.166464 , 27.34265  , 30.13236  , 33.126217 ,
+           37.89362  , 40.11695  , 43.784634 , 46.754696 , 51.974545 ,
+           55.642136 ], dtype=float32), observed=Array([ 1,  2,  3,  5,  4,  4,  7,  4,  8,  4,  7,  3,  8, 12, 13, 18, 14,
+           20, 17, 18, 28, 27, 36, 37, 26, 31, 40, 27, 48, 54, 60],      dtype=int32))
 
 The `sample()` method of the `RtInfectionsRenewalModel` returns a list
 composed of the `Rt` and `infections` sequences.
@@ -126,9 +134,8 @@ plt.tight_layout()
 plt.show()
 ```
 
-<img
-src="getting-started_files/figure-commonmark/basic-fig-output-1.png"
-id="basic-fig" />
+![Rt and
+Infections](getting-started_files/figure-commonmark/basic-fig-output-1.png)
 
 To fit the model, we can use the `run()` method of the model
 `RtInfectionsRenewalModel`; an inherited method from the metaclass
@@ -169,9 +176,8 @@ ax.set_yticks([0.5, 1, 2])
 ax.set_yscale("log")
 ```
 
-<img
-src="getting-started_files/figure-commonmark/output-rt-output-1.png"
-id="output-rt" />
+![Rt posterior
+distribution](getting-started_files/figure-commonmark/output-rt-output-1.png)
 
 ## Architecture of pyrenew
 
@@ -182,32 +188,37 @@ has two metaclass from which most objects inherit: `RandomVariable` and
 `Model`. From them, the following four sub-modules arise:
 
 - The `process` sub-module,
+- The `deterministic` sub-module,
 - The `observation` sub-module,
 - The `latent` sub-module, and
 - The `models` sub-module
 
-Where the first three are collections of instances of `RandomVariable`
+Where the first four are collections of instances of `RandomVariable`
 and the last one a collection of instances of `Model`. The following
 diagram shows a detailed view of how meta classes, modules, and classes
 interact to create the `RtInfectionsRenewalModel` instantiated in the
 previous section:
 
 ``` mermaid
-flowchart TB
+flowchart LR
     rand((RandomVariable\nmetaclass))
     models((Model\nmetaclass))
 
     subgraph observations[Observations module]
-        genint["gen_int\n(DetermnisticPMF)"]
         obs["observed_infections\n(PoissonObservation)"]
     end
 
     subgraph latent[Latent module]
         inf["latent_infections\n(Infections)"]
+        i0["I0\n(Infections0)"]
     end
 
     subgraph process[Process module]
         rt["rt_proc\n(RtRandomWalkProcess)"]
+    end
+
+    subgraph deterministic[Deterministic module]
+        detpmf["gen_int\n(DeterministicPMF)"]
     end
 
     subgraph model[Model module]
@@ -217,9 +228,11 @@ flowchart TB
     rand-->|Inherited by|observations
     rand-->|Inherited by|process
     rand-->|Inherited by|latent
+    rand-->|Inherited by|deterministic
     models-->|Inherited by|model
 
-    genint-->|Composes|inf
+    detpmf-->|Composes|model1
+    i0-->|Composes|model1
     rt-->|Composes|model1
     obs-->|Composes|model1
     inf-->|Composes|model1
