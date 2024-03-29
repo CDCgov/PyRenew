@@ -1,39 +1,66 @@
-# name: "Sphinx: Render docs"
+name: "Sphinx: Render docs"
 
-# on: push
+on: push
 
-# jobs:
-#   build:
-#     runs-on: ubuntu-latest
-#     permissions:
-#       contents: write
-#     steps:
-#     - uses: actions/checkout@v4
-#     # - name: Build HTML
-#     #   uses: ammaraskar/sphinx-action@master
-#     - name: Set up Python
-#       uses: actions/setup-python@v2
-#       with:
-#         python-version: '3.11'
-#     # - uses: abatilo/actions-poetry@v3.0.0
-#     - name: Install Poetry
-#       run: pip install poetry
-#     - name: Install dependencies with Poetry
-#       run: |
-#         cd docs
-#         poetry install
-#     - name: Build HTML using Poetry
-#       run: |
-#         cd docs
-#         poetry run sphinx-build -M html source/ build/
-#     - name: Upload artifacts
-#       uses: actions/upload-artifact@v4
-#       with:
-#         name: html-docs
-#         path: docs/build/html/
-#     - name: Deploy
-#       uses: peaceiris/actions-gh-pages@v3
-#       if: github.ref == 'refs/heads/main'
-#       with:
-#         github_token: ${{ secrets.GITHUB_TOKEN }}
-#         publish_dir: docs/build/html
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v4
+
+    # Setting up the environment
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.11'
+
+    - name: Install Poetry
+      run: pip install poetry
+
+    - name: Install dependencies with Poetry
+      run: |
+        cd docs
+        poetry install
+
+    # Building
+    - name: Build HTML using Poetry
+      run: |
+        cd docs
+        poetry run sphinx-build -M html source/ build/
+
+    # Upload
+    - name: Upload artifacts
+      uses: actions/upload-pages-artifact@v3
+      with:
+        name: github-pages-test
+        path: docs/build/html/
+
+  deploy:
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages-test
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    needs: build
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4
+      with:
+        artifact_name: github-pages-test
+        preview: true
