@@ -29,27 +29,23 @@ jobs:
       run: pip install poetry
 
     - name: Install dependencies with Poetry
-      run: |
-        cd docs
-        poetry install
+      run: poetry install -C docs
 
     # Building
     - name: Build HTML using Poetry
-      run: |
-        cd docs
-        poetry run sphinx-build -M html source/ build/
+      run: poetry run -C docs sphinx-build -M html source/ build/
 
     # Upload
     - name: Upload artifacts
       uses: actions/upload-pages-artifact@v3
       with:
-        name: github-pages-test
+        name: github-pages
         path: docs/build/html/
 
   deploy:
     # Deploy to the github-pages environment
     environment:
-      name: github-pages-test
+      name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     needs: build
@@ -62,5 +58,5 @@ jobs:
       id: deployment
       uses: actions/deploy-pages@v4
       with:
-        artifact_name: github-pages-test
-        preview: true
+        artifact_name: github-pages
+        preview: false # Not yet available to the public.
