@@ -7,7 +7,12 @@ import numpyro as npro
 import numpyro.distributions as dist
 import polars as pl
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import HospitalAdmissions, Infections, Infections0
+from pyrenew.latent import (
+    HospitalAdmissions,
+    InfectHospRate,
+    Infections,
+    Infections0,
+)
 from pyrenew.metaclass import RandomVariable
 from pyrenew.model import HospitalizationsModel
 from pyrenew.observation import PoissonObservation
@@ -74,6 +79,9 @@ def test_model_hosp_no_obs_model():
         infection_to_admission_interval=inf_hosp,
         infections_varname="infections",
         hospitalizations_predicted_varname="observed_hospitalizations",
+        infect_hosp_rate_dist=InfectHospRate(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+        ),
     )
 
     model0 = HospitalizationsModel(
@@ -158,6 +166,9 @@ def test_model_hosp_with_obs_model():
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         infections_varname="infections",
+        infect_hosp_rate_dist=InfectHospRate(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+        ),
     )
 
     model1 = HospitalizationsModel(
@@ -256,6 +267,9 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         infections_varname="infections",
         weekday_effect_dist=weekday,
         p_hosp_dist=p_hosp,
+        infect_hosp_rate_dist=InfectHospRate(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+        ),
     )
 
     model1 = HospitalizationsModel(
@@ -354,6 +368,9 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         infections_varname="infections",
         weekday_effect_dist=weekday,
         p_hosp_dist=p_hosp,
+        infect_hosp_rate_dist=InfectHospRate(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+        ),
     )
 
     model1 = HospitalizationsModel(

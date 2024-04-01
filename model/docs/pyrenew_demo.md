@@ -35,7 +35,10 @@ plt.plot(np.exp(q_samp[0]))
 ![](pyrenew_demo_files/figure-commonmark/fig-randwalk-output-1.png)
 
 ``` python
-from pyrenew.latent import Infections, HospitalAdmissions, Infections0
+from pyrenew.latent import (
+    Infections, HospitalAdmissions, Infections0, InfectHospRate,
+)
+
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalizationsModel
@@ -60,7 +63,12 @@ inf_hosp_int = DeterministicPMF(
     )
 
 # The latent hospitalization process
-latent_hospitalizations = HospitalAdmissions(infection_to_admission_interval=inf_hosp_int)
+latent_hospitalizations = HospitalAdmissions(
+    infection_to_admission_interval=inf_hosp_int,
+    infect_hosp_rate_dist = InfectHospRate(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+            ),
+    )
 
 # And observation process for the hospitalizations
 observed_hospitalizations = PoissonObservation(

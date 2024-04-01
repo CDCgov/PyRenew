@@ -27,19 +27,19 @@ class InfectHospRate(RandomVariable):
 
     def __init__(
         self,
+        dist: dist.Distribution,
         varname: str = "IHR",
-        dist: dist.Distribution = dist.LogNormal(jnp.log(0.05), 0.05),
     ) -> None:
         """Default constructor
 
         Parameters
         ----------
-        varname : str, optional
-            Name of the random_variable that may hold observed IHR, by default
-            "IHR"
         dist : dist.Distribution, optional
             Prior distribution of the IHR, by default
             dist.LogNormal(jnp.log(0.05), 0.05)
+        varname : str, optional
+            Name of the random_variable that may hold observed IHR, by default
+            "IHR"
 
         Returns
         -------
@@ -105,9 +105,9 @@ class HospitalAdmissions(RandomVariable):
     def __init__(
         self,
         infection_to_admission_interval: RandomVariable,
+        infect_hosp_rate_dist: RandomVariable,
         infections_varname: str = "infections",
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
-        infect_hosp_rate_dist: RandomVariable = InfectHospRate("IHR"),
         weekday_effect_dist: RandomVariable = DeterministicVariable((1,)),
         p_hosp_dist: RandomVariable = DeterministicVariable((1,)),
     ) -> None:
@@ -118,6 +118,8 @@ class HospitalAdmissions(RandomVariable):
         infection_to_admission_interval : RandomVariable
             pmf for reporting (informing) hospitalizations (see
             pyrenew.observations.Deterministic).
+        infect_hosp_rate_dist : RandomVariable
+            Infection to hospitalization rate pmf.
         infections_varname : str
             Name of the entry in random_variables that holds the vector of
             infections.
@@ -128,8 +130,6 @@ class HospitalAdmissions(RandomVariable):
         hospitalizations_predicted_varname : str
             Name to assign to the deterministic component in numpyro of
             predicted hospitalizations.
-        infect_hosp_rate_dist : RandomVariable, optional
-            Infection to hospitalization rate pmf.
         weekday_effect_dist : RandomVariable, optional
             Weekday effect.
         p_hosp_dist : RandomVariable, optional
