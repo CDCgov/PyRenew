@@ -27,6 +27,7 @@ from pyrenew.process import SimpleRandomWalkProcess
 
 ```{python}
 #| label: fig-randwalk
+#| fig-cap: Random walk example
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
 with seed(rng_seed=np.random.randint(0,1000)):
@@ -76,7 +77,7 @@ Rt_process = RtRandomWalkProcess()
 # Initializing the model
 hospmodel = HospitalizationsModel(
     gen_int=gen_int,
-    i0=I0,
+    I0=I0,
     latent_hospitalizations=latent_hospitalizations,
     observed_hospitalizations=observed_hospitalizations,
     latent_infections=latent_infections,
@@ -93,6 +94,7 @@ x
 
 ```{python}
 #| label: fig-hosp
+#| fig-cap: Infections
 fig, ax = plt.subplots(nrows=3, sharex=True)
 ax[0].plot(x.infections)
 ax[0].set_ylim([1/5, 5])
@@ -128,6 +130,7 @@ samps = spread_draws(hospmodel.mcmc.get_samples(), [("Rt", "time")])
 
 ```{python}
 #| label: fig-sampled-rt
+#| fig-cap: Posterior Rt
 import numpy as np
 import polars as pl
 fig, ax = plt.subplots(figsize=[4, 5])

@@ -21,8 +21,6 @@ import numpyro.distributions as dist
 from pyrenew.process import SimpleRandomWalkProcess
 ```
 
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
 ``` python
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
@@ -32,9 +30,7 @@ with seed(rng_seed=np.random.randint(0,1000)):
 plt.plot(np.exp(q_samp[0]))
 ```
 
-<img
-src="pyrenew_demo_files/figure-commonmark/fig-randwalk-output-1.png"
-id="fig-randwalk" />
+![](pyrenew_demo_files/figure-commonmark/fig-randwalk-output-1.png)
 
 ``` python
 from pyrenew.latent import Infections, HospitalAdmissions, Infections0
@@ -77,7 +73,7 @@ Rt_process = RtRandomWalkProcess()
 # Initializing the model
 hospmodel = HospitalizationsModel(
     gen_int=gen_int,
-    i0=I0,
+    I0=I0,
     latent_hospitalizations=latent_hospitalizations,
     observed_hospitalizations=observed_hospitalizations,
     latent_infections=latent_infections,
@@ -121,8 +117,7 @@ for axis in ax[:-1]:
     axis.set_yscale("log")
 ```
 
-<img src="pyrenew_demo_files/figure-commonmark/fig-hosp-output-1.png"
-id="fig-hosp" />
+![](pyrenew_demo_files/figure-commonmark/fig-hosp-output-1.png)
 
 ``` python
 sim_dat={"observed_hospitalizations": x.sampled}
@@ -202,6 +197,4 @@ ax.set_yticks([0.5, 1, 2])
 ax.set_yscale("log")
 ```
 
-<img
-src="pyrenew_demo_files/figure-commonmark/fig-sampled-rt-output-1.png"
-id="fig-sampled-rt" />
+![](pyrenew_demo_files/figure-commonmark/fig-sampled-rt-output-1.png)
