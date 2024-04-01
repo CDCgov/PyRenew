@@ -104,7 +104,7 @@ class HospitalAdmissions(RandomVariable):
 
     def __init__(
         self,
-        inform_hosp: RandomVariable,
+        infection_to_admission_interval: RandomVariable,
         infections_varname: str = "infections",
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
         infect_hosp_rate_dist: RandomVariable = InfectHospRate("IHR"),
@@ -115,7 +115,7 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        inform_hosp : RandomVariable
+        infection_to_admission_interval : RandomVariable
             pmf for reporting (informing) hospitalizations (see
             pyrenew.observations.Deterministic).
         infections_varname : str
@@ -153,7 +153,7 @@ class HospitalAdmissions(RandomVariable):
         self.infect_hosp_rate_dist = infect_hosp_rate_dist
         self.weekday_effect_dist = weekday_effect_dist
         self.p_hosp_dist = p_hosp_dist
-        self.inform_hosp = inform_hosp
+        self.infection_to_admission_interval = infection_to_admission_interval
 
     @staticmethod
     def validate(
@@ -198,13 +198,16 @@ class HospitalAdmissions(RandomVariable):
 
         IHR_t = IHR * random_variables.get(self.infections_varname)
 
-        inform_hosp, *_ = self.inform_hosp.sample(
+        (
+            infection_to_admission_interval,
+            *_,
+        ) = self.infection_to_admission_interval.sample(
             random_variables=random_variables,
             constants=constants,
         )
 
         predicted_hospitalizations = jnp.convolve(
-            IHR_t, inform_hosp, mode="full"
+            IHR_t, infection_to_admission_interval, mode="full"
         )[: IHR_t.shape[0]]
 
         # Applying weekday effect

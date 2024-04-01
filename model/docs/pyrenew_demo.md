@@ -21,6 +21,8 @@ import numpyro.distributions as dist
 from pyrenew.process import SimpleRandomWalkProcess
 ```
 
+    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+
 ``` python
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
@@ -58,7 +60,7 @@ inf_hosp_int = DeterministicPMF(
     )
 
 # The latent hospitalization process
-latent_hospitalizations = HospitalAdmissions(inform_hosp=inf_hosp_int)
+latent_hospitalizations = HospitalAdmissions(infection_to_admission_interval=inf_hosp_int)
 
 # And observation process for the hospitalizations
 observed_hospitalizations = PoissonObservation(

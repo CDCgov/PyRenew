@@ -58,7 +58,7 @@ def test_hospitalizations_sample():
             ),
         ),
     )
-    hosp1 = HospitalAdmissions(inform_hosp=inf_hosp)
+    hosp1 = HospitalAdmissions(infection_to_admission_interval=inf_hosp)
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_hosp_1 = hosp1.sample(
