@@ -71,7 +71,7 @@ def test_model_hosp_no_obs_model():
         ),
     )
     latent_hospitalizations = HospitalAdmissions(
-        inf_hosp_int=inf_hosp,
+        inform_hosp=inf_hosp,
         infections_varname="infections",
         hospitalizations_predicted_varname="observed_hospitalizations",
     )
@@ -156,7 +156,7 @@ def test_model_hosp_with_obs_model():
     )
 
     latent_hospitalizations = HospitalAdmissions(
-        inf_hosp_int=inf_hosp,
+        inform_hosp=inf_hosp,
         infections_varname="infections",
     )
 
@@ -252,7 +252,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     weekday = UniformProbForTest("weekday")
 
     latent_hospitalizations = HospitalAdmissions(
-        inf_hosp_int=inf_hosp,
+        inform_hosp=inf_hosp,
         infections_varname="infections",
         weekday_effect_dist=weekday,
         p_hosp_dist=p_hosp,
@@ -350,7 +350,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = DeterministicVariable((weekday,))
 
     latent_hospitalizations = HospitalAdmissions(
-        inf_hosp_int=inf_hosp,
+        inform_hosp=inf_hosp,
         infections_varname="infections",
         weekday_effect_dist=weekday,
         p_hosp_dist=p_hosp,

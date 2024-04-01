@@ -62,7 +62,7 @@ inf_hosp_int = DeterministicPMF(
     )
 
 # The latent hospitalization process
-latent_hospitalizations = HospitalAdmissions(inf_hosp_int=inf_hosp_int)
+latent_hospitalizations = HospitalAdmissions(inform_hosp=inf_hosp_int)
 
 # And observation process for the hospitalizations
 observed_hospitalizations = PoissonObservation(
