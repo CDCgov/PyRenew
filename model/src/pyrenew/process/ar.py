@@ -78,7 +78,7 @@ class ARProcess(RandomVariable):
         )
 
         last, ts = lax.scan(_ar_scanner, inits - self.mean, noise)
-        return (self.mean + ts.flatten(),)
+        return (jnp.hstack([inits, self.mean + ts.flatten()]),)
 
     @staticmethod
     def validate():
