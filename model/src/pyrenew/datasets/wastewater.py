@@ -1,7 +1,7 @@
 """This module loads the package dataset named 'wastewater' and provides
 functions to manipulate the data. It uses the 'polars' library"""
 
-from importlib.resources import path
+from importlib.resources import files
 
 import polars as pl
 
@@ -42,6 +42,6 @@ def load_wastewater() -> pl.DataFrame:
 
     # Load the dataset
     return pl.read_csv(
-        source=path("pyrenew.datasets", "wastewater.tsv"),
+        source=files("pyrenew.datasets") / "wastewater.tsv",
         separator="\t",
     )
