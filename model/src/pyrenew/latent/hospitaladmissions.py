@@ -119,7 +119,7 @@ class HospitalAdmissions(RandomVariable):
             pmf for reporting (informing) hospitalizations (see
             pyrenew.observations.Deterministic).
         infect_hosp_rate_dist : RandomVariable
-            Infection to hospitalization rate pmf.
+            Infection to hospitalization rate distribution.
         infections_varname : str
             Name of the entry in random_variables that holds the vector of
             infections.
