@@ -10,6 +10,7 @@ from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import Infections, Infections0
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
+from pyrenew.process import RtRandomWalkProcess
 
 
 def test_model_basicrenewal_no_obs_model():
@@ -26,8 +27,13 @@ def test_model_basicrenewal_no_obs_model():
 
     latent_infections = Infections()
 
+    rt = RtRandomWalkProcess()
+
     model0 = RtInfectionsRenewalModel(
-        gen_int=gen_int, I0=I0, latent_infections=latent_infections
+        gen_int=gen_int,
+        I0=I0,
+        latent_infections=latent_infections,
+        Rt_process=rt,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -74,11 +80,14 @@ def test_model_basicrenewal_with_obs_model():
         counts_varname="observed_infections",
     )
 
+    rt = RtRandomWalkProcess()
+
     model1 = RtInfectionsRenewalModel(
         I0=I0,
         gen_int=gen_int,
         latent_infections=latent_infections,
         observed_infections=observed_infections,
+        Rt_process=rt,
     )
 
     # Sampling and fitting model 1 (with obs infections)

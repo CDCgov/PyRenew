@@ -2,9 +2,7 @@
 
 from collections import namedtuple
 
-from pyrenew.latent import Infections0
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
-from pyrenew.process import RtRandomWalkProcess
 
 # Output class of the RtInfectionsRenewalModel
 RtInfectionsRenewalSample = namedtuple(
@@ -26,9 +24,9 @@ class RtInfectionsRenewalModel(Model):
         self,
         latent_infections: RandomVariable,
         gen_int: RandomVariable,
+        I0: RandomVariable,
+        Rt_process: RandomVariable,
         observed_infections: RandomVariable = None,
-        I0: RandomVariable = Infections0(),
-        Rt_process: RandomVariable = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
 
@@ -39,15 +37,15 @@ class RtInfectionsRenewalModel(Model):
             pyrenew.latent.Infections.)
         gen_int : RandomVariable
             Generation interval.
+        I0 : RandomVariable
+            Initial infections.
+        Rt_process : RandomVariable
+            The sample function of the process should return a tuple where the
+            first element is the drawn Rt.
         observed_infections : RandomVariable, optional
             Infections observation process (e.g.,
             pyrenew.observations.Poisson.) It should receive the sampled Rt
             via `random_variables`.
-        I0 : RandomVariable
-            Initial infections. Default to Infections0.
-        Rt_process : RandomVariable, optional
-            The sample function of the process should return a tuple where the
-            first element is the drawn Rt., by default RtRandomWalkProcess()
 
         Returns
         -------
