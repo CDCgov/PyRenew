@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
+import numpyro.distributions as dist
 import polars as pl
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import Infections, Infections0
@@ -21,7 +22,7 @@ def test_model_basicrenewal_no_obs_model():
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
-    I0 = Infections0()
+    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 
@@ -64,7 +65,7 @@ def test_model_basicrenewal_with_obs_model():
         (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
-    I0 = Infections0()
+    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 

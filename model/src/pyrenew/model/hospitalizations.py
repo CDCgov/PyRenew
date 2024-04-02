@@ -2,10 +2,8 @@
 
 from collections import namedtuple
 
-from pyrenew.latent import Infections0
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
-from pyrenew.process import RtRandomWalkProcess
 
 HospModelSample = namedtuple(
     "HospModelSample",
@@ -35,9 +33,9 @@ class HospitalizationsModel(Model):
         latent_hospitalizations: RandomVariable,
         latent_infections: RandomVariable,
         gen_int: RandomVariable,
-        I0: RandomVariable = Infections0(),
+        I0: RandomVariable,
+        Rt_process: RandomVariable,
         observed_hospitalizations: RandomVariable = None,
-        Rt_process: RandomVariable = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
 
@@ -51,10 +49,10 @@ class HospitalizationsModel(Model):
             Generation time (passed to RtInfectionsRenewalModel)
         I0 : RandomVariable
             Initial infections (passed to RtInfectionsRenewalModel)
-        observed_hospitalizations : RandomVariable
-            Observation process for the hospitalizations.
-        Rt_process : RandomVariable, optional
+        Rt_process : RandomVariable
             Rt process  (passed to RtInfectionsRenewalModel).
+        observed_hospitalizations : RandomVariable, optional
+            Observation process for the hospitalizations.
 
         Returns
         -------

@@ -54,7 +54,7 @@ gen_int = DeterministicPMF(
     )
 
 # Initial infections
-I0 = Infections0()
+I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
 # The latent infections process
 latent_infections = Infections()
