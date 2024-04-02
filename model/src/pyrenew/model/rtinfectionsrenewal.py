@@ -44,7 +44,7 @@ class RtInfectionsRenewalModel(Model):
             pyrenew.observations.Poisson.) It should receive the sampled Rt
             via `random_variables`.
         I0 : RandomVariable
-            Baseline infections. Default to Infections0.
+            Initial infections. Default to Infections0.
         Rt_process : RandomVariable, optional
             The sample function of the process should return a tuple where the
             first element is the drawn Rt., by default RtRandomWalkProcess()
@@ -174,7 +174,7 @@ class RtInfectionsRenewalModel(Model):
             constants=constants,
         )
 
-        # Sampling baseline infections
+        # Sampling initial infections
         i0, *_ = self.sample_i0(
             random_variables=random_variables,
             constants=constants,

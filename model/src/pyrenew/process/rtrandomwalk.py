@@ -23,7 +23,7 @@ class RtRandomWalkProcess(RandomVariable):
         Parameters
         ----------
         Rt0_dist : dist.Distribution, optional
-            Baseline distributiono of Rt, defaults to
+            Initial distributiono of Rt, defaults to
             dist.TruncatedNormal( loc=1.2, scale=0.2, low=0 )
         Rt_transform : AbstractTransform, optional
             Transformation applied to the sampled Rt0, defaults

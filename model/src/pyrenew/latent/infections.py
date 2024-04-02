@@ -41,7 +41,7 @@ class Infections(RandomVariable):
             Name of the element in `random_variables` that will hold the value
             of mean 'infections'.
         I0_dist : dist.Distribution, optional
-            Distribution from where to sample the baseline number of infections.
+            Distribution from where to sample the initial number of infections.
 
         Returns
         -------

@@ -50,7 +50,7 @@ class HospitalizationsModel(Model):
         gen_int : RandomVariable
             Generation time (passed to RtInfectionsRenewalModel)
         I0 : RandomVariable
-            Baseline infections (passed to RtInfectionsRenewalModel)
+            Initial infections (passed to RtInfectionsRenewalModel)
         observed_hospitalizations : RandomVariable
             Observation process for the hospitalizations.
         Rt_process : RandomVariable, optional
@@ -144,7 +144,7 @@ class HospitalizationsModel(Model):
         if constants is None:
             constants = dict()
 
-        # Getting the baseline quantities from the basic model
+        # Getting the initial quantities from the basic model
         Rt, infections, *_ = self.basic_renewal.sample(
             constants=constants,
             random_variables=random_variables,

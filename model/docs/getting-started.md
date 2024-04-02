@@ -1,16 +1,56 @@
 # Getting started with pyrenew
 
 
-`pyrenew` is a flexible tool for simulation and inference of
-epidemiological models with an emphasis on renewal models. Built on top
-of `numpyro`, `pyrenew` provides core components for model building as
-well as pre-defined models for processing various types of observational
-processes. This document illustrates how `pyrenew` can be used to build
-a basic renewal model.
+`pyrenew` is a flexible tool for simulating and making statistical
+inference of epidemiological models, emphasizing renewal models. Built
+on `numpyro`, `pyrenew` provides core components for model building and
+pre-defined models for processing various observational processes. This
+document illustrates how `pyrenew` can be used to build a basic renewal
+model.
+
+## The fundamentals
+
+`pyrenew`’s core components are the metaclasses `RandomVariable` and
+`Model`. From the package’s perspective, a `RandomVariable` is a
+quantity models can sample and estimate, **including deterministic
+quantities**. Mainly, sampling from a `RandomVariable` involves calling
+the `sample()` method. The benefit of this design is the definition of
+the sample function can be arbitrary, allowing the user to either sample
+from a distribution using `numpyro.sample()`, compute fixed quantities
+(like a mechanistic equation,) or return a fixed value (like a
+pre-computed PMF.) For instance, we may be interested in estimating a
+PMF, in which case a `RandomVariable` sampling function may roughly be
+defined as:
+
+``` python
+class MyRandVar(RandomVariable):
+    def sample(...) -> ArrayLike:
+        return numpyro.sample(...)
+```
+
+Whereas, in some other cases, we may instead use a fixed quantity for
+that variable (like a pre-computed PMF,) where the `RandomVariable`’s
+sample function could be defined like:
+
+``` python
+class MyRandVar(RandomVariable):
+    def sample(...) -> ArrayLike:
+        return jax.numpy.array([0.2, 0.7, 0.1])
+```
+
+This way, when a `Model` samples from `MyRandVar`, it could be either
+adding random variables to be estimated (first case) or just retrieving
+some quantity needed for other calculations (second case.)
+
+The `Model` metaclass provides basic functionality for estimating and
+simulation. Like `RandomVariable`, the `Model` metaclass has a
+`sample()` method that defines the model structure. Ultimately, models
+can be nested (or inherited,) providing a straightforward way to add
+layers of complexity.
 
 ## ‘Hello world’ model
 
-In this section, we will show the steps to build a simple renewal model
+This section will show the steps to build a simple renewal model
 featuring a latent infection process, a random walk Rt process, and an
 observation process for the reported infections. We start by loading the
 needed components to build a basic renewal model:
@@ -26,9 +66,11 @@ from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
 ```
 
-In the basic renewal model we can define five components: generation
-interval, baseline infections, Rt, latent infections, and observed
-infections.
+The basic renewal model defines five components: generation interval,
+initial infections, Rt, latent infections, and observed infections. In
+this example, the generation interval is not estimated but passed as a
+deterministic instance of `RandomVariable`. Here is the code to
+initialize the five components:
 
 ``` python
 # (1) The generation interval (deterministic)
@@ -36,7 +78,7 @@ gen_int = DeterministicPMF(
     (jnp.array([0.25, 0.25, 0.25, 0.25]),),
 )
 
-# (2) Baseline infections (inferred with a prior)
+# (2) Initial infections (inferred with a prior)
 I0 = Infections0()
 
 # (3) The random process for Rt
@@ -47,8 +89,8 @@ latent_infections = Infections()
 
 # (5) The observed infections process (with mean at the latent infections)
 observed_infections = PoissonObservation(
-    rate_varname='latent',
-    counts_varname='observed_infections',
+    rate_varname   = 'latent',
+    counts_varname = 'observed_infections',
     )
 ```
 
@@ -56,18 +98,18 @@ With these five pieces, we can build the basic renewal model:
 
 ``` python
 model1 = RtInfectionsRenewalModel(
-    gen_int=gen_int,
-    I0=I0,
-    Rt_process=rt_proc,
-    latent_infections=latent_infections,
-    observed_infections=observed_infections,
+    gen_int             = gen_int,
+    I0                  = I0,
+    Rt_process          = rt_proc,
+    latent_infections   = latent_infections,
+    observed_infections = observed_infections,
     )
 ```
 
 The following diagram summarizes how the modules interact via
 composition; notably, `gen_int`, `I0`, `rt_proc`, `latent_infections`,
 and `observed_infections` are instances of `RandomVariable`, which means
-these can be easily replaced to generate different version of
+these can be easily replaced to generate a different version of
 `RtInfectionsRenewalModel`:
 
 ``` mermaid
@@ -92,8 +134,8 @@ function of `RtInfectionsRenewalModel`:
 
 ``` python
 np.random.seed(223)
-with npro.handlers.seed(rng_seed=np.random.randint(1, 60)):
-    sim_data = model1.sample(constants=dict(n_timepoints=30))
+with npro.handlers.seed(rng_seed = np.random.randint(1, 60)):
+    sim_data = model1.sample(constants = dict(n_timepoints=30))
 
 sim_data
 ```
@@ -156,7 +198,7 @@ model1.run(
     )
 ```
 
-Now, let’s investigate the output, particularly, the posterior
+Now, let’s investigate the output, particularly the posterior
 distribution of the Rt estimates:
 
 ``` python
@@ -183,9 +225,9 @@ distribution](getting-started_files/figure-commonmark/output-rt-output-1.png)
 
 `pyrenew` leverages `numpyro`’s flexibility to build models via
 composition. As a principle, most objects in `pyrenew` can be treated as
-random variables from which we can sample. At the top-level `pyrenew`
-has two metaclass from which most objects inherit: `RandomVariable` and
-`Model`. From them, the following four sub-modules arise:
+random variables we can sample. At the top-level `pyrenew` has two
+metaclass from which most objects inherit: `RandomVariable` and `Model`.
+From them, the following four sub-modules arise:
 
 - The `process` sub-module,
 - The `deterministic` sub-module,
@@ -193,11 +235,11 @@ has two metaclass from which most objects inherit: `RandomVariable` and
 - The `latent` sub-module, and
 - The `models` sub-module
 
-Where the first four are collections of instances of `RandomVariable`
-and the last one a collection of instances of `Model`. The following
-diagram shows a detailed view of how meta classes, modules, and classes
-interact to create the `RtInfectionsRenewalModel` instantiated in the
-previous section:
+The first four are collections of instances of `RandomVariable`, and the
+last is a collection of instances of `Model`. The following diagram
+shows a detailed view of how meta classes, modules, and classes interact
+to create the `RtInfectionsRenewalModel` instantiated in the previous
+section:
 
 ``` mermaid
 flowchart LR

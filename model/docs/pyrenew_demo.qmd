@@ -53,7 +53,7 @@ gen_int = DeterministicPMF(
     (jnp.array([0.25, 0.25, 0.25, 0.25]),),
     )
 
-# Baseline infections
+# Initial infections
 I0 = Infections0()
 
 # The latent infections process
