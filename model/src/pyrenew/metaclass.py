@@ -91,26 +91,16 @@ class RandomVariable(metaclass=ABCMeta):
     @abstractmethod
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
         """Sample method of the process
 
-        The method design in the class should have two dictionaries:
-        `random_variables` and `constants`.
-
-        - `randon_variables`: This dictionary contains any data that sample
-          function may pass to `numpyro.sample(obs=...)`.
-
-        - `constants`: Contains any data that the sample function does not pass
-          to `numpyro.sample(obs=...)`.
+        The method design in the class should have at least kwargs.
 
         Parameters
         ----------
-        random_variables : dict, optional
-            Dictionary of random variables, defaults to None
-        constants : dict, optional
-            Dictionary of constants
+        kwargs : dict
+            Dictionary of arguments passed to the sample function.
 
         Returns
         -------
@@ -141,8 +131,7 @@ class Model(metaclass=ABCMeta):
     @abstractmethod
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
         pass
 
