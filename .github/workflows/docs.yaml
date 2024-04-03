@@ -31,9 +31,9 @@ jobs:
 
       - name: installing other dependencies
         run: |
-          poetry run pip install pyyaml
-          poetry run pip install nbclient
-          poetry run pip install nbformat
+          poetry run -C model pip install pyyaml
+          poetry run -C model pip install nbclient
+          poetry run -C model pip install nbformat
 
       - name: Render documents
         run: |
