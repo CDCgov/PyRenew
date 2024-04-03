@@ -133,7 +133,7 @@ class HospitalAdmissions(RandomVariable):
         weekday_effect_dist : RandomVariable, optional
             Weekday effect.
         p_report_dist  : RandomVariable, optional
-            Hospitalization probability.
+            Reporting probability for hospital admissions. Defaults to 1 (full reporting).
 
         Returns
         -------
