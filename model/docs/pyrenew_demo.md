@@ -18,9 +18,14 @@ from numpyro.handlers import seed
 import numpyro.distributions as dist
 ```
 
+    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+
 ``` python
 from pyrenew.process import SimpleRandomWalkProcess
 ```
+
+    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
 
 ``` python
 np.random.seed(3312)
@@ -124,39 +129,39 @@ hospmodel.print_summary()
 
 
                                      mean       std    median      5.0%     95.0%     n_eff     r_hat
-                             I0      7.15      1.69      6.87      4.50      9.76   1597.65      1.00
-                            IHR      0.05      0.00      0.05      0.05      0.05   1957.10      1.00
-                            Rt0      1.13      0.12      1.13      0.92      1.31   1204.75      1.00
-     Rt_transformed_rw_diffs[0]     -0.00      0.02     -0.00     -0.04      0.04   1543.92      1.00
-     Rt_transformed_rw_diffs[1]     -0.00      0.03      0.00     -0.04      0.05   1624.77      1.00
-     Rt_transformed_rw_diffs[2]     -0.00      0.02     -0.00     -0.04      0.04   1906.13      1.00
-     Rt_transformed_rw_diffs[3]     -0.00      0.02     -0.00     -0.04      0.04   2581.47      1.00
-     Rt_transformed_rw_diffs[4]     -0.00      0.02     -0.00     -0.04      0.04   2354.67      1.00
-     Rt_transformed_rw_diffs[5]      0.00      0.03      0.00     -0.05      0.04   2350.32      1.00
-     Rt_transformed_rw_diffs[6]      0.00      0.02      0.00     -0.04      0.04   1942.94      1.00
-     Rt_transformed_rw_diffs[7]     -0.00      0.02     -0.00     -0.04      0.04   2280.75      1.00
-     Rt_transformed_rw_diffs[8]     -0.00      0.03     -0.00     -0.04      0.04   1875.19      1.00
-     Rt_transformed_rw_diffs[9]      0.00      0.03      0.00     -0.04      0.04   2007.68      1.00
-    Rt_transformed_rw_diffs[10]     -0.00      0.02     -0.00     -0.04      0.04   2108.68      1.00
-    Rt_transformed_rw_diffs[11]     -0.00      0.03      0.00     -0.04      0.04   1479.90      1.00
-    Rt_transformed_rw_diffs[12]      0.00      0.02      0.00     -0.04      0.04   2256.27      1.00
-    Rt_transformed_rw_diffs[13]     -0.00      0.03     -0.00     -0.04      0.04   1261.43      1.00
-    Rt_transformed_rw_diffs[14]     -0.00      0.03     -0.00     -0.04      0.04   1974.44      1.00
-    Rt_transformed_rw_diffs[15]     -0.00      0.03     -0.00     -0.04      0.04   2245.66      1.00
-    Rt_transformed_rw_diffs[16]     -0.00      0.02      0.00     -0.04      0.04   1630.22      1.00
-    Rt_transformed_rw_diffs[17]      0.00      0.03      0.00     -0.04      0.04   1756.48      1.00
-    Rt_transformed_rw_diffs[18]      0.00      0.02     -0.00     -0.04      0.04   1706.49      1.00
-    Rt_transformed_rw_diffs[19]      0.00      0.03     -0.00     -0.04      0.04   2176.36      1.00
-    Rt_transformed_rw_diffs[20]      0.00      0.02     -0.00     -0.04      0.04   2021.24      1.00
-    Rt_transformed_rw_diffs[21]      0.00      0.02      0.00     -0.04      0.04   2242.62      1.00
-    Rt_transformed_rw_diffs[22]      0.00      0.03      0.00     -0.04      0.04   1988.97      1.00
-    Rt_transformed_rw_diffs[23]      0.00      0.02      0.00     -0.04      0.03   2113.37      1.00
-    Rt_transformed_rw_diffs[24]      0.00      0.02      0.00     -0.04      0.04   2179.13      1.00
-    Rt_transformed_rw_diffs[25]     -0.00      0.02     -0.00     -0.04      0.03   1770.54      1.00
-    Rt_transformed_rw_diffs[26]      0.00      0.03      0.00     -0.04      0.05   2101.45      1.00
-    Rt_transformed_rw_diffs[27]     -0.00      0.03      0.00     -0.04      0.04   1752.68      1.00
-    Rt_transformed_rw_diffs[28]     -0.00      0.02     -0.00     -0.04      0.04   1537.43      1.00
-    Rt_transformed_rw_diffs[29]     -0.00      0.03     -0.00     -0.04      0.04   1837.84      1.00
+                             I0      7.14      1.75      6.87      4.30      9.69   1052.68      1.00
+                            IHR      0.05      0.00      0.05      0.05      0.05   1712.91      1.00
+                            Rt0      1.13      0.12      1.13      0.92      1.32    960.40      1.00
+     Rt_transformed_rw_diffs[0]     -0.00      0.02     -0.00     -0.04      0.04   1315.29      1.00
+     Rt_transformed_rw_diffs[1]     -0.00      0.03      0.00     -0.04      0.04   1886.70      1.00
+     Rt_transformed_rw_diffs[2]     -0.00      0.02     -0.00     -0.04      0.04   1460.97      1.00
+     Rt_transformed_rw_diffs[3]     -0.00      0.02     -0.00     -0.04      0.04   1669.85      1.00
+     Rt_transformed_rw_diffs[4]     -0.00      0.02     -0.00     -0.04      0.04   1667.25      1.00
+     Rt_transformed_rw_diffs[5]      0.00      0.03      0.00     -0.05      0.04   1702.68      1.00
+     Rt_transformed_rw_diffs[6]     -0.00      0.02     -0.00     -0.04      0.04   1558.87      1.00
+     Rt_transformed_rw_diffs[7]     -0.00      0.02     -0.00     -0.04      0.04   2296.40      1.00
+     Rt_transformed_rw_diffs[8]     -0.00      0.02     -0.00     -0.04      0.04   1850.65      1.00
+     Rt_transformed_rw_diffs[9]      0.00      0.02      0.00     -0.04      0.03   1460.40      1.00
+    Rt_transformed_rw_diffs[10]     -0.00      0.02      0.00     -0.04      0.04   2055.47      1.00
+    Rt_transformed_rw_diffs[11]     -0.00      0.03      0.00     -0.04      0.04   1332.18      1.00
+    Rt_transformed_rw_diffs[12]      0.00      0.02      0.00     -0.04      0.04   2042.44      1.00
+    Rt_transformed_rw_diffs[13]     -0.00      0.03     -0.00     -0.04      0.04   1278.69      1.00
+    Rt_transformed_rw_diffs[14]     -0.00      0.03     -0.00     -0.04      0.04   1777.71      1.00
+    Rt_transformed_rw_diffs[15]      0.00      0.03      0.00     -0.04      0.04   1683.29      1.00
+    Rt_transformed_rw_diffs[16]     -0.00      0.02     -0.00     -0.03      0.04   1383.06      1.00
+    Rt_transformed_rw_diffs[17]     -0.00      0.03     -0.00     -0.04      0.04   1581.60      1.00
+    Rt_transformed_rw_diffs[18]      0.00      0.03      0.00     -0.04      0.04   1576.48      1.00
+    Rt_transformed_rw_diffs[19]      0.00      0.03      0.00     -0.04      0.04   2169.46      1.00
+    Rt_transformed_rw_diffs[20]     -0.00      0.02     -0.00     -0.04      0.04   2041.61      1.00
+    Rt_transformed_rw_diffs[21]      0.00      0.02      0.00     -0.03      0.05   1861.29      1.00
+    Rt_transformed_rw_diffs[22]      0.00      0.03     -0.00     -0.04      0.04   1796.97      1.00
+    Rt_transformed_rw_diffs[23]     -0.00      0.02      0.00     -0.04      0.04   1542.73      1.00
+    Rt_transformed_rw_diffs[24]      0.00      0.03      0.00     -0.04      0.04   1625.01      1.00
+    Rt_transformed_rw_diffs[25]     -0.00      0.02     -0.00     -0.05      0.04   1711.34      1.00
+    Rt_transformed_rw_diffs[26]      0.00      0.03      0.00     -0.04      0.04   1496.53      1.00
+    Rt_transformed_rw_diffs[27]     -0.00      0.03     -0.00     -0.05      0.04   1411.17      1.00
+    Rt_transformed_rw_diffs[28]     -0.00      0.02      0.00     -0.04      0.04   1478.24      1.00
+    Rt_transformed_rw_diffs[29]     -0.00      0.03     -0.00     -0.04      0.04   1557.55      1.00
 
     Number of divergences: 0
 
