@@ -21,8 +21,6 @@ import numpyro.distributions as dist
 from pyrenew.process import SimpleRandomWalkProcess
 ```
 
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
 ``` python
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
@@ -71,10 +69,7 @@ latent_hospitalizations = HospitalAdmissions(
     )
 
 # And observation process for the hospitalizations
-observed_hospitalizations = PoissonObservation(
-    rate_varname='latent',
-    counts_varname='observed_hospitalizations',
-    )
+observed_hospitalizations = PoissonObservation()
 
 # And a random walk process (it could be deterministic using
 # pyrenew.process.DeterministicProcess())
@@ -93,7 +88,7 @@ hospmodel = HospitalizationsModel(
 
 ``` python
 with seed(rng_seed=np.random.randint(1, 60)):
-    x = hospmodel.sample(constants=dict(n_timepoints=30))
+    x = hospmodel.sample(n_timepoints=30)
 x
 ```
 
@@ -130,15 +125,12 @@ for axis in ax[:-1]:
 ![](pyrenew_demo_files/figure-commonmark/fig-hosp-output-1.png)
 
 ``` python
-sim_dat={"observed_hospitalizations": x.sampled}
-constants = {"n_timepoints":len(x.sampled)-1}
-
 # from numpyro.infer import MCMC, NUTS
 hospmodel.run(
     num_warmup=1000,
     num_samples=1000,
-    random_variables=sim_dat,
-    constants=constants,
+    observed_hospitalizations=x.sampled,
+    n_timepoints = len(x.sampled)-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )

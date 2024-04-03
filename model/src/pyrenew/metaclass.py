@@ -193,10 +193,9 @@ class Model(metaclass=ABCMeta):
         num_warmup,
         num_samples,
         rng_key: jax.random.PRNGKey = jax.random.PRNGKey(54),
-        random_variables: dict = None,
-        constants: dict = None,
         nuts_args: dict = None,
         mcmc_args: dict = None,
+        **kwargs,
     ) -> None:
         """Runs the model
 
@@ -212,12 +211,6 @@ class Model(metaclass=ABCMeta):
             None
         """
 
-        if random_variables is None:
-            random_variables = dict()
-
-        if constants is None:
-            constants = dict()
-
         if self.mcmc is None:
             self._init_model(
                 num_warmup=num_warmup,
@@ -226,11 +219,7 @@ class Model(metaclass=ABCMeta):
                 mcmc_args=mcmc_args,
             )
 
-        self.mcmc.run(
-            rng_key=rng_key,
-            random_variables=random_variables,
-            constants=constants,
-        )
+        self.mcmc.run(rng_key=rng_key, **kwargs)
 
         return None
 

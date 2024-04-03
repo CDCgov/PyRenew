@@ -29,7 +29,7 @@ class UniformProbForTest(RandomVariable):
     def validate(self):
         return None
 
-    def sample(self, random_variables, constants):
+    def sample(self, **kwargs):
         return (
             npro.sample(name=self.name, fn=dist.Uniform(high=0.99, low=0.01)),
         )
@@ -77,7 +77,6 @@ def test_model_hosp_no_obs_model():
     )
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
-        infections_varname="infections",
         hospitalizations_predicted_varname="observed_hospitalizations",
         infect_hosp_rate_dist=InfectHospRate(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
@@ -90,20 +89,20 @@ def test_model_hosp_no_obs_model():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=None,
+        observed_hospitalizations=DeterministicVariable((0,)),
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model0_samp = model0.sample(constants={"n_timepoints": 30})
+        model0_samp = model0.sample(n_timepoints=30)
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        random_variables=dict(observed_hospitalizations=model0_samp.sampled),
-        constants=dict(n_timepoints=30),
+        obs_mean=model0_samp.sampled,
+        n_timepoints=30,
     )
 
     inf = model0.spread_draws(["observed_hospitalizations"])
@@ -131,10 +130,7 @@ def test_model_hosp_with_obs_model():
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
-    observed_hospitalizations = PoissonObservation(
-        rate_varname="latent",
-        counts_varname="observed_hospitalizations",
-    )
+    observed_hospitalizations = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
         (
@@ -165,7 +161,6 @@ def test_model_hosp_with_obs_model():
 
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
-        infections_varname="infections",
         infect_hosp_rate_dist=InfectHospRate(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
@@ -183,17 +178,14 @@ def test_model_hosp_with_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(constants={"n_timepoints": 30})
+        model1_samp = model1.sample(n_timepoints=30)
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        random_variables=dict(
-            observed_hospitalizations=model1_samp.sampled,
-            infections=model1_samp.infections,
-        ),
-        constants=dict(n_timepoints=30),
+        observed_hospitalizations=model1_samp.sampled,
+        n_timepoints=30,
     )
 
     inf = model1.spread_draws(["predicted_hospitalizations"])
@@ -221,10 +213,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
-    observed_hospitalizations = PoissonObservation(
-        rate_varname="latent",
-        counts_varname="observed_hospitalizations",
-    )
+    observed_hospitalizations = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
         (
@@ -264,7 +253,6 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
-        infections_varname="infections",
         weekday_effect_dist=weekday,
         hosp_report_prob_dist=hosp_report_prob_dist,
         infect_hosp_rate_dist=InfectHospRate(
@@ -284,17 +272,14 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(constants={"n_timepoints": 30})
+        model1_samp = model1.sample(n_timepoints=30)
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        random_variables=dict(
-            observed_hospitalizations=model1_samp.sampled,
-            infections=model1_samp.infections,
-        ),
-        constants=dict(n_timepoints=30),
+        observed_hospitalizations=model1_samp.sampled,
+        n_timepoints=30,
     )
 
     inf = model1.spread_draws(["predicted_hospitalizations"])
@@ -322,10 +307,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
-    observed_hospitalizations = PoissonObservation(
-        rate_varname="latent",
-        counts_varname="observed_hospitalizations",
-    )
+    observed_hospitalizations = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
         (
@@ -374,7 +356,6 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
-        infections_varname="infections",
         weekday_effect_dist=weekday,
         hosp_report_prob_dist=hosp_report_prob_dist,
         infect_hosp_rate_dist=InfectHospRate(
@@ -394,17 +375,14 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(constants={"n_timepoints": 30})
+        model1_samp = model1.sample(n_timepoints=30)
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        random_variables=dict(
-            observed_hospitalizations=model1_samp.sampled,
-            infections=model1_samp.infections,
-        ),
-        constants=dict(n_timepoints=30),
+        observed_hospitalizations=model1_samp.sampled,
+        n_timepoints=30,
     )
 
     inf = model1.spread_draws(["predicted_hospitalizations"])

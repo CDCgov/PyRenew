@@ -41,18 +41,14 @@ class DeterministicVariable(RandomVariable):
 
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
         """Retrieve the value of the deterministic Rv
 
         Parameters
         ----------
-
-        random_variables : dict
-            Ignored. Default None.
-        constants : dict
-            Ignored. Default None.
+        kwargs : dict
+            Ignored.
 
         Returns
         -------

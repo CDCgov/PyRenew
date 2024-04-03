@@ -89,10 +89,7 @@ rt_proc = RtRandomWalkProcess()
 latent_infections = Infections()
 
 # (5) The observed infections process (with mean at the latent infections)
-observed_infections = PoissonObservation(
-    rate_varname   = 'latent',
-    counts_varname = 'observed_infections',
-    )
+observed_infections = PoissonObservation()
 ```
 
 With these five pieces, we can build the basic renewal model:
@@ -136,7 +133,7 @@ function of `RtInfectionsRenewalModel`:
 ``` python
 np.random.seed(223)
 with npro.handlers.seed(rng_seed = np.random.randint(1, 60)):
-    sim_data = model1.sample(constants = dict(n_timepoints=30))
+    sim_data = model1.sample(n_timepoints=30)
 
 sim_data
 ```
@@ -187,13 +184,11 @@ To fit the model, we can use the `run()` method of the model
 ``` python
 import jax
 
-model_data = {'n_timepoints': len(sim_data[1])-1}
-
 model1.run(
     num_warmup=2000,
     num_samples=1000,
-    random_variables=dict(observed_infections=sim_data.observed),
-    constants=model_data,
+    observed_infections=sim_data.observed,
+    n_timepoints = len(sim_data[1])-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )

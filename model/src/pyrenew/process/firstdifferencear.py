@@ -39,6 +39,7 @@ class FirstDifferenceARProcess(RandomVariable):
         init_val: ArrayLike = None,
         init_rate_of_change: ArrayLike = None,
         name: str = "trend_rw",
+        **kwargs,
     ) -> tuple:
         """Sample from the process
 
@@ -52,6 +53,8 @@ class FirstDifferenceARProcess(RandomVariable):
             Passed to ARProcess.sample, by default None.
         name : str, optional
             Passed to ARProcess.sample(), by default "trend_rw"
+        kwargs : dict
+            Ignored.
 
         Returns
         -------

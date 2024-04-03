@@ -2,6 +2,8 @@
 
 from collections import namedtuple
 
+from numpy.typing import ArrayLike
+from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
 
@@ -35,7 +37,7 @@ class HospitalizationsModel(Model):
         gen_int: RandomVariable,
         I0: RandomVariable,
         Rt_process: RandomVariable,
-        observed_hospitalizations: RandomVariable = None,
+        observed_hospitalizations: RandomVariable,
     ) -> None:
         """Default constructor
 
@@ -62,7 +64,7 @@ class HospitalizationsModel(Model):
             gen_int=gen_int,
             I0=I0,
             latent_infections=latent_infections,
-            observed_infections=None,
+            observed_infections=DeterministicVariable((0,)),
             Rt_process=Rt_process,
         )
 
@@ -76,23 +78,24 @@ class HospitalizationsModel(Model):
     @staticmethod
     def validate(latent_hospitalizations, observed_hospitalizations) -> None:
         _assert_sample_and_rtype(latent_hospitalizations, skip_if_none=False)
-        _assert_sample_and_rtype(observed_hospitalizations, skip_if_none=True)
+        _assert_sample_and_rtype(observed_hospitalizations, skip_if_none=False)
         return None
 
     def sample_hospitalizations_latent(
         self,
-        random_variables: dict,
-        constants: dict = None,
+        infections: ArrayLike,
+        **kwargs,
     ) -> tuple:
         return self.latent_hospitalizations.sample(
-            random_variables=random_variables,
-            constants=constants,
+            latent=infections,
+            **kwargs,
         )
 
     def sample_hospitalizations_obs(
         self,
-        random_variables: dict,
-        constants: dict = None,
+        latent: ArrayLike,
+        observed_hospitalizations: ArrayLike,
+        **kwargs,
     ) -> tuple:
         """Sample number of hospitalizations
 
@@ -109,43 +112,35 @@ class HospitalizationsModel(Model):
         tuple
         """
 
-        if self.observed_hospitalizations is None:
-            return (None,)
-
         return self.observed_hospitalizations.sample(
-            random_variables=random_variables,
-            constants=constants,
+            mean=latent, obs=observed_hospitalizations, **kwargs
         )
 
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        n_timepoints: int,
+        observed_hospitalizations=None,
+        **kwargs,
     ) -> HospModelSample:
         """Sample from the HospitalAdmissions model
 
         Parameters
         ----------
-        random_variables : dict, optional
-            A dictionary with random variables passed to
-            `pyrenew.models.RtInfectionsRenewalModel` and `sample_hospitalizations`.
-        constants : dict, optional
-            Possible constants for the model.
+        n_timepoints : int
+            Number of timepoints to sample (passed to the basic renewal model).
+        kwargs : dict
+            Keyword arguments passed to the sampling methods.
 
         Returns
         -------
         HospModelSample
         """
-        if random_variables is None:
-            random_variables = dict()
-
-        if constants is None:
-            constants = dict()
 
         # Getting the initial quantities from the basic model
         Rt, infections, *_ = self.basic_renewal.sample(
-            constants=constants,
-            random_variables=random_variables,
+            n_timepoints=n_timepoints,
+            observed_infections=None,
+            **kwargs,
         )
 
         # Sampling the latent hospitalizations
@@ -154,20 +149,15 @@ class HospitalizationsModel(Model):
             latent,
             *_,
         ) = self.sample_hospitalizations_latent(
-            random_variables={
-                **random_variables,
-                **dict(infections=infections),
-            },
-            constants=constants,
+            infections=infections,
+            **kwargs,
         )
 
         # Sampling the hospitalizations
         sampled, *_ = self.sample_hospitalizations_obs(
-            random_variables={
-                **random_variables,
-                **dict(latent=latent),
-            },
-            constants=constants,
+            latent=latent,
+            observed_hospitalizations=observed_hospitalizations,
+            **kwargs,
         )
 
         return HospModelSample(

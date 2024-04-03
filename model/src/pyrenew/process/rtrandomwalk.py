@@ -51,34 +51,24 @@ class RtRandomWalkProcess(RandomVariable):
 
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        n_timepoints: int,
+        **kwargs,
     ) -> tuple:
         """Generate samples from the process
 
         Parameters
         ----------
-        random_variables : dict
-            A dictionary containing `Rt0` (optional).
-        constants : dict.
-            A dictionary containing `n_timepoints`.
+        n_timepoints : int
+            Number of timepoints to sample.
+        kwargs : dict
+            Ignored.
 
         Returns
         -------
         tuple
         """
 
-        if random_variables is None:
-            random_variables = dict()
-
-        if constants is None:
-            constants = dict()
-
-        n_timepoints = constants.get("n_timepoints")
-
-        Rt0 = npro.sample(
-            "Rt0", self.Rt0_dist, obs=random_variables.get("Rt0", None)
-        )
+        Rt0 = npro.sample("Rt0", self.Rt0_dist)
 
         Rt0_trans = self.Rt_transform(Rt0)
         Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)

@@ -2,6 +2,7 @@
 
 from collections import namedtuple
 
+from numpy.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 
 # Output class of the RtInfectionsRenewalModel
@@ -26,7 +27,7 @@ class RtInfectionsRenewalModel(Model):
         gen_int: RandomVariable,
         I0: RandomVariable,
         Rt_process: RandomVariable,
-        observed_infections: RandomVariable = None,
+        observed_infections: RandomVariable,
     ) -> None:
         """Default constructor
 
@@ -83,117 +84,86 @@ class RtInfectionsRenewalModel(Model):
 
     def sample_rt(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
-        return self.Rt_process.sample(
-            random_variables=random_variables,
-            constants=constants,
-        )
+        return self.Rt_process.sample(**kwargs)
 
     def sample_gen_int(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
-        return self.gen_int.sample(
-            random_variables=random_variables,
-            constants=constants,
-        )
+        return self.gen_int.sample(**kwargs)
 
     def sample_i0(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
-        return self.i0.sample(
-            random_variables=random_variables,
-            constants=constants,
-        )
+        return self.i0.sample(**kwargs)
 
     def sample_infections_latent(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
-        return self.latent_infections.sample(
-            random_variables=random_variables,
-            constants=constants,
-        )
+        return self.latent_infections.sample(**kwargs)
 
     def sample_infections_obs(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        latent: ArrayLike,
+        observed_infections: ArrayLike = None,
+        **kwargs,
     ) -> tuple:
-        if self.observed_infections is None:
-            return (None,)
-
         return self.observed_infections.sample(
-            random_variables=random_variables,
-            constants=constants,
+            mean=latent,
+            obs=observed_infections,
+            **kwargs,
         )
 
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        n_timepoints: int,
+        observed_infections: ArrayLike = None,
+        **kwargs,
     ) -> RtInfectionsRenewalSample:
         """Sample from the Basic Renewal Model
 
         Parameters
         ----------
-        random_variables : dict, optional
-            A dictionary containing `infections` and/or `Rt` (optional).
-        constants : dict, optional
-            A dictionary containing `n_timepoints`.
+        n_timepoints : int
+            Number of timepoints to sample.
+        observed_infections : ArrayLike, optional
+            Observed infections.
+        kwargs : dict
+            Keyword arguments passed to the sampling methods.
 
         Returns
         -------
         RtInfectionsRenewalSample
         """
 
-        if random_variables is None:
-            random_variables = dict()
-
-        if constants is None:
-            constants = dict()
-
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.sample_rt(
-            random_variables=random_variables,
-            constants=constants,
+            n_timepoints=n_timepoints,
+            **kwargs,
         )
 
         # Getting the generation interval
-        gen_int, *_ = self.sample_gen_int(
-            random_variables=random_variables,
-            constants=constants,
-        )
+        gen_int, *_ = self.sample_gen_int(**kwargs)
 
         # Sampling initial infections
-        i0, *_ = self.sample_i0(
-            random_variables=random_variables,
-            constants=constants,
-        )
+        i0, *_ = self.sample_i0(**kwargs)
 
         # Sampling from the latent process
         latent, *_ = self.sample_infections_latent(
-            random_variables={
-                **random_variables,
-                **dict(Rt=Rt, gen_int=gen_int, I0=i0),
-            },
-            constants=constants,
+            Rt=Rt,
+            gen_int=gen_int,
+            I0=i0,
+            **kwargs,
         )
 
         # Using the predicted infections to sample from the observation process
         observed, *_ = self.sample_infections_obs(
-            random_variables={
-                **random_variables,
-                **dict(latent=latent),
-            },
-            constants=constants,
+            latent=latent, observed_infections=observed_infections, **kwargs
         )
 
         return RtInfectionsRenewalSample(
