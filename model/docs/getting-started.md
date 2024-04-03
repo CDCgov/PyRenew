@@ -17,7 +17,7 @@ quantities**. Mainly, sampling from a `RandomVariable` involves calling
 the `sample()` method. The benefit of this design is the definition of
 the sample function can be arbitrary, allowing the user to either sample
 from a distribution using `numpyro.sample()`, compute fixed quantities
-(like a mechanistic equation,) or return a fixed value (like a
+(like a mechanistic equation), or return a fixed value (like a
 pre-computed PMF.) For instance, we may be interested in estimating a
 PMF, in which case a `RandomVariable` sampling function may roughly be
 defined as:
@@ -29,7 +29,7 @@ class MyRandVar(RandomVariable):
 ```
 
 Whereas, in some other cases, we may instead use a fixed quantity for
-that variable (like a pre-computed PMF,) where the `RandomVariable`’s
+that variable (like a pre-computed PMF), where the `RandomVariable`’s
 sample function could be defined like:
 
 ``` python
@@ -45,7 +45,7 @@ some quantity needed for other calculations (second case.)
 The `Model` metaclass provides basic functionality for estimating and
 simulation. Like `RandomVariable`, the `Model` metaclass has a
 `sample()` method that defines the model structure. Ultimately, models
-can be nested (or inherited,) providing a straightforward way to add
+can be nested (or inherited), providing a straightforward way to add
 layers of complexity.
 
 ## ‘Hello world’ model
