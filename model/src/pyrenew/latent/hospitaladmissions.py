@@ -133,7 +133,7 @@ class HospitalAdmissions(RandomVariable):
         weekday_effect_dist : RandomVariable, optional
             Weekday effect.
         hosp_report_prob_dist  : RandomVariable, optional
-            Reporting probability for hospital admissions. Defaults to 1 (full
+            Distribution or fixed value for the hospital admission reporting probability. Defaults to 1 (full
             reporting).
 
         Returns
