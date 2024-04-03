@@ -10,9 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: cache poetry
         uses: actions/cache@v4
         with:
@@ -20,7 +22,16 @@ jobs:
           key: ${{ runner.os }}-poetry
       - name: install poetry
         run: pip install poetry
+
       - name: install package
         run: poetry install -C model
+
       - name: run tests
-        run: poetry run -C model pytest model
+        run: poetry run -C model pytest model --cov=model
+
+      # Upload artifacts
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage
+          path: model/.coverage
