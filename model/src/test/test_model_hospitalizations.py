@@ -266,7 +266,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         infection_to_admission_interval=inf_hosp,
         infections_varname="infections",
         weekday_effect_dist=weekday,
-        hospitalizations_reporting_dist=p_hosp,
+        hosp_report_prob_dist=p_hosp,
         infect_hosp_rate_dist=InfectHospRate(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
@@ -367,7 +367,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         infection_to_admission_interval=inf_hosp,
         infections_varname="infections",
         weekday_effect_dist=weekday,
-        hospitalizations_reporting_dist=p_hosp,
+        hosp_report_prob_dist=p_hosp,
         infect_hosp_rate_dist=InfectHospRate(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
