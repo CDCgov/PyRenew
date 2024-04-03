@@ -30,10 +30,7 @@ jobs:
         run: poetry install -C model
 
       - name: installing other dependencies
-        run: |
-          poetry run -C model pip install pyyaml
-          poetry run -C model pip install nbclient
-          poetry run -C model pip install nbformat
+        run: poetry run -C model pip install pyyaml nbclient nbformat
 
       - name: Render documents
         run: |
