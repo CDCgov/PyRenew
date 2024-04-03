@@ -356,12 +356,21 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     # Other random components
     weekday = jnp.array([1, 1, 1, 1, 2, 2])
-    weekday = weekday / weekday.sum()
     weekday = jnp.tile(weekday, 10)
+    weekday = weekday / weekday.sum()
     weekday = weekday[:31]
 
-    hosp_report_prob_dist = DeterministicVariable((weekday,))
     weekday = DeterministicVariable((weekday,))
+
+    hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
+    hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
+    hosp_report_prob_dist = hosp_report_prob_dist / hosp_report_prob_dist.sum()
+
+    hosp_report_prob_dist = hosp_report_prob_dist[:31]
+
+    hosp_report_prob_dist = DeterministicVariable(
+        vars=(hosp_report_prob_dist,)
+    )
 
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
