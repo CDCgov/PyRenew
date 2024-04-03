@@ -26,12 +26,19 @@ jobs:
       - name: install package
         run: poetry install -C model
 
-      - name: run tests
-        run: poetry run -C model pytest model --cov=model
+      - name: install pytest-cov
+        run: poetry run pip install pytest-cov
 
-      # Upload artifacts
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v2
+      - name: run tests
+        run: poetry run -C model pytest model --cov=./
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
         with:
-          name: coverage
-          path: model/.coverage
+          directory: ./coverage/reports/
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
+          files: .coverage1
+          flags: unittests
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
