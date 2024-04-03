@@ -259,14 +259,14 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     weekday = jnp.tile(weekday, 10)
     weekday = weekday[:31]
 
-    p_hosp = UniformProbForTest("p_hosp")
+    hosp_report_prob_dist = UniformProbForTest("hosp_report_prob_dist")
     weekday = UniformProbForTest("weekday")
 
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         infections_varname="infections",
         weekday_effect_dist=weekday,
-        hosp_report_prob_dist=p_hosp,
+        hosp_report_prob_dist=hosp_report_prob_dist,
         infect_hosp_rate_dist=InfectHospRate(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
@@ -360,14 +360,14 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = jnp.tile(weekday, 10)
     weekday = weekday[:31]
 
-    p_hosp = DeterministicVariable((weekday,))
+    hosp_report_prob_dist = DeterministicVariable((weekday,))
     weekday = DeterministicVariable((weekday,))
 
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         infections_varname="infections",
         weekday_effect_dist=weekday,
-        hosp_report_prob_dist=p_hosp,
+        hosp_report_prob_dist=hosp_report_prob_dist,
         infect_hosp_rate_dist=InfectHospRate(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
