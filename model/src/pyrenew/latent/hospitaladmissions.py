@@ -109,7 +109,9 @@ class HospitalAdmissions(RandomVariable):
         infections_varname: str = "infections",
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
         weekday_effect_dist: RandomVariable = DeterministicVariable((1,)),
-        p_report_dist: RandomVariable = DeterministicVariable((1,)),
+        hospitalizations_reporting_dist: RandomVariable = DeterministicVariable(
+            (1,)
+        ),
     ) -> None:
         """Default constructor
 
@@ -132,8 +134,9 @@ class HospitalAdmissions(RandomVariable):
             predicted hospitalizations.
         weekday_effect_dist : RandomVariable, optional
             Weekday effect.
-        p_report_dist  : RandomVariable, optional
-            Reporting probability for hospital admissions. Defaults to 1 (full reporting).
+        hospitalizations_reporting_dist  : RandomVariable, optional
+            Reporting probability for hospital admissions. Defaults to 1 (full
+            reporting).
 
         Returns
         -------
@@ -142,7 +145,7 @@ class HospitalAdmissions(RandomVariable):
         HospitalAdmissions.validate(
             infect_hosp_rate_dist,
             weekday_effect_dist,
-            p_report_dist,
+            hospitalizations_reporting_dist,
         )
 
         self.infections_varname = infections_varname
@@ -152,16 +155,18 @@ class HospitalAdmissions(RandomVariable):
 
         self.infect_hosp_rate_dist = infect_hosp_rate_dist
         self.weekday_effect_dist = weekday_effect_dist
-        self.p_report_dist = p_report_dist
+        self.hospitalizations_reporting_dist = hospitalizations_reporting_dist
         self.infection_to_admission_interval = infection_to_admission_interval
 
     @staticmethod
     def validate(
-        infect_hosp_rate_dist, weekday_effect_dist, p_report_dist
+        infect_hosp_rate_dist,
+        weekday_effect_dist,
+        hospitalizations_reporting_dist,
     ) -> None:
         assert isinstance(infect_hosp_rate_dist, RandomVariable)
         assert isinstance(weekday_effect_dist, RandomVariable)
-        assert isinstance(p_report_dist, RandomVariable)
+        assert isinstance(hospitalizations_reporting_dist, RandomVariable)
 
         return None
 
@@ -222,7 +227,7 @@ class HospitalAdmissions(RandomVariable):
         # Applying probability of hospitalization effect
         predicted_hospitalizations = (
             predicted_hospitalizations
-            * self.p_report_dist.sample(
+            * self.hospitalizations_reporting_dist.sample(
                 random_variables=random_variables,
                 constants=constants,
             )[0]
