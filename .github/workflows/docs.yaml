@@ -1,26 +1,41 @@
-name: installation and testing model
+name: Quarto documents
 
 on:
   pull_request:
+    branches: [main]
   push:
     branches: [main]
 
 jobs:
-  install-and-test:
+  render-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: cache poetry
         uses: actions/cache@v4
         with:
           path: ~/.local
           key: ${{ runner.os }}-poetry
+
       - name: install poetry
         run: pip install poetry
+
       - name: install package
         run: poetry install -C model
-      - name: run tests
-        run: poetry run -C model pytest model
+
+      - name: installing other dependencies
+        run: poetry run -C model pip install pyyaml nbclient nbformat
+
+      - name: Render documents
+        run: |
+            cd model
+            for file in $(find docs -name '*.qmd'); do
+                poetry run quarto render $file
+            done

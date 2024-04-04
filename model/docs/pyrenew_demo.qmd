@@ -9,9 +9,11 @@ This demo simulates some basic renewal process data and then fits to it using `p
 You'll need to install `pyrenew` first. You'll also need working installations of `matplotlib`, `numpy`, `jax`, `numpyro`, and `polars`
 
 ```{python}
+#| output: false
+#| label: loading-pkgs
+#| warning: false
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -25,6 +27,7 @@ from pyrenew.process import SimpleRandomWalkProcess
 
 ```{python}
 #| label: fig-randwalk
+#| fig-cap: Random walk example
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
 with seed(rng_seed=np.random.randint(0,1000)):
@@ -34,27 +37,52 @@ plt.plot(np.exp(q_samp[0]))
 ```
 
 ```{python}
-from pyrenew.latent import Infections, HospitalAdmissions
-from pyrenew.observation import PoissonObservation
+from pyrenew.latent import (
+    Infections, HospitalAdmissions, Infections0, InfectHospRate,
+)
 
+from pyrenew.observation import PoissonObservation
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalizationsModel
 from pyrenew.process import RtRandomWalkProcess
 
-# Initializing model parameters
-latent_infections = Infections(jnp.array([0.25, 0.25, 0.25, 0.25]))
+# Initializing model components:
+
+# A deterministic generation time
+gen_int = DeterministicPMF(
+    (jnp.array([0.25, 0.25, 0.25, 0.25]),),
+    )
+
+# Initial infections
+I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+
+# The latent infections process
+latent_infections = Infections()
+
+# A deterministic infection to hosp pmf
+inf_hosp_int = DeterministicPMF(
+    (jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),),
+    )
+
+# The latent hospitalization process
 latent_hospitalizations = HospitalAdmissions(
-    inf_hosp_int=jnp.array(
-        [0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05],
-        )
+    infection_to_admission_interval=inf_hosp_int,
+    infect_hosp_rate_dist = InfectHospRate(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+            ),
     )
-observed_hospitalizations = PoissonObservation(
-    rate_varname='latent',
-    counts_varname='observed_hospitalizations',
-    )
+
+# And observation process for the hospitalizations
+observed_hospitalizations = PoissonObservation()
+
+# And a random walk process (it could be deterministic using
+# pyrenew.process.DeterministicProcess())
 Rt_process = RtRandomWalkProcess()
 
 # Initializing the model
 hospmodel = HospitalizationsModel(
+    gen_int=gen_int,
+    I0=I0,
     latent_hospitalizations=latent_hospitalizations,
     observed_hospitalizations=observed_hospitalizations,
     latent_infections=latent_infections,
@@ -65,12 +93,13 @@ hospmodel = HospitalizationsModel(
 
 ```{python}
 with seed(rng_seed=np.random.randint(1, 60)):
-    x = hospmodel.sample(constants=dict(n_timepoints=30))
+    x = hospmodel.sample(n_timepoints=30)
 x
 ```
 
 ```{python}
 #| label: fig-hosp
+#| fig-cap: Infections
 fig, ax = plt.subplots(nrows=3, sharex=True)
 ax[0].plot(x.infections)
 ax[0].set_ylim([1/5, 5])
@@ -81,15 +110,12 @@ for axis in ax[:-1]:
 ```
 
 ```{python}
-sim_dat={"observed_hospitalizations": x.sampled}
-constants = {"n_timepoints":len(x.sampled)-1}
-
 # from numpyro.infer import MCMC, NUTS
 hospmodel.run(
     num_warmup=1000,
     num_samples=1000,
-    random_variables=sim_dat,
-    constants=constants,
+    observed_hospitalizations=x.sampled,
+    n_timepoints = len(x.sampled)-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )
@@ -106,6 +132,7 @@ samps = spread_draws(hospmodel.mcmc.get_samples(), [("Rt", "time")])
 
 ```{python}
 #| label: fig-sampled-rt
+#| fig-cap: Posterior Rt
 import numpy as np
 import polars as pl
 fig, ax = plt.subplots(figsize=[4, 5])

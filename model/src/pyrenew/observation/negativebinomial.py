@@ -4,7 +4,7 @@ import numbers as nums
 
 import numpyro
 import numpyro.distributions as dist
-from numpy.typing import ArrayLike
+from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 
@@ -16,8 +16,6 @@ class NegativeBinomialObservation(RandomVariable):
         concentration_prior: dist.Distribution | ArrayLike,
         concentration_suffix: str = "_concentration",
         parameter_name="negbinom_rv",
-        mean_varname="mean",
-        counts_varname="counts",
     ) -> None:
         """Default constructor
 
@@ -34,12 +32,6 @@ class NegativeBinomialObservation(RandomVariable):
             Suffix for the numpy variable.
         parameter_name : str, optional
             Name for the numpy variable.
-        mean_varname : str, optional
-            Name of the element in `random_variables` that will hold the rate
-            when calling `PoissonObservation.sample()`.
-        counts_varname: str, optional
-            Name of the element in `random_variables` that will hold the
-            observed count when calling `PoissonObservation.sample()`.
 
         Returns
         -------
@@ -58,23 +50,24 @@ class NegativeBinomialObservation(RandomVariable):
 
         self.parameter_name = parameter_name
         self.concentration_suffix = concentration_suffix
-        self.mean_varname = mean_varname
-        self.counts_varname = counts_varname
 
     def sample(
         self,
-        random_variables: dict,
-        constants: dict = None,
+        predicted: ArrayLike,
+        obs: ArrayLike = None,
+        **kwargs,
     ) -> tuple:
         """Sample from the negative binomial distribution
 
         Parameters
         ----------
-        random_variables : dict, optional
-            A dictionary containing the `mean` parameter, and possibly
-            containing `counts`, which is passed to `obs` `numpyro.sample()`.
-        constants : dict, optional
-            Ignored, defaults to dict().
+        predicted : ArrayLike
+            Mean parameter of the negative binomial distribution.
+        obs : ArrayLike, optional
+            Observed data, by default None.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Returns
         -------
@@ -84,10 +77,10 @@ class NegativeBinomialObservation(RandomVariable):
             numpyro.sample(
                 self.parameter_name,
                 dist.NegativeBinomial2(
-                    mean=random_variables.get(self.mean_varname),
+                    mean=predicted,
                     concentration=self.sample_prior(),
                 ),
-                obs=random_variables.get(self.counts_varname, None),
+                obs=obs,
             ),
         )
 

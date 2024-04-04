@@ -149,9 +149,18 @@ $$h_{t,d} = P(\text{delay}=d|\text{delay} \geq d, W_{t,d}).$$
 
 ### Hospitalizations
 
-from <a href="https://github.com/cdcent/cfa-forecast-renewal-ww/blob/main/model_definition.md#hospital-admissions-component">the wastewater model</a> the eventual expected number of hospitalizations with [reference time](#reporting-delay-between-the-time-of-reference-and-the-time-of-report) $t$ is given by:
+In the wastewater model[^ww], the observed hospitalizations $h_t$ are the realization of a count random variable with mean modeled as a function of a renewal process, $H(t)$. Following the wastewater model's notation, the two equations that characterized this model component are:
 
-$$H(t) = \omega(t) ~ p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau).$$
+[^ww]: https://github.com/cdcent/cfa-forecast-renewal-ww/blob/main/model_definition.md#hospital-admissions-component
+
+$$
+\begin{align}
+H(t) & = \omega(t) ~ p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau).\\
+h_t & \sim \text{CountDistribution}(\theta(H(t)))
+\end{align}
+$$
+
+Where $\omega(t)$ is a weekday effect, $p_{hosp}(t)$ is the probability of hospitalization, $d(\tau)$ is akin to incubation but representing infection to hospitalization time, $I(t)$ is the incidence, and $\text{CountDistribution}(\theta)$ can be a Negative Binomial or Poisson distribution (for example,). More details are provided in the documentation of the wastewater model ([link](https://github.com/cdcent/cfa-forecast-renewal-ww/blob/e7976925d5eea960ae1b907cddb857bce88f3d7a/model_definition.md#wastewater-component)).
 
 ### Wastewater
 
