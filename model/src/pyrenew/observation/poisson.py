@@ -50,7 +50,8 @@ class PoissonObservation(RandomVariable):
         obs : ArrayLike, optional
             Observed data, by default None.
         **kwargs : dict, optional
-            Keyword arguments passed to the sampling methods.
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Returns
         -------

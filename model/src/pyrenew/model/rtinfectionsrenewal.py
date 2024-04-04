@@ -45,8 +45,7 @@ class RtInfectionsRenewalModel(Model):
             first element is the drawn Rt.
         observed_infections : RandomVariable, optional
             Infections observation process (e.g.,
-            pyrenew.observations.Poisson.) It should receive the sampled Rt
-            via `random_variables`.
+            pyrenew.observations.Poisson.).
 
         Returns
         -------
@@ -133,7 +132,8 @@ class RtInfectionsRenewalModel(Model):
         observed_infections : ArrayLike, optional
             Observed infections.
         **kwargs : dict, optional
-            Keyword arguments passed to the sampling methods.
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Returns
         -------

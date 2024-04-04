@@ -100,7 +100,8 @@ class RandomVariable(metaclass=ABCMeta):
         Parameters
         ----------
         **kwargs : dict, optional
-            Dictionary of arguments passed to the sample function.
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Notes
         -----
@@ -147,7 +148,8 @@ class Model(metaclass=ABCMeta):
         Parameters
         ----------
         **kwargs : dict, optional
-            Dictionary of arguments passed to the sample function.
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Notes
         -----

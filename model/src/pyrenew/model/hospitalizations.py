@@ -128,7 +128,8 @@ class HospitalizationsModel(Model):
         n_timepoints : int
             Number of timepoints to sample (passed to the basic renewal model).
         **kwargs : dict, optional
-            Keyword arguments passed to the sampling methods.
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Returns
         -------

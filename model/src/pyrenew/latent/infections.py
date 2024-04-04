@@ -27,8 +27,7 @@ class Infections(RandomVariable):
         Parameters
         ----------
         infections_mean_varname : str.
-            Name of the element in `random_variables` that will hold the value
-            of mean 'infections'.
+            Name to be assigned to the deterministic variable in the model.
 
         Returns
         -------

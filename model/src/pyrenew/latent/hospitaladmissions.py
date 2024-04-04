@@ -39,8 +39,7 @@ class InfectHospRate(RandomVariable):
             Prior distribution of the IHR, by default
             dist.LogNormal(jnp.log(0.05), 0.05)
         varname : str, optional
-            Name of the random_variable that may hold observed IHR, by default
-            "IHR"
+            Name of the random variable in the model, by default "IHR."
 
         Returns
         -------
@@ -61,8 +60,8 @@ class InfectHospRate(RandomVariable):
     def sample(self, **kwargs) -> InfectHospRateSample:
         return InfectHospRateSample(
             npro.sample(
-                "IHR",
-                self.dist,
+                name=self.varname,
+                fn=self.dist,
             )
         )
 
@@ -103,8 +102,8 @@ class HospitalAdmissions(RandomVariable):
         infection_to_admission_interval: RandomVariable,
         infect_hosp_rate_dist: RandomVariable,
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
-        weekday_effect_dist: RandomVariable = DeterministicVariable((1,)),
-        hosp_report_prob_dist: RandomVariable = DeterministicVariable((1,)),
+        weekday_effect_dist: RandomVariable = None,
+        hosp_report_prob_dist: RandomVariable = None,
     ) -> None:
         """Default constructor
 
@@ -128,6 +127,12 @@ class HospitalAdmissions(RandomVariable):
         -------
         None
         """
+
+        if weekday_effect_dist is None:
+            weekday_effect_dist = DeterministicVariable((1,))
+        if hosp_report_prob_dist is None:
+            hosp_report_prob_dist = DeterministicVariable((1,))
+
         HospitalAdmissions.validate(
             infect_hosp_rate_dist,
             weekday_effect_dist,
@@ -167,7 +172,8 @@ class HospitalAdmissions(RandomVariable):
         latent : ArrayLike
             Latent infections.
         **kwargs : dict, optional
-            Keyword arguments passed to the sampling methods.
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Returns
         -------
