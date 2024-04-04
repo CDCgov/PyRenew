@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  install-and-test:
+  render-docs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
