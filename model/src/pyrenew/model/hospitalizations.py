@@ -93,7 +93,7 @@ class HospitalizationsModel(Model):
 
     def sample_hospitalizations_obs(
         self,
-        latent: ArrayLike,
+        predicted: ArrayLike,
         observed_hospitalizations: ArrayLike,
         **kwargs,
     ) -> tuple:
@@ -101,11 +101,10 @@ class HospitalizationsModel(Model):
 
         Parameters
         ----------
-        random_variables : dict
-            A dictionary containing `infections` passed to the specified
-            sampler.
-        constants : dict, optional
-            Possible constants for the model.
+        predicted : ArrayLike
+            Predicted hospitalizations.
+        observed_hospitalizations : ArrayLike
+            Observed hospitalizations.
 
         Returns
         -------
@@ -113,7 +112,7 @@ class HospitalizationsModel(Model):
         """
 
         return self.observed_hospitalizations.sample(
-            mean=latent, obs=observed_hospitalizations, **kwargs
+            predicted=predicted, obs=observed_hospitalizations, **kwargs
         )
 
     def sample(
@@ -155,7 +154,7 @@ class HospitalizationsModel(Model):
 
         # Sampling the hospitalizations
         sampled, *_ = self.sample_hospitalizations_obs(
-            latent=latent,
+            predicted=latent,
             observed_hospitalizations=observed_hospitalizations,
             **kwargs,
         )

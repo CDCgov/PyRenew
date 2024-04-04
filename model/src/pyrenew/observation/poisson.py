@@ -37,7 +37,7 @@ class PoissonObservation(RandomVariable):
 
     def sample(
         self,
-        mean: ArrayLike,
+        predicted: ArrayLike,
         obs: ArrayLike = None,
         **kwargs,
     ) -> tuple:
@@ -45,7 +45,7 @@ class PoissonObservation(RandomVariable):
 
         Parameters
         ----------
-        mean : ArrayLike
+        predicted : ArrayLike
             Rate parameter of the Poisson distribution.
         obs : ArrayLike, optional
             Observed data, by default None.
@@ -59,7 +59,7 @@ class PoissonObservation(RandomVariable):
         return (
             numpyro.sample(
                 self.parameter_name,
-                dist.Poisson(rate=mean + self.eps),
+                dist.Poisson(rate=predicted + self.eps),
                 obs=obs,
             ),
         )

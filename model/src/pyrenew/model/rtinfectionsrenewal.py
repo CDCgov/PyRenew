@@ -108,12 +108,12 @@ class RtInfectionsRenewalModel(Model):
 
     def sample_infections_obs(
         self,
-        latent: ArrayLike,
+        predicted: ArrayLike,
         observed_infections: ArrayLike = None,
         **kwargs,
     ) -> tuple:
         return self.observed_infections.sample(
-            mean=latent,
+            predicted=predicted,
             obs=observed_infections,
             **kwargs,
         )
@@ -163,7 +163,7 @@ class RtInfectionsRenewalModel(Model):
 
         # Using the predicted infections to sample from the observation process
         observed, *_ = self.sample_infections_obs(
-            latent=latent, observed_infections=observed_infections, **kwargs
+            predicted=latent, observed_infections=observed_infections, **kwargs
         )
 
         return RtInfectionsRenewalSample(
