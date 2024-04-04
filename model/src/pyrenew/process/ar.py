@@ -45,6 +45,7 @@ class ARProcess(RandomVariable):
         duration: int,
         inits: ArrayLike = None,
         name: str = "arprocess",
+        **kwargs,
     ) -> tuple:
         """Sample from the AR process
 
@@ -56,6 +57,8 @@ class ARProcess(RandomVariable):
             Initial points, if None, then these are sampled.
         name : str, optional
             Name of the parameter passed to numpyro.sample.
+        **kwargs : dict, optional
+            Ignored.
 
         Returns
         -------

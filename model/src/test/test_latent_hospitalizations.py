@@ -20,7 +20,7 @@ def test_hospitalizations_sample():
     np.random.seed(223)
     rt = RtRandomWalkProcess()
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt, *_ = rt.sample(constants={"n_timepoints": 30})
+        sim_rt, *_ = rt.sample(n_timepoints=30)
 
     gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
     i0 = 10
@@ -28,9 +28,7 @@ def test_hospitalizations_sample():
     inf1 = Infections()
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        inf_sampled1 = inf1.sample(
-            random_variables=dict(Rt=sim_rt, gen_int=gen_int, I0=i0),
-        )
+        inf_sampled1 = inf1.sample(Rt=sim_rt, gen_int=gen_int, I0=i0)
 
     # Testing the hospitalizations
     inf_hosp = DeterministicPMF(
@@ -67,9 +65,7 @@ def test_hospitalizations_sample():
     )
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_hosp_1 = hosp1.sample(
-            random_variables=dict(infections=inf_sampled1[0])
-        )
+        sim_hosp_1 = hosp1.sample(latent=inf_sampled1[0])
 
     testing.assert_array_less(
         sim_hosp_1.predicted,

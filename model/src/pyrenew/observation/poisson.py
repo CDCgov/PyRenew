@@ -2,6 +2,7 @@
 
 import numpyro
 import numpyro.distributions as dist
+from numpy.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 
@@ -13,8 +14,6 @@ class PoissonObservation(RandomVariable):
     def __init__(
         self,
         parameter_name: str = "poisson_rv",
-        rate_varname: str = "rate",
-        counts_varname: str = "counts",
         eps: float = 1e-8,
     ) -> None:
         """Default Constructor
@@ -23,12 +22,8 @@ class PoissonObservation(RandomVariable):
         ----------
         parameter_name : str, optional
             Passed to numpyro.sample.
-        rate_varname : str, optional
-            Name of the element in `random_variables` that will hold the rate
-            when calling `PoissonObservation.sample()`.
-        counts_varname : str, optional
-            Name of the element in `random_variables` that will hold the
-            observed count when calling `PoissonObservation.sample()`.
+        eps : float, optional
+            Small value added to the rate parameter to avoid zero values.
 
         Returns
         -------
@@ -36,27 +31,27 @@ class PoissonObservation(RandomVariable):
         """
 
         self.parameter_name = parameter_name
-        self.rate_varname = rate_varname
-        self.counts_varname = counts_varname
         self.eps = eps
 
         return None
 
     def sample(
         self,
-        random_variables: dict,
-        constants: dict = None,
+        predicted: ArrayLike,
+        obs: ArrayLike = None,
+        **kwargs,
     ) -> tuple:
         """Sample from the Poisson process
 
         Parameters
         ----------
-        random_variables : dict, optional
-            A dictionary containing the rate parameter passed to
-            `numpyro.distributions.Poisson()`, and possible containing `counts`
-            passed to `obs` in `numpyro.sample()`.
-        constants : dict, optional
-            Ignored.
+        predicted : ArrayLike
+            Rate parameter of the Poisson distribution.
+        obs : ArrayLike, optional
+            Observed data, by default None.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Returns
         -------
@@ -65,10 +60,8 @@ class PoissonObservation(RandomVariable):
         return (
             numpyro.sample(
                 self.parameter_name,
-                dist.Poisson(
-                    rate=random_variables.get(self.rate_varname) + self.eps
-                ),
-                obs=random_variables.get(self.counts_varname, None),
+                dist.Poisson(rate=predicted + self.eps),
+                obs=obs,
             ),
         )
 

@@ -52,17 +52,14 @@ class Infections0(RandomVariable):
 
     def sample(
         self,
-        random_variables: dict,
-        constants: dict,
+        **kwargs,
     ) -> tuple:
         """Sample the initial infections.
 
         Parameters
         ----------
-        random_variables : dict
-            Dictionary of random variables.
-        constants : dict
-            Dictionary of constants.
+        **kwargs : dict, optional
+            Ignored
 
         Returns
         -------

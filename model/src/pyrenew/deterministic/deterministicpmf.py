@@ -52,18 +52,15 @@ class DeterministicPMF(RandomVariable):
 
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
         """Retrieves the deterministic PMF
 
         Parameters
         ----------
-
-        random_variables : dict
-            Ignored. Default None.
-        constants : dict
-            Ignored. Default None.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Returns
         -------
@@ -71,7 +68,4 @@ class DeterministicPMF(RandomVariable):
             Containing the stored values during construction.
         """
 
-        return self.basevar.sample(
-            random_variables=random_variables,
-            constants=constants,
-        )
+        return self.basevar.sample(**kwargs)

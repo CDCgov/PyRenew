@@ -5,6 +5,7 @@ from collections import namedtuple
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
+from numpy.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 
@@ -38,8 +39,7 @@ class InfectHospRate(RandomVariable):
             Prior distribution of the IHR, by default
             dist.LogNormal(jnp.log(0.05), 0.05)
         varname : str, optional
-            Name of the random_variable that may hold observed IHR, by default
-            "IHR"
+            Name of the random variable in the model, by default "IHR."
 
         Returns
         -------
@@ -57,16 +57,11 @@ class InfectHospRate(RandomVariable):
     def validate(distr: dist.Distribution) -> None:
         assert isinstance(distr, dist.Distribution)
 
-    def sample(
-        self,
-        random_variables: dict = None,
-        constants: dict = None,
-    ) -> InfectHospRateSample:
+    def sample(self, **kwargs) -> InfectHospRateSample:
         return InfectHospRateSample(
             npro.sample(
-                "IHR",
-                self.dist,
-                obs=random_variables.get(self.varname, None),
+                name=self.varname,
+                fn=self.dist,
             )
         )
 
@@ -106,10 +101,9 @@ class HospitalAdmissions(RandomVariable):
         self,
         infection_to_admission_interval: RandomVariable,
         infect_hosp_rate_dist: RandomVariable,
-        infections_varname: str = "infections",
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
-        weekday_effect_dist: RandomVariable = DeterministicVariable((1,)),
-        hosp_report_prob_dist: RandomVariable = DeterministicVariable((1,)),
+        weekday_effect_dist: RandomVariable = None,
+        hosp_report_prob_dist: RandomVariable = None,
     ) -> None:
         """Default constructor
 
@@ -120,33 +114,31 @@ class HospitalAdmissions(RandomVariable):
             pyrenew.observations.Deterministic).
         infect_hosp_rate_dist : RandomVariable
             Infection to hospitalization rate distribution.
-        infections_varname : str
-            Name of the entry in random_variables that holds the vector of
-            infections.
-        infect_hosp_rate_varname : str
-            Name of the entry in random_variables that holds the observed
-            infection-hospitalization rate (IHR).
-            (if available).
         hospitalizations_predicted_varname : str
             Name to assign to the deterministic component in numpyro of
             predicted hospitalizations.
         weekday_effect_dist : RandomVariable, optional
             Weekday effect.
         hosp_report_prob_dist  : RandomVariable, optional
-            Distribution or fixed value for the hospital admission reporting probability. Defaults to 1 (full
-            reporting).
+            Distribution or fixed value for the hospital admission reporting
+            probability. Defaults to 1 (full reporting).
 
         Returns
         -------
         None
         """
+
+        if weekday_effect_dist is None:
+            weekday_effect_dist = DeterministicVariable((1,))
+        if hosp_report_prob_dist is None:
+            hosp_report_prob_dist = DeterministicVariable((1,))
+
         HospitalAdmissions.validate(
             infect_hosp_rate_dist,
             weekday_effect_dist,
             hosp_report_prob_dist,
         )
 
-        self.infections_varname = infections_varname
         self.hospitalizations_predicted_varname = (
             hospitalizations_predicted_varname
         )
@@ -170,44 +162,32 @@ class HospitalAdmissions(RandomVariable):
 
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        latent: ArrayLike,
+        **kwargs,
     ) -> HospAdmissionsSample:
         """Samples from the observation process
 
         Parameters
         ----------
-        random_variables : dict
-            A dictionary `self.infections_varname` with the observed
-            infections. Optionally, with IHR passed to obs in npyro.sample().
-        constants : dict, optional
-            Ignored.
+        latent : ArrayLike
+            Latent infections.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
 
         Returns
         -------
         HospAdmissionsSample
         """
 
-        if random_variables is None:
-            random_variables = dict()
+        IHR, *_ = self.infect_hosp_rate_dist.sample(**kwargs)
 
-        if constants is None:
-            constants = dict()
-
-        IHR, *_ = self.infect_hosp_rate_dist.sample(
-            random_variables=random_variables,
-            constants=constants,
-        )
-
-        IHR_t = IHR * random_variables.get(self.infections_varname)
+        IHR_t = IHR * latent
 
         (
             infection_to_admission_interval,
             *_,
-        ) = self.infection_to_admission_interval.sample(
-            random_variables=random_variables,
-            constants=constants,
-        )
+        ) = self.infection_to_admission_interval.sample(**kwargs)
 
         predicted_hospitalizations = jnp.convolve(
             IHR_t, infection_to_admission_interval, mode="full"
@@ -216,19 +196,13 @@ class HospitalAdmissions(RandomVariable):
         # Applying weekday effect
         predicted_hospitalizations = (
             predicted_hospitalizations
-            * self.weekday_effect_dist.sample(
-                random_variables=random_variables,
-                constants=constants,
-            )[0]
+            * self.weekday_effect_dist.sample(**kwargs)[0]
         )
 
         # Applying probability of hospitalization effect
         predicted_hospitalizations = (
             predicted_hospitalizations
-            * self.hosp_report_prob_dist.sample(
-                random_variables=random_variables,
-                constants=constants,
-            )[0]
+            * self.hosp_report_prob_dist.sample(**kwargs)[0]
         )
 
         npro.deterministic(
