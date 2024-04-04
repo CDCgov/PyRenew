@@ -58,7 +58,7 @@ class DeterministicPMF(RandomVariable):
 
         Parameters
         ----------
-        kwargs : dict
+        **kwargs : dict, optional
             Arguments to pass to the sample method.
 
         Returns

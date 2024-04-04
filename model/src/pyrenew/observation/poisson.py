@@ -49,7 +49,7 @@ class PoissonObservation(RandomVariable):
             Rate parameter of the Poisson distribution.
         obs : ArrayLike, optional
             Observed data, by default None.
-        kwargs : dict
+        **kwargs : dict, optional
             Keyword arguments passed to the sampling methods.
 
         Returns

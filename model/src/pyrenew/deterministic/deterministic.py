@@ -47,7 +47,7 @@ class DeterministicVariable(RandomVariable):
 
         Parameters
         ----------
-        kwargs : dict
+        **kwargs : dict, optional
             Ignored.
 
         Returns

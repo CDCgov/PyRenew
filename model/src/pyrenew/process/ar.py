@@ -57,7 +57,7 @@ class ARProcess(RandomVariable):
             Initial points, if None, then these are sampled.
         name : str, optional
             Name of the parameter passed to numpyro.sample.
-        kwargs : dict
+        **kwargs : dict, optional
             Ignored.
 
         Returns

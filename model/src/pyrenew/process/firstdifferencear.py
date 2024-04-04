@@ -53,7 +53,7 @@ class FirstDifferenceARProcess(RandomVariable):
             Passed to ARProcess.sample, by default None.
         name : str, optional
             Passed to ARProcess.sample(), by default "trend_rw"
-        kwargs : dict
+        **kwargs : dict, optional
             Ignored.
 
         Returns

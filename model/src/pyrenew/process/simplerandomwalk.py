@@ -47,7 +47,7 @@ class SimpleRandomWalkProcess(RandomVariable):
             Passed to numpyro.sample, by default "randomwalk"
         init : float, optional
             Initial point of the walk, by default None
-        kwargs : dict
+        **kwargs : dict, optional
             Ignored.
 
         Returns

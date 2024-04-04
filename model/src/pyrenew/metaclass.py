@@ -99,8 +99,13 @@ class RandomVariable(metaclass=ABCMeta):
 
         Parameters
         ----------
-        kwargs : dict
+        **kwargs : dict, optional
             Dictionary of arguments passed to the sample function.
+
+        Notes
+        -----
+        <description of how the kwargs documented above does not cover all
+        kwargs (in some instances)>
 
         Returns
         -------
@@ -115,6 +120,8 @@ class RandomVariable(metaclass=ABCMeta):
 
 
 class Model(metaclass=ABCMeta):
+    """Abstract base class for models"""
+
     # Since initialized in none, values not shared across instances
     kernel = None
     mcmc = None
@@ -133,6 +140,24 @@ class Model(metaclass=ABCMeta):
         self,
         **kwargs,
     ) -> tuple:
+        """Sample method of the model
+
+        The method design in the class should have at least kwargs.
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Dictionary of arguments passed to the sample function.
+
+        Notes
+        -----
+        <description of how the kwargs documented above does not cover all
+        kwargs (in some instances)>
+
+        Returns
+        -------
+        tuple
+        """
         pass
 
     def _init_model(

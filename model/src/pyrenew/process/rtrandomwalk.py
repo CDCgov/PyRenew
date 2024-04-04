@@ -60,7 +60,7 @@ class RtRandomWalkProcess(RandomVariable):
         ----------
         n_timepoints : int
             Number of timepoints to sample.
-        kwargs : dict
+        **kwargs : dict, optional
             Ignored.
 
         Returns

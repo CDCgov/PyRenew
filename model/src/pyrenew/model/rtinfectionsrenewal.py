@@ -132,7 +132,7 @@ class RtInfectionsRenewalModel(Model):
             Number of timepoints to sample.
         observed_infections : ArrayLike, optional
             Observed infections.
-        kwargs : dict
+        **kwargs : dict, optional
             Keyword arguments passed to the sampling methods.
 
         Returns

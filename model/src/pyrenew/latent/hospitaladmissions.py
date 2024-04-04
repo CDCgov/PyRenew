@@ -166,7 +166,7 @@ class HospitalAdmissions(RandomVariable):
         ----------
         latent : ArrayLike
             Latent infections.
-        kwargs : dict
+        **kwargs : dict, optional
             Keyword arguments passed to the sampling methods.
 
         Returns

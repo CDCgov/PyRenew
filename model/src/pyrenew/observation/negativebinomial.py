@@ -65,7 +65,7 @@ class NegativeBinomialObservation(RandomVariable):
             Mean parameter of the negative binomial distribution.
         obs : ArrayLike, optional
             Observed data, by default None.
-        kwargs : dict
+        **kwargs : dict, optional
             Keyword arguments passed to the sampling methods.
 
         Returns

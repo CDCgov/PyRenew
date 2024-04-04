@@ -58,7 +58,7 @@ class Infections0(RandomVariable):
 
         Parameters
         ----------
-        kwargs : dict
+        **kwargs : dict, optional
             Ignored
 
         Returns
