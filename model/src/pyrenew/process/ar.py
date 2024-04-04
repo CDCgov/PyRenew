@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax import lax
-from numpy.typing import ArrayLike
+from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 
