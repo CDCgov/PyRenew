@@ -1,4 +1,4 @@
-name: installation and testing model
+name: model
 
 on:
   pull_request:

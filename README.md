@@ -6,7 +6,7 @@
 [![installation and testing model](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/test_model.yaml/badge.svg)](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/test_model.yaml)
 [![installation and testing pipeline](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/test_pipeline.yaml/badge.svg)](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/test_pipeline.yaml)
 [![Docs: model](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/sphinx.yaml/badge.svg)](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/sphinx.yaml)
-[![codecov](https://codecov.io/gh/CDCgov/multisignal-epi-inference/graph/badge.svg?token=7Z06HOMYR1)](https://codecov.io/gh/CDCgov/multisignal-epi-inference)
+[![codecov (model)](https://codecov.io/gh/CDCgov/multisignal-epi-inference/graph/badge.svg?token=7Z06HOMYR1)](https://codecov.io/gh/CDCgov/multisignal-epi-inference)
 
 This repo hosts the multisignal (*a.k.a.* signal fusion) renewal project: an internal forecasting model that leverages multiple data sources for enhancing epidemiological modeling of infectious disease outbreaks.
 
