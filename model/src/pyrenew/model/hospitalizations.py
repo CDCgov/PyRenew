@@ -4,7 +4,6 @@ from collections import namedtuple
 
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
-from pyrenew.process import RtRandomWalkProcess
 
 HospModelSample = namedtuple(
     "HospModelSample",
@@ -33,8 +32,10 @@ class HospitalizationsModel(Model):
         self,
         latent_hospitalizations: RandomVariable,
         latent_infections: RandomVariable,
+        gen_int: RandomVariable,
+        I0: RandomVariable,
+        Rt_process: RandomVariable,
         observed_hospitalizations: RandomVariable = None,
-        Rt_process: RandomVariable = RtRandomWalkProcess(),
     ) -> None:
         """Default constructor
 
@@ -42,18 +43,24 @@ class HospitalizationsModel(Model):
         ----------
         latent_hospitalizations : RandomVariable
             Latent process for the hospitalizations.
-        observed_hospitalizations : RandomVariable
-            Observation process for the hospitalizations.
         latent_infections : RandomVariable
             The infections latent process (passed to RtInfectionsRenewalModel).
-        Rt_process : RandomVariable, optional
+        gen_int : RandomVariable
+            Generation time (passed to RtInfectionsRenewalModel)
+        I0 : RandomVariable
+            Initial infections (passed to RtInfectionsRenewalModel)
+        Rt_process : RandomVariable
             Rt process  (passed to RtInfectionsRenewalModel).
+        observed_hospitalizations : RandomVariable, optional
+            Observation process for the hospitalizations.
 
         Returns
         -------
         None
         """
         self.basic_renewal = RtInfectionsRenewalModel(
+            gen_int=gen_int,
+            I0=I0,
             latent_infections=latent_infections,
             observed_infections=None,
             Rt_process=Rt_process,
@@ -135,7 +142,7 @@ class HospitalizationsModel(Model):
         if constants is None:
             constants = dict()
 
-        # Getting the baseline quantities from the basic model
+        # Getting the initial quantities from the basic model
         Rt, infections, *_ = self.basic_renewal.sample(
             constants=constants,
             random_variables=random_variables,
