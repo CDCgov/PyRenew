@@ -4,7 +4,7 @@ import numbers as nums
 
 import numpyro
 import numpyro.distributions as dist
-from numpy.typing import ArrayLike
+from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 
