@@ -1,0 +1,7 @@
+Convolution Utility Module
+==========================
+
+.. automodule:: pyrenew.convolve
+   :members:
+   :undoc-members:
+   :show-inheritance:

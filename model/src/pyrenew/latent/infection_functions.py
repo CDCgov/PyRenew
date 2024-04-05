@@ -2,7 +2,7 @@
 
 import jax
 import jax.numpy as jnp
-from numpy.typing import ArrayLike
+from jax.typing import ArrayLike
 from pyrenew.convolve import new_convolve_scanner, new_double_scanner
 
 """
