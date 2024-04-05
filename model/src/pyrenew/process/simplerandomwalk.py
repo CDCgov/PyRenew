@@ -10,7 +10,7 @@ class SimpleRandomWalkProcess(RandomVariable):
     """
     Class for a Markovian
     random walk with an a
-    abitrary step distribution
+    arbitrary step distribution
     """
 
     def __init__(
@@ -35,6 +35,7 @@ class SimpleRandomWalkProcess(RandomVariable):
         duration: int,
         name: str = "randomwalk",
         init: float = None,
+        **kwargs,
     ) -> tuple:
         """Samples from the randomwalk
 
@@ -46,6 +47,8 @@ class SimpleRandomWalkProcess(RandomVariable):
             Passed to numpyro.sample, by default "randomwalk"
         init : float, optional
             Initial point of the walk, by default None
+        **kwargs : dict, optional
+            Ignored.
 
         Returns
         -------
