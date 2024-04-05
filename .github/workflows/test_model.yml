@@ -1,0 +1,46 @@
+name: model
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  install-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: cache poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: ${{ runner.os }}-poetry
+      - name: install poetry
+        run: pip install poetry
+
+      - name: install package
+        run: poetry install -C model
+
+      - name: install pytest-cov
+        run: poetry run -C model pip install pytest-cov
+
+      - name: run tests
+        run: |
+          poetry run -C model pytest \
+            --cov=pyrenew --cov-report term --cov-report xml model
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
+          flags: unittests
+          file: coverage.xml
+          plugin: pycoverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true

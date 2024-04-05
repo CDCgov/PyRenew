@@ -91,26 +91,22 @@ class RandomVariable(metaclass=ABCMeta):
     @abstractmethod
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
         """Sample method of the process
 
-        The method desing in the class should have two dictionaries:
-        `random_variables` and `constants`.
-
-        - `randon_variables`: This dictionary contains any data that sample
-          function may pass to `numpyro.sample(obs=...)`.
-
-        - `constants`: Contains any data that the sample function does not pass
-          to `numpyro.sample(obs=...)`.
+        The method design in the class should have at least kwargs.
 
         Parameters
         ----------
-        random_variables : dict, optional
-            Dictionary of random variables, defaults to None
-        constants : dict, optional
-            Dictionary of constants
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
+
+        Notes
+        -----
+        <description of how the kwargs documented above does not cover all
+        kwargs (in some instances)>
 
         Returns
         -------
@@ -125,6 +121,8 @@ class RandomVariable(metaclass=ABCMeta):
 
 
 class Model(metaclass=ABCMeta):
+    """Abstract base class for models"""
+
     # Since initialized in none, values not shared across instances
     kernel = None
     mcmc = None
@@ -141,9 +139,27 @@ class Model(metaclass=ABCMeta):
     @abstractmethod
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        **kwargs,
     ) -> tuple:
+        """Sample method of the model
+
+        The method design in the class should have at least kwargs.
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal `sample()`
+            calls, if any
+
+        Notes
+        -----
+        <description of how the kwargs documented above does not cover all
+        kwargs (in some instances)>
+
+        Returns
+        -------
+        tuple
+        """
         pass
 
     def _init_model(
@@ -193,10 +209,9 @@ class Model(metaclass=ABCMeta):
         num_warmup,
         num_samples,
         rng_key: jax.random.PRNGKey = jax.random.PRNGKey(54),
-        random_variables: dict = None,
-        constants: dict = None,
         nuts_args: dict = None,
         mcmc_args: dict = None,
+        **kwargs,
     ) -> None:
         """Runs the model
 
@@ -212,12 +227,6 @@ class Model(metaclass=ABCMeta):
             None
         """
 
-        if random_variables is None:
-            random_variables = dict()
-
-        if constants is None:
-            constants = dict()
-
         if self.mcmc is None:
             self._init_model(
                 num_warmup=num_warmup,
@@ -226,11 +235,7 @@ class Model(metaclass=ABCMeta):
                 mcmc_args=mcmc_args,
             )
 
-        self.mcmc.run(
-            rng_key=rng_key,
-            random_variables=random_variables,
-            constants=constants,
-        )
+        self.mcmc.run(rng_key=rng_key, **kwargs)
 
         return None
 

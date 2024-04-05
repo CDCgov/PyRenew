@@ -23,7 +23,7 @@ class RtRandomWalkProcess(RandomVariable):
         Parameters
         ----------
         Rt0_dist : dist.Distribution, optional
-            Baseline distributiono of Rt, defaults to
+            Initial distributiono of Rt, defaults to
             dist.TruncatedNormal( loc=1.2, scale=0.2, low=0 )
         Rt_transform : AbstractTransform, optional
             Transformation applied to the sampled Rt0, defaults
@@ -51,34 +51,24 @@ class RtRandomWalkProcess(RandomVariable):
 
     def sample(
         self,
-        random_variables: dict = None,
-        constants: dict = None,
+        n_timepoints: int,
+        **kwargs,
     ) -> tuple:
         """Generate samples from the process
 
         Parameters
         ----------
-        random_variables : dict
-            A dictionary containing `Rt0` (optional).
-        constants : dict.
-            A dictionary containing `n_timepoints`.
+        n_timepoints : int
+            Number of timepoints to sample.
+        **kwargs : dict, optional
+            Ignored.
 
         Returns
         -------
         tuple
         """
 
-        if random_variables is None:
-            random_variables = dict()
-
-        if constants is None:
-            constants = dict()
-
-        n_timepoints = constants.get("n_timepoints")
-
-        Rt0 = npro.sample(
-            "Rt0", self.Rt0_dist, obs=random_variables.get("Rt0", None)
-        )
+        Rt0 = npro.sample("Rt0", self.Rt0_dist)
 
         Rt0_trans = self.Rt_transform(Rt0)
         Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)

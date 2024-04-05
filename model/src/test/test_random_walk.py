@@ -1,8 +1,7 @@
-# -*- coding: utf-8 -*-
-
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
+from numpy.testing import assert_almost_equal
 from pyrenew.process import SimpleRandomWalkProcess
 
 
@@ -30,15 +29,13 @@ def test_rw_samples_correctly_distributed():
         [0, 2.253, -3.2521, 1052, 1e-6], [1, 0.025, 3, 1, 0.02]
     ):
         rw_normal = SimpleRandomWalkProcess(dist.Normal(step_mean, step_sd))
-
+        init_arr = jnp.array([532.0])
         with numpyro.handlers.seed(rng_seed=62):
-            samples, *_ = rw_normal.sample(n_samples, init=jnp.array([50.0]))
+            samples, *_ = rw_normal.sample(n_samples, init=init_arr)
 
             # diffs should not be greater than
             # 4 sigma
             diffs = jnp.diff(samples)
-            print(samples)
-            print(diffs)
             assert jnp.all(jnp.abs(diffs - step_mean) < 4 * step_sd)
 
             # sample mean of diffs should be
@@ -52,3 +49,6 @@ def test_rw_samples_correctly_distributed():
             # should be approximately equal
             # to the step sd
             assert jnp.abs(jnp.log(jnp.std(diffs) / step_sd)) < jnp.log(1.1)
+
+            # first value should be the init value
+            assert_almost_equal(samples[0], init_arr)
