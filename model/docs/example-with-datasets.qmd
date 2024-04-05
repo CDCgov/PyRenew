@@ -165,3 +165,21 @@ fig.supxlabel('Time')
 plt.tight_layout()
 plt.show()
 ```
+
+## Fitting the model
+
+Now we can fit the model to the data. We will use the `run` method of the model object. The two inputs this model requires are `n_timepoints` and `observed_hospitalizations`
+
+
+```{python}
+import jax
+
+model.run(
+    num_samples=2000,
+    num_warmup=1000,
+    n_timepoints=dat.shape[0] - 1,
+    observed_hospitalizations=dat["hospitalizations"].to_numpy(),
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
+)
+```

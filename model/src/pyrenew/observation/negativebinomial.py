@@ -73,12 +73,14 @@ class NegativeBinomialObservation(RandomVariable):
         -------
         tuple
         """
+        concentration = self.sample_prior()
+
         return (
             numpyro.sample(
                 self.parameter_name,
                 dist.NegativeBinomial2(
                     mean=predicted,
-                    concentration=self.sample_prior(),
+                    concentration=concentration,
                 ),
                 obs=obs,
             ),
