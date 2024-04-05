@@ -38,5 +38,12 @@ repos:
     hooks:
     -   id: detect-secrets
         args: ['--baseline', '.secrets.baseline',
-               '--exclude-files', 'model/docs/']
+               '--exclude-files', 'model/docs/*_cache']
         exclude: package.lock.json
+####
+# Typos
+# comment out for Sphinx running purposes
+# -   repo: https://github.com/crate-ci/typos
+#     rev: v1.19.0
+#     hooks:
+#     -   id: typos

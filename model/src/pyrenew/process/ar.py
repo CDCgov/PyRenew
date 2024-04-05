@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax import lax
-from numpy.typing import ArrayLike
+from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 
@@ -45,6 +45,7 @@ class ARProcess(RandomVariable):
         duration: int,
         inits: ArrayLike = None,
         name: str = "arprocess",
+        **kwargs,
     ) -> tuple:
         """Sample from the AR process
 
@@ -56,6 +57,8 @@ class ARProcess(RandomVariable):
             Initial points, if None, then these are sampled.
         name : str, optional
             Name of the parameter passed to numpyro.sample.
+        **kwargs : dict, optional
+            Ignored.
 
         Returns
         -------
@@ -78,7 +81,7 @@ class ARProcess(RandomVariable):
         )
 
         last, ts = lax.scan(_ar_scanner, inits - self.mean, noise)
-        return (self.mean + ts.flatten(),)
+        return (jnp.hstack([inits, self.mean + ts.flatten()]),)
 
     @staticmethod
     def validate():
