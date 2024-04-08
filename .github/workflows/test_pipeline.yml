@@ -29,7 +29,7 @@ jobs:
 
       - name: run tests
         run: poetry run -C pipeline pytest pipeline \
-            --cov=pipeline --cov-report term --cov-report xml model
+            --cov-report term --cov-report xml model
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
