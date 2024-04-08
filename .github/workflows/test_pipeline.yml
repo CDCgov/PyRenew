@@ -28,7 +28,7 @@ jobs:
         run: poetry run -C pipeline pip install pytest-cov
 
       - name: run tests
-        run: poetry run -C pipeline pytest pipeline \
+        run: poetry run -C pipeline pytest \
             --cov=pipeline --cov-report term --cov-report xml
 
       - name: Upload coverage to Codecov
