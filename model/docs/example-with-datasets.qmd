@@ -13,6 +13,34 @@ from pyrenew.datasets import load_wastewater
 from pyrenew.model import HospitalizationsModel
 ```
 
+## Model definition
+
+In this section we provide the formal definition of the model. The hospitalization model is a semi-mechanistic model that describes the number of observed hospitalizations as a function of a set of latent variables. Particularly, the observed number of hospitalizations is discretily distributed with location at the number of latent hospitalizations:
+
+$$
+h(t) \sim \text{HospDist}\left(H(t)\right)
+$$
+
+Where $h(t)$ is the observed number of hospitalizations at time $t$, and $H(t)$ is the number of latent hospitalizations at time $t$. The distribution $\text{HospDist}$ can be any discrete distribution, but in this case we will use a negative binomial distribution.
+
+The number of latent hospitalizations at time $t$ is a function of the number of latent infections at time $t$ and the infection to hospitalization rate. The latent infections are modeled as a renewal process:
+
+$$
+I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t - \tau)
+$$
+
+The reproductive number $R(t)$ is modeled as a random walk process:
+
+$$
+\begin{align*}
+R(t) & = R(t-1) + \epsilon\\
+\log{\epsilon} & \sim \text{Normal}(0, \sigma) \\
+R(0) &\sim \text{TruncatedNormal}(\text{loc}=1.2, \text{scale}=0.2, \text{min}=0)
+\end{align*}
+$$
+
+
+
 ## Data processing
 
 We start by loading the data and inspecting the first five rows.
@@ -74,6 +102,14 @@ inf_hosp_int = inf_hosp_int["probability_mass"].to_numpy()
 
 # Taking a pick at the first 5 elements of each
 gen_int[:5], inf_hosp_int[:5]
+
+# Visualizing both quantities side by side
+fig, axs = plt.subplots(1, 2)
+
+axs[0].plot(gen_int)
+axs[0].set_title("Generation interval")
+axs[1].plot(inf_hosp_int)
+axs[1].set_title("Infection to hospitalization interval")
 ```
 
 With these two in hand, we can start building the model. First, we will define the latent hospitalizations.
@@ -139,9 +175,11 @@ Let's run a simulation to check if the model is working:
 import numpyro as npro
 import numpy as np
 
+timeframe = 120
+
 np.random.seed(223)
-with npro.handlers.seed(rng_seed = np.random.randint(1, 60)):
-    sim_data = model.sample(n_timepoints=60)
+with npro.handlers.seed(rng_seed = np.random.randint(1, timeframe)):
+    sim_data = model.sample(n_timepoints=timeframe)
 ```
 
 ```{python}
@@ -153,11 +191,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, 61), sim_data[0])
+axs[0].plot(range(0, timeframe + 1), sim_data[0])
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, 61), sim_data[1])
+axs[1].plot(range(0, timeframe + 1), sim_data[1])
 axs[1].set_ylabel('Infections')
 
 fig.suptitle('Basic renewal model')
@@ -172,6 +210,7 @@ Now we can fit the model to the data. We will use the `run` method of the model 
 
 
 ```{python}
+#| eval: false
 import jax
 
 model.run(

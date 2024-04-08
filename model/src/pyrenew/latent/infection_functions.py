@@ -45,7 +45,7 @@ def sample_infections_rt(
     """
     incidence_func = new_convolve_scanner(reversed_generation_interval_pmf)
 
-    latest, all_infections = jax.lax.scan(incidence_func, I0, Rt)
+    latest, all_infections = jax.lax.scan(f=incidence_func, init=I0, xs=Rt)
 
     return all_infections
 

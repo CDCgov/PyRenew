@@ -12,6 +12,47 @@ from pyrenew.datasets import load_wastewater
 from pyrenew.model import HospitalizationsModel
 ```
 
+    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+
+## Model definition
+
+In this section we provide the formal definition of the model. The
+hospitalization model is a semi-mechanistic model that describes the
+number of observed hospitalizations as a function of a set of latent
+variables. Particularly, the observed number of hospitalizations is
+discretily distributed with location at the number of latent
+hospitalizations:
+
+$$
+h(t) \sim \text{HospDist}\left(H(t)\right)
+$$
+
+Where $h(t)$ is the observed number of hospitalizations at time $t$, and
+$H(t)$ is the number of latent hospitalizations at time $t$. The
+distribution $\text{HospDist}$ can be any discrete distribution, but in
+this case we will use a negative binomial distribution.
+
+The number of latent hospitalizations at time $t$ is a function of the
+number of latent infections at time $t$ and the infection to
+hospitalization rate. The latent infections are modeled as a renewal
+process:
+
+$$
+I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t - \tau)
+$$
+
+The reproductive number $R(t)$ is modeled as a random walk process:
+
+$$
+\begin{align*}
+R(t) & = R(t-1) + \epsilon\\
+\log{\epsilon} & \sim \text{Normal}(0, \sigma) \\
+R(0) &\sim \text{TruncatedNormal}(\text{loc}=1.2, \text{scale}=0.2, \text{min}=0)
+\end{align*}
+$$
+
 ## Data processing
 
 We start by loading the data and inspecting the first five rows.
@@ -116,10 +157,21 @@ inf_hosp_int = inf_hosp_int["probability_mass"].to_numpy()
 
 # Taking a pick at the first 5 elements of each
 gen_int[:5], inf_hosp_int[:5]
+
+# Visualizing both quantities side by side
+fig, axs = plt.subplots(1, 2)
+
+axs[0].plot(gen_int)
+axs[0].set_title("Generation interval")
+axs[1].plot(inf_hosp_int)
+axs[1].set_title("Infection to hospitalization interval")
 ```
 
-    (array([0.16174201, 0.32062589, 0.24228335, 0.13465256, 0.06892184]),
-     array([0.        , 0.00469385, 0.01452001, 0.02786277, 0.04236565]))
+    Text(0.5, 1.0, 'Infection to hospitalization interval')
+
+<img
+src="example-with-datasets_files/figure-commonmark/data-extract-output-2.png"
+id="data-extract-2" />
 
 With these two in hand, we can start building the model. First, we will
 define the latent hospitalizations.
@@ -182,9 +234,11 @@ Let’s run a simulation to check if the model is working:
 import numpyro as npro
 import numpy as np
 
+timeframe = 120
+
 np.random.seed(223)
-with npro.handlers.seed(rng_seed = np.random.randint(1, 60)):
-    sim_data = model.sample(n_timepoints=60)
+with npro.handlers.seed(rng_seed = np.random.randint(1, timeframe)):
+    sim_data = model.sample(n_timepoints=timeframe)
 ```
 
 ``` python
@@ -193,11 +247,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, 61), sim_data[0])
+axs[0].plot(range(0, timeframe + 1), sim_data[0])
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, 61), sim_data[1])
+axs[1].plot(range(0, timeframe + 1), sim_data[1])
 axs[1].set_ylabel('Infections')
 
 fig.suptitle('Basic renewal model')
@@ -208,3 +262,22 @@ plt.show()
 
 ![Rt and
 Infections](example-with-datasets_files/figure-commonmark/basic-fig-output-1.png)
+
+## Fitting the model
+
+Now we can fit the model to the data. We will use the `run` method of
+the model object. The two inputs this model requires are `n_timepoints`
+and `observed_hospitalizations`
+
+``` python
+import jax
+
+model.run(
+    num_samples=2000,
+    num_warmup=1000,
+    n_timepoints=dat.shape[0] - 1,
+    observed_hospitalizations=dat["hospitalizations"].to_numpy(),
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
+)
+```
