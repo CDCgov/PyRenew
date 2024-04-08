@@ -20,7 +20,24 @@ jobs:
           key: ${{ runner.os }}-poetry
       - name: install poetry
         run: pip install poetry
+
       - name: install package
         run: poetry install -C pipeline
+
+      - name: install pytest-cov
+        run: poetry run -C pipeline pip install pytest-cov
+
       - name: run tests
-        run: poetry run -C pipeline pytest pipeline
+        run: poetry run -C pipeline pytest pipeline \
+            --cov=pyrenew --cov-report term --cov-report xml model
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          env_vars: OS,PYTHON
+          fail_ci_if_error: true
+          flags: unittests
+          file: coverage.xml
+          plugin: pycoverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
