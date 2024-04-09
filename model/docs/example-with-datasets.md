@@ -94,6 +94,9 @@ dat = dat.group_by("date").agg(
 # Now, sorting by date
 dat = dat.sort("date")
 
+# Keeping the first 90 days
+dat = dat.head(90)
+
 dat.head(5)
 ```
 
@@ -182,7 +185,7 @@ from pyrenew.deterministic import DeterministicPMF
 import jax.numpy as jnp
 import numpyro.distributions as dist
 
-inf_hosp_int = DeterministicPMF((inf_hosp_int,))
+inf_hosp_int = DeterministicPMF(inf_hosp_int)
 
 hosp_rate = InfectHospRate(
     dist=dist.LogNormal(jnp.log(0.05), 0.05)
@@ -207,11 +210,11 @@ latent_inf = Infections()
 I0 = Infections0()
 
 # Generation interval and Rt
-gen_int = DeterministicPMF((gen_int,))
+gen_int = DeterministicPMF(gen_int)
 process = RtRandomWalkProcess()
 
 # The observation model
-obs = NegativeBinomialObservation(concentration_prior=0.1)
+obs = NegativeBinomialObservation(concentration_prior=1.0)
 ```
 
 Notice all the components are `RandomVariable` instances. We can now
@@ -281,3 +284,29 @@ model.run(
     mcmc_args=dict(progress_bar=False),
 )
 ```
+
+``` python
+import polars as pl
+samps = model.spread_draws([('predicted_hospitalizations', 'time')])
+
+fig, ax = plt.subplots(figsize=[4, 5])
+
+ax.plot(dat["hospitalizations"].to_numpy(), color="black")
+samp_ids = np.random.randint(size=25, low=0, high=999)
+for samp_id in samp_ids:
+    sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
+    ax.plot(sub_samps.select("time").to_numpy(),
+            sub_samps.select("predicted_hospitalizations").to_numpy(), color="darkblue", alpha=0.1)
+
+# Some labels
+ax.set_xlabel("Time")
+ax.set_ylabel("Hospitalizations")
+
+# Adding a legend
+ax.plot([], [], color="darkblue", alpha=0.9, label="Posterior samples")
+ax.plot([], [], color="black", label="Observed hospitalizations")
+ax.legend()
+```
+
+![Hospitalizations posterior
+distribution](example-with-datasets_files/figure-commonmark/output-hospitalizations-output-1.png)

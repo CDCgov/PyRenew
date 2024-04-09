@@ -89,7 +89,7 @@ def test_model_hosp_no_obs_model():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=DeterministicVariable((0,)),
+        observed_hospitalizations=DeterministicVariable(0),
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -342,7 +342,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = weekday / weekday.sum()
     weekday = weekday[:31]
 
-    weekday = DeterministicVariable((weekday,))
+    weekday = DeterministicVariable(weekday)
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
@@ -350,9 +350,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     hosp_report_prob_dist = hosp_report_prob_dist[:31]
 
-    hosp_report_prob_dist = DeterministicVariable(
-        vars=(hosp_report_prob_dist,)
-    )
+    hosp_report_prob_dist = DeterministicVariable(vars=hosp_report_prob_dist)
 
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,

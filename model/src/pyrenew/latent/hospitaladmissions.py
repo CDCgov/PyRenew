@@ -129,9 +129,9 @@ class HospitalAdmissions(RandomVariable):
         """
 
         if weekday_effect_dist is None:
-            weekday_effect_dist = DeterministicVariable((1,))
+            weekday_effect_dist = DeterministicVariable(1)
         if hosp_report_prob_dist is None:
-            hosp_report_prob_dist = DeterministicVariable((1,))
+            hosp_report_prob_dist = DeterministicVariable(1)
 
         HospitalAdmissions.validate(
             infect_hosp_rate_dist,

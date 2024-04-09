@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from jax.typing import ArrayLike
 from pyrenew.deterministic.deterministic import DeterministicVariable
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.metaclass import RandomVariable
@@ -10,7 +11,7 @@ class DeterministicPMF(RandomVariable):
 
     def __init__(
         self,
-        vars: tuple,
+        vars: ArrayLike,
         label: str = "a_random_variable",
         tol: float = 1e-20,
     ) -> None:
@@ -23,8 +24,8 @@ class DeterministicPMF(RandomVariable):
 
         Parameters
         ----------
-        vars : tuple
-            A tuple with arraylike objects.
+        vars : ArrayLike
+            An array with the fixed quantity.
         label : str
             A label to assign to the process.
         tol : float
@@ -34,15 +35,12 @@ class DeterministicPMF(RandomVariable):
         -------
         None
         """
+        vars = validate_discrete_dist_vector(
+            discrete_dist=vars,
+            tol=tol,
+        )
 
-        vars2 = list(vars)
-        for i in range(0, len(vars2)):
-            vars2[i] = validate_discrete_dist_vector(
-                discrete_dist=vars2[i],
-                tol=tol,
-            )
-
-        self.basevar = DeterministicVariable(tuple(vars2), label)
+        self.basevar = DeterministicVariable(vars, label)
 
         return None
 

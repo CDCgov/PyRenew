@@ -16,16 +16,21 @@ docs/getting-started.md: docs/getting-started.qmd
 docs/example-with-datasets.md: docs/example-with-datasets.qmd
 	poetry run quarto render docs/example-with-datasets.qmd
 
-notebooks:
-	quarto convert docs/pyrenew_demo.qmd --output docs/pyrenew_demo.ipynb
-	quarto convert docs/getting-started.qmd --output docs/getting-started.ipynb
+docs/py: docs/notebooks
 	jupyter nbconvert --to python docs/pyrenew_demo.ipynb
 	jupyter nbconvert --to python docs/getting-started.ipynb
-	rm -f docs/pyrenew_demo.ipynb docs/getting-started.ipynb
+	jupyter nbconvert --to python docs/example-with-datasets.ipynb
+
+docs/notebooks:
+	quarto convert docs/pyrenew_demo.qmd --output docs/pyrenew_demo.ipynb
+	quarto convert docs/getting-started.qmd --output docs/getting-started.ipynb
+	quarto convert docs/example-with-datasets.qmd --output \
+		docs/example-with-datasets.ipynb
 
 clean:
 	rm -rf docs/*_files/
 	rm -f docs/getting-started.ipynb
 	rm -f docs/pyrenew_demo.ipynb
+	rm -f docs/example-with-datasets.ipynb
 
-.PHONY: install test docs clean notebooks
+.PHONY: install test docs clean docs/notebooks docs/py

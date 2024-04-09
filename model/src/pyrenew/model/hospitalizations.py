@@ -64,7 +64,7 @@ class HospitalizationsModel(Model):
             gen_int=gen_int,
             I0=I0,
             latent_infections=latent_infections,
-            observed_infections=DeterministicVariable((0,)),
+            observed_infections=DeterministicVariable(0),
             Rt_process=Rt_process,
         )
 

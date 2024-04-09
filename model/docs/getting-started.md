@@ -75,9 +75,7 @@ initialize the five components:
 
 ``` python
 # (1) The generation interval (deterministic)
-gen_int = DeterministicPMF(
-    (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-)
+gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
 # (2) Initial infections (inferred with a prior)
 I0 = Infections0(I0_dist=dist.LogNormal(0, 1))

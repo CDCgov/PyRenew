@@ -34,7 +34,7 @@ def test_model_basicrenewal_no_obs_model():
         I0=I0,
         latent_infections=latent_infections,
         Rt_process=rt,
-        observed_infections=DeterministicVariable((1,)),
+        observed_infections=DeterministicVariable(1),
     )
 
     # Sampling and fitting model 0 (with no obs for infections)

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 
@@ -9,15 +10,15 @@ class DeterministicVariable(RandomVariable):
 
     def __init__(
         self,
-        vars: tuple,
+        vars: ArrayLike,
         label: str = "a_random_variable",
     ) -> None:
         """Default constructor
 
         Parameters
         ----------
-        vars : tuple
-            A tuple with arraylike objects.
+        vars : ArrayLike
+            An array with the fixed quantity.
         label : str
             A label to assign to the process.
 
@@ -33,9 +34,9 @@ class DeterministicVariable(RandomVariable):
         return None
 
     @staticmethod
-    def validate(vars: tuple) -> None:
-        if not isinstance(vars, tuple):
-            raise Exception("vars is not a tuple")
+    def validate(vars: ArrayLike) -> None:
+        if not isinstance(vars, ArrayLike):
+            raise Exception("vars is not an array-like object.")
 
         return None
 
@@ -56,4 +57,4 @@ class DeterministicVariable(RandomVariable):
             Containing the stored values during construction.
         """
 
-        return self.vars
+        return (self.vars,)

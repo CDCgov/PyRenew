@@ -16,6 +16,7 @@ class NegativeBinomialObservation(RandomVariable):
         concentration_prior: dist.Distribution | ArrayLike,
         concentration_suffix: str = "_concentration",
         parameter_name="negbinom_rv",
+        eps: float = 1e-10,
     ) -> None:
         """Default constructor
 
@@ -32,6 +33,9 @@ class NegativeBinomialObservation(RandomVariable):
             Suffix for the numpy variable.
         parameter_name : str, optional
             Name for the numpy variable.
+        eps : float, optional
+            Small value to add to the predicted mean to prevent numerical
+            instability.
 
         Returns
         -------
@@ -50,6 +54,7 @@ class NegativeBinomialObservation(RandomVariable):
 
         self.parameter_name = parameter_name
         self.concentration_suffix = concentration_suffix
+        self.eps = eps
 
     def sample(
         self,
@@ -79,7 +84,7 @@ class NegativeBinomialObservation(RandomVariable):
             numpyro.sample(
                 self.parameter_name,
                 dist.NegativeBinomial2(
-                    mean=predicted,
+                    mean=predicted + self.eps,
                     concentration=concentration,
                 ),
                 obs=obs,
