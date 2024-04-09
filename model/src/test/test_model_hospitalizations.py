@@ -41,40 +41,37 @@ def test_model_hosp_no_obs_model():
     Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
     inf_hosp = DeterministicPMF(
-        (
-            jnp.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0.25,
-                    0.5,
-                    0.1,
-                    0.1,
-                    0.05,
-                ],
-            ),
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ]
         ),
     )
+
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         hospitalizations_predicted_varname="observed_hospitalizations",
@@ -122,9 +119,7 @@ def test_model_hosp_with_obs_model():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
@@ -133,29 +128,27 @@ def test_model_hosp_with_obs_model():
     observed_hospitalizations = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
-        (
-            jnp.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0.25,
-                    0.5,
-                    0.1,
-                    0.1,
-                    0.05,
-                ],
-            ),
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ],
         ),
     )
 
@@ -205,9 +198,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
@@ -216,29 +207,27 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     observed_hospitalizations = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
-        (
-            jnp.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0.25,
-                    0.5,
-                    0.1,
-                    0.1,
-                    0.05,
-                ],
-            ),
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ],
         ),
     )
 
@@ -299,9 +288,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
@@ -310,29 +297,27 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     observed_hospitalizations = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
-        (
-            jnp.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0.25,
-                    0.5,
-                    0.1,
-                    0.1,
-                    0.05,
-                ],
-            ),
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ],
         ),
     )
 

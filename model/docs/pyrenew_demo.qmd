@@ -49,9 +49,7 @@ from pyrenew.process import RtRandomWalkProcess
 # Initializing model components:
 
 # A deterministic generation time
-gen_int = DeterministicPMF(
-    (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
 # Initial infections
 I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
@@ -61,7 +59,7 @@ latent_infections = Infections()
 
 # A deterministic infection to hosp pmf
 inf_hosp_int = DeterministicPMF(
-    (jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),),
+    jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),
     )
 
 # The latent hospitalization process

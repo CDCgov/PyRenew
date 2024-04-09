@@ -32,31 +32,30 @@ def test_hospitalizations_sample():
 
     # Testing the hospitalizations
     inf_hosp = DeterministicPMF(
-        (
-            jnp.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0.25,
-                    0.5,
-                    0.1,
-                    0.1,
-                    0.05,
-                ]
-            ),
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ]
         ),
     )
+
     hosp1 = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         infect_hosp_rate_dist=InfectHospRate(
