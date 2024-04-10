@@ -84,7 +84,9 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_trans = self.Rt_transform(Rt0)
         Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)
         Rt_trans_ts, *_ = Rt_trans_proc.sample(
-            duration=n_timepoints, name="Rt_transformed_rw", init=Rt0_trans
+            duration=n_timepoints,
+            name="Rt_transformed_rw",
+            init=Rt0_trans,
         )
 
         Rt = npro.deterministic("Rt", self.Rt_transform.inverse(Rt_trans_ts))

@@ -12,10 +12,6 @@ from pyrenew.datasets import load_wastewater
 from pyrenew.model import HospitalizationsModel
 ```
 
-    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-      from .autonotebook import tqdm as notebook_tqdm
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
 ## Model definition
 
 In this section we provide the formal definition of the model. The
@@ -177,7 +173,7 @@ src="example-with-datasets_files/figure-commonmark/data-extract-output-2.png"
 id="data-extract-2" />
 
 With these two in hand, we can start building the model. First, we will
-define the latent hospitalizations.
+define the latent hospitalizations:
 
 ``` python
 from pyrenew.latent import HospitalAdmissions, InfectHospRate
@@ -188,7 +184,7 @@ import numpyro.distributions as dist
 inf_hosp_int = DeterministicPMF(inf_hosp_int)
 
 hosp_rate = InfectHospRate(
-    dist=dist.LogNormal(jnp.log(0.05), 0.05)
+    dist=dist.LogNormal(jnp.log(0.05), 0.01)
 )
 
 latent_hosp = HospitalAdmissions(
@@ -197,7 +193,13 @@ latent_hosp = HospitalAdmissions(
     )
 ```
 
-Now we can define the rest of the other model components:
+The `inf_hosp_int` is a `DeterministicPMF` object that takes the
+infection to hospitalization interval as input. The `hosp_rate` is an
+`InfectHospRate` object that takes the infection to hospitalization rate
+as input. The `HospitalAdmissions` class is a `RandomVariable` that
+takes two distributions as inputs: the infection to admission interval
+and the infection to hospitalization rate. Now we can define the rest of
+the other model components:
 
 ``` python
 from pyrenew.model import HospitalizationsModel
@@ -207,7 +209,7 @@ from pyrenew.observation import NegativeBinomialObservation
 
 # Infection process
 latent_inf = Infections()
-I0 = Infections0()
+I0 = Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=0.5))
 
 # Generation interval and Rt
 gen_int = DeterministicPMF(gen_int)
@@ -277,7 +279,7 @@ import jax
 
 model.run(
     num_samples=2000,
-    num_warmup=1000,
+    num_warmup=2000,
     n_timepoints=dat.shape[0] - 1,
     observed_hospitalizations=dat["hospitalizations"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
@@ -310,3 +312,118 @@ ax.legend()
 
 ![Hospitalizations posterior
 distribution](example-with-datasets_files/figure-commonmark/output-hospitalizations-output-1.png)
+
+The first half of the model is not looking good. We can try to improve
+the model by incorporating weekday effects. The following section will
+show how to do this.
+
+## Round 2: Incorporating weekday effects
+
+We will re-use the infection to admission interval and infection to
+hospitalization rate from the previous model. But we will also add a
+weekday effect distribution. To do this, we will create a new instance
+of `RandomVariable` to model the weekday effect. The weekday effect will
+be a truncated normal distribution with a mean of 1.0 and a standard
+deviation of 0.5. The distribution will be truncated between 0.1 and
+10.0. The weekday effect will be repeated for the number of weeks in the
+dataset.
+
+``` python
+from pyrenew.metaclass import RandomVariable
+import numpyro as npro
+
+class WeekdayEffect(RandomVariable):
+    """Weekday effect distribution"""
+    def __init__(self, len: int):
+        """ Initialize the weekday effect distribution
+        Parameters
+        ----------
+        len : int
+            The number of observations
+        """
+        self.nweeks = jnp.ceil(len/7).astype(int)
+        self.len = len
+
+    @staticmethod
+    def validate():
+        return None
+
+    def sample(self, **kwargs):
+        ans = npro.sample(
+            name="weekday_effect",
+            fn=npro.distributions.TruncatedNormal(
+                loc=1.0, scale=.5, low=0.1, high=10.0
+                ),
+            sample_shape=(7,)
+        )
+
+        return jnp.tile(ans, self.nweeks)[:self.len]
+
+# Initializing the weekday effect
+weekday_effect = WeekdayEffect(dat.shape[0])
+```
+
+Notice that the instance’s `nweeks` and `len` members are passed during
+construction. Trying to compute the number of weeks and the length of
+the dataset in the `validate` method will raise a `jit` error in `jax`
+as the shape and size of elements are not known during the validation
+step, which happens before the model is run. With the new weekday
+effect, we can rebuild the latent hospitalization model:
+
+``` python
+latent_hosp_wday_effect = HospitalAdmissions(
+    infection_to_admission_interval=inf_hosp_int,
+    infect_hosp_rate_dist=hosp_rate,
+    weekday_effect_dist=weekday_effect,
+    )
+
+model_weekday = HospitalizationsModel(
+    latent_infections=latent_inf,
+    latent_hospitalizations=latent_hosp_wday_effect,
+    I0=I0,
+    gen_int=gen_int,
+    Rt_process=process,
+    observed_hospitalizations=obs,
+)
+```
+
+Running the model:
+
+``` python
+model_weekday.run(
+    num_samples=2000,
+    num_warmup=2000,
+    n_timepoints=dat.shape[0] - 1,
+    observed_hospitalizations=dat["hospitalizations"].to_numpy(),
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
+)
+```
+
+And plotting the results:
+
+``` python
+import polars as pl
+samps = model_weekday.spread_draws([('predicted_hospitalizations', 'time')])
+
+fig, ax = plt.subplots(figsize=[4, 5])
+
+ax.plot(dat["hospitalizations"].to_numpy(), color="black")
+samp_ids = np.random.randint(size=25, low=0, high=999)
+for samp_id in samp_ids:
+    sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
+    ax.plot(sub_samps.select("time").to_numpy(),
+            sub_samps.select("predicted_hospitalizations").to_numpy(), color="darkblue", alpha=0.1)
+
+# Some labels
+ax.set_xlabel("Time")
+ax.set_ylabel("Hospitalizations")
+
+# Adding a legend
+ax.plot([], [], color="darkblue", alpha=0.9, label="Posterior samples")
+ax.plot([], [], color="black", label="Observed hospitalizations")
+ax.legend()
+```
+
+![Hospitalizations posterior
+distribution](example-with-datasets_files/figure-commonmark/output-hospitalizations-weekday-output-1.png)
