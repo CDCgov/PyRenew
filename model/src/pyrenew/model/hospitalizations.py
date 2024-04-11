@@ -93,7 +93,7 @@ class HospitalizationsModel(Model):
         infections : ArrayLike
             The predicted infections array
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal 
+            Additional keyword arguments passed through to internal
             `sample_hospitalizations_latent()` calls, if any
 
         Returns
@@ -129,7 +129,7 @@ class HospitalizationsModel(Model):
         observed_hospitalizations : ArrayLike
             The observed hospitalization data
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal 
+            Additional keyword arguments passed through to internal
             `sample_hospitalizations_obs()` calls, if any
 
         Returns
@@ -163,8 +163,8 @@ class HospitalizationsModel(Model):
         n_timepoints : int
             Number of timepoints to sample (passed to the basic renewal model).
         observed_hospitalizations : ArrayLike or None, optional
-            The observed hospitalization data (passed to the basic renewal 
-            model). Defaults to None. 
+            The observed hospitalization data (passed to the basic renewal
+            model). Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
             calls, if any
@@ -181,7 +181,7 @@ class HospitalizationsModel(Model):
 
         Notes
         -----
-        TODO: Include example(s) here. 
+        TODO: Include example(s) here.
         """
 
         # Getting the initial quantities from the basic model
