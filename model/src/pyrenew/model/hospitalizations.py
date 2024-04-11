@@ -205,7 +205,7 @@ class HospitalizationsModel(Model):
         ----------
         n_timepoints : int
             Number of timepoints to sample (passed to the basic renewal model).
-        observed_hospitalizations : ArrayLike or None
+        observed_hospitalizations : ArrayLike, optional
             The observed hospitalization data (passed to the basic renewal
             model). Defaults to None (simulation, rather than fit).
         **kwargs : dict, optional
