@@ -86,6 +86,29 @@ class HospitalizationsModel(Model):
         infections: ArrayLike,
         **kwargs,
     ) -> tuple:
+        """Sample number of hospitalizations
+
+        Parameters
+        ----------
+        infections : ArrayLike
+            The predicted infections array
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal 
+            `sample_hospitalizations_latent()` calls, if any
+
+        Returns
+        -------
+        tuple
+
+        See Also
+        --------
+        latent_hospitalizations.sample : For sampling latent hospitalizations
+
+        Notes
+        -----
+        TODO: Include example(s) here.
+        """
+
         return self.latent_hospitalizations.sample(
             latent=infections,
             **kwargs,
@@ -104,11 +127,22 @@ class HospitalizationsModel(Model):
         predicted : ArrayLike
             Predicted hospitalizations.
         observed_hospitalizations : ArrayLike
-            Observed hospitalizations.
+            The observed hospitalization data
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal 
+            `sample_hospitalizations_obs()` calls, if any
 
         Returns
         -------
         tuple
+
+        See Also
+        --------
+        observed_hospitalizations.sample : For sampling observed hospitalizations
+
+        Notes
+        -----
+        TODO: Include example(s) here.
         """
 
         return self.observed_hospitalizations.sample(
@@ -121,12 +155,16 @@ class HospitalizationsModel(Model):
         observed_hospitalizations=None,
         **kwargs,
     ) -> HospModelSample:
-        """Sample from the HospitalAdmissions model
+        """
+        Sample from the HospitalAdmissions model
 
         Parameters
         ----------
         n_timepoints : int
             Number of timepoints to sample (passed to the basic renewal model).
+        observed_hospitalizations : ArrayLike or None, optional
+            The observed hospitalization data (passed to the basic renewal 
+            model). Defaults to None. 
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
             calls, if any
@@ -134,6 +172,16 @@ class HospitalizationsModel(Model):
         Returns
         -------
         HospModelSample
+
+        See Also
+        --------
+        basic_renewal.sample : For sampling the basic renewal model
+        sample_hospitalizations_latent : To sample latent hospitalizations
+        sample_hospitalizations_obs : For sampling observed hospitalizations
+
+        Notes
+        -----
+        TODO: Include example(s) here. 
         """
 
         # Getting the initial quantities from the basic model
