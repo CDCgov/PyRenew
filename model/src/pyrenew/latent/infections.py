@@ -13,16 +13,29 @@ InfectionsSample = namedtuple(
     ["infections"],
     defaults=[None],
 )
+InfectionsSample.__doc__ = """
+A container for holding the output from the InfectionsSample.
+
+Attributes
+----------
+infections : ArrayLike or None
+    The estimated latent infections. Defaults to None. 
+"""
 
 
 class Infections(RandomVariable):
-    """Latent infections"""
+    """Latent infections
+    
+    Methods
+    -------
+    sample(Rt, I0, gen_int, **kwargs)
+    """
 
     def __init__(
         self,
         infections_mean_varname: str = "latent_infections",
     ) -> None:
-        """Default constructor
+        """Default constructor for Infections class. 
 
         Parameters
         ----------
@@ -40,6 +53,11 @@ class Infections(RandomVariable):
 
     @staticmethod
     def validate() -> None:
+        """ 
+        Notes
+        -----
+        TODO: Complete this method.
+        """
         return None
 
     def sample(
@@ -61,6 +79,9 @@ class Infections(RandomVariable):
             Initial infections.
         gen_int : ArrayLike
             Generation interval.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal
+            sample calls, should there be any.
 
         Returns
         -------
