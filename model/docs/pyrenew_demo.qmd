@@ -6,7 +6,20 @@ engine: jupyter
 
 This demo simulates some basic renewal process data and then fits to it using `pyrenew`.
 
-You'll need to install `pyrenew` first. You'll also need working installations of `matplotlib`, `numpy`, `jax`, `numpyro`, and `polars`
+Assuming you've already installed Python and pip, you’ll need to first install `pyrenew`:
+
+```python
+python3 -m pip install "pyrenew"
+```
+
+You’ll also need working
+installations of `matplotlib`, `numpy`, `jax`, `numpyro`, and `polars`:
+
+```python
+python -m pip install "matplotlib" "numpy" "jax" "numpyro" "polars"
+```
+
+Run the following import section to call external modules and functions necessary to run the `pyrenew` demo. The `import` statement imports the module and the `as` statement renames the module for use within this script. The `from` statement imports a specific function from a module (named after the `.`) within a package (named before the `.`). 
 
 ```{python}
 #| output: false
