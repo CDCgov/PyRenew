@@ -75,8 +75,7 @@ class NegativeBinomialObservation(RandomVariable):
         obs : ArrayLike, optional
             Observed data, by default None.
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal sample
-            calls, should there be any.
+            Additional keyword arguments passed through to internal sample calls, should there be any.
 
         Returns
         -------

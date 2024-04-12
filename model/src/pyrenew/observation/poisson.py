@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+from typing import Optional
+
 import numpyro
 import numpyro.distributions as dist
 from numpy.typing import ArrayLike
@@ -9,21 +11,27 @@ from pyrenew.metaclass import RandomVariable
 class PoissonObservation(RandomVariable):
     """
     Poisson observation process
+
+    Methods
+    -------
+    sample(predicted, obs, **kwargs)
+        Sample from the Poisson process
     """
 
     def __init__(
         self,
-        parameter_name: str = "poisson_rv",
-        eps: float = 1e-8,
+        parameter_name: Optional[str] = "poisson_rv",
+        eps: Optional[float] = 1e-8,
     ) -> None:
         """Default Constructor
 
         Parameters
         ----------
         parameter_name : str, optional
-            Passed to numpyro.sample.
+            Passed to numpyro.sample. Defaults to "poisson_rv"
         eps : float, optional
             Small value added to the rate parameter to avoid zero values.
+            Defaults to 1e-8.
 
         Returns
         -------
@@ -38,7 +46,7 @@ class PoissonObservation(RandomVariable):
     def sample(
         self,
         predicted: ArrayLike,
-        obs: ArrayLike = None,
+        obs: Optional[ArrayLike] = None,
         **kwargs,
     ) -> tuple:
         """Sample from the Poisson process
@@ -48,10 +56,9 @@ class PoissonObservation(RandomVariable):
         predicted : ArrayLike
             Rate parameter of the Poisson distribution.
         obs : ArrayLike, optional
-            Observed data, by default None.
+            Observed data. Defaults to None.
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal `sample()`
-            calls, if any
+            Additional keyword arguments passed through to internal sample calls, should there be any.
 
         Returns
         -------
