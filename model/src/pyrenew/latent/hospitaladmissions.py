@@ -63,15 +63,15 @@ class InfectHospRate(RandomVariable):
 
     def __init__(
         self,
-        dist: dist.Distribution,
-        varname: str = "IHR",
+        dist: Optional[dist.Distribution] = dist.LogNormal(jnp.log(0.05), 0.05),
+        varname: Optional[str] = "IHR",
     ) -> None:
         """
         Default constructor
 
         Parameters
         ----------
-        dist : dist.Distribution
+        dist : dist.Distribution, optional
             Prior distribution of the IHR, by default
             dist.LogNormal(jnp.log(0.05), 0.05).
         varname : str, optional

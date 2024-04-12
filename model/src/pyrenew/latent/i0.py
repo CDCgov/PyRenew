@@ -2,18 +2,26 @@ import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.metaclass import RandomVariable
 
+from tpying import Optional, Any
 
 class Infections0(RandomVariable):
     """Initial infections helper class.
 
     It creates a random variable for the initial infections with a prior
     distribution.
+
+    Methods
+    -------
+    validate(i0_dist)
+        Validate the initial infections distribution.
+    sample(**kwargs)
+        Sample the initial infections.
     """
 
     def __init__(
         self,
-        name: str = "I0",
-        I0_dist: dist.Distribution = dist.LogNormal(0, 1),
+        name: Optional[str] = "I0",
+        I0_dist: Optional[dist.Distribution] = dist.LogNormal(0, 1),
     ) -> None:
         """Default constructor
 
@@ -36,17 +44,22 @@ class Infections0(RandomVariable):
         return None
 
     @staticmethod
-    def validate(i0_dist):
+    def validate(i0_dist: Any):
         """Validate the initial infections distribution.
 
         Parameters
         ----------
-        i0_dist : dist.Distribution
-            Distribution of the initial infections.
+        i0_dist : Any
+            Distribution (expected dist.Distribution) of the initial infections.
 
         Returns
         -------
         None
+
+        Raises
+        ------
+        AssertionError
+            If the inputted distribution is not a Numpyro distribution.
         """
         assert isinstance(i0_dist, dist.Distribution)
 
@@ -59,7 +72,8 @@ class Infections0(RandomVariable):
         Parameters
         ----------
         **kwargs : dict, optional
-            Ignored
+            Additional keyword arguments passed through to internal
+            sample calls, should there be any.
 
         Returns
         -------
