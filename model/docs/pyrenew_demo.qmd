@@ -10,7 +10,7 @@ Assuming you've already installed Python and pip, you’ll need to first install
 
 ```python
 python3 -m pip install "pyrenew"
-```
+```  
 
 You’ll also need working
 installations of `matplotlib`, `numpy`, `jax`, `numpyro`, and `polars`:
