@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
+from typing import Optional
 
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
