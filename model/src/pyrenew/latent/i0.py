@@ -1,7 +1,7 @@
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.metaclass import RandomVariable
-from tpying import Any, Optional
+from typing import Any, Optional
 
 
 class Infections0(RandomVariable):
