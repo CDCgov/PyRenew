@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
+from typing import Optional
 
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
@@ -102,7 +103,7 @@ class HospitalizationsModel(Model):
     @staticmethod
     def validate(latent_hospitalizations, observed_hospitalizations) -> None:
         """
-        Verifies types and status (RV) of latent and observed hospitalizations 
+        Verifies types and status (RV) of latent and observed hospitalizations
 
         Parameters
         ----------
@@ -149,7 +150,7 @@ class HospitalizationsModel(Model):
         Notes
         -----
         TODO: Include example(s) here.
-        TODO: Cover Returns in more detail. 
+        TODO: Cover Returns in more detail.
         """
 
         return self.latent_hospitalizations.sample(
@@ -195,7 +196,7 @@ class HospitalizationsModel(Model):
     def sample(
         self,
         n_timepoints: int,
-        observed_hospitalizations=None,
+        observed_hospitalizations: Optional[ArrayLike] = None,
         **kwargs,
     ) -> HospModelSample:
         """
@@ -210,7 +211,7 @@ class HospitalizationsModel(Model):
             model). Defaults to None (simulation, rather than fit).
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample
-            calls, should there be any. 
+            calls, should there be any.
 
         Returns
         -------

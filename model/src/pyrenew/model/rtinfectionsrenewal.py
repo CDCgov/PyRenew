@@ -90,7 +90,7 @@ class RtInfectionsRenewalModel(Model):
         Rt_process,
     ) -> None:
         """
-        Verifies types and status (RV) of the generation interval, initial infections, latent and observed infections, and the Rt process. 
+        Verifies types and status (RV) of the generation interval, initial infections, latent and observed infections, and the Rt process.
 
         Parameters
         ----------
@@ -118,8 +118,8 @@ class RtInfectionsRenewalModel(Model):
         self,
         **kwargs,
     ) -> tuple:
-        """ 
-        Samples the Rt process 
+        """
+        Samples the Rt process
 
         Parameters
         ----------
@@ -141,7 +141,7 @@ class RtInfectionsRenewalModel(Model):
         self,
         **kwargs,
     ) -> tuple:
-        """ 
+        """
         Samples the generation interval
 
         Parameters
@@ -164,7 +164,7 @@ class RtInfectionsRenewalModel(Model):
         self,
         **kwargs,
     ) -> tuple:
-        """ 
+        """
         Samples the initial infections
 
         Parameters
@@ -187,7 +187,7 @@ class RtInfectionsRenewalModel(Model):
         self,
         **kwargs,
     ) -> tuple:
-        """ 
+        """
         Samples the latent infections
 
         Parameters
@@ -209,7 +209,7 @@ class RtInfectionsRenewalModel(Model):
     def sample_infections_obs(
         self,
         predicted: ArrayLike,
-        observed_infections: ArrayLike = None,
+        observed_infections: Optional[ArrayLike] = None,
         **kwargs,
     ) -> tuple:
         """Sample number of hospitalizations
@@ -219,7 +219,7 @@ class RtInfectionsRenewalModel(Model):
         predicted : ArrayLike
             The predicted infecteds.
         observed_hospitalizations : ArrayLike, optional
-            The estimates infections (to fit). Defaults to None. 
+            The estimates infections (to fit). Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample_infections_obs calls, should there be any.
@@ -245,7 +245,7 @@ class RtInfectionsRenewalModel(Model):
     def sample(
         self,
         n_timepoints: int,
-        observed_infections: ArrayLike = None,
+        observed_infections: Optional[ArrayLike] = None,
         **kwargs,
     ) -> RtInfectionsRenewalSample:
         """Sample from the Basic Renewal Model
@@ -266,7 +266,7 @@ class RtInfectionsRenewalModel(Model):
 
         Notes
         -----
-        TODO: Add See Also. 
+        TODO: Add See Also.
         """
 
         # Sampling from Rt (possibly with a given Rt, depending on
