@@ -19,13 +19,13 @@ A container for holding the output from the InfectionsSample.
 Attributes
 ----------
 infections : ArrayLike or None
-    The estimated latent infections. Defaults to None. 
+    The estimated latent infections. Defaults to None.
 """
 
 
 class Infections(RandomVariable):
     """Latent infections
-    
+
     Methods
     -------
     sample(Rt, I0, gen_int, **kwargs)
@@ -35,7 +35,7 @@ class Infections(RandomVariable):
         self,
         infections_mean_varname: str = "latent_infections",
     ) -> None:
-        """Default constructor for Infections class. 
+        """Default constructor for Infections class.
 
         Parameters
         ----------
@@ -53,7 +53,7 @@ class Infections(RandomVariable):
 
     @staticmethod
     def validate() -> None:
-        """ 
+        """
         Notes
         -----
         TODO: Complete this method.

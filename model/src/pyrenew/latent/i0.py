@@ -1,8 +1,8 @@
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.metaclass import RandomVariable
+from tpying import Any, Optional
 
-from tpying import Optional, Any
 
 class Infections0(RandomVariable):
     """Initial infections helper class.

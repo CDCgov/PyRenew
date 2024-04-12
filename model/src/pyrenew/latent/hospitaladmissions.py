@@ -63,7 +63,9 @@ class InfectHospRate(RandomVariable):
 
     def __init__(
         self,
-        dist: Optional[dist.Distribution] = dist.LogNormal(jnp.log(0.05), 0.05),
+        dist: Optional[dist.Distribution] = dist.LogNormal(
+            jnp.log(0.05), 0.05
+        ),
         varname: Optional[str] = "IHR",
     ) -> None:
         """
