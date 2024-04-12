@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
+from typing import Any, Optional
 
 import jax.numpy as jnp
 import numpyro as npro
@@ -14,30 +15,65 @@ HospAdmissionsSample = namedtuple(
     ["IHR", "predicted"],
     defaults=[None, None],
 )
-"""Output from HospitalAdmissions.sample()"""
+HospAdmissionsSample.__doc__ = """
+A container for holding the output from HospAdmissionsSample.sample.
+
+Attributes
+----------
+IHR : float or None
+    The infected hospitalization rate. Defaults to None.
+predicted : ArrayLike or None
+    The predicted number of hospital admissions. Defaults to None.
+
+Notes
+-----
+TODO: Add Notes.
+"""
 
 InfectHospRateSample = namedtuple(
     "InfectHospRateSample",
     ["IHR"],
     defaults=[None],
 )
+InfectHospRateSample.__doc__ = """
+A container for holding the output from InfectHospRateSample.sample.
+
+Attributes
+----------
+IHR : ArrayLike or None
+    The infected hospitalization rate. Defaults to None.
+
+Notes
+-----
+TODO: Add Notes.
+"""
 
 
 class InfectHospRate(RandomVariable):
-    """Infection to Hospitalization Rate"""
+    """
+    Infection to Hospitalization Rate
+
+    Methods
+    -------
+    validate(distr)
+        Validates distribution is Numpyro distribution
+    sample(**kwargs)
+        Produces a sample of the IHR
+    """
 
     def __init__(
         self,
         dist: dist.Distribution,
         varname: str = "IHR",
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------
-        dist : dist.Distribution, optional
+        dist : dist.Distribution
             Prior distribution of the IHR, by default
-            dist.LogNormal(jnp.log(0.05), 0.05)
+            dist.LogNormal(jnp.log(0.05), 0.05).
         varname : str, optional
             Name of the random variable in the model, by default "IHR."
 
@@ -47,7 +83,6 @@ class InfectHospRate(RandomVariable):
         """
 
         self.validate(dist)
-
         self.dist = dist
         self.varname = varname
 
@@ -55,9 +90,36 @@ class InfectHospRate(RandomVariable):
 
     @staticmethod
     def validate(distr: dist.Distribution) -> None:
+        """
+        Validates distribution is Numpyro distribution
+
+        Parameter
+        ---------
+        distr : dist.Distribution
+            A ingested distribution (e.g., prior IHR distribution)
+
+        Raises
+        ------
+        AssertionError
+            If the inputted distribution is not a Numpyro distribution.
+        """
         assert isinstance(distr, dist.Distribution)
 
     def sample(self, **kwargs) -> InfectHospRateSample:
+        """
+        Produces a sample of the IHR
+
+        Parameter
+        ---------
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal
+            sample calls, should there be any.
+
+        Returns
+        -------
+        InfectHospRateSample
+            The sampled IHR
+        """
         return InfectHospRateSample(
             npro.sample(
                 name=self.varname,
@@ -71,12 +133,18 @@ class HospitalAdmissions(RandomVariable):
 
     Implements a renewal process for the expected number of hospitalizations.
 
+    Methods
+    -------
+    validate(infect_hosp_rate_dist, weekday_effect_dist, hosp_report_prob_dist)
+        Validates that the IHR, weekday effects, and probability of being
+        reported hospitalized distributions are RandomVariable types
+    sample(latent, **kwargs)
+        Samples from the observation process
+
     Notes
     -----
-
     The following text was directly extracted from the wastewater model
-    documentation
-    (`link <https://github.com/cdcent/cfa-forecast-renewal-ww/blob/a17efc090b2ffbc7bc11bdd9eec5198d6bcf7322/model_definition.md#hospital-admissions-component> `_).
+    documentation (`link <https://github.com/cdcent/cfa-forecast-renewal-ww/blob/a17efc090b2ffbc7bc11bdd9eec5198d6bcf7322/model_definition.md#hospital-admissions-component> `_).
 
     Following other semi-mechanistic renewal frameworks, we model the _expected_
     hospital admissions per capita :math:`H(t)` as a convolution of the
@@ -102,8 +170,8 @@ class HospitalAdmissions(RandomVariable):
         infection_to_admission_interval: RandomVariable,
         infect_hosp_rate_dist: RandomVariable,
         hospitalizations_predicted_varname: str = "predicted_hospitalizations",
-        weekday_effect_dist: RandomVariable = None,
-        hosp_report_prob_dist: RandomVariable = None,
+        weekday_effect_dist: Optional[RandomVariable] = None,
+        hosp_report_prob_dist: Optional[RandomVariable] = None,
     ) -> None:
         """Default constructor
 
@@ -150,10 +218,34 @@ class HospitalAdmissions(RandomVariable):
 
     @staticmethod
     def validate(
-        infect_hosp_rate_dist,
-        weekday_effect_dist,
-        hosp_report_prob_dist,
+        infect_hosp_rate_dist: Any,
+        weekday_effect_dist: Any,
+        hosp_report_prob_dist: Any,
     ) -> None:
+        """
+        Validates that the IHR, weekday effects, and probability of being
+        reported hospitalized distributions are RandomVariable types
+
+        Parameters
+        ----------
+        infect_hosp_rate_dist : Any
+            Possibly incorrect input for infection to hospitalization rate distribution.
+        weekday_effect_dist : Any
+            Possibly incorrect input for weekday effect.
+        hosp_report_prob_dist  : Any
+            Possibly incorrect input for distribution or fixed value for the
+            hospital admission reporting probability.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        AssertionError
+            If the object `distr` is not an instance of `dist.Distribution`, indicating
+            that the validation has failed.
+        """
         assert isinstance(infect_hosp_rate_dist, RandomVariable)
         assert isinstance(weekday_effect_dist, RandomVariable)
         assert isinstance(hosp_report_prob_dist, RandomVariable)
