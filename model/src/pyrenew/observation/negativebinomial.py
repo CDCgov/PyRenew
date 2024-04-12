@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numbers as nums
+from typing import Any, Optional
 
 import numpyro
 import numpyro.distributions as dist
@@ -9,12 +10,20 @@ from pyrenew.metaclass import RandomVariable
 
 
 class NegativeBinomialObservation(RandomVariable):
-    """Negative Binomial observation"""
+    """Negative Binomial observation
+
+    Methods
+    -------
+    sample(predicted, obs, **kwargs)
+        Sample from the negative binomial distribution
+    validate(concentration_prior)
+        Check that the concentration prior is actually a nums.Number
+    """
 
     def __init__(
         self,
         concentration_prior: dist.Distribution | ArrayLike,
-        concentration_suffix: str = "_concentration",
+        concentration_suffix: Optional[str] = "_concentration",
         parameter_name="negbinom_rv",
     ) -> None:
         """Default constructor
@@ -54,7 +63,7 @@ class NegativeBinomialObservation(RandomVariable):
     def sample(
         self,
         predicted: ArrayLike,
-        obs: ArrayLike = None,
+        obs: Optional[ArrayLike] = None,
         **kwargs,
     ) -> tuple:
         """Sample from the negative binomial distribution
@@ -66,8 +75,8 @@ class NegativeBinomialObservation(RandomVariable):
         obs : ArrayLike, optional
             Observed data, by default None.
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal `sample()`
-            calls, if any
+            Additional keyword arguments passed through to internal sample
+            calls, should there be any.
 
         Returns
         -------
@@ -85,7 +94,21 @@ class NegativeBinomialObservation(RandomVariable):
         )
 
     @staticmethod
-    def validate(concentration_prior) -> None:
+    def validate(concentration_prior: Any) -> None:
+        """
+        Check that the concentration prior is actually a nums.Number
+
+        Parameters
+        ----------
+        concentration_prior : Any
+            Numpyro distribution from which to sample the positive concentration
+            parameter of the negative binomial. Expected dist.Distribution or
+            numbers.nums
+
+        Returns
+        -------
+        None
+        """
         assert isinstance(
             concentration_prior, (dist.Distribution, nums.Number)
         )
