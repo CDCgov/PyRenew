@@ -19,7 +19,7 @@ installations of `matplotlib`, `numpy`, `jax`, `numpyro`, and `polars`:
 python -m pip install "matplotlib" "numpy" "jax" "numpyro" "polars"
 ```
 
-Run the following import section to call external modules and functions necessary to run the `pyrenew` demo. The `import` statement imports the module and the `as` statement renames the module for use within this script. The `from` statement imports a specific function from a module (named after the `.`) within a package (named before the `.`).  
+Run the following import section to call external modules and functions necessary to run the `pyrenew` demo. The `import` statement imports the module and the `as` statement renames the module for use within this script. The `from` statement imports a specific function from a module (named after the `.`) within a package (named before the `.`).
 
 ```{python}
 #| output: false
@@ -38,7 +38,7 @@ import numpyro.distributions as dist
 from pyrenew.process import SimpleRandomWalkProcess
 ```
 
-Next, we will set up a single random walk process using the `sample` method from an instance of the `SimpleRandomWalkProcess` class. First, we create an instance of the `SimpleRandomWalkProcess` class with a normal distribution of mean = 0 and standard deviation = 0.0001 as its input. Next, the `with ` statement sets the seed for the random number generator for the duration of the block that follows. Inside the `with` block, the `q_samp = q.sample(duration=100)` generates the sample instance over a duration of 100 time units. Finally, this single random walk process is visualized using `matplot.pyplot` to plot the exponential of the sample instance. 
+Next, we will set up a single random walk process using the `sample` method from an instance of the `SimpleRandomWalkProcess` class. First, we create an instance of the `SimpleRandomWalkProcess` class with a normal distribution of mean = 0 and standard deviation = 0.0001 as its input. Next, the `with ` statement sets the seed for the random number generator for the duration of the block that follows. Inside the `with` block, the `q_samp = q.sample(duration=100)` generates the sample instance over a duration of 100 time units. Finally, this single random walk process is visualized using `matplot.pyplot` to plot the exponential of the sample instance.
 
 ```{python}
 #| label: fig-randwalk
