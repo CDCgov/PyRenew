@@ -52,7 +52,7 @@ plt.plot(np.exp(q_samp[0]))
 # Damon: why is q_samp multideminsional?
 # Damon: Why do we generate a Normal random walk and exponentiate? Should we have a Log-Normal Random walk function?
 # Damon: Why do we generate random number to use as the rng seed?
-# Damon: Description could be updated to relate our example to a real world scenario. What are we simulating here? What are the
+# Damon: Description could be updated to relate our example to a real world scenario. What are we simulating here?
 ```
 
 Damon: I believe the next section is totally separate from this first example. Perhaps we could make this clearer with # Section Labels.
