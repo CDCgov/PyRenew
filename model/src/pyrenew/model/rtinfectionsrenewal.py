@@ -26,7 +26,6 @@ observed : ArrayLike or None
 
 Notes
 -----
-Defaulting to None often indicates use for simulation, rather than for fitting.
 """
 
 
@@ -91,7 +90,8 @@ class RtInfectionsRenewalModel(Model):
         Rt_process,
     ) -> None:
         """
-        Verifies types and status (RV) of the generation interval, initial infections, latent and observed infections, and the Rt process.
+        Verifies types and status (RV) of the generation interval, initial
+        infections, latent and observed infections, and the Rt process.
 
         Parameters
         ----------
@@ -220,10 +220,10 @@ class RtInfectionsRenewalModel(Model):
         predicted : ArrayLike
             The predicted infecteds.
         observed_hospitalizations : ArrayLike, optional
-            The estimates infections (to fit). Defaults to None.
+            The observed values of hospital admissions, if any, for inference. Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
-            sample_infections_obs calls, should there be any.
+            sample() calls, should there be any.
 
         Returns
         -------
@@ -258,7 +258,7 @@ class RtInfectionsRenewalModel(Model):
         observed_infections : ArrayLike, optional
             Observed infections.
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal sample
+            Additional keyword arguments passed through to internal sample()
             calls, if any
 
         Returns

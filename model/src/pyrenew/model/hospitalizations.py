@@ -33,11 +33,10 @@ IHR : float or None
 latent : ArrayLike or None
     The estimated latent hospitalizations. Defaults to None.
 sampled : ArrayLike or None
-    The sampled or observed hospitalizations. Defaults to None.
+    The sampled or observed hospital admissions. Defaults to None.
 
 Notes
 -----
-Defaulting to None often indicates use for simulation, rather than for fitting.
 """
 
 
@@ -46,7 +45,7 @@ class HospitalizationsModel(Model):
     HospitalAdmissions Model (BasicRenewal + HospitalAdmissions)
 
     This class inherits from pyrenew.models.Model. It extends the
-    basic renewal model by adding a hospitalization module, e.g.,
+    basic renewal model by adding a hospital admissions module, e.g.,
     pyrenew.observations.HospitalAdmissions.
     """
 
@@ -137,7 +136,7 @@ class HospitalizationsModel(Model):
             The predicted infections array.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
-            sample_hospitalizations_latent calls, should there be any.
+            sample() calls, should there be any.
 
         Returns
         -------
@@ -210,7 +209,7 @@ class HospitalizationsModel(Model):
             The observed hospitalization data (passed to the basic renewal
             model). Defaults to None (simulation, rather than fit).
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal sample
+            Additional keyword arguments passed through to internal sample()
             calls, should there be any.
 
         Returns
