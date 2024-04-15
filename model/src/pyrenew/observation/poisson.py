@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from typing import Optional
-
 import numpyro
 import numpyro.distributions as dist
 from numpy.typing import ArrayLike
@@ -20,8 +18,8 @@ class PoissonObservation(RandomVariable):
 
     def __init__(
         self,
-        parameter_name: Optional[str] = "poisson_rv",
-        eps: Optional[float] = 1e-8,
+        parameter_name: str | None = "poisson_rv",
+        eps: float | None = 1e-8,
     ) -> None:
         """Default Constructor
 
@@ -46,7 +44,7 @@ class PoissonObservation(RandomVariable):
     def sample(
         self,
         predicted: ArrayLike,
-        obs: Optional[ArrayLike] = None,
+        obs: ArrayLike | None = None,
         **kwargs,
     ) -> tuple:
         """Sample from the Poisson process

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import numbers as nums
-from typing import Any, Optional
+from typing import Any
 
 import numpyro
 import numpyro.distributions as dist
@@ -23,7 +23,7 @@ class NegativeBinomialObservation(RandomVariable):
     def __init__(
         self,
         concentration_prior: dist.Distribution | ArrayLike,
-        concentration_suffix: Optional[str] = "_concentration",
+        concentration_suffix: str | None = "_concentration",
         parameter_name="negbinom_rv",
     ) -> None:
         """Default constructor
@@ -63,7 +63,7 @@ class NegativeBinomialObservation(RandomVariable):
     def sample(
         self,
         predicted: ArrayLike,
-        obs: Optional[ArrayLike] = None,
+        obs: ArrayLike | None = None,
         **kwargs,
     ) -> tuple:
         """Sample from the negative binomial distribution
