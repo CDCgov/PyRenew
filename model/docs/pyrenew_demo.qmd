@@ -49,8 +49,13 @@ with seed(rng_seed=np.random.randint(0,1000)):
     q_samp = q.sample(duration=100)
 
 plt.plot(np.exp(q_samp[0]))
+# Damon: why is q_samp multideminsional?
+# Damon: Why do we generate a Normal random walk and exponentiate? Should we have a Log-Normal Random walk function?
+# Damon: Why do we generate random number to use as the rng seed?
+# Damon: Description could be updated to relate our example to a real world scenario. What are we simulating here? What are the
 ```
 
+Damon: I believe the next section is totally separate from this first example. Perhaps we could make this clearer with # Section Labels.
 Next, import several additional functions from the `latent` module of the `pyrenew` package to model infections, hospital admissions, initial infections, and hospitalization rate due to infection.
 
 ```{python}
@@ -103,6 +108,8 @@ inf_hosp_int = DeterministicPMF(
     (jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),),
     )
 
+# These sum to 1, so I assume they are probabilities, but what is the domain of the distribution?
+# Regardless, a single array doesn't seem like the appropriate data structure to use.
 latent_hospitalizations = HospitalAdmissions(
     infection_to_admission_interval=inf_hosp_int,
     infect_hosp_rate_dist = InfectHospRate(
@@ -112,10 +119,12 @@ latent_hospitalizations = HospitalAdmissions(
 
 # 5) An observation process for the hospitalizations
 observed_hospitalizations = PoissonObservation()
+# Damon: What does it mean that there is a PoissonObservation? What are the parameters of the Poisson distrubtion?
 
 # 6) A random walk process (it could be deterministic using
 # pyrenew.process.DeterministicProcess())
 Rt_process = RtRandomWalkProcess()
+# What's the difference between this and the SimpleRandomWalkProcess used earlier? Why don't we need to specify a distribution this time?
 ```
 
 The `HospitalizationsModel` is then initialized using the initial conditions just defined:
@@ -130,6 +139,8 @@ hospmodel = HospitalizationsModel(
     latent_infections=latent_infections,
     Rt_process=Rt_process
     )
+# Damon: I don't really get why there is a hospitalizations model as a concept.
+# Damon: Maybe the scope of the project is so limited that it makes sense, but one can easily imagine additional data sources (Wastewater, separate hosp and ICU admissions). Would each of those get a separate class?
 ```
 
 Next, we sample from the `hospmodel` for 30 time steps and view the output of a single run:
@@ -138,6 +149,7 @@ Next, we sample from the `hospmodel` for 30 time steps and view the output of a 
 with seed(rng_seed=np.random.randint(1, 60)):
     x = hospmodel.sample(n_timepoints=30)
 x
+# Damon: Why do we generate random number to use as the rng seed?
 ```
 
 Visualizations of the single model output show (top) infections over the 30 time steps, (middle) hospitalizations over the 30 time steps, and (bottom)
@@ -152,9 +164,12 @@ ax[1].plot(x.latent)
 ax[2].plot(x.sampled, 'o')
 for axis in ax[:-1]:
     axis.set_yscale("log")
+# Damon: We should label the figures.
 ```
 
 To fit the `hospmodel` to the simulated data, we call `hospmodel.run()`, an MCMC algorithm, with the arguments generated in `hospmodel` object, using 1000 warmup stepts and 1000 samples to draw from the posterior distribution of the model parameters. The model is run for `len(x.sampled)-1` time steps with the seed set by `jax.random.PRNGKey()`
+Damon: Which MCMC algorithm is run? Does it come from another module?
+Damon: Where did we specify the prior distribution?
 
 ```{python}
 # from numpyro.infer import MCMC, NUTS
@@ -166,6 +181,8 @@ hospmodel.run(
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )
+
+# Damon: What is the relationship between `n_timepoints` and `observed_hospitalizations`? Is `n_timepoints` always one less than the number of hospitalization observtion times? If so, is this parameter redundant?
 ```
 
 Print a summary of the model:
@@ -182,6 +199,8 @@ samps = spread_draws(hospmodel.mcmc.get_samples(), [("Rt", "time")])
 ```
 
 We visualize these samples below, with individual possible Rt estimates over time shown in light blue, and the overall mean estimate Rt shown in dark blue.
+Damon: Phrasing could be improved on "individual possible Rt estimates." These are individual draws from the posterior R_t distribution.
+Damon: also, we can use mathjax formatting to format R subscript t.
 
 ```{python}
 #| label: fig-sampled-rt
@@ -199,4 +218,6 @@ for samp_id in samp_ids:
 ax.set_ylim([0.4, 1/.4])
 ax.set_yticks([0.5, 1, 2])
 ax.set_yscale("log")
+
+# Can we use ArviZ for visualization? It is included in poetry dependencies.
 ```
