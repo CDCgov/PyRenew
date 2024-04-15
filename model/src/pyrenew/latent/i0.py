@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 import numpyro as npro
 import numpyro.distributions as dist
@@ -21,8 +21,8 @@ class Infections0(RandomVariable):
 
     def __init__(
         self,
-        name: Optional[str] = "I0",
-        I0_dist: Optional[dist.Distribution] = dist.LogNormal(0, 1),
+        name: str | None = "I0",
+        I0_dist: dist.Distribution | None = dist.LogNormal(0, 1),
     ) -> None:
         """Default constructor
 
