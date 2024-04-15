@@ -24,10 +24,7 @@ jobs:
         run: pip install poetry
 
       - name: install package
-        run: poetry install -C model
-
-      - name: install pytest-cov
-        run: poetry run -C model pip install pytest-cov
+        run: poetry install --with dev -C model
 
       - name: run tests
         run: |

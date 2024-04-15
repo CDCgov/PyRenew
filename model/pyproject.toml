@@ -12,10 +12,36 @@ numpyro = "^0.13.2"
 jax = "^0.4.24"
 numpy = "^1.26.4"
 polars = "^0.20.13"
-matplotlib = "^3.8.3"
 pillow = "^10.3.0" # See #56 on CDCgov/multisignal-epi-inference
-ipykernel = "^6.29.3"
 
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pyyaml = "^6.0.0"
+matplotlib = "^3.8.3"
+ipykernel = "^6.29.3"
+numpydoc = "^1.6.0"
+nbclient = "^0.10.0"
+nbformat = "^5.10.0"
+pytest-cov = "^5.0.0"
+
+[tool.numpydoc_validation]
+checks = [
+    "EX01",
+    "SA01",
+    "ES01",
+]
+exclude = [  # don't report on objects that match any of these regex
+    '\.undocumented_method$',
+    '\.__repr__$',
+    '\.__init__$',
+]
+override_SS05 = [  # override SS05 to allow docstrings starting with these words
+    '^Process ',
+    '^Assess ',
+    '^Access ',
+]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.0.0"
