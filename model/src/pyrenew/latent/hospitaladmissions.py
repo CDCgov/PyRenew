@@ -63,9 +63,7 @@ class InfectHospRate(RandomVariable):
 
     def __init__(
         self,
-        dist: Optional[dist.Distribution] = dist.LogNormal(
-            jnp.log(0.05), 0.05
-        ),
+        dist: dist.Distribution | None,
         varname: Optional[str] = "IHR",
     ) -> None:
         """
@@ -73,9 +71,8 @@ class InfectHospRate(RandomVariable):
 
         Parameters
         ----------
-        dist : dist.Distribution, optional
-            Prior distribution of the IHR, by default
-            dist.LogNormal(jnp.log(0.05), 0.05).
+        dist : dist.Distribution
+            Prior distribution of the IHR.
         varname : str, optional
             Name of the random variable in the model, by default "IHR."
 
@@ -95,8 +92,8 @@ class InfectHospRate(RandomVariable):
         """
         Validates distribution is Numpyro distribution
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         distr : dist.Distribution
             A ingested distribution (e.g., prior IHR distribution)
 
@@ -111,8 +108,8 @@ class InfectHospRate(RandomVariable):
         """
         Produces a sample of the IHR
 
-        Parameter
-        ---------
+        Parameters
+        ----------
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
