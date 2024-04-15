@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
-from typing import Optional
 
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
@@ -195,7 +194,7 @@ class HospitalizationsModel(Model):
     def sample(
         self,
         n_timepoints: int,
-        observed_hospitalizations: Optional[ArrayLike] = None,
+        observed_hospitalizations: ArrayLike | None = None,
         **kwargs,
     ) -> HospModelSample:
         """
