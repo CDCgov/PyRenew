@@ -16,9 +16,11 @@ Notes
 TODO: Look into adding blocks for Functions and Examples in this
 docstring.
 """
-import jax.numpy as jnp
 from typing import Callable, Tuple
+
+import jax.numpy as jnp
 from jax.typing import ArrayLike
+
 
 def new_convolve_scanner(discrete_dist_flipped: ArrayLike) -> Callable:
     """
@@ -40,9 +42,12 @@ def new_convolve_scanner(discrete_dist_flipped: ArrayLike) -> Callable:
     Notes
     -----
     TODO: Add Example.
-    TODO: Clarification on Returns description. 
+    TODO: Clarification on Returns description.
     """
-    def _new_scanner(history_subset: ArrayLike, multiplier: float) -> Tuple[ArrayLike, float]:
+
+    def _new_scanner(
+        history_subset: ArrayLike, multiplier: float
+    ) -> Tuple[ArrayLike, float]:
         new_val = multiplier * jnp.dot(discrete_dist_flipped, history_subset)
         latest = jnp.hstack([history_subset[1:], new_val])
         return latest, new_val
@@ -50,25 +55,8 @@ def new_convolve_scanner(discrete_dist_flipped: ArrayLike) -> Callable:
     return _new_scanner
 
 
-
-def new_double_scanner(dists, transforms):
-    d1, d2 = dists
-    t1, t2 = transforms
-
-    def _new_scanner(history_subset, multipliers):
-        m1, m2 = multipliers
-        m_net1 = t1(m1 * jnp.dot(d1, history_subset))
-        new_val = t2(m2 * m_net1 * jnp.dot(d2, history_subset))
-        latest = jnp.hstack([history_subset[1:], new_val])
-        return (latest, (new_val, m_net1))
-
-    return _new_scanner
-
-
-
 def new_double_scanner(
-    dists: Tuple[ArrayLike, ArrayLike],
-    transforms: Tuple[Callable, Callable]
+    dists: Tuple[ArrayLike, ArrayLike], transforms: Tuple[Callable, Callable]
 ) -> Callable:
     """
     Factory function to create a scanner function that applies two sequential transformations
@@ -97,7 +85,9 @@ def new_double_scanner(
     d1, d2 = dists
     t1, t2 = transforms
 
-    def _new_scanner(history_subset: jnp.ndarray, multipliers: Tuple[float, float]) -> (jnp.ndarray, Tuple[float, float]):
+    def _new_scanner(
+        history_subset: jnp.ndarray, multipliers: Tuple[float, float]
+    ) -> (jnp.ndarray, Tuple[float, float]):
         m1, m2 = multipliers
         m_net1 = t1(m1 * jnp.dot(d1, history_subset))
         new_val = t2(m2 * m_net1 * jnp.dot(d2, history_subset))
