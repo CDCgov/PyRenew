@@ -61,7 +61,7 @@ def validate_discrete_dist_vector(
     return discrete_dist / dist_norm
 
 
-def reverse_discrete_dist_vector(dist: ArrayLike):
+def reverse_discrete_dist_vector(dist: ArrayLike) -> ArrayLike:
     """
     Reverse a discrete distribution
     vector (useful for discrete
