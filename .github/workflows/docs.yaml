@@ -28,7 +28,7 @@ jobs:
         run: pip install poetry
 
       - name: install package
-        run: poetry install --with docs -C model
+        run: poetry install --with dev -C model
 
       - name: Render documents
         run: |
