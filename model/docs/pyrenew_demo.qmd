@@ -8,14 +8,14 @@ This demo simulates some basic renewal process data and then fits to it using `p
 
 Assuming you've already installed Python and pip, you’ll need to first install `pyrenew`:
 
-```{python}
+```python
 pip install pyrenew
 ```
 
 You’ll also need working
 installations of `matplotlib`, `numpy`, `jax`, `numpyro`, and `polars`:
 
-```{python}
+```python
 pip install matplotlib numpy jax numpyro polars
 ```
 
@@ -144,23 +144,23 @@ Visualizations of the single model output show (top) infections over the 30 time
 #| label: fig-hosp
 #| fig-cap: Infections
 fig, ax = plt.subplots(nrows=3, sharex=True)
-ax[0].plot(x.infections)
+ax[0].plot(x.latent_infections)
 ax[0].set_ylim([1/5, 5])
-ax[1].plot(x.latent)
-ax[2].plot(x.sampled, 'o')
+ax[1].plot(x.latent_admissions)
+ax[2].plot(x.sampled_admissions, 'o')
 for axis in ax[:-1]:
     axis.set_yscale("log")
 ```
 
-To fit the `hospmodel` to the simulated data, we call `hospmodel.run()`, an MCMC algorithm, with the arguments generated in `hospmodel` object, using 1000 warmup stepts and 1000 samples to draw from the posterior distribution of the model parameters. The model is run for `len(x.sampled)-1` time steps with the seed set by `jax.random.PRNGKey()`
+To fit the `hospmodel` to the simulated data, we call `hospmodel.run()`, an MCMC algorithm, with the arguments generated in `hospmodel` object, using 1000 warmup stepts and 1000 samples to draw from the posterior distribution of the model parameters. The model is run for `len(x.sampled_admissions)-1` time steps with the seed set by `jax.random.PRNGKey()`
 
 ```{python}
 # from numpyro.infer import MCMC, NUTS
 hospmodel.run(
     num_warmup=1000,
     num_samples=1000,
-    observed_hospitalizations=x.sampled,
-    n_timepoints = len(x.sampled)-1,
+    observed_hospitalizations=x.sampled_admissions,
+    n_timepoints = len(x.sampled_admissions)-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )

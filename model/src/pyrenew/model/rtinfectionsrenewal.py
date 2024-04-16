@@ -9,7 +9,7 @@ from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 # Output class of the RtInfectionsRenewalModel
 RtInfectionsRenewalSample = namedtuple(
     "InfectModelSample",
-    ["Rt", "latent", "observed"],
+    ["Rt", "latent_infections", "sampled_infections"],
     defaults=[None, None, None],
 )
 RtInfectionsRenewalSample.__doc__ = """
@@ -19,10 +19,10 @@ Attributes
 ----------
 Rt : float or None
     The reproduction number over time. Defaults to None.
-latent : ArrayLike or None
+latent_infections : ArrayLike or None
     The estimated latent infections. Defaults to None.
-observed : ArrayLike or None
-    The observed infections. Defaults to None.
+sampled_infections : ArrayLike or None
+    The sampled infections. Defaults to None.
 
 Notes
 -----
@@ -292,12 +292,12 @@ class RtInfectionsRenewalModel(Model):
         )
 
         # Using the predicted infections to sample from the observation process
-        observed, *_ = self.sample_infections_obs(
+        sampled, *_ = self.sample_infections_obs(
             predicted=latent, observed_infections=observed_infections, **kwargs
         )
 
         return RtInfectionsRenewalSample(
             Rt=Rt,
-            latent=latent,
-            observed=observed,
+            latent_infections=latent,
+            sampled_infections=sampled,
         )

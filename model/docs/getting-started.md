@@ -141,13 +141,13 @@ sim_data
            1.271196 , 1.3189521, 1.3054799, 1.3165426, 1.291952 , 1.3026639,
            1.2619467, 1.2852622, 1.3121517, 1.2888998, 1.2641873, 1.2580931,
            1.2545817, 1.3092988, 1.2488269, 1.2397509, 1.2071848, 1.2334517,
-           1.21868  ], dtype=float32), latent=Array([ 2.3215084,  3.0415602,  4.0327816,  5.180868 ,  4.381411 ,
+           1.21868  ], dtype=float32), latent_infections=Array([ 2.3215084,  3.0415602,  4.0327816,  5.180868 ,  4.381411 ,
             4.978916 ,  5.750626 ,  6.3024273,  6.66758  ,  7.354823 ,
             7.8755097,  8.416656 ,  9.63394  , 10.973988 , 12.043082 ,
            13.516833 , 14.911659 , 16.75407  , 18.053928 , 20.318869 ,
            22.975292 , 25.166464 , 27.34265  , 30.13236  , 33.126217 ,
            37.89362  , 40.11695  , 43.784634 , 46.754696 , 51.974545 ,
-           55.642136 ], dtype=float32), observed=Array([ 1,  2,  3,  5,  4,  4,  7,  4,  8,  4,  7,  3,  8, 12, 13, 18, 14,
+           55.642136 ], dtype=float32), sampled_infections=Array([ 1,  2,  3,  5,  4,  4,  7,  4,  8,  4,  7,  3,  8, 12, 13, 18, 14,
            20, 17, 18, 28, 27, 36, 37, 26, 31, 40, 27, 48, 54, 60],      dtype=int32))
 
 The `sample()` method of the `RtInfectionsRenewalModel` returns a list
@@ -159,11 +159,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, 31), sim_data[0])
+axs[0].plot(range(0, 31), sim_data.Rt)
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, 31), sim_data[1])
+axs[1].plot(range(0, 31), sim_data.sampled_infections)
 axs[1].set_ylabel('Infections')
 
 fig.suptitle('Basic renewal model')
@@ -185,7 +185,7 @@ import jax
 model1.run(
     num_warmup=2000,
     num_samples=1000,
-    observed_infections=sim_data.observed,
+    observed_infections=sim_data.sampled_infections,
     n_timepoints = len(sim_data[1])-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
@@ -201,7 +201,7 @@ samps = model1.spread_draws([('Rt', 'time')])
 
 fig, ax = plt.subplots(figsize=[4, 5])
 
-ax.plot(sim_data[0])
+ax.plot(sim_data.Rt)
 samp_ids = np.random.randint(size=25, low=0, high=999)
 for samp_id in samp_ids:
     sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))

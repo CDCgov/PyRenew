@@ -98,7 +98,7 @@ def test_model_hosp_no_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        obs_mean=model0_samp.sampled,
+        obs_mean=model0_samp.sampled_admissions,
         n_timepoints=30,
     )
 
@@ -177,7 +177,7 @@ def test_model_hosp_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_hospitalizations=model1_samp.sampled,
+        observed_hospitalizations=model1_samp.sampled_admissions,
         n_timepoints=30,
     )
 
@@ -267,7 +267,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_hospitalizations=model1_samp.sampled,
+        observed_hospitalizations=model1_samp.sampled_admissions,
         n_timepoints=30,
     )
 
@@ -364,7 +364,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_hospitalizations=model1_samp.sampled,
+        observed_hospitalizations=model1_samp.sampled_admissions,
         n_timepoints=30,
     )
 

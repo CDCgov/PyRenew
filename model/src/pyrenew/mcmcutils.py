@@ -4,8 +4,10 @@
 Utilities to deal with MCMC outputs
 """
 
+import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
+from jax.typing import ArrayLike
 
 
 def spread_draws(
@@ -73,3 +75,71 @@ def spread_draws(
         pass
 
     return df
+
+
+def plot_posterior(
+    var: str,
+    draws: pl.DataFrame,
+    obs_signal: ArrayLike = None,
+    ylab: str = None,
+    xlab: str = "Time",
+    samples: int = 25,
+) -> plt.Figure:
+    """
+    Plot the posterior distribution of a variable
+
+    Parameters
+    ----------
+    var : str
+        Name of the variable to plot
+    model : Model
+        Model object
+    obs_signal : ArrayLike, optional
+        Observed signal to plot as reference
+    ylab : str, optional
+        Label for the y-axis
+    xlab : str, optional
+        Label for the x-axis
+    samples : int, optional
+        Number of samples to plot
+
+    Returns
+    -------
+    plt.Figure
+    """
+
+    if ylab is None:
+        ylab = var
+
+    fig, ax = plt.subplots(figsize=[4, 5])
+
+    # Reference signal (if any)
+    if obs_signal is not None:
+        ax.plot(obs_signal, color="black")
+
+    samp_ids = np.random.randint(size=samples, low=0, high=999)
+
+    for samp_id in samp_ids:
+        sub_samps = draws.filter(pl.col("draw") == samp_id).sort(
+            pl.col("time")
+        )
+        ax.plot(
+            sub_samps.select("time").to_numpy(),
+            sub_samps.select(var).to_numpy(),
+            color="darkblue",
+            alpha=0.1,
+        )
+
+    # Some labels
+    ax.set_xlabel(xlab)
+    ax.set_ylabel(ylab)
+
+    # Adding a legend
+    ax.plot([], [], color="darkblue", alpha=0.9, label="Posterior samples")
+
+    if obs_signal is not None:
+        ax.plot([], [], color="black", label="Observed signal")
+
+    ax.legend()
+
+    return fig

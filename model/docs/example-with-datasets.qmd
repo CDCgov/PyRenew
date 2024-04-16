@@ -1,29 +1,28 @@
 ---
-title: Fitting an hospitalizations only model
+title: Fitting a Hospital Admissions-only Model
 format: gfm
 engine: jupyter
 ---
 
-This document illustrates how a hospitalization-only model can be fitted using data from the Pyrenew package, particularly the wastewater dataset. The CFA wastewater team created this dataset, which contains simulated data.
+This document illustrates how a hospital admissions-only model can be fitted using data from the Pyrenew package, particularly the wastewater dataset. The CFA wastewater team created this dataset, which contains simulated data.
 
 ```{python}
 #| label: setup
 import polars as pl
 from pyrenew.datasets import load_wastewater
-from pyrenew.model import HospitalizationsModel
 ```
 
 ## Model definition
 
-In this section we provide the formal definition of the model. The hospitalization model is a semi-mechanistic model that describes the number of observed hospitalizations as a function of a set of latent variables. Particularly, the observed number of hospitalizations is discretily distributed with location at the number of latent hospitalizations:
+In this section, we provide the formal definition of the model. The hospitalization model is a semi-mechanistic model that describes the number of observed hospital admissions as a function of a set of latent variables. Mainly, the observed number of hospital admissions is discretely distributed with location at the number of latent hospital admissions:
 
 $$
 h(t) \sim \text{HospDist}\left(H(t)\right)
 $$
 
-Where $h(t)$ is the observed number of hospitalizations at time $t$, and $H(t)$ is the number of latent hospitalizations at time $t$. The distribution $\text{HospDist}$ can be any discrete distribution, but in this case we will use a negative binomial distribution.
+Where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$. The distribution $\text{HospDist}$ can be any discrete distribution, but we will use a negative binomial distribution.
 
-The number of latent hospitalizations at time $t$ is a function of the number of latent infections at time $t$ and the infection to hospitalization rate. The latent infections are modeled as a renewal process:
+The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to hospitalization rate. The latent infections are modeled as a renewal process:
 
 $$
 I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t - \tau)
@@ -51,14 +50,12 @@ dat = load_wastewater()
 dat.head(5)
 ```
 
-The data shows one entry per site. We will take the aggregated data for all sites by date.
+The data shows one entry per site, but the way it was simulated, the number of admissions is the same across sites. Thus we will only keep the first observation per day.
 
 ```{python}
 #| label: aggregation
-dat = dat.group_by("date").agg(
-    hospitalizations = pl.sum("daily_hosp_admits"),
-    population = pl.sum("pop"),
-)
+# Keeping the first observation of each date
+dat = dat.group_by("date").first().select(["date", "daily_hosp_admits"])
 
 # Now, sorting by date
 dat = dat.sort("date")
@@ -69,19 +66,19 @@ dat = dat.head(90)
 dat.head(5)
 ```
 
-Let's take a look at the daily prevalence of hospitalizations.
+Let's take a look at the daily prevalence of hospital admissions.
 
 ```{python}
-#| label: plot-hospitalizations
+#| label: plot-hospital admissions
 import matplotlib.pyplot as plt
 
 # Rotating the x-axis labels, and only showing ~10 labels
 ax = plt.gca()
 ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
 ax.xaxis.set_tick_params(rotation=45)
-plt.plot(dat["date"].to_numpy(), dat["hospitalizations"].to_numpy())
+plt.plot(dat["date"].to_numpy(), dat["daily_hosp_admits"].to_numpy())
 plt.xlabel("Date")
-plt.ylabel("Hospitalizations")
+plt.ylabel("Admissions")
 plt.show()
 ```
 
@@ -115,7 +112,7 @@ axs[1].plot(inf_hosp_int)
 axs[1].set_title("Infection to hospitalization interval")
 ```
 
-With these two in hand, we can start building the model. First, we will define the latent hospitalizations:
+With these two in hand, we can start building the model. First, we will define the latent hospital admissions:
 
 ```{python}
 #| label: latent-hosp
@@ -136,7 +133,7 @@ latent_hosp = HospitalAdmissions(
     )
 ```
 
-The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospitalization interval as input. The `hosp_rate` is an `InfectHospRate` object that takes the infection to hospitalization rate as input. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospitalization rate. Now we can define the rest of the other model components:
+The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospitalization interval as input. The `hosp_rate` is an `InfectHospRate` object that takes the infection to hospitalization rate as input. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospitalization rate. Now, we can define the rest of the other components:
 
 ```{python}
 #| label: initializing-rest-of-model
@@ -171,7 +168,7 @@ model = HospitalizationsModel(
 )
 ```
 
-Let's run a simulation to check if the model is working:
+Let's simulate to check if the model is working:
 
 ```{python}
 #| label: simulation
@@ -194,12 +191,13 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, timeframe + 1), sim_data[0])
+axs[0].plot(range(0, timeframe + 1), sim_data.Rt)
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, timeframe + 1), sim_data[1])
+axs[1].plot(range(0, timeframe + 1), sim_data.sampled_admissions)
 axs[1].set_ylabel('Infections')
+axs[1].set_yscale('log')
 
 fig.suptitle('Basic renewal model')
 fig.supxlabel('Time')
@@ -209,7 +207,7 @@ plt.show()
 
 ## Fitting the model
 
-Now we can fit the model to the data. We will use the `run` method of the model object. The two inputs this model requires are `n_timepoints` and `observed_hospitalizations`
+We can fit the model to the data. We will use the `run` method of the model object. The two inputs this model requires are `n_timepoints` and `observed_hospitalizations`
 
 
 ```{python}
@@ -220,7 +218,7 @@ model.run(
     num_samples=2000,
     num_warmup=2000,
     n_timepoints=dat.shape[0] - 1,
-    observed_hospitalizations=dat["hospitalizations"].to_numpy(),
+    observed_hospitalizations=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
 )
@@ -228,29 +226,14 @@ model.run(
 
 
 ```{python}
-#| label: output-hospitalizations
-#| fig-cap: Hospitalizations posterior distribution
+#| label: output-hospital admissions
+#| fig-cap: Hospital Admissions posterior distribution
 #| fig-cap-location: bottom
-import polars as pl
-samps = model.spread_draws([('predicted_hospitalizations', 'time')])
-
-fig, ax = plt.subplots(figsize=[4, 5])
-
-ax.plot(dat["hospitalizations"].to_numpy(), color="black")
-samp_ids = np.random.randint(size=25, low=0, high=999)
-for samp_id in samp_ids:
-    sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
-    ax.plot(sub_samps.select("time").to_numpy(),
-            sub_samps.select("predicted_hospitalizations").to_numpy(), color="darkblue", alpha=0.1)
-
-# Some labels
-ax.set_xlabel("Time")
-ax.set_ylabel("Hospitalizations")
-
-# Adding a legend
-ax.plot([], [], color="darkblue", alpha=0.9, label="Posterior samples")
-ax.plot([], [], color="black", label="Observed hospitalizations")
-ax.legend()
+model.plot_posterior(
+    var="predicted_hospitalizations",
+    ylab="Hospital Admissions",
+    obs_signal=dat["daily_hosp_admits"].to_numpy(),
+)
 ```
 
 The first half of the model is not looking good. We can try to improve the model by incorporating weekday effects. The following section will show how to do this.
@@ -323,7 +306,7 @@ model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
     n_timepoints=dat.shape[0] - 1,
-    observed_hospitalizations=dat["hospitalizations"].to_numpy(),
+    observed_hospitalizations=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
 )
@@ -332,27 +315,12 @@ model_weekday.run(
 And plotting the results:
 
 ```{python}
-#| label: output-hospitalizations-weekday
-#| fig-cap: Hospitalizations posterior distribution
+#| label: output-hospital admissions-weekday
+#| fig-cap: Hospital Admissions posterior distribution
 #| fig-cap-location: bottom
-import polars as pl
-samps = model_weekday.spread_draws([('predicted_hospitalizations', 'time')])
-
-fig, ax = plt.subplots(figsize=[4, 5])
-
-ax.plot(dat["hospitalizations"].to_numpy(), color="black")
-samp_ids = np.random.randint(size=25, low=0, high=999)
-for samp_id in samp_ids:
-    sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
-    ax.plot(sub_samps.select("time").to_numpy(),
-            sub_samps.select("predicted_hospitalizations").to_numpy(), color="darkblue", alpha=0.1)
-
-# Some labels
-ax.set_xlabel("Time")
-ax.set_ylabel("Hospitalizations")
-
-# Adding a legend
-ax.plot([], [], color="darkblue", alpha=0.9, label="Posterior samples")
-ax.plot([], [], color="black", label="Observed hospitalizations")
-ax.legend()
+model_weekday.plot_posterior(
+    var="predicted_hospitalizations",
+    ylab="Hospital Admissions",
+    obs_signal=dat["daily_hosp_admits"].to_numpy(),
+)
 ```

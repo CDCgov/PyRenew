@@ -123,11 +123,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, 31), sim_data[0])
+axs[0].plot(range(0, 31), sim_data.Rt)
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, 31), sim_data[1])
+axs[1].plot(range(0, 31), sim_data.sampled_infections)
 axs[1].set_ylabel('Infections')
 
 fig.suptitle('Basic renewal model')
@@ -145,7 +145,7 @@ import jax
 model1.run(
     num_warmup=2000,
     num_samples=1000,
-    observed_infections=sim_data.observed,
+    observed_infections=sim_data.sampled_infections,
     n_timepoints = len(sim_data[1])-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
@@ -163,7 +163,7 @@ samps = model1.spread_draws([('Rt', 'time')])
 
 fig, ax = plt.subplots(figsize=[4, 5])
 
-ax.plot(sim_data[0])
+ax.plot(sim_data.Rt)
 samp_ids = np.random.randint(size=25, low=0, high=999)
 for samp_id in samp_ids:
     sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))

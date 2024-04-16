@@ -29,7 +29,7 @@ jobs:
       - name: run tests
         run: |
           poetry run -C model pytest \
-            --cov=pyrenew --cov-report term --cov-report xml model
+            --mpl --cov=pyrenew --cov-report term --cov-report xml model
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4

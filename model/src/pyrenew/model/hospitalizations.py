@@ -11,10 +11,10 @@ HospModelSample = namedtuple(
     "HospModelSample",
     [
         "Rt",
-        "infections",
+        "latent_infections",
         "IHR",
-        "latent",
-        "sampled",
+        "latent_admissions",
+        "sampled_admissions",
     ],
     defaults=[None, None, None, None, None],
 )
@@ -25,13 +25,13 @@ Attributes
 ----------
 Rt : float or None
     The reproduction number over time. Defaults to None.
-infections : ArrayLike or None
+latent_infections : ArrayLike or None
     The estimated number of new infections over time. Defaults to None.
 IHR : float or None
     The infected hospitalization rate. Defaults to None.
-latent : ArrayLike or None
+latent_admissions : ArrayLike or None
     The estimated latent hospitalizations. Defaults to None.
-sampled : ArrayLike or None
+sampled_admissions : ArrayLike or None
     The sampled or observed hospital admissions. Defaults to None.
 
 Notes
@@ -252,8 +252,8 @@ class HospitalizationsModel(Model):
 
         return HospModelSample(
             Rt=Rt,
-            infections=infections,
+            latent_infections=infections,
             IHR=IHR,
-            latent=latent,
-            sampled=sampled,
+            latent_admissions=latent,
+            sampled_admissions=sampled,
         )

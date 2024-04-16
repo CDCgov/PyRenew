@@ -2,7 +2,7 @@ install:
 	poetry install
 
 test:
-	poetry run pytest
+	poetry run pytest --mpl
 
 docs: docs/pyrenew_demo.md docs/getting-started.md \
 	docs/example-with-datasets.md
@@ -27,10 +27,16 @@ docs/notebooks:
 	quarto convert docs/example-with-datasets.qmd --output \
 		docs/example-with-datasets.ipynb
 
+test_images:
+	echo "Generating reference images for tests"
+	poetry run pytest --mpl-generate-path=src/test/reference_image
+
 clean:
 	rm -rf docs/*_files/
-	rm -f docs/getting-started.ipynb
-	rm -f docs/pyrenew_demo.ipynb
-	rm -f docs/example-with-datasets.ipynb
+	for i in .py, .md, .ipynb; do \
+		rm -f docs/getting-started.$$i; \
+		rm -f docs/pyrenew_demo.$$i; \
+		rm -f docs/example-with-datasets.$$i; \
+	done
 
-.PHONY: install test docs clean docs/notebooks docs/py
+.PHONY: install test docs clean docs/notebooks docs/py test_images
