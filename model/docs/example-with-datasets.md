@@ -12,6 +12,10 @@ from pyrenew.datasets import load_wastewater
 from pyrenew.model import HospitalizationsModel
 ```
 
+    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+
 ## Model definition
 
 In this section we provide the formal definition of the model. The

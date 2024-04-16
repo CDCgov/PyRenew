@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from collections import namedtuple
+from typing import Optional
 
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
@@ -11,7 +12,21 @@ RtInfectionsRenewalSample = namedtuple(
     ["Rt", "latent", "observed"],
     defaults=[None, None, None],
 )
-"""Output from RtInfectionsRenewalModel.sample()"""
+RtInfectionsRenewalSample.__doc__ = """
+A container for holding the output from RtInfectionsRenewalModel.sample().
+
+Attributes
+----------
+Rt : float or None
+    The reproduction number over time. Defaults to None.
+latent : ArrayLike or None
+    The estimated latent infections. Defaults to None.
+observed : ArrayLike or None
+    The observed infections. Defaults to None.
+
+Notes
+-----
+"""
 
 
 class RtInfectionsRenewalModel(Model):
@@ -35,15 +50,15 @@ class RtInfectionsRenewalModel(Model):
         ----------
         latent_infections : RandomVariable
             Infections latent process (e.g.,
-            pyrenew.latent.Infections.)
+            pyrenew.latent.Infections.).
         gen_int : RandomVariable
-            Generation interval.
+            The generation interval.
         I0 : RandomVariable
-            Initial infections.
+            The initial infections.
         Rt_process : RandomVariable
             The sample function of the process should return a tuple where the
             first element is the drawn Rt.
-        observed_infections : RandomVariable, optional
+        observed_infections : RandomVariable
             Infections observation process (e.g.,
             pyrenew.observations.Poisson.).
 
@@ -74,6 +89,25 @@ class RtInfectionsRenewalModel(Model):
         observed_infections,
         Rt_process,
     ) -> None:
+        """
+        Verifies types and status (RV) of the generation interval, initial
+        infections, latent and observed infections, and the Rt process.
+
+        Parameters
+        ----------
+        latent_hospitalizations : ArrayLike
+            The latent process for the hospitalizations.
+        observed_hospitalizations : ArrayLike
+            The observed hospitalizations.
+
+        Returns
+        -------
+        None
+
+        See Also
+        --------
+        _assert_sample_and_rtype : Perform type-checking and verify RV
+        """
         _assert_sample_and_rtype(gen_int, skip_if_none=False)
         _assert_sample_and_rtype(i0, skip_if_none=False)
         _assert_sample_and_rtype(latent_infections, skip_if_none=False)
@@ -85,32 +119,124 @@ class RtInfectionsRenewalModel(Model):
         self,
         **kwargs,
     ) -> tuple:
+        """
+        Samples the Rt process
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal
+            sample_rt calls, should there be any.
+
+        Returns
+        -------
+        tuple
+
+        Notes
+        -----
+        TODO: More information in Returns.
+        """
         return self.Rt_process.sample(**kwargs)
 
     def sample_gen_int(
         self,
         **kwargs,
     ) -> tuple:
+        """
+        Samples the generation interval
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal
+            sample_gen_int calls, should there be any.
+
+        Returns
+        -------
+        tuple
+
+        Notes
+        -----
+        TODO: More information in Returns.
+        """
         return self.gen_int.sample(**kwargs)
 
     def sample_i0(
         self,
         **kwargs,
     ) -> tuple:
+        """
+        Samples the initial infections
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal
+            sample_i0 calls, should there be any.
+
+        Returns
+        -------
+        tuple
+
+        Notes
+        -----
+        TODO: More information in Returns.
+        """
         return self.i0.sample(**kwargs)
 
     def sample_infections_latent(
         self,
         **kwargs,
     ) -> tuple:
+        """
+        Samples the latent infections
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal
+            sample_infections_latent calls, should there be any.
+
+        Returns
+        -------
+        tuple
+
+        Notes
+        -----
+        TODO: More information in Returns.
+        """
         return self.latent_infections.sample(**kwargs)
 
     def sample_infections_obs(
         self,
         predicted: ArrayLike,
-        observed_infections: ArrayLike = None,
+        observed_infections: Optional[ArrayLike] = None,
         **kwargs,
     ) -> tuple:
+        """Sample number of hospitalizations
+
+        Parameters
+        ----------
+        predicted : ArrayLike
+            The predicted infecteds.
+        observed_hospitalizations : ArrayLike, optional
+            The observed values of hospital admissions, if any, for inference. Defaults to None.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal
+            sample() calls, should there be any.
+
+        Returns
+        -------
+        tuple
+
+        See Also
+        --------
+        observed_infections.sample : For sampling observed infections
+
+        Notes
+        -----
+        TODO: Include example(s) here.
+        """
         return self.observed_infections.sample(
             predicted=predicted,
             obs=observed_infections,
@@ -120,7 +246,7 @@ class RtInfectionsRenewalModel(Model):
     def sample(
         self,
         n_timepoints: int,
-        observed_infections: ArrayLike = None,
+        observed_infections: Optional[ArrayLike] = None,
         **kwargs,
     ) -> RtInfectionsRenewalSample:
         """Sample from the Basic Renewal Model
@@ -132,12 +258,16 @@ class RtInfectionsRenewalModel(Model):
         observed_infections : ArrayLike, optional
             Observed infections.
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal `sample()`
+            Additional keyword arguments passed through to internal sample()
             calls, if any
 
         Returns
         -------
         RtInfectionsRenewalSample
+
+        Notes
+        -----
+        TODO: Add See Also.
         """
 
         # Sampling from Rt (possibly with a given Rt, depending on
