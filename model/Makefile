@@ -29,7 +29,7 @@ docs/notebooks:
 
 test_images:
 	echo "Generating reference images for tests"
-	poetry run pytest --mpl-generate-path=src/test/reference_image
+	poetry run pytest --mpl-generate-path=src/test/baseline
 
 clean:
 	rm -rf docs/*_files/
