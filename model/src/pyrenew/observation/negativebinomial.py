@@ -68,6 +68,7 @@ class NegativeBinomialObservation(RandomVariable):
     def sample(
         self,
         predicted: ArrayLike,
+        name: str | None = None,
         obs: ArrayLike | None = None,
         **kwargs,
     ) -> tuple:
@@ -79,6 +80,9 @@ class NegativeBinomialObservation(RandomVariable):
             Mean parameter of the negative binomial distribution.
         obs : ArrayLike, optional
             Observed data, by default None.
+        name : str, optional
+            Name of the random variable if other than that defined during
+            construction, by default None (self.parameter_name).
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample calls, should there be any.
 
@@ -88,10 +92,13 @@ class NegativeBinomialObservation(RandomVariable):
         """
         concentration = self.sample_prior()
 
+        if name is None:
+            name = self.parameter_name
+
         return (
             numpyro.sample(
-                self.parameter_name,
-                dist.NegativeBinomial2(
+                name=name,
+                fn=dist.NegativeBinomial2(
                     mean=predicted + self.eps,
                     concentration=concentration,
                 ),

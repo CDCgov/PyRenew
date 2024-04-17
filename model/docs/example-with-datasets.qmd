@@ -20,7 +20,7 @@ $$
 h(t) \sim \text{HospDist}\left(H(t)\right)
 $$
 
-Where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$. The distribution $\text{HospDist}$ can be any discrete distribution, but we will use a negative binomial distribution.
+Where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$. The distribution $\text{HospDist}$ is discrete. For this example, we will use a negative binomial distribution.
 
 The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to hospitalization rate. The latent infections are modeled as a renewal process:
 
@@ -84,7 +84,7 @@ plt.show()
 
 ## Building the model
 
-First, we will extract two datasets that we will use as deterministic quantities, the generation interval and the infection to hospitalization interval.
+First, we will extract two datasets we will use as deterministic quantities: the generation interval and the infection to hospitalization interval.
 
 ```{python}
 #| label: data-extract
@@ -148,7 +148,9 @@ I0 = Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=0.5))
 
 # Generation interval and Rt
 gen_int = DeterministicPMF(gen_int)
-process = RtRandomWalkProcess()
+process = RtRandomWalkProcess(
+    Rt_rw_dist=dist.Normal(0, 0.1)
+)
 
 # The observation model
 obs = NegativeBinomialObservation(concentration_prior=1.0)
@@ -224,19 +226,55 @@ model.run(
 )
 ```
 
+We can use the `plot_posterior` method to visualize the results[^capture]:
+
+[^capture]: The output is captured to avoid `quarto` from displaying the output twice.
 
 ```{python}
 #| label: output-hospital admissions
 #| fig-cap: Hospital Admissions posterior distribution
 #| fig-cap-location: bottom
-model.plot_posterior(
+out = model.plot_posterior(
     var="predicted_hospitalizations",
     ylab="Hospital Admissions",
     obs_signal=dat["daily_hosp_admits"].to_numpy(),
 )
 ```
 
-The first half of the model is not looking good. We can try to improve the model by incorporating weekday effects. The following section will show how to do this.
+The first half of the model is not looking good. The reason is that the infection to hospitalization interval PMF makes it unlikely to observe admissions from the beginning. To solve this, we can use the padding argument to add a few days of missing data at the beginning of the model. The following code will add 14 days of missing data at the beginning of the model:
+
+```{python}
+#| label: model-fit-padding
+days_to_inpute = 14
+
+dat2 = dat["daily_hosp_admits"].to_numpy()
+
+# Add 14 Nas to the beginning of dat2
+dat2 = np.hstack((np.repeat(np.nan, days_to_inpute), dat2))
+
+model.run(
+    num_samples=2000,
+    num_warmup=2000,
+    n_timepoints=dat2.shape[0] - 1,
+    observed_hospitalizations=dat2,
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
+    padding=days_to_inpute,
+)
+```
+
+And plotting the results:
+
+```{python}
+#| label: output-admissions-with-padding
+#| fig-cap: Hospital Admissions posterior distribution
+#| fig-cap-location: bottom
+out = model.plot_posterior(
+    var="predicted_hospitalizations",
+    ylab="Hospital Admissions",
+    obs_signal=dat2,
+)
+```
 
 ## Round 2: Incorporating weekday effects
 
@@ -298,29 +336,31 @@ model_weekday = HospitalizationsModel(
 )
 ```
 
-Running the model:
+Running the model (with the same padding as before):
 
 ```{python}
 #| label: model-2-run
 model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat.shape[0] - 1,
-    observed_hospitalizations=dat["daily_hosp_admits"].to_numpy(),
+    n_timepoints=dat2.shape[0] - 1,
+    observed_hospitalizations=dat2,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
+    padding=days_to_inpute,
 )
 ```
 
 And plotting the results:
 
 ```{python}
-#| label: output-hospital admissions-weekday
+#| label: output-admissions-padding-and-weekday
 #| fig-cap: Hospital Admissions posterior distribution
 #| fig-cap-location: bottom
-model_weekday.plot_posterior(
+#|
+out = model_weekday.plot_posterior(
     var="predicted_hospitalizations",
     ylab="Hospital Admissions",
-    obs_signal=dat["daily_hosp_admits"].to_numpy(),
+    obs_signal=dat2,
 )
 ```

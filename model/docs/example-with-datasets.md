@@ -26,8 +26,8 @@ $$
 
 Where $h(t)$ is the observed number of hospital admissions at time $t$,
 and $H(t)$ is the number of latent hospital admissions at time $t$. The
-distribution $\text{HospDist}$ can be any discrete distribution, but we
-will use a negative binomial distribution.
+distribution $\text{HospDist}$ is discrete. For this example, we will
+use a negative binomial distribution.
 
 The number of latent hospital admissions at time $t$ is a function of
 the number of latent infections at time $t$ and the infection to
@@ -135,8 +135,8 @@ id="plot-hospital-admissions" />
 
 ## Building the model
 
-First, we will extract two datasets that we will use as deterministic
-quantities, the generation interval and the infection to hospitalization
+First, we will extract two datasets we will use as deterministic
+quantities: the generation interval and the infection to hospitalization
 interval.
 
 ``` python
@@ -191,6 +191,10 @@ latent_hosp = HospitalAdmissions(
     )
 ```
 
+    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+
 The `inf_hosp_int` is a `DeterministicPMF` object that takes the
 infection to hospitalization interval as input. The `hosp_rate` is an
 `InfectHospRate` object that takes the infection to hospitalization rate
@@ -211,7 +215,9 @@ I0 = Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=0.5))
 
 # Generation interval and Rt
 gen_int = DeterministicPMF(gen_int)
-process = RtRandomWalkProcess()
+process = RtRandomWalkProcess(
+    Rt_rw_dist=dist.Normal(0, 0.1)
+)
 
 # The observation model
 obs = NegativeBinomialObservation(concentration_prior=1.0)
@@ -286,8 +292,10 @@ model.run(
 )
 ```
 
+We can use the `plot_posterior` method to visualize the results[^1]:
+
 ``` python
-model.plot_posterior(
+out = model.plot_posterior(
     var="predicted_hospitalizations",
     ylab="Hospital Admissions",
     obs_signal=dat["daily_hosp_admits"].to_numpy(),
@@ -297,9 +305,44 @@ model.plot_posterior(
 ![Hospital Admissions posterior
 distribution](example-with-datasets_files/figure-commonmark/output-hospital-admissions-output-1.png)
 
-The first half of the model is not looking good. We can try to improve
-the model by incorporating weekday effects. The following section will
-show how to do this.
+The first half of the model is not looking good. The reason is that the
+infection to hospitalization interval PMF makes it unlikely to observe
+admissions from the beginning. To solve this, we can use the padding
+argument to add a few days of missing data at the beginning of the
+model. The following code will add 14 days of missing data at the
+beginning of the model:
+
+``` python
+days_to_inpute = 14
+
+dat2 = dat["daily_hosp_admits"].to_numpy()
+
+# Add 14 Nas to the beginning of dat2
+dat2 = np.hstack((np.repeat(np.nan, days_to_inpute), dat2))
+
+model.run(
+    num_samples=2000,
+    num_warmup=2000,
+    n_timepoints=dat2.shape[0] - 1,
+    observed_hospitalizations=dat2,
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
+    padding=days_to_inpute,
+)
+```
+
+And plotting the results:
+
+``` python
+out = model.plot_posterior(
+    var="predicted_hospitalizations",
+    ylab="Hospital Admissions",
+    obs_signal=dat2,
+)
+```
+
+![Hospital Admissions posterior
+distribution](example-with-datasets_files/figure-commonmark/output-admissions-with-padding-output-1.png)
 
 ## Round 2: Incorporating weekday effects
 
@@ -371,28 +414,32 @@ model_weekday = HospitalizationsModel(
 )
 ```
 
-Running the model:
+Running the model (with the same padding as before):
 
 ``` python
 model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat.shape[0] - 1,
-    observed_hospitalizations=dat["daily_hosp_admits"].to_numpy(),
+    n_timepoints=dat2.shape[0] - 1,
+    observed_hospitalizations=dat2,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
+    padding=days_to_inpute,
 )
 ```
 
 And plotting the results:
 
 ``` python
-model_weekday.plot_posterior(
+out = model_weekday.plot_posterior(
     var="predicted_hospitalizations",
     ylab="Hospital Admissions",
-    obs_signal=dat["daily_hosp_admits"].to_numpy(),
+    obs_signal=dat2,
 )
 ```
 
 ![Hospital Admissions posterior
-distribution](example-with-datasets_files/figure-commonmark/output-hospital-admissions-weekday-output-1.png)
+distribution](example-with-datasets_files/figure-commonmark/output-admissions-padding-and-weekday-output-1.png)
+
+[^1]: The output is captured to avoid `quarto` from displaying the
+    output twice.

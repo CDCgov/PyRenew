@@ -2,6 +2,7 @@
 
 from collections import namedtuple
 
+import jax.numpy as jnp
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
@@ -160,6 +161,7 @@ class HospitalizationsModel(Model):
         self,
         predicted: ArrayLike,
         observed_hospitalizations: ArrayLike,
+        name: str | None = None,
         **kwargs,
     ) -> tuple:
         """Sample number of hospitalizations
@@ -170,6 +172,8 @@ class HospitalizationsModel(Model):
             The predicted hospitalizations.
         observed_hospitalizations : ArrayLike
             The observed hospitalization data (to fit).
+        name : str, optional
+            Name of the random variable. Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample_hospitalizations_obs calls, should there be any.
@@ -188,13 +192,17 @@ class HospitalizationsModel(Model):
         """
 
         return self.observed_hospitalizations.sample(
-            predicted=predicted, obs=observed_hospitalizations, **kwargs
+            predicted=predicted,
+            obs=observed_hospitalizations,
+            name=name,
+            **kwargs,
         )
 
     def sample(
         self,
         n_timepoints: int,
         observed_hospitalizations: ArrayLike | None = None,
+        padding: int = 0,
         **kwargs,
     ) -> HospModelSample:
         """
@@ -207,6 +215,9 @@ class HospitalizationsModel(Model):
         observed_hospitalizations : ArrayLike, optional
             The observed hospitalization data (passed to the basic renewal
             model). Defaults to None (simulation, rather than fit).
+        padding : int, optional
+            Number of padding timepoints to add to the beginning of the
+            simulation. Defaults to 0.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
             calls, should there be any.
@@ -230,6 +241,7 @@ class HospitalizationsModel(Model):
         Rt, infections, *_ = self.basic_renewal.sample(
             n_timepoints=n_timepoints,
             observed_infections=None,
+            padding=padding,
             **kwargs,
         )
 
@@ -244,11 +256,23 @@ class HospitalizationsModel(Model):
         )
 
         # Sampling the hospitalizations
-        sampled, *_ = self.sample_hospitalizations_obs(
-            predicted=latent,
-            observed_hospitalizations=observed_hospitalizations,
-            **kwargs,
-        )
+        if (observed_hospitalizations is not None) and (padding > 0):
+            sampled_imputed = jnp.repeat(jnp.nan, padding)
+
+            sampled_observed, *_ = self.sample_hospitalizations_obs(
+                predicted=latent[padding:],
+                observed_hospitalizations=observed_hospitalizations[padding:],
+                **kwargs,
+            )
+
+            sampled = jnp.hstack([sampled_imputed, sampled_observed])
+
+        else:
+            sampled, *_ = self.sample_hospitalizations_obs(
+                predicted=latent,
+                observed_hospitalizations=observed_hospitalizations,
+                **kwargs,
+            )
 
         return HospModelSample(
             Rt=Rt,

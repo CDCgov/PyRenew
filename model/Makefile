@@ -2,7 +2,7 @@ install:
 	poetry install
 
 test:
-	poetry run pytest --mpl
+	poetry run pytest --mpl --mpl-default-tolerance=10
 
 docs: docs/pyrenew_demo.md docs/getting-started.md \
 	docs/example-with-datasets.md

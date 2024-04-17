@@ -3,6 +3,7 @@
 from collections import namedtuple
 from typing import Optional
 
+import jax.numpy as jnp
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 
@@ -211,6 +212,7 @@ class RtInfectionsRenewalModel(Model):
         self,
         predicted: ArrayLike,
         observed_infections: Optional[ArrayLike] = None,
+        name: str | None = None,
         **kwargs,
     ) -> tuple:
         """Sample number of hospitalizations
@@ -221,6 +223,8 @@ class RtInfectionsRenewalModel(Model):
             The predicted infecteds.
         observed_hospitalizations : ArrayLike, optional
             The observed values of hospital admissions, if any, for inference. Defaults to None.
+        name : str, optional
+            Name of the random variable passed to the RandomVariable.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample() calls, should there be any.
@@ -240,6 +244,7 @@ class RtInfectionsRenewalModel(Model):
         return self.observed_infections.sample(
             predicted=predicted,
             obs=observed_infections,
+            name=name,
             **kwargs,
         )
 
@@ -247,6 +252,7 @@ class RtInfectionsRenewalModel(Model):
         self,
         n_timepoints: int,
         observed_infections: Optional[ArrayLike] = None,
+        padding: int = 0,
         **kwargs,
     ) -> RtInfectionsRenewalSample:
         """Sample from the Basic Renewal Model
@@ -257,6 +263,9 @@ class RtInfectionsRenewalModel(Model):
             Number of timepoints to sample.
         observed_infections : ArrayLike, optional
             Observed infections.
+        padding : int, optional
+            Number of padding timepoints to add to the beginning of the
+            simulation. Defaults to 0.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
             calls, if any
@@ -292,9 +301,22 @@ class RtInfectionsRenewalModel(Model):
         )
 
         # Using the predicted infections to sample from the observation process
-        sampled, *_ = self.sample_infections_obs(
-            predicted=latent, observed_infections=observed_infections, **kwargs
-        )
+        if (observed_infections is not None) and (padding > 0):
+            sampled_pad = jnp.zeros(padding)
+
+            sampled_obs, *_ = self.sample_infections_obs(
+                predicted=latent[padding:],
+                observed_infections=observed_infections[padding],
+                **kwargs,
+            )
+
+            sampled = jnp.concatenate([sampled_pad, sampled_obs])
+        else:
+            sampled, *_ = self.sample_infections_obs(
+                predicted=latent,
+                observed_infections=observed_infections,
+                **kwargs,
+            )
 
         return RtInfectionsRenewalSample(
             Rt=Rt,
