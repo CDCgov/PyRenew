@@ -302,7 +302,7 @@ class RtInfectionsRenewalModel(Model):
 
         # Using the predicted infections to sample from the observation process
         if (observed_infections is not None) and (padding > 0):
-            sampled_pad = jnp.zeros(padding)
+            sampled_pad = jnp.repeat(jnp.nan, padding)
 
             sampled_obs, *_ = self.sample_infections_obs(
                 predicted=latent[padding:],
@@ -310,7 +310,8 @@ class RtInfectionsRenewalModel(Model):
                 **kwargs,
             )
 
-            sampled = jnp.concatenate([sampled_pad, sampled_obs])
+            sampled = jnp.hstack([sampled_pad, sampled_obs])
+
         else:
             sampled, *_ = self.sample_infections_obs(
                 predicted=latent,
