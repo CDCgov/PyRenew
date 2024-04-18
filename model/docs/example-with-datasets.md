@@ -190,10 +190,6 @@ latent_hosp = latent.HospitalAdmissions(
     )
 ```
 
-    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
-      from .autonotebook import tqdm as notebook_tqdm
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
-
 The `inf_hosp_int` is a `DeterministicPMF` object that takes the
 infection to hospitalization interval as input. The `hosp_rate` is an
 `InfectHospRate` object that takes the infection to hospitalization rate
@@ -303,10 +299,20 @@ distribution](example-with-datasets_files/figure-commonmark/output-hospital-admi
 
 The first half of the model is not looking good. The reason is that the
 infection to hospitalization interval PMF makes it unlikely to observe
-admissions from the beginning. To solve this, we can use the padding
-argument to add a few days of missing data at the beginning of the
-model. The following code will add 21 days of missing data at the
-beginning of the model:
+admissions from the beginning. The following section shows how to fix
+this.
+
+## Padding the model
+
+We can use the padding argument to solve the overestimation of
+hospitalizations in the first half of the model. By setting
+`padding > 0`, the model then assumes that the first `padding`
+observations are missing; thus, only observations after `padding` will
+count towards the likelihood of the model. In practice, the model will
+extend the estimated Rt and latent infections by `padding` days, given
+time to adjust to the observed data. The following code will add 21 days
+of missing data at the beginning of the model and re-estimate it with
+`padding = 21`:
 
 ``` python
 days_to_inpute = 21
@@ -323,7 +329,7 @@ hosp_model.run(
     observed_hospitalizations=dat2,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
-    padding=days_to_inpute,
+    padding=days_to_inpute, # Padding the model
 )
 ```
 
@@ -339,6 +345,18 @@ out = hosp_model.plot_posterior(
 
 ![Hospital Admissions posterior
 distribution](example-with-datasets_files/figure-commonmark/output-admissions-with-padding-output-1.png)
+
+We can also take a look at the latent infections:
+
+``` python
+out2 = hosp_model.plot_posterior(
+    var="latent_infections",
+    ylab="Latent Infections"
+)
+```
+
+![Hospital Admissions posterior
+distribution](example-with-datasets_files/figure-commonmark/output-infections-with-padding-output-1.png)
 
 ## Round 2: Incorporating weekday effects
 

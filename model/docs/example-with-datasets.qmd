@@ -235,7 +235,11 @@ out = hosp_model.plot_posterior(
 )
 ```
 
-The first half of the model is not looking good. The reason is that the infection to hospitalization interval PMF makes it unlikely to observe admissions from the beginning. To solve this, we can use the padding argument to add a few days of missing data at the beginning of the model. The following code will add 21 days of missing data at the beginning of the model:
+The first half of the model is not looking good. The reason is that the infection to hospitalization interval PMF makes it unlikely to observe admissions from the beginning. The following section shows how to fix this.
+
+## Padding the model
+
+We can use the padding argument to solve the overestimation of hospitalizations in the first half of the model. By setting `padding > 0`, the model then assumes that the first `padding` observations are missing; thus, only observations after `padding` will count towards the likelihood of the model. In practice, the model will extend the estimated Rt and latent infections by `padding` days, given time to adjust to the observed data. The following code will add 21 days of missing data at the beginning of the model and re-estimate it with `padding = 21`:
 
 ```{python}
 #| label: model-fit-padding
@@ -253,7 +257,7 @@ hosp_model.run(
     observed_hospitalizations=dat2,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
-    padding=days_to_inpute,
+    padding=days_to_inpute, # Padding the model
 )
 ```
 
@@ -267,6 +271,18 @@ out = hosp_model.plot_posterior(
     var="predicted_hospitalizations",
     ylab="Hospital Admissions",
     obs_signal=dat2,
+)
+```
+
+We can also take a look at the latent infections:
+
+```{python}
+#| label: output-infections-with-padding
+#| fig-cap: Hospital Admissions posterior distribution
+#| fig-cap-location: bottom
+out2 = hosp_model.plot_posterior(
+    var="latent_infections",
+    ylab="Latent Infections"
 )
 ```
 
