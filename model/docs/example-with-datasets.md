@@ -6,11 +6,6 @@ fitted using data from the Pyrenew package, particularly the wastewater
 dataset. The CFA wastewater team created this dataset, which contains
 simulated data.
 
-``` python
-import polars as pl
-from pyrenew.datasets import load_wastewater
-```
-
 ## Model definition
 
 In this section, we provide the formal definition of the model. The
@@ -27,7 +22,11 @@ $$
 Where $h(t)$ is the observed number of hospital admissions at time $t$,
 and $H(t)$ is the number of latent hospital admissions at time $t$. The
 distribution $\text{HospDist}$ is discrete. For this example, we will
-use a negative binomial distribution.
+use a negative binomial distribution:
+
+$$
+h(t) \sim \text{NegativeNinomial}\left(\text{concentration} = 1, \text{logits} = \log(H(t))\right)
+$$
 
 The number of latent hospital admissions at time $t$ is a function of
 the number of latent infections at time $t$ and the infection to
@@ -35,7 +34,10 @@ hospitalization rate. The latent infections are modeled as a renewal
 process:
 
 $$
-I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t - \tau)
+\begin{align*}
+I(t) &= R(t) \times \sum_{\tau < t} I(\tau) g(t - \tau) \\
+I(0) &\sim \text{LogNormal}(\mu = \log(80/0.05), \sigma = 1.5)
+\end{align*}
 $$
 
 The reproductive number $R(t)$ is modeled as a random walk process:
@@ -43,7 +45,7 @@ The reproductive number $R(t)$ is modeled as a random walk process:
 $$
 \begin{align*}
 R(t) & = R(t-1) + \epsilon\\
-\log{\epsilon} & \sim \text{Normal}(0, \sigma) \\
+\log{\epsilon} & \sim \text{Normal}(\mu=0, \sigma=0.1) \\
 R(0) &\sim \text{TruncatedNormal}(\text{loc}=1.2, \text{scale}=0.2, \text{min}=0)
 \end{align*}
 $$
@@ -53,7 +55,10 @@ $$
 We start by loading the data and inspecting the first five rows.
 
 ``` python
-dat = load_wastewater()
+import polars as pl
+from pyrenew import datasets
+
+dat = datasets.load_wastewater()
 dat.head(5)
 ```
 
@@ -78,7 +83,7 @@ dat.head(5)
 </div>
 
 The data shows one entry per site, but the way it was simulated, the
-number of admissions is the same across sites. Thus we will only keep
+number of admissions is the same across sites. Thus, we will only keep
 the first observation per day.
 
 ``` python
@@ -140,13 +145,8 @@ quantities: the generation interval and the infection to hospitalization
 interval.
 
 ``` python
-from pyrenew.datasets import (
-    load_generation_interval,
-    load_infection_admission_interval,
-)
-
-gen_int = load_generation_interval()
-inf_hosp_int = load_infection_admission_interval()
+gen_int = datasets.load_generation_interval()
+inf_hosp_int = datasets.load_infection_admission_interval()
 
 # We only need the probability_mass column of each dataset
 gen_int = gen_int["probability_mass"].to_numpy()
@@ -174,18 +174,17 @@ With these two in hand, we can start building the model. First, we will
 define the latent hospital admissions:
 
 ``` python
-from pyrenew.latent import HospitalAdmissions, InfectHospRate
-from pyrenew.deterministic import DeterministicPMF
+from pyrenew import latent, deterministic
 import jax.numpy as jnp
 import numpyro.distributions as dist
 
-inf_hosp_int = DeterministicPMF(inf_hosp_int)
+inf_hosp_int = deterministic.DeterministicPMF(inf_hosp_int)
 
-hosp_rate = InfectHospRate(
-    dist=dist.LogNormal(jnp.log(0.05), 0.01)
+hosp_rate = latent.InfectHospRate(
+    dist=dist.LogNormal(jnp.log(0.05), 0.1)
 )
 
-latent_hosp = HospitalAdmissions(
+latent_hosp = latent.HospitalAdmissions(
     infection_to_admission_interval=inf_hosp_int,
     infect_hosp_rate_dist=hosp_rate,
     )
@@ -204,36 +203,33 @@ and the infection to hospitalization rate. Now, we can define the rest
 of the other components:
 
 ``` python
-from pyrenew.model import HospitalizationsModel
-from pyrenew.latent import Infections, Infections0
-from pyrenew.process import RtRandomWalkProcess
-from pyrenew.observation import NegativeBinomialObservation
+from pyrenew import model, process, observation
 
 # Infection process
-latent_inf = Infections()
-I0 = Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=0.5))
+latent_inf = latent.Infections()
+I0 = latent.Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=1.5))
 
 # Generation interval and Rt
-gen_int = DeterministicPMF(gen_int)
-process = RtRandomWalkProcess(
+gen_int = deterministic.DeterministicPMF(gen_int)
+rtproc = process.RtRandomWalkProcess(
     Rt_rw_dist=dist.Normal(0, 0.1)
 )
 
 # The observation model
-obs = NegativeBinomialObservation(concentration_prior=1.0)
+obs = observation.NegativeBinomialObservation(concentration_prior=1.0)
 ```
 
 Notice all the components are `RandomVariable` instances. We can now
 build the model:
 
 ``` python
-model = HospitalizationsModel(
+hosp_model = model.HospitalizationsModel(
     latent_infections=latent_inf,
     latent_hospitalizations=latent_hosp,
     I0=I0,
     gen_int=gen_int,
-    Rt_process=process,
-    observed_hospitalizations=obs,
+    Rt_process=rtproc,
+    observation_process=obs,
 )
 ```
 
@@ -247,7 +243,7 @@ timeframe = 120
 
 np.random.seed(223)
 with npro.handlers.seed(rng_seed = np.random.randint(1, timeframe)):
-    sim_data = model.sample(n_timepoints=timeframe)
+    sim_data = hosp_model.sample(n_timepoints=timeframe)
 ```
 
 ``` python
@@ -282,7 +278,7 @@ model object. The two inputs this model requires are `n_timepoints` and
 ``` python
 import jax
 
-model.run(
+hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
     n_timepoints=dat.shape[0] - 1,
@@ -295,7 +291,7 @@ model.run(
 We can use the `plot_posterior` method to visualize the results[^1]:
 
 ``` python
-out = model.plot_posterior(
+out = hosp_model.plot_posterior(
     var="predicted_hospitalizations",
     ylab="Hospital Admissions",
     obs_signal=dat["daily_hosp_admits"].to_numpy(),
@@ -309,18 +305,18 @@ The first half of the model is not looking good. The reason is that the
 infection to hospitalization interval PMF makes it unlikely to observe
 admissions from the beginning. To solve this, we can use the padding
 argument to add a few days of missing data at the beginning of the
-model. The following code will add 14 days of missing data at the
+model. The following code will add 21 days of missing data at the
 beginning of the model:
 
 ``` python
-days_to_inpute = 14
+days_to_inpute = 21
 
 dat2 = dat["daily_hosp_admits"].to_numpy()
 
-# Add 14 Nas to the beginning of dat2
+# Add 21 Nas to the beginning of dat2
 dat2 = np.hstack((np.repeat(np.nan, days_to_inpute), dat2))
 
-model.run(
+hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
     n_timepoints=dat2.shape[0] - 1,
@@ -334,7 +330,7 @@ model.run(
 And plotting the results:
 
 ``` python
-out = model.plot_posterior(
+out = hosp_model.plot_posterior(
     var="predicted_hospitalizations",
     ylab="Hospital Admissions",
     obs_signal=dat2,
@@ -356,10 +352,10 @@ deviation of 0.5. The distribution will be truncated between 0.1 and
 dataset.
 
 ``` python
-from pyrenew.metaclass import RandomVariable
+from pyrenew import metaclass
 import numpyro as npro
 
-class WeekdayEffect(RandomVariable):
+class WeekdayEffect(metaclass.RandomVariable):
     """Weekday effect distribution"""
     def __init__(self, len: int):
         """ Initialize the weekday effect distribution
@@ -398,26 +394,26 @@ step, which happens before the model is run. With the new weekday
 effect, we can rebuild the latent hospitalization model:
 
 ``` python
-latent_hosp_wday_effect = HospitalAdmissions(
+latent_hosp_wday_effect = latent.HospitalAdmissions(
     infection_to_admission_interval=inf_hosp_int,
     infect_hosp_rate_dist=hosp_rate,
     weekday_effect_dist=weekday_effect,
     )
 
-model_weekday = HospitalizationsModel(
+hosp_model_weekday = model.HospitalizationsModel(
     latent_infections=latent_inf,
     latent_hospitalizations=latent_hosp_wday_effect,
     I0=I0,
     gen_int=gen_int,
-    Rt_process=process,
-    observed_hospitalizations=obs,
+    Rt_process=rtproc,
+    observation_process=obs,
 )
 ```
 
 Running the model (with the same padding as before):
 
 ``` python
-model_weekday.run(
+hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
     n_timepoints=dat2.shape[0] - 1,
@@ -431,7 +427,7 @@ model_weekday.run(
 And plotting the results:
 
 ``` python
-out = model_weekday.plot_posterior(
+out = hosp_model_weekday.plot_posterior(
     var="predicted_hospitalizations",
     ylab="Hospital Admissions",
     obs_signal=dat2,

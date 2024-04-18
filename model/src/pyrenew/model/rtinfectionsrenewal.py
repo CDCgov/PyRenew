@@ -43,7 +43,7 @@ class RtInfectionsRenewalModel(Model):
         gen_int: RandomVariable,
         I0: RandomVariable,
         Rt_process: RandomVariable,
-        observed_infections: RandomVariable,
+        observation_process: RandomVariable,
     ) -> None:
         """Default constructor
 
@@ -59,7 +59,7 @@ class RtInfectionsRenewalModel(Model):
         Rt_process : RandomVariable
             The sample function of the process should return a tuple where the
             first element is the drawn Rt.
-        observed_infections : RandomVariable
+        observation_process : RandomVariable
             Infections observation process (e.g.,
             pyrenew.observations.Poisson.).
 
@@ -72,14 +72,14 @@ class RtInfectionsRenewalModel(Model):
             gen_int=gen_int,
             i0=I0,
             latent_infections=latent_infections,
-            observed_infections=observed_infections,
+            observation_process=observation_process,
             Rt_process=Rt_process,
         )
 
         self.gen_int = gen_int
         self.i0 = I0
         self.latent_infections = latent_infections
-        self.observed_infections = observed_infections
+        self.observation_process = observation_process
         self.Rt_process = Rt_process
 
     @staticmethod
@@ -87,7 +87,7 @@ class RtInfectionsRenewalModel(Model):
         gen_int,
         i0,
         latent_infections,
-        observed_infections,
+        observation_process,
         Rt_process,
     ) -> None:
         """
@@ -112,7 +112,7 @@ class RtInfectionsRenewalModel(Model):
         _assert_sample_and_rtype(gen_int, skip_if_none=False)
         _assert_sample_and_rtype(i0, skip_if_none=False)
         _assert_sample_and_rtype(latent_infections, skip_if_none=False)
-        _assert_sample_and_rtype(observed_infections, skip_if_none=True)
+        _assert_sample_and_rtype(observation_process, skip_if_none=True)
         _assert_sample_and_rtype(Rt_process, skip_if_none=False)
         return None
 
@@ -233,15 +233,11 @@ class RtInfectionsRenewalModel(Model):
         -------
         tuple
 
-        See Also
-        --------
-        observed_infections.sample : For sampling observed infections
-
         Notes
         -----
         TODO: Include example(s) here.
         """
-        return self.observed_infections.sample(
+        return self.observation_process.sample(
             predicted=predicted,
             obs=observed_infections,
             name=name,
@@ -301,23 +297,26 @@ class RtInfectionsRenewalModel(Model):
         )
 
         # Using the predicted infections to sample from the observation process
-        if (observed_infections is not None) and (padding > 0):
-            sampled_pad = jnp.repeat(jnp.nan, padding)
+        if self.observation_process is not None:
+            if (observed_infections is not None) and (padding > 0):
+                sampled_pad = jnp.repeat(jnp.nan, padding)
 
-            sampled_obs, *_ = self.sample_infections_obs(
-                predicted=latent[padding:],
-                observed_infections=observed_infections[padding],
-                **kwargs,
-            )
+                sampled_obs, *_ = self.sample_infections_obs(
+                    predicted=latent[padding:],
+                    observed_infections=observed_infections[padding:],
+                    **kwargs,
+                )
 
-            sampled = jnp.hstack([sampled_pad, sampled_obs])
+                sampled = jnp.hstack([sampled_pad, sampled_obs])
 
+            else:
+                sampled, *_ = self.sample_infections_obs(
+                    predicted=latent,
+                    observed_infections=observed_infections,
+                    **kwargs,
+                )
         else:
-            sampled, *_ = self.sample_infections_obs(
-                predicted=latent,
-                observed_infections=observed_infections,
-                **kwargs,
-            )
+            sampled = None
 
         return RtInfectionsRenewalSample(
             Rt=Rt,

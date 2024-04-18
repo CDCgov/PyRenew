@@ -255,13 +255,23 @@ class Model(metaclass=ABCMeta):
     def plot_posterior(
         self,
         var: list,
-        ylab: str = "Signal",
         obs_signal: jax.typing.ArrayLike = None,
+        xlab: str = None,
+        ylab: str = "Signal",
+        samples: int = 50,
+        figsize: list = [4, 5],
+        draws_col: str = "darkblue",
+        obs_col: str = "black",
     ) -> plt.Figure:
         """A wrapper of pyrenew.mcmcutils.plot_posterior"""
         return plot_posterior(
             var=var,
             draws=self.spread_draws([(var, "time")]),
+            xlab=xlab,
             ylab=ylab,
+            samples=samples,
             obs_signal=obs_signal,
+            figsize=figsize,
+            draws_col=draws_col,
+            obs_col=obs_col,
         )

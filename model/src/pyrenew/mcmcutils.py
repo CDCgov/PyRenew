@@ -83,7 +83,10 @@ def plot_posterior(
     obs_signal: ArrayLike = None,
     ylab: str = None,
     xlab: str = "Time",
-    samples: int = 25,
+    samples: int = 50,
+    figsize: list = [4, 5],
+    draws_col: str = "darkblue",
+    obs_col: str = "black",
 ) -> plt.Figure:
     """
     Plot the posterior distribution of a variable
@@ -102,6 +105,11 @@ def plot_posterior(
         Label for the x-axis
     samples : int, optional
         Number of samples to plot
+    figsize : list, optional
+        Size of the figure
+    draws_col : str, optional
+        Color of the draws
+    obs_col : str, optional
 
     Returns
     -------
@@ -111,11 +119,11 @@ def plot_posterior(
     if ylab is None:
         ylab = var
 
-    fig, ax = plt.subplots(figsize=[4, 5])
+    fig, ax = plt.subplots(figsize=figsize)
 
     # Reference signal (if any)
     if obs_signal is not None:
-        ax.plot(obs_signal, color="black")
+        ax.plot(obs_signal, color=obs_col)
 
     samp_ids = np.random.randint(size=samples, low=0, high=999)
 
@@ -126,7 +134,7 @@ def plot_posterior(
         ax.plot(
             sub_samps.select("time").to_numpy(),
             sub_samps.select(var).to_numpy(),
-            color="darkblue",
+            color=draws_col,
             alpha=0.1,
         )
 
@@ -135,10 +143,10 @@ def plot_posterior(
     ax.set_ylabel(ylab)
 
     # Adding a legend
-    ax.plot([], [], color="darkblue", alpha=0.9, label="Posterior samples")
+    ax.plot([], [], color=draws_col, alpha=0.9, label="Posterior samples")
 
     if obs_signal is not None:
-        ax.plot([], [], color="black", label="Observed signal")
+        ax.plot([], [], color=obs_col, label="Observed signal")
 
     ax.legend()
 

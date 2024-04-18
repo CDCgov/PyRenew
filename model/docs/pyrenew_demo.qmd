@@ -109,7 +109,7 @@ latent_hospitalizations = HospitalAdmissions(
     )
 
 # 5) An observation process for the hospitalizations
-observed_hospitalizations = PoissonObservation()
+obs_process = PoissonObservation()
 
 # 6) A random walk process (it could be deterministic using
 # pyrenew.process.DeterministicProcess())
@@ -124,7 +124,7 @@ hospmodel = HospitalizationsModel(
     gen_int=gen_int,
     I0=I0,
     latent_hospitalizations=latent_hospitalizations,
-    observed_hospitalizations=observed_hospitalizations,
+    observation_process=obs_process,
     latent_infections=latent_infections,
     Rt_process=Rt_process
     )

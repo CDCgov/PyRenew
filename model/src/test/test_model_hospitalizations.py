@@ -86,7 +86,7 @@ def test_model_hosp_no_obs_model():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=DeterministicVariable(0),
+        observation_process=DeterministicVariable(0),
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -165,7 +165,7 @@ def test_model_hosp_with_obs_model():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        observation_process=observed_hospitalizations,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -255,7 +255,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        observation_process=observed_hospitalizations,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -352,7 +352,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        observation_process=observed_hospitalizations,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)

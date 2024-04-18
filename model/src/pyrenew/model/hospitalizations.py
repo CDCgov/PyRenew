@@ -4,7 +4,6 @@ from collections import namedtuple
 
 import jax.numpy as jnp
 from numpy.typing import ArrayLike
-from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
 
@@ -56,7 +55,7 @@ class HospitalizationsModel(Model):
         gen_int: RandomVariable,
         I0: RandomVariable,
         Rt_process: RandomVariable,
-        observed_hospitalizations: RandomVariable,
+        observation_process: RandomVariable,
     ) -> None:
         """
         Default constructor
@@ -73,7 +72,7 @@ class HospitalizationsModel(Model):
             Initial infections (passed to RtInfectionsRenewalModel)
         Rt_process : RandomVariable
             Rt process  (passed to RtInfectionsRenewalModel).
-        observed_hospitalizations : RandomVariable, optional
+        observation_process : RandomVariable, optional
             Observation process for the hospitalizations.
 
         Returns
@@ -88,19 +87,19 @@ class HospitalizationsModel(Model):
             gen_int=gen_int,
             I0=I0,
             latent_infections=latent_infections,
-            observed_infections=DeterministicVariable(0),
+            observation_process=None,
             Rt_process=Rt_process,
         )
 
         HospitalizationsModel.validate(
-            latent_hospitalizations, observed_hospitalizations
+            latent_hospitalizations, observation_process
         )
 
         self.latent_hospitalizations = latent_hospitalizations
-        self.observed_hospitalizations = observed_hospitalizations
+        self.observation_process = observation_process
 
     @staticmethod
-    def validate(latent_hospitalizations, observed_hospitalizations) -> None:
+    def validate(latent_hospitalizations, observation_process) -> None:
         """
         Verifies types and status (RV) of latent and observed hospitalizations
 
@@ -108,7 +107,7 @@ class HospitalizationsModel(Model):
         ----------
         latent_hospitalizations : ArrayLike
             The latent process for the hospitalizations.
-        observed_hospitalizations : ArrayLike
+        observation_process : ArrayLike
             The observed hospitalizations.
 
         Returns
@@ -120,7 +119,7 @@ class HospitalizationsModel(Model):
         _assert_sample_and_rtype : Perform type-checking and verify RV
         """
         _assert_sample_and_rtype(latent_hospitalizations, skip_if_none=False)
-        _assert_sample_and_rtype(observed_hospitalizations, skip_if_none=False)
+        _assert_sample_and_rtype(observation_process, skip_if_none=False)
         return None
 
     def sample_hospitalizations_latent(
@@ -182,16 +181,12 @@ class HospitalizationsModel(Model):
         -------
         tuple
 
-        See Also
-        --------
-        observed_hospitalizations.sample : For sampling observed hospitalizations
-
         Notes
         -----
         TODO: Include example(s) here.
         """
 
-        return self.observed_hospitalizations.sample(
+        return self.observation_process.sample(
             predicted=predicted,
             obs=observed_hospitalizations,
             name=name,
@@ -238,7 +233,7 @@ class HospitalizationsModel(Model):
         """
 
         # Getting the initial quantities from the basic model
-        Rt, infections, *_ = self.basic_renewal.sample(
+        basic_model = self.basic_renewal.sample(
             n_timepoints=n_timepoints,
             observed_infections=None,
             padding=padding,
@@ -251,7 +246,7 @@ class HospitalizationsModel(Model):
             latent,
             *_,
         ) = self.sample_hospitalizations_latent(
-            infections=infections,
+            infections=basic_model.latent_infections,
             **kwargs,
         )
 
@@ -275,8 +270,8 @@ class HospitalizationsModel(Model):
             )
 
         return HospModelSample(
-            Rt=Rt,
-            latent_infections=infections,
+            Rt=basic_model.Rt,
+            latent_infections=basic_model.latent_infections,
             IHR=IHR,
             latent_admissions=latent,
             sampled_admissions=sampled,

@@ -87,7 +87,7 @@ rt_proc = RtRandomWalkProcess()
 latent_infections = Infections()
 
 # (5) The observed infections process (with mean at the latent infections)
-observed_infections = PoissonObservation()
+observation_process = PoissonObservation()
 ```
 
 With these five pieces, we can build the basic renewal model:
@@ -98,7 +98,7 @@ model1 = RtInfectionsRenewalModel(
     I0                  = I0,
     Rt_process          = rt_proc,
     latent_infections   = latent_infections,
-    observed_infections = observed_infections,
+    observation_process = observation_process,
     )
 ```
 
@@ -114,7 +114,7 @@ flowchart TB
     i0["(2) I0\n(Infections0)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     inf["(4) latent_infections\n(Infections)"]
-    obs["(5) observed_infections\n(PoissonObservation)"]
+    obs["(5) observation_process\n(PoissonObservation)"]
 
     model1["model1\n(RtInfectionsRenewalModel)"]
 
@@ -241,7 +241,7 @@ flowchart LR
     models((Model\nmetaclass))
 
     subgraph observations[Observations module]
-        obs["observed_infections\n(PoissonObservation)"]
+        obs["observation_process\n(PoissonObservation)"]
     end
 
     subgraph latent[Latent module]

@@ -34,7 +34,7 @@ def test_model_basicrenewal_no_obs_model():
         I0=I0,
         latent_infections=latent_infections,
         Rt_process=rt,
-        observed_infections=DeterministicVariable(1),
+        observation_process=DeterministicVariable(1),
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -82,7 +82,7 @@ def test_model_basicrenewal_with_obs_model():
         I0=I0,
         gen_int=gen_int,
         latent_infections=latent_infections,
-        observed_infections=observed_infections,
+        observation_process=observed_infections,
         Rt_process=rt,
     )
 
@@ -127,7 +127,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:
         I0=I0,
         gen_int=gen_int,
         latent_infections=latent_infections,
-        observed_infections=observed_infections,
+        observation_process=observed_infections,
         Rt_process=rt,
     )
 
@@ -165,7 +165,7 @@ def test_model_basicrenewal_padding() -> None:
         I0=I0,
         gen_int=gen_int,
         latent_infections=latent_infections,
-        observed_infections=observed_infections,
+        observation_process=observed_infections,
         Rt_process=rt,
     )
 
@@ -183,7 +183,7 @@ def test_model_basicrenewal_padding() -> None:
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
         observed_infections=new_obs,
-        n_timepoints=35,
+        n_timepoints=30,
         padding=5,
     )
 
