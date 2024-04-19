@@ -18,8 +18,8 @@ class DeterministicVariable(RandomVariable):
         ----------
         vars : tuple
             A tuple with arraylike objects.
-        label : str
-            A label to assign to the process.
+        label : str, optional
+            A label to assign to the process. Defaults to "a_random_variable"
 
         Returns
         -------
@@ -34,6 +34,23 @@ class DeterministicVariable(RandomVariable):
 
     @staticmethod
     def validate(vars: tuple) -> None:
+        """
+        Validates inputted to DeterministicPMF
+
+        Parameters
+        ----------
+        vars : tuple
+            A tuple with arraylike objects.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        Exception
+            If the inputted vars object is not in fact a tuple. s
+        """
         if not isinstance(vars, tuple):
             raise Exception("vars is not a tuple")
 
