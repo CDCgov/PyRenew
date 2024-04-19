@@ -158,7 +158,7 @@ class HospitalAdmissions(RandomVariable):
 
     .. math::
 
-        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\\tau = 0}^{T_d} d(\tau) I(t-\tau)
+        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
 
     Where :math:`T_d` is the maximum delay from infection to hospitalization
     that we consider.

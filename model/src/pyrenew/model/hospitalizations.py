@@ -251,23 +251,28 @@ class HospitalizationsModel(Model):
         )
 
         # Sampling the hospitalizations
-        if (observed_hospitalizations is not None) and (padding > 0):
-            sampled_imputed = jnp.repeat(jnp.nan, padding)
+        if self.observation_process is not None:
+            if (observed_hospitalizations is not None) and (padding > 0):
+                sampled_na = jnp.repeat(jnp.nan, padding)
 
-            sampled_observed, *_ = self.sample_hospitalizations_obs(
-                predicted=latent[padding:],
-                observed_hospitalizations=observed_hospitalizations[padding:],
-                **kwargs,
-            )
+                sampled_observed, *_ = self.sample_hospitalizations_obs(
+                    predicted=latent[padding:],
+                    observed_hospitalizations=observed_hospitalizations[
+                        padding:
+                    ],
+                    **kwargs,
+                )
 
-            sampled = jnp.hstack([sampled_imputed, sampled_observed])
+                sampled = jnp.hstack([sampled_na, sampled_observed])
 
+            else:
+                sampled, *_ = self.sample_hospitalizations_obs(
+                    predicted=latent,
+                    observed_hospitalizations=observed_hospitalizations,
+                    **kwargs,
+                )
         else:
-            sampled, *_ = self.sample_hospitalizations_obs(
-                predicted=latent,
-                observed_hospitalizations=observed_hospitalizations,
-                **kwargs,
-            )
+            sampled = None
 
         return HospModelSample(
             Rt=basic_model.Rt,

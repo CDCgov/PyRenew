@@ -25,8 +25,17 @@ distribution $\text{HospDist}$ is discrete. For this example, we will
 use a negative binomial distribution:
 
 $$
-h(t) \sim \text{NegativeNinomial}\left(\text{concentration} = 1, \text{logits} = \log(H(t))\right)
+\begin{align*}
+h(t) & \sim \text{NegativeNinomial}\left(\text{concentration} = 1, \text{mean} = H(t)\right) \\
+H(t) & = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
+\end{align*}
 $$
+
+Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is
+the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the
+infection to hospitalization rate, and $\omega(t)$ is the weekday effect
+at time $t$; the last section provides an example building a weekly
+effect `RandomVariable`.
 
 The number of latent hospital admissions at time $t$ is a function of
 the number of latent infections at time $t$ and the infection to
@@ -315,12 +324,12 @@ of missing data at the beginning of the model and re-estimate it with
 `padding = 21`:
 
 ``` python
-days_to_inpute = 21
+days_to_impute = 21
 
 dat2 = dat["daily_hosp_admits"].to_numpy()
 
 # Add 21 Nas to the beginning of dat2
-dat2 = np.hstack((np.repeat(np.nan, days_to_inpute), dat2))
+dat2 = np.hstack((np.repeat(np.nan, days_to_impute), dat2))
 
 hosp_model.run(
     num_samples=2000,
@@ -329,7 +338,7 @@ hosp_model.run(
     observed_hospitalizations=dat2,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
-    padding=days_to_inpute, # Padding the model
+    padding=days_to_impute, # Padding the model
 )
 ```
 
@@ -438,7 +447,7 @@ hosp_model_weekday.run(
     observed_hospitalizations=dat2,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
-    padding=days_to_inpute,
+    padding=days_to_impute,
 )
 ```
 
