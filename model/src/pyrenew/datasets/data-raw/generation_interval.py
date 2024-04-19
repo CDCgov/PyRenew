@@ -16,7 +16,7 @@ path = os.path.join(
     "gen_int.tsv",
 )
 
-assert os.path.exists(os.path.dirname(path))
+os.makedirs(os.path.dirname(path), exist_ok=True)
 
 gen_int.write_csv(
     file=path,
