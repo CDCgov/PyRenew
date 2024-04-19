@@ -54,7 +54,8 @@ class FirstDifferenceARProcess(RandomVariable):
         name : str, optional
             Passed to ARProcess.sample(), by default "trend_rw"
         **kwargs : dict, optional
-            Ignored.
+            Additional keyword arguments passed through to internal sample()
+            calls, should there be any.
 
         Returns
         -------
@@ -67,4 +68,7 @@ class FirstDifferenceARProcess(RandomVariable):
 
     @staticmethod
     def validate():
+        """
+        Validates inputted parameters, implementation pending.
+        """
         return None
