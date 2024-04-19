@@ -16,7 +16,7 @@ path = os.path.join(
     "infection_admission_interval.tsv",
 )
 
-assert os.path.exists(os.path.dirname(path))
+os.makedirs(os.path.dirname(path), exist_ok=True)
 
 # Save as TSV
 infection_admission_interval.write_csv(
