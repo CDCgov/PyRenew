@@ -7,7 +7,7 @@ dir.create(datasets_dir)
 # Saving as TSV
 write.table(
   x = example_df,
-  file = "src/pyrenew/datasets/wastewater.tsv",
+  file = file.path(datasets_dir, "wastewater.tsv"),
   sep = "\t",
   quote = FALSE,
   row.names = FALSE,
