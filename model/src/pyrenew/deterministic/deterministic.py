@@ -17,10 +17,10 @@ class DeterministicVariable(RandomVariable):
 
         Parameters
         ----------
-        vars : ArrayLike
-            An array with the fixed quantity.
-        label : str
-            A label to assign to the process.
+        vars : tuple
+            A tuple with arraylike objects.
+        label : str, optional
+            A label to assign to the process. Defaults to "a_random_variable"
 
         Returns
         -------
@@ -34,9 +34,26 @@ class DeterministicVariable(RandomVariable):
         return None
 
     @staticmethod
-    def validate(vars: ArrayLike) -> None:
-        if not isinstance(vars, ArrayLike):
-            raise Exception("vars is not an array-like object.")
+    def validate(vars: tuple) -> None:
+        """
+        Validates inputted to DeterministicPMF
+
+        Parameters
+        ----------
+        vars : tuple
+            A tuple with arraylike objects.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        Exception
+            If the inputted vars object is not a tuple.
+        """
+        if not isinstance(vars, tuple):
+            raise Exception("vars is not a tuple")
 
         return None
 
@@ -49,7 +66,8 @@ class DeterministicVariable(RandomVariable):
         Parameters
         ----------
         **kwargs : dict, optional
-            Ignored.
+            Additional keyword arguments passed through to internal
+            sample calls, should there be any.
 
         Returns
         -------

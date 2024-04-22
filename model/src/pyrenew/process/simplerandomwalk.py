@@ -48,7 +48,8 @@ class SimpleRandomWalkProcess(RandomVariable):
         init : float, optional
             Initial point of the walk, by default None
         **kwargs : dict, optional
-            Ignored.
+            Additional keyword arguments passed through to internal sample()
+            calls, should there be any.
 
         Returns
         -------
@@ -65,4 +66,7 @@ class SimpleRandomWalkProcess(RandomVariable):
 
     @staticmethod
     def validate():
+        """
+        Validates inputted parameters, implementation pending.
+        """
         return None

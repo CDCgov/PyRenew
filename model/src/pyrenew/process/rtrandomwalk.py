@@ -34,7 +34,7 @@ class RtRandomWalkProcess(RandomVariable):
         Parameters
         ----------
         Rt0_dist : dist.Distribution, optional
-            Initial distributiono of Rt, defaults to
+            Initial distribution of Rt, defaults to
             dist.TruncatedNormal( loc=1.2, scale=0.2, low=0 )
         Rt_transform : AbstractTransform, optional
             Transformation applied to the sampled Rt0, defaults
@@ -55,7 +55,35 @@ class RtRandomWalkProcess(RandomVariable):
         return None
 
     @staticmethod
-    def validate(Rt0_dist, Rt_transform, Rt_rw_dist):
+    def validate(
+        Rt0_dist: dist.Distribution,
+        Rt_transform: AbstractTransform,
+        Rt_rw_dist: dist.Distribution,
+    ) -> None:
+        """
+        Validates Rt0_dist, Rt_transform, and Rt_rw_dist.
+
+        Parameters
+        ----------
+        Rt0_dist : dist.Distribution, optional
+            Initial distribution of Rt, expected dist.Distribution
+        Rt_transform : any
+            Transformation applied to the sampled Rt0, expected
+            AbstractTransform
+        Rt_rw_dist : any
+            Randomwalk process, expected dist.Distribution.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        AssertionError
+            If Rt0_dist or Rt_rw_dist are not dist.Distribution or if
+            Rt_transform is not AbstractTransform.
+
+        """
         assert isinstance(Rt0_dist, dist.Distribution)
         assert isinstance(Rt_transform, AbstractTransform)
         assert isinstance(Rt_rw_dist, dist.Distribution)
@@ -72,7 +100,8 @@ class RtRandomWalkProcess(RandomVariable):
         n_timepoints : int
             Number of timepoints to sample.
         **kwargs : dict, optional
-            Ignored.
+            Additional keyword arguments passed through to internal sample()
+            calls, should there be any.
 
         Returns
         -------

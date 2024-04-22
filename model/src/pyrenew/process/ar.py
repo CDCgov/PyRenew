@@ -58,7 +58,8 @@ class ARProcess(RandomVariable):
         name : str, optional
             Name of the parameter passed to numpyro.sample.
         **kwargs : dict, optional
-            Ignored.
+            Additional keyword arguments passed through to internal sample()
+            calls, should there be any.
 
         Returns
         -------
@@ -85,4 +86,7 @@ class ARProcess(RandomVariable):
 
     @staticmethod
     def validate():
+        """
+        Validates inputted parameters, implementation pending.
+        """
         return None
