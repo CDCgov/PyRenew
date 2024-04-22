@@ -6,7 +6,6 @@ and/or numerical calculations about
 a given renewal process.
 """
 
-from typing import Tuple
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
@@ -49,7 +48,7 @@ def get_leslie_matrix(R: float, generation_interval_pmf: ArrayLike) -> float:
 
 def get_asymptotic_growth_rate_and_age_dist(
     R: float, generation_interval_pmf: ArrayLike
-) -> Tuple[float, ArrayLike]:
+) -> tuple[float, ArrayLike]:
     """
     Get the asymptotic per-timestep growth
     rate of the renewal process (the dominant
@@ -57,6 +56,7 @@ def get_asymptotic_growth_rate_and_age_dist(
     associated stable age distribution
     (a normalized eigenvector associated to
     that eigenvalue).
+
     Parameters
     ----------
     R : float
@@ -67,7 +67,7 @@ def get_asymptotic_growth_rate_and_age_dist(
 
     Returns
     -------
-    Tuple[float, ArrayLike]
+    tuple[float, ArrayLike]
         A tuple consisting of the asymptotic growth rate of
         the process, as jax float, and the stable age distribution
         of the process, as a jax array probability vector of the
