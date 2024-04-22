@@ -17,19 +17,26 @@ def _assert_sample_and_rtype(
 ) -> None:
     """Return type-checking for RandomVariable's sample function
 
-    Objects passed as `RandomVariable` should (a) have a `sample()` method that
+    Objects passed as `RandomVariable` should (a) have a sample() method that
     (b) returns either a tuple or a named tuple.
 
     Parameters
     ----------
     rp : RandomVariable
         Random variable to check.
-    skip_if_none: bool
-        When `True` it returns if `rp` is None.
+    skip_if_none: bool, optional
+        When `True` it returns if `rp` is None. Defaults to True
 
     Returns
     -------
     None
+
+    Raises
+    ------
+    Exception
+        If rp is not a RandomVariable, does not have a sample function, or
+        does not return a tuple. Also occurs if rettype does not initialized
+        properly.
     """
 
     # Addressing the None case
@@ -101,7 +108,7 @@ class RandomVariable(metaclass=ABCMeta):
         ----------
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
-            calls, if any
+            calls, should there be any.
 
         Notes
         -----
@@ -117,6 +124,9 @@ class RandomVariable(metaclass=ABCMeta):
     @staticmethod
     @abstractmethod
     def validate(**kwargs) -> None:
+        """
+        Validation of kwargs to be implemented in subclasses.
+        """
         pass
 
 
@@ -149,7 +159,7 @@ class Model(metaclass=ABCMeta):
         ----------
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
-            calls, if any
+            calls, should there be any.
 
         Notes
         -----
@@ -244,9 +254,34 @@ class Model(metaclass=ABCMeta):
         prob: float = 0.9,
         exclude_deterministic: bool = True,
     ) -> None:
-        """A wrapper of MCMC.print_summary"""
+        """
+        A wrapper of MCMC.print_summary
+
+        Parameters
+        ----------
+        prob : float, optional
+            The acceptance probability of print_summary. Defaults to 0.9
+        exclude_deterministic : bool, optional.
+            Whether to print deterministic variables in the summary.
+            Defaults to True.
+
+        Returns
+        -------
+        None
+        """
         return self.mcmc.print_summary(prob, exclude_deterministic)
 
     def spread_draws(self, variables_names: list) -> pl.DataFrame:
-        """A wrapper of mcmcutils.spread_draws"""
+        """A wrapper of mcmcutils.spread_draws
+
+        Parameters
+        ----------
+        variables_names : list
+            A list of variable names to create a table of samples.
+
+        Returns
+        -------
+        pl.DataFrame
+        """
+
         return spread_draws(self.mcmc.get_samples(), variables_names)

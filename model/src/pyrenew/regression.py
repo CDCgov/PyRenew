@@ -78,11 +78,11 @@ class GLMPrediction(AbstractRegressionPrediction):
             If `None`, use an identity transform. Default
             `None`.
 
-        intercept_suffix : str
+        intercept_suffix : str, optional
             Suffix for naming the intercept random variable in
             class to numpyro.sample(). Default `"_intercept"`.
 
-        coefficient_suffix : str
+        coefficient_suffix : str, optional
             Suffix for naming the regression coefficient
             random variables in calls to numpyro.sample().
             Default `"_coefficients"`.
@@ -99,12 +99,38 @@ class GLMPrediction(AbstractRegressionPrediction):
         self.coefficient_suffix = coefficient_suffix
 
     def predict(self, intercept, coefficients):
+        """
+        Generates a transformed prediction w/ intercept, coefficients, and
+        fixed predictor values
+
+        Parameters
+        ----------
+        intercept : ArrayLike
+            Sampled numpyro distribution generated from intercept priors.
+        coefficients : ArrayLike
+            Sampled prediction coefficients distribution generated
+            from coefficients priors.
+
+        Returns
+        -------
+        ArrayLike
+            Array of transformed predictions.
+        """
         transformed_prediction = (
             intercept + self.fixed_predictor_values @ coefficients
         )
         return self.transform.inverse(transformed_prediction)
 
     def sample(self):
+        """
+        Sample generalized linear model
+
+        Returns
+        -------
+        dict
+            A dictionary containing transformed predictions, and
+            the intercept and coefficients sample distributions.
+        """
         intercept = numpyro.sample(
             self.name + self.intercept_suffix, self.intercept_prior
         )
