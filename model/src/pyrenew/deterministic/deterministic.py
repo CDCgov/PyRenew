@@ -49,7 +49,7 @@ class DeterministicVariable(RandomVariable):
         Raises
         ------
         Exception
-            If the inputted vars object is not in fact a tuple. s
+            If the inputted vars object is not a tuple.
         """
         if not isinstance(vars, tuple):
             raise Exception("vars is not a tuple")
