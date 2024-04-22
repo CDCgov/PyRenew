@@ -34,14 +34,14 @@ class DeterministicVariable(RandomVariable):
         return None
 
     @staticmethod
-    def validate(vars: tuple) -> None:
+    def validate(vars: ArrayLike) -> None:
         """
         Validates inputted to DeterministicPMF
 
         Parameters
         ----------
-        vars : tuple
-            A tuple with arraylike objects.
+        vars : ArrayLike
+            An ArrayLike object.
 
         Returns
         -------
@@ -50,10 +50,10 @@ class DeterministicVariable(RandomVariable):
         Raises
         ------
         Exception
-            If the inputted vars object is not a tuple.
+            If the inputted vars object is not a ArrayLike.
         """
-        if not isinstance(vars, tuple):
-            raise Exception("vars is not a tuple")
+        if not isinstance(vars, ArrayLike):
+            raise Exception("vars is not a ArrayLike")
 
         return None
 

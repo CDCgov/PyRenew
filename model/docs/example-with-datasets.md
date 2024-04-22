@@ -199,6 +199,10 @@ latent_hosp = latent.HospitalAdmissions(
     )
 ```
 
+    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+
 The `inf_hosp_int` is a `DeterministicPMF` object that takes the
 infection to hospitalization interval as input. The `hosp_rate` is an
 `InfectHospRate` object that takes the infection to hospitalization rate

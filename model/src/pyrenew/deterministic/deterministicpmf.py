@@ -48,14 +48,14 @@ class DeterministicPMF(RandomVariable):
         return None
 
     @staticmethod
-    def validate(vars: tuple) -> None:
+    def validate(vars: ArrayLike) -> None:
         """
         Validates inputted to DeterministicPMF
 
         Parameters
         ----------
-        vars : tuple
-            A tuple with arraylike objects.
+        vars : ArrayLike
+            An ArrayLike object.
 
         Returns
         -------
