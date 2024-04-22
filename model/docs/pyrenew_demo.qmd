@@ -126,7 +126,7 @@ hospmodel = HospitalAdmissionsModel(
     gen_int=gen_int,
     I0=I0,
     latent_admissions=latent_admissions,
-    admissions_process=admissions_process,
+    observed_admissions=admissions_process,
     latent_infections=latent_infections,
     Rt_process=Rt_process
     )
