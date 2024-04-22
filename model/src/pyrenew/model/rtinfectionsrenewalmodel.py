@@ -95,10 +95,10 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        latent_hospitalizations : ArrayLike
-            The latent process for the hospitalizations.
-        observed_hospitalizations : ArrayLike
-            The observed hospitalizations.
+        latent_admissions : ArrayLike
+            The latent process for the hospital admissions.
+        observed_admissions : ArrayLike
+            The observed hospital admissions.
 
         Returns
         -------
@@ -213,13 +213,14 @@ class RtInfectionsRenewalModel(Model):
         observed_infections: Optional[ArrayLike] = None,
         **kwargs,
     ) -> tuple:
-        """Sample number of hospitalizations
+        """
+        Sample number of hospital admissions
 
         Parameters
         ----------
         predicted : ArrayLike
             The predicted infecteds.
-        observed_hospitalizations : ArrayLike, optional
+        observed_admissions : ArrayLike, optional
             The observed values of hospital admissions, if any, for inference. Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal

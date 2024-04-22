@@ -14,7 +14,7 @@ from pyrenew.latent import (
     Infections0,
 )
 from pyrenew.metaclass import RandomVariable
-from pyrenew.model import HospitalizationsModel
+from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
 
@@ -75,21 +75,21 @@ def test_model_hosp_no_obs_model():
             ),
         ),
     )
-    latent_hospitalizations = HospitalAdmissions(
+    latent_admissions = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
-        hospitalizations_predicted_varname="observed_hospitalizations",
+        admissions_predicted_varname="observed_admissions",
         infect_hosp_rate_dist=InfectHospRate(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
     )
 
-    model0 = HospitalizationsModel(
+    model0 = HospitalAdmissionsModel(
         gen_int=gen_int,
         I0=I0,
         Rt_process=Rt_process,
         latent_infections=latent_infections,
-        latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=DeterministicVariable((0,)),
+        latent_admissions=latent_admissions,
+        observed_admissions=DeterministicVariable((0,)),
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -105,10 +105,10 @@ def test_model_hosp_no_obs_model():
         n_timepoints=30,
     )
 
-    inf = model0.spread_draws(["observed_hospitalizations"])
+    inf = model0.spread_draws(["observed_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("observed_hospitalizations").mean())
+        .agg(pl.col("observed_admissions").mean())
         .sort(pl.col("draw"))
     )
 
@@ -130,7 +130,7 @@ def test_model_hosp_with_obs_model():
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
-    observed_hospitalizations = PoissonObservation()
+    observed_admissions = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
         (
@@ -159,20 +159,20 @@ def test_model_hosp_with_obs_model():
         ),
     )
 
-    latent_hospitalizations = HospitalAdmissions(
+    latent_admissions = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         infect_hosp_rate_dist=InfectHospRate(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
     )
 
-    model1 = HospitalizationsModel(
+    model1 = HospitalAdmissionsModel(
         gen_int=gen_int,
         I0=I0,
         Rt_process=Rt_process,
         latent_infections=latent_infections,
-        latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        latent_admissions=latent_admissions,
+        observed_admissions=observed_admissions,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -184,14 +184,14 @@ def test_model_hosp_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_hospitalizations=model1_samp.sampled,
+        observed_admissions=model1_samp.sampled,
         n_timepoints=30,
     )
 
-    inf = model1.spread_draws(["predicted_hospitalizations"])
+    inf = model1.spread_draws(["predicted_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("predicted_hospitalizations").mean())
+        .agg(pl.col("predicted_admissions").mean())
         .sort(pl.col("draw"))
     )
 
@@ -213,7 +213,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
-    observed_hospitalizations = PoissonObservation()
+    observed_admissions = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
         (
@@ -251,7 +251,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     hosp_report_prob_dist = UniformProbForTest("hosp_report_prob_dist")
     weekday = UniformProbForTest("weekday")
 
-    latent_hospitalizations = HospitalAdmissions(
+    latent_admissions = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         weekday_effect_dist=weekday,
         hosp_report_prob_dist=hosp_report_prob_dist,
@@ -260,13 +260,13 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         ),
     )
 
-    model1 = HospitalizationsModel(
+    model1 = HospitalAdmissionsModel(
         I0=I0,
         gen_int=gen_int,
         Rt_process=Rt_process,
         latent_infections=latent_infections,
-        latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        latent_admissions=latent_admissions,
+        observed_admissions=observed_admissions,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -278,14 +278,14 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_hospitalizations=model1_samp.sampled,
+        observed_admissions=model1_samp.sampled,
         n_timepoints=30,
     )
 
-    inf = model1.spread_draws(["predicted_hospitalizations"])
+    inf = model1.spread_draws(["predicted_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("predicted_hospitalizations").mean())
+        .agg(pl.col("predicted_admissions").mean())
         .sort(pl.col("draw"))
     )
 
@@ -307,7 +307,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
-    observed_hospitalizations = PoissonObservation()
+    observed_admissions = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
         (
@@ -354,7 +354,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         vars=(hosp_report_prob_dist,)
     )
 
-    latent_hospitalizations = HospitalAdmissions(
+    latent_admissions = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         weekday_effect_dist=weekday,
         hosp_report_prob_dist=hosp_report_prob_dist,
@@ -363,13 +363,13 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         ),
     )
 
-    model1 = HospitalizationsModel(
+    model1 = HospitalAdmissionsModel(
         I0=I0,
         gen_int=gen_int,
         Rt_process=Rt_process,
         latent_infections=latent_infections,
-        latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        latent_admissions=latent_admissions,
+        observed_admissions=observed_admissions,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -381,14 +381,14 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_hospitalizations=model1_samp.sampled,
+        observed_admissions=model1_samp.sampled,
         n_timepoints=30,
     )
 
-    inf = model1.spread_draws(["predicted_hospitalizations"])
+    inf = model1.spread_draws(["predicted_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("predicted_hospitalizations").mean())
+        .agg(pl.col("predicted_admissions").mean())
         .sort(pl.col("draw"))
     )
 

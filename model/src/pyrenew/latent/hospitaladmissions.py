@@ -130,7 +130,7 @@ class InfectHospRate(RandomVariable):
 class HospitalAdmissions(RandomVariable):
     r"""Latent hospital admissions
 
-    Implements a renewal process for the expected number of hospitalizations.
+    Implements a renewal process for the expected number of hospital admissions.
 
     Methods
     -------
@@ -168,7 +168,7 @@ class HospitalAdmissions(RandomVariable):
         self,
         infection_to_admission_interval: RandomVariable,
         infect_hosp_rate_dist: RandomVariable,
-        hospitalizations_predicted_varname: str = "predicted_hospitalizations",
+        admissions_predicted_varname: str = "predicted_admissions",
         weekday_effect_dist: Optional[RandomVariable] = None,
         hosp_report_prob_dist: Optional[RandomVariable] = None,
     ) -> None:
@@ -177,13 +177,13 @@ class HospitalAdmissions(RandomVariable):
         Parameters
         ----------
         infection_to_admission_interval : RandomVariable
-            pmf for reporting (informing) hospitalizations (see
+            pmf for reporting (informing) hospital admissions (see
             pyrenew.observations.Deterministic).
         infect_hosp_rate_dist : RandomVariable
             Infection to hospitalization rate distribution.
-        hospitalizations_predicted_varname : str
+        admissions_predicted_varname : str
             Name to assign to the deterministic component in numpyro of
-            predicted hospitalizations.
+            predicted hospital admissions.
         weekday_effect_dist : RandomVariable, optional
             Weekday effect.
         hosp_report_prob_dist  : RandomVariable, optional
@@ -206,9 +206,7 @@ class HospitalAdmissions(RandomVariable):
             hosp_report_prob_dist,
         )
 
-        self.hospitalizations_predicted_varname = (
-            hospitalizations_predicted_varname
-        )
+        self.admissions_predicted_varname = admissions_predicted_varname
 
         self.infect_hosp_rate_dist = infect_hosp_rate_dist
         self.weekday_effect_dist = weekday_effect_dist
@@ -280,24 +278,23 @@ class HospitalAdmissions(RandomVariable):
             *_,
         ) = self.infection_to_admission_interval.sample(**kwargs)
 
-        predicted_hospitalizations = jnp.convolve(
+        predicted_admissions = jnp.convolve(
             IHR_t, infection_to_admission_interval, mode="full"
         )[: IHR_t.shape[0]]
 
         # Applying weekday effect
-        predicted_hospitalizations = (
-            predicted_hospitalizations
-            * self.weekday_effect_dist.sample(**kwargs)[0]
+        predicted_admissions = (
+            predicted_admissions * self.weekday_effect_dist.sample(**kwargs)[0]
         )
 
         # Applying probability of hospitalization effect
-        predicted_hospitalizations = (
-            predicted_hospitalizations
+        predicted_admissions = (
+            predicted_admissions
             * self.hosp_report_prob_dist.sample(**kwargs)[0]
         )
 
         npro.deterministic(
-            self.hospitalizations_predicted_varname, predicted_hospitalizations
+            self.admissions_predicted_varname, predicted_admissions
         )
 
-        return HospAdmissionsSample(IHR, predicted_hospitalizations)
+        return HospAdmissionsSample(IHR, predicted_admissions)

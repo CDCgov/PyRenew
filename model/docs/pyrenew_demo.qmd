@@ -64,7 +64,7 @@ Additionally, import several classes from Pyrenew, including a Poisson observati
 ```{python}
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.model import HospitalizationsModel
+from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.process import RtRandomWalkProcess
 ```
 
@@ -110,23 +110,23 @@ latent_hospitalizations = HospitalAdmissions(
             ),
     )
 
-# 5) An observation process for the hospitalizations
-observed_hospitalizations = PoissonObservation()
+# 5) An observation process for the hospital admissions
+admissions_process = PoissonObservation()
 
 # 6) A random walk process (it could be deterministic using
 # pyrenew.process.DeterministicProcess())
 Rt_process = RtRandomWalkProcess()
 ```
 
-The `HospitalizationsModel` is then initialized using the initial conditions just defined:
+The `HospitalAdmissionsModel` is then initialized using the initial conditions just defined:
 
 ```{python}
 # Initializing the model
-hospmodel = HospitalizationsModel(
+hospmodel = HospitalAdmissionsModel(
     gen_int=gen_int,
     I0=I0,
     latent_hospitalizations=latent_hospitalizations,
-    observed_hospitalizations=observed_hospitalizations,
+    admissions_process=admissions_process,
     latent_infections=latent_infections,
     Rt_process=Rt_process
     )
@@ -161,7 +161,7 @@ To fit the `hospmodel` to the simulated data, we call `hospmodel.run()`, an MCMC
 hospmodel.run(
     num_warmup=1000,
     num_samples=1000,
-    observed_hospitalizations=x.sampled,
+    admissions_process=x.sampled,
     n_timepoints = len(x.sampled)-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),

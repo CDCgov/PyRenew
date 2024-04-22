@@ -1,10 +1,10 @@
 MSEI Model
 ==========
 
-Hospitalizations
-----------------
+Hospital Admissions
+-------------------
 
-.. automodule:: pyrenew.model.hospitalizations
+.. automodule:: pyrenew.model.admissionsmodel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -12,7 +12,7 @@ Hospitalizations
 Reproduction Number Renewal Infections
 --------------------------------------
 
-.. automodule:: pyrenew.model.rtinfectionsrenewal
+.. automodule:: pyrenew.model.rtinfectionsrenewalmodel
    :members:
    :undoc-members:
    :show-inheritance:
