@@ -55,7 +55,7 @@ class HospitalAdmissionsModel(Model):
         gen_int: RandomVariable,
         I0: RandomVariable,
         Rt_process: RandomVariable,
-        observation_process: RandomVariable,
+        admissions_process: RandomVariable,
     ) -> None:
         """
         Default constructor
@@ -72,7 +72,7 @@ class HospitalAdmissionsModel(Model):
             Initial infections (passed to RtInfectionsRenewalModel)
         Rt_process : RandomVariable
             Rt process  (passed to RtInfectionsRenewalModel).
-        observation_process : RandomVariable, optional
+        admissions_process : RandomVariable, optional
             Observation process for the hospital admissions.
 
         Returns
@@ -91,15 +91,13 @@ class HospitalAdmissionsModel(Model):
             Rt_process=Rt_process,
         )
 
-        HospitalAdmissionsModel.validate(
-            latent_admissions, observation_process
-        )
+        HospitalAdmissionsModel.validate(latent_admissions, admissions_process)
 
         self.latent_admissions = latent_admissions
-        self.observation_process = observation_process
+        self.admissions_process = admissions_process
 
     @staticmethod
-    def validate(latent_admissions, observation_process) -> None:
+    def validate(latent_admissions, admissions_process) -> None:
         """
         Verifies types and status (RV) of latent and observed hospital admissions
 
@@ -107,7 +105,7 @@ class HospitalAdmissionsModel(Model):
         ----------
         latent_admissions : ArrayLike
             The latent process for the hospial admissions.
-        observation_process : ArrayLike
+        admissions_process : ArrayLike
             The observed hospital admissions.
 
         Returns
@@ -119,7 +117,7 @@ class HospitalAdmissionsModel(Model):
         _assert_sample_and_rtype : Perform type-checking and verify RV
         """
         _assert_sample_and_rtype(latent_admissions, skip_if_none=False)
-        _assert_sample_and_rtype(observation_process, skip_if_none=False)
+        _assert_sample_and_rtype(admissions_process, skip_if_none=False)
         return None
 
     def sample_latent_admissions(
@@ -157,7 +155,7 @@ class HospitalAdmissionsModel(Model):
             **kwargs,
         )
 
-    def sample_observation_process(
+    def sample_admissions_process(
         self,
         predicted: ArrayLike,
         obs: ArrayLike,
@@ -182,7 +180,7 @@ class HospitalAdmissionsModel(Model):
 
         See Also
         --------
-        observation_process.sample : For sampling observed hospital
+        admissions_process.sample : For sampling observed hospital
         admissions.
 
         Notes
@@ -190,7 +188,7 @@ class HospitalAdmissionsModel(Model):
         TODO: Include example(s) here.
         """
 
-        return self.observation_process.sample(
+        return self.admissions_process.sample(
             predicted=predicted, obs=obs, **kwargs
         )
 
@@ -247,7 +245,7 @@ class HospitalAdmissionsModel(Model):
         )
 
         # Sampling the hospital admissions
-        sampled, *_ = self.sample_observation_process(
+        sampled, *_ = self.sample_admissions_process(
             predicted=latent,
             obs=observed_admissions,
             **kwargs,
