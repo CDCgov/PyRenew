@@ -10,7 +10,7 @@ import polars as pl
 
 def spread_draws(
     posteriors: dict,
-    variables_names: list,
+    variables_names: list[str] | list[tuple],
 ) -> pl.DataFrame:
     """Get nicely shaped draws from the posterior
 
@@ -29,7 +29,8 @@ def spread_draws(
 
     Returns
     -------
-    polars.DataFrame
+    pl.DataFrame
+        A dataframe of draw-indexed
     """
 
     for i_var, v in enumerate(variables_names):

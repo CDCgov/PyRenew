@@ -23,10 +23,14 @@ repos:
     -   id: isort
         args: ['--profile', 'black',
                '--line-length', '79']
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.1.0
-  hooks:
-    - id: ruff
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.0
+    hooks:
+    -   id: ruff
+# -   repo: https://github.com/numpy/numpydoc
+#     rev: v1.6.0
+#     hooks:
+#     -   id: numpydoc-validation
 #####
 # Secrets
 -   repo: https://github.com/Yelp/detect-secrets
