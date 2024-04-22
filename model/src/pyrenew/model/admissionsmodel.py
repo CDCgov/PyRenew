@@ -12,7 +12,7 @@ HospModelSample = namedtuple(
     [
         "Rt",
         "infections",
-        "IHR",
+        "infection_hosp_rate",
         "latent",
         "sampled",
     ],
@@ -27,7 +27,7 @@ Rt : float or None
     The reproduction number over time. Defaults to None.
 infections : ArrayLike or None
     The estimated number of new infections over time. Defaults to None.
-IHR : float or None
+infection_hosp_rate : float or None
     The infected hospitalization rate. Defaults to None.
 latent : ArrayLike or None
     The estimated latent hospital admissions. Defaults to None.
@@ -238,7 +238,7 @@ class HospitalAdmissionsModel(Model):
 
         # Sampling the latent hospital admissions
         (
-            IHR,
+            infection_hosp_rate,
             latent,
             *_,
         ) = self.sample_latent_admissions(
@@ -256,7 +256,7 @@ class HospitalAdmissionsModel(Model):
         return HospModelSample(
             Rt=Rt,
             infections=infections,
-            IHR=IHR,
+            infection_hosp_rate=infection_hosp_rate,
             latent=latent,
             sampled=sampled,
         )

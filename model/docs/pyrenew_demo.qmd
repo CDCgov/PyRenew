@@ -103,7 +103,7 @@ inf_hosp_int = DeterministicPMF(
     (jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),),
     )
 
-latent_hospitalizations = HospitalAdmissions(
+latent_admissions = HospitalAdmissions(
     infection_to_admission_interval=inf_hosp_int,
     infect_hosp_rate_dist = InfectHospRate(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
@@ -125,7 +125,7 @@ The `HospitalAdmissionsModel` is then initialized using the initial conditions j
 hospmodel = HospitalAdmissionsModel(
     gen_int=gen_int,
     I0=I0,
-    latent_hospitalizations=latent_hospitalizations,
+    latent_admissions=latent_admissions,
     admissions_process=admissions_process,
     latent_infections=latent_infections,
     Rt_process=Rt_process
