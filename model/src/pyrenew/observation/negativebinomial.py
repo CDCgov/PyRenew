@@ -25,6 +25,7 @@ class NegativeBinomialObservation(RandomVariable):
         concentration_prior: dist.Distribution | ArrayLike,
         concentration_suffix: str | None = "_concentration",
         parameter_name="negbinom_rv",
+        eps: float = 1e-10,
     ) -> None:
         """Default constructor
 
@@ -41,6 +42,9 @@ class NegativeBinomialObservation(RandomVariable):
             Suffix for the numpy variable.
         parameter_name : str, optional
             Name for the numpy variable.
+        eps : float, optional
+            Small value to add to the predicted mean to prevent numerical
+            instability.
 
         Returns
         -------
@@ -59,10 +63,12 @@ class NegativeBinomialObservation(RandomVariable):
 
         self.parameter_name = parameter_name
         self.concentration_suffix = concentration_suffix
+        self.eps = eps
 
     def sample(
         self,
         predicted: ArrayLike,
+        name: str | None = None,
         obs: ArrayLike | None = None,
         **kwargs,
     ) -> tuple:
@@ -74,6 +80,9 @@ class NegativeBinomialObservation(RandomVariable):
             Mean parameter of the negative binomial distribution.
         obs : ArrayLike, optional
             Observed data, by default None.
+        name : str, optional
+            Name of the random variable if other than that defined during
+            construction, by default None (self.parameter_name).
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample calls, should there be any.
 
@@ -81,12 +90,17 @@ class NegativeBinomialObservation(RandomVariable):
         -------
         tuple
         """
+        concentration = self.sample_prior()
+
+        if name is None:
+            name = self.parameter_name
+
         return (
             numpyro.sample(
-                self.parameter_name,
-                dist.NegativeBinomial2(
-                    mean=predicted,
-                    concentration=self.sample_prior(),
+                name=name,
+                fn=dist.NegativeBinomial2(
+                    mean=predicted + self.eps,
+                    concentration=concentration,
                 ),
                 obs=obs,
             ),

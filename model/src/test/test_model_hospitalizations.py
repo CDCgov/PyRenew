@@ -41,40 +41,37 @@ def test_model_hosp_no_obs_model():
     Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
     inf_hosp = DeterministicPMF(
-        (
-            jnp.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0.25,
-                    0.5,
-                    0.1,
-                    0.1,
-                    0.05,
-                ],
-            ),
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ]
         ),
     )
+
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         hospitalizations_predicted_varname="observed_hospitalizations",
@@ -89,7 +86,7 @@ def test_model_hosp_no_obs_model():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=DeterministicVariable((0,)),
+        observation_process=DeterministicVariable(0),
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -101,7 +98,7 @@ def test_model_hosp_no_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        obs_mean=model0_samp.sampled,
+        obs_mean=model0_samp.sampled_admissions,
         n_timepoints=30,
     )
 
@@ -122,9 +119,7 @@ def test_model_hosp_with_obs_model():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
@@ -133,29 +128,27 @@ def test_model_hosp_with_obs_model():
     observed_hospitalizations = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
-        (
-            jnp.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0.25,
-                    0.5,
-                    0.1,
-                    0.1,
-                    0.05,
-                ],
-            ),
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ],
         ),
     )
 
@@ -172,7 +165,7 @@ def test_model_hosp_with_obs_model():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        observation_process=observed_hospitalizations,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -184,7 +177,7 @@ def test_model_hosp_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_hospitalizations=model1_samp.sampled,
+        observed_hospitalizations=model1_samp.sampled_admissions,
         n_timepoints=30,
     )
 
@@ -205,9 +198,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
@@ -216,29 +207,27 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     observed_hospitalizations = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
-        (
-            jnp.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0.25,
-                    0.5,
-                    0.1,
-                    0.1,
-                    0.05,
-                ],
-            ),
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ],
         ),
     )
 
@@ -266,7 +255,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        observation_process=observed_hospitalizations,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -278,7 +267,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_hospitalizations=model1_samp.sampled,
+        observed_hospitalizations=model1_samp.sampled_admissions,
         n_timepoints=30,
     )
 
@@ -299,9 +288,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(
-        (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
@@ -310,29 +297,27 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     observed_hospitalizations = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
-        (
-            jnp.array(
-                [
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0.25,
-                    0.5,
-                    0.1,
-                    0.1,
-                    0.05,
-                ],
-            ),
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ],
         ),
     )
 
@@ -342,7 +327,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = weekday / weekday.sum()
     weekday = weekday[:31]
 
-    weekday = DeterministicVariable((weekday,))
+    weekday = DeterministicVariable(weekday)
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
@@ -350,9 +335,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     hosp_report_prob_dist = hosp_report_prob_dist[:31]
 
-    hosp_report_prob_dist = DeterministicVariable(
-        vars=(hosp_report_prob_dist,)
-    )
+    hosp_report_prob_dist = DeterministicVariable(vars=hosp_report_prob_dist)
 
     latent_hospitalizations = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
@@ -369,7 +352,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observed_hospitalizations=observed_hospitalizations,
+        observation_process=observed_hospitalizations,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -377,12 +360,18 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model1.sample(n_timepoints=30)
 
+    obs = jnp.hstack(
+        [jnp.repeat(jnp.nan, 5), model1_samp.sampled_admissions[5:]]
+    )
+
+    # Running with padding
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_hospitalizations=model1_samp.sampled,
+        observed_hospitalizations=obs,
         n_timepoints=30,
+        padding=5,
     )
 
     inf = model1.spread_draws(["predicted_hospitalizations"])

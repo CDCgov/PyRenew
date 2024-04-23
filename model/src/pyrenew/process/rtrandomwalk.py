@@ -8,7 +8,18 @@ from pyrenew.transform import AbstractTransform, LogTransform
 
 
 class RtRandomWalkProcess(RandomVariable):
-    """Rt Randomwalk Process"""
+    r"""Rt Randomwalk Process
+
+    Notes
+    -----
+
+    The process is defined as follows:
+
+    .. math::
+
+            Rt(0) &\sim \text{Rt0_dist} \\
+            Rt(t) &\sim \text{Rt_transform}(\text{Rt_transformed_rw}(t))
+    """
 
     def __init__(
         self,
@@ -102,7 +113,9 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_trans = self.Rt_transform(Rt0)
         Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)
         Rt_trans_ts, *_ = Rt_trans_proc.sample(
-            duration=n_timepoints, name="Rt_transformed_rw", init=Rt0_trans
+            duration=n_timepoints,
+            name="Rt_transformed_rw",
+            init=Rt0_trans,
         )
 
         Rt = npro.deterministic("Rt", self.Rt_transform.inverse(Rt_trans_ts))

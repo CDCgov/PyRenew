@@ -7,9 +7,10 @@ pyrenew helper classes
 from abc import ABCMeta, abstractmethod
 
 import jax
+import matplotlib.pyplot as plt
 import polars as pl
 from numpyro.infer import MCMC, NUTS
-from pyrenew.mcmcutils import spread_draws
+from pyrenew.mcmcutils import plot_posterior, spread_draws
 
 
 def _assert_sample_and_rtype(
@@ -285,3 +286,27 @@ class Model(metaclass=ABCMeta):
         """
 
         return spread_draws(self.mcmc.get_samples(), variables_names)
+
+    def plot_posterior(
+        self,
+        var: list,
+        obs_signal: jax.typing.ArrayLike = None,
+        xlab: str = None,
+        ylab: str = "Signal",
+        samples: int = 50,
+        figsize: list = [4, 5],
+        draws_col: str = "darkblue",
+        obs_col: str = "black",
+    ) -> plt.Figure:
+        """A wrapper of pyrenew.mcmcutils.plot_posterior"""
+        return plot_posterior(
+            var=var,
+            draws=self.spread_draws([(var, "time")]),
+            xlab=xlab,
+            ylab=ylab,
+            samples=samples,
+            obs_signal=obs_signal,
+            figsize=figsize,
+            draws_col=draws_col,
+            obs_col=obs_col,
+        )

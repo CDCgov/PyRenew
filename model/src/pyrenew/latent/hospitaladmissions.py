@@ -158,7 +158,7 @@ class HospitalAdmissions(RandomVariable):
 
     .. math::
 
-        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\\tau = 0}^{T_d} d(\tau) I(t-\tau)
+        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
 
     Where :math:`T_d` is the maximum delay from infection to hospitalization
     that we consider.
@@ -196,9 +196,9 @@ class HospitalAdmissions(RandomVariable):
         """
 
         if weekday_effect_dist is None:
-            weekday_effect_dist = DeterministicVariable((1,))
+            weekday_effect_dist = DeterministicVariable(1)
         if hosp_report_prob_dist is None:
-            hosp_report_prob_dist = DeterministicVariable((1,))
+            hosp_report_prob_dist = DeterministicVariable(1)
 
         HospitalAdmissions.validate(
             infect_hosp_rate_dist,

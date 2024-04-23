@@ -24,11 +24,27 @@ infections : ArrayLike or None
 
 
 class Infections(RandomVariable):
-    """Latent infections
+    r"""Latent infections
+
+    This class samples infections given Rt, initial infections, and generation
+    interval.
+
+    Notes
+    -----
+    The mathematical model is given by:
+
+    .. math::
+
+            I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t-\tau)
+
+    where :math:`I(t)` is the number of infections at time :math:`t`,
+    :math:`R(t)` is the reproduction number at time :math:`t`, and
+    :math:`g(t-\tau)` is the generation interval.
 
     Methods
     -------
     sample(Rt, I0, gen_int, **kwargs)
+
     """
 
     def __init__(
@@ -67,9 +83,8 @@ class Infections(RandomVariable):
         gen_int: ArrayLike,
         **kwargs,
     ) -> tuple:
-        """Samples infections given Rt
-
-        A random variable representing the pmf of the generation interval.
+        """Samples infections given Rt, initial infections, and generation
+        interval.
 
         Parameters
         ----------
