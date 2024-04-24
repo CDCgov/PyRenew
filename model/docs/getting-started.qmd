@@ -8,19 +8,25 @@ engine: jupyter
 
 ## The fundamentals
 
-`pyrenew`'s core components are the metaclasses `RandomVariable` and `Model` (in Python, a _metaclass_ is a class whose instances are also classes). Within the `pyrenew` package, a `RandomVariable` is a quantity that models can estimate and sample from, **including deterministic quantities**. The benefit of this design is the definition of the `sample()` function can be arbitrary, allowing the user to either sample from a distribution using `numpyro.sample()`, compute fixed quantities (like a mechanistic equation), or return a fixed value (like a pre-computed PMF.) For instance, when estimating a PMF, the `RandomVariable` sampling function may roughly be defined as:
+`pyrenew`'s core components are the metaclasses `RandomVariable` and `Model` (in Python, a _metaclass_ is a class whose instances are also classes, which themselves are templates for making objects). Within the `pyrenew` package, a `RandomVariable` is a quantity that models can estimate and sample from, **including deterministic quantities**. The benefit of this design is that the definition of the `sample()` function can be arbitrary, allowing the user to either sample from a distribution using `numpyro.sample()`, compute fixed quantities (like a mechanistic equation), or return a fixed value (like a pre-computed PMF.) For instance, when estimating a PMF, the `RandomVariable` sampling function may roughly be defined as:
 
 ```python
+# define a new class called MyRandVar that inherits from the RandomVariable class
 class MyRandVar(RandomVariable):
+    #define a method called sample that returns an object of type ArrayLike
     def sample(...) -> ArrayLike:
+        # calls sample function from NumPyro package
         return numpyro.sample(...)
 ```
 
 Whereas, in some other cases, we may instead use a fixed quantity for that variable (like a pre-computed PMF), where the `RandomVariable`'s sample function could be defined like:
 
 ```python
+# instead define MyRandVar to still inherit from the RandVariable class
 class MyRandVar(RandomVariable):
+    #define sample method that still returns an ArrayLike object
     def sample(...) -> ArrayLike:
+        #sampling method is a pre-computed PMF, a JAX NumPy array with explicit elements
         return jax.numpy.array([0.2, 0.7, 0.1])
 ```
 

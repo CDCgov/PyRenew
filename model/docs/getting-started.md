@@ -2,29 +2,32 @@
 
 
 `pyrenew` is a flexible tool for simulating and making statistical
-inference of epidemiological models, emphasizing renewal models. Built
-on `numpyro`, `pyrenew` provides core components for model building and
-pre-defined models for processing various observational processes. This
-document illustrates how `pyrenew` can be used to build a basic renewal
-model.
+inferences from epidemiologic models, with an emphasis on renewal
+models. Built on `numpyro`, `pyrenew` provides core components for model
+building and pre-defined models for processing various observational
+processes. This document illustrates how `pyrenew` can be used to build
+a basic renewal model.
 
 ## The fundamentals
 
 `pyrenew`’s core components are the metaclasses `RandomVariable` and
-`Model`. From the package’s perspective, a `RandomVariable` is a
-quantity models can sample and estimate, **including deterministic
-quantities**. Mainly, sampling from a `RandomVariable` involves calling
-the `sample()` method. The benefit of this design is the definition of
-the sample function can be arbitrary, allowing the user to either sample
-from a distribution using `numpyro.sample()`, compute fixed quantities
-(like a mechanistic equation), or return a fixed value (like a
-pre-computed PMF.) For instance, we may be interested in estimating a
-PMF, in which case a `RandomVariable` sampling function may roughly be
-defined as:
+`Model` (in Python, a *metaclass* is a class whose instances are also
+classes, which themselves are templates for making objects). Within the
+`pyrenew` package, a `RandomVariable` is a quantity that models can
+estimate and sample from, **including deterministic quantities**. The
+benefit of this design is that the definition of the `sample()` function
+can be arbitrary, allowing the user to either sample from a distribution
+using `numpyro.sample()`, compute fixed quantities (like a mechanistic
+equation), or return a fixed value (like a pre-computed PMF.) For
+instance, when estimating a PMF, the `RandomVariable` sampling function
+may roughly be defined as:
 
 ``` python
+# define a new class called MyRandVar that inherits from the RandomVariable class
 class MyRandVar(RandomVariable):
+    #define a method called sample that returns an object of type ArrayLike
     def sample(...) -> ArrayLike:
+        # calls sample function from NumPyro package
         return numpyro.sample(...)
 ```
 
@@ -33,8 +36,11 @@ that variable (like a pre-computed PMF), where the `RandomVariable`’s
 sample function could be defined like:
 
 ``` python
+# instead define MyRandVar to still inherit from the RandVariable class
 class MyRandVar(RandomVariable):
+    #define sample method that still returns an ArrayLike object
     def sample(...) -> ArrayLike:
+        #sampling method is a pre-computed PMF, a JAX NumPy array with explicit elements
         return jax.numpy.array([0.2, 0.7, 0.1])
 ```
 
