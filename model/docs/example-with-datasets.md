@@ -26,7 +26,7 @@ use a negative binomial distribution:
 
 $$
 \begin{align*}
-h(t) & \sim \text{NegativeNinomial}\left(\text{concentration} = 1, \text{mean} = H(t)\right) \\
+h(t) & \sim \text{NegativeBinomial}\left(\text{concentration} = 1, \text{mean} = H(t)\right) \\
 H(t) & = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
 \end{align*}
 $$
@@ -199,6 +199,10 @@ latent_hosp = latent.HospitalAdmissions(
     )
 ```
 
+    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+      from .autonotebook import tqdm as notebook_tqdm
+    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+
 The `inf_hosp_int` is a `DeterministicPMF` object that takes the
 infection to hospitalization interval as input. The `hosp_rate` is an
 `InfectHospRate` object that takes the infection to hospitalization rate
@@ -313,14 +317,14 @@ this.
 
 ## Padding the model
 
-We can use the padding argument to solve the overestimation of
-hospitalizations in the first half of the model. By setting
-`padding > 0`, the model then assumes that the first `padding`
-observations are missing; thus, only observations after `padding` will
-count towards the likelihood of the model. In practice, the model will
-extend the estimated Rt and latent infections by `padding` days, given
-time to adjust to the observed data. The following code will add 21 days
-of missing data at the beginning of the model and re-estimate it with
+We can use the padding argument to solve the overestimation of hospital
+admissions in the first half of the model. By setting `padding > 0`, the
+model then assumes that the first `padding` observations are missing;
+thus, only observations after `padding` will count towards the
+likelihood of the model. In practice, the model will extend the
+estimated Rt and latent infections by `padding` days, given time to
+adjust to the observed data. The following code will add 21 days of
+missing data at the beginning of the model and re-estimate it with
 `padding = 21`:
 
 ``` python

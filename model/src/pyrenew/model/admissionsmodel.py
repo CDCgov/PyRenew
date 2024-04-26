@@ -30,7 +30,7 @@ latent_infections : ArrayLike or None
 infection_hosp_rate : float or None
     The infected hospitalization rate. Defaults to None.
 latent_admissions : ArrayLike or None
-    The estimated latent hospitalizations. Defaults to None.
+    The estimated latent hospital admissions. Defaults to None.
 sampled_admissions : ArrayLike or None
     The sampled or observed hospital admissions. Defaults to None.
 
@@ -73,7 +73,7 @@ class HospitalAdmissionsModel(Model):
         Rt_process : RandomVariable
             Rt process  (passed to RtInfectionsRenewalModel).
         observation_process : RandomVariable, optional
-            Observation process for the hospitalizations.
+            Observation process for the hospital admissions.
 
         Returns
         -------
@@ -106,9 +106,9 @@ class HospitalAdmissionsModel(Model):
         Parameters
         ----------
         latent_admissions : ArrayLike
-            The latent process for the hospitalizations.
+            The latent process for the hospital admissions.
         observation_process : ArrayLike
-            The observed hospitalizations.
+            The observed hospital admissions.
 
         Returns
         -------
@@ -252,7 +252,7 @@ class HospitalAdmissionsModel(Model):
             **kwargs,
         )
 
-        # Sampling the hospitalizations
+        # Sampling the hospital admissions
         if self.observation_process is not None:
             if (observed_admissions is not None) and (padding > 0):
                 sampled_na = jnp.repeat(jnp.nan, padding)

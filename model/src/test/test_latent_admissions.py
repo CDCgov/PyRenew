@@ -30,7 +30,7 @@ def test_admissions_sample():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         inf_sampled1 = inf1.sample(Rt=sim_rt, gen_int=gen_int, I0=i0)
 
-    # Testing the hospitalizations
+    # Testing the hospital admissions
     inf_hosp = DeterministicPMF(
         jnp.array(
             [

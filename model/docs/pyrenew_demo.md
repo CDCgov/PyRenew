@@ -39,6 +39,8 @@ import numpyro.distributions as dist
 from pyrenew.process import SimpleRandomWalkProcess
 ```
 
+    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
+
 To understand the simple random walk process underlying the sampling
 within the renewal process model, we first examine a single random walk
 path. Using the `sample` method from an instance of the
@@ -191,7 +193,7 @@ x
            0, 0, 0, 0, 0, 1, 0, 0, 0], dtype=int32))
 
 Visualizations of the single model output show (top) infections over the
-30 time steps, (middle) hospitalizations over the 30 time steps, and
+30 time steps, (middle) hospital admissions over the 30 time steps, and
 (bottom)
 
 ``` python
