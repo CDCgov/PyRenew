@@ -53,9 +53,7 @@ The basic renewal model defines five components: generation interval, initial in
 ```{python}
 #| label: creating-elements
 # (1) The generation interval (deterministic)
-gen_int = DeterministicPMF(
-    (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-)
+gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
 # (2) Initial infections (inferred with a prior)
 I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
@@ -67,7 +65,7 @@ rt_proc = RtRandomWalkProcess()
 latent_infections = Infections()
 
 # (5) The observed infections process (with mean at the latent infections)
-observed_infections = PoissonObservation()
+observation_process = PoissonObservation()
 ```
 
 With these five pieces, we can build the basic renewal model:
@@ -79,7 +77,7 @@ model1 = RtInfectionsRenewalModel(
     I0                  = I0,
     Rt_process          = rt_proc,
     latent_infections   = latent_infections,
-    observed_infections = observed_infections,
+    observation_process = observation_process,
     )
 ```
 
@@ -92,7 +90,7 @@ flowchart TB
     i0["(2) I0\n(Infections0)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     inf["(4) latent_infections\n(Infections)"]
-    obs["(5) observed_infections\n(PoissonObservation)"]
+    obs["(5) observation_process\n(PoissonObservation)"]
 
     model1["model1\n(RtInfectionsRenewalModel)"]
 
@@ -125,11 +123,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, 31), sim_data[0])
+axs[0].plot(range(0, 31), sim_data.Rt)
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, 31), sim_data[1])
+axs[1].plot(range(0, 31), sim_data.sampled_infections)
 axs[1].set_ylabel('Infections')
 
 fig.suptitle('Basic renewal model')
@@ -147,7 +145,7 @@ import jax
 model1.run(
     num_warmup=2000,
     num_samples=1000,
-    observed_infections=sim_data.observed,
+    observed_infections=sim_data.sampled_infections,
     n_timepoints = len(sim_data[1])-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
@@ -165,7 +163,7 @@ samps = model1.spread_draws([('Rt', 'time')])
 
 fig, ax = plt.subplots(figsize=[4, 5])
 
-ax.plot(sim_data[0])
+ax.plot(sim_data.Rt)
 samp_ids = np.random.randint(size=25, low=0, high=999)
 for samp_id in samp_ids:
     sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
@@ -195,7 +193,7 @@ flowchart LR
     models((Model\nmetaclass))
 
     subgraph observations[Observations module]
-        obs["observed_infections\n(PoissonObservation)"]
+        obs["observation_process\n(PoissonObservation)"]
     end
 
     subgraph latent[Latent module]

@@ -45,6 +45,7 @@ class PoissonObservation(RandomVariable):
         self,
         predicted: ArrayLike,
         obs: ArrayLike | None = None,
+        name: str | None = None,
         **kwargs,
     ) -> tuple:
         """Sample from the Poisson process
@@ -55,6 +56,8 @@ class PoissonObservation(RandomVariable):
             Rate parameter of the Poisson distribution.
         obs : ArrayLike, optional
             Observed data. Defaults to None.
+        name : str, optional
+            Name of the random variable. Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample calls, should there be any.
 
@@ -62,10 +65,14 @@ class PoissonObservation(RandomVariable):
         -------
         tuple
         """
+
+        if name is None:
+            name = self.parameter_name
+
         return (
             numpyro.sample(
-                self.parameter_name,
-                dist.Poisson(rate=predicted + self.eps),
+                name=name,
+                fn=dist.Poisson(rate=predicted + self.eps),
                 obs=obs,
             ),
         )

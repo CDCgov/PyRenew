@@ -11,48 +11,12 @@ install `pyrenew`:
 pip install pyrenew
 ```
 
-    Requirement already satisfied: pyrenew in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (0.1.0)
-    Requirement already satisfied: jax<0.5.0,>=0.4.24 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from pyrenew) (0.4.26)
-    Requirement already satisfied: numpy<2.0.0,>=1.26.4 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from pyrenew) (1.26.4)
-    Requirement already satisfied: numpyro<0.14.0,>=0.13.2 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from pyrenew) (0.13.2)
-    Requirement already satisfied: pillow<11.0.0,>=10.3.0 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from pyrenew) (10.3.0)
-    Requirement already satisfied: polars<0.21.0,>=0.20.13 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from pyrenew) (0.20.19)
-    Requirement already satisfied: ml-dtypes>=0.2.0 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from jax<0.5.0,>=0.4.24->pyrenew) (0.4.0)
-    Requirement already satisfied: opt-einsum in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from jax<0.5.0,>=0.4.24->pyrenew) (3.3.0)
-    Requirement already satisfied: scipy>=1.9 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from jax<0.5.0,>=0.4.24->pyrenew) (1.13.0)
-    Requirement already satisfied: jaxlib>=0.4.14 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from numpyro<0.14.0,>=0.13.2->pyrenew) (0.4.26)
-    Requirement already satisfied: multipledispatch in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from numpyro<0.14.0,>=0.13.2->pyrenew) (1.0.0)
-    Requirement already satisfied: tqdm in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from numpyro<0.14.0,>=0.13.2->pyrenew) (4.66.2)
-    Note: you may need to restart the kernel to use updated packages.
-
 You’ll also need working installations of `matplotlib`, `numpy`, `jax`,
 `numpyro`, and `polars`:
 
 ``` python
 pip install matplotlib numpy jax numpyro polars
 ```
-
-    Requirement already satisfied: matplotlib in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (3.8.3)
-    Requirement already satisfied: numpy in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (1.26.4)
-    Requirement already satisfied: jax in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (0.4.26)
-    Requirement already satisfied: numpyro in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (0.13.2)
-    Requirement already satisfied: polars in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (0.20.19)
-    Requirement already satisfied: contourpy>=1.0.1 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from matplotlib) (1.2.1)
-    Requirement already satisfied: cycler>=0.10 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from matplotlib) (0.12.1)
-    Requirement already satisfied: fonttools>=4.22.0 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from matplotlib) (4.50.0)
-    Requirement already satisfied: kiwisolver>=1.3.1 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from matplotlib) (1.4.5)
-    Requirement already satisfied: packaging>=20.0 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from matplotlib) (24.0)
-    Requirement already satisfied: pillow>=8 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from matplotlib) (10.3.0)
-    Requirement already satisfied: pyparsing>=2.3.1 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from matplotlib) (3.1.2)
-    Requirement already satisfied: python-dateutil>=2.7 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from matplotlib) (2.9.0.post0)
-    Requirement already satisfied: ml-dtypes>=0.2.0 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from jax) (0.4.0)
-    Requirement already satisfied: opt-einsum in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from jax) (3.3.0)
-    Requirement already satisfied: scipy>=1.9 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from jax) (1.13.0)
-    Requirement already satisfied: jaxlib>=0.4.14 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from numpyro) (0.4.26)
-    Requirement already satisfied: multipledispatch in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from numpyro) (1.0.0)
-    Requirement already satisfied: tqdm in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from numpyro) (4.66.2)
-    Requirement already satisfied: six>=1.5 in /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages (from python-dateutil>=2.7->matplotlib) (1.16.0)
-    Note: you may need to restart the kernel to use updated packages.
 
 To begin, run the following import section to call external modules and
 functions necessary to run the `pyrenew` demo. The `import` statement
@@ -74,8 +38,6 @@ import numpyro.distributions as dist
 ``` python
 from pyrenew.process import SimpleRandomWalkProcess
 ```
-
-    An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
 
 To understand the simple random walk process underlying the sampling
 within the renewal process model, we first examine a single random walk
@@ -154,9 +116,7 @@ To initialize the model, we first define initial conditions, including:
 # Initializing model components:
 
 # 1) A deterministic generation time
-gen_int = DeterministicPMF(
-    (jnp.array([0.25, 0.25, 0.25, 0.25]),),
-    )
+gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
 # 2) Initial infections
 I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
@@ -168,7 +128,7 @@ latent_infections = Infections()
 
 # First, define a deterministic infection to hosp pmf
 inf_hosp_int = DeterministicPMF(
-    (jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),),
+    jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),
     )
 
 latent_admissions = HospitalAdmissions(
@@ -195,7 +155,7 @@ hospmodel = HospitalAdmissionsModel(
     gen_int=gen_int,
     I0=I0,
     latent_admissions=latent_admissions,
-    admissions_process=admissions_process,
+    observation_process=admissions_process,
     latent_infections=latent_infections,
     Rt_process=Rt_process
     )
@@ -215,19 +175,19 @@ x
            1.2466507, 1.2800207, 1.2749145, 1.2619376, 1.2189837, 1.2192641,
            1.2290158, 1.2128737, 1.1908046, 1.2174997, 1.1941082, 1.2084603,
            1.1965215, 1.2248698, 1.2308019, 1.2426206, 1.2131014, 1.207159 ,
-           1.1837622], dtype=float32), infections=Array([0.05214045, 0.06867922, 0.08761451, 0.11476436, 0.09757317,
+           1.1837622], dtype=float32), latent_infections=Array([0.05214045, 0.06867922, 0.08761451, 0.11476436, 0.09757317,
            0.10547114, 0.1167062 , 0.13010225, 0.13824694, 0.14372033,
            0.15924728, 0.17601486, 0.19236736, 0.21483542, 0.23664482,
            0.25865382, 0.27503362, 0.30029488, 0.3289544 , 0.35262382,
            0.37418258, 0.41274938, 0.43839005, 0.47672123, 0.50913286,
            0.5625195 , 0.6113282 , 0.67092246, 0.7138808 , 0.77217466,
-           0.819254  ], dtype=float32), infection_hosp_rate=Array(0.04929917, dtype=float32), latent=Array([0.        , 0.        , 0.        , 0.        , 0.        ,
+           0.819254  ], dtype=float32), IHR=Array(0.04929917, dtype=float32), latent_admissions=Array([0.        , 0.        , 0.        , 0.        , 0.        ,
            0.        , 0.        , 0.        , 0.        , 0.        ,
            0.        , 0.        , 0.        , 0.00064262, 0.0021317 ,
            0.00302979, 0.00416974, 0.0049305 , 0.00487205, 0.00530097,
            0.00576412, 0.00624666, 0.00665578, 0.00711595, 0.0078055 ,
            0.00854396, 0.00939666, 0.01042083, 0.0114624 , 0.01246538,
-           0.01345188], dtype=float32), sampled=Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+           0.01345188], dtype=float32), sampled_admissions=Array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
            0, 0, 0, 0, 0, 1, 0, 0, 0], dtype=int32))
 
 Visualizations of the single model output show (top) infections over the
@@ -236,10 +196,10 @@ Visualizations of the single model output show (top) infections over the
 
 ``` python
 fig, ax = plt.subplots(nrows=3, sharex=True)
-ax[0].plot(x.infections)
+ax[0].plot(x.latent_infections)
 ax[0].set_ylim([1/5, 5])
-ax[1].plot(x.latent)
-ax[2].plot(x.sampled, 'o')
+ax[1].plot(x.latent_admissions)
+ax[2].plot(x.sampled_admissions, 'o')
 for axis in ax[:-1]:
     axis.set_yscale("log")
 ```
@@ -250,7 +210,7 @@ To fit the `hospmodel` to the simulated data, we call `hospmodel.run()`,
 an MCMC algorithm, with the arguments generated in `hospmodel` object,
 using 1000 warmup stepts and 1000 samples to draw from the posterior
 distribution of the model parameters. The model is run for
-`len(x.sampled)-1` time steps with the seed set by
+`len(x.sampled_admissions)-1` time steps with the seed set by
 `jax.random.PRNGKey()`
 
 ``` python
@@ -258,8 +218,8 @@ distribution of the model parameters. The model is run for
 hospmodel.run(
     num_warmup=1000,
     num_samples=1000,
-    observed_admissions=x.sampled,
-    n_timepoints = len(x.sampled)-1,
+    observed_admissions=x.sampled_admissions,
+    n_timepoints = len(x.sampled_admissions)-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )

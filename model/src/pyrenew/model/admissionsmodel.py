@@ -2,8 +2,8 @@
 
 from collections import namedtuple
 
+import jax.numpy as jnp
 from numpy.typing import ArrayLike
-from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
@@ -11,10 +11,10 @@ HospModelSample = namedtuple(
     "HospModelSample",
     [
         "Rt",
-        "infections",
-        "infection_hosp_rate",
-        "latent",
-        "sampled",
+        "latent_infections",
+        "IHR",
+        "latent_admissions",
+        "sampled_admissions",
     ],
     defaults=[None, None, None, None, None],
 )
@@ -25,13 +25,13 @@ Attributes
 ------HospitalAdmissionsModel
 Rt : float or None
     The reproduction number over time. Defaults to None.
-infections : ArrayLike or None
+latent_infections : ArrayLike or None
     The estimated number of new infections over time. Defaults to None.
 infection_hosp_rate : float or None
     The infected hospitalization rate. Defaults to None.
-latent : ArrayLike or None
-    The estimated latent hospital admissions. Defaults to None.
-sampled : ArrayLike or None
+latent_admissions : ArrayLike or None
+    The estimated latent hospitalizations. Defaults to None.
+sampled_admissions : ArrayLike or None
     The sampled or observed hospital admissions. Defaults to None.
 
 Notes
@@ -55,7 +55,7 @@ class HospitalAdmissionsModel(Model):
         gen_int: RandomVariable,
         I0: RandomVariable,
         Rt_process: RandomVariable,
-        admissions_process: RandomVariable,
+        observation_process: RandomVariable,
     ) -> None:
         """
         Default constructor
@@ -72,8 +72,8 @@ class HospitalAdmissionsModel(Model):
             Initial infections (passed to RtInfectionsRenewalModel)
         Rt_process : RandomVariable
             Rt process  (passed to RtInfectionsRenewalModel).
-        admissions_process : RandomVariable, optional
-            Observation process for the hospital admissions.
+        observation_process : RandomVariable, optional
+            Observation process for the hospitalizations.
 
         Returns
         -------
@@ -87,26 +87,28 @@ class HospitalAdmissionsModel(Model):
             gen_int=gen_int,
             I0=I0,
             latent_infections=latent_infections,
-            observed_infections=DeterministicVariable((0,)),
+            observation_process=None,
             Rt_process=Rt_process,
         )
 
-        HospitalAdmissionsModel.validate(latent_admissions, admissions_process)
+        HospitalAdmissionsModel.validate(
+            latent_admissions, observation_process
+        )
 
         self.latent_admissions = latent_admissions
-        self.admissions_process = admissions_process
+        self.observation_process = observation_process
 
     @staticmethod
-    def validate(latent_admissions, admissions_process) -> None:
+    def validate(latent_admissions, observation_process) -> None:
         """
         Verifies types and status (RV) of latent and observed hospital admissions
 
         Parameters
         ----------
         latent_admissions : ArrayLike
-            The latent process for the hospial admissions.
-        admissions_process : ArrayLike
-            The observed hospital admissions.
+            The latent process for the hospitalizations.
+        observation_process : ArrayLike
+            The observed hospitalizations.
 
         Returns
         -------
@@ -117,7 +119,7 @@ class HospitalAdmissionsModel(Model):
         _assert_sample_and_rtype : Perform type-checking and verify RV
         """
         _assert_sample_and_rtype(latent_admissions, skip_if_none=False)
-        _assert_sample_and_rtype(admissions_process, skip_if_none=False)
+        _assert_sample_and_rtype(observation_process, skip_if_none=False)
         return None
 
     def sample_latent_admissions(
@@ -158,7 +160,8 @@ class HospitalAdmissionsModel(Model):
     def sample_admissions_process(
         self,
         predicted: ArrayLike,
-        obs: ArrayLike,
+        observed_admissions: ArrayLike,
+        name: str | None = None,
         **kwargs,
     ) -> tuple:
         """
@@ -170,6 +173,8 @@ class HospitalAdmissionsModel(Model):
             The predicted hospital admissions.
         obs : ArrayLike
             The observed hospitalization data (to fit).
+        name : str, optional
+            Name of the random variable. Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             obs calls, should there be any.
@@ -178,24 +183,23 @@ class HospitalAdmissionsModel(Model):
         -------
         tuple
 
-        See Also
-        --------
-        admissions_process.sample : For sampling observed hospital
-        admissions.
-
         Notes
         -----
         TODO: Include example(s) here.
         """
 
-        return self.admissions_process.sample(
-            predicted=predicted, obs=obs, **kwargs
+        return self.observation_process.sample(
+            predicted=predicted,
+            obs=observed_admissions,
+            name=name,
+            **kwargs,
         )
 
     def sample(
         self,
         n_timepoints: int,
         observed_admissions: ArrayLike | None = None,
+        padding: int = 0,
         **kwargs,
     ) -> HospModelSample:
         """
@@ -208,6 +212,9 @@ class HospitalAdmissionsModel(Model):
         observed_admissions : ArrayLike, optional
             The observed hospitalization data (passed to the basic renewal
             model). Defaults to None (simulation, rather than fit).
+        padding : int, optional
+            Number of padding timepoints to add to the beginning of the
+            simulation. Defaults to 0.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
             calls, should there be any.
@@ -228,9 +235,10 @@ class HospitalAdmissionsModel(Model):
         """
 
         # Getting the initial quantities from the basic model
-        Rt, infections, *_ = self.basic_renewal.sample(
+        basic_model = self.basic_renewal.sample(
             n_timepoints=n_timepoints,
             observed_infections=None,
+            padding=padding,
             **kwargs,
         )
 
@@ -240,21 +248,36 @@ class HospitalAdmissionsModel(Model):
             latent,
             *_,
         ) = self.sample_latent_admissions(
-            infections=infections,
+            infections=basic_model.latent_infections,
             **kwargs,
         )
 
-        # Sampling the hospital admissions
-        sampled, *_ = self.sample_admissions_process(
-            predicted=latent,
-            obs=observed_admissions,
-            **kwargs,
-        )
+        # Sampling the hospitalizations
+        if self.observation_process is not None:
+            if (observed_admissions is not None) and (padding > 0):
+                sampled_na = jnp.repeat(jnp.nan, padding)
+
+                sampled_observed, *_ = self.sample_admissions_process(
+                    predicted=latent[padding:],
+                    observed_admissions=observed_admissions[padding:],
+                    **kwargs,
+                )
+
+                sampled = jnp.hstack([sampled_na, sampled_observed])
+
+            else:
+                sampled, *_ = self.sample_admissions_process(
+                    predicted=latent,
+                    observed_admissions=observed_admissions,
+                    **kwargs,
+                )
+        else:
+            sampled = None
 
         return HospModelSample(
-            Rt=Rt,
-            infections=infections,
-            infection_hosp_rate=infection_hosp_rate,
-            latent=latent,
-            sampled=sampled,
+            Rt=basic_model.Rt,
+            latent_infections=basic_model.latent_infections,
+            IHR=infection_hosp_rate,
+            latent_admissions=latent,
+            sampled_admissions=sampled,
         )

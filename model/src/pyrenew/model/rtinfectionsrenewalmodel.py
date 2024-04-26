@@ -3,13 +3,14 @@
 from collections import namedtuple
 from typing import Optional
 
+import jax.numpy as jnp
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 
 # Output class of the RtInfectionsRenewalModel
 RtInfectionsRenewalSample = namedtuple(
     "InfectModelSample",
-    ["Rt", "latent", "observed"],
+    ["Rt", "latent_infections", "sampled_infections"],
     defaults=[None, None, None],
 )
 RtInfectionsRenewalSample.__doc__ = """
@@ -19,10 +20,10 @@ Attributes
 ----------
 Rt : float or None
     The reproduction number over time. Defaults to None.
-latent : ArrayLike or None
+latent_infections : ArrayLike or None
     The estimated latent infections. Defaults to None.
-observed : ArrayLike or None
-    The observed infections. Defaults to None.
+sampled_infections : ArrayLike or None
+    The sampled infections. Defaults to None.
 
 Notes
 -----
@@ -42,7 +43,7 @@ class RtInfectionsRenewalModel(Model):
         gen_int: RandomVariable,
         I0: RandomVariable,
         Rt_process: RandomVariable,
-        observed_infections: RandomVariable,
+        observation_process: RandomVariable,
     ) -> None:
         """Default constructor
 
@@ -58,7 +59,7 @@ class RtInfectionsRenewalModel(Model):
         Rt_process : RandomVariable
             The sample function of the process should return a tuple where the
             first element is the drawn Rt.
-        observed_infections : RandomVariable
+        observation_process : RandomVariable
             Infections observation process (e.g.,
             pyrenew.observations.Poisson.).
 
@@ -71,14 +72,14 @@ class RtInfectionsRenewalModel(Model):
             gen_int=gen_int,
             i0=I0,
             latent_infections=latent_infections,
-            observed_infections=observed_infections,
+            observation_process=observation_process,
             Rt_process=Rt_process,
         )
 
         self.gen_int = gen_int
         self.i0 = I0
         self.latent_infections = latent_infections
-        self.observed_infections = observed_infections
+        self.observation_process = observation_process
         self.Rt_process = Rt_process
 
     @staticmethod
@@ -86,7 +87,7 @@ class RtInfectionsRenewalModel(Model):
         gen_int,
         i0,
         latent_infections,
-        observed_infections,
+        observation_process,
         Rt_process,
     ) -> None:
         """
@@ -111,7 +112,7 @@ class RtInfectionsRenewalModel(Model):
         _assert_sample_and_rtype(gen_int, skip_if_none=False)
         _assert_sample_and_rtype(i0, skip_if_none=False)
         _assert_sample_and_rtype(latent_infections, skip_if_none=False)
-        _assert_sample_and_rtype(observed_infections, skip_if_none=True)
+        _assert_sample_and_rtype(observation_process, skip_if_none=True)
         _assert_sample_and_rtype(Rt_process, skip_if_none=False)
         return None
 
@@ -211,6 +212,7 @@ class RtInfectionsRenewalModel(Model):
         self,
         predicted: ArrayLike,
         observed_infections: Optional[ArrayLike] = None,
+        name: str | None = None,
         **kwargs,
     ) -> tuple:
         """
@@ -222,6 +224,8 @@ class RtInfectionsRenewalModel(Model):
             The predicted infecteds.
         observed_admissions : ArrayLike, optional
             The observed values of hospital admissions, if any, for inference. Defaults to None.
+        name : str, optional
+            Name of the random variable passed to the RandomVariable.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample() calls, should there be any.
@@ -230,17 +234,14 @@ class RtInfectionsRenewalModel(Model):
         -------
         tuple
 
-        See Also
-        --------
-        observed_infections.sample : For sampling observed infections
-
         Notes
         -----
         TODO: Include example(s) here.
         """
-        return self.observed_infections.sample(
+        return self.observation_process.sample(
             predicted=predicted,
             obs=observed_infections,
+            name=name,
             **kwargs,
         )
 
@@ -248,6 +249,7 @@ class RtInfectionsRenewalModel(Model):
         self,
         n_timepoints: int,
         observed_infections: Optional[ArrayLike] = None,
+        padding: int = 0,
         **kwargs,
     ) -> RtInfectionsRenewalSample:
         """Sample from the Basic Renewal Model
@@ -258,6 +260,9 @@ class RtInfectionsRenewalModel(Model):
             Number of timepoints to sample.
         observed_infections : ArrayLike, optional
             Observed infections.
+        padding : int, optional
+            Number of padding timepoints to add to the beginning of the
+            simulation. Defaults to 0.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
             calls, if any
@@ -293,12 +298,29 @@ class RtInfectionsRenewalModel(Model):
         )
 
         # Using the predicted infections to sample from the observation process
-        observed, *_ = self.sample_infections_obs(
-            predicted=latent, observed_infections=observed_infections, **kwargs
-        )
+        if self.observation_process is not None:
+            if (observed_infections is not None) and (padding > 0):
+                sampled_pad = jnp.repeat(jnp.nan, padding)
+
+                sampled_obs, *_ = self.sample_infections_obs(
+                    predicted=latent[padding:],
+                    observed_infections=observed_infections[padding:],
+                    **kwargs,
+                )
+
+                sampled = jnp.hstack([sampled_pad, sampled_obs])
+
+            else:
+                sampled, *_ = self.sample_infections_obs(
+                    predicted=latent,
+                    observed_infections=observed_infections,
+                    **kwargs,
+                )
+        else:
+            sampled = None
 
         return RtInfectionsRenewalSample(
             Rt=Rt,
-            latent=latent,
-            observed=observed,
+            latent_infections=latent,
+            sampled_infections=sampled,
         )

@@ -5,6 +5,9 @@ description = "Pyrenew: a package for Bayesian renewal modeling with JAX and Num
 authors = ["Dylan H. Morris <dylan@dylanhmorris.com>"]
 license = "Apache 2.0"
 readme = "README.md"
+include = [{path = "datasets/*.tsv"}]
+exclude = [{path = "datasets/*.rds"}]
+
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -25,6 +28,7 @@ numpydoc = "^1.6.0"
 nbclient = "^0.10.0"
 nbformat = "^5.10.0"
 pytest-cov = "^5.0.0"
+pytest-mpl = "^0.17.0"
 
 [tool.numpydoc_validation]
 checks = [
