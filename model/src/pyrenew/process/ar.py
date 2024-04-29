@@ -55,8 +55,10 @@ class ARProcess(RandomVariable):
             Length of the sequence.
         inits : ArrayLike, optional
             Initial points, if None, then these are sampled.
+            Defaults to None.
         name : str, optional
             Name of the parameter passed to numpyro.sample.
+            Defaults to "arprocess".
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
             calls, should there be any.
