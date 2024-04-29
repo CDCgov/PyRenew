@@ -52,13 +52,6 @@ TODO: Add Notes.
 class InfectHospRate(RandomVariable):
     """
     Infection to Hospitalization Rate
-
-    Methods
-    -------
-    validate(distr)
-        Validates distribution is Numpyro distribution
-    sample(**kwargs)
-        Produces a sample of the IHR
     """
 
     def __init__(
@@ -132,13 +125,6 @@ class HospitalAdmissions(RandomVariable):
 
     Implements a renewal process for the expected number of hospitalizations.
 
-    Methods
-    -------
-    validate(infect_hosp_rate_dist, weekday_effect_dist, hosp_report_prob_dist)
-        Validates that the IHR, weekday effects, and probability of being
-        reported hospitalized distributions are RandomVariable types
-    sample(latent, **kwargs)
-        Samples from the observation process
 
     Notes
     -----
