@@ -14,6 +14,7 @@ class DeterministicProcess(DeterministicVariable):
         **kwargs,
     ) -> tuple:
         """Retrieve the value of the deterministic Rv
+        
         Parameters
         ----------
         n_timepoints : int

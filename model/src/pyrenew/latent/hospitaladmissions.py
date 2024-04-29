@@ -10,44 +10,50 @@ from numpy.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 
-HospAdmissionsSample = namedtuple(
-    "HospAdmissionsSample",
-    ["IHR", "predicted"],
-    defaults=[None, None],
-)
-HospAdmissionsSample.__doc__ = """
-A container for holding the output from HospAdmissionsSample.sample.
+class HospAdmissionsSample:
+    """
+    A container for holding the output from HospAdmissionsSample.sample.
+    """
+    def __init__(self, IHR=None, predicted=None) -> None:
+        """
+        Default constructor.
 
-Attributes
-----------
-IHR : float or None
-    The infected hospitalization rate. Defaults to None.
-predicted : ArrayLike or None
-    The predicted number of hospital admissions. Defaults to None.
+        Parameters
+        ----------
+        IHR : float, optional
+            The infected hospitalization rate. Defaults to None.
+        predicted : ArrayLike or None
+            The predicted number of hospital admissions. Defaults to None.
 
-Notes
------
-TODO: Add Notes.
-"""
+        Returns
+        -------
+        None
+        """
+        self.IHR = IHR
+        self.predicted = predicted
 
-InfectHospRateSample = namedtuple(
-    "InfectHospRateSample",
-    ["IHR"],
-    defaults=[None],
-)
-InfectHospRateSample.__doc__ = """
-A container for holding the output from InfectHospRateSample.sample.
+    def __repr__(self):
+        return (f"HospAdmissionsSample(IHR={self.IRH}, predicted={self.predicted})")
+    
+class InfectHospRateSample:
+    """
+    A container for holding the output from InfectHospRateSample.sample.
+    """
+    def __init__(self, IHR=None) -> None:
+        """
+        Default constructor
 
-Attributes
-----------
-IHR : ArrayLike or None
-    The infected hospitalization rate. Defaults to None.
+        Parameters
+        ----------
+        IHR : float, optional
+            The infected hospitalization rate. Defaults to None.
 
-Notes
------
-TODO: Add Notes.
-"""
+        """
+        self.IHR = IHR
 
+    def __repr__(self):
+        return (f"InfectHospRateSample(IHR={self.IHR})")
+    
 
 class InfectHospRate(RandomVariable):
     """
@@ -250,7 +256,7 @@ class HospitalAdmissions(RandomVariable):
             Latent infections.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
-            calls, if any
+            calls, should there be any.
 
         Returns
         -------
