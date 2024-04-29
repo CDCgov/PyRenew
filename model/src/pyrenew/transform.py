@@ -162,6 +162,7 @@ class ScaledLogitTransform(AbstractTransform):
     def __init__(self, x_max: float):
         """
         Default constructor
+
         Parameters
         ----------
         x_max : float
