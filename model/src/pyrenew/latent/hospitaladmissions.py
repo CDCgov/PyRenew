@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from collections import namedtuple
+
 from typing import Any, Optional
 
 import jax.numpy as jnp
@@ -10,10 +10,12 @@ from numpy.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 
+
 class HospAdmissionsSample:
     """
     A container for holding the output from HospAdmissionsSample.sample.
     """
+
     def __init__(self, IHR=None, predicted=None) -> None:
         """
         Default constructor.
@@ -33,12 +35,16 @@ class HospAdmissionsSample:
         self.predicted = predicted
 
     def __repr__(self):
-        return (f"HospAdmissionsSample(IHR={self.IRH}, predicted={self.predicted})")
-    
+        return (
+            f"HospAdmissionsSample(IHR={self.IRH}, predicted={self.predicted})"
+        )
+
+
 class InfectHospRateSample:
     """
     A container for holding the output from InfectHospRateSample.sample.
     """
+
     def __init__(self, IHR=None) -> None:
         """
         Default constructor
@@ -52,8 +58,8 @@ class InfectHospRateSample:
         self.IHR = IHR
 
     def __repr__(self):
-        return (f"InfectHospRateSample(IHR={self.IHR})")
-    
+        return f"InfectHospRateSample(IHR={self.IHR})"
+
 
 class InfectHospRate(RandomVariable):
     """
