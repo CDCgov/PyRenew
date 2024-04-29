@@ -39,8 +39,9 @@ def sample_infections_rt(
         an infection two time units in the past, etc.
 
     Returns
-    --------
-    The timeseries of infections, as a JAX array
+    -------
+    ArrayLike
+        The timeseries of infections, as a JAX array
     """
     incidence_func = new_convolve_scanner(reversed_generation_interval_pmf)
 
@@ -129,10 +130,11 @@ def sample_infections_with_feedback(
 
     Returns
     -------
-    A tuple `(Rt_adjusted, infections)`,
-    where `Rt_adjusted` is the infection-feedback-adjusted
-    timeseries of the reproduction number R(t) and
-    infections is the incident infection timeseries.
+    tuple
+        A tuple `(Rt_adjusted, infections)`,
+        where `Rt_adjusted` is the infection-feedback-adjusted
+        timeseries of the reproduction number R(t) and
+        infections is the incident infection timeseries.
     """
     feedback_scanner = new_double_scanner(
         (infection_feedback_pmf, generation_interval_pmf),
