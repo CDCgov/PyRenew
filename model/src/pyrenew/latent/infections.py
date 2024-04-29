@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from collections import namedtuple
 
 import jax.numpy as jnp
 import numpyro as npro
@@ -8,19 +7,29 @@ import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
-InfectionsSample = namedtuple(
-    "InfectionsSample",
-    ["infections"],
-    defaults=[None],
-)
-InfectionsSample.__doc__ = """
-A container for holding the output from the InfectionsSample.
 
-Attributes
-----------
-infections : ArrayLike or None
-    The estimated latent infections. Defaults to None.
-"""
+class InfectionsSample:
+    """
+    A container for holding the output from the InfectionsSample.
+    """
+
+    def __init__(self, infections=None) -> None:
+        """
+        Default constructor
+
+        Parameters
+        ----------
+        infections : ArrayLike | None, optional
+            The estimated latent infections. Defaults to None.
+
+        Returns
+        -------
+        None
+        """
+        self.infections = infections
+
+    def __repr__(self):
+        return f"InfectionsSample(infections={self.infections})"
 
 
 class Infections(RandomVariable):
@@ -40,11 +49,6 @@ class Infections(RandomVariable):
     where :math:`I(t)` is the number of infections at time :math:`t`,
     :math:`R(t)` is the reproduction number at time :math:`t`, and
     :math:`g(t-\tau)` is the generation interval.
-
-    Methods
-    -------
-    sample(Rt, I0, gen_int, **kwargs)
-
     """
 
     def __init__(
@@ -55,8 +59,9 @@ class Infections(RandomVariable):
 
         Parameters
         ----------
-        infections_mean_varname : str.
+        infections_mean_varname : str, optional.
             Name to be assigned to the deterministic variable in the model.
+            Defaults to "latent_infections".
 
         Returns
         -------
@@ -69,11 +74,6 @@ class Infections(RandomVariable):
 
     @staticmethod
     def validate() -> None:
-        """
-        Notes
-        -----
-        TODO: Complete this method.
-        """
         return None
 
     def sample(

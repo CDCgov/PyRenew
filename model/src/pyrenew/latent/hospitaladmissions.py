@@ -229,7 +229,7 @@ class HospitalAdmissions(RandomVariable):
             Possibly incorrect input for infection to hospitalization rate distribution.
         weekday_effect_dist : Any
             Possibly incorrect input for weekday effect.
-        hosp_report_prob_dist  : Any
+        hosp_report_prob_dist : Any
             Possibly incorrect input for distribution or fixed value for the
             hospital admission reporting probability.
 
