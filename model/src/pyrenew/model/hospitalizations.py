@@ -4,6 +4,7 @@ from collections import namedtuple
 
 import jax.numpy as jnp
 from numpy.typing import ArrayLike
+from pyrenew.deterministic import NullObservation
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
 
@@ -55,7 +56,7 @@ class HospitalizationsModel(Model):
         gen_int: RandomVariable,
         I0: RandomVariable,
         Rt_process: RandomVariable,
-        observation_process: RandomVariable,
+        observation_process: RandomVariable | None = None,
     ) -> None:
         """
         Default constructor
@@ -87,9 +88,12 @@ class HospitalizationsModel(Model):
             gen_int=gen_int,
             I0=I0,
             latent_infections=latent_infections,
-            observation_process=None,
+            observation_process=NullObservation(),
             Rt_process=Rt_process,
         )
+
+        if observation_process is None:
+            observation_process = NullObservation()
 
         HospitalizationsModel.validate(
             latent_hospitalizations, observation_process
@@ -251,28 +255,23 @@ class HospitalizationsModel(Model):
         )
 
         # Sampling the hospitalizations
-        if self.observation_process is not None:
-            if (observed_hospitalizations is not None) and (padding > 0):
-                sampled_na = jnp.repeat(jnp.nan, padding)
+        if (observed_hospitalizations is not None) and (padding > 0):
+            sampled_na = jnp.repeat(jnp.nan, padding)
 
-                sampled_observed, *_ = self.sample_hospitalizations_obs(
-                    predicted=latent[padding:],
-                    observed_hospitalizations=observed_hospitalizations[
-                        padding:
-                    ],
-                    **kwargs,
-                )
+            sampled_observed, *_ = self.sample_hospitalizations_obs(
+                predicted=latent[padding:],
+                observed_hospitalizations=observed_hospitalizations[padding:],
+                **kwargs,
+            )
 
-                sampled = jnp.hstack([sampled_na, sampled_observed])
+            sampled = jnp.hstack([sampled_na, sampled_observed])
 
-            else:
-                sampled, *_ = self.sample_hospitalizations_obs(
-                    predicted=latent,
-                    observed_hospitalizations=observed_hospitalizations,
-                    **kwargs,
-                )
         else:
-            sampled = None
+            sampled, *_ = self.sample_hospitalizations_obs(
+                predicted=latent,
+                observed_hospitalizations=observed_hospitalizations,
+                **kwargs,
+            )
 
         return HospModelSample(
             Rt=basic_model.Rt,

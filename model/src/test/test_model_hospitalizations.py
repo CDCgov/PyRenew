@@ -6,7 +6,11 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 import polars as pl
-from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.deterministic import (
+    DeterministicPMF,
+    DeterministicVariable,
+    NullObservation,
+)
 from pyrenew.latent import (
     HospitalAdmissions,
     InfectHospRate,
@@ -86,13 +90,31 @@ def test_model_hosp_no_obs_model():
         Rt_process=Rt_process,
         latent_infections=latent_infections,
         latent_hospitalizations=latent_hospitalizations,
-        observation_process=DeterministicVariable(0),
+        observation_process=None,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model0_samp = model0.sample(n_timepoints=30)
+
+    model0.observation_process = NullObservation()
+
+    np.random.seed(223)
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        model1_samp = model0.sample(n_timepoints=30)
+
+    np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
+    np.testing.assert_array_equal(
+        model0_samp.latent_infections, model1_samp.latent_infections
+    )
+    np.testing.assert_array_equal(model0_samp.IHR, model1_samp.IHR)
+    np.testing.assert_array_equal(
+        model0_samp.latent_admissions, model1_samp.latent_admissions
+    )
+    np.testing.assert_array_equal(
+        model0_samp.sampled_admissions, model1_samp.sampled_admissions
+    )
 
     model0.run(
         num_warmup=500,

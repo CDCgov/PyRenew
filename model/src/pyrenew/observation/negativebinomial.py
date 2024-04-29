@@ -68,8 +68,8 @@ class NegativeBinomialObservation(RandomVariable):
     def sample(
         self,
         predicted: ArrayLike,
-        name: str | None = None,
         obs: ArrayLike | None = None,
+        name: str | None = None,
         **kwargs,
     ) -> tuple:
         """Sample from the negative binomial distribution

@@ -8,7 +8,7 @@ import numpyro as npro
 import numpyro.distributions as dist
 import polars as pl
 import pytest
-from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.deterministic import DeterministicPMF, NullObservation
 from pyrenew.latent import Infections, Infections0
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
@@ -34,13 +34,28 @@ def test_model_basicrenewal_no_obs_model():
         I0=I0,
         latent_infections=latent_infections,
         Rt_process=rt,
-        observation_process=DeterministicVariable(1),
+        # Explicitly use None, this should call the NullObservation
+        observation_process=None,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model0_samp = model0.sample(n_timepoints=30)
+
+    # Generating
+    model0.observation_process = NullObservation()
+    np.random.seed(223)
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        model1_samp = model0.sample(n_timepoints=30)
+
+    np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
+    np.testing.assert_array_equal(
+        model0_samp.latent_infections, model1_samp.latent_infections
+    )
+    np.testing.assert_array_equal(
+        model0_samp.sampled_infections, model1_samp.sampled_infections
+    )
 
     model0.run(
         num_warmup=500,
