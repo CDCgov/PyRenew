@@ -12,7 +12,7 @@ a basic renewal model.
 
 `pyrenew`’s core components are the metaclasses `RandomVariable` and
 `Model` (in Python, a *metaclass* is a class whose instances are also
-classes, which themselves are templates for making objects). Within the
+classes, where a *class* is a template for making objects). Within the
 `pyrenew` package, a `RandomVariable` is a quantity that models can
 estimate and sample from, **including deterministic quantities**. The
 benefit of this design is that the definition of the `sample()` function
@@ -33,7 +33,7 @@ class MyRandVar(RandomVariable):
 
 Whereas, in some other cases, we may instead use a fixed quantity for
 that variable (like a pre-computed PMF), where the `RandomVariable`’s
-sample function could be defined like:
+sample function could instead be defined as:
 
 ``` python
 # instead define MyRandVar to still inherit from the RandVariable class
@@ -44,9 +44,9 @@ class MyRandVar(RandomVariable):
         return jax.numpy.array([0.2, 0.7, 0.1])
 ```
 
-This way, when a `Model` samples from `MyRandVar`, it could be either
-adding random variables to be estimated (first case) or just retrieving
-some quantity needed for other calculations (second case.)
+Thus, when a `Model` samples from `MyRandVar`, it could be either adding
+random variables to be estimated (first case) or just retrieving some
+quantity needed for other calculations (second case.)
 
 The `Model` metaclass provides basic functionality for estimating and
 simulation. Like `RandomVariable`, the `Model` metaclass has a
