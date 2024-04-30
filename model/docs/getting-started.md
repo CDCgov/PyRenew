@@ -80,9 +80,7 @@ ratio of new infections at time $t$ to previous infections at some time
 $t-s$, as a renewal process model. Our basic renewal process model
 defines five components:
 
-1)  generation interval, the times between infections. In this example,
-    the generation interval is not estimated but passed as a
-    deterministic instance of `RandomVariable`
+1)  generation interval, the times between infections
 
 2)  initial infections, occurring prior to time $t = 0$
 
@@ -95,7 +93,20 @@ defines five components:
     reported, perhaps via hospital admissions, physician’s office
     visits, or routine biosurveillance.
 
-Here is the code to initialize the five components:
+To initialize these five components within the renewal modeling
+framework, we estimate each component with:
+
+1)  In this example, the generation interval is not estimated but passed
+    as a deterministic instance of `RandomVariable`
+
+2)  an instance of the `Infections0` class, with a log-normal
+    distribution with mean = 0 and standard deviation = 1 as input
+
+3)  an instance of the `RtRandomWalkProcess` class with default values
+
+4)  an instance of the `Infections` class with default values, and
+
+5)  an instance of the `PoissonObservation` class with default values
 
 ``` python
 # (1) The generation interval (deterministic)
