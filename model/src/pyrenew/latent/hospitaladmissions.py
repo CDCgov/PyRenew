@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from collections import namedtuple
-from typing import Any, Optional
+
+from typing import Any, NamedTuple, Optional
 
 import jax.numpy as jnp
 import numpyro as npro
@@ -10,55 +10,56 @@ from numpy.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 
-HospAdmissionsSample = namedtuple(
-    "HospAdmissionsSample",
-    ["infection_hosp_rate", "predicted"],
-    defaults=[None, None],
-)
-HospAdmissionsSample.__doc__ = """
-A container for holding the output from HospAdmissionsSample.sample.
 
-Attributes
-----------
-infection_hosp_rate : float or None
-    The infected hospitalization rate. Defaults to None.
-predicted : ArrayLike or None
-    The predicted number of hospital admissions. Defaults to None.
+class HospAdmissionsSample(NamedTuple):
+    """
+        A container for holding the output from HospAdmissionsSample.sample.
+    >>>>>>> origin/main
 
-Notes
------
-TODO: Add Notes.
-"""
+        Parameters
+        ----------
+        infection_hosp_rate : float, optional
+            The infected hospitalization rate. Defaults to None.
+        predicted : ArrayLike or None
+            The predicted number of hospital admissions. Defaults to None.
+    """
 
-InfectHospRateSample = namedtuple(
-    "InfectHospRateSample",
-    ["infection_hosp_rate"],
-    defaults=[None],
-)
-InfectHospRateSample.__doc__ = """
-A container for holding the output from InfectHospRateSample.sample.
+    infection_hosp_rate: float | None = None
+    predicted: ArrayLike | None = None
 
-Attributes
-----------
-infection_hosp_rate : ArrayLike or None
-    The infected hospitalization rate. Defaults to None.
+    def __repr__(self):
+        return f"HospAdmissionsSample(infection_hosp_rate={self.IRH}, predicted={self.predicted})"
 
-Notes
------
-TODO: Add Notes.
-"""
+
+class InfectHospRateSample(NamedTuple):
+    """
+    A container for holding the output from InfectHospRateSample.sample.
+
+    Attributes
+    ----------
+    IHR : float, optional
+        The infected hospitalization rate. Defaults to None.
+    """
+
+    IHR: float | None = None
+
+    def __repr__(self):
+        return f"InfectHospRateSample(IHR={self.IHR})"
 
 
 class InfectHospRate(RandomVariable):
     """
-    Infection to Hospitalization Rate
+        Infection to Hospitalization Rate
+    <<<<<<< HEAD
 
-    Methods
-    -------
-    validate(distr)
-        Validates distribution is Numpyro distribution
-    sample(**kwargs)
-        Produces a sample of the infection-hospitalization rate (IHR).
+        Methods
+        -------
+        validate(distr)
+            Validates distribution is Numpyro distribution
+        sample(**kwargs)
+            Produces a sample of the infection-hospitalization rate (IHR).
+    =======
+    >>>>>>> origin/main
     """
 
     def __init__(
@@ -132,13 +133,6 @@ class HospitalAdmissions(RandomVariable):
 
     Implements a renewal process for the expected number of hospital admissions.
 
-    Methods
-    -------
-    validate(infect_hosp_rate_dist, weekday_effect_dist, hosp_report_prob_dist)
-        Validates that the IHR, weekday effects, and probability of being
-        reported hospitalized distributions are RandomVariable types
-    sample(latent, **kwargs)
-        Samples from the observation process
 
     Notes
     -----
@@ -229,7 +223,7 @@ class HospitalAdmissions(RandomVariable):
             Possibly incorrect input for infection to hospitalization rate distribution.
         weekday_effect_dist : Any
             Possibly incorrect input for weekday effect.
-        hosp_report_prob_dist  : Any
+        hosp_report_prob_dist : Any
             Possibly incorrect input for distribution or fixed value for the
             hospital admission reporting probability.
 
@@ -262,7 +256,7 @@ class HospitalAdmissions(RandomVariable):
             Latent infections.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
-            calls, if any
+            calls, should there be any.
 
         Returns
         -------

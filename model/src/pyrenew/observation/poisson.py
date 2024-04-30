@@ -9,17 +9,12 @@ from pyrenew.metaclass import RandomVariable
 class PoissonObservation(RandomVariable):
     """
     Poisson observation process
-
-    Methods
-    -------
-    sample(predicted, obs, **kwargs)
-        Sample from the Poisson process
     """
 
     def __init__(
         self,
-        parameter_name: str | None = "poisson_rv",
-        eps: float | None = 1e-8,
+        parameter_name: str = "poisson_rv",
+        eps: float = 1e-8,
     ) -> None:
         """Default Constructor
 
@@ -54,9 +49,9 @@ class PoissonObservation(RandomVariable):
         ----------
         predicted : ArrayLike
             Rate parameter of the Poisson distribution.
-        obs : ArrayLike, optional
+        obs : ArrayLike | None, optional
             Observed data. Defaults to None.
-        name : str, optional
+        name : str | None, optional
             Name of the random variable. Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample calls, should there be any.
