@@ -58,8 +58,10 @@ layers of complexity.
 
 This section will show the steps to build a simple renewal model
 featuring a latent infection process, a random walk Rt process, and an
-observation process for the reported infections. We start by loading the
-needed components to build a basic renewal model:
+observation process for the reported infections.
+
+We start by loading the needed components to build a basic renewal
+model:
 
 ``` python
 import jax.numpy as jnp
@@ -73,11 +75,27 @@ from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
 ```
 
-The basic renewal model defines five components: generation interval,
-initial infections, Rt, latent infections, and observed infections. In
-this example, the generation interval is not estimated but passed as a
-deterministic instance of `RandomVariable`. Here is the code to
-initialize the five components:
+The pyrenew package models the real-time reproductive number $R_t$, the
+ratio of new infections at time $t$ to previous infections at some time
+$t-s$, as a renewal process model. Our basic renewal process model
+defines five components:
+
+1)  generation interval, the times between infections. In this example,
+    the generation interval is not estimated but passed as a
+    deterministic instance of `RandomVariable`
+
+2)  initial infections, occurring prior to time $t = 0$
+
+3)  $R_t$, the real-time reproductive number,
+
+4)  latent infections, i.e., those infections which are known to exist
+    but are not observed (or not observable), and
+
+5)  observed infections, a subset of underlying true infections that are
+    reported, perhaps via hospital admissions, physician’s office
+    visits, or routine biosurveillance.
+
+Here is the code to initialize the five components:
 
 ``` python
 # (1) The generation interval (deterministic)
