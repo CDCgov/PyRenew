@@ -1,50 +1,37 @@
 # -*- coding: utf-8 -*-
 
 
+from typing import NamedTuple
+
 import jax.numpy as jnp
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
 
 
-class HospModelSample:
+class HospModelSample(NamedTuple):
     """
     A container for holding the output from HospitalAdmissionsModel.sample().
+
+    Attributes
+    ----------
+    Rt : float | None, optional
+        The reproduction number over time. Defaults to None.
+    latent_infections : ArrayLike | None, optional
+        The estimated number of new infections over time. Defaults to None.
+    IHR : float | None, optional
+        The infected hospitalization rate. Defaults to None.
+    latent_admissions : ArrayLike | None, optional
+        The estimated latent hospitalizations. Defaults to None.
+    sampled_admissions : ArrayLike | None, optional
+        The sampled or observed hospital admissions. Defaults to None.
     """
 
-    def __init__(
-        self,
-        Rt=None,
-        latent_infections=None,
-        IHR=None,
-        latent_admissions=None,
-        sampled_admissions=None,
-    ) -> None:
-        """
-        Default constructor
-
-        Parameters
-        ----------
-        Rt : float | None, optional
-            The reproduction number over time. Defaults to None.
-        latent_infections : ArrayLike | None, optional
-            The estimated number of new infections over time. Defaults to None.
-        IHR : float | None, optional
-            The infected hospitalization rate. Defaults to None.
-        latent_admissions : ArrayLike | None, optional
-            The estimated latent hospitalizations. Defaults to None.
-        sampled_admissions : ArrayLike | None, optional
-            The sampled or observed hospital admissions. Defaults to None.
-
-        Returns
-        -------
-        None
-        """
-        self.Rt = Rt
-        self.latent_infections = latent_infections
-        self.IHR = IHR
-        self.latent_admissions = latent_admissions
-        self.sampled_admissions = sampled_admissions
+    Rt: float | None = None
+    latent_infections: ArrayLike | None = None
+    IHR: float | None = None
+    latent_admissions: ArrayLike | None = None
+    sampled_admissions: ArrayLike | None = None
 
     def __repr__(self):
         return f"HospModelSample(Rt={self.Rt}, latent_infections={self.latent_infections}, IHR={self.IHR}, latent_admissions={self.latent_admissions}, sampled_admissions={self.sampled_admissions})"

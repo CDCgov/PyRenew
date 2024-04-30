@@ -1,36 +1,31 @@
 # -*- coding: utf-8 -*-
 
 
+from typing import NamedTuple
+
 import jax.numpy as jnp
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 
 
 # Output class of the RtInfectionsRenewalModel
-class RtInfectionsRenewalSample:
+class RtInfectionsRenewalSample(NamedTuple):
     """
     A container for holding the output from RtInfectionsRenewalModel.sample().
+
+    Attributes
+    ----------
+    Rt : float | None, optional
+        The reproduction number over time. Defaults to None.
+    latent_infections : ArrayLike | None, optional
+        The estimated latent infections. Defaults to None.
+    sampled_infections : ArrayLike | None, optional
+        The sampled infections. Defaults to None.
     """
 
-    def __init__(
-        self, Rt=None, latent_infections=None, sampled_infections=None
-    ) -> None:
-        """
-        Default constructor
-
-        Parameters
-        ----------
-        Rt : float | None, optional
-            The reproduction number over time. Defaults to None.
-        latent_infections : ArrayLike | None, optional
-            The estimated latent infections. Defaults to None.
-        sampled_infections : ArrayLike | None, optional
-            The sampled infections. Defaults to None.
-
-        Returns
-        -------
-        None
-        """
+    Rt: float | None = None
+    latent_infections: ArrayLike | None = None
+    sampled_infections: ArrayLike | None = None
 
     def __repr__(self):
         return f"RtInfectionsRenewalSample(Rt={self.Rt}, latent_infections={self.latent_infections}, sampled_infections={self.sampled_infections})"

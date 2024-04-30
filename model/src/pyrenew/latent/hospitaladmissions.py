@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-from typing import Any, Optional
+from typing import Any, NamedTuple, Optional
 
 import jax.numpy as jnp
 import numpyro as npro
@@ -11,28 +11,20 @@ from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 
 
-class HospAdmissionsSample:
+class HospAdmissionsSample(NamedTuple):
     """
     A container for holding the output from HospAdmissionsSample.sample.
+
+    Parameters
+    ----------
+    IHR : float, optional
+        The infected hospitalization rate. Defaults to None.
+    predicted : ArrayLike or None
+        The predicted number of hospital admissions. Defaults to None.
     """
 
-    def __init__(self, IHR=None, predicted=None) -> None:
-        """
-        Default constructor.
-
-        Parameters
-        ----------
-        IHR : float, optional
-            The infected hospitalization rate. Defaults to None.
-        predicted : ArrayLike or None
-            The predicted number of hospital admissions. Defaults to None.
-
-        Returns
-        -------
-        None
-        """
-        self.IHR = IHR
-        self.predicted = predicted
+    IHR: float | None = None
+    predicted: ArrayLike | None = None
 
     def __repr__(self):
         return (
@@ -40,22 +32,17 @@ class HospAdmissionsSample:
         )
 
 
-class InfectHospRateSample:
+class InfectHospRateSample(NamedTuple):
     """
     A container for holding the output from InfectHospRateSample.sample.
+
+    Attributes
+    ----------
+    IHR : float, optional
+        The infected hospitalization rate. Defaults to None.
     """
 
-    def __init__(self, IHR=None) -> None:
-        """
-        Default constructor
-
-        Parameters
-        ----------
-        IHR : float, optional
-            The infected hospitalization rate. Defaults to None.
-
-        """
-        self.IHR = IHR
+    IHR: float | None = None
 
     def __repr__(self):
         return f"InfectHospRateSample(IHR={self.IHR})"
