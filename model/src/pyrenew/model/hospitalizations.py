@@ -57,6 +57,7 @@ class HospitalizationsModel(Model):
         I0: RandomVariable,
         Rt_process: RandomVariable,
         observation_process: RandomVariable | None = None,
+        observation_process_infections: RandomVariable | None = None,
     ) -> None:
         """
         Default constructor
@@ -75,6 +76,10 @@ class HospitalizationsModel(Model):
             Rt process  (passed to RtInfectionsRenewalModel).
         observation_process : RandomVariable, optional
             Observation process for the hospitalizations.
+            Defaults to None.
+        observation_process_infections : RandomVariable, optional
+            Observation process for the infections. Passed to the
+            RtInfectionsRenewalModel. Defaults to None.
 
         Returns
         -------
@@ -88,7 +93,7 @@ class HospitalizationsModel(Model):
             gen_int=gen_int,
             I0=I0,
             latent_infections=latent_infections,
-            observation_process=NullObservation(),
+            observation_process=observation_process_infections,
             Rt_process=Rt_process,
         )
 
@@ -201,6 +206,7 @@ class HospitalizationsModel(Model):
         self,
         n_timepoints: int,
         observed_hospitalizations: ArrayLike | None = None,
+        observed_infections: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
     ) -> HospModelSample:
@@ -214,6 +220,8 @@ class HospitalizationsModel(Model):
         observed_hospitalizations : ArrayLike, optional
             The observed hospitalization data (passed to the basic renewal
             model). Defaults to None (simulation, rather than fit).
+        observed_infections : ArrayLike, optional
+            The observed infection data (passed to the basic renewal model).
         padding : int, optional
             Number of padding timepoints to add to the beginning of the
             simulation. Defaults to 0.
@@ -239,7 +247,7 @@ class HospitalizationsModel(Model):
         # Getting the initial quantities from the basic model
         basic_model = self.basic_renewal.sample(
             n_timepoints=n_timepoints,
-            observed_infections=None,
+            observed_infections=observed_infections,
             padding=padding,
             **kwargs,
         )
