@@ -82,7 +82,6 @@ class RtRandomWalkProcess(RandomVariable):
         AssertionError
             If Rt0_dist or Rt_rw_dist are not dist.Distribution or if
             Rt_transform is not AbstractTransform.
-
         """
         assert isinstance(Rt0_dist, dist.Distribution)
         assert isinstance(Rt_transform, AbstractTransform)

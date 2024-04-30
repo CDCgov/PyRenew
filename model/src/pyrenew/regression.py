@@ -45,7 +45,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         transform: AbstractTransform = None,
         intercept_suffix="_intercept",
         coefficient_suffix="_coefficients",
-    ):
+    ) -> None:
         """
         Default class constructor for GLMObservation
 
@@ -98,7 +98,9 @@ class GLMPrediction(AbstractRegressionPrediction):
         self.intercept_suffix = intercept_suffix
         self.coefficient_suffix = coefficient_suffix
 
-    def predict(self, intercept, coefficients):
+    def predict(
+        self, intercept: ArrayLike, coefficients: ArrayLike
+    ) -> ArrayLike:
         """
         Generates a transformed prediction w/ intercept, coefficients, and
         fixed predictor values
@@ -121,7 +123,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         )
         return self.transform.inverse(transformed_prediction)
 
-    def sample(self):
+    def sample(self) -> dict:
         """
         Sample generalized linear model
 

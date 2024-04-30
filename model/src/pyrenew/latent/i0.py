@@ -10,13 +10,6 @@ class Infections0(RandomVariable):
 
     It creates a random variable for the initial infections with a prior
     distribution.
-
-    Methods
-    -------
-    validate(i0_dist)
-        Validate the initial infections distribution.
-    sample(**kwargs)
-        Sample the initial infections.
     """
 
     def __init__(
@@ -45,7 +38,7 @@ class Infections0(RandomVariable):
         return None
 
     @staticmethod
-    def validate(i0_dist: Any):
+    def validate(i0_dist: Any) -> None:
         """Validate the initial infections distribution.
 
         Parameters

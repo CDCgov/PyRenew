@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import numbers as nums
-from typing import Any
 
 import numpyro
 import numpyro.distributions as dist
@@ -10,15 +9,7 @@ from pyrenew.metaclass import RandomVariable
 
 
 class NegativeBinomialObservation(RandomVariable):
-    """Negative Binomial observation
-
-    Methods
-    -------
-    sample(predicted, obs, **kwargs)
-        Sample from the negative binomial distribution
-    validate(concentration_prior)
-        Check that the concentration prior is actually a nums.Number
-    """
+    """Negative Binomial observation"""
 
     def __init__(
         self,
@@ -38,13 +29,13 @@ class NegativeBinomialObservation(RandomVariable):
             despite the fact that larger values imply that the distribution
             becomes more Poissonian, while smaller ones imply a greater degree
             of dispersion.
-        concentration_suffix : str, optional
-            Suffix for the numpy variable.
+        concentration_suffix : str | None, optional
+            Suffix for the numpy variable. Defaults to "_concentration".
         parameter_name : str, optional
-            Name for the numpy variable.
+            Name for the numpy variable. Defaults to "negbinom_rv".
         eps : float, optional
             Small value to add to the predicted mean to prevent numerical
-            instability.
+            instability. Defaults to 1e-10.
 
         Returns
         -------
@@ -107,13 +98,13 @@ class NegativeBinomialObservation(RandomVariable):
         )
 
     @staticmethod
-    def validate(concentration_prior: Any) -> None:
+    def validate(concentration_prior: any) -> None:
         """
         Check that the concentration prior is actually a nums.Number
 
         Parameters
         ----------
-        concentration_prior : Any
+        concentration_prior : any
             Numpyro distribution from which to sample the positive concentration
             parameter of the negative binomial. Expected dist.Distribution or
             numbers.nums
