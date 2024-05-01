@@ -43,7 +43,7 @@ jobs:
             cd model
             mkdir _compiled
             for file in $(find docs -name '*.qmd'); do
-                poetry run quarto render --to rst $file --output-dir _compiled
+                poetry run quarto render $file --to rst --output-dir ../_compiled
             done
 
       # Upload
