@@ -15,7 +15,46 @@ permissions:
   id-token: write
 
 jobs:
+  render-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: quarto-dev/quarto-actions/setup@v2
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: cache poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: ${{ runner.os }}-poetry
+
+      - name: install poetry
+        run: pip install poetry
+
+      - name: install package
+        run: poetry install --with dev -C model
+
+      - name: Render documents
+        run: |
+            cd model
+            mkdir _compiled
+            for file in $(find docs -name '*.qmd'); do
+                poetry run quarto render --to rst $file --output-dir _compiled
+            done
+
+      # Upload
+      - name: Upload artifacts
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: github-pages-tutorials
+          path: model/_compiled/
+
   build:
+    needs: render-docs
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -25,6 +64,13 @@ jobs:
     # Setting up the environment
     - name: Setup Pages
       uses: actions/configure-pages@v4
+
+    # Load the artifact github-pages-tutorials
+    - name: Download artifacts
+      uses: actions/download-artifact@v3
+      with:
+        name: github-pages-tutorials
+        path: docs/source/tutorials/
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -39,9 +85,7 @@ jobs:
 
     # Building
     - name: Build HTML using Poetry
-      run: |
-        poetry run -C model make sphinx-tutorials
-        poetry run -C docs make html
+      run: poetry run -C docs sphinx-build -M html docs/source/ docs/build/
 
     # Upload
     - name: Upload artifacts

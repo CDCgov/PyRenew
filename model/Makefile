@@ -49,4 +49,5 @@ clean:
 		rm -f docs/example-with-datasets.$$i; \
 	done
 
-.PHONY: install test docs clean docs/notebooks docs/py test_images
+.PHONY: install test docs clean docs/notebooks docs/py test_images \
+	sphinx-tutorials
