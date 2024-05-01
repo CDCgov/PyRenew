@@ -48,9 +48,9 @@ jobs:
 
       # Upload
       - name: Upload artifacts
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-artifact@v3
         with:
-          name: github-pages-tutorials
+          name: tutorials
           path: model/_compiled/
 
   build:
@@ -69,7 +69,7 @@ jobs:
     - name: Download artifacts
       uses: actions/download-artifact@v3
       with:
-        name: github-pages-tutorials
+        name: tutorials
         path: docs/source/tutorials/
 
     - name: Set up Python
