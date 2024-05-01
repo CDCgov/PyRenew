@@ -27,16 +27,6 @@ docs/notebooks:
 	quarto convert docs/example-with-datasets.qmd --output \
 		docs/example-with-datasets.ipynb
 
-sphinx-tutorials: docs
-	for i in docs/*.md; do \
-		if [ "$$i" = "docs/README.md" ]; then \
-			continue; \
-		fi; \
-		pandoc -s $$i -o ../docs/source/tutorials/$$(basename $$i .md).rst;\
-		cp -r docs/$$(basename $$i .md)_files ../docs/source/tutorials/; \
-	done
-
-
 test_images:
 	echo "Generating reference images for tests"
 	poetry run pytest --mpl-generate-path=src/test/baseline
@@ -49,5 +39,4 @@ clean:
 		rm -f docs/example-with-datasets.$$i; \
 	done
 
-.PHONY: install test docs clean docs/notebooks docs/py test_images \
-	sphinx-tutorials
+.PHONY: install test docs clean docs/notebooks docs/py test_images
