@@ -6,6 +6,7 @@ Complete Table Of Contents
 
    ../msei_reference/index
    ../test_reference/index
+   ../tutorials/index
    ../genindex
    ../modindex
    ../search
