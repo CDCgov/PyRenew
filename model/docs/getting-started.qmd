@@ -116,9 +116,8 @@ sim_data
 The `sample()` method of the `RtInfectionsRenewalModel` returns a list composed of the `Rt` and `infections` sequences.
 
 ```{python}
-#| label: basic-fig
+#| label: fig-basic
 #| fig-cap: Rt and Infections
-#| fig-cap-location: bottom
 import matplotlib.pyplot as plt
 
 fig, axs = plt.subplots(1, 2)
@@ -156,9 +155,8 @@ model1.run(
 Now, let's investigate the output, particularly the posterior distribution of the Rt estimates:
 
 ```{python}
-#| label: output-rt
+#| label: fig-output-rt
 #| fig-cap: Rt posterior distribution
-#| fig-cap-location: bottom
 import polars as pl
 samps = model1.spread_draws([('Rt', 'time')])
 
