@@ -133,7 +133,7 @@ flowchart TB
     inf-->|Composes|model1
 ```
 
-Using `numpyro`, we can simulate data using the `sample()` member function of `RtInfectionsRenewalModel`:
+Using `numpyro`, we can simulate data using the `sample()` member function of `RtInfectionsRenewalModel`. The `sample()` method of the `RtInfectionsRenewalModel` returns a list composed of the `Rt` and `infections` sequences:
 
 ```{python}
 #| label: simulate
@@ -144,7 +144,7 @@ with npro.handlers.seed(rng_seed = np.random.randint(1, 60)):
 sim_data
 ```
 
-The `sample()` method of the `RtInfectionsRenewalModel` returns a list composed of the `Rt` and `infections` sequences.
+To understand what has been accomplished here, visualize an $R_t$ sample path (left panel) and infections over time (right panel):
 
 ```{python}
 #| label: basic-fig
