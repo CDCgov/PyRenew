@@ -6,11 +6,15 @@ and/or numerical calculations about
 a given renewal process.
 """
 
+
 import jax.numpy as jnp
+from jax.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
 
 
-def get_leslie_matrix(R, generation_interval_pmf):
+def get_leslie_matrix(
+    R: float, generation_interval_pmf: ArrayLike
+) -> ArrayLike:
     """
     Create the Leslie matrix
     corresponding to a basic
@@ -28,9 +32,10 @@ def get_leslie_matrix(R, generation_interval_pmf):
        mass vector of the renewal process
 
     Returns
-    --------
-    The Leslie matrix for the
-    renewal process, as a jax array.
+    -------
+    ArrayLike
+        The Leslie matrix for the
+        renewal process, as a jax array.
     """
     validate_discrete_dist_vector(generation_interval_pmf)
     gen_int_len = generation_interval_pmf.size
@@ -44,7 +49,9 @@ def get_leslie_matrix(R, generation_interval_pmf):
     return jnp.vstack([R * generation_interval_pmf, aging_matrix])
 
 
-def get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf):
+def get_asymptotic_growth_rate_and_age_dist(
+    R: float, generation_interval_pmf: ArrayLike
+) -> tuple[float, ArrayLike]:
     """
     Get the asymptotic per-timestep growth
     rate of the renewal process (the dominant
@@ -52,6 +59,7 @@ def get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf):
     associated stable age distribution
     (a normalized eigenvector associated to
     that eigenvalue).
+
     Parameters
     ----------
     R : float
@@ -61,11 +69,17 @@ def get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf):
        mass vector of the renewal process
 
     Returns
-    --------
-    A tuple consisting of the asymptotic growth rate of
-    the process, as jax float, and the stable age distribution
-    of the process, as a jax array probability vector of the
-    same shape as the generation interval probability vector.
+    -------
+    tuple[float, ArrayLike]
+        A tuple consisting of the asymptotic growth rate of
+        the process, as jax float, and the stable age distribution
+        of the process, as a jax array probability vector of the
+        same shape as the generation interval probability vector.
+
+    Raises
+    ------
+    ValueError
+        If an age distribution vector with non-zero imaginary part is produced.
     """
     L = get_leslie_matrix(R, generation_interval_pmf)
     eigenvals, eigenvecs = jnp.linalg.eig(L)
@@ -92,7 +106,9 @@ def get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf):
     return d_val_real, d_vec_norm
 
 
-def get_stable_age_distribution(R, generation_interval_pmf):
+def get_stable_age_distribution(
+    R: float, generation_interval_pmf: ArrayLike
+) -> ArrayLike:
     """
     Get the stable age distribution for a
     renewal process with a given value of
@@ -114,18 +130,21 @@ def get_stable_age_distribution(R, generation_interval_pmf):
        mass vector of the renewal process
 
     Returns
-    --------
-    The stable age distribution for the
-    process, as a jax array probability vector of
-    the same shape as the generation interval
-    probability vector.
+    -------
+    ArrayLike
+        The stable age distribution for the
+        process, as a jax array probability vector of
+        the same shape as the generation interval
+        probability vector.
     """
     return get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf)[
         1
     ]
 
 
-def get_asymptotic_growth_rate(R, generation_interval_pmf):
+def get_asymptotic_growth_rate(
+    R: float, generation_interval_pmf: ArrayLike
+) -> float:
     """
     Get the asymptotic per timestep growth rate
     for a renewal process with a given value of
@@ -145,9 +164,10 @@ def get_asymptotic_growth_rate(R, generation_interval_pmf):
        mass vector of the renewal process
 
     Returns
-    --------
-    The asymptotic growth rate of the renewal process,
-    as a jax float.
+    -------
+    float
+        The asymptotic growth rate of the renewal process,
+        as a jax float.
     """
     return get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf)[
         0

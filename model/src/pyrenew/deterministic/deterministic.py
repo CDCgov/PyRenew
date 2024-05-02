@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 
@@ -9,7 +10,7 @@ class DeterministicVariable(RandomVariable):
 
     def __init__(
         self,
-        vars: tuple,
+        vars: ArrayLike,
         label: str = "a_random_variable",
     ) -> None:
         """Default constructor
@@ -18,8 +19,8 @@ class DeterministicVariable(RandomVariable):
         ----------
         vars : tuple
             A tuple with arraylike objects.
-        label : str
-            A label to assign to the process.
+        label : str, optional
+            A label to assign to the process. Defaults to "a_random_variable"
 
         Returns
         -------
@@ -33,9 +34,26 @@ class DeterministicVariable(RandomVariable):
         return None
 
     @staticmethod
-    def validate(vars: tuple) -> None:
-        if not isinstance(vars, tuple):
-            raise Exception("vars is not a tuple")
+    def validate(vars: ArrayLike) -> None:
+        """
+        Validates inputted to DeterministicPMF
+
+        Parameters
+        ----------
+        vars : ArrayLike
+            An ArrayLike object.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        Exception
+            If the inputted vars object is not a ArrayLike.
+        """
+        if not isinstance(vars, ArrayLike):
+            raise Exception("vars is not a ArrayLike")
 
         return None
 
@@ -48,7 +66,8 @@ class DeterministicVariable(RandomVariable):
         Parameters
         ----------
         **kwargs : dict, optional
-            Ignored.
+            Additional keyword arguments passed through to internal
+            sample calls, should there be any.
 
         Returns
         -------
@@ -56,4 +75,4 @@ class DeterministicVariable(RandomVariable):
             Containing the stored values during construction.
         """
 
-        return self.vars
+        return (self.vars,)

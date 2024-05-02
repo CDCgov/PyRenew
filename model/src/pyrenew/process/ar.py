@@ -55,10 +55,13 @@ class ARProcess(RandomVariable):
             Length of the sequence.
         inits : ArrayLike, optional
             Initial points, if None, then these are sampled.
+            Defaults to None.
         name : str, optional
             Name of the parameter passed to numpyro.sample.
+            Defaults to "arprocess".
         **kwargs : dict, optional
-            Ignored.
+            Additional keyword arguments passed through to internal sample()
+            calls, should there be any.
 
         Returns
         -------
@@ -85,4 +88,7 @@ class ARProcess(RandomVariable):
 
     @staticmethod
     def validate():
+        """
+        Validates inputted parameters, implementation pending.
+        """
         return None

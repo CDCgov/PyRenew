@@ -7,6 +7,7 @@ from abc import ABCMeta, abstractmethod
 
 import jax
 import jax.numpy as jnp
+from jax.typing import ArrayLike
 
 
 class AbstractTransform(metaclass=ABCMeta):
@@ -19,10 +20,16 @@ class AbstractTransform(metaclass=ABCMeta):
 
     @abstractmethod
     def transform(self, x):
+        """
+        Transform generated predictions
+        """
         pass
 
     @abstractmethod
     def inverse(self, x):
+        """
+        Take the inverse of transformed predictions
+        """
         pass
 
 
@@ -35,10 +42,32 @@ class IdentityTransform(AbstractTransform):
     f^-1(x) = x
     """
 
-    def transform(self, x):
+    def transform(self, x: any):
+        """
+        Parameters
+        ----------
+        x : any
+            Input, usually ArrayLike
+
+        Returns
+        -------
+        any
+            The same object that was inputted.
+        """
         return x
 
-    def inverse(self, x):
+    def inverse(self, x: any):
+        """
+        Parameters
+        ----------
+        x : any
+            Input, usually ArrayLike
+
+        Returns
+        -------
+        any
+            The same object that was inputted.
+        """
         return x
 
 
@@ -51,10 +80,32 @@ class LogTransform(AbstractTransform):
     f^-1(x) = exp(x)
     """
 
-    def transform(self, x):
+    def transform(self, x: ArrayLike):
+        """
+        Parameters
+        ----------
+        x : ArrayLike
+            Input, usually predictions array..
+
+        Returns
+        -------
+        ArrayLike
+            Log-transformed input
+        """
         return jnp.log(x)
 
-    def inverse(self, x):
+    def inverse(self, x: ArrayLike):
+        """
+        Parameters
+        ----------
+        x : ArrayLike
+            Input, usually log-scale predictions array.
+
+        Returns
+        -------
+        ArrayLike
+            Exponentiated input
+        """
         return jnp.exp(x)
 
 
@@ -68,10 +119,32 @@ class LogitTransform(AbstractTransform):
     f^-1(x) = 1 / (1 + exp(-x))
     """
 
-    def transform(self, x):
+    def transform(self, x: ArrayLike):
+        """
+        Parameters
+        ----------
+        x : ArrayLike
+            Input, usually predictions array.
+
+        Returns
+        -------
+        ArrayLike
+            Logit transformed input.
+        """
         return jax.scipy.special.logit(x)
 
-    def inverse(self, x):
+    def inverse(self, x: ArrayLike):
+        """
+        Parameters
+        ----------
+        x : ArrayLike
+            Input, usually logit-transformed predictions array.
+
+        Returns
+        -------
+        ArrayLike
+            Inversed logit transformed input.
+        """
         return jax.scipy.special.expit(x)
 
 
@@ -89,6 +162,7 @@ class ScaledLogitTransform(AbstractTransform):
     def __init__(self, x_max: float):
         """
         Default constructor
+
         Parameters
         ----------
         x_max : float
@@ -97,8 +171,30 @@ class ScaledLogitTransform(AbstractTransform):
         """
         self.x_max = x_max
 
-    def transform(self, x):
+    def transform(self, x: ArrayLike):
+        """
+        Parameters
+        ----------
+        x : ArrayLike
+            Input, usually predictions array.
+
+        Returns
+        -------
+        ArrayLike
+            x_max scaled logit transformed input.
+        """
         return jax.scipy.special.logit(x / self.x_max)
 
-    def inverse(self, x):
+    def inverse(self, x: ArrayLike):
+        """
+        Parameters
+        ----------
+        x : ArrayLike
+            Input, usually scaled logit predictions array.
+
+        Returns
+        -------
+        ArrayLike
+            Inverse of x_max scaled logit transformed input.
+        """
         return self.x_max * jax.scipy.special.expit(x)
