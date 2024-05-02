@@ -13,23 +13,22 @@ from pyrenew.metaclass import RandomVariable
 
 class HospAdmissionsSample(NamedTuple):
     """
-    A container for holding the output from HospAdmissionsSample.sample.
+        A container for holding the output from HospAdmissionsSample.sample.
+    >>>>>>> origin/main
 
-    Parameters
-    ----------
-    IHR : float, optional
-        The infected hospitalization rate. Defaults to None.
-    predicted : ArrayLike or None
-        The predicted number of hospital admissions. Defaults to None.
+        Parameters
+        ----------
+        infection_hosp_rate : float, optional
+            The infection-to-hospitalization rate. Defaults to None.
+        predicted : ArrayLike or None
+            The predicted number of hospital admissions. Defaults to None.
     """
 
-    IHR: float | None = None
+    infection_hosp_rate: float | None = None
     predicted: ArrayLike | None = None
 
     def __repr__(self):
-        return (
-            f"HospAdmissionsSample(IHR={self.IRH}, predicted={self.predicted})"
-        )
+        return f"HospAdmissionsSample(infection_hosp_rate={self.IRH}, predicted={self.predicted})"
 
 
 class InfectHospRateSample(NamedTuple):
@@ -50,13 +49,21 @@ class InfectHospRateSample(NamedTuple):
 
 class InfectHospRate(RandomVariable):
     """
-    Infection to Hospitalization Rate
+        Infection-to-Hospitalization rate
+
+        Methods
+        -------
+        validate(distr)
+            Validates distribution is Numpyro distribution
+        sample(**kwargs)
+            Produces a sample of the infection-hospitalization rate (IHR).
+    =======
     """
 
     def __init__(
         self,
         dist: dist.Distribution | None,
-        varname: Optional[str] = "IHR",
+        varname: Optional[str] = "infection_hosp_rate",
     ) -> None:
         """
         Default constructor
@@ -66,7 +73,7 @@ class InfectHospRate(RandomVariable):
         dist : dist.Distribution
             Prior distribution of the IHR.
         varname : str, optional
-            Name of the random variable in the model, by default "IHR."
+            Name of the random variable in the model, by default "infection_hosp_rate."
 
         Returns
         -------
@@ -98,7 +105,7 @@ class InfectHospRate(RandomVariable):
 
     def sample(self, **kwargs) -> InfectHospRateSample:
         """
-        Produces a sample of the IHR
+        Produces a sample of an infection-to-hospitalization Rate (IHR)
 
         Parameters
         ----------
@@ -122,7 +129,7 @@ class InfectHospRate(RandomVariable):
 class HospitalAdmissions(RandomVariable):
     r"""Latent hospital admissions
 
-    Implements a renewal process for the expected number of hospitalizations.
+    Implements a renewal process for the expected number of hospital admissions.
 
 
     Notes
@@ -153,7 +160,7 @@ class HospitalAdmissions(RandomVariable):
         self,
         infection_to_admission_interval: RandomVariable,
         infect_hosp_rate_dist: RandomVariable,
-        hospitalizations_predicted_varname: str = "predicted_hospitalizations",
+        admissions_predicted_varname: str = "predicted_admissions",
         weekday_effect_dist: Optional[RandomVariable] = None,
         hosp_report_prob_dist: Optional[RandomVariable] = None,
     ) -> None:
@@ -162,13 +169,13 @@ class HospitalAdmissions(RandomVariable):
         Parameters
         ----------
         infection_to_admission_interval : RandomVariable
-            pmf for reporting (informing) hospitalizations (see
+            pmf for reporting (informing) hospital admissions (see
             pyrenew.observations.Deterministic).
         infect_hosp_rate_dist : RandomVariable
             Infection to hospitalization rate distribution.
-        hospitalizations_predicted_varname : str
+        admissions_predicted_varname : str
             Name to assign to the deterministic component in numpyro of
-            predicted hospitalizations.
+            predicted hospital admissions.
         weekday_effect_dist : RandomVariable, optional
             Weekday effect.
         hosp_report_prob_dist  : RandomVariable, optional
@@ -191,9 +198,7 @@ class HospitalAdmissions(RandomVariable):
             hosp_report_prob_dist,
         )
 
-        self.hospitalizations_predicted_varname = (
-            hospitalizations_predicted_varname
-        )
+        self.admissions_predicted_varname = admissions_predicted_varname
 
         self.infect_hosp_rate_dist = infect_hosp_rate_dist
         self.weekday_effect_dist = weekday_effect_dist
@@ -256,33 +261,32 @@ class HospitalAdmissions(RandomVariable):
         HospAdmissionsSample
         """
 
-        IHR, *_ = self.infect_hosp_rate_dist.sample(**kwargs)
+        infection_hosp_rate, *_ = self.infect_hosp_rate_dist.sample(**kwargs)
 
-        IHR_t = IHR * latent
+        infection_hosp_rate_t = infection_hosp_rate * latent
 
         (
             infection_to_admission_interval,
             *_,
         ) = self.infection_to_admission_interval.sample(**kwargs)
 
-        predicted_hospitalizations = jnp.convolve(
-            IHR_t, infection_to_admission_interval, mode="full"
-        )[: IHR_t.shape[0]]
+        predicted_admissions = jnp.convolve(
+            infection_hosp_rate_t, infection_to_admission_interval, mode="full"
+        )[: infection_hosp_rate_t.shape[0]]
 
         # Applying weekday effect
-        predicted_hospitalizations = (
-            predicted_hospitalizations
-            * self.weekday_effect_dist.sample(**kwargs)[0]
+        predicted_admissions = (
+            predicted_admissions * self.weekday_effect_dist.sample(**kwargs)[0]
         )
 
         # Applying probability of hospitalization effect
-        predicted_hospitalizations = (
-            predicted_hospitalizations
+        predicted_admissions = (
+            predicted_admissions
             * self.hosp_report_prob_dist.sample(**kwargs)[0]
         )
 
         npro.deterministic(
-            self.hospitalizations_predicted_varname, predicted_hospitalizations
+            self.admissions_predicted_varname, predicted_admissions
         )
 
-        return HospAdmissionsSample(IHR, predicted_hospitalizations)
+        return HospAdmissionsSample(infection_hosp_rate, predicted_admissions)

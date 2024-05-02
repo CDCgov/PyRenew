@@ -12,4 +12,4 @@ pip install git+https://github.com/cdcent/cfa-pyrenew.git
 
 ## Demo
 
-The [`docs`](docs) folder contains quarto documents to get you started. It simulates observed hospitalizations using a simple renewal process model and then fits it using a No-U-Turn Sampler.
+The [`docs`](docs) folder contains quarto documents to get you started. It simulates observed hospital admissions using a simple renewal process model and then fits it using a No-U-Turn Sampler.
