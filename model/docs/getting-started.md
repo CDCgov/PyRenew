@@ -241,7 +241,7 @@ model1.run(
 ```
 
 Now, let’s investigate the output, particularly the posterior
-distribution of the Rt estimates:
+distribution of the $R_t$ estimates:
 
 ``` python
 import polars as pl
@@ -250,6 +250,9 @@ samps = model1.spread_draws([('Rt', 'time')])
 fig, ax = plt.subplots(figsize=[4, 5])
 
 ax.plot(sim_data[0])
+ax.set_title('Posterior Distribution of Rt Estimates')
+ax.set_xlabel('Time')
+ax.set_ylabel('Log Rt')
 samp_ids = np.random.randint(size=25, low=0, high=999)
 for samp_id in samp_ids:
     sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
@@ -268,8 +271,8 @@ distribution](getting-started_files/figure-commonmark/output-rt-output-1.png)
 `pyrenew` leverages `numpyro`’s flexibility to build models via
 composition. As a principle, most objects in `pyrenew` can be treated as
 random variables we can sample. At the top-level `pyrenew` has two
-metaclass from which most objects inherit: `RandomVariable` and `Model`.
-From them, the following four sub-modules arise:
+metaclasses from which most objects inherit: `RandomVariable` and
+`Model`. From them, the following four sub-modules arise:
 
 - The `process` sub-module,
 - The `deterministic` sub-module,
@@ -279,7 +282,7 @@ From them, the following four sub-modules arise:
 
 The first four are collections of instances of `RandomVariable`, and the
 last is a collection of instances of `Model`. The following diagram
-shows a detailed view of how meta classes, modules, and classes interact
+shows a detailed view of how metaclasses, modules, and classes interact
 to create the `RtInfectionsRenewalModel` instantiated in the previous
 section:
 
