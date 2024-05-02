@@ -208,8 +208,8 @@ class RtInfectionsRenewalModel(Model):
         **kwargs,
     ) -> tuple:
         """
-        Sample observed infections according 
-        to an observation process, if one has 
+        Sample observed infections according
+        to an observation process, if one has
         been specified.
 
         Parameters
