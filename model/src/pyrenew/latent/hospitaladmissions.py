@@ -13,14 +13,14 @@ from pyrenew.metaclass import RandomVariable
 
 class HospAdmissionsSample(NamedTuple):
     """
-        A container for holding the output from HospAdmissionsSample.sample.
+    A container for holding the output from HospAdmissionsSample.sample.
 
-        Parameters
-        ----------
-        infection_hosp_rate : float, optional
-            The infection-to-hospitalization rate. Defaults to None.
-        predicted : ArrayLike or None
-            The predicted number of hospital admissions. Defaults to None.
+    Parameters
+    ----------
+    infection_hosp_rate : float, optional
+        The infection-to-hospitalization rate. Defaults to None.
+    predicted : ArrayLike or None
+        The predicted number of hospital admissions. Defaults to None.
     """
 
     infection_hosp_rate: float | None = None
