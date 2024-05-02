@@ -32,12 +32,24 @@ extensions = [
     "sphinx.ext.viewcode",
     "sphinx.ext.mathjax",
     "sphinxcontrib.mermaid",
+    "sphinx_autodoc_typehints",
 ]
+
+# Simplifies printing of type hints
+set_type_checking_flag = True
+typehints_fully_qualified = False
+
+# Avoid appending the full module name to the class name
+add_module_names = False
 
 templates_path = ["_templates"]
 exclude_patterns = []
 
-todo_include_todos = True
+# Default deph for documentation
+toc_deph = 2
+
+# We don't want that explicitly
+todo_include_todos = False
 
 
 # -- Options for HTML output -------------------------------------------------
