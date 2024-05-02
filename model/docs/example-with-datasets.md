@@ -199,7 +199,7 @@ latent_hosp = latent.HospitalAdmissions(
     )
 ```
 
-    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.10/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
+    /mnt/c/Users/xrd4/Documents/repos/msr/model/.venv/lib/python3.11/site-packages/tqdm/auto.py:21: TqdmWarning: IProgress not found. Please update jupyter and ipywidgets. See https://ipywidgets.readthedocs.io/en/stable/user_install.html
       from .autonotebook import tqdm as notebook_tqdm
     An NVIDIA GPU may be present on this machine, but a CUDA-enabled jaxlib is not installed. Falling back to cpu.
 
@@ -330,16 +330,16 @@ missing data at the beginning of the model and re-estimate it with
 ``` python
 days_to_impute = 21
 
-dat2 = dat["daily_hosp_admits"].to_numpy()
+dat_w_padding = dat["daily_hosp_admits"].to_numpy()
 
-# Add 21 Nas to the beginning of dat2
-dat2 = np.hstack((np.repeat(np.nan, days_to_impute), dat2))
+# Add 21 Nas to the beginning of dat_w_padding
+dat_w_padding = np.hstack((np.repeat(np.nan, days_to_impute), dat_w_padding))
 
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat2.shape[0] - 1,
-    observed_admissions=dat2,
+    n_timepoints=dat_w_padding.shape[0] - 1,
+    observed_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute, # Padding the model
@@ -352,7 +352,7 @@ And plotting the results:
 out = hosp_model.plot_posterior(
     var="predicted_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat2,
+    obs_signal=dat_w_padding,
 )
 ```
 
@@ -447,8 +447,8 @@ Running the model (with the same padding as before):
 hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat2.shape[0] - 1,
-    observed_admissions=dat2,
+    n_timepoints=dat_w_padding.shape[0] - 1,
+    observed_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute,
@@ -461,7 +461,7 @@ And plotting the results:
 out = hosp_model_weekday.plot_posterior(
     var="predicted_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat2,
+    obs_signal=dat_w_padding,
 )
 ```
 
