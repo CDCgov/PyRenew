@@ -208,7 +208,7 @@ To fit the `hospmodel` to the simulated data, we call `hospmodel.run()`,
 an MCMC algorithm, with the arguments generated in `hospmodel` object,
 using 1000 warmup stepts and 1000 samples to draw from the posterior
 distribution of the model parameters. The model is run for
-`len(x.sampled_admissions)-1` time steps with the seed set by
+`len(x.sampled)-1` time steps with the seed set by
 `jax.random.PRNGKey()`
 
 ``` python
