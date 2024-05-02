@@ -127,7 +127,8 @@ latent_infections = Infections()
 observed_infections = PoissonObservation()
 ```
 
-With these five pieces, we can build the basic renewal model:
+With these five pieces, we can build the basic renewal model as an
+instance of the `RtInfectionsRenewalModel` class:
 
 ``` python
 model1 = RtInfectionsRenewalModel(
@@ -142,8 +143,8 @@ model1 = RtInfectionsRenewalModel(
 The following diagram summarizes how the modules interact via
 composition; notably, `gen_int`, `I0`, `rt_proc`, `latent_infections`,
 and `observed_infections` are instances of `RandomVariable`, which means
-these can be easily replaced to generate a different version of
-`RtInfectionsRenewalModel`:
+these can be easily replaced to generate a different instance of the
+`RtInfectionsRenewalModel` class:
 
 ``` mermaid
 flowchart TB
@@ -164,8 +165,8 @@ flowchart TB
 
 Using `numpyro`, we can simulate data using the `sample()` member
 function of `RtInfectionsRenewalModel`. The `sample()` method of the
-`RtInfectionsRenewalModel` returns a list composed of the `Rt` and
-`infections` sequences:
+`RtInfectionsRenewalModel` class returns a list composed of the `Rt` and
+`infections` sequences, called `sim_data`:
 
 ``` python
 np.random.seed(223)
@@ -214,9 +215,17 @@ plt.show()
 ![Rt and
 Infections](getting-started_files/figure-commonmark/basic-fig-output-1.png)
 
-To fit the model, we can use the `run()` method of the model
-`RtInfectionsRenewalModel`; an inherited method from the metaclass
-`Model`:
+To fit the model, we can use the `run()` method of the
+`RtInfectionsRenewalModel` class (an inherited method from the metaclass
+`Model`). `model1.run()` will call the `run` method of the `model1`
+object, which will generate an instance of model MCMC simulation, with
+2000 warm-up iterations for the MCMC algorith, used to tune the
+parameters of the MCMC algorithm to improve efficiency of the sampling
+process. From the posterior distributio of the model paremeters, 1000
+samples will be drawn and used to estimate the posterior distributions
+and compute summary statistics. Observed data is provided to the model
+using the `sim_data` object previously generated. `mcmc_args` provides
+additional arguments for the MCMC algorithm.
 
 ``` python
 import jax
