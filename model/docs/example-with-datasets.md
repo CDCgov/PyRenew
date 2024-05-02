@@ -26,7 +26,7 @@ use a negative binomial distribution:
 
 $$
 \begin{align*}
-h(t) & \sim \text{NegativeNinomial}\left(\text{concentration} = 1, \text{mean} = H(t)\right) \\
+h(t) & \sim \text{NegativeBinomial}\left(\text{concentration} = 1, \text{mean} = H(t)\right) \\
 H(t) & = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
 \end{align*}
 $$
@@ -232,9 +232,9 @@ Notice all the components are `RandomVariable` instances. We can now
 build the model:
 
 ``` python
-hosp_model = model.HospitalizationsModel(
+hosp_model = model.HospitalAdmissionsModel(
     latent_infections=latent_inf,
-    latent_hospitalizations=latent_hosp,
+    latent_admissions=latent_hosp,
     I0=I0,
     gen_int=gen_int,
     Rt_process=rtproc,
@@ -282,7 +282,7 @@ Infections](example-with-datasets_files/figure-commonmark/basic-fig-output-1.png
 
 We can fit the model to the data. We will use the `run` method of the
 model object. The two inputs this model requires are `n_timepoints` and
-`observed_hospitalizations`
+`observed_admissions`
 
 ``` python
 import jax
@@ -291,7 +291,7 @@ hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
     n_timepoints=dat.shape[0] - 1,
-    observed_hospitalizations=dat["daily_hosp_admits"].to_numpy(),
+    observed_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
 )
@@ -301,7 +301,7 @@ We can use the `plot_posterior` method to visualize the results[^1]:
 
 ``` python
 out = hosp_model.plot_posterior(
-    var="predicted_hospitalizations",
+    var="predicted_admissions",
     ylab="Hospital Admissions",
     obs_signal=dat["daily_hosp_admits"].to_numpy(),
 )
@@ -317,29 +317,29 @@ this.
 
 ## Padding the model
 
-We can use the padding argument to solve the overestimation of
-hospitalizations in the first half of the model. By setting
-`padding > 0`, the model then assumes that the first `padding`
-observations are missing; thus, only observations after `padding` will
-count towards the likelihood of the model. In practice, the model will
-extend the estimated Rt and latent infections by `padding` days, given
-time to adjust to the observed data. The following code will add 21 days
-of missing data at the beginning of the model and re-estimate it with
+We can use the padding argument to solve the overestimation of hospital
+admissions in the first half of the model. By setting `padding > 0`, the
+model then assumes that the first `padding` observations are missing;
+thus, only observations after `padding` will count towards the
+likelihood of the model. In practice, the model will extend the
+estimated Rt and latent infections by `padding` days, given time to
+adjust to the observed data. The following code will add 21 days of
+missing data at the beginning of the model and re-estimate it with
 `padding = 21`:
 
 ``` python
 days_to_impute = 21
 
-dat2 = dat["daily_hosp_admits"].to_numpy()
+dat_w_padding = dat["daily_hosp_admits"].to_numpy()
 
-# Add 21 Nas to the beginning of dat2
-dat2 = np.hstack((np.repeat(np.nan, days_to_impute), dat2))
+# Add 21 Nas to the beginning of dat_w_padding
+dat_w_padding = np.hstack((np.repeat(np.nan, days_to_impute), dat_w_padding))
 
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat2.shape[0] - 1,
-    observed_hospitalizations=dat2,
+    n_timepoints=dat_w_padding.shape[0] - 1,
+    observed_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute, # Padding the model
@@ -350,9 +350,9 @@ And plotting the results:
 
 ``` python
 out = hosp_model.plot_posterior(
-    var="predicted_hospitalizations",
+    var="predicted_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat2,
+    obs_signal=dat_w_padding,
 )
 ```
 
@@ -431,9 +431,9 @@ latent_hosp_wday_effect = latent.HospitalAdmissions(
     weekday_effect_dist=weekday_effect,
     )
 
-hosp_model_weekday = model.HospitalizationsModel(
+hosp_model_weekday = model.HospitalAdmissionsModel(
     latent_infections=latent_inf,
-    latent_hospitalizations=latent_hosp_wday_effect,
+    latent_admissions=latent_hosp_wday_effect,
     I0=I0,
     gen_int=gen_int,
     Rt_process=rtproc,
@@ -447,8 +447,8 @@ Running the model (with the same padding as before):
 hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat2.shape[0] - 1,
-    observed_hospitalizations=dat2,
+    n_timepoints=dat_w_padding.shape[0] - 1,
+    observed_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute,
@@ -459,9 +459,9 @@ And plotting the results:
 
 ``` python
 out = hosp_model_weekday.plot_posterior(
-    var="predicted_hospitalizations",
+    var="predicted_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat2,
+    obs_signal=dat_w_padding,
 )
 ```
 

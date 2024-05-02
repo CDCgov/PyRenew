@@ -13,7 +13,7 @@ Eventually, it should incorporate information about the software implementation 
       - [Left truncation for the generation interval](#left-truncation-for-the-generation-interval)
       - [Reporting delay between the time of reference and the time of report](#reporting-delay-between-the-time-of-reference-and-the-time-of-report)
   - [Signals](#signals)
-    - [Hospitalizations](#hospitalizations)
+    - [Hospital Admissions](#hospital-admissions)
     - [Wastewater](#wastewater)
 - [Overview](#overview)
 
@@ -147,9 +147,9 @@ $$h_{t,d} = P(\text{delay}=d|\text{delay} \geq d, W_{t,d}).$$
 
 ## Signals
 
-### Hospitalizations
+### Hospital Admissions
 
-In the wastewater model[^ww], the observed hospitalizations $h_t$ are the realization of a count random variable with mean modeled as a function of a renewal process, $H(t)$. Following the wastewater model's notation, the two equations that characterized this model component are:
+In the wastewater model[^ww], the observed hospital admissions $h_t$ are the realization of a count random variable with mean modeled as a function of a renewal process, $H(t)$. Following the wastewater model's notation, the two equations that characterized this model component are:
 
 [^ww]: https://github.com/cdcent/cfa-forecast-renewal-ww/blob/main/model_definition.md#hospital-admissions-component
 
@@ -205,7 +205,7 @@ flowchart LR
   subgraph signals["Signals in location j"]
     direction TB
     signals_elements["y<sub>1</sub>: Cases
-    y<sub>2</sub>: Hospitalizations
+    y<sub>2</sub>: Hospital Admissions
     y<sub>3</sub>: Wastewater
     ...
     y<sub>M</sub>: M-th signal"]
