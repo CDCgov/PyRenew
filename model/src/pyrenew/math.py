@@ -12,7 +12,9 @@ from jax.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
 
 
-def get_leslie_matrix(R: float, generation_interval_pmf: ArrayLike) -> float:
+def get_leslie_matrix(
+    R: float, generation_interval_pmf: ArrayLike
+) -> ArrayLike:
     """
     Create the Leslie matrix
     corresponding to a basic
@@ -31,8 +33,9 @@ def get_leslie_matrix(R: float, generation_interval_pmf: ArrayLike) -> float:
 
     Returns
     -------
-    The Leslie matrix for the
-    renewal process, as a jax array.
+    ArrayLike
+        The Leslie matrix for the
+        renewal process, as a jax array.
     """
     validate_discrete_dist_vector(generation_interval_pmf)
     gen_int_len = generation_interval_pmf.size

@@ -26,7 +26,7 @@ def _assert_sample_and_rtype(
     rp : RandomVariable
         Random variable to check.
     skip_if_none: bool, optional
-        When `True` it returns if `rp` is None. Defaults to True
+        When `True` it returns if `rp` is None. Defaults to True.
 
     Returns
     -------
@@ -111,11 +111,6 @@ class RandomVariable(metaclass=ABCMeta):
             Additional keyword arguments passed through to internal `sample()`
             calls, should there be any.
 
-        Notes
-        -----
-        <description of how the kwargs documented above does not cover all
-        kwargs (in some instances)>
-
         Returns
         -------
         tuple
@@ -161,11 +156,6 @@ class Model(metaclass=ABCMeta):
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
             calls, should there be any.
-
-        Notes
-        -----
-        <description of how the kwargs documented above does not cover all
-        kwargs (in some instances)>
 
         Returns
         -------
@@ -235,7 +225,7 @@ class Model(metaclass=ABCMeta):
 
         Returns
         -------
-            None
+        None
         """
 
         if self.mcmc is None:
@@ -262,7 +252,7 @@ class Model(metaclass=ABCMeta):
         ----------
         prob : float, optional
             The acceptance probability of print_summary. Defaults to 0.9
-        exclude_deterministic : bool, optional.
+        exclude_deterministic : bool, optional
             Whether to print deterministic variables in the summary.
             Defaults to True.
 

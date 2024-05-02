@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from pyrenew.model.hospitalizations import HospitalizationsModel
-from pyrenew.model.rtinfectionsrenewal import RtInfectionsRenewalModel
+from pyrenew.model.admissionsmodel import HospitalAdmissionsModel
+from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
-__all__ = ["RtInfectionsRenewalModel", "HospitalizationsModel"]
+__all__ = ["RtInfectionsRenewalModel", "HospitalAdmissionsModel"]
