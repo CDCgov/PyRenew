@@ -12,8 +12,8 @@ from pyrenew.process import RtRandomWalkProcess
 
 def test_admissions_sample():
     """
-    Check that an InfectionObservation
-    can be initialized and sampled from (deterministic)
+    Check that a HospitalAdmissions latent process
+    can be initialized and sampled from.
     """
 
     # Generating Rt and Infections to compute the hospital admissions

@@ -19,7 +19,7 @@ class HospAdmissionsSample(NamedTuple):
         Parameters
         ----------
         infection_hosp_rate : float, optional
-            The infected hospitalization rate. Defaults to None.
+            The infection-to-hospitalization rate. Defaults to None.
         predicted : ArrayLike or None
             The predicted number of hospital admissions. Defaults to None.
     """
@@ -49,8 +49,7 @@ class InfectHospRateSample(NamedTuple):
 
 class InfectHospRate(RandomVariable):
     """
-        Infection to Hospitalization Rate
-    <<<<<<< HEAD
+        Infection-to-Hospitalization rate
 
         Methods
         -------
@@ -59,7 +58,6 @@ class InfectHospRate(RandomVariable):
         sample(**kwargs)
             Produces a sample of the infection-hospitalization rate (IHR).
     =======
-    >>>>>>> origin/main
     """
 
     def __init__(
@@ -107,7 +105,7 @@ class InfectHospRate(RandomVariable):
 
     def sample(self, **kwargs) -> InfectHospRateSample:
         """
-        Produces a sample of the Infection-hospitalization Rate (IHR)
+        Produces a sample of an infection-to-hospitalization Rate (IHR)
 
         Parameters
         ----------

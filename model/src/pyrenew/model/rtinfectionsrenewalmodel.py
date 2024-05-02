@@ -208,14 +208,16 @@ class RtInfectionsRenewalModel(Model):
         **kwargs,
     ) -> tuple:
         """
-        Sample number of hospital admissions
+        Sample observed infections according 
+        to an observation process, if one has 
+        been specified.
 
         Parameters
         ----------
         predicted : ArrayLike
             The predicted infecteds.
-        observed_admissions : ArrayLike | None, optional
-            The observed values of hospital admissions, if any, for inference. Defaults to None.
+        observed_infections : ArrayLike | None, optional
+            The observed infection values, if any, for inference. Defaults to None.
         name : str | None, optional
             Name of the random variable passed to the RandomVariable. Defaults to None.
         **kwargs : dict, optional
