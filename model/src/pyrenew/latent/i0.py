@@ -6,7 +6,8 @@ from pyrenew.metaclass import RandomVariable
 
 
 class Infections0(RandomVariable):
-    """Initial infections helper class.
+    """
+    Initial infections helper class.
 
     It creates a random variable for the initial infections with a prior
     distribution.
@@ -17,7 +18,8 @@ class Infections0(RandomVariable):
         name: str | None = "I0",
         I0_dist: dist.Distribution | None = dist.LogNormal(0, 1),
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------
@@ -39,7 +41,8 @@ class Infections0(RandomVariable):
 
     @staticmethod
     def validate(i0_dist: Any) -> None:
-        """Validate the initial infections distribution.
+        """
+        Validate the initial infections distribution.
 
         Parameters
         ----------
@@ -61,7 +64,8 @@ class Infections0(RandomVariable):
         self,
         **kwargs,
     ) -> tuple:
-        """Sample the initial infections.
+        """
+        Sample the initial infections.
 
         Parameters
         ----------

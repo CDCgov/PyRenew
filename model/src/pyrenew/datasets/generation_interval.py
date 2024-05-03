@@ -4,7 +4,8 @@ import polars as pl
 
 
 def load_generation_interval() -> pl.DataFrame:
-    """Load the generation interval dataset
+    """
+    Load the generation interval dataset
 
     This dataset contains the generation interval distribution for COVID-19.
 

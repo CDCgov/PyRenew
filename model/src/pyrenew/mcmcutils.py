@@ -14,7 +14,8 @@ def spread_draws(
     posteriors: dict,
     variables_names: list[str] | list[tuple],
 ) -> pl.DataFrame:
-    """Get nicely shaped draws from the posterior
+    """
+    Get nicely shaped draws from the posterior
 
     Given a dictionary of posteriors, return a long-form polars dataframe
     indexed by draw, with variable values (equivalent of tidybayes

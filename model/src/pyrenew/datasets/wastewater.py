@@ -7,7 +7,8 @@ import polars as pl
 
 
 def load_wastewater() -> pl.DataFrame:
-    """Load the wastewater dataset
+    """
+    Load the wastewater dataset
 
     This dataset contains simulated entries of COVID-19 wastewater concentration
     data. The dataset is used to demonstrate the use of the wastewater-informed

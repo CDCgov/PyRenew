@@ -3,7 +3,8 @@ from pyrenew.deterministic.deterministic import DeterministicVariable
 
 
 class DeterministicProcess(DeterministicVariable):
-    """A deterministic process (degenerate) random variable.
+    """
+    A deterministic process (degenerate) random variable.
     Useful to pass fixed quantities over time."""
 
     __init__ = DeterministicVariable.__init__
@@ -13,7 +14,8 @@ class DeterministicProcess(DeterministicVariable):
         n_timepoints: int,
         **kwargs,
     ) -> tuple:
-        """Retrieve the value of the deterministic Rv
+        """
+        Retrieve the value of the deterministic Rv
 
         Parameters
         ----------
