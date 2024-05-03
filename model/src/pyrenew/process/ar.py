@@ -21,7 +21,8 @@ class ARProcess(RandomVariable):
         autoreg: ArrayLike,
         noise_sd: float,
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------
@@ -47,7 +48,8 @@ class ARProcess(RandomVariable):
         name: str = "arprocess",
         **kwargs,
     ) -> tuple:
-        """Sample from the AR process
+        """
+        Sample from the AR process
 
         Parameters
         ----------

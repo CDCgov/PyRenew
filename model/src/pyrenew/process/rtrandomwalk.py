@@ -29,7 +29,8 @@ class RtRandomWalkProcess(RandomVariable):
         Rt_transform: AbstractTransform = LogTransform(),
         Rt_rw_dist: dist.Distribution = dist.Normal(0, 0.025),
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------

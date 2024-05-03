@@ -18,7 +18,8 @@ class NegativeBinomialObservation(RandomVariable):
         parameter_name="negbinom_rv",
         eps: float = 1e-10,
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------
@@ -63,7 +64,8 @@ class NegativeBinomialObservation(RandomVariable):
         obs: ArrayLike | None = None,
         **kwargs,
     ) -> tuple:
-        """Sample from the negative binomial distribution
+        """
+        Sample from the negative binomial distribution
 
         Parameters
         ----------

@@ -16,7 +16,8 @@ class PoissonObservation(RandomVariable):
         parameter_name: str = "poisson_rv",
         eps: float = 1e-8,
     ) -> None:
-        """Default Constructor
+        """
+        Default Constructor
 
         Parameters
         ----------
@@ -43,7 +44,8 @@ class PoissonObservation(RandomVariable):
         name: str | None = None,
         **kwargs,
     ) -> tuple:
-        """Sample from the Poisson process
+        """
+        Sample from the Poisson process
 
         Parameters
         ----------

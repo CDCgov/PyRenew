@@ -238,7 +238,8 @@ class HospitalAdmissions(RandomVariable):
         latent: ArrayLike,
         **kwargs,
     ) -> HospAdmissionsSample:
-        """Samples from the observation process
+        """
+        Samples from the observation process
 
         Parameters
         ----------
