@@ -81,7 +81,6 @@ Meta Information
    :maxdepth: 1
 
    general/contribute
-   general/bugs
    general/license
    general/notices
 

@@ -17,6 +17,5 @@ Complete Table Of Contents
    state
    usage
    contribute
-   bugs
 
 .. todo:: Change order and naming of these toctree entities

@@ -122,32 +122,28 @@ class HospitalAdmissionsModel(Model):
         **kwargs,
     ) -> tuple:
         """
-                Sample number of hospital admissions
+        Sample number of hospital admissions
 
-                Parameters
-                ----------
-                infections : ArrayLike
-                    The predicted infections array.
-                **kwargs : dict, optional
-                    Additional keyword arguments passed through to internal
-                    sample() calls, should there be any.
+        Parameters
+        ----------
+        infections : ArrayLike
+            The predicted infections array.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal
+            sample() calls, should there be any.
 
-                Returns
-                -------
-                tuple
+        Returns
+        -------
+        tuple
 
-                See Also
-                --------
-        <<<<<<< HEAD:model/src/pyrenew/model/admissionsmodel.py
-                latent_admissions.sample : For sampling latent hospital admissions
+        See Also
+        --------
+        latent_admissions.sample : For sampling latent hospital admissions
 
-                Notes
-                -----
-                TODO: Include example(s) here.
-                TODO: Cover Returns in more detail.
-        =======
-                latent_hospitalizations.sample : For sampling latent hospitalizations
-        >>>>>>> origin/main:model/src/pyrenew/model/hospitalizations.py
+        Notes
+        -----
+        TODO: Include example(s) here.
+        TODO: Cover Returns in more detail.
         """
 
         return self.latent_admissions.sample(
@@ -197,40 +193,35 @@ class HospitalAdmissionsModel(Model):
         **kwargs,
     ) -> HospModelSample:
         """
-                Sample from the HospitalAdmissions model
+        Sample from the HospitalAdmissions model
 
-                Parameters
-                ----------
-                n_timepoints : int
-                    Number of timepoints to sample (passed to the basic renewal model).
-                observed_admissions : ArrayLike, optional
-                    The observed hospitalization data (passed to the basic renewal
-                    model). Defaults to None (simulation, rather than fit).
-                padding : int, optional
-                    Number of padding timepoints to add to the beginning of the
-                    simulation. Defaults to 0.
-                **kwargs : dict, optional
-                    Additional keyword arguments passed through to internal sample()
-                    calls, should there be any.
+        Parameters
+        ----------
+        n_timepoints : int
+            Number of timepoints to sample (passed to the basic renewal model).
+        observed_admissions : ArrayLike, optional
+            The observed hospitalization data (passed to the basic renewal
+            model). Defaults to None (simulation, rather than fit).
+        padding : int, optional
+            Number of padding timepoints to add to the beginning of the
+            simulation. Defaults to 0.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal sample()
+            calls, should there be any.
 
-                Returns
-                -------
-                HospModelSample
+        Returns
+        -------
+        HospModelSample
 
-                See Also
-                --------
-                basic_renewal.sample : For sampling the basic renewal model
-        <<<<<<< HEAD:model/src/pyrenew/model/admissionsmodel.py
-                sample_latent_admissions : To sample latent hospitalization process
-                sample_observed_admissions : For sampling observed hospital admissions
+        See Also
+        --------
+        basic_renewal.sample : For sampling the basic renewal model
+        sample_latent_admissions : To sample latent hospitalization process
+        sample_observed_admissions : For sampling observed hospital admissions
 
-                Notes
-                -----
-                TODO: Include example(s) here.
-        =======
-                sample_hospitalizations_latent : To sample latent hospitalization process
-                sample_hospitalizations_obs : For sampling observed hospitalizations
-        >>>>>>> origin/main:model/src/pyrenew/model/hospitalizations.py
+        Notes
+        -----
+        TODO: Include example(s) here.
         """
 
         # Getting the initial quantities from the basic model

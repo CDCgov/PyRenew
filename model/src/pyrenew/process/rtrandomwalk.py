@@ -92,7 +92,8 @@ class RtRandomWalkProcess(RandomVariable):
         n_timepoints: int,
         **kwargs,
     ) -> tuple:
-        """Generate samples from the process
+        """
+        Generate samples from the process
 
         Parameters
         ----------

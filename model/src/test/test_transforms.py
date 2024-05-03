@@ -17,7 +17,7 @@ def generic_inversion_test(transform, test_vals, decimal=1e-8, **kwargs):
     x values givein in `test_vals`
 
     Parameters
-    -----------
+    ----------
     transform : pyrenew.transform.AbstractTransform
         Uninstantiated transformation to instantiate
         and test
