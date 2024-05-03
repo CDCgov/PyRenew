@@ -56,6 +56,7 @@ Documentation Components
 
    msei_reference/index
    test_reference/index
+   tutorials/index
    general/state
    general/faq
    general/usage

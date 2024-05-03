@@ -2,10 +2,11 @@ Complete Table Of Contents
 ==========================
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
 
    ../msei_reference/index
    ../test_reference/index
+   ../tutorials/index
    ../genindex
    ../modindex
    ../search

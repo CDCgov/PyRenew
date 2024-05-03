@@ -1,4 +1,0 @@
-General Index
-=============
-
-:ref:`genindex`
