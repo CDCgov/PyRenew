@@ -113,7 +113,7 @@ class HospitalAdmissionsModel(Model):
         _assert_sample_and_rtype : Perform type-checking and verify RV
         """
         _assert_sample_and_rtype(latent_admissions, skip_if_none=False)
-        _assert_sample_and_rtype(observation_process, skip_if_none=False)
+        _assert_sample_and_rtype(observation_process, skip_if_none=True)
         return None
 
     def sample_latent_admissions(
@@ -139,11 +139,6 @@ class HospitalAdmissionsModel(Model):
         See Also
         --------
         latent_admissions.sample : For sampling latent hospital admissions
-
-        Notes
-        -----
-        TODO: Include example(s) here.
-        TODO: Cover Returns in more detail.
         """
 
         return self.latent_admissions.sample(
@@ -218,10 +213,6 @@ class HospitalAdmissionsModel(Model):
         basic_renewal.sample : For sampling the basic renewal model
         sample_latent_admissions : To sample latent hospitalization process
         sample_observed_admissions : For sampling observed hospital admissions
-
-        Notes
-        -----
-        TODO: Include example(s) here.
         """
 
         # Getting the initial quantities from the basic model
