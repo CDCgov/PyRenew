@@ -18,7 +18,8 @@ class FirstDifferenceARProcess(RandomVariable):
         autoreg: ArrayLike,
         noise_sd: float,
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------
@@ -41,7 +42,8 @@ class FirstDifferenceARProcess(RandomVariable):
         name: str = "trend_rw",
         **kwargs,
     ) -> tuple:
-        """Sample from the process
+        """
+        Sample from the process
 
         Parameters
         ----------

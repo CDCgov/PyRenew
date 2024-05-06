@@ -56,6 +56,7 @@ Documentation Components
 
    msei_reference/index
    test_reference/index
+   tutorials/index
    general/state
    general/faq
    general/usage
@@ -80,7 +81,6 @@ Meta Information
    :maxdepth: 1
 
    general/contribute
-   general/bugs
    general/license
    general/notices
 

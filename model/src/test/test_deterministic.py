@@ -10,7 +10,8 @@ from pyrenew.deterministic import (
 
 
 def test_deterministic():
-    """Test the DeterministicVariable, DeterministicPMF, and
+    """
+    Test the DeterministicVariable, DeterministicPMF, and
     DeterministicProcess classes in the deterministic module.
     """
 

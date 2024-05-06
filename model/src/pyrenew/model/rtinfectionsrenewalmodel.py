@@ -33,7 +33,8 @@ class RtInfectionsRenewalSample(NamedTuple):
 
 
 class RtInfectionsRenewalModel(Model):
-    """Basic Renewal Model (Infections + Rt)
+    """
+    Basic Renewal Model (Infections + Rt)
 
     The basic renewal model consists of a sampler of two steps: Sample from
     Rt and then used that to sample the infections.
@@ -47,7 +48,8 @@ class RtInfectionsRenewalModel(Model):
         Rt_process: RandomVariable,
         observation_process: RandomVariable = None,
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------
@@ -246,7 +248,8 @@ class RtInfectionsRenewalModel(Model):
         padding: int = 0,
         **kwargs,
     ) -> RtInfectionsRenewalSample:
-        """Sample from the Basic Renewal Model
+        """
+        Sample from the Basic Renewal Model
 
         Parameters
         ----------

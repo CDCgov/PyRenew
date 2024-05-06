@@ -17,7 +17,8 @@ class SimpleRandomWalkProcess(RandomVariable):
         self,
         error_distribution: dist.Distribution,
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------
@@ -37,7 +38,8 @@ class SimpleRandomWalkProcess(RandomVariable):
         init: float = None,
         **kwargs,
     ) -> tuple:
-        """Samples from the randomwalk
+        """
+        Samples from the randomwalk
 
         Parameters
         ----------

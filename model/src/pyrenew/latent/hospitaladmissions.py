@@ -13,15 +13,14 @@ from pyrenew.metaclass import RandomVariable
 
 class HospAdmissionsSample(NamedTuple):
     """
-        A container for holding the output from HospAdmissionsSample.sample.
-    >>>>>>> origin/main
+    A container for holding the output from HospAdmissionsSample.sample.
 
-        Parameters
-        ----------
-        infection_hosp_rate : float, optional
-            The infection-to-hospitalization rate. Defaults to None.
-        predicted : ArrayLike or None
-            The predicted number of hospital admissions. Defaults to None.
+    Attributes
+    ----------
+    infection_hosp_rate : float, optional
+        The infection-to-hospitalization rate. Defaults to None.
+    predicted : ArrayLike or None
+        The predicted number of hospital admissions. Defaults to None.
     """
 
     infection_hosp_rate: float | None = None
@@ -49,15 +48,7 @@ class InfectHospRateSample(NamedTuple):
 
 class InfectHospRate(RandomVariable):
     """
-        Infection-to-Hospitalization rate
-
-        Methods
-        -------
-        validate(distr)
-            Validates distribution is Numpyro distribution
-        sample(**kwargs)
-            Produces a sample of the infection-hospitalization rate (IHR).
-    =======
+    Infection-to-Hospitalization rate
     """
 
     def __init__(
@@ -127,24 +118,24 @@ class InfectHospRate(RandomVariable):
 
 
 class HospitalAdmissions(RandomVariable):
-    r"""Latent hospital admissions
+    r"""
+    Latent hospital admissions
 
     Implements a renewal process for the expected number of hospital admissions.
-
 
     Notes
     -----
     The following text was directly extracted from the wastewater model
-    documentation (`link <https://github.com/cdcent/cfa-forecast-renewal-ww/blob/a17efc090b2ffbc7bc11bdd9eec5198d6bcf7322/model_definition.md#hospital-admissions-component> `_).
+    documentation (`link <https://github.com/cdcent/cfa-forecast-renewal-ww/blob/a17efc090b2ffbc7bc11bdd9eec5198d6bcf7322/model_definition.md#hospital-admissions-component>`_).
 
-    Following other semi-mechanistic renewal frameworks, we model the _expected_
+    Following other semi-mechanistic renewal frameworks, we model the *expected*
     hospital admissions per capita :math:`H(t)` as a convolution of the
-    _expected_ latent incident infections per capita :math:`I(t)`, and a
+    *expected* latent incident infections per capita :math:`I(t)`, and a
     discrete infection to hospitalization distribution :math:`d(\tau)`, scaled
     by the probability of being hospitalized :math:`p_\mathrm{hosp}(t)`.
 
     To account for day-of-week effects in hospital reporting, we use an
-    estimated _weekday effect_ :math:`\omega(t)`. If :math:`t` and :math:`t'`
+    estimated *weekday effect* :math:`\omega(t)`. If :math:`t` and :math:`t'`
     are the same day of the week, :math:`\omega(t) = \omega(t')`. The seven
     values that :math:`\omega(t)` takes on are constrained to have mean 1.
 
@@ -164,7 +155,8 @@ class HospitalAdmissions(RandomVariable):
         weekday_effect_dist: Optional[RandomVariable] = None,
         hosp_report_prob_dist: Optional[RandomVariable] = None,
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------
@@ -246,7 +238,8 @@ class HospitalAdmissions(RandomVariable):
         latent: ArrayLike,
         **kwargs,
     ) -> HospAdmissionsSample:
-        """Samples from the observation process
+        """
+        Samples from the observation process
 
         Parameters
         ----------

@@ -49,7 +49,8 @@ class Infections(RandomVariable):
         self,
         infections_mean_varname: str = "latent_infections",
     ) -> None:
-        """Default constructor for Infections class.
+        """
+        Default constructor for Infections class.
 
         Parameters
         ----------
@@ -77,7 +78,8 @@ class Infections(RandomVariable):
         gen_int: ArrayLike,
         **kwargs,
     ) -> tuple:
-        """Samples infections given Rt, initial infections, and generation
+        """
+        Samples infections given Rt, initial infections, and generation
         interval.
 
         Parameters

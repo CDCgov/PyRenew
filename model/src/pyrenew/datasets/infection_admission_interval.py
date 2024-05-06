@@ -4,7 +4,8 @@ import polars as pl
 
 
 def load_infection_admission_interval() -> pl.DataFrame:
-    """Load the infection to admission interval
+    """
+    Load the infection to admission interval
 
     This dataset contains the infection to admission interval distribution for
     COVID-19.

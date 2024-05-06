@@ -16,7 +16,8 @@ from pyrenew.mcmcutils import plot_posterior, spread_draws
 def _assert_sample_and_rtype(
     rp: "RandomVariable", skip_if_none: bool = True
 ) -> None:
-    """Return type-checking for RandomVariable's sample function
+    """
+    Return type-checking for RandomVariable's sample function
 
     Objects passed as `RandomVariable` should (a) have a sample() method that
     (b) returns either a tuple or a named tuple.
@@ -101,7 +102,8 @@ class RandomVariable(metaclass=ABCMeta):
         self,
         **kwargs,
     ) -> tuple:
-        """Sample method of the process
+        """
+        Sample method of the process
 
         The method design in the class should have at least kwargs.
 
@@ -147,7 +149,8 @@ class Model(metaclass=ABCMeta):
         self,
         **kwargs,
     ) -> tuple:
-        """Sample method of the model
+        """
+        Sample method of the model
 
         The method design in the class should have at least kwargs.
 
@@ -170,7 +173,8 @@ class Model(metaclass=ABCMeta):
         nuts_args: dict = None,
         mcmc_args: dict = None,
     ) -> None:
-        """Creates the NUTS kernel and MCMC model
+        """
+        Creates the NUTS kernel and MCMC model
 
         Parameters
         ----------
@@ -214,7 +218,8 @@ class Model(metaclass=ABCMeta):
         mcmc_args: dict = None,
         **kwargs,
     ) -> None:
-        """Runs the model
+        """
+        Runs the model
 
         Parameters
         ----------
@@ -263,7 +268,8 @@ class Model(metaclass=ABCMeta):
         return self.mcmc.print_summary(prob, exclude_deterministic)
 
     def spread_draws(self, variables_names: list) -> pl.DataFrame:
-        """A wrapper of mcmcutils.spread_draws
+        """
+        A wrapper of mcmcutils.spread_draws
 
         Parameters
         ----------

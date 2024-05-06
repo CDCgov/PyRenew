@@ -5,7 +5,8 @@ from pyrenew.metaclass import RandomVariable
 
 
 class DeterministicVariable(RandomVariable):
-    """A deterministic (degenerate) random variable. Useful to pass fixed
+    """
+    A deterministic (degenerate) random variable. Useful to pass fixed
     quantities."""
 
     def __init__(
@@ -13,7 +14,8 @@ class DeterministicVariable(RandomVariable):
         vars: ArrayLike,
         label: str = "a_random_variable",
     ) -> None:
-        """Default constructor
+        """
+        Default constructor
 
         Parameters
         ----------
@@ -61,7 +63,8 @@ class DeterministicVariable(RandomVariable):
         self,
         **kwargs,
     ) -> tuple:
-        """Retrieve the value of the deterministic Rv
+        """
+        Retrieve the value of the deterministic Rv
 
         Parameters
         ----------

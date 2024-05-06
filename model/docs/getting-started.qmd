@@ -115,6 +115,7 @@ The following diagram summarizes how the modules interact via composition; notab
 
 ```{mermaid}
 %%| label: overview-of-RtInfectionsRenewalModel
+%%| include: true
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
     i0["(2) I0\n(Infections0)"]
@@ -145,9 +146,8 @@ sim_data
 To understand what has been accomplished here, visualize an $R_t$ sample path (left panel) and infections over time (right panel):
 
 ```{python}
-#| label: basic-fig
+#| label: fig-basic
 #| fig-cap: Rt and Infections
-#| fig-cap-location: bottom
 import matplotlib.pyplot as plt
 
 fig, axs = plt.subplots(1, 2)
@@ -185,9 +185,8 @@ model1.run(
 Now, let's investigate the output, particularly the posterior distribution of the $R_t$ estimates:
 
 ```{python}
-#| label: output-rt
+#| label: fig-output-rt
 #| fig-cap: Rt posterior distribution
-#| fig-cap-location: bottom
 import polars as pl
 samps = model1.spread_draws([('Rt', 'time')])
 
@@ -221,6 +220,7 @@ The first four are collections of instances of `RandomVariable`, and the last is
 
 ```{mermaid}
 %%| label: overview-of-RtInfectionsRenewalModel
+%%| include: true
 flowchart LR
     rand((RandomVariable\nmetaclass))
     models((Model\nmetaclass))
