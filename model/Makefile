@@ -39,4 +39,7 @@ clean:
 		rm -f docs/example-with-datasets.$$i; \
 	done
 
-.PHONY: install test docs clean docs/notebooks docs/py test_images
+image-build: Dockerfile
+	docker build -t pyrenew:latest .
+
+.PHONY: install test docs clean docs/notebooks docs/py test_images image-build
