@@ -59,7 +59,7 @@ from pyrenew.latent import (
 )
 ```
 
-Additionally, import several classes from Pyrenew, including a Poisson observation process, determininstic PMF and variable classes, the Pyrenew hospitalization model, and a renewal modle (Rt) random walk process:
+Additionally, import several classes from Pyrenew, including a Poisson observation process, determininstic PMF and variable classes, the Pyrenew hospitalization model, and a renewal model (Rt) random walk process:
 
 ```{python}
 from pyrenew.observation import PoissonObservation

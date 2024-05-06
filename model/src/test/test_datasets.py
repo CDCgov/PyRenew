@@ -13,7 +13,7 @@ def test_loading_wastewater():
     assert df.shape == (635, 14)
 
     testing.assert_approx_equal(df["daily_hosp_admits"].mean(), 12.8888, 3)
-    testing.assert_approx_equal(df["lod_sewage"].mean(), 3.841025, 3)
+    testing.assert_approx_equal(df["load_sewage"].mean(), 3.841025, 3)
 
 
 def test_gen_int():

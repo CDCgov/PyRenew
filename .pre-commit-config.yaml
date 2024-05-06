@@ -43,7 +43,7 @@ repos:
 ####
 # Typos
 # comment out for Sphinx running purposes
-# -   repo: https://github.com/crate-ci/typos
-#     rev: v1.19.0
-#     hooks:
-#     -   id: typos
+-   repo: https://github.com/crate-ci/typos
+    rev: v1.19.0
+    hooks:
+    -   id: typos
