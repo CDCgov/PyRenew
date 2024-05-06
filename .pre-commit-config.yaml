@@ -28,9 +28,10 @@ repos:
     hooks:
     -   id: ruff
 # -   repo: https://github.com/numpy/numpydoc
-#     rev: v1.6.0
+#     rev: v1.7.0
 #     hooks:
 #     -   id: numpydoc-validation
+#         args: ["--config", "./model/pyproject.toml"]
 #####
 # Secrets
 -   repo: https://github.com/Yelp/detect-secrets
