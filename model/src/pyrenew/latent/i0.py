@@ -1,4 +1,5 @@
-from typing import Any
+# numpydoc ignore=GL08
+
 
 import numpyro as npro
 import numpyro.distributions as dist
@@ -40,13 +41,13 @@ class Infections0(RandomVariable):
         return None
 
     @staticmethod
-    def validate(i0_dist: Any) -> None:
+    def validate(i0_dist: any) -> None:
         """
         Validate the initial infections distribution.
 
         Parameters
         ----------
-        i0_dist : Any
+        i0_dist : any
             Distribution (expected dist.Distribution) of the initial infections.
 
         Returns

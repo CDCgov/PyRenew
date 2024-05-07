@@ -37,7 +37,7 @@ def new_convolve_scanner(discrete_dist_flipped: ArrayLike) -> Callable:
 
     def _new_scanner(
         history_subset: ArrayLike, multiplier: float
-    ) -> tuple[ArrayLike, float]:
+    ) -> tuple[ArrayLike, float]:  # numpydoc ignore=GL08
         new_val = multiplier * jnp.dot(discrete_dist_flipped, history_subset)
         latest = jnp.hstack([history_subset[1:], new_val])
         return latest, new_val
@@ -73,7 +73,7 @@ def new_double_scanner(
 
     def _new_scanner(
         history_subset: ArrayLike, multipliers: tuple[float, float]
-    ) -> tuple[ArrayLike, tuple[float, float]]:
+    ) -> tuple[ArrayLike, tuple[float, float]]:  # numpydoc ignore=GL08
         m1, m2 = multipliers
         m_net1 = t1(m1 * jnp.dot(d1, history_subset))
         new_val = t2(m2 * m_net1 * jnp.dot(d2, history_subset))

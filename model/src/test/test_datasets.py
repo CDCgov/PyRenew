@@ -1,3 +1,5 @@
+# numpydoc ignore=GL08
+
 import numpy.testing as testing
 from pyrenew.datasets import (
     load_generation_interval,

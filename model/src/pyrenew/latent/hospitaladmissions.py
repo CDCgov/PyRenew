@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# numpydoc ignore=GL08
 
 from typing import Any, NamedTuple, Optional
 

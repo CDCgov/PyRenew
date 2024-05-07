@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# numpydoc ignore=GL08
 
 import jax
 import jax.numpy as jnp

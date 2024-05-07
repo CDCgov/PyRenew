@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# numpydoc ignore=GL08
 
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
@@ -7,19 +8,19 @@ from pyrenew.metaclass import RandomVariable
 class DeterministicVariable(RandomVariable):
     """
     A deterministic (degenerate) random variable. Useful to pass fixed
-    quantities."""
+    quantities.
+    """
 
     def __init__(
         self,
         vars: ArrayLike,
         label: str = "a_random_variable",
     ) -> None:
-        """
-        Default constructor
+        """Default constructor
 
         Parameters
         ----------
-        vars : tuple
+        vars : ArrayLike
             A tuple with arraylike objects.
         label : str, optional
             A label to assign to the process. Defaults to "a_random_variable"

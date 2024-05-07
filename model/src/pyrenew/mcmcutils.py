@@ -112,6 +112,7 @@ def plot_posterior(
     draws_col : str, optional
         Color of the draws
     obs_col : str, optional
+        Color of observations column.
 
     Returns
     -------

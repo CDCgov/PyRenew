@@ -1,3 +1,5 @@
+# numpydoc ignore=GL08
+
 from pipeline.placeholder import add
 
 

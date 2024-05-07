@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+# numpydoc ignore=GL08
 
 import jax.numpy as jnp
 from pyrenew.latent import logistic_susceptibility_adjustment
 
 
-def test_logistic_susceptibility_adjustment():
+def test_logistic_susceptibility_adjustment():  # numpydoc ignore=GL08
     new_I_raw = 1000000
     population = 100
 
