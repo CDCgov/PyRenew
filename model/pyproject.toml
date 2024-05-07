@@ -33,10 +33,17 @@ pytest-mpl = "^0.17.0"
 [tool.numpydoc_validation]
 checks = [
     "GL03",
+    "GL08",
+    "SS01",
+    "PR03",
+    "PR04",
+    "PR07",
+    "RT01"
 ]
 exclude = [  # don't report on objects that match any of these regex
     '\.undocumented_method$',
     '\.__repr__$',
+    '\.__call__$'
 ]
 
 [build-system]

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# numpydoc ignore=GL08
 
 import jax.numpy as jnp
 import numpyro
@@ -76,7 +77,7 @@ class ARProcess(RandomVariable):
                 dist.Normal(0, self.noise_sd).expand((order,)),
             )
 
-        def _ar_scanner(carry, next):
+        def _ar_scanner(carry, next):  # numpydoc ignore=GL08
             new_term = (jnp.dot(self.autoreg, carry) + next).flatten()
             new_carry = jnp.hstack([new_term, carry[: (order - 1)]])
             return new_carry, new_term
@@ -89,7 +90,7 @@ class ARProcess(RandomVariable):
         return (jnp.hstack([inits, self.mean + ts.flatten()]),)
 
     @staticmethod
-    def validate():
+    def validate():  # numpydoc ignore=RT01
         """
         Validates inputted parameters, implementation pending.
         """

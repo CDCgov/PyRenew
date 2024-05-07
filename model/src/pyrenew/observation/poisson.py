@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# numpydoc ignore=GL08
 
 import numpyro
 import numpyro.distributions as dist
@@ -75,5 +76,5 @@ class PoissonObservation(RandomVariable):
         )
 
     @staticmethod
-    def validate():
+    def validate():  # numpydoc ignore=GL08
         None

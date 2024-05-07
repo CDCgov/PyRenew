@@ -48,7 +48,7 @@ def generic_inversion_test(transform, test_vals, decimal=1e-8, **kwargs):
     )
 
 
-def test_invert_dists():
+def test_invert_dists():  # numpydoc ignore=GL08
     generic_inversion_test(
         t.LogTransform, jnp.array([1.52, 0.21, 1563.52, 23.523, 1.2352e7])
     )

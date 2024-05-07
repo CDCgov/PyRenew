@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# numpydoc ignore=GL08
 
 from typing import NamedTuple
 
@@ -54,7 +54,7 @@ class HospitalAdmissionsModel(Model):
         I0: RandomVariable,
         Rt_process: RandomVariable,
         observation_process: RandomVariable,
-    ) -> None:
+    ) -> None:  # numpydoc ignore=PR04
         """
         Default constructor
 

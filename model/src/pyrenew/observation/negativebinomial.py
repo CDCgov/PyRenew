@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# numpydoc ignore=GL08
 
 import numbers as nums
 
@@ -60,8 +61,8 @@ class NegativeBinomialObservation(RandomVariable):
     def sample(
         self,
         predicted: ArrayLike,
-        name: str | None = None,
         obs: ArrayLike | None = None,
+        name: str | None = None,
         **kwargs,
     ) -> tuple:
         """

@@ -293,7 +293,7 @@ class Model(metaclass=ABCMeta):
         figsize: list = [4, 5],
         draws_col: str = "darkblue",
         obs_col: str = "black",
-    ) -> plt.Figure:
+    ) -> plt.Figure:  # numpydoc ignore=RT01
         """A wrapper of pyrenew.mcmcutils.plot_posterior"""
         return plot_posterior(
             var=var,
