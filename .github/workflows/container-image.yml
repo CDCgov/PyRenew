@@ -28,7 +28,7 @@ jobs:
 
       - name: Log in to ghcr.io
         run: |
-          podman login ghcr.io \
+          podman login \
             -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} \
             ghcr.io/cdcgov
         # uses: redhat-actions/podman-login@v1
