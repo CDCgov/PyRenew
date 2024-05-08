@@ -115,6 +115,7 @@ axs[0].plot(gen_int)
 axs[0].set_title("Generation interval")
 axs[1].plot(inf_hosp_int)
 axs[1].set_title("Infection to hospitalization interval")
+plt.show()
 ```
 
 With these two in hand, we can start building the model. First, we will define the latent hospital admissions:
