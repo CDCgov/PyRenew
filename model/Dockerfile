@@ -16,13 +16,12 @@ RUN echo "export PATH=$PATH:/root/.local/bin" >> ~/.bashrc
 ENV PATH="${PATH}:/root/.local/bin"
 
 # Copying the project files
-COPY . /app
+COPY src/ poetry.lock pyproject.toml Makefile LICENSE README.md /pyrenew/
 
 # Setting the working directory
-WORKDIR /app
+WORKDIR /pyrenew
 
 # Installing the dependencies
 RUN poetry install
 
-# Returning with the command line
 CMD ["bash"]

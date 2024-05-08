@@ -1,0 +1,21 @@
+name: Build container image
+
+on:
+    workflow_dispatch:
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Installs podman
+              run: |
+                sudo apt-get update
+                sudo apt-get install -y --no-install-recommends podman
+
+            - name: Build container image
+              run: |
+                make image-build
+              working-directory: model
