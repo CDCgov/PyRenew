@@ -5,11 +5,6 @@ on:
   release:
     types: [published]
 
-# env:
-#   REGISTRY_USER: ${{ github.actor }}
-#   REGISTRY_PASSWORD: ${{ github.token }}
-#   IMAGE_REGISTRY: ghcr.io/cdcgov
-
 permissions:
   packages: write
   contents: read
@@ -31,11 +26,6 @@ jobs:
           podman login \
             -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} \
             ghcr.io/cdcgov
-        # uses: redhat-actions/podman-login@v1
-        # with:
-        #   username: ${{ env.REGISTRY_USER }}
-        #   password: ${{ env.REGISTRY_PASSWORD }}
-        #   registry: ${{ env.IMAGE_REGISTRY }}
 
       - name: Build container image
         run: |

@@ -10,6 +10,14 @@ Install via pip with
 pip install git+https://github.com/cdcent/cfa-pyrenew.git
 ```
 
+## Container image
+
+A container image is available at `ghcr.io/cdcent/cfa-pyrenew:latest`. You can pull it with
+
+```bash
+docker pull ghcr.io/cdcent/cfa-pyrenew:latest
+```
+
 ## Demo
 
 The [`docs`](docs) folder contains quarto documents to get you started. It simulates observed hospital admissions using a simple renewal process model and then fits it using a No-U-Turn Sampler.

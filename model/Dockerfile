@@ -1,5 +1,10 @@
 FROM ubuntu:24.04
 
+LABEL org.opencontainers.image.description="Image of PyRenew python package"
+LABEL org.opencontainers.image.source="https://github.com/CDCgov/multisignal-epi-inference"
+LABEL org.opencontainers.image.authors="CDC's Center for Forecasting Analytics"
+LABEL org.opencontainers.image.license="Apache-2.0"
+
 # Installing python3-11.0
 RUN apt-get update && apt install -y python3.12
 
