@@ -29,7 +29,7 @@ def load_wastewater() -> pl.DataFrame:
         - `log_conc`
         - `date`
         - `load_sewage`
-        - `below_LOAD`
+        - `below_load`
         - `daily_hosp_admits`
         - `daily_hosp_admits_for_eval`
         - `pop`
