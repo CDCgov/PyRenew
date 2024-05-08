@@ -78,6 +78,7 @@ Let's take a look at the daily prevalence of hospital admissions.
 
 ```{python}
 #| label: fig-plot-hospital-admissions
+#| fig-cap: Daily hospital admissions from the simulated data
 import matplotlib.pyplot as plt
 
 # Rotating the x-axis labels, and only showing ~10 labels
@@ -96,6 +97,7 @@ First, we will extract two datasets we will use as deterministic quantities: the
 
 ```{python}
 #| label: fig-data-extract
+#| fig-cap: Generation interval and infection to hospitalization interval
 gen_int = datasets.load_generation_interval()
 inf_hosp_int = datasets.load_infection_admission_interval()
 
