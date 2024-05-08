@@ -23,5 +23,5 @@ jobs:
             - name: Build container image
               run: |
                 make image-build
-                CONTAINER_URL=cdcgov.ghcr.io make image-push
+                CONTAINER_URL=ghcr.io/cdcgov make image-push
               working-directory: model
