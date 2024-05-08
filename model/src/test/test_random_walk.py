@@ -1,3 +1,5 @@
+# numpydoc ignore=GL08
+
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist

@@ -26,7 +26,7 @@ def _assert_sample_and_rtype(
     ----------
     rp : RandomVariable
         Random variable to check.
-    skip_if_none: bool, optional
+    skip_if_none : bool, optional
         When `True` it returns if `rp` is None. Defaults to True.
 
     Returns
@@ -136,12 +136,12 @@ class Model(metaclass=ABCMeta):
     mcmc = None
 
     @abstractmethod
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, **kwargs) -> None:  # numpydoc ignore=GL08
         pass
 
     @staticmethod
     @abstractmethod
-    def validate() -> None:
+    def validate() -> None:  # numpydoc ignore=GL08
         pass
 
     @abstractmethod
@@ -293,7 +293,7 @@ class Model(metaclass=ABCMeta):
         figsize: list = [4, 5],
         draws_col: str = "darkblue",
         obs_col: str = "black",
-    ) -> plt.Figure:
+    ) -> plt.Figure:  # numpydoc ignore=RT01
         """A wrapper of pyrenew.mcmcutils.plot_posterior"""
         return plot_posterior(
             var=var,

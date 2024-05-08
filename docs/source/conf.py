@@ -1,3 +1,5 @@
+# numpydoc ignore=GL08
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -51,6 +53,8 @@ toc_deph = 2
 # We don't want that explicitly
 todo_include_todos = False
 
+# Numpydocs checks
+# numpydoc_validation_checks = {"SA01", "EX01"}
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output

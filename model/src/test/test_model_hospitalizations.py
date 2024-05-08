@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# numpydoc ignore=GL08
 
 import jax
 import jax.numpy as jnp
@@ -23,17 +24,17 @@ from pyrenew.observation import PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
 
 
-class UniformProbForTest(RandomVariable):
-    def __init__(self, pname: str):
+class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
+    def __init__(self, pname: str):  # numpydoc ignore=GL08
         self.name = pname
 
         return None
 
     @staticmethod
-    def validate(self):
+    def validate(self):  # numpydoc ignore=GL08
         return None
 
-    def sample(self, **kwargs):
+    def sample(self, **kwargs):  # numpydoc ignore=GL08
         return (
             npro.sample(name=self.name, fn=dist.Uniform(high=0.99, low=0.01)),
         )

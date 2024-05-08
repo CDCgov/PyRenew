@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# numpydoc ignore=GL08
 
 import jax
 import jax.numpy as jnp
@@ -127,7 +128,7 @@ def test_model_basicrenewal_with_obs_model():
 
 
 @pytest.mark.mpl_image_compare
-def test_model_basicrenewal_plot() -> plt.Figure:
+def test_model_basicrenewal_plot() -> plt.Figure:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
@@ -165,7 +166,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:
     )
 
 
-def test_model_basicrenewal_padding() -> None:
+def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = Infections0(I0_dist=dist.LogNormal(0, 1))

@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "pyrenew"
 version = "0.1.0"
-description = "Pyrenew: a package for Bayesian renewal modeling with JAX and Numpyro\""
+description = "Pyrenew: a package for Bayesian renewal modeling with JAX and Numpyro"
 authors = ["Dylan H. Morris <dylan@dylanhmorris.com>"]
 license = "Apache 2.0"
 readme = "README.md"
@@ -24,27 +24,26 @@ optional = true
 pyyaml = "^6.0.0"
 matplotlib = "^3.8.3"
 ipykernel = "^6.29.3"
-numpydoc = "^1.6.0"
 nbclient = "^0.10.0"
 nbformat = "^5.10.0"
 pytest-cov = "^5.0.0"
 pytest-mpl = "^0.17.0"
+numpydoc = "^1.7.0"
 
 [tool.numpydoc_validation]
 checks = [
-    "EX01",
-    "SA01",
-    "ES01",
+    "GL03",
+    "GL08",
+    "SS01",
+    "PR03",
+    "PR04",
+    "PR07",
+    "RT01"
 ]
 exclude = [  # don't report on objects that match any of these regex
     '\.undocumented_method$',
     '\.__repr__$',
-    '\.__init__$',
-]
-override_SS05 = [  # override SS05 to allow docstrings starting with these words
-    '^Process ',
-    '^Assess ',
-    '^Access ',
+    '\.__call__$'
 ]
 
 [build-system]

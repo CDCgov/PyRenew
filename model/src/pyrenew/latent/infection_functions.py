@@ -1,17 +1,10 @@
 # -*- coding: utf-8 -*-
+# numpydoc ignore=GL08
 
 import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from pyrenew.convolve import new_convolve_scanner, new_double_scanner
-
-# """
-# infection
-
-# Functions for sampling timeseries of
-# infections
-# # UPX3 comment given uncertainty of this docstring
-# """
 
 
 def sample_infections_rt(
@@ -24,13 +17,13 @@ def sample_infections_rt(
 
     Parameters
     ----------
-    I0: ArrayLike
+    I0 : ArrayLike
         Array of initial infections of the
         same length as the generation inferval
         pmf vector.
-    Rt: ArrayLike
+    Rt : ArrayLike
         Timeseries of R(t) values
-    reversed_generation_interval_pmf: ArrayLike
+    reversed_generation_interval_pmf : ArrayLike
         discrete probability mass vector
         representing the generation interval
         of the infection process, where the final
@@ -75,7 +68,7 @@ def logistic_susceptibility_adjustment(
 
     Returns
     -------
-    float:
+    float
         The adjusted value of I(t)
 
     .. [1] Bhatt, Samir, et al.
@@ -104,24 +97,24 @@ def sample_infections_with_feedback(
 
     Parameters
     ----------
-    I0: ArrayLike
+    I0 : ArrayLike
         Array of initial infections of the
         same length as the generation inferval
         pmf vector.
-    Rt_raw: ArrayLike
+    Rt_raw : ArrayLike
         Timeseries of raw R(t) values not
         adjusted by infection feedback
-    infection_feedback_strength: ArrayLike
+    infection_feedback_strength : ArrayLike
         Strength of the infection feedback.
         Either a scalar (constant feedback
         strength in time) or a vector representing
         the infection feedback strength at a
         given point in time.
-    generation_interval_pmf: ArrayLike
+    generation_interval_pmf : ArrayLike
         discrete probability mass vector
         representing the generation interval
         of the infection process
-    infection_feedback_pmf: ArrayLike
+    infection_feedback_pmf : ArrayLike
         discrete probability mass vector
         whose `i`th entry represents the
         relative contribution to infection

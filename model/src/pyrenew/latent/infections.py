@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# numpydoc ignore=GL08
 
 from typing import NamedTuple
 
@@ -54,7 +54,7 @@ class Infections(RandomVariable):
 
         Parameters
         ----------
-        infections_mean_varname : str, optional.
+        infections_mean_varname : str, optional
             Name to be assigned to the deterministic variable in the model.
             Defaults to "latent_infections".
 
@@ -68,7 +68,7 @@ class Infections(RandomVariable):
         return None
 
     @staticmethod
-    def validate() -> None:
+    def validate() -> None:  # numpydoc ignore=GL08
         return None
 
     def sample(

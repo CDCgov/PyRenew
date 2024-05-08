@@ -1,3 +1,5 @@
+# numpydoc ignore=GL08
+
 import jax.numpy as jnp
 from pyrenew.deterministic.deterministic import DeterministicVariable
 

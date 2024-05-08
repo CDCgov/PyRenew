@@ -12,7 +12,7 @@ from jax.typing import ArrayLike
 from pyrenew.transform import AbstractTransform, IdentityTransform
 
 
-class AbstractRegressionPrediction(metaclass=ABCMeta):
+class AbstractRegressionPrediction(metaclass=ABCMeta):  # numpydoc ignore=GL08
     @abstractmethod
     def predict(self):
         """

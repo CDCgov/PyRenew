@@ -1,3 +1,5 @@
+# numpydoc ignore=GL08
+
 from pyrenew.datasets.generation_interval import load_generation_interval
 from pyrenew.datasets.infection_admission_interval import (
     load_infection_admission_interval,

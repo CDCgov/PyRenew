@@ -28,8 +28,8 @@ def load_wastewater() -> pl.DataFrame:
         - `lab_wwtp_unique_id`
         - `log_conc`
         - `date`
-        - `lod_sewage`
-        - `below_LOD`
+        - `load_sewage`
+        - `below_load`
         - `daily_hosp_admits`
         - `daily_hosp_admits_for_eval`
         - `pop`

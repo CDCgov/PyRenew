@@ -42,7 +42,7 @@ class IdentityTransform(AbstractTransform):
     f^-1(x) = x
     """
 
-    def transform(self, x: any):
+    def transform(self, x: any):  # numpydoc ignore=SS01
         """
         Parameters
         ----------
@@ -56,7 +56,7 @@ class IdentityTransform(AbstractTransform):
         """
         return x
 
-    def inverse(self, x: any):
+    def inverse(self, x: any):  # numpydoc ignore=SS01
         """
         Parameters
         ----------
@@ -80,7 +80,7 @@ class LogTransform(AbstractTransform):
     f^-1(x) = exp(x)
     """
 
-    def transform(self, x: ArrayLike):
+    def transform(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
         Parameters
         ----------
@@ -94,7 +94,7 @@ class LogTransform(AbstractTransform):
         """
         return jnp.log(x)
 
-    def inverse(self, x: ArrayLike):
+    def inverse(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
         Parameters
         ----------
@@ -119,7 +119,7 @@ class LogitTransform(AbstractTransform):
     f^-1(x) = 1 / (1 + exp(-x))
     """
 
-    def transform(self, x: ArrayLike):
+    def transform(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
         Parameters
         ----------
@@ -133,7 +133,7 @@ class LogitTransform(AbstractTransform):
         """
         return jax.scipy.special.logit(x)
 
-    def inverse(self, x: ArrayLike):
+    def inverse(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
         Parameters
         ----------
@@ -159,7 +159,7 @@ class ScaledLogitTransform(AbstractTransform):
     f^-1(x) = X_max / (1 + exp(-x))
     """
 
-    def __init__(self, x_max: float):
+    def __init__(self, x_max: float):  # numpydoc ignore=RT01
         """
         Default constructor
 
@@ -171,7 +171,7 @@ class ScaledLogitTransform(AbstractTransform):
         """
         self.x_max = x_max
 
-    def transform(self, x: ArrayLike):
+    def transform(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
         Parameters
         ----------
@@ -185,7 +185,7 @@ class ScaledLogitTransform(AbstractTransform):
         """
         return jax.scipy.special.logit(x / self.x_max)
 
-    def inverse(self, x: ArrayLike):
+    def inverse(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
         Parameters
         ----------
