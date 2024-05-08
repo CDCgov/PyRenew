@@ -166,7 +166,7 @@ plt.tight_layout()
 plt.show()
 ```
 
-To fit the model, we can use the `run()` method of the `RtInfectionsRenewalModel` class (an inherited method from the metaclass `Model`). `model1.run()` will call the `run` method of the `model1` object, which will generate an instance of model MCMC simulation, with 2000 warm-up iterations for the MCMC algorithm, used to tune the parameters of the MCMC algorithm to improve efficiency of the sampling process. From the posterior distributor of the model parameters, 1000 samples will be drawn and used to estimate the posterior distributions and compute summary statistics. Observed data is provided to the model using the `sim_data` object previously generated. `mcmc_args` provides additional arguments for the MCMC algorithm.
+To fit the model, we can use the `run()` method of the `RtInfectionsRenewalModel` class (an inherited method from the metaclass `Model`). `model1.run()` will call the `run` method of the `model1` object, which will generate an instance of model MCMC simulation, with 2000 warm-up iterations for the MCMC algorithm, used to tune the parameters of the MCMC algorithm to improve efficiency of the sampling process. From the posterior distribution of the model parameters, 1000 samples will be drawn and used to estimate the posterior distributions and compute summary statistics. Observed data is provided to the model using the `sim_data` object previously generated. `mcmc_args` provides additional arguments for the MCMC algorithm.
 
 ```{python}
 #| label: model-fit
