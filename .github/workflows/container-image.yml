@@ -2,12 +2,11 @@ name: Build container image
 
 on:
     workflow_dispatch:
-    # These should be removed once the PR is merged. See
-    # https://stackoverflow.com/questions/63362126/github-actions-how-can-i-run-a-workflow-created-on-a-non-master-branch-from-t
-    push:
-        branches: [main]
-    pull_request:
-        branches: [main]
+    release:
+        types: [published]
+
+permissions:
+    packages: write
 
 jobs:
     build:
@@ -24,4 +23,5 @@ jobs:
             - name: Build container image
               run: |
                 make image-build
+                CONTAINER_URL=cdcgov.ghcr.io make image-push
               working-directory: model
