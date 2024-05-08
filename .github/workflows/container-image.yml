@@ -1,29 +1,41 @@
 name: Build container image
 
 on:
-    workflow_dispatch:
-    release:
-        types: [published]
+  workflow_dispatch:
+  release:
+    types: [published]
+
+env:
+  REGISTRY_USER: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ github.token }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
 permissions:
-    packages: write
-    contents: read
+  packages: write
+  contents: read
 
 jobs:
-    build:
-        runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-        steps:
-            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-            - name: Installs podman
-              run: |
-                sudo apt-get update
-                sudo apt-get install -y --no-install-recommends podman
+      - name: Installs podman
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends podman
 
-            - name: Build container image
-              run: |
-                make image-build
-                podman tag pyrenew:latest ghcr.io/cdcgov/pyrenew:latest
-                podman push ghcr.io/cdcgov/pyrenew:latest
-              working-directory: model
+      - name: Log in to ghcr.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          username: ${{ env.REGISTRY_USER }}
+          password: ${{ env.REGISTRY_PASSWORD }}
+          registry: ${{ env.IMAGE_REGISTRY }}
+
+      - name: Build container image
+        run: |
+          make image-build
+          podman tag pyrenew:latest ghcr.io/cdcgov/pyrenew:latest
+          podman push ghcr.io/cdcgov/pyrenew:latest
+        working-directory: model
