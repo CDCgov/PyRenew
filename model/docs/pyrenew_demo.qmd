@@ -4,19 +4,18 @@ format: gfm
 engine: jupyter
 ---
 
-This demo simulates some basic renewal process data and then fits to it using `pyrenew`.
+This demo simulates a basic renewal process data and then fits it using `pyrenew`.
 
-Assuming you've already installed Python and pip, you’ll need to first install `pyrenew`:
+You’ll need to install `pyrenew` using either poetry or pip. To install `pyrenew` using poetry, run the following command from within the directory containing the `pyrenew` project:
 
-```python
-pip install pyrenew
+```bash
+poetry install
 ```
 
-You’ll also need working
-installations of `matplotlib`, `numpy`, `jax`, `numpyro`, and `polars`:
+To install `pyrenew` using pip, run the following command:
 
-```python
-pip install matplotlib numpy jax numpyro polars
+```bash
+pip install git+https://github.com/CDCgov/multisignal-epi-inference@main#subdirectory=model
 ```
 
 To begin, run the following import section to call external modules and functions necessary to run the `pyrenew` demo. The `import` statement imports the module and the `as` statement renames the module for use within this script. The `from` statement imports a specific function from a module (named after the `.`) within a package (named before the `.`).
