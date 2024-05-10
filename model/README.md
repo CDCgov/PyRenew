@@ -7,7 +7,15 @@
 Install via pip with
 
 ```bash
-pip install git+https://github.com/cdcent/cfa-pyrenew.git
+pip install git+https://github.com/CDCgov/multisignal-epi-inference@main#subdirectory=model
+```
+
+## Container image
+
+A container image is available at `ghcr.io/CDCgov/pyrenew:latest`. You can pull it with
+
+```bash
+docker pull ghcr.io/CDCgov/pyrenew:latest
 ```
 
 ## Demo
