@@ -10,7 +10,7 @@
 
 ## Overview
 
-The **Multisignal Renewal Project** aims to develop a modeling framework that leverages multiple data sources to enhance CDC's epidemiological modeling capabilities. The project's goal is twofold: (a) **create a Python library** that provides a flexible renewal modeling framework and (b) **develop a pipeline** that leverages this framework to estimate epidemiological parameters from multiple data sources and produce forecasts. The library and pipeline are located in the [`model/`](model) and [`pipeline/`](pipeline/) directories, respectively.
+The **Multisignal Renewal Project** aims to develop a modeling framework that leverages multiple data sources to enhance CDC's epidemiological modeling capabilities. The project's goal is twofold: (a) **create a Python library** that provides a flexible renewal modeling framework and (b) **develop a pipeline** that leverages this framework to estimate epidemiological parameters from multiple data sources and produce forecasts. The library and pipeline are located in the [`model/`](https://github.com/CDCgov/multisignal-epi-inference/tree/main/model) and [`pipeline/`](https://github.com/CDCgov/multisignal-epi-inference/tree/main/pipeline/) directories, respectively.
 
 Examples using the library can be found on the project's website [here](https://cdcgov.github.io/multisignal-epi-inference/tutorials/index.html).
 

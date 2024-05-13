@@ -62,3 +62,5 @@ todo_include_todos = False
 html_theme = "sphinx_book_theme"
 html_static_path = ["_static"]
 html_css_files = ["msei.css"]
+
+html_sidebars = {"**": ["sbt-sidebar-nav.html"]}
