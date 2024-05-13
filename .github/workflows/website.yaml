@@ -42,8 +42,8 @@ jobs:
         run: |
             cd model
             mkdir _compiled
-            poetry run quarto render ../README.md --to rst --output-dir \
-              -o _compiled/docs/index.rst
+            poetry run quarto render ../README.md --to rst \
+              --output-dir _compiled/docs/ -o index.rst
             for file in $(find docs -name '*.qmd'); do
                 poetry run quarto render $file --to rst --output-dir ../_compiled
             done
