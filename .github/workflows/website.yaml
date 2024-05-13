@@ -40,10 +40,10 @@ jobs:
 
       - name: Render documents
         run: |
-            poetry run quarto render README.md --to rst \
-              --output-dir ../_compiled -o docs/index.rst
             cd model
             mkdir _compiled
+            poetry run quarto render ../README.md --to rst --output-dir \
+              -o _compiled/docs/index.rst
             for file in $(find docs -name '*.qmd'); do
                 poetry run quarto render $file --to rst --output-dir ../_compiled
             done
