@@ -40,11 +40,14 @@ jobs:
 
       - name: Render documents
         run: |
+            poetry run quarto render README.md --to rst \
+              --output-dir ../_compiled -o docs/index.rst
             cd model
             mkdir _compiled
             for file in $(find docs -name '*.qmd'); do
                 poetry run quarto render $file --to rst --output-dir ../_compiled
             done
+            sed -i 's/.. code::mermaid/.. mermaid::/g' ../_compiled/*.rst
 
       # Upload
       - name: Upload artifacts
@@ -71,6 +74,8 @@ jobs:
       with:
         name: tutorials
         path: docs/source/tutorials/
+
+    - run: mv docs/source/tutorials/index.rst docs/source/index.rst
 
     - name: Set up Python
       uses: actions/setup-python@v5
