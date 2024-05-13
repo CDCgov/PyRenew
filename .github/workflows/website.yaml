@@ -40,14 +40,14 @@ jobs:
 
       - name: Render documents
         run: |
+            poetry run quarto render README.md --to rst -o index.rst
             cd model
             mkdir _compiled
-            poetry run quarto render ../README.md --to rst \
-              --output-dir _compiled/docs/ -o index.rst
+            mv ../index.rst _compiled
             for file in $(find docs -name '*.qmd'); do
                 poetry run quarto render $file --to rst --output-dir ../_compiled
             done
-            sed -i 's/.. code::mermaid/.. mermaid::/g' ../_compiled/*.rst
+            sed -i 's/.. code:: mermaid/.. mermaid::/g' _compiled/*.rst
 
       # Upload
       - name: Upload artifacts
