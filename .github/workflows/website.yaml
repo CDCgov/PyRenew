@@ -40,10 +40,10 @@ jobs:
 
       - name: Render documents
         run: |
-            poetry run quarto render README.md --to rst -o index.rst
+            poetry run quarto render README.md --to rst -o index2.rst
             cd model
             mkdir _compiled
-            mv ../index.rst _compiled
+            mv ../index2.rst _compiled
             for file in $(find docs -name '*.qmd'); do
                 poetry run quarto render $file --to rst --output-dir ../_compiled
             done
@@ -75,7 +75,7 @@ jobs:
         name: tutorials
         path: docs/source/tutorials/
 
-    - run: mv docs/source/tutorials/index.rst docs/source/index.rst
+    - run: mv docs/source/tutorials/index2.rst docs/source/index.rst
 
     - name: Set up Python
       uses: actions/setup-python@v5
