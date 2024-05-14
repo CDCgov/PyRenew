@@ -1,5 +1,5 @@
-MSEI Reference
-==============
+Reference
+=========
 
 .. toctree::
    :maxdepth: 3

@@ -60,7 +60,18 @@ todo_include_todos = False
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_book_theme"
+html_theme_options = {
+    "repository_url": "https://github.com/CDCgov/multisignal-epi-inference",
+    "use_edit_page_button": True,
+    "use_issues_button": True,
+    "use_repository_button": True,
+    "repository_branch": "main",
+    "path_to_docs": "docs/source",
+    "use_download_button": True,
+}
+
 html_static_path = ["_static"]
 html_css_files = ["msei.css"]
 
-html_sidebars = {"**": ["sbt-sidebar-nav.html"]}
+html_sidebars = {"**": ["search-field.html", "sbt-sidebar-nav.html"]}
+master_doc = "general/ctoc"

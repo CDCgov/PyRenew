@@ -1,4 +1,4 @@
-MSEI Model
+Epi Models
 ==========
 
 Hospital Admissions
