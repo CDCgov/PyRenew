@@ -313,7 +313,7 @@ class WeekdayEffect(metaclass.RandomVariable):
         return None
 
     def sample(self, **kwargs):
-        ans = npro.sample(
+        and = npro.sample(
             name="weekday_effect",
             fn=npro.distributions.TruncatedNormal(
                 loc=1.0, scale=.5, low=0.1, high=10.0
@@ -321,7 +321,7 @@ class WeekdayEffect(metaclass.RandomVariable):
             sample_shape=(7,)
         )
 
-        return jnp.tile(ans, self.nweeks)[:self.len]
+        return jnp.tile(and, self.nweeks)[:self.len]
 
 # Initializing the weekday effect
 weekday_effect = WeekdayEffect(dat.shape[0])

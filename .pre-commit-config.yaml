@@ -42,8 +42,7 @@ repos:
         exclude: package.lock.json
 ####
 # Typos
-# comment out for Sphinx running purposes
 -   repo: https://github.com/crate-ci/typos
-    rev: v1.19.0
+    rev: v1.20.0
     hooks:
     -   id: typos

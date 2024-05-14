@@ -9,3 +9,12 @@ AttributeIDSupressMenu = "AttributeIDSupressMenu"
 [default.extend-words]
 # words that should not be corrected
 damon = "Damon"
+lod_sewage = "lod_sewage"
+below_LOD = "below_LOD"
+
+
+[files]
+extend-exclude = [
+    ".gitignore",
+    ".pre-commit-config.yaml",
+]

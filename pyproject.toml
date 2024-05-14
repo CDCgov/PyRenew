@@ -1,1 +1,19 @@
-model/pyproject.toml
+[tool.poetry.group.dev.dependencies]
+numpydoc = "^1.7.0"
+
+
+[tool.numpydoc_validation]
+checks = [
+    "GL03",
+    "GL08",
+    "SS01",
+    "PR03",
+    "PR04",
+    "PR07",
+    "RT01"
+]
+exclude = [  # don't report on objects that match any of these regex
+    '\.undocumented_method$',
+    '\.__repr__$',
+    '\.__call__$'
+]
