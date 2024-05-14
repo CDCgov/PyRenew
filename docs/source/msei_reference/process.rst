@@ -1,5 +1,5 @@
-Process MSEI
-============
+Random Process
+==============
 
 AR Processes
 ------------

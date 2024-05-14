@@ -73,5 +73,5 @@ html_theme_options = {
 html_static_path = ["_static"]
 html_css_files = ["msei.css"]
 
-html_sidebars = {"**": ["search-field.html", "sbt-sidebar-nav.html"]}
+html_sidebars = {"**": ["sbt-sidebar-nav.html", "search-field.html"]}
 master_doc = "general/ctoc"

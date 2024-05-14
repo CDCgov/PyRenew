@@ -2,12 +2,12 @@ Reference
 =========
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
-   observation
-   process
-   latent
    model
+   latent
+   process
+   observation
    msei
 
 .. todolist::

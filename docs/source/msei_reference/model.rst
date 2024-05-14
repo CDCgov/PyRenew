@@ -1,5 +1,5 @@
-Epi Models
-==========
+Model
+=====
 
 Hospital Admissions
 -------------------
