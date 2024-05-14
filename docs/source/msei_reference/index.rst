@@ -8,6 +8,7 @@ Reference
    latent
    process
    observation
+   datasets
    msei
 
 .. todolist::

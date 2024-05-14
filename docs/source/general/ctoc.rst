@@ -8,7 +8,5 @@ Complete Table Of Contents
    ../msei_reference/index
    ../tutorials/index
    ../genindex
-   ../modindex
-   glossary
 
 .. todo:: Change order and naming of these toctree entities
