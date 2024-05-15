@@ -22,7 +22,7 @@ repos:
         # Language and type are irrelevant here, but need to
         # be defined
         language: script
-        files: 'model/docs/tutorials/.*\.rst'
+        files: 'model/docs/.*\.rst'
 -   repo: https://github.com/psf/black
     rev: 23.10.0
     hooks:
