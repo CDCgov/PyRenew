@@ -13,10 +13,10 @@ sys.path.insert(0, os.path.abspath("../../model/src"))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "CFA Multisignal Renewal"
-copyright = "2024, CFA"
-author = "CFA"
-release = "0.0.1"
+project = "Multisignal Renewal Models for Epi Inference"
+copyright = "2024, CDC CFA"
+author = "CDC's Center for Forecasting Analytics"
+release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
