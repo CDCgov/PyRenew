@@ -15,14 +15,14 @@ repos:
 -   repo: local
     hooks:
     -   id: generate-rst-placeholders
-        name: RST placeholders for the tutorials (local run only)
+        name: Tutorials .rst placeholders (local run only)
         # Local file living in the project.
         # only runs when the GITHUB_ACTION envir var is undefined.
         entry: ./.pre-commit-rst-placeholder.sh
         # Language and type are irrelevant here, but need to
         # be defined
         language: script
-        files: 'model/docs/.*\.rst'
+        files: 'model/docs/.*\.qmd'
 -   repo: https://github.com/psf/black
     rev: 23.10.0
     hooks:

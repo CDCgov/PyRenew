@@ -4,15 +4,19 @@ TUTORIALS_DIR=docs/source/tutorials
 
 # For each *qmd file in model/docs, create a corresponding rst file
 # under docs/source/tutorial
+COUNTER=0
 for qmd in model/docs/*.qmd; do
     # Capture the basename
     bname=$(basename $qmd .qmd)
 
     # Check if the corresponding rst file already exists
-    if [ -f ${TUTORIALS_DIR}${bname}.rst ]; then
+    if [ -f ${TUTORIALS_DIR}/${bname}.rst ]; then
         echo "RST file already exists: ${TUTORIALS_DIR}${bname}.rst"
         continue
     fi
+
+    # Increment counter
+    COUNTER=$((COUNTER+1))
 
     # Create the rst file
     rst=${TUTORIALS_DIR}/${bname}.rst
@@ -26,3 +30,9 @@ for qmd in model/docs/*.qmd; do
     echo ".. <https://github.com/CDCgov/multisignal-epi-inference/tree/main/model/docs/${bname}.qmd>" >> $rst
 
 done
+
+# Exit with 1 if COUNTER != 0
+if [ $COUNTER -ne 0 ]; then
+    echo "Tutorials' RST placeholders were generated."
+    exit 1
+fi
