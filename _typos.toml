@@ -8,13 +8,15 @@ AttributeIDSupressMenu = "AttributeIDSupressMenu"
 
 [default.extend-words]
 # words that should not be corrected
-damon = "Damon"
-lod_sewage = "lod_sewage"
+Damon = "Damon"
 below_LOD = "below_LOD"
-
+lod_sewage = "lod_sewage"
 
 [files]
 extend-exclude = [
     ".gitignore",
     ".pre-commit-config.yaml",
+    ".github/ISSUE_TEMPLATE/general_issue.md",
+    "model/src/pyrenew/datasets/wastewater.py",
+    "model/src/pyrenew/datasets/wastewater.tsv",
 ]

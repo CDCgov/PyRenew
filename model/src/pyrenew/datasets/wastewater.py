@@ -1,23 +1,27 @@
-"""This module loads the package dataset named 'wastewater' and provides
-functions to manipulate the data. It uses the 'polars' library"""
+# numpydoc ignore=ES01,SA01,EX01
+
+"""
+This module loads the package dataset named 'wastewater' and provides functions to manipulate the data. It uses the 'polars' library.
+"""
+
 
 from importlib.resources import files
 
 import polars as pl
 
 
-def load_wastewater() -> pl.DataFrame:
+def load_wastewater() -> pl.DataFrame:  # numpydoc ignore=SS06,SA01,EX01
     """
-    Load the wastewater dataset
-
-    This dataset contains simulated entries of COVID-19 wastewater concentration
-    data. The dataset is used to demonstrate the use of the wastewater-informed
-    COVID-19 forecasting model.
+    Load the wastewater dataset. This dataset
+    contains simulated entries of
+    COVID-19 wastewater concentration data.
+    The dataset is used to demonstrate the use of
+    the wastewater-informed COVID-19 forecasting model.
 
     Returns
     -------
     pl.DataFrame
-        The wastewater dataset
+        The wastewater dataset.
 
     Notes
     -----
@@ -28,8 +32,8 @@ def load_wastewater() -> pl.DataFrame:
         - `lab_wwtp_unique_id`
         - `log_conc`
         - `date`
-        - `load_sewage`
-        - `below_LOAD`
+        - `lod_sewage`
+        - `below_LOD`
         - `daily_hosp_admits`
         - `daily_hosp_admits_for_eval`
         - `pop`
