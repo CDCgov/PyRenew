@@ -135,14 +135,16 @@ def sample_infections_with_feedback(
 
     .. math::
 
-        I(t) = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
+        I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
 
-        \mathcal{R}(t) = \mathcal{R}^u(t)\exp\left(-\gamma(t)\sum_{\tau=1}^{T_f}\right)
+        \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
+            \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
 
-    where :math:`\gamma(t)` is the infection feedback strength,
-    :math:`\mathcal{R}^u(t)` is the raw reproduction number, :math:`T_g` is the
-    length of the generation interval, and :math:`T_f` is the infection feedback
-    interval.
+    where :math:`\mathcal{R}(t)` is the reproductive number, :math:`\gamma(t)`
+    is the infection feedback strength, :math:`T_g` is the max-length of the
+    generation interval, :math:`\mathcal{R}^u(t)` is the raw reproduction
+    number, :math:`f(t)` is the infection feedback pmf, and :math:`T_f`
+    is the max-length of the infection feedback pmf.
     """
     feedback_scanner = new_double_scanner(
         (infection_feedback_pmf, generation_interval_pmf),
@@ -151,4 +153,4 @@ def sample_infections_with_feedback(
     latest, infs_and_R = jax.lax.scan(
         feedback_scanner, I0, (infection_feedback_strength, Rt_raw)
     )
-    return infs_and_R
+    return (infs_and_R,)

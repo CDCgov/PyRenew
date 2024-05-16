@@ -13,6 +13,7 @@ from pyrenew.latent.infection_functions import (
     sample_infections_with_feedback,
 )
 from pyrenew.latent.infections import Infections
+from pyrenew.latent.infectionsrtfeedback import InfectionsRtFeedback
 
 __all__ = [
     "HospitalAdmissions",
@@ -22,4 +23,5 @@ __all__ = [
     "sample_infections_rt",
     "sample_infections_with_feedback",
     "Infections0",
+    "InfectionsRtFeedback",
 ]
