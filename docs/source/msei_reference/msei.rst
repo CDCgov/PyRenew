@@ -1,8 +1,8 @@
-General MSEI Support
-====================
+Additional modules
+==================
 
 Metaclass Module
-================
+----------------
 
 .. automodule:: pyrenew.metaclass
    :members:

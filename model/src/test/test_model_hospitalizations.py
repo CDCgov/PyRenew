@@ -407,6 +407,3 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     # For now the assertion is only about the expected number of rows
     # It should be about the MCMC inference.
     assert inf_mean.to_numpy().shape[0] == 500
-
-
-test_model_hosp_no_obs_model()

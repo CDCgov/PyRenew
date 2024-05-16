@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
+from __future__ import annotations
+
 from typing import Any, NamedTuple, Optional
 
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-from numpy.typing import ArrayLike
+from jax.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
+from __future__ import annotations
+
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist

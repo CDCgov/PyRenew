@@ -1,13 +1,14 @@
-MSEI Reference
-==============
+Reference
+=========
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
-   observation
-   process
-   latent
    model
+   latent
+   process
+   observation
+   datasets
    msei
 
 .. todolist::

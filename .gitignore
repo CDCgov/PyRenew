@@ -340,3 +340,5 @@ replay_pid*
 
 # macOS
 .DS_Store
+
+/.quarto/
