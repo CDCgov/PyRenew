@@ -89,7 +89,7 @@ def sample_infections_with_feedback(
     generation_interval_pmf: ArrayLike,
     infection_feedback_pmf: ArrayLike,
 ) -> tuple:
-    """
+    r"""
     Sample infections according to
     a renewal process with infection
     feedback (generalizing Asher 2018:
@@ -128,6 +128,21 @@ def sample_infections_with_feedback(
         where `Rt_adjusted` is the infection-feedback-adjusted
         timeseries of the reproduction number R(t) and
         infections is the incident infection timeseries.
+
+    Notes
+    -----
+    This function implements the following renewal process:
+
+    .. math::
+
+        I(t) = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
+
+        \mathcal{R}(t) = \mathcal{R}^u(t)\exp\left(-\gamma(t)\sum_{\tau=1}^{T_f}\right)
+
+    where :math:`\gamma(t)` is the infection feedback strength,
+    :math:`\mathcal{R}^u(t)` is the raw reproduction number, :math:`T_g` is the
+    length of the generation interval, and :math:`T_f` is the infection feedback
+    interval.
     """
     feedback_scanner = new_double_scanner(
         (infection_feedback_pmf, generation_interval_pmf),
