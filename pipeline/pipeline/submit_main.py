@@ -63,7 +63,7 @@ def main(input_config_path: Path, client: AzureClient):
 
     # === Prep Azure client ===================================================
     pool_name = "multisignal-epi-inference"
-    client.use_pool(pool_name=pool_name)
+    client.set_pool(pool_name=pool_name)
     logger.debug(f"Using pool {pool_name}")
     job_id = "multisignal-epi-inference-prod"
     client.add_job(job_id=job_id)
@@ -138,7 +138,7 @@ def submit_model_tasks(
             input_files=[str(cfg_fname)],
         )
         logger.debug(f"Submitted task {tid}")
-        model_task_ids.append(tid)
+        model_task_ids.extend(tid)
 
     return model_task_ids
 
