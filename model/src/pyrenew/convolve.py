@@ -46,7 +46,8 @@ def new_convolve_scanner(discrete_dist_flipped: ArrayLike) -> Callable:
 
 
 def new_double_scanner(
-    dists: tuple[ArrayLike, ArrayLike], transforms: tuple[Callable, Callable]
+    dists: tuple[ArrayLike, ArrayLike],
+    transforms: tuple[Callable, Callable],
 ) -> Callable:
     """
     Factory function to create a scanner function that applies two sequential transformations
@@ -72,7 +73,8 @@ def new_double_scanner(
     t1, t2 = transforms
 
     def _new_scanner(
-        history_subset: ArrayLike, multipliers: tuple[float, float]
+        history_subset: ArrayLike,
+        multipliers: tuple[float, float],
     ) -> tuple[ArrayLike, tuple[float, float]]:  # numpydoc ignore=GL08
         m1, m2 = multipliers
         m_net1 = t1(m1 * jnp.dot(d1, history_subset))

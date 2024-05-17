@@ -1,0 +1,89 @@
+---
+title: Extending pyrenew
+format: gfm
+---
+
+This tutorial illustrates how the `RandomVariable` `InfectionsRtFeedback` can be built from scratch, providing a simple example of how to extend `pyrenew` with custom `RandomVariable` classes.
+
+## Infection feedback
+
+$$
+\begin{align*}
+I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau) \\
+\mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+\end{align*}
+$$
+
+## The expected outcome
+
+```{python}
+#| label: setup
+import jax
+import jax.numpy as jnp
+import matplotlib.pyplot as plt
+import numpy as np
+import numpyro as npro
+import numpyro.distributions as dist
+import polars as pl
+import pytest
+from pyrenew.deterministic import DeterministicPMF, NullObservation
+from pyrenew.latent import Infections0, InfectionsRtFeedback
+from pyrenew.model import RtInfectionsRenewalModel
+from pyrenew.observation import PoissonObservation
+from pyrenew.process import RtRandomWalkProcess
+```
+
+```{python}
+#| label: model-components
+gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+
+I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+
+latent_infections = InfectionsRtFeedback(
+  infection_feedback_strength = gen_int,
+  infection_feedback_pmf = gen_int,
+)
+
+rt = RtRandomWalkProcess()
+```
+
+```{python}
+#| label: simulation1
+model0 = RtInfectionsRenewalModel(
+    gen_int=gen_int,
+    I0=I0,
+    latent_infections=latent_infections,
+    Rt_process=rt,
+    observation_process=None,
+)
+
+# Sampling and fitting model 0 (with no obs for infections)
+np.random.seed(223)
+with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    model0_samp = model0.sample(n_timepoints=30)
+```
+
+```{python}
+#| label: fig-simulate1
+#| fig-cap: Simulated infections with no observation process
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots()
+ax.plot(model0_samp.latent_infections)
+ax.set_xlabel("Time")
+ax.set_ylabel("Infections")
+plt.show()
+```
+
+## How to build the model
+
+`RandomVariable`s have three main functions:
+
+  - `__init__()`: This is the constructor. It is used to set the parameters of the class.
+
+  - `validate()`: This function is used to validate the parameters of the class.
+
+  - `sample()`: This function samples the random variable. It should return a tuple or named tuple. The sample function should take the following arguments:
+    - `self`
+    - `kwargs`: A dictionary of the parameters of the model.
+
+    Additional arguments will depend on what the model requires. In the case of infection processes, the models `AdmissionsModel` and `RtInfectionsRenewalModel` pass a sampled `Rt` to the `infections` random variable.

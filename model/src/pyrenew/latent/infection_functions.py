@@ -124,7 +124,7 @@ def sample_infections_with_feedback(
     Returns
     -------
     tuple
-        A tuple `(Rt_adjusted, infections)`,
+        A tuple `(infections, Rt_adjusted)`,
         where `Rt_adjusted` is the infection-feedback-adjusted
         timeseries of the reproduction number R(t) and
         infections is the incident infection timeseries.
@@ -147,10 +147,15 @@ def sample_infections_with_feedback(
     is the max-length of the infection feedback pmf.
     """
     feedback_scanner = new_double_scanner(
-        (infection_feedback_pmf, generation_interval_pmf),
-        (jnp.exp, lambda x: x),
+        dists=(infection_feedback_pmf, generation_interval_pmf),
+        transforms=(jnp.exp, lambda x: x),
     )
     latest, infs_and_R = jax.lax.scan(
-        feedback_scanner, I0, (infection_feedback_strength, Rt_raw)
+        f=feedback_scanner,
+        init=I0,
+        xs=(infection_feedback_strength, Rt_raw),
     )
-    return (infs_and_R,)
+
+    infections, rt = infs_and_R
+    rt = rt * Rt_raw
+    return infections, rt
