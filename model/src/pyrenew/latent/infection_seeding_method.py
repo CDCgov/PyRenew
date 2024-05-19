@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# numpydoc ignore=GL08
 """
 Classes for the infection seeding methods
 """
