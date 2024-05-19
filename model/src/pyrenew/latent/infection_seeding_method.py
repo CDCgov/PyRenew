@@ -17,8 +17,10 @@ class InfectionSeedMethod(metaclass=ABCMeta):
 
     @staticmethod
     def validate(n_timepoints: int) -> None:
-        assert isinstance(n_timepoints, int), "n_timepoints must be an integer"
-        assert n_timepoints > 0, "n_timepoints must be positive"
+        if not isinstance(n_timepoints, int):
+            raise TypeError("n_timepoints must be an integer")
+        if n_timepoints <= 0:
+            raise ValueError("n_timepoints must be positive")
 
     @abstractmethod
     def seed_infections(self, I0: ArrayLike) -> ArrayLike:

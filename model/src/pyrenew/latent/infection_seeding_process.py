@@ -26,8 +26,12 @@ class InfectionSeedingProcess(RandomVariable):
         I0_dist: dist.Distribution,
         infection_seed_method: InfectionSeedMethod,
     ) -> None:
-        assert isinstance(I0_dist, dist.Distribution)
-        assert isinstance(infection_seed_method, InfectionSeedMethod)
+        if not isinstance(I0_dist, dist.Distribution):
+            raise TypeError("I0_dist must be an instance of dist.Distribution")
+        if not isinstance(infection_seed_method, InfectionSeedMethod):
+            raise TypeError(
+                "infection_seed_method must be an instance of InfectionSeedMethod"
+            )
 
     def sample(self) -> tuple:
         I0 = npro.sample("I0", self.I0_dist)
