@@ -68,7 +68,7 @@ class HospitalAdmissionsModel(Model):
             The infections latent process (passed to RtInfectionsRenewalModel).
         gen_int : RandomVariable
             Generation time (passed to RtInfectionsRenewalModel)
-        HospitalAdmissionsModel
+        IO : RandomVariable
             Initial infections (passed to RtInfectionsRenewalModel)
         Rt_process : RandomVariable
             Rt process  (passed to RtInfectionsRenewalModel).
