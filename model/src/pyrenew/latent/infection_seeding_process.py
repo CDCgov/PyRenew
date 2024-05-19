@@ -13,15 +13,11 @@ class InfectionSeedingProcess(RandomVariable):
         self,
         I0_dist: dist.Distribution,
         infection_seed_method: InfectionSeedMethod,
-        n_timepoints: int,
     ) -> None:
-        InfectionSeedingProcess.validate(
-            I0_dist, infection_seed_method, n_timepoints
-        )
+        InfectionSeedingProcess.validate(I0_dist, infection_seed_method)
 
         self.I0_dist = I0_dist
         self.infection_seed_method = infection_seed_method
-        self.n_timepoints = n_timepoints
 
         return None
 
@@ -29,18 +25,14 @@ class InfectionSeedingProcess(RandomVariable):
     def validate(
         I0_dist: dist.Distribution,
         infection_seed_method: InfectionSeedMethod,
-        n_timepoints: int,
     ) -> None:
         assert isinstance(I0_dist, dist.Distribution)
         assert isinstance(infection_seed_method, InfectionSeedMethod)
-        assert isinstance(n_timepoints, int)
 
     def sample(self) -> tuple:
         I0 = npro.sample("I0", self.I0_dist)
 
-        infection_seeding = self.infection_seed_method.seed_infections(
-            I0, self.n_timepoints
-        )
+        infection_seeding = self.infection_seed_method.seed_infections(I0)
         I0_det = npro.deterministic("I0", infection_seeding)
 
         return I0_det
