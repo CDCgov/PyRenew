@@ -39,4 +39,4 @@ class InfectionSeedingProcess(RandomVariable):
         infection_seeding = self.infection_seed_method.seed_infections(I0)
         I0_det = npro.deterministic("I0", infection_seeding)
 
-        return I0_det
+        return (I0_det,)

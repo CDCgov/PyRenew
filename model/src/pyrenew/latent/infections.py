@@ -99,14 +99,16 @@ class Infections(RandomVariable):
         InfectionsSample
             Named tuple with "infections".
         """
+        if I0.size < gen_int.size:
+            raise ValueError(
+                f"Initial infections must be at least as long as the generation interval. Got {I0.size} initial infections and {gen_int.size} generation interval."
+            )
 
         gen_int_rev = jnp.flip(gen_int)
-
-        n_lead = gen_int_rev.size - 1
-        I0_vec = jnp.hstack([jnp.zeros(n_lead), I0])
+        recent_I0 = I0[-gen_int_rev.size :]
 
         all_infections = inf.sample_infections_rt(
-            I0=I0_vec,
+            I0=recent_I0,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
         )
