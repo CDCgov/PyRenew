@@ -54,6 +54,8 @@ from pyrenew.latent import Infections, Infections0
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
+from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
+from pyrenew.latent.infection_seeding_method import SeedInfectionsZeroHstack
 ```
 
 The pyrenew package models the real-time reproductive number $R_t$, the ratio of new infections at time $t$ to previous infections at some time $t-s$, as a renewal process model. Our basic renewal process model defines five components:
@@ -83,10 +85,11 @@ To initialize these five components within the renewal modeling framework, we es
 ```{python}
 #| label: creating-elements
 # (1) The generation interval (deterministic)
-gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
+gen_int = DeterministicPMF(pmf_array)
 
 # (2) Initial infections (inferred with a prior)
-I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+I0 = InfectionSeedingProcess(dist.LogNormal(0, 1), SeedInfectionsZeroHstack(pmf_array.size))
 
 # (3) The random process for Rt
 rt_proc = RtRandomWalkProcess()
