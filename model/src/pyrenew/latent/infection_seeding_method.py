@@ -20,10 +20,14 @@ class InfectionSeedMethod(metaclass=ABCMeta):
 
 class SeedInfectionsZeroPad(InfectionSeedMethod):
     def seed_infections(self, I0: ArrayLike, n_timepoints: int):
-        # Don't know why this doesn't work here.
+        # This should work the same as SeedInfectionsZeroHstack
+        # But it doesn't
         # When I tested pad vs hstack outside of the class,
         # they both worked and pad was faster.
-        # return jnp.pad(I0, (n_timepoints - I0.size, 0))
+        return jnp.pad(I0, (n_timepoints - I0.size, 0))
+
+class SeedInfectionsZeroHstack(InfectionSeedMethod):
+    def seed_infections(self, I0: ArrayLike, n_timepoints: int):
         return jnp.hstack([jnp.zeros(n_timepoints - I0.size), I0])
 
 
