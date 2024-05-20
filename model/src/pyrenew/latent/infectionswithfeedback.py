@@ -5,6 +5,7 @@ from typing import NamedTuple
 
 import jax.numpy as jnp
 import numpyro as npro
+import pyrenew.datautils as du
 import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
@@ -12,7 +13,7 @@ from pyrenew.metaclass import RandomVariable
 
 class InfectionsRtFeedbackSample(NamedTuple):
     """
-    A container for holding the output from the InfectionsRtFeedback.
+    A container for holding the output from the InfectionsWithFeedback.
 
     Attributes
     ----------
@@ -29,7 +30,7 @@ class InfectionsRtFeedbackSample(NamedTuple):
         return f"InfectionsSample(infections={self.infections}, rt={self.rt})"
 
 
-class InfectionsRtFeedback(RandomVariable):
+class InfectionsWithFeedback(RandomVariable):
     r"""
     Latent infections
 
@@ -123,36 +124,32 @@ class InfectionsRtFeedback(RandomVariable):
 
         Returns
         -------
-        InfectionsRtFeedback
+        InfectionsWithFeedback
             Named tuple with "infections".
         """
 
+        # Adjusting sizes
+        Rt, gen_int = du.pad_to_match(Rt, gen_int, fill_value=0.0)
         gen_int_rev = jnp.flip(gen_int)
 
-        # Adjusting sizes
-        if gen_int_rev.size > Rt.size:
-            n_lead = gen_int_rev.size - Rt.size
-            Rt = jnp.hstack([Rt, jnp.zeros(n_lead)])
-        else:
-            n_lead = Rt.size - gen_int_rev.size
-            gen_int_rev = jnp.hstack([jnp.zeros(n_lead), gen_int_rev])
-
-        n_lead = gen_int_rev.size - 1
-        I0_vec = jnp.hstack([jnp.zeros(n_lead), I0])
+        # Adjusting the size of I0
+        I0_vec = du.pad_x_to_match_y(I0, gen_int_rev, fill_value=0.0)
+        I0_vec = jnp.flip(I0_vec)
 
         # Sampling inf feedback strength and adjusting the shape
         inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
             **kwargs,
         )
-        n_lead = Rt.size - inf_feedback_strength.size
-        inf_feedback_strength = jnp.hstack(
-            [inf_feedback_strength, jnp.zeros(n_lead)]
+
+        inf_feedback_strength = du.pad_x_to_match_y(
+            inf_feedback_strength, Rt, fill_value=0.0
         )
 
         # Sampling inf feedback and adjusting the shape
         inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
-        n_lead = Rt.size - inf_feedback_pmf.size
-        inf_feedback_pmf = jnp.hstack([inf_feedback_pmf, jnp.zeros(n_lead)])
+        inf_feedback_pmf = du.pad_x_to_match_y(
+            inf_feedback_pmf, Rt, fill_value=0.0
+        )
 
         all_infections, Rt_adj = inf.sample_infections_with_feedback(
             I0=I0_vec,

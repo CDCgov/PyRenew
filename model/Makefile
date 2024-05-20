@@ -38,14 +38,14 @@ docs/example-with-datasets.md: docs/example-with-datasets.qmd
 	poetry run quarto render docs/example-with-datasets.qmd
 
 docs/py: docs/notebooks
-	for i in docs/*.qmd; do \
-		jupyter nbconvert --to python $$(basename $$i .qmd).ipynb ; \
+	for i in docs/*.ipynb; do \
+		jupyter nbconvert --to python $$i ; \
 	done
 
 docs/notebooks:
 	for i in docs/*.qmd; do \
 		if [ $$i -nt $$(basename $$i .qmd).ipynb ]; then \
-			quarto convert $$i --output $$(basename $$i .qmd).ipynb ; \
+			quarto convert $$i --output docs/$$(basename $$i .qmd).ipynb ; \
 		fi \
 	done
 

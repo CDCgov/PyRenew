@@ -3,9 +3,7 @@ title: Extending pyrenew
 format: gfm
 ---
 
-This tutorial illustrates how the `RandomVariable` `InfectionsRtFeedback` can be built from scratch, providing a simple example of how to extend `pyrenew` with custom `RandomVariable` classes.
-
-## Infection feedback
+This tutorial illustrates how to extend `pyrenew` with custom `RandomVariable` classes. We will use the `InfectionsWithFeedback` class as an example. The `InfectionsWithFeedback` class is a `RandomVariable` that models the number of infections at time $t$ as a function of the number of infections at time $t - \tau$ and the reproduction number at time $t$. The reproduction number at time $t$ is a function of the *unadjusted* reproduction number at time $t - \tau$ and the number of infections at time $t - \tau$:
 
 $$
 \begin{align*}
@@ -14,41 +12,45 @@ I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau) \\
 \end{align*}
 $$
 
+Where $\mathcal{R}^u(t)$ is the unadjusted reproduction number, $g(t)$ is the generation interval, $\gamma(t)$ is the infection feedback strength, and $f(t)$ is the infection feedback pmf.
+
 ## The expected outcome
+
+Before we start, let's simulate the model with the original `InfectionsWithFeedback` class. We will simulate the model with no observation process. The following code-chunk loads the required libraries and defines the model components:
 
 ```{python}
 #| label: setup
 import jax
 import jax.numpy as jnp
-import matplotlib.pyplot as plt
 import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
-import polars as pl
-import pytest
-from pyrenew.deterministic import DeterministicPMF, NullObservation
-from pyrenew.latent import Infections0, InfectionsRtFeedback
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.latent import Infections0, InfectionsWithFeedback
 from pyrenew.model import RtInfectionsRenewalModel
-from pyrenew.observation import PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
 ```
 
+The following code-chunk defines the model components. Notice that for both the generation interval and the infection feedback, we use a deterministic PMF with equal probabilities:
+
 ```{python}
 #| label: model-components
-gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+gen_int = DeterministicPMF(jnp.array([0.25, 0.5, 0.15, 0.1]))
 
 I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
 
-latent_infections = InfectionsRtFeedback(
-  infection_feedback_strength = gen_int,
+latent_infections = InfectionsWithFeedback(
+  infection_feedback_strength = DeterministicVariable(1.1),
   infection_feedback_pmf = gen_int,
 )
 
 rt = RtRandomWalkProcess()
 ```
 
+With all the components defined, we can build the model:
+
 ```{python}
-#| label: simulation1
+#| label: build1
 model0 = RtInfectionsRenewalModel(
     gen_int=gen_int,
     I0=I0,
@@ -56,7 +58,12 @@ model0 = RtInfectionsRenewalModel(
     Rt_process=rt,
     observation_process=None,
 )
+```
 
+And simulate it:
+
+```{python}
+#| label: simulate1
 # Sampling and fitting model 0 (with no obs for infections)
 np.random.seed(223)
 with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
@@ -74,16 +81,167 @@ ax.set_ylabel("Infections")
 plt.show()
 ```
 
-## How to build the model
+## Pyrenew's random variable class
 
-`RandomVariable`s have three main functions:
+### Fundamentals
 
-  - `__init__()`: This is the constructor. It is used to set the parameters of the class.
+All instances of PyRenew's `RandomVariable` should have at least three functions: `__init__()`, `validate()`, and `sample()`. The `__init__()` function is the constructor and initializes the class. The `validate()` function checks if the class is correctly initialized. Finally, the `sample()` method contains the core of the class; it should return a tuple or named tuple. The following is a minimal example of a `RandomVariable` class based on `numpyro.distributions.Normal`:
 
-  - `validate()`: This function is used to validate the parameters of the class.
+```{python}
+#| label: example-rv
+from pyrenew.metaclass import RandomVariable
 
-  - `sample()`: This function samples the random variable. It should return a tuple or named tuple. The sample function should take the following arguments:
-    - `self`
-    - `kwargs`: A dictionary of the parameters of the model.
+class MyNormal(RandomVariable):
+    def __init__(self, loc, scale):
+        self.validate(scale)
+        self.loc = loc
+        self.scale = scale
+        return None
 
-    Additional arguments will depend on what the model requires. In the case of infection processes, the models `AdmissionsModel` and `RtInfectionsRenewalModel` pass a sampled `Rt` to the `infections` random variable.
+    @staticmethod
+    def validate(self):
+        if self.scale <= 0:
+            raise ValueError("Scale must be positive")
+        return None
+
+    def sample(self, **kwargs):
+        return (dist.Normal(loc=self.loc, scale=self.scale),)
+```
+
+The `@staticmethod` decorator exposes the `validate` function to be used outside the class. Next, we show how to build a more complex `RandomVariable` class; the `InfectionsWithFeedback` class.
+
+### The `InfectionsWithFeedback` class
+
+Although returning namedtuples are not strictly required, they are recommended as they make the code more readable. The following code-chunk shows how to create a named tuple for the `InfectionsWithFeedback` class:
+
+```{python}
+#| label: data-class
+from collections import namedtuple
+
+# Creating a tuple to store the output
+InfFeedbackSample = namedtuple(
+  typename='InfFeedbackSample',
+  field_names=['infections', 'rt'],
+  defaults=(None, None)
+)
+```
+
+The next step is to create the actual class. The bulk of its implementation lies in the function `pyrenew.latent.sample_infections_with_feedback()`. We will also use the `pyrenew.datautils.pad_x_to_match_y()` function to ensure the passed vectors match their lengths. The following code-chunk shows most of the implementation of the `InfectionsWithFeedback` class:
+
+```{python}
+#| label: new-model-def
+# Creating the class
+from pyrenew.metaclass import RandomVariable
+from pyrenew.latent import sample_infections_with_feedback
+from pyrenew import datautils as du
+from jax.typing import ArrayLike
+
+class InfFeedback(RandomVariable):
+    """Latent infections"""
+
+    def __init__(
+        self,
+        infection_feedback_strength: RandomVariable,
+        infection_feedback_pmf: RandomVariable,
+        infections_mean_varname: str = "latent_infections",
+    ) -> None:
+        """Constructor"""
+
+        self.infection_feedback_strength = infection_feedback_strength
+        self.infection_feedback_pmf = infection_feedback_pmf
+        self.infections_mean_varname = infections_mean_varname
+
+        return None
+
+    def validate(self):
+        """
+        Generally, this method should be more meaningful, but we will skip it for now
+        """
+        return None
+
+    def sample(
+        self,
+        Rt: ArrayLike,
+        I0: ArrayLike,
+        gen_int: ArrayLike,
+        **kwargs,
+    ) -> tuple:
+        """Sample infections with feedback"""
+
+        # Baseline infections
+        I0_vec = du.pad_x_to_match_y(x=I0, y=Rt)
+        I0_vec = jnp.flip(I0_vec)
+
+        # Generation interval
+        gen_int = du.pad_x_to_match_y(x=gen_int, y=Rt)
+        gen_int_rev = jnp.flip(gen_int)
+
+        # Sampling inf feedback strength and adjusting the shape
+        inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
+            **kwargs,
+        )
+        inf_feedback_strength = du.pad_x_to_match_y(
+            x=inf_feedback_strength, y=Rt
+        )
+
+        # Sampling inf feedback and adjusting the shape
+        inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
+        inf_feedback_pmf = du.pad_x_to_match_y(x=inf_feedback_pmf, y=Rt)
+
+        # Generating the infections with feedback
+        all_infections, Rt_adj = sample_infections_with_feedback(
+            I0=I0_vec,
+            Rt_raw=Rt,
+            infection_feedback_strength=inf_feedback_strength,
+            generation_interval_pmf=gen_int_rev,
+            infection_feedback_pmf=inf_feedback_pmf,
+        )
+
+        # Storing adjusted Rt for future use
+        npro.deterministic("Rt_adjusted", Rt_adj)
+
+        # Preparing theoutput
+
+        return InfFeedbackSample(
+            infections=all_infections,
+            rt=Rt_adj,
+            )
+```
+
+The core of the class is implemented in the `sample()` method.
+
+```{python}
+#| label: simulation2
+latent_infections2 = InfFeedback(
+  infection_feedback_strength = gen_int,
+  infection_feedback_pmf = gen_int,
+)
+
+model1 = RtInfectionsRenewalModel(
+    gen_int=gen_int,
+    I0=I0,
+    latent_infections=latent_infections2,
+    Rt_process=rt,
+    observation_process=None,
+)
+
+# Sampling and fitting model 0 (with no obs for infections)
+np.random.seed(223)
+with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    model1_samp = model1.sample(n_timepoints=30)
+```
+
+Comparing `model0` with `model1`:
+
+```{python}
+#| label: fig-simulate2
+#| fig-cap: Simulated infections with no observation process
+import matplotlib.pyplot as plt
+fig, ax = plt.subplots(ncols=2)
+ax[0].plot(model0_samp.latent_infections)
+ax[1].plot(model1_samp.latent_infections)
+ax[0].set_xlabel("Time")
+ax[1].set_xlabel("Time")
+ax[0].set_ylabel("Infections")
+plt.show()
+```
