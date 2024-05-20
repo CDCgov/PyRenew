@@ -121,7 +121,7 @@ def submit_model_tasks(
     ]
 
     # === Kick off model tasks ================================================
-    logger.info("Submiting Modeling tasks")
+    logger.info("Submitting Modeling tasks")
     model_task_ids: list[str] | None = []
     for mcfg, dckr_cmd, cfg_fname in zip(
         model_config, model_docker_cmds, model_config_file_names
@@ -231,7 +231,7 @@ if __name__ == "__main__":
 
     start_time = datetime.now()
 
-    # Get log level from environemnt. Set to debug if not found.
+    # Get log level from environment. Set to debug if not found.
     LOGLEVEL = os.environ.get("LOGLEVEL", "DEBUG").upper()
     logging.basicConfig(level=LOGLEVEL)
 
