@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 
@@ -38,42 +38,50 @@ def test_local_e2e(mocked_azure_client, primary_config_small, tmp_path):
         # Assert that for each model, and each post_prod in
         # primary_config_small, there is a call to `client.add_task()`
         # Since we aren't producing actual files yet, the inputs are basic
-        add_task.assert_called()
-        # TODO: the below is almost working, but not yet
-        # add_task.assert_has_calls(
-        #     [
-        #         call(
-        #             job_id="multisignal-epi-inference-prod",
-        #             docker_cmd=list(),
-        #             input_files=[str(Path("somemodel.json"))],
-        #         ),
-        #         call(
-        #             job_id="multisignal-epi-inference-prod",
-        #             docker_cmd=list(),
-        #             input_files=[str(Path("somemodel.json"))],
-        #         ),
-        #         call(
-        #             job_id="multisignal-epi-inference-prod",
-        #             docker_cmd=list(),
-        #             input_files=[str(Path("somemodel.json"))],
-        #         ),
-        #         call(
-        #             job_id="multisignal-epi-inference-prod",
-        #             docker_cmd=list(),
-        #             input_files=[str(Path("somemodel.json"))],
-        #         ),
-        #         call(
-        #             job_id="multisignal-epi-inference-prod",
-        #             docker_cmd=list(),
-        #             input_files=[str(Path("somepostprod.json"))],
-        #         ),
-        #         call(
-        #             job_id="multisignal-epi-inference-prod",
-        #             docker_cmd=list(),
-        #             input_files=[str(Path("somepostprod.json"))],
-        #         ),
-        #     ]
-        # )
+        expected_calls = [
+            call(
+                job_id="multisignal-epi-inference-prod",
+                docker_cmd=list(),
+                input_files=[str(Path("somemodel.json"))],
+            ),
+            call(
+                job_id="multisignal-epi-inference-prod",
+                docker_cmd=list(),
+                input_files=[str(Path("somemodel.json"))],
+            ),
+            call(
+                job_id="multisignal-epi-inference-prod",
+                docker_cmd=list(),
+                input_files=[str(Path("somemodel.json"))],
+            ),
+            call(
+                job_id="multisignal-epi-inference-prod",
+                docker_cmd=list(),
+                input_files=[str(Path("somemodel.json"))],
+            ),
+            call(
+                job_id="multisignal-epi-inference-prod",
+                docker_cmd=list(),
+                input_files=[str(Path("somepostprod.json"))],
+                # This should be a list of task_ids, but haven't yet figured out how to
+                # mock that
+                depends_on=[],
+            ),
+            call(
+                job_id="multisignal-epi-inference-prod",
+                docker_cmd=list(),
+                input_files=[str(Path("somepostprod.json"))],
+                # This should be a list of task_ids, but haven't yet figured out how to
+                # mock that
+                depends_on=[],
+            ),
+        ]
+        # Not using `add_task.assert_has_calls()` bc there are a number of calls to
+        # `__str__()`, `__len__()`, and `__iter__()` made by the mocking that we don't
+        # care about.
+        # Instead, test that each expected call is in the list of actual calls made
+        for ec in expected_calls:
+            assert ec in add_task.mock_calls
 
 
 @patch("cfa_azure.clients.AzureClient")
