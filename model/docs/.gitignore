@@ -1,0 +1,7 @@
+*.png
+*_files/
+*.md
+!README.md
+
+/.quarto/
+_compiled

@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -10,7 +9,7 @@ import pyrenew.transform as t
 from numpy.testing import assert_array_almost_equal
 
 
-def generic_inversion_test(transform, test_vals, decimal=1e-8):
+def generic_inversion_test(transform, test_vals, decimal=1e-8, **kwargs):
     """
     Generic test for inverting a
     pyrenew transform, confirming
@@ -18,7 +17,7 @@ def generic_inversion_test(transform, test_vals, decimal=1e-8):
     x values givein in `test_vals`
 
     Parameters
-    -----------
+    ----------
     transform : pyrenew.transform.AbstractTransform
         Uninstantiated transformation to instantiate
         and test
@@ -30,8 +29,12 @@ def generic_inversion_test(transform, test_vals, decimal=1e-8):
     decimal : float
         Decimal tolerance, passed to
         numpy.testing.assert_array_almost_equal()
+
+    **kwargs :
+        Additional keyword arguments passed
+        to the transform constructor
     """
-    instantiated = transform()
+    instantiated = transform(**kwargs)
 
     assert_array_almost_equal(
         test_vals,
@@ -45,12 +48,17 @@ def generic_inversion_test(transform, test_vals, decimal=1e-8):
     )
 
 
-def test_invert_dists():
+def test_invert_dists():  # numpydoc ignore=GL08
     generic_inversion_test(
         t.LogTransform, jnp.array([1.52, 0.21, 1563.52, 23.523, 1.2352e7])
     )
     generic_inversion_test(
         t.LogitTransform, jnp.array([0.99235, 0.13242, 0.5, 0.235, 0.862])
+    )
+    generic_inversion_test(
+        t.ScaledLogitTransform,
+        50 * jnp.array([0.99235, 0.13242, 0.5, 0.235, 0.862]),
+        x_max=50,
     )
     generic_inversion_test(
         t.IdentityTransform, jnp.array([0.99235, 0.13242, 0.5, 0.235, 0.862])

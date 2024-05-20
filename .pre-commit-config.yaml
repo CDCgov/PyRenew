@@ -12,6 +12,13 @@ repos:
     -   id: trailing-whitespace
 #####
 # Python
+-   repo: local
+    hooks:
+    -   id: generate-rst-placeholders
+        name: Tutorials .rst placeholders (local run only)
+        entry: ./.pre-commit-rst-placeholder.sh
+        language: script
+        files: 'model/docs/.*\.qmd'
 -   repo: https://github.com/psf/black
     rev: 23.10.0
     hooks:
@@ -23,10 +30,14 @@ repos:
     -   id: isort
         args: ['--profile', 'black',
                '--line-length', '79']
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.1.0
-  hooks:
-    - id: ruff
+-   repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.0
+    hooks:
+    -   id: ruff
+-   repo: https://github.com/numpy/numpydoc
+    rev: v1.7.0
+    hooks:
+    -   id: numpydoc-validation
 #####
 # Secrets
 -   repo: https://github.com/Yelp/detect-secrets
@@ -34,5 +45,12 @@ repos:
     hooks:
     -   id: detect-secrets
         args: ['--baseline', '.secrets.baseline',
-               '--exclude-files', 'model/docs/pyrenew_demo.ipynb']
+               '--exclude-files', 'model/docs/*_cache']
         exclude: package.lock.json
+####
+# Typos
+# comment out for Sphinx running purposes
+-   repo: https://github.com/crate-ci/typos
+    rev: v1.19.0
+    hooks:
+    -   id: typos

@@ -10,6 +10,15 @@ readme = "README.md"
 python = "^3.12"
 cfa-azure = {git = "https://github.com/cdcgov/cfa_azure", tag = "v0.1.0"}
 
+[tool.numpydoc_validation]
+checks = [
+    "EX01",
+]
+exclude = [  # don't report on objects that match any of these regex
+    '\.undocumented_method$',
+    '\.__repr__$',
+    '\.__init__$',
+]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"

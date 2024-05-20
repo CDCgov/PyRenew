@@ -1,10 +1,13 @@
 [tool.poetry]
 name = "pyrenew"
 version = "0.1.0"
-description = "Pyrenew: a package for Bayesian renewal modeling with JAX and Numpyro\""
+description = "Pyrenew: a package for Bayesian renewal modeling with JAX and Numpyro"
 authors = ["Dylan H. Morris <dylan@dylanhmorris.com>"]
 license = "Apache 2.0"
 readme = "README.md"
+include = [{path = "datasets/*.tsv"}]
+exclude = [{path = "datasets/*.rds"}]
+
 
 [tool.poetry.dependencies]
 python = "^3.10"
@@ -12,11 +15,36 @@ numpyro = "^0.13.2"
 jax = "^0.4.24"
 numpy = "^1.26.4"
 polars = "^0.20.13"
+pillow = "^10.3.0" # See #56 on CDCgov/multisignal-epi-inference
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+pyyaml = "^6.0.0"
 matplotlib = "^3.8.3"
+ipykernel = "^6.29.3"
+nbclient = "^0.10.0"
+nbformat = "^5.10.0"
+pytest-cov = "^5.0.0"
+pytest-mpl = "^0.17.0"
+numpydoc = "^1.7.0"
 
-
-[tool.poetry.group.test.dependencies]
-pytest = "^8.0.0"
+[tool.numpydoc_validation]
+checks = [
+    "GL03",
+    "GL08",
+    "SS01",
+    "PR03",
+    "PR04",
+    "PR07",
+    "RT01"
+]
+exclude = [  # don't report on objects that match any of these regex
+    '\.undocumented_method$',
+    '\.__repr__$',
+    '\.__call__$'
+]
 
 [build-system]
 requires = ["poetry-core"]
