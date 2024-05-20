@@ -12,7 +12,7 @@ class InfectionSeedingProcess(RandomVariable):
     def __init__(
         self,
         I0_dist: dist.Distribution,
-        # todo: make I0_dist a RandomVariable
+        # TODO make I0_dist a RandomVariable
         infection_seed_method: InfectionSeedMethod,
     ) -> None:
         InfectionSeedingProcess.validate(I0_dist, infection_seed_method)
