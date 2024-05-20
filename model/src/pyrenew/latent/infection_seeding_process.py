@@ -12,6 +12,7 @@ class InfectionSeedingProcess(RandomVariable):
     def __init__(
         self,
         I0_dist: dist.Distribution,
+        # todo: make I0_dist a RandomVariable
         infection_seed_method: InfectionSeedMethod,
     ) -> None:
         InfectionSeedingProcess.validate(I0_dist, infection_seed_method)
@@ -34,9 +35,16 @@ class InfectionSeedingProcess(RandomVariable):
             )
 
     def sample(self) -> tuple:
-        I0 = npro.sample("I0", self.I0_dist)
-
+        I0 = npro.sample(
+            "I0_only",
+            self.I0_dist,
+            sample_shape=(1,),
+        )
+        if I0.size != 1:
+            raise ValueError(
+                f"I0 must be an array of size 1. Got size {I0.size}."
+            )
         infection_seeding = self.infection_seed_method.seed_infections(I0)
-        I0_det = npro.deterministic("I0", infection_seeding)
+        npro.deterministic("I0", infection_seeding)
 
-        return (I0_det,)
+        return (infection_seeding,)

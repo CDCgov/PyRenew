@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
+from pyrenew.metaclass import RandomVariable
 
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
@@ -29,12 +30,9 @@ class InfectionSeedMethod(metaclass=ABCMeta):
 
 class SeedInfectionsZeroPad(InfectionSeedMethod):
     def seed_infections(self, I0: ArrayLike):
+        # alternative implementation:
+        # return jnp.hstack([jnp.zeros(self.n_timepoints - I0.size), I0])
         return jnp.pad(I0, (self.n_timepoints - I0.size, 0))
-
-
-class SeedInfectionsZeroHstack(InfectionSeedMethod):
-    def seed_infections(self, I0: ArrayLike):
-        return jnp.hstack([jnp.zeros(self.n_timepoints - I0.size), I0])
 
 
 class SeedInfectionsRepeat(InfectionSeedMethod):
@@ -42,12 +40,15 @@ class SeedInfectionsRepeat(InfectionSeedMethod):
         return jnp.tile(I0, self.n_timepoints)
 
 
-# Defined as below, I don't see how we can sample `rate`, which we probably want to do.
-# Not sure if rate should be ArrayLike or float
 class SeedInfectionsExponential(InfectionSeedMethod):
-    def __init__(self, n_timepoints: int, rate: ArrayLike):
+    def __init__(self, n_timepoints: int, rate: RandomVariable):
         super().__init__(n_timepoints)
         self.rate = rate
 
     def seed_infections(self, I0: ArrayLike):
-        return I0 * jnp.exp(self.rate * jnp.arange(self.n_timepoints))
+        # How do I ensure rate is recorded?
+        rate = jnp.array(self.rate.sample())
+        return I0 * jnp.exp(rate * jnp.arange(self.n_timepoints))
+
+
+# TODO define __call__ so that you don't have to run the seed_infections functions
