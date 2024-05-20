@@ -65,6 +65,8 @@ from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.process import RtRandomWalkProcess
+from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
+from pyrenew.latent.infection_seeding_method import SeedInfectionsZeroPad
 ```
 
 To initialize the model, we first define initial conditions, including:
@@ -85,10 +87,13 @@ To initialize the model, we first define initial conditions, including:
 # Initializing model components:
 
 # 1) A deterministic generation time
-gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
+gen_int = DeterministicPMF(pmf_array)
 
 # 2) Initial infections
-I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+I0 = InfectionSeedingProcess(
+    dist.LogNormal(0, 1),
+    SeedInfectionsZeroPad(pmf_array.size))
 
 # 3) The latent infections process
 latent_infections = Infections()

@@ -102,7 +102,8 @@ gen_int = datasets.load_generation_interval()
 inf_hosp_int = datasets.load_infection_admission_interval()
 
 # We only need the probability_mass column of each dataset
-gen_int = gen_int["probability_mass"].to_numpy()
+gen_int_array = gen_int["probability_mass"].to_numpy()
+gen_int = gen_int_array
 inf_hosp_int = inf_hosp_int["probability_mass"].to_numpy()
 
 # Taking a pick at the first 5 elements of each
@@ -126,7 +127,7 @@ from pyrenew import latent, deterministic
 import jax.numpy as jnp
 import numpyro.distributions as dist
 
-inf_hosp_int = deterministic.DeterministicPMF(inf_hosp_int)
+inf_hosp_int = deterministic.DeterministicPMF(inf_hosp_int, tol = 1e-2)
 
 hosp_rate = latent.InfectHospRate(
     dist=dist.LogNormal(jnp.log(0.05), 0.1)
@@ -143,10 +144,14 @@ The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to ho
 ```{python}
 #| label: initializing-rest-of-model
 from pyrenew import model, process, observation
+from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
+from pyrenew.latent.infection_seeding_method import SeedInfectionsZeroPad
 
 # Infection process
 latent_inf = latent.Infections()
-I0 = latent.Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=1.5))
+I0 = InfectionSeedingProcess(
+    dist.LogNormal(loc=jnp.log(80/.05), scale=1.5),
+    SeedInfectionsZeroPad(gen_int_array.size))
 
 # Generation interval and Rt
 gen_int = deterministic.DeterministicPMF(gen_int)

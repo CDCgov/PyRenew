@@ -74,7 +74,7 @@ To initialize these five components within the renewal modeling framework, we es
 
 (1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
-(2) an instance of the `Infections0` class, with a log-normal distribution with mean = 0 and standard deviation = 1 as input
+(2) an instance of the `InfectionSeedingProcess` class, with a log-normal distribution with mean = 0 and standard deviation = 1 as input
 
 (3) an instance of the `RtRandomWalkProcess` class with default values
 
@@ -89,7 +89,9 @@ pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(pmf_array)
 
 # (2) Initial infections (inferred with a prior)
-I0 = InfectionSeedingProcess(dist.LogNormal(0, 1), SeedInfectionsZeroPad(pmf_array.size))
+I0 = InfectionSeedingProcess(
+    dist.LogNormal(0, 1),
+    SeedInfectionsZeroPad(pmf_array.size))
 
 # (3) The random process for Rt
 rt_proc = RtRandomWalkProcess()
@@ -121,7 +123,7 @@ The following diagram summarizes how the modules interact via composition; notab
 %%| include: true
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
-    i0["(2) I0\n(Infections0)"]
+    i0["(2) I0\n(InfectionSeedingProcess)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     inf["(4) latent_infections\n(Infections)"]
     obs["(5) observation_process\n(PoissonObservation)"]
