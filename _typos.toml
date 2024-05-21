@@ -11,12 +11,12 @@ AttributeIDSupressMenu = "AttributeIDSupressMenu"
 Damon = "Damon"
 below_LOD = "below_LOD"
 lod_sewage = "lod_sewage"
+lod = "lod"
+LOD = "LOD"
 
 [files]
 extend-exclude = [
     ".gitignore",
     ".pre-commit-config.yaml",
     ".github/ISSUE_TEMPLATE/general_issue.md",
-    "model/src/pyrenew/datasets/wastewater.py",
-    "model/src/pyrenew/datasets/wastewater.tsv",
 ]
