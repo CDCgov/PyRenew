@@ -150,12 +150,12 @@ def sample_infections_with_feedback(
         dists=(infection_feedback_pmf, generation_interval_pmf),
         transforms=(jnp.exp, lambda x: x),
     )
-    latest, infs_and_R = jax.lax.scan(
+    latest, infs_and_R_adj = jax.lax.scan(
         f=feedback_scanner,
         init=I0,
         xs=(infection_feedback_strength, Rt_raw),
     )
 
-    infections, rt = infs_and_R
-    rt = rt * Rt_raw
-    return infections, rt
+    infections, R_adjustment = infs_and_R_adj
+    Rt_adjusted = R_adjustment * Rt_raw
+    return infections, Rt_adjusted
