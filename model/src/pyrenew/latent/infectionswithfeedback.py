@@ -8,7 +8,7 @@ import numpyro as npro
 import pyrenew.datautils as du
 import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
 
 
 class InfectionsRtFeedbackSample(NamedTuple):
@@ -89,6 +89,9 @@ class InfectionsWithFeedback(RandomVariable):
         -------
         None
         """
+
+        self.validate(infection_feedback_strength, infection_feedback_pmf)
+
         self.infection_feedback_strength = infection_feedback_strength
         self.infection_feedback_pmf = infection_feedback_pmf
         self.infections_mean_varname = infections_mean_varname
@@ -96,7 +99,27 @@ class InfectionsWithFeedback(RandomVariable):
         return None
 
     @staticmethod
-    def validate() -> None:  # numpydoc ignore=GL08
+    def validate(
+        inf_feedback_strength: any,
+        inf_feedback_pmf: any,
+    ) -> None:  # numpydoc ignore=GL08
+        """
+        Validates the input parameters.
+
+        Parameters
+        ----------
+        inf_feedback_strength : RandomVariable
+            Infection feedback strength.
+        inf_feedback_pmf : RandomVariable
+            Infection feedback pmf.
+
+        Returns
+        -------
+        None
+        """
+        _assert_sample_and_rtype(inf_feedback_strength)
+        _assert_sample_and_rtype(inf_feedback_pmf)
+
         return None
 
     def sample(
