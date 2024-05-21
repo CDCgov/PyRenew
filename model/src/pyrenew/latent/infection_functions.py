@@ -137,14 +137,27 @@ def sample_infections_with_feedback(
 
         I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
 
-        \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
+        \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(\gamma(t)\
             \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
 
-    where :math:`\mathcal{R}(t)` is the reproductive number, :math:`\gamma(t)`
-    is the infection feedback strength, :math:`T_g` is the max-length of the
+    where :math:`\mathcal{R}(t)` is the reproductive number,
+    :math:`\gamma(t)` is the infection feedback strength,
+    :math:`T_g` is the max-length of the
     generation interval, :math:`\mathcal{R}^u(t)` is the raw reproduction
     number, :math:`f(t)` is the infection feedback pmf, and :math:`T_f`
     is the max-length of the infection feedback pmf.
+
+    Note that negative :math:`\gamma(t)` implies
+    that recent incident infections reduce :math:`\mathcal{R}(t)`
+    below its raw value in the absence of feedback, while
+    positive :math:`\gamma` implies that recent incident infections
+    _increase_ :math:`\mathcal{R}(t)` above its raw value, and
+    :math:`gamma(t)=0` implies no feedback.
+
+    In general, negative :math:`\gamma` is the more common modeling
+    choice, as it can be used to model susceptible depletion,
+    reductions in contact rate due to awareness of high incidence,
+    et cetera.
     """
     feedback_scanner = new_double_scanner(
         dists=(infection_feedback_pmf, generation_interval_pmf),

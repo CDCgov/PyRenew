@@ -53,7 +53,7 @@ def _infection_w_feedback_alt(
 
     for t in range(T):
         Rt_adj[t] = Rt[t] * np.exp(
-            -inf_feedback_strength[t]
+            inf_feedback_strength[t]
             * np.dot(I0_vec, np.flip(inf_feedback_pmf))
         )
 
