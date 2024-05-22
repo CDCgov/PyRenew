@@ -1,3 +1,4 @@
+# numpydoc ignore=GL08
 from typing import NamedTuple
 
 import jax.numpy as jnp
@@ -137,6 +138,31 @@ class RtWeeklyDiff(Model):
 
         return None
 
+    @staticmethod
+    def autoreg_process(
+        dat: ArrayLike, sigma: float
+    ) -> tuple[ArrayLike, float]:
+        """
+        Scan function for the autoregressive process.
+
+        Parameters
+        ----------
+        dat : ArrayLike
+            Data array with three elements: log_rt0, log_rt1, and b.
+        sigma : float
+            Standard deviation of the noise.
+
+        Returns
+        -------
+        tuple
+        """
+
+        log_rt0, log_rt1, b = dat
+
+        next_log_rt = log_rt1 + b * (log_rt1 - log_rt0) + sigma
+
+        return jnp.hstack([log_rt1, next_log_rt, b]), next_log_rt
+
     def sample(
         self,
         duration: int | None = None,
@@ -172,15 +198,10 @@ class RtWeeklyDiff(Model):
             sample_shape=(self.n_weeks,),
         )
 
-        # Building the scanner
-        def _rt_scanner(log_rts, sigma):
-            next_log_rt = log_rts[1] + b * (log_rts[1] - log_rts[0]) + sigma
-            return jnp.hstack([log_rts[1:], next_log_rt]), next_log_rt
-
-        # Scanning
+        # Running the process
         _, log_rt = lax.scan(
-            f=_rt_scanner,
-            init=log_rt_prior,
+            f=self.autoreg_process,
+            init=jnp.hstack([log_rt_prior, b]),
             xs=noise,
         )
 
