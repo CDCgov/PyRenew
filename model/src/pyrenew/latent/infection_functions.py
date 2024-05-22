@@ -86,8 +86,8 @@ def sample_infections_with_feedback(
     I0: ArrayLike,
     Rt_raw: ArrayLike,
     infection_feedback_strength: ArrayLike,
-    generation_interval_pmf: ArrayLike,
-    infection_feedback_pmf: ArrayLike,
+    reversed_generation_interval_pmf: ArrayLike,
+    reversed_infection_feedback_pmf: ArrayLike,
 ) -> tuple:
     r"""
     Sample infections according to
@@ -110,16 +110,22 @@ def sample_infections_with_feedback(
         strength in time) or a vector representing
         the infection feedback strength at a
         given point in time.
-    generation_interval_pmf : ArrayLike
+    reversed_generation_interval_pmf : ArrayLike
         discrete probability mass vector
         representing the generation interval
-        of the infection process
-    infection_feedback_pmf : ArrayLike
+        of the infection process, where the final
+        entry represents an infection 1 time unit in the
+        past, the second-to-last entry represents
+        an infection two time units in the past, etc.
+    reversed_infection_feedback_pmf : ArrayLike
         discrete probability mass vector
-        whose `i`th entry represents the
-        relative contribution to infection
+        representing the infection feedback
+        process, where the final entry represents
+        the relative contribution to infection
         feedback from infections that occurred
-        `i` days in the past.
+        1 time unit in the past, the second-to-last
+        entry represents the contribution from infections
+        that occurred 2 time units in the past, etc.
 
     Returns
     -------
@@ -160,7 +166,10 @@ def sample_infections_with_feedback(
     et cetera.
     """
     feedback_scanner = new_double_scanner(
-        dists=(infection_feedback_pmf, generation_interval_pmf),
+        dists=(
+            reversed_infection_feedback_pmf,
+            reversed_generation_interval_pmf,
+        ),
         transforms=(jnp.exp, lambda x: x),
     )
     latest, infs_and_R_adj = jax.lax.scan(
