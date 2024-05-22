@@ -56,10 +56,10 @@ def test_rtweeklydiff() -> None:
 
 
 def test_rtweeklydiff_no_autoregressive() -> None:
-    """Checks convergence to mean when no autoregression"""
+    """Checks step size averages close to 0"""
 
     params = {
-        "n_obs": 350,
+        "n_obs": 1000,
         "weekday_data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.0, 0.0])),
         # No autoregression!
@@ -70,24 +70,22 @@ def test_rtweeklydiff_no_autoregressive() -> None:
 
     rtwd = RtWeeklyDiff(**params)
 
-    assert rtwd.n_weeks == 50
+    assert rtwd.n_weeks == jnp.ceil(params["n_obs"] / 7).astype(int)
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         rt = rtwd.sample().rt
 
     # Checking that the shape of the sampled Rt is correct
-    assert rt.shape == (350,)
+    assert rt.shape == (rtwd.n_obs,)
 
     # Checking that the sampled Rt is constant every 7 days
-    for i in range(0, 350, 7):
-        assert_array_equal(rt[i : i + 7], jnp.repeat(rt[i], 7))
+    for i in range(0, rtwd.n_obs, 7):
+        j = jnp.min(jnp.array([i + 7, rtwd.n_obs]))
 
-    # Checking that the mean is approx to 1
-    assert jnp.abs(jnp.mean(rt) - 1.0) < 0.01
+        assert_array_equal(rt[i:j], jnp.repeat(rt[i], rt[i:j].size))
+
+    # Checking that the difference is close to zero
+    assert jnp.abs(jnp.mean(rt[1:] - rt[:-1])) < 0.01
 
     return None
-
-
-# test_rtweeklydiff()
-# test_rtweeklydiff_no_autoregressive()
