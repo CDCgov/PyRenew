@@ -29,8 +29,8 @@ class InfectionsSample(NamedTuple):
 class Infections(RandomVariable):
     r"""Latent infections
 
-    This class samples infections given Rt, initial infections, and generation
-    interval.
+    This class samples infections given Rt,
+    initial infections, and generation interval.
 
     Notes
     -----
