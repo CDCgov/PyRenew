@@ -145,8 +145,8 @@ def test_infectionsrtfeedback_feedback():
     )
 
     assert not jnp.array_equal(samp1.infections, samp2.infections)
-    assert_array_equal(samp1.infections, res['infections'])
-    assert_array_equal(samp1.rt, res['rt'])
+    assert_array_equal(samp1.infections, res["infections"])
+    assert_array_equal(samp1.rt, res["rt"])
 
     return None
 
