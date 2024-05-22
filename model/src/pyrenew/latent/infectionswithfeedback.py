@@ -150,36 +150,28 @@ class InfectionsWithFeedback(RandomVariable):
         InfectionsWithFeedback
             Named tuple with "infections".
         """
-
-        # Adjusting sizes
-        Rt, gen_int = du.pad_to_match(Rt, gen_int, fill_value=0.0)
         gen_int_rev = jnp.flip(gen_int)
 
         # Adjusting the size of I0
-        I0_vec = du.pad_x_to_match_y(I0, gen_int_rev, fill_value=0.0)
-        I0_vec = jnp.flip(I0_vec)
+        # to match gen int
+        I0_vec = jnp.flip(du.pad_x_to_match_y(I0, gen_int, fill_value=0.0))
 
-        # Sampling inf feedback strength and adjusting the shape
+        # Sampling inf feedback strength
         inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
             **kwargs,
         )
 
-        inf_feedback_strength = du.pad_x_to_match_y(
-            inf_feedback_strength, Rt, fill_value=0.0
-        )
-
-        # Sampling inf feedback and adjusting the shape
+        # Sampling inf feedback pmf
         inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
-        inf_feedback_pmf = du.pad_x_to_match_y(
-            inf_feedback_pmf, Rt, fill_value=0.0
-        )
+
+        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
         all_infections, Rt_adj = inf.sample_infections_with_feedback(
             I0=I0_vec,
             Rt_raw=Rt,
             infection_feedback_strength=inf_feedback_strength,
-            generation_interval_pmf=gen_int_rev,
-            infection_feedback_pmf=inf_feedback_pmf,
+            reversed_generation_interval_pmf=gen_int_rev,
+            reversed_infection_feedback_pmf=inf_fb_pmf_rev,
         )
 
         npro.deterministic("Rt_adjusted", Rt_adj)
