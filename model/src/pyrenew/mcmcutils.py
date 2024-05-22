@@ -4,6 +4,8 @@
 Utilities to deal with MCMC outputs
 """
 
+from __future__ import annotations
+
 import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl

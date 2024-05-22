@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
+from __future__ import annotations
+
 from typing import NamedTuple
 
 import jax.numpy as jnp
-from numpy.typing import ArrayLike
+from jax.typing import ArrayLike
+from pyrenew.deterministic import NullObservation
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 
 
@@ -45,7 +48,7 @@ class RtInfectionsRenewalModel(Model):
         gen_int: RandomVariable,
         I0: RandomVariable,
         Rt_process: RandomVariable,
-        observation_process: RandomVariable,
+        observation_process: RandomVariable = None,
     ) -> None:
         """
         Default constructor
@@ -70,6 +73,9 @@ class RtInfectionsRenewalModel(Model):
         -------
         None
         """
+
+        if observation_process is None:
+            observation_process = NullObservation()
 
         RtInfectionsRenewalModel.validate(
             gen_int=gen_int,
@@ -122,7 +128,7 @@ class RtInfectionsRenewalModel(Model):
         _assert_sample_and_rtype(gen_int, skip_if_none=False)
         _assert_sample_and_rtype(i0, skip_if_none=False)
         _assert_sample_and_rtype(latent_infections, skip_if_none=False)
-        _assert_sample_and_rtype(observation_process, skip_if_none=True)
+        _assert_sample_and_rtype(observation_process, skip_if_none=False)
         _assert_sample_and_rtype(Rt_process, skip_if_none=False)
         return None
 
@@ -287,26 +293,23 @@ class RtInfectionsRenewalModel(Model):
         )
 
         # Using the predicted infections to sample from the observation process
-        if self.observation_process is not None:
-            if (observed_infections is not None) and (padding > 0):
-                sampled_pad = jnp.repeat(jnp.nan, padding)
+        if (observed_infections is not None) and (padding > 0):
+            sampled_pad = jnp.repeat(jnp.nan, padding)
 
-                sampled_obs, *_ = self.sample_infections_obs(
-                    predicted=latent[padding:],
-                    observed_infections=observed_infections[padding:],
-                    **kwargs,
-                )
+            sampled_obs, *_ = self.sample_infections_obs(
+                predicted=latent[padding:],
+                observed_infections=observed_infections[padding:],
+                **kwargs,
+            )
 
-                sampled = jnp.hstack([sampled_pad, sampled_obs])
+            sampled = jnp.hstack([sampled_pad, sampled_obs])
 
-            else:
-                sampled, *_ = self.sample_infections_obs(
-                    predicted=latent,
-                    observed_infections=observed_infections,
-                    **kwargs,
-                )
         else:
-            sampled = None
+            sampled, *_ = self.sample_infections_obs(
+                predicted=latent,
+                observed_infections=observed_infections,
+                **kwargs,
+            )
 
         return RtInfectionsRenewalSample(
             Rt=Rt,

@@ -1,5 +1,5 @@
-Observation Processes
-=====================
+Observation
+===========
 
 Negative Binomial
 -----------------

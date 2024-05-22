@@ -1,5 +1,5 @@
-Latent MSEI Components
-======================
+Latent
+======
 
 Hospital Admissions
 -------------------

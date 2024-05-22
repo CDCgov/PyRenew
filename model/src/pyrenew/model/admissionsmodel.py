@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
+from __future__ import annotations
+
 from typing import NamedTuple
 
 import jax.numpy as jnp
-from numpy.typing import ArrayLike
+from jax.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
@@ -66,7 +68,7 @@ class HospitalAdmissionsModel(Model):
             The infections latent process (passed to RtInfectionsRenewalModel).
         gen_int : RandomVariable
             Generation time (passed to RtInfectionsRenewalModel)
-        HospitalAdmissionsModel
+        IO : RandomVariable
             Initial infections (passed to RtInfectionsRenewalModel)
         Rt_process : RandomVariable
             Rt process  (passed to RtInfectionsRenewalModel).
@@ -113,7 +115,7 @@ class HospitalAdmissionsModel(Model):
         _assert_sample_and_rtype : Perform type-checking and verify RV
         """
         _assert_sample_and_rtype(latent_admissions, skip_if_none=False)
-        _assert_sample_and_rtype(observation_process, skip_if_none=False)
+        _assert_sample_and_rtype(observation_process, skip_if_none=True)
         return None
 
     def sample_latent_admissions(
@@ -139,11 +141,6 @@ class HospitalAdmissionsModel(Model):
         See Also
         --------
         latent_admissions.sample : For sampling latent hospital admissions
-
-        Notes
-        -----
-        TODO: Include example(s) here.
-        TODO: Cover Returns in more detail.
         """
 
         return self.latent_admissions.sample(
@@ -218,10 +215,6 @@ class HospitalAdmissionsModel(Model):
         basic_renewal.sample : For sampling the basic renewal model
         sample_latent_admissions : To sample latent hospitalization process
         sample_observed_admissions : For sampling observed hospital admissions
-
-        Notes
-        -----
-        TODO: Include example(s) here.
         """
 
         # Getting the initial quantities from the basic model

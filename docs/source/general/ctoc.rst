@@ -2,20 +2,11 @@ Complete Table Of Contents
 ==========================
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
 
+   ../index
    ../msei_reference/index
-   ../test_reference/index
    ../tutorials/index
    ../genindex
-   ../modindex
-   ../search
-   faq
-   glossary
-   license
-   notices
-   state
-   usage
-   contribute
 
 .. todo:: Change order and naming of these toctree entities

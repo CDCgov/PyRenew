@@ -6,6 +6,8 @@ from pyrenew.deterministic import (
     DeterministicPMF,
     DeterministicProcess,
     DeterministicVariable,
+    NullProcess,
+    NullVariable,
 )
 
 
@@ -24,6 +26,8 @@ def test_deterministic():
     )
     var2 = DeterministicPMF(jnp.array([0.25, 0.25, 0.2, 0.3]))
     var3 = DeterministicProcess(jnp.array([1, 2, 3, 4]))
+    var4 = NullVariable()
+    var5 = NullProcess()
 
     testing.assert_array_equal(
         var1.sample()[0],
@@ -52,3 +56,6 @@ def test_deterministic():
             ]
         ),
     )
+
+    testing.assert_equal(var4.sample()[0], None)
+    testing.assert_equal(var5.sample(n_timepoints=1)[0], None)

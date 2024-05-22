@@ -32,8 +32,8 @@ def load_wastewater() -> pl.DataFrame:  # numpydoc ignore=SS06,SA01,EX01
         - `lab_wwtp_unique_id`
         - `log_conc`
         - `date`
-        - `lod_sewage`
-        - `below_LOD`
+        - `load_sewage`
+        - `below_load`
         - `daily_hosp_admits`
         - `daily_hosp_admits_for_eval`
         - `pop`

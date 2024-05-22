@@ -6,6 +6,7 @@ and/or numerical calculations about
 a given renewal process.
 """
 
+from __future__ import annotations
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
