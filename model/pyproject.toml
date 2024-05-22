@@ -17,6 +17,7 @@ numpy = "^1.26.4"
 polars = "^0.20.13"
 pillow = "^10.3.0" # See #56 on CDCgov/multisignal-epi-inference
 nbconvert = "^7.16.4"
+pytest-mpl = "^0.17.0"
 
 [tool.poetry.group.dev]
 optional = true
