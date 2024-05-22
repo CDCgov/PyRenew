@@ -87,9 +87,11 @@ class Infections(RandomVariable):
         Rt : ArrayLike
             Reproduction number.
         I0 : ArrayLike
-            Initial infections.
+            Initial infections vector
+            of the same length as the
+            generation interval.
         gen_int : ArrayLike
-            Generation interval.
+            Generation interval pmf vector.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
@@ -102,11 +104,8 @@ class Infections(RandomVariable):
 
         gen_int_rev = jnp.flip(gen_int)
 
-        n_lead = gen_int_rev.size - 1
-        I0_vec = jnp.hstack([jnp.zeros(n_lead), I0])
-
         all_infections = inf.sample_infections_rt(
-            I0=I0_vec,
+            I0=I0,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
         )

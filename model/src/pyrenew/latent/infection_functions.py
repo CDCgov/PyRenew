@@ -19,7 +19,7 @@ def sample_infections_rt(
     ----------
     I0 : ArrayLike
         Array of initial infections of the
-        same length as the generation inferval
+        same length as the generation interval
         pmf vector.
     Rt : ArrayLike
         Timeseries of R(t) values
@@ -99,7 +99,7 @@ def sample_infections_with_feedback(
     ----------
     I0 : ArrayLike
         Array of initial infections of the
-        same length as the generation inferval
+        same length as the generation interval
         pmf vector.
     Rt_raw : ArrayLike
         Timeseries of raw R(t) values not

@@ -5,7 +5,6 @@ from typing import NamedTuple
 
 import jax.numpy as jnp
 import numpyro as npro
-import pyrenew.datautils as du
 import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
@@ -138,9 +137,11 @@ class InfectionsWithFeedback(RandomVariable):
         Rt : ArrayLike
             Reproduction number.
         I0 : ArrayLike
-            Initial infections.
+            Initial infections, as an array
+            of the same length as the generation
+            interval PMF.
         gen_int : ArrayLike
-            Generation interval.
+            Generation interval PMF.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
@@ -151,10 +152,6 @@ class InfectionsWithFeedback(RandomVariable):
             Named tuple with "infections".
         """
         gen_int_rev = jnp.flip(gen_int)
-
-        # Adjusting the size of I0
-        # to match gen int
-        I0_vec = jnp.flip(du.pad_x_to_match_y(I0, gen_int, fill_value=0.0))
 
         # Sampling inf feedback strength
         inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
@@ -167,7 +164,7 @@ class InfectionsWithFeedback(RandomVariable):
         inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
         all_infections, Rt_adj = inf.sample_infections_with_feedback(
-            I0=I0_vec,
+            I0=I0,
             Rt_raw=Rt,
             infection_feedback_strength=inf_feedback_strength,
             reversed_generation_interval_pmf=gen_int_rev,
