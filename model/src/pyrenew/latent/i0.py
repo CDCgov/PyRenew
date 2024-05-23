@@ -83,5 +83,6 @@ class Infections0(RandomVariable):
             npro.sample(
                 name=self.name,
                 fn=self.i0_dist,
+                sample_shape=(1,),
             ),
         )
