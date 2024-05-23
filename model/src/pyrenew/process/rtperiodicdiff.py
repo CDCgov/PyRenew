@@ -4,9 +4,9 @@ from typing import NamedTuple
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-from jax import lax
 from jax.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
+from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
 
 
 class RtPeriodicDiffSample(NamedTuple):
@@ -203,11 +203,12 @@ class RtPeriodicDiff(Model):
         )
 
         # Running the process
-        _, log_rt = lax.scan(
-            f=self.autoreg_process,
-            init=jnp.hstack([log_rt_prior, b]),
-            xs=noise,
-        )
+        ar_diff = FirstDifferenceARProcess(autoreg=b, noise_sd=noise)
+        log_rt = ar_diff.sample(
+            duration=self.n_periods,
+            init_val=log_rt_prior[1],
+            init_rate_of_change=log_rt_prior[1] - log_rt_prior[0],
+        )[0]
 
         # Expanding according to the number of days
         if duration is None:

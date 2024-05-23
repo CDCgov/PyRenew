@@ -67,7 +67,9 @@ class FirstDifferenceARProcess(RandomVariable):
         tuple
         """
         rocs, *_ = self.rate_of_change_proc.sample(
-            duration, inits=init_rate_of_change, name=name + "_rate_of_change"
+            duration=duration,
+            inits=jnp.atleast_1d(init_rate_of_change),
+            name=name + "_rate_of_change",
         )
         return (init_val + jnp.cumsum(rocs.flatten()),)
 
