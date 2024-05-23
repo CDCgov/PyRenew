@@ -2,16 +2,14 @@
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import numpyro as npro
-import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
 
 
-class RtPeriodicDiffSample(NamedTuple):
+class RtPeriodicDiffProcessProcessSample(NamedTuple):
     """
-    A container for holding the output from the `process.RtWeeklyDiff.sample()`.
+    A container for holding the output from the `process.RtWeeklyDiffProcess.sample()`.
 
     Attributes
     ----------
@@ -22,10 +20,10 @@ class RtPeriodicDiffSample(NamedTuple):
     rt: ArrayLike | None = None
 
     def __repr__(self):
-        return f"RtPeriodicDiffSample(rt={self.rt})"
+        return f"RtPeriodicDiffProcessProcessSample(rt={self.rt})"
 
 
-class RtPeriodicDiff(Model):
+class RtPeriodicDiffProcess(Model):
     r"""
     Periodic Rt with autoregressive difference.
 
@@ -55,7 +53,7 @@ class RtPeriodicDiff(Model):
         site_name: str = "rt_periodic_diff",
     ) -> None:
         """
-        Default constructor for RtPeriodicDiff class.
+        Default constructor for RtPeriodicDiffProcess class.
 
         Parameters
         ----------
@@ -171,7 +169,7 @@ class RtPeriodicDiff(Model):
         self,
         duration: int | None = None,
         **kwargs,
-    ) -> RtPeriodicDiffSample:
+    ) -> RtPeriodicDiffProcessProcessSample:
         """
         Samples the periodic Rt with autoregressive difference.
 
@@ -186,7 +184,7 @@ class RtPeriodicDiff(Model):
 
         Returns
         -------
-        RtPeriodicDiffSample
+        RtPeriodicDiffProcessProcessSample
             Named tuple with "rt".
         """
 
@@ -195,14 +193,8 @@ class RtPeriodicDiff(Model):
         b = self.autoreg.sample(**kwargs)[0]
         s_r = self.sigma_r.sample(**kwargs)[0]
 
-        # Sample noise
-        noise = npro.sample(
-            self.site_name + "_error",
-            dist.Normal(0, s_r).expand((self.n_periods,)),
-        )
-
         # Running the process
-        ar_diff = FirstDifferenceARProcess(autoreg=b, noise_sd=noise)
+        ar_diff = FirstDifferenceARProcess(autoreg=b, noise_sd=s_r)
         log_rt = ar_diff.sample(
             duration=self.n_periods,
             init_val=log_rt_prior[1],
@@ -217,14 +209,14 @@ class RtPeriodicDiff(Model):
                 f"Duration should be less than or equal to {self.n_obs}."
             )
 
-        return RtPeriodicDiffSample(
+        return RtPeriodicDiffProcessProcessSample(
             rt=jnp.repeat(jnp.exp(log_rt.flatten()), self.period_size)[
                 self.data_starts : (self.data_starts + duration)
             ],
         )
 
 
-class RtWeeklyDiff(RtPeriodicDiff):
+class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
     """
     Weekly Rt with autoregressive difference.
     """
@@ -239,7 +231,7 @@ class RtWeeklyDiff(RtPeriodicDiff):
         site_name: str = "rt_weekly_diff",
     ) -> None:
         """
-        Default constructor for RtWeeklyDiff class.
+        Default constructor for RtWeeklyDiffProcess class.
 
         Parameters
         ----------
