@@ -146,11 +146,12 @@ The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to ho
 from pyrenew import model, process, observation
 from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
 from pyrenew.latent.infection_seeding_method import SeedInfectionsZeroPad
+from pyrenew.latent import Infections0
 
 # Infection process
 latent_inf = latent.Infections()
 I0 = InfectionSeedingProcess(
-    dist.LogNormal(loc=jnp.log(80/.05), scale=1.5),
+    Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=1.5)),
     SeedInfectionsZeroPad(gen_int_array.size))
 
 # Generation interval and Rt

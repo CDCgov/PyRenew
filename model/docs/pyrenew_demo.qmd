@@ -92,7 +92,7 @@ gen_int = DeterministicPMF(pmf_array)
 
 # 2) Initial infections
 I0 = InfectionSeedingProcess(
-    dist.LogNormal(0, 1),
+    Infections0(),
     SeedInfectionsZeroPad(pmf_array.size))
 
 # 3) The latent infections process
