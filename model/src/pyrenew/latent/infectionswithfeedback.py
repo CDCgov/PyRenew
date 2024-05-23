@@ -5,6 +5,7 @@ from typing import NamedTuple
 
 import jax.numpy as jnp
 import numpyro as npro
+import pyrenew.datautils as du
 import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
@@ -156,6 +157,13 @@ class InfectionsWithFeedback(RandomVariable):
         # Sampling inf feedback strength
         inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
             **kwargs,
+        )
+
+        # Making sure inf_feedback_strength spans the Rt length
+        inf_feedback_strength = du.pad_x_to_match_y(
+            x=inf_feedback_strength,
+            y=Rt,
+            fill_value=0.0,
         )
 
         # Sampling inf feedback pmf

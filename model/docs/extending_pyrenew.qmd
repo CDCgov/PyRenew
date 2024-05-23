@@ -87,8 +87,7 @@ plt.show()
 
 All instances of PyRenew's `RandomVariable` should have at least three functions: `__init__()`, `validate()`, and `sample()`. The `__init__()` function is the constructor and initializes the class. The `validate()` function checks if the class is correctly initialized. Finally, the `sample()` method contains the core of the class; it should return a tuple or named tuple. The following is a minimal example of a `RandomVariable` class based on `numpyro.distributions.Normal`:
 
-```{python}
-#| label: example-rv
+```python
 from pyrenew.metaclass import RandomVariable
 
 class MyNormal(RandomVariable):
@@ -194,8 +193,8 @@ class InfFeedback(RandomVariable):
             I0=I0_vec,
             Rt_raw=Rt,
             infection_feedback_strength=inf_feedback_strength,
-            generation_interval_pmf=gen_int_rev,
-            infection_feedback_pmf=inf_feedback_pmf,
+            reversed_generation_interval_pmf=gen_int_rev,
+            reversed_infection_feedback_pmf=inf_feedback_pmf,
         )
 
         # Storing adjusted Rt for future use
