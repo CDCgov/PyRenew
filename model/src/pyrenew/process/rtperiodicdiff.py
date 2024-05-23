@@ -89,7 +89,7 @@ class RtPeriodicDiff(Model):
         self.n_obs = n_obs
         self.period_size = period_size
         self.data_starts = data_starts
-        self.n_periods = jnp.ceil(n_obs / period_size).astype(int)
+        self.n_periods = int(jnp.ceil(n_obs / period_size))
         self.log_rt_prior = log_rt_prior
         self.autoreg = autoreg
         self.sigma_r = sigma_r
@@ -198,8 +198,7 @@ class RtPeriodicDiff(Model):
         # Sample noise
         noise = npro.sample(
             self.site_name + "_error",
-            dist.Normal(0, s_r),
-            sample_shape=(self.n_periods,),
+            dist.Normal(0, s_r).expand((self.n_periods,)),
         )
 
         # Running the process

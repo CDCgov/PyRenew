@@ -106,7 +106,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
 
     rtwd = RtWeeklyDiff(**params)
 
-    assert rtwd.n_periods == jnp.ceil(params["n_obs"] / 7).astype(int)
+    assert rtwd.n_periods == int(jnp.ceil(params["n_obs"] / 7))
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):

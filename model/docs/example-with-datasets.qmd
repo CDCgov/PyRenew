@@ -308,7 +308,7 @@ class WeekdayEffect(metaclass.RandomVariable):
         len : int
             The number of observations
         """
-        self.nweeks = jnp.ceil(len/7).astype(int)
+        self.nweeks = int(jnp.ceil(len/7))
         self.len = len
 
     @staticmethod
