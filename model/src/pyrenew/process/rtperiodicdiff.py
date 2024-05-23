@@ -9,7 +9,7 @@ from jax.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 
 
-class RtWeeklyDiffSample(NamedTuple):
+class RtPeriodicDiffSample(NamedTuple):
     """
     A container for holding the output from the `process.RtWeeklyDiff.sample()`.
 
@@ -22,16 +22,16 @@ class RtWeeklyDiffSample(NamedTuple):
     rt: ArrayLike | None = None
 
     def __repr__(self):
-        return f"RtWeeklyDiffSample(rt={self.rt})"
+        return f"RtPeriodicDiffSample(rt={self.rt})"
 
 
-class RtWeeklyDiff(Model):
+class RtPeriodicDiff(Model):
     r"""
-    Weekly Rt with autoregressive difference.
+    Periodic Rt with autoregressive difference.
 
     Notes
     -----
-    This class samples a weekly Rt with autoregressive difference. The
+    This class samples a periodic Rt with autoregressive difference. The
     mathematical formulation is given by:
 
     .. math::
@@ -39,29 +39,31 @@ class RtWeeklyDiff(Model):
             + \beta \left(\log[\mathcal{R}^\mathrm{u}(t_2)] - \
              \log[\mathcal{R}^\mathrm{u}(t_1)]\right), \sigma_r \right)
 
-    where :math:`\mathcal{R}^\mathrm{u}(t)` is the weekly reproduction number
-    at week :math:`t`, :math:`\beta` is the autoregressive parameter, and
+    where :math:`\mathcal{R}^\mathrm{u}(t)` is the periodic reproduction number
+    at time :math:`t`, :math:`\beta` is the autoregressive parameter, and
     :math:`\sigma_r` is the standard deviation of the noise.
     """
 
     def __init__(
         self,
         n_obs: int,
-        weekday_data_starts: int,
+        data_starts: int,
+        period_size: int,
         log_rt_prior: RandomVariable,
         autoreg: RandomVariable,
         sigma_r: RandomVariable,
-        site_name: str = "rt_weekly_diff",
+        site_name: str = "rt_periodic_diff",
     ) -> None:
         """
-        Default constructor for RtWeeklyDiff class.
+        Default constructor for RtPeriodicDiff class.
 
         Parameters
         ----------
         n_obs : int
             Number of observations.
-        weekday_data_starts : int
-            Weekday data starts, must be between 0 and 6, 0 beign Sunday.
+        data_starts : int
+            Relative point at which data starts, must be between 0 and
+            period_size - 1.
         log_rt_prior : RandomVariable
             Log Rt prior for the first two observations.
         autoreg : RandomVariable
@@ -69,7 +71,7 @@ class RtWeeklyDiff(Model):
         sigma_r : RandomVariable
             Standard deviation of the noise.
         site_name : str, optional
-            Name of the site. Defaults to "rt_weekly_diff".
+            Name of the site. Defaults to "rt_periodic_diff".
 
         Returns
         -------
@@ -78,15 +80,16 @@ class RtWeeklyDiff(Model):
 
         self.validate(
             n_obs,
-            weekday_data_starts,
+            data_starts,
             log_rt_prior,
             autoreg,
             sigma_r,
         )
 
         self.n_obs = n_obs
-        self.weekday_data_starts = weekday_data_starts
-        self.n_weeks = jnp.ceil(n_obs / 7).astype(int)
+        self.period_size = period_size
+        self.data_starts = data_starts
+        self.n_periods = jnp.ceil(n_obs / period_size).astype(int)
         self.log_rt_prior = log_rt_prior
         self.autoreg = autoreg
         self.sigma_r = sigma_r
@@ -97,7 +100,7 @@ class RtWeeklyDiff(Model):
     @staticmethod
     def validate(
         n_obs: int,
-        weekday_data_starts: int,
+        data_starts: int,
         prior: any,
         autoreg: any,
         sigma_r: any,
@@ -109,8 +112,9 @@ class RtWeeklyDiff(Model):
         ----------
         n_obs : int
             Number of observations.
-        weekday_data_starts : int
-            Weekday data starts.
+        data_starts : int
+            Relative point at which data starts, must be between 0 and
+            period_size - 1.
         prior : any
             Log Rt prior for the first two observations.
         autoreg : any
@@ -126,10 +130,10 @@ class RtWeeklyDiff(Model):
         # Nweeks should be a positive integer
         assert n_obs > 0, f"n_obs should be a positive integer. It is {n_obs}."
 
-        # Weekday data starts should be a positive integer between 0 and 6
-        assert 0 <= weekday_data_starts <= 6, (
-            "weekday_data_starts should be a positive integer between 0 and 6."
-            + f"It is {weekday_data_starts}."
+        # Data starts should be a positive integer
+        assert 0 <= data_starts, (
+            "data_starts should be a positive integer."
+            + f"It is {data_starts}."
         )
 
         _assert_sample_and_rtype(prior)
@@ -167,9 +171,9 @@ class RtWeeklyDiff(Model):
         self,
         duration: int | None = None,
         **kwargs,
-    ) -> RtWeeklyDiffSample:
+    ) -> RtPeriodicDiffSample:
         """
-        Samples the weekly Rt with autoregressive difference.
+        Samples the periodic Rt with autoregressive difference.
 
         Parameters
         ----------
@@ -182,7 +186,7 @@ class RtWeeklyDiff(Model):
 
         Returns
         -------
-        RtWeeklyDiffSample
+        RtPeriodicDiffSample
             Named tuple with "rt".
         """
 
@@ -195,7 +199,7 @@ class RtWeeklyDiff(Model):
         noise = npro.sample(
             self.site_name + "_error",
             dist.Normal(0, s_r),
-            sample_shape=(self.n_weeks,),
+            sample_shape=(self.n_periods,),
         )
 
         # Running the process
@@ -213,10 +217,62 @@ class RtWeeklyDiff(Model):
                 f"Duration should be less than or equal to {self.n_obs}."
             )
 
-        return RtWeeklyDiffSample(
-            rt=jnp.repeat(jnp.exp(log_rt.flatten()), 7)[
-                self.weekday_data_starts : (
-                    self.weekday_data_starts + duration
-                )
+        return RtPeriodicDiffSample(
+            rt=jnp.repeat(jnp.exp(log_rt.flatten()), self.period_size)[
+                self.data_starts : (self.data_starts + duration)
             ],
         )
+
+
+class RtWeeklyDiff(RtPeriodicDiff):
+    """
+    Weekly Rt with autoregressive difference.
+    """
+
+    def __init__(
+        self,
+        n_obs: int,
+        data_starts: int,
+        log_rt_prior: RandomVariable,
+        autoreg: RandomVariable,
+        sigma_r: RandomVariable,
+        site_name: str = "rt_weekly_diff",
+    ) -> None:
+        """
+        Default constructor for RtWeeklyDiff class.
+
+        Parameters
+        ----------
+        n_obs : int
+            Number of observations.
+        data_starts : int
+            Relative point at which data starts, must be between 0 and 6.
+        log_rt_prior : RandomVariable
+            Log Rt prior for the first two observations.
+        autoreg : RandomVariable
+            Autoregressive parameter.
+        sigma_r : RandomVariable
+            Standard deviation of the noise.
+        site_name : str, optional
+            Name of the site. Defaults to "rt_weekly_diff".
+
+        Returns
+        -------
+        None
+        """
+
+        assert 0 <= data_starts <= 6, (
+            "data_starts should be between 0 and 6." + f"It is {data_starts}."
+        )
+
+        super().__init__(
+            n_obs=n_obs,
+            data_starts=data_starts,
+            period_size=7,
+            log_rt_prior=log_rt_prior,
+            autoreg=autoreg,
+            sigma_r=sigma_r,
+            site_name=site_name,
+        )
+
+        return None

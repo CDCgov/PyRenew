@@ -9,7 +9,7 @@ from jax import lax
 from jax.typing import ArrayLike
 from numpy.testing import assert_array_equal
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.process.rtweeklydiff import RtWeeklyDiff
+from pyrenew.process import RtWeeklyDiff
 
 
 def _manual_rt_weekly_diff(
@@ -51,7 +51,7 @@ def test_rtweeklydiff() -> None:
 
     params = {
         "n_obs": 30,
-        "weekday_data_starts": 0,
+        "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
         "autoreg": DeterministicVariable(jnp.array([0.7])),
         "sigma_r": DeterministicVariable(jnp.array([0.1])),
@@ -60,7 +60,7 @@ def test_rtweeklydiff() -> None:
 
     rtwd = RtWeeklyDiff(**params)
 
-    assert rtwd.n_weeks == 5
+    assert rtwd.n_periods == 5
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
@@ -76,7 +76,7 @@ def test_rtweeklydiff() -> None:
 
     # Checking start off a different day of the week
     np.random.seed(223)
-    params["weekday_data_starts"] = 5
+    params["data_starts"] = 5
     rtwd = RtWeeklyDiff(**params)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         rt2 = rtwd.sample().rt
@@ -96,7 +96,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
 
     params = {
         "n_obs": 1000,
-        "weekday_data_starts": 0,
+        "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.0, 0.0])),
         # No autoregression!
         "autoreg": DeterministicVariable(jnp.array([0.0])),
@@ -106,7 +106,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
 
     rtwd = RtWeeklyDiff(**params)
 
-    assert rtwd.n_weeks == jnp.ceil(params["n_obs"] / 7).astype(int)
+    assert rtwd.n_periods == jnp.ceil(params["n_obs"] / 7).astype(int)
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
@@ -132,7 +132,7 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
 
     params = {
         "n_obs": 30,
-        "weekday_data_starts": 0,
+        "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
         "autoreg": DeterministicVariable(jnp.array([0.7])),
         "sigma_r": DeterministicVariable(jnp.array([0.1])),
