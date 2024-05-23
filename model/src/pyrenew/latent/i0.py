@@ -1,6 +1,7 @@
 # numpydoc ignore=GL08
 
 
+import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.metaclass import RandomVariable
@@ -79,10 +80,4 @@ class Infections0(RandomVariable):
         tuple
             Tuple with the initial infections.
         """
-        return (
-            npro.sample(
-                name=self.name,
-                fn=self.i0_dist,
-                sample_shape=(1,),
-            ),
-        )
+        return (jnp.atleast_1d(npro.sample(name=self.name, fn=self.i0_dist)),)
