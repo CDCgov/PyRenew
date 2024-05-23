@@ -13,7 +13,7 @@ def pad_to_match(
     fix_y: bool = False,
 ) -> tuple[ArrayLike, ArrayLike]:
     """
-    Pad the shorter array with zeros to match the length of the longer array.
+    Pad the shorter array at the end to match the length of the longer array.
 
     Parameters
     ----------
@@ -58,7 +58,7 @@ def pad_x_to_match_y(
     fill_value: float = 0.0,
 ) -> ArrayLike:
     """
-    Pad the `x` array with to match the length of the `y` array.
+    Pad the `x` array at the end to match the length of the `y` array.
 
     Parameters
     ----------
