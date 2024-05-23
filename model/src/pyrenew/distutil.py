@@ -8,6 +8,8 @@ encountered probability distributions
 found in renewal equation modeling,
 such as discrete time-to-event distributions
 """
+from __future__ import annotations
+
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
@@ -54,7 +56,7 @@ def validate_discrete_dist_vector(
     if not jnp.abs(dist_norm - 1) < tol:
         raise ValueError(
             "Discrete generation interval "
-            "distributions must sum to 1"
+            "distributions must sum to 1 "
             "with a tolerance of {}"
             "".format(tol)
         )

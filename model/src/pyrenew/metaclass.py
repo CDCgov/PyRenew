@@ -5,6 +5,7 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
+from typing import get_type_hints
 
 import jax
 import matplotlib.pyplot as plt
@@ -62,7 +63,7 @@ def _assert_sample_and_rtype(
         )  # noqa: E722
 
     # Getting the return annotation (if any)
-    rettype = sfun.__annotations__.get("return", None)
+    rettype = get_type_hints(sfun).get("return", None)
 
     if rettype is None:
         raise Exception(

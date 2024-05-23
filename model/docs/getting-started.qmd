@@ -118,7 +118,7 @@ model1 = RtInfectionsRenewalModel(
 
 The following diagram summarizes how the modules interact via composition; notably, `gen_int`, `I0`, `rt_proc`, `latent_infections`, and `observed_infections` are instances of `RandomVariable`, which means these can be easily replaced to generate a different instance of the `RtInfectionsRenewalModel` class:
 
-```{mermaid}
+```mermaid
 %%| label: overview-of-RtInfectionsRenewalModel
 %%| include: true
 flowchart TB
@@ -192,23 +192,7 @@ Now, let's investigate the output, particularly the posterior distribution of th
 ```{python}
 #| label: fig-output-rt
 #| fig-cap: Rt posterior distribution
-import polars as pl
-samps = model1.spread_draws([('Rt', 'time')])
-
-fig, ax = plt.subplots(figsize=[4, 5])
-
-ax.plot(sim_data[0])
-ax.set_title('Posterior Distribution of Rt Estimates')
-ax.set_xlabel('Time')
-ax.set_ylabel('Log Rt')
-samp_ids = np.random.randint(size=25, low=0, high=999)
-for samp_id in samp_ids:
-    sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
-    ax.plot(sub_samps.select("time").to_numpy(),
-            sub_samps.select("Rt").to_numpy(), color="darkblue", alpha=0.1)
-ax.set_ylim([0.4, 1/.4])
-ax.set_yticks([0.5, 1, 2])
-ax.set_yscale("log")
+out = model1.plot_posterior(var="Rt")
 ```
 
 ## Architecture of pyrenew
@@ -223,7 +207,7 @@ ax.set_yscale("log")
 
 The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`. The following diagram shows a detailed view of how metaclasses, modules, and classes interact to create the `RtInfectionsRenewalModel` instantiated in the previous section:
 
-```{mermaid}
+```mermaid
 %%| label: overview-of-RtInfectionsRenewalModel
 %%| include: true
 flowchart LR

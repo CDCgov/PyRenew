@@ -1,5 +1,5 @@
-MSEI Model
-==========
+Model
+=====
 
 Hospital Admissions
 -------------------

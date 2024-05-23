@@ -4,6 +4,8 @@
 Helper classes for regression problems
 """
 
+from __future__ import annotations
+
 from abc import ABCMeta, abstractmethod
 
 import numpyro
