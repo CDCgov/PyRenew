@@ -24,8 +24,12 @@ def test_infections_as_deterministic():
 
     inf1 = Infections()
 
+    obs = dict(
+        Rt=sim_rt,
+        I0=jnp.repeat(0, repeats=gen_int.size),
+        gen_int=gen_int,
+    )
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        obs = dict(Rt=sim_rt, I0=10, gen_int=gen_int)
         inf_sampled1 = inf1.sample(**obs)
         inf_sampled2 = inf1.sample(**obs)
 
