@@ -27,35 +27,32 @@ class InfectionSeedMethod(metaclass=ABCMeta):
                 f"n_timepoints must be positive. Got {n_timepoints}"
             )
 
-    abstractmethod
-
-    def seed_infections(self, *args, **kwargs):
+    @abstractmethod
+    def seed_infections(self, I_pre_seed: ArrayLike):
         pass
 
-        pass
-
-    def __call__(self, *args, **kwargs):
-        return self.seed_infections(*args, **kwargs)
+    def __call__(self, I_pre_seed: ArrayLike):
+        return self.seed_infections(I_pre_seed)
 
 
 class SeedInfectionsZeroPad(InfectionSeedMethod):
-    def seed_infections(self, I_last: ArrayLike):
-        if self.n_timepoints < I_last.size:
+    def seed_infections(self, I_pre_seed: ArrayLike):
+        if self.n_timepoints < I_pre_seed.size:
             raise ValueError(
-                f"I_last must be at least as long as n_timepoints. Got I_last of size {I_last.size} and and n_timepoints of size {self.n_timepoints}."
+                f"I_pre_seed must be at least as long as n_timepoints. Got I_pre_seed of size {I_pre_seed.size} and and n_timepoints of size {self.n_timepoints}."
             )
         # alternative implementation:
-        # return jnp.hstack([jnp.zeros(self.n_timepoints - I0.size), I0])
-        return jnp.pad(I_last, (self.n_timepoints - I_last.size, 0))
+        # return jnp.hstack([jnp.zeros(self.n_timepoints - I_pre_seed.size), I_pre_seed])
+        return jnp.pad(I_pre_seed, (self.n_timepoints - I_pre_seed.size, 0))
 
 
 class SeedInfectionsFromVec(InfectionSeedMethod):
-    def seed_infections(self, I_seed: ArrayLike):
-        if I_seed.size != self.n_timepoints:
+    def seed_infections(self, I_pre_seed: ArrayLike):
+        if I_pre_seed.size != self.n_timepoints:
             raise ValueError(
-                f"I_seed must have the same size as n_timepoints. Got I_seed of size {I_seed.size} and and n_timepoints of size {self.n_timepoints}."
+                f"I_pre_seed must have the same size as n_timepoints. Got I_pre_seed of size {I_pre_seed.size} and and n_timepoints of size {self.n_timepoints}."
             )
-        return jnp.array(I_seed)
+        return jnp.array(I_pre_seed)
 
 
 class SeedInfectionsExponential(InfectionSeedMethod):
@@ -63,10 +60,10 @@ class SeedInfectionsExponential(InfectionSeedMethod):
         super().__init__(n_timepoints)
         self.rate = rate
 
-    def seed_infections(self, I0: ArrayLike):
-        if I0.size != 1:
+    def seed_infections(self, I_pre_seed: ArrayLike):
+        if I_pre_seed.size != 1:
             raise ValueError(
-                f"I0 must be an array of size 1. Got size {I0.size}."
+                f"I_pre_seed must be an array of size 1. Got size {I_pre_seed.size}."
             )
         rate = jnp.array(self.rate.sample())
-        return I0 * jnp.exp(rate * jnp.arange(self.n_timepoints))
+        return I_pre_seed * jnp.exp(rate * jnp.arange(self.n_timepoints))

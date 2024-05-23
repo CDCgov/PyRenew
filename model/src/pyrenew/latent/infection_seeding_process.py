@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 import numpyro as npro
-import numpyro.distributions as dist
 from pyrenew.latent.infection_seeding_method import InfectionSeedMethod
 from pyrenew.metaclass import RandomVariable
 
@@ -11,36 +10,33 @@ class InfectionSeedingProcess(RandomVariable):
 
     def __init__(
         self,
-        I0_dist: dist.Distribution,
-        # TODO make I0_dist a RandomVariable
+        I_pre_seed_rv: RandomVariable,
         infection_seed_method: InfectionSeedMethod,
     ) -> None:
-        InfectionSeedingProcess.validate(I0_dist, infection_seed_method)
+        InfectionSeedingProcess.validate(I_pre_seed_rv, infection_seed_method)
 
-        self.I0_dist = I0_dist
+        self.I_pre_seed_rv = I_pre_seed_rv
         self.infection_seed_method = infection_seed_method
 
         return None
 
     @staticmethod
     def validate(
-        I0_dist: dist.Distribution,
+        I_pre_seed_rv: RandomVariable,
         infection_seed_method: InfectionSeedMethod,
     ) -> None:
-        if not isinstance(I0_dist, dist.Distribution):
-            raise TypeError("I0_dist must be an instance of dist.Distribution")
+        if not isinstance(I_pre_seed_rv, RandomVariable):
+            raise TypeError(
+                "I_pre_seed_rv must be an instance of RandomVariable"
+            )
         if not isinstance(infection_seed_method, InfectionSeedMethod):
             raise TypeError(
                 "infection_seed_method must be an instance of InfectionSeedMethod"
             )
 
     def sample(self) -> tuple:
-        I0_unseeded = npro.sample(
-            "I0_unseeded",
-            self.I0_dist,
-            sample_shape=(1,),
-        )
-        infection_seeding = self.infection_seed_method(I0_unseeded)
-        npro.deterministic("I0", infection_seeding)
+        (I_pre_seed,) = self.I_pre_seed_rv.sample()
+        infection_seeding = self.infection_seed_method(I_pre_seed)
+        npro.deterministic("I_seed", infection_seeding)
 
         return (infection_seeding,)
