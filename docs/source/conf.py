@@ -13,10 +13,10 @@ sys.path.insert(0, os.path.abspath("../../model/src"))
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = "CFA Multisignal Renewal"
-copyright = "2024, CFA"
-author = "CFA"
-release = "0.0.1"
+project = "Multisignal Renewal Models for Epi Inference"
+copyright = "2024, CDC CFA"
+author = "CDC's Center for Forecasting Analytics"
+release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -60,5 +60,24 @@ todo_include_todos = False
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "sphinx_book_theme"
+html_theme_options = {
+    "repository_url": "https://github.com/CDCgov/multisignal-epi-inference",
+    "use_edit_page_button": True,
+    "use_issues_button": True,
+    "use_repository_button": True,
+    "repository_branch": "main",
+    "path_to_docs": "docs/source",
+    "use_download_button": True,
+}
+
 html_static_path = ["_static"]
 html_css_files = ["msei.css"]
+
+html_sidebars = {
+    "**": [
+        "navbar-logo.html",
+        "search-field.html",
+        "sbt-sidebar-nav.html",
+    ]
+}
+master_doc = "general/ctoc"

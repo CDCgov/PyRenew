@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
+from __future__ import annotations
+
 from typing import NamedTuple
 
 import jax.numpy as jnp

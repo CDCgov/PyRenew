@@ -8,6 +8,8 @@ encountered probability distributions
 found in renewal equation modeling,
 such as discrete time-to-event distributions
 """
+from __future__ import annotations
+
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 

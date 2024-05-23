@@ -11,6 +11,8 @@ jax.lax.scan. Factories generate functions
 that can be passed to scan with an
 appropriate array to scan.
 """
+from __future__ import annotations
+
 from typing import Callable
 
 import jax.numpy as jnp

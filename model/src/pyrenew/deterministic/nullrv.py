@@ -1,5 +1,7 @@
 # numpydoc ignore=GL08
 
+from __future__ import annotations
+
 from jax.typing import ArrayLike
 from pyrenew.deterministic.deterministic import DeterministicVariable
 

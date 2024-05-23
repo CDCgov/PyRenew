@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
+from __future__ import annotations
+
 from jax.typing import ArrayLike
 from pyrenew.deterministic.deterministic import DeterministicVariable
 from pyrenew.distutil import validate_discrete_dist_vector
