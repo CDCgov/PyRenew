@@ -35,16 +35,12 @@ class InfectionSeedingProcess(RandomVariable):
             )
 
     def sample(self) -> tuple:
-        I0 = npro.sample(
-            "I0_only",
+        I0_unseeded = npro.sample(
+            "I0_unseeded",
             self.I0_dist,
             sample_shape=(1,),
         )
-        if I0.size != 1:
-            raise ValueError(
-                f"I0 must be an array of size 1. Got size {I0.size}."
-            )
-        infection_seeding = self.infection_seed_method.seed_infections(I0)
+        infection_seeding = self.infection_seed_method(I0_unseeded)
         npro.deterministic("I0", infection_seeding)
 
         return (infection_seeding,)
