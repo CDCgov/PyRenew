@@ -17,7 +17,7 @@ class DeterministicPMF(RandomVariable):
         self,
         vars: ArrayLike,
         label: str = "a_random_variable",
-        tol: float = 1e-20,
+        tol: float = 1e-5,
     ) -> None:
         """
         Default constructor
@@ -35,7 +35,7 @@ class DeterministicPMF(RandomVariable):
             A label to assign to the process. Defaults to "a_random_variable"
         tol : float, optional
             Passed to pyrenew.distutil.validate_discrete_dist_vector. Defaults
-            to 1e-20.
+            to 1e-5.
 
         Returns
         -------
