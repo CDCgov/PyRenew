@@ -50,12 +50,14 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.process import RtRandomWalkProcess
-from pyrenew.latent import Infections, Infections0
+from pyrenew.latent import (
+    Infections, Infections0,
+    InfectionSeedingProcess,
+    SeedInfectionsZeroPad,
+)
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
-from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
-from pyrenew.latent.infection_seeding_method import SeedInfectionsZeroPad
 ```
 
 The pyrenew package models the real-time reproductive number $R_t$, the ratio of new infections at time $t$ to previous infections at some time $t-s$, as a renewal process model. Our basic renewal process model defines five components:

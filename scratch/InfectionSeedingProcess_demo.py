@@ -1,13 +1,14 @@
+"""This is a demo"""
 import jax.numpy as jnp
 import numpyro as npro
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent import Infections0
-from pyrenew.latent.infection_seeding_method import (
+from pyrenew.latent import (
+    Infections0,
+    InfectionSeedingProcess,
     SeedInfectionsExponential,
     SeedInfectionsFromVec,
     SeedInfectionsZeroPad,
 )
-from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
 
 n_timepoints = 10
 rng_seed = 1

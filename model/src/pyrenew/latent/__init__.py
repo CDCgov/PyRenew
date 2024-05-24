@@ -12,6 +12,13 @@ from pyrenew.latent.infection_functions import (
     sample_infections_rt,
     sample_infections_with_feedback,
 )
+from pyrenew.latent.infection_seeding_method import (
+    InfectionSeedMethod,
+    SeedInfectionsExponential,
+    SeedInfectionsFromVec,
+    SeedInfectionsZeroPad,
+)
+from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
 from pyrenew.latent.infections import Infections
 
 __all__ = [
@@ -22,4 +29,9 @@ __all__ = [
     "sample_infections_rt",
     "sample_infections_with_feedback",
     "Infections0",
+    "InfectionSeedMethod",
+    "SeedInfectionsExponential",
+    "SeedInfectionsFromVec",
+    "SeedInfectionsZeroPad",
+    "InfectionSeedingProcess",
 ]
