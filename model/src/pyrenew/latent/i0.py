@@ -15,7 +15,7 @@ class Infections0(DistributionalRV):
 
     def __init__(
         self,
-        dist: dist.Distribution | None = dist.LogNormal(0, 1),
+        dist: dist.Distribution,
         name: str | None = "I0",
     ) -> None:
         """
