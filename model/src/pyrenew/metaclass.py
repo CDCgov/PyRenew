@@ -152,7 +152,7 @@ class DistributionalRVSample(NamedTuple):
 
 class DistributionalRV(RandomVariable):
     """
-    Class for random variables that are numpyro distributions.
+    Wrapper class for random variables that sample from a single `numpyro.distributions.Distribution`.
     """
 
     def __init__(
