@@ -152,7 +152,16 @@ class InfectionsWithFeedback(RandomVariable):
         InfectionsWithFeedback
             Named tuple with "infections".
         """
+        if I0.size < gen_int.size:
+            raise ValueError(
+                "Initial infections must be at least as long as the "
+                f"generation interval. Got {I0.size} initial infections "
+                f"and {gen_int.size} generation interval."
+            )
+
         gen_int_rev = jnp.flip(gen_int)
+
+        I0 = I0[: gen_int_rev.size]
 
         # Sampling inf feedback strength
         inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
