@@ -206,7 +206,7 @@ class DistributionalRV(RandomVariable):
         Parameters
         ----------
         obs : ArrayLike, optional
-            Observations to be passed to the distribution, by default None.
+            Observations passed as the `obs` argument to `numpyro.sample()`. Default `None`.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample calls,
             should there be any.
