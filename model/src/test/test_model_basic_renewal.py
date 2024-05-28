@@ -233,6 +233,3 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     # For now the assertion is only about the expected number of rows
     # It should be about the MCMC inference.
     assert inf_mean.to_numpy().shape[0] == 500
-
-
-test_model_basicrenewal_plot()
