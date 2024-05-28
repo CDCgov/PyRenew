@@ -15,7 +15,7 @@ from pyrenew.metaclass import RandomVariable
 
 class HospAdmissionsSample(NamedTuple):
     """
-    A container for holding the output from HospAdmissionsSample.sample.
+    A container for holding the output from `lantent.HospAdmissions.sample()`.
 
     Attributes
     ----------
@@ -34,7 +34,7 @@ class HospAdmissionsSample(NamedTuple):
 
 class InfectHospRateSample(NamedTuple):
     """
-    A container for holding the output from InfectHospRateSample.sample.
+    A container for holding the output from `lantent.InfectHospRate.sample()`.
 
     Attributes
     ----------
