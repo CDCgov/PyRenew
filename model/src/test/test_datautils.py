@@ -38,7 +38,7 @@ def test_datautils_pad_to_match():
 
 def test_datautils_pad_x_to_match_y():
     """
-    Verifies extension when required and error when `fix_y` is True.
+    Verifies extension when required
     """
 
     x = jnp.array([1, 2])
