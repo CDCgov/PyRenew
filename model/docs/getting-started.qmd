@@ -92,7 +92,7 @@ gen_int = DeterministicPMF(pmf_array)
 
 # (2) Initial infections (inferred with a prior)
 I0 = InfectionSeedingProcess(
-    dist.LogNormal(0, 1),
+    Infections0(),
     SeedInfectionsZeroPad(pmf_array.size))
 
 # (3) The random process for Rt
@@ -160,11 +160,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, 31), sim_data.Rt)
+axs[0].plot(sim_data.Rt)
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, 31), sim_data.sampled_infections)
+axs[1].plot(sim_data.sampled_infections)
 axs[1].set_ylabel('Infections')
 
 fig.suptitle('Basic renewal model')
@@ -183,7 +183,7 @@ model1.run(
     num_warmup=2000,
     num_samples=1000,
     observed_infections=sim_data.sampled_infections,
-    n_timepoints = len(sim_data[1])-1,
+    n_timepoints = len(sim_data[1])-5,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )

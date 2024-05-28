@@ -127,7 +127,7 @@ from pyrenew import latent, deterministic
 import jax.numpy as jnp
 import numpyro.distributions as dist
 
-inf_hosp_int = deterministic.DeterministicPMF(inf_hosp_int, tol = 1e-2)
+inf_hosp_int = deterministic.DeterministicPMF(inf_hosp_int)
 
 hosp_rate = latent.InfectHospRate(
     dist=dist.LogNormal(jnp.log(0.05), 0.1)
@@ -144,12 +144,12 @@ The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to ho
 ```{python}
 #| label: initializing-rest-of-model
 from pyrenew import model, process, observation
-from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsZeroPad
+from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsZeroPad, Infections0
 
 # Infection process
 latent_inf = latent.Infections()
 I0 = InfectionSeedingProcess(
-    dist.LogNormal(loc=jnp.log(80/.05), scale=1.5),
+    Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=1.5)),
     SeedInfectionsZeroPad(gen_int_array.size))
 
 # Generation interval and Rt
@@ -198,11 +198,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, timeframe + 1), sim_data.Rt)
+axs[0].plot(sim_data.Rt)
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, timeframe + 1), sim_data.sampled_admissions)
+axs[1].plot(sim_data.sampled_admissions)
 axs[1].set_ylabel('Infections')
 axs[1].set_yscale('log')
 
@@ -224,7 +224,7 @@ import jax
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat.shape[0] - 1,
+    n_timepoints=dat.shape[0] - 16,
     observed_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
@@ -263,7 +263,7 @@ dat_w_padding = np.hstack((np.repeat(np.nan, days_to_impute), dat_w_padding))
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat_w_padding.shape[0] - 1,
+    n_timepoints=dat_w_padding.shape[0] - 16,
     observed_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
@@ -361,7 +361,7 @@ Running the model (with the same padding as before):
 hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat_w_padding.shape[0] - 1,
+    n_timepoints=dat_w_padding.shape[0] - 16,
     observed_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
