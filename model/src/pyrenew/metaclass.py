@@ -199,7 +199,7 @@ class DistributionalRV(RandomVariable):
         self,
         obs: ArrayLike | None = None,
         **kwargs,
-    ) -> tuple:
+    ) -> DistributionalRVSample:
         """
         Sample from the distribution.
 
