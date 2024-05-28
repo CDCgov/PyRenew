@@ -139,7 +139,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:
 
     Notes
     -----
-    IMPORTANT: If this test breaks, then it could be that you need
+    IMPORTANT: If this test fails, it may be that you need
     to regenerate the figures. To do so, you can the test using the following
     command:
 
