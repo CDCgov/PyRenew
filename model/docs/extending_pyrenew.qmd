@@ -132,7 +132,7 @@ The next step is to create the actual class. The bulk of its implementation lies
 #| code-line-numbers: true
 # Creating the class
 from pyrenew.metaclass import RandomVariable
-from pyrenew.latent import sample_infections_with_feedback
+from pyrenew.latent import compute_infections_from_rt_with_feedback
 from pyrenew import datautils as du
 from jax.typing import ArrayLike
 
