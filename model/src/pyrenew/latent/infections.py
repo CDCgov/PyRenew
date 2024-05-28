@@ -107,7 +107,7 @@ class Infections(RandomVariable):
         n_lead = gen_int_rev.size - 1
         I0_vec = jnp.hstack([jnp.zeros(n_lead), I0])
 
-        all_infections = inf.compute_future_infections_rt(
+        all_infections = inf.compute_infections_from_rt(
             I0=I0_vec,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
