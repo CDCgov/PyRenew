@@ -63,8 +63,8 @@ def test_infectionsrtfeedback():
     """
 
     Rt = jnp.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25])
-    I0 = jnp.array([0.0, 0.0, 0.0, 1.0])
-    gen_int = jnp.array([0.4, 0.25, 0.25, 0.1])
+    I0 = jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+    gen_int = jnp.array([0.4, 0.25, 0.25, 0.1, 0.0, 0.0, 0.0])
 
     # By doing the infection feedback strength 0, Rt = Rt_adjusted
     # So infection should be equal in both
@@ -104,8 +104,8 @@ def test_infectionsrtfeedback_feedback():
     """
 
     Rt = jnp.array([0.5, 0.6, 1.5, 2.523, 0.7, 0.8])
-    I0 = jnp.array([0.0, 0.0, 0.0, 1.0])
-    gen_int = jnp.array([0.25, 0.3, 0.25, 0.2])
+    I0 = jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+    gen_int = jnp.array([0.4, 0.25, 0.25, 0.1, 0.0, 0.0, 0.0])
 
     inf_feed_strength = DeterministicVariable(jnp.repeat(0.5, len(Rt)))
     inf_feedback_pmf = DeterministicPMF(gen_int)
@@ -144,3 +144,6 @@ def test_infectionsrtfeedback_feedback():
     assert_array_almost_equal(samp1.rt, res["rt"])
 
     return None
+
+
+test_infectionsrtfeedback()

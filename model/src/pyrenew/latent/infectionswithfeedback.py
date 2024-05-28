@@ -180,7 +180,7 @@ class InfectionsWithFeedback(RandomVariable):
 
         inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
-        all_infections, Rt_adj = inf.sample_infections_with_feedback(
+        all_infections, Rt_adj = inf.compute_infections_from_rt_with_feedback(
             I0=I0,
             Rt_raw=Rt,
             infection_feedback_strength=inf_feedback_strength,

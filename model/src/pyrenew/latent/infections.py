@@ -106,8 +106,17 @@ class Infections(RandomVariable):
 
         gen_int_rev = jnp.flip(gen_int)
 
-        n_lead = gen_int_rev.size - 1
-        I0_vec = jnp.hstack([jnp.zeros(n_lead), I0])
+        if I0.size < gen_int_rev.size:
+            raise ValueError(
+                "Initial infections vector must be at least as long as "
+                "the generation interval."
+                f"Initial infections vector length: {I0.size}, "
+                f"generation interval length: {gen_int_rev.size}."
+            )
+        elif I0.size > gen_int_rev.size:
+            I0_vec = I0[: gen_int_rev.size]
+        else:
+            I0_vec = I0
 
         all_infections = inf.compute_infections_from_rt(
             I0=I0_vec,

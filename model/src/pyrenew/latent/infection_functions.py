@@ -93,6 +93,7 @@ def compute_infections_from_rt_with_feedback(
     reversed_generation_interval_pmf: ArrayLike,
     reversed_infection_feedback_pmf: ArrayLike,
 ) -> tuple:
+    """
     Generate infections according to
     a renewal process with infection
     feedback (generalizing Asher 2018:

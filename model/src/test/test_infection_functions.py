@@ -8,14 +8,14 @@ from numpy.testing import assert_array_equal
 from pyrenew.latent import infection_functions as inf
 
 
-def test_sample_infections_with_feedback():
+def test_compute_infections_from_rt_with_feedback():
     """
     test that the implementation of infection
     feedback is as expected
     """
 
     # if feedback is zero, results should be
-    # equivalent to sample_infections_rt
+    # equivalent to compute_infections_from_rt
     # and Rt_adjusted should be Rt_raw
 
     gen_ints = [
@@ -40,12 +40,16 @@ def test_sample_infections_with_feedback():
 
     for I0, gen_int, inf_pmf in zip(I0s, gen_ints, inf_pmfs):
         for Rt_raw in Rts_raw:
-            infs_feedback, Rt_adj = inf.sample_infections_with_feedback(
+            (
+                infs_feedback,
+                Rt_adj,
+            ) = inf.compute_infections_from_rt_with_feedback(
                 I0, Rt_raw, jnp.zeros_like(Rt_raw), gen_int, inf_pmf
             )
 
             assert_array_equal(
-                inf.sample_infections_rt(I0, Rt_raw, gen_int), infs_feedback
+                inf.compute_infections_from_rt(I0, Rt_raw, gen_int),
+                infs_feedback,
             )
 
             assert_array_equal(Rt_adj, Rt_raw)

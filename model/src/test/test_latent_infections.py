@@ -5,6 +5,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
+import pytest
 from pyrenew.latent import Infections
 from pyrenew.process import RtRandomWalkProcess
 
@@ -37,3 +38,8 @@ def test_infections_as_deterministic():
     testing.assert_array_equal(
         inf_sampled1.infections, inf_sampled2.infections
     )
+
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        with pytest.raises(ValueError):
+            obs["I0"] = jnp.array([1])
+            inf1.sample(**obs)
