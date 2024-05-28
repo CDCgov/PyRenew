@@ -24,7 +24,7 @@ class Infections0(DistributionalRV):
         Parameters
         ----------
         dist : dist.Distribution, optional
-            Distribution of the initial infections, by default dist.LogNormal(0, 1)
+            Distribution of the initial infection count.
         name : str, optional
             Name of the random variable, by default "I0"
 
