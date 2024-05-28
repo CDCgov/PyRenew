@@ -79,7 +79,7 @@ class Infections(RandomVariable):
         I0: ArrayLike,
         gen_int: ArrayLike,
         **kwargs,
-    ) -> tuple:
+    ) -> InfectionsSample:
         """
         Samples infections given Rt, initial infections, and generation
         interval.

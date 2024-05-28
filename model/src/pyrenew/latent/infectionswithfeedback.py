@@ -128,7 +128,7 @@ class InfectionsWithFeedback(RandomVariable):
         I0: ArrayLike,
         gen_int: ArrayLike,
         **kwargs,
-    ) -> tuple:
+    ) -> InfectionsRtFeedbackSample:
         """
         Samples infections given Rt, initial infections, and generation
         interval.
