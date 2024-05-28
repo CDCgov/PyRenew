@@ -50,11 +50,15 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.process import RtRandomWalkProcess
+<<<<<<< HEAD
 from pyrenew.latent import (
     Infections,
     InfectionSeedingProcess,
     SeedInfectionsZeroPad,
 )
+=======
+from pyrenew.latent import Infections
+>>>>>>> 77dc819 (New metaclass.DistributionalRV (#138))
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
@@ -77,7 +81,11 @@ To initialize these five components within the renewal modeling framework, we es
 
 (1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
+<<<<<<< HEAD
 (2) an instance of the `InfectionSeedingProcess` class, with a log-normal distribution with mean = 0 and standard deviation = 1 as input
+=======
+(2) an instance of the `DistributionalRV` class, with a log-normal distribution with mean = 0 and standard deviation = 1 as input.
+>>>>>>> 77dc819 (New metaclass.DistributionalRV (#138))
 
 (3) an instance of the `RtRandomWalkProcess` class with default values
 
@@ -95,7 +103,6 @@ gen_int = DeterministicPMF(pmf_array)
 I0 = InfectionSeedingProcess(
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     SeedInfectionsZeroPad(pmf_array.size))
-
 
 # (3) The random process for Rt
 rt_proc = RtRandomWalkProcess()
@@ -127,7 +134,11 @@ The following diagram summarizes how the modules interact via composition; notab
 %%| include: true
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
+<<<<<<< HEAD
     i0["(2) I0\n(InfectionSeedingProcess)"]
+=======
+    i0["(2) I0\n(DistributionalRV)"]
+>>>>>>> 77dc819 (New metaclass.DistributionalRV (#138))
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     inf["(4) latent_infections\n(Infections)"]
     obs["(5) observation_process\n(PoissonObservation)"]
