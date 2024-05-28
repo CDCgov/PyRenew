@@ -54,8 +54,9 @@ Next, import several additional functions from the `latent` module of the `pyren
 
 ```{python}
 from pyrenew.latent import (
-    Infections, HospitalAdmissions, Infections0, InfectHospRate,
+    Infections, HospitalAdmissions, InfectHospRate,
 )
+from pyrenew.metaclass import DistributionalRV
 ```
 
 Additionally, import several classes from Pyrenew, including a Poisson observation process, determininstic PMF and variable classes, the Pyrenew hospitalization model, and a renewal model (Rt) random walk process:
@@ -88,7 +89,7 @@ To initialize the model, we first define initial conditions, including:
 gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
 # 2) Initial infections
-I0 = Infections0(dist=dist.LogNormal(0, 1))
+I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
 # 3) The latent infections process
 latent_infections = Infections()

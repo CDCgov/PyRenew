@@ -141,7 +141,7 @@ class DistributionalRVSample(NamedTuple):
         Sampled value from the distribution.
     """
 
-    value: ArrayLike
+    value: ArrayLike | None = None
 
     def __repr__(self) -> str:
         """

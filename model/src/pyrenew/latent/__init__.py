@@ -6,7 +6,6 @@ from pyrenew.latent.hospitaladmissions import (
     HospitalAdmissions,
     InfectHospRate,
 )
-from pyrenew.latent.i0 import Infections0
 from pyrenew.latent.infection_functions import (
     logistic_susceptibility_adjustment,
     sample_infections_rt,
@@ -21,5 +20,4 @@ __all__ = [
     "logistic_susceptibility_adjustment",
     "sample_infections_rt",
     "sample_infections_with_feedback",
-    "Infections0",
 ]
