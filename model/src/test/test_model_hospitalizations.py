@@ -12,13 +12,8 @@ from pyrenew.deterministic import (
     DeterministicVariable,
     NullObservation,
 )
-from pyrenew.latent import (
-    HospitalAdmissions,
-    InfectHospRate,
-    Infections,
-    Infections0,
-)
-from pyrenew.metaclass import RandomVariable
+from pyrenew.latent import HospitalAdmissions, Infections
+from pyrenew.metaclass import DistributionalRV, RandomVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
@@ -48,7 +43,7 @@ def test_model_hosp_no_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -80,8 +75,8 @@ def test_model_hosp_no_obs_model():
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
         admissions_predicted_varname="observed_admissions",
-        infect_hosp_rate_dist=InfectHospRate(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+        infect_hosp_rate_dist=DistributionalRV(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
@@ -144,7 +139,7 @@ def test_model_hosp_with_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -177,8 +172,8 @@ def test_model_hosp_with_obs_model():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
-        infect_hosp_rate_dist=InfectHospRate(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+        infect_hosp_rate_dist=DistributionalRV(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
@@ -223,7 +218,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -267,8 +262,8 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         infection_to_admission_interval=inf_hosp,
         weekday_effect_dist=weekday,
         hosp_report_prob_dist=hosp_report_prob_dist,
-        infect_hosp_rate_dist=InfectHospRate(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+        infect_hosp_rate_dist=DistributionalRV(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
@@ -313,7 +308,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -364,8 +359,8 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         infection_to_admission_interval=inf_hosp,
         weekday_effect_dist=weekday,
         hosp_report_prob_dist=hosp_report_prob_dist,
-        infect_hosp_rate_dist=InfectHospRate(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+        infect_hosp_rate_dist=DistributionalRV(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 

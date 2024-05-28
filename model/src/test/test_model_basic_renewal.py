@@ -10,7 +10,8 @@ import numpyro.distributions as dist
 import polars as pl
 import pytest
 from pyrenew.deterministic import DeterministicPMF, NullObservation
-from pyrenew.latent import Infections, Infections0
+from pyrenew.latent import Infections
+from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
@@ -24,7 +25,10 @@ def test_model_basicrenewal_no_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    with pytest.raises(ValueError):
+        I0 = DistributionalRV(dist=1, name="I0")
+
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
 
@@ -86,7 +90,7 @@ def test_model_basicrenewal_with_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
 
@@ -131,7 +135,7 @@ def test_model_basicrenewal_with_obs_model():
 def test_model_basicrenewal_plot() -> plt.Figure:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
 
@@ -169,7 +173,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:  # numpydoc ignore=GL08
 def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
 
