@@ -144,6 +144,3 @@ def test_infectionsrtfeedback_feedback():
     assert_array_almost_equal(samp1.rt, res["rt"])
 
     return None
-
-
-test_infectionsrtfeedback()
