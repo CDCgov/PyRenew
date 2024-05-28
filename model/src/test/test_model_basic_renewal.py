@@ -25,6 +25,9 @@ def test_model_basicrenewal_no_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
+    with pytest.raises(ValueError):
+        I0 = DistributionalRV(dist=1, name="I0")
+
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()

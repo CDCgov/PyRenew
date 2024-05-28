@@ -122,14 +122,15 @@ With these two in hand, we can start building the model. First, we will define t
 
 ```{python}
 #| label: latent-hosp
-from pyrenew import latent, deterministic
+from pyrenew import latent, deterministic, metaclass
 import jax.numpy as jnp
 import numpyro.distributions as dist
 
 inf_hosp_int = deterministic.DeterministicPMF(inf_hosp_int)
 
-hosp_rate = latent.InfectHospRate(
-    dist=dist.LogNormal(jnp.log(0.05), 0.1)
+hosp_rate = metaclass.DistributionalRV(
+    dist=dist.LogNormal(jnp.log(0.05), 0.1),
+    name="IHR",
 )
 
 latent_hosp = latent.HospitalAdmissions(
@@ -138,7 +139,7 @@ latent_hosp = latent.HospitalAdmissions(
     )
 ```
 
-The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospitalization interval as input. The `hosp_rate` is an `InfectHospRate` object that takes the infection to hospitalization rate as input. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospitalization rate. Now, we can define the rest of the other components:
+The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospitalization interval as input. The `hosp_rate` is a `DistributionalRV` object that takes a numpyro distribution to represent the infection to hospitalization rate. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospitalization rate. Now, we can define the rest of the other components:
 
 ```{python}
 #| label: initializing-rest-of-model

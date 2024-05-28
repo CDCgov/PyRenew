@@ -7,10 +7,9 @@ from typing import Any, NamedTuple, Optional
 
 import jax.numpy as jnp
 import numpyro as npro
-import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.metaclass import DistributionalRV, RandomVariable
+from pyrenew.metaclass import RandomVariable
 
 
 class HospAdmissionsSample(NamedTuple):
@@ -30,36 +29,6 @@ class HospAdmissionsSample(NamedTuple):
 
     def __repr__(self):
         return f"HospAdmissionsSample(infection_hosp_rate={self.IRH}, predicted={self.predicted})"
-
-
-class InfectHospRate(DistributionalRV):
-    """
-    Infection-to-Hospitalization rate (wrapper of DistributionalRV)
-    """
-
-    def __init__(
-        self,
-        dist: dist.Distribution,
-        name: str = "infection_hosp_rate",
-    ) -> None:
-        """
-        Default constructor
-
-        Parameters
-        ----------
-        dist : dist.Distribution
-            Prior distribution of the IHR.
-        name : str, optional
-            Name of the random variable in the model, by default "infection_hosp_rate."
-
-        Returns
-        -------
-        None
-        """
-
-        super().__init__(dist=dist, name=name)
-
-        return None
 
 
 class HospitalAdmissions(RandomVariable):
