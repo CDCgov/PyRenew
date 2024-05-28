@@ -9,7 +9,7 @@ from jax.typing import ArrayLike
 from pyrenew.convolve import new_convolve_scanner, new_double_scanner
 
 
-def compute_future_infections_rt(
+def compute_infections_from_rt(
     I0: ArrayLike,
     Rt: ArrayLike,
     reversed_generation_interval_pmf: ArrayLike,
@@ -86,7 +86,7 @@ def logistic_susceptibility_adjustment(
     return n_population * frac_susceptible * approx_frac_infected
 
 
-def compute_future_infections_with_feedback(
+def compute_infections_from_rt_with_feedback(
     I0: ArrayLike,
     Rt_raw: ArrayLike,
     infection_feedback_strength: ArrayLike,

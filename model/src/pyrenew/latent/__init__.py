@@ -8,8 +8,8 @@ from pyrenew.latent.hospitaladmissions import (
 )
 from pyrenew.latent.i0 import Infections0
 from pyrenew.latent.infection_functions import (
-    compute_future_infections_rt,
-    compute_future_infections_with_feedback,
+    compute_infections_from_rt,
+    compute_infections_from_rt_with_feedback,
     logistic_susceptibility_adjustment,
 )
 from pyrenew.latent.infections import Infections
@@ -19,7 +19,7 @@ __all__ = [
     "InfectHospRate",
     "Infections",
     "logistic_susceptibility_adjustment",
-    "compute_future_infections_rt",
-    "compute_future_infections_with_feedback",
+    "compute_infections_from_rt",
+    "compute_infections_from_rt_with_feedback",
     "Infections0",
 ]
