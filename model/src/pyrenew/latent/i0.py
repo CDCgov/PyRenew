@@ -57,7 +57,7 @@ class Infections0(RandomVariable):
         Raises
         ------
         AssertionError
-            If the inputted distribution is not a Numpyro distribution.
+            If the passed distribution is not a Numpyro distribution.
         """
         assert isinstance(i0_dist, dist.Distribution)
 
