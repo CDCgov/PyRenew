@@ -24,7 +24,7 @@ def test_model_basicrenewal_no_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = Infections0(dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 
@@ -86,7 +86,7 @@ def test_model_basicrenewal_with_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = Infections0(dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 
@@ -131,7 +131,7 @@ def test_model_basicrenewal_with_obs_model():
 def test_model_basicrenewal_plot() -> plt.Figure:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = Infections0(dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 
@@ -169,7 +169,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:  # numpydoc ignore=GL08
 def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = Infections0(dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 

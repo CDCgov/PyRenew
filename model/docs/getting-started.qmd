@@ -72,7 +72,7 @@ To initialize these five components within the renewal modeling framework, we es
 
 (1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
-(2) an instance of the `Infections0` class, with a log-normal distribution with mean = 0 and standard deviation = 1 as input
+(2) an instance of the `Infections0` class, with a log-normal distribution with mean = 0 and standard deviation = 1 as input.
 
 (3) an instance of the `RtRandomWalkProcess` class with default values
 
@@ -86,7 +86,7 @@ To initialize these five components within the renewal modeling framework, we es
 gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
 # (2) Initial infections (inferred with a prior)
-I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+I0 = Infections0(dist=dist.LogNormal(0, 1))
 
 # (3) The random process for Rt
 rt_proc = RtRandomWalkProcess()
@@ -96,6 +96,13 @@ latent_infections = Infections()
 
 # (5) The observed infections process (with mean at the latent infections)
 observation_process = PoissonObservation()
+```
+
+Notice that `Infections0` is an instance of the `DistributionalRV(RandomVariable)` class; therefore, the following could also be used:
+
+```py
+from pyrenew.metaclass import DistributionalRV
+I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name = "I0")
 ```
 
 With these five pieces, we can build the basic renewal model as an instance of the  `RtInfectionsRenewalModel` class:

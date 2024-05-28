@@ -48,7 +48,7 @@ def test_model_hosp_no_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = Infections0(dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -144,7 +144,7 @@ def test_model_hosp_with_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = Infections0(dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -223,7 +223,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = Infections0(dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -313,7 +313,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+    I0 = Infections0(dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()

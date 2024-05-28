@@ -146,7 +146,7 @@ from pyrenew import model, process, observation
 
 # Infection process
 latent_inf = latent.Infections()
-I0 = latent.Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=1.5))
+I0 = latent.Infections0(dist=dist.LogNormal(loc=jnp.log(80/.05), scale=1.5))
 
 # Generation interval and Rt
 gen_int = deterministic.DeterministicPMF(gen_int)

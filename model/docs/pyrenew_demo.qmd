@@ -88,7 +88,7 @@ To initialize the model, we first define initial conditions, including:
 gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
 # 2) Initial infections
-I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+I0 = Infections0(dist=dist.LogNormal(0, 1))
 
 # 3) The latent infections process
 latent_infections = Infections()
