@@ -106,8 +106,11 @@ class Infections(RandomVariable):
 
         gen_int_rev = jnp.flip(gen_int)
 
-        all_infections = inf.sample_infections_rt(
-            I0=I0,
+        n_lead = gen_int_rev.size - 1
+        I0_vec = jnp.hstack([jnp.zeros(n_lead), I0])
+
+        all_infections = inf.compute_infections_from_rt(
+            I0=I0_vec,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
         )
