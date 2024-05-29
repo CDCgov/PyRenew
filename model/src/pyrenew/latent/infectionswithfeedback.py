@@ -169,11 +169,18 @@ class InfectionsWithFeedback(RandomVariable):
         )
 
         # Making sure inf_feedback_strength spans the Rt length
-        inf_feedback_strength = du.pad_x_to_match_y(
-            x=inf_feedback_strength,
-            y=Rt,
-            fill_value=0.0,
-        )
+        if inf_feedback_strength.size == 1:
+            inf_feedback_strength = du.pad_x_to_match_y(
+                x=inf_feedback_strength,
+                y=Rt,
+                fill_value=inf_feedback_strength[0],
+            )
+        elif inf_feedback_strength.size != Rt.size:
+            raise ValueError(
+                "Infection feedback strength must be of size 1 or the same "
+                f"size as the reproduction number. Got {inf_feedback_strength.size} "
+                f"and {Rt.size} respectively."
+            )
 
         # Sampling inf feedback pmf
         inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
