@@ -4,13 +4,37 @@
 import numpyro as npro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
+from numpyro.distributions import constraints
 from numpyro.distributions import transforms as nt
 from pyrenew.metaclass import RandomVariable
 from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
 
 
-class LogTransform(nt.ExpTransform):
-    r"""Logarithmic transformation (inverse of ExpTransform)"""
+class LogTransform(nt.Transform):
+    r"""
+    Partial implementation of Logarithmic transformation
+    (inverse of ExpTransform)
+    """
+
+    def __init__(
+        self, domain: constraints.Constraint = constraints.real
+    ) -> None:
+        """
+        Default constructor
+
+        Parameters
+        ----------
+        domain : numpyro.distributions.constraints.Constraint
+            Domain of the transformation, defaults to constraints.real
+
+        Returns
+        -------
+        None
+        """
+        self.domain = domain
+        self.transform = nt.ExpTransform(domain)
+
+        return None
 
     def __call__(self, x: ArrayLike) -> ArrayLike:
         """
@@ -25,7 +49,7 @@ class LogTransform(nt.ExpTransform):
         -------
         ArrayLike
         """
-        return super().inv(x)
+        return self.transform.inv(x)
 
     def inv(self, y: ArrayLike) -> ArrayLike:
         """
@@ -40,7 +64,7 @@ class LogTransform(nt.ExpTransform):
         -------
         ArrayLike
         """
-        return super().__call__(y)
+        return self.transform.__call__(y)
 
 
 class RtRandomWalkProcess(RandomVariable):
