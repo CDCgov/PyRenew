@@ -7,7 +7,6 @@ from typing import Any, NamedTuple, Optional
 
 import jax.numpy as jnp
 import numpyro as npro
-import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
@@ -30,94 +29,6 @@ class HospAdmissionsSample(NamedTuple):
 
     def __repr__(self):
         return f"HospAdmissionsSample(infection_hosp_rate={self.IRH}, predicted={self.predicted})"
-
-
-class InfectHospRateSample(NamedTuple):
-    """
-    A container for holding the output from `lantent.InfectHospRate.sample()`.
-
-    Attributes
-    ----------
-    IHR : float, optional
-        The infected hospitalization rate. Defaults to None.
-    """
-
-    IHR: float | None = None
-
-    def __repr__(self):
-        return f"InfectHospRateSample(IHR={self.IHR})"
-
-
-class InfectHospRate(RandomVariable):
-    """
-    Infection-to-Hospitalization rate
-    """
-
-    def __init__(
-        self,
-        dist: dist.Distribution | None,
-        varname: Optional[str] = "infection_hosp_rate",
-    ) -> None:
-        """
-        Default constructor
-
-        Parameters
-        ----------
-        dist : dist.Distribution
-            Prior distribution of the IHR.
-        varname : str, optional
-            Name of the random variable in the model, by default "infection_hosp_rate."
-
-        Returns
-        -------
-        None
-        """
-
-        self.validate(dist)
-        self.dist = dist
-        self.varname = varname
-
-        return None
-
-    @staticmethod
-    def validate(distr: dist.Distribution) -> None:
-        """
-        Validates distribution is Numpyro distribution
-
-        Parameters
-        ----------
-        distr : dist.Distribution
-            A ingested distribution (e.g., prior IHR distribution)
-
-        Raises
-        ------
-        AssertionError
-            If the inputted distribution is not a Numpyro distribution.
-        """
-        assert isinstance(distr, dist.Distribution)
-
-    def sample(self, **kwargs) -> InfectHospRateSample:
-        """
-        Produces a sample of an infection-to-hospitalization Rate (IHR)
-
-        Parameters
-        ----------
-        **kwargs : dict, optional
-            Additional keyword arguments passed through to internal
-            sample calls, should there be any.
-
-        Returns
-        -------
-        InfectHospRateSample
-            The sampled IHR
-        """
-        return InfectHospRateSample(
-            npro.sample(
-                name=self.varname,
-                fn=self.dist,
-            )
-        )
-
 
 class HospitalAdmissions(RandomVariable):
     r"""
