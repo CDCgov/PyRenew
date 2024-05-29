@@ -11,7 +11,7 @@ from abc import ABCMeta, abstractmethod
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
-from pyrenew.transform import AbstractTransform, IdentityTransform
+from numpyro.distributions import transforms as nt
 
 
 class AbstractRegressionPrediction(metaclass=ABCMeta):  # numpydoc ignore=GL08
@@ -44,7 +44,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         fixed_predictor_values: ArrayLike,
         intercept_prior: dist.Distribution,
         coefficient_priors: dist.Distribution,
-        transform: AbstractTransform = None,
+        transform: nt.Transform = None,
         intercept_suffix="_intercept",
         coefficient_suffix="_coefficients",
     ) -> None:
@@ -74,7 +74,7 @@ class GLMPrediction(AbstractRegressionPrediction):
             Vectorized prior distribution for the regression
             coefficient values
 
-        transform : pyrenew.AbstractTransform
+        transform : numpyro.distributions.transforms.Transform, optional
             Transform linking the scale of the
             regression to the scale of the observation.
             If `None`, use an identity transform. Default
@@ -90,7 +90,7 @@ class GLMPrediction(AbstractRegressionPrediction):
             Default `"_coefficients"`.
         """
         if transform is None:
-            transform = IdentityTransform()
+            transform = nt.IdentityTransform()
 
         self.name = name
         self.fixed_predictor_values = fixed_predictor_values
@@ -123,7 +123,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         transformed_prediction = (
             intercept + self.fixed_predictor_values @ coefficients
         )
-        return self.transform.inverse(transformed_prediction)
+        return self.transform.inv(transformed_prediction)
 
     def sample(self) -> dict:
         """

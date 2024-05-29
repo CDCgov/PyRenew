@@ -8,8 +8,8 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pyrenew.regression as r
-import pyrenew.transform as t
 from numpy.testing import assert_array_almost_equal
+from numpyro.distributions import transforms as t
 
 
 def test_glm_prediction():

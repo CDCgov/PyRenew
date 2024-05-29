@@ -3,9 +3,44 @@
 
 import numpyro as npro
 import numpyro.distributions as dist
+from jax.typing import ArrayLike
+from numpyro.distributions import transforms as nt
 from pyrenew.metaclass import RandomVariable
 from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
-from pyrenew.transform import AbstractTransform, LogTransform
+
+
+class LogTransform(nt.ExpTransform):
+    r"""Logarithmic transformation (inverse of ExpTransform)"""
+
+    def __call__(self, x: ArrayLike) -> ArrayLike:
+        """
+        Apply the transformation to x
+
+        Parameters
+        ----------
+        x : ArrayLike
+            Value to transform
+
+        Returns
+        -------
+        ArrayLike
+        """
+        return super().inv(x)
+
+    def inv(self, y: ArrayLike) -> ArrayLike:
+        """
+        Apply the inverse transformation to y
+
+        Parameters
+        ----------
+        y : ArrayLike
+            Value to transform
+
+        Returns
+        -------
+        ArrayLike
+        """
+        return super().__call__(y)
 
 
 class RtRandomWalkProcess(RandomVariable):
@@ -27,7 +62,7 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_dist: dist.Distribution = dist.TruncatedNormal(
             loc=1.2, scale=0.2, low=0
         ),
-        Rt_transform: AbstractTransform = LogTransform(),
+        Rt_transform: nt.Transform = LogTransform(),
         Rt_rw_dist: dist.Distribution = dist.Normal(0, 0.025),
     ) -> None:
         """
@@ -38,9 +73,10 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_dist : dist.Distribution, optional
             Initial distribution of Rt, defaults to
             dist.TruncatedNormal( loc=1.2, scale=0.2, low=0 )
-        Rt_transform : AbstractTransform, optional
+
+                    Rt_transform : numpyro.distributions.transformers.Transform, optional
             Transformation applied to the sampled Rt0, defaults
-            to LogTransform().
+            to ExpTransform.inv().
         Rt_rw_dist : dist.Distribution, optional
             Randomwalk process, defaults to dist.Normal(0, 0.025)
 
@@ -59,7 +95,7 @@ class RtRandomWalkProcess(RandomVariable):
     @staticmethod
     def validate(
         Rt0_dist: dist.Distribution,
-        Rt_transform: AbstractTransform,
+        Rt_transform: nt.Transform,
         Rt_rw_dist: dist.Distribution,
     ) -> None:
         """
@@ -69,9 +105,8 @@ class RtRandomWalkProcess(RandomVariable):
         ----------
         Rt0_dist : dist.Distribution, optional
             Initial distribution of Rt, expected dist.Distribution
-        Rt_transform : any
-            Transformation applied to the sampled Rt0, expected
-            AbstractTransform
+        Rt_transform : numpyro.distributions.transforms.Transform
+            Transformation applied to the sampled Rt0.
         Rt_rw_dist : any
             Randomwalk process, expected dist.Distribution.
 
@@ -83,10 +118,10 @@ class RtRandomWalkProcess(RandomVariable):
         ------
         AssertionError
             If Rt0_dist or Rt_rw_dist are not dist.Distribution or if
-            Rt_transform is not AbstractTransform.
+            Rt_transform is not numpyro.distributions.transforms.Transform.
         """
         assert isinstance(Rt0_dist, dist.Distribution)
-        assert isinstance(Rt_transform, AbstractTransform)
+        assert isinstance(Rt_transform, nt.Transform)
         assert isinstance(Rt_rw_dist, dist.Distribution)
 
     def sample(
@@ -120,6 +155,6 @@ class RtRandomWalkProcess(RandomVariable):
             init=Rt0_trans,
         )
 
-        Rt = npro.deterministic("Rt", self.Rt_transform.inverse(Rt_trans_ts))
+        Rt = npro.deterministic("Rt", self.Rt_transform.inv(Rt_trans_ts))
 
         return (Rt,)
