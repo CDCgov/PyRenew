@@ -109,13 +109,13 @@ class Infections(RandomVariable):
         gen_int_rev = jnp.flip(gen_int)
         recent_I0 = I0[-gen_int_rev.size :]
 
-        sampled_infections = inf.sample_infections_rt(
+        all_infections = inf.compute_infections_from_rt(
             I0=recent_I0,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        all_infections = jnp.hstack([I0, sampled_infections])
+        all_infections = jnp.hstack([I0, all_infections])
 
         npro.deterministic(self.infections_mean_varname, all_infections)
 

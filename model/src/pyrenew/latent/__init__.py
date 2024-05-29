@@ -2,15 +2,11 @@
 
 # numpydoc ignore=GL08
 
-from pyrenew.latent.hospitaladmissions import (
-    HospitalAdmissions,
-    InfectHospRate,
-)
-from pyrenew.latent.i0 import Infections0
+from pyrenew.latent.hospitaladmissions import HospitalAdmissions
 from pyrenew.latent.infection_functions import (
+    compute_infections_from_rt,
+    compute_infections_from_rt_with_feedback,
     logistic_susceptibility_adjustment,
-    sample_infections_rt,
-    sample_infections_with_feedback,
 )
 from pyrenew.latent.infection_seeding_method import (
     InfectionSeedMethod,
@@ -23,12 +19,10 @@ from pyrenew.latent.infections import Infections
 
 __all__ = [
     "HospitalAdmissions",
-    "InfectHospRate",
     "Infections",
     "logistic_susceptibility_adjustment",
-    "sample_infections_rt",
-    "sample_infections_with_feedback",
-    "Infections0",
+    "compute_infections_from_rt",
+    "compute_infections_from_rt_with_feedback",
     "InfectionSeedMethod",
     "SeedInfectionsExponential",
     "SeedInfectionsFromVec",

@@ -51,13 +51,14 @@ import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import (
-    Infections, Infections0,
+    Infections,
     InfectionSeedingProcess,
     SeedInfectionsZeroPad,
 )
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
+from pyrenew.metaclass import DistributionalRV
 ```
 
 The pyrenew package models the real-time reproductive number $R_t$, the ratio of new infections at time $t$ to previous infections at some time $t-s$, as a renewal process model. Our basic renewal process model defines five components:
@@ -92,8 +93,9 @@ gen_int = DeterministicPMF(pmf_array)
 
 # (2) Initial infections (inferred with a prior)
 I0 = InfectionSeedingProcess(
-    Infections0(),
+    DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     SeedInfectionsZeroPad(pmf_array.size))
+
 
 # (3) The random process for Rt
 rt_proc = RtRandomWalkProcess()
@@ -222,7 +224,7 @@ flowchart LR
 
     subgraph latent[Latent module]
         inf["latent_infections\n(Infections)"]
-        i0["I0\n(Infections0)"]
+        i0["I0\n(DistributionalRV)"]
     end
 
     subgraph process[Process module]
