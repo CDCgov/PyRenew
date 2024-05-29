@@ -50,7 +50,7 @@ def test_rtweeklydiff() -> None:
     """Checks basic functionality of the process"""
 
     params = {
-        "n_obs": 30,
+        "n_timepoints": 30,
         "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
         "autoreg": DeterministicVariable(jnp.array([0.7])),
@@ -95,7 +95,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     """Checks step size averages close to 0"""
 
     params = {
-        "n_obs": 1000,
+        "n_timepoints": 1000,
         "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.0, 0.0])),
         # No autoregression!
@@ -106,18 +106,18 @@ def test_rtweeklydiff_no_autoregressive() -> None:
 
     rtwd = RtWeeklyDiffProcess(**params)
 
-    assert rtwd.n_periods == int(jnp.ceil(params["n_obs"] / 7))
+    assert rtwd.n_periods == int(jnp.ceil(params["n_timepoints"] / 7))
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         rt = rtwd.sample().rt
 
     # Checking that the shape of the sampled Rt is correct
-    assert rt.shape == (rtwd.n_obs,)
+    assert rt.shape == (rtwd.n_timepoints,)
 
     # Checking that the sampled Rt is constant every 7 days
-    for i in range(0, rtwd.n_obs, 7):
-        j = jnp.min(jnp.array([i + 7, rtwd.n_obs]))
+    for i in range(0, rtwd.n_timepoints, 7):
+        j = jnp.min(jnp.array([i + 7, rtwd.n_timepoints]))
 
         assert_array_equal(rt[i:j], jnp.repeat(rt[i], rt[i:j].size))
 
@@ -131,7 +131,7 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
     """Checks that the 'manual' reconstruction is correct"""
 
     params = {
-        "n_obs": 30,
+        "n_timepoints": 30,
         "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
         "autoreg": DeterministicVariable(jnp.array([0.7])),
@@ -163,7 +163,7 @@ def test_rtperiodicdiff_smallsample():
     """Checks basic functionality of the process with a small sample size."""
 
     params = {
-        "n_obs": 6,
+        "n_timepoints": 6,
         "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
         "autoreg": DeterministicVariable(jnp.array([0.7])),
@@ -180,7 +180,7 @@ def test_rtperiodicdiff_smallsample():
         rt = rtwd.sample().rt
 
     # Checking that the shape of the sampled Rt is correct
-    assert rt.shape == (params["n_obs"],)
+    assert rt.shape == (params["n_timepoints"],)
 
     # Check that all values in rt are the same
     assert jnp.all(rt == rt[0])

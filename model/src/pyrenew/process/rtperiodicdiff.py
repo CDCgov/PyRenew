@@ -44,7 +44,7 @@ class RtPeriodicDiffProcess(Model):
 
     def __init__(
         self,
-        n_obs: int,
+        n_timepoints: int,
         data_starts: int,
         period_size: int,
         log_rt_prior: RandomVariable,
@@ -57,7 +57,7 @@ class RtPeriodicDiffProcess(Model):
 
         Parameters
         ----------
-        n_obs : int
+        n_timepoints : int
             Size of the returned sample.
         data_starts : int
             Relative point at which data starts, must be between 0 and
@@ -77,17 +77,17 @@ class RtPeriodicDiffProcess(Model):
         """
 
         self.validate(
-            n_obs,
+            n_timepoints,
             data_starts,
             log_rt_prior,
             autoreg,
             periodic_diff_sd,
         )
 
-        self.n_obs = n_obs
+        self.n_timepoints = n_timepoints
         self.period_size = period_size
         self.data_starts = data_starts
-        self.n_periods = int(jnp.ceil(n_obs / period_size))
+        self.n_periods = int(jnp.ceil(n_timepoints / period_size))
         self.log_rt_prior = log_rt_prior
         self.autoreg = autoreg
         self.periodic_diff_sd = periodic_diff_sd
@@ -97,7 +97,7 @@ class RtPeriodicDiffProcess(Model):
 
     @staticmethod
     def validate(
-        n_obs: int,
+        n_timepoints: int,
         data_starts: int,
         prior: any,
         autoreg: any,
@@ -108,8 +108,8 @@ class RtPeriodicDiffProcess(Model):
 
         Parameters
         ----------
-        n_obs : int
-            Number of observations.
+        n_timepoints : int
+            Size of the returned sample.
         data_starts : int
             Relative point at which data starts, must be between 0 and
             period_size - 1.
@@ -127,10 +127,12 @@ class RtPeriodicDiffProcess(Model):
 
         # Nweeks should be a positive integer
         assert isinstance(
-            n_obs, int
-        ), f"n_obs should be an integer. It is {type(n_obs)}."
+            n_timepoints, int
+        ), f"n_timepoints  should be an integer. It is {type(n_timepoints )}."
 
-        assert n_obs > 0, f"n_obs should be a positive integer. It is {n_obs}."
+        assert (
+            n_timepoints > 0
+        ), f"n_timepoints  should be a positive integer. It is {n_timepoints }."
 
         # Data starts should be a positive integer
         assert 0 <= data_starts, (
@@ -207,10 +209,11 @@ class RtPeriodicDiffProcess(Model):
 
         # Expanding according to the number of days
         if duration is None:
-            duration = self.n_obs
-        elif duration > self.n_obs:
+            duration = self.n_timepoints
+        elif duration > self.n_timepoints:
             raise ValueError(
-                f"Duration should be less than or equal to n_obs ({self.n_obs})."
+                "Duration should be less than or equal "
+                f"to n_timepoints ({self.n_timepoints })."
             )
 
         return RtPeriodicDiffProcessProcessSample(
@@ -227,7 +230,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
 
     def __init__(
         self,
-        n_obs: int,
+        n_timepoints: int,
         data_starts: int,
         log_rt_prior: RandomVariable,
         autoreg: RandomVariable,
@@ -239,8 +242,8 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
 
         Parameters
         ----------
-        n_obs : int
-            Number of observations.
+        n_timepoints : int
+            Size of the returned sample.
         data_starts : int
             Relative point at which data starts, must be between 0 and 6.
         log_rt_prior : RandomVariable
@@ -262,7 +265,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
         )
 
         super().__init__(
-            n_obs=n_obs,
+            n_timepoints=n_timepoints,
             data_starts=data_starts,
             period_size=7,
             log_rt_prior=log_rt_prior,
