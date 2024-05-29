@@ -38,7 +38,7 @@ def test_infections_as_deterministic():
         inf_sampled1.infections, inf_sampled2.infections
     )
 
-# Check that Initial infections vector must be at least as long as the generation interval.
+    # Check that Initial infections vector must be at least as long as the generation interval.
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError):
             obs["I0"] = jnp.array([1])
