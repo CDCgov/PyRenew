@@ -44,7 +44,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         fixed_predictor_values: ArrayLike,
         intercept_prior: dist.Distribution,
         coefficient_priors: dist.Distribution,
-        transform: nt.Transform = None,
+        transform: nt.Transform | nt._InverseTransform = None,
         intercept_suffix="_intercept",
         coefficient_suffix="_coefficients",
     ) -> None:

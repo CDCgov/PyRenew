@@ -3,76 +3,9 @@
 
 import numpyro as npro
 import numpyro.distributions as dist
-from jax.typing import ArrayLike
-from numpyro.distributions import constraints
 from numpyro.distributions import transforms as nt
 from pyrenew.metaclass import RandomVariable
 from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
-
-
-class LogTransform(nt.Transform):
-    r"""
-    Partial implementation of Logarithmic transformation
-    (inverse of ExpTransform)
-    """
-
-    def __init__(
-        self, domain: constraints.Constraint = constraints.real
-    ) -> None:
-        """
-        Default constructor
-
-        Parameters
-        ----------
-        domain : numpyro.distributions.constraints.Constraint
-            Domain of the transformation, defaults to constraints.real
-
-        Returns
-        -------
-        None
-        """
-        self.domain = domain
-        self.transform = nt.ExpTransform(domain)
-
-        return None
-
-    def __call__(self, x: ArrayLike) -> ArrayLike:
-        """
-        Apply the transformation to x
-
-        Parameters
-        ----------
-        x : ArrayLike
-            Value to transform
-
-        Returns
-        -------
-        ArrayLike
-        """
-        return self.transform.inv(x)
-
-    def inv(self, y: ArrayLike) -> ArrayLike:
-        """
-        Apply the inverse transformation to y
-
-        Parameters
-        ----------
-        y : ArrayLike
-            Value to transform
-
-        Returns
-        -------
-        ArrayLike
-        """
-        return self.transform.__call__(y)
-
-    def tree_flatten(self) -> tuple:  # numpydoc ignore=GL08
-        return (self.domain,), (("domain",), dict())
-
-    def __eq__(self, other) -> bool:  # numpydoc ignore=GL08
-        if not isinstance(other, LogTransform):
-            return False
-        return self.domain == other.domain
 
 
 class RtRandomWalkProcess(RandomVariable):
@@ -94,7 +27,7 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_dist: dist.Distribution = dist.TruncatedNormal(
             loc=1.2, scale=0.2, low=0
         ),
-        Rt_transform: nt.Transform = LogTransform(),
+        Rt_transform: nt.Transform | nt._InverseTransform | None = None,
         Rt_rw_dist: dist.Distribution = dist.Normal(0, 0.025),
     ) -> None:
         """
@@ -106,9 +39,9 @@ class RtRandomWalkProcess(RandomVariable):
             Initial distribution of Rt, defaults to
             dist.TruncatedNormal( loc=1.2, scale=0.2, low=0 )
 
-                    Rt_transform : numpyro.distributions.transformers.Transform, optional
+        Rt_transform : numpyro.distributions.transformers.Transform, optional
             Transformation applied to the sampled Rt0, defaults
-            to ExpTransform.inv().
+            to ExpTransform().inv.
         Rt_rw_dist : dist.Distribution, optional
             Randomwalk process, defaults to dist.Normal(0, 0.025)
 
@@ -116,6 +49,10 @@ class RtRandomWalkProcess(RandomVariable):
         -------
         None
         """
+
+        if Rt_transform is None:
+            Rt_transform = nt.ExpTransform().inv
+
         RtRandomWalkProcess.validate(Rt0_dist, Rt_transform, Rt_rw_dist)
 
         self.Rt0_dist = Rt0_dist
@@ -127,7 +64,7 @@ class RtRandomWalkProcess(RandomVariable):
     @staticmethod
     def validate(
         Rt0_dist: dist.Distribution,
-        Rt_transform: nt.Transform,
+        Rt_transform: nt.Transform | nt._InverseTransform,
         Rt_rw_dist: dist.Distribution,
     ) -> None:
         """
@@ -153,7 +90,7 @@ class RtRandomWalkProcess(RandomVariable):
             Rt_transform is not numpyro.distributions.transforms.Transform.
         """
         assert isinstance(Rt0_dist, dist.Distribution)
-        assert isinstance(Rt_transform, nt.Transform)
+        assert isinstance(Rt_transform, (nt.Transform, nt._InverseTransform))
         assert isinstance(Rt_rw_dist, dist.Distribution)
 
     def sample(
