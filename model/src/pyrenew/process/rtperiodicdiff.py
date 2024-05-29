@@ -206,7 +206,7 @@ class RtPeriodicDiffProcess(Model):
             duration = self.n_obs
         elif duration > self.n_obs:
             raise ValueError(
-                f"Duration should be less than or equal to {self.n_obs}."
+                f"Duration should be less than or equal to n_obs ({self.n_obs})."
             )
 
         return RtPeriodicDiffProcessProcessSample(
