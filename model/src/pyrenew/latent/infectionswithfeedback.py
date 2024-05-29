@@ -34,7 +34,7 @@ class InfectionsWithFeedback(RandomVariable):
     r"""
     Latent infections
 
-    This class samples infections given Rt, initial infections, and generation
+    This class computes infections, given Rt, initial infections, and generation
     interval.
 
     Parameters
@@ -161,7 +161,7 @@ class InfectionsWithFeedback(RandomVariable):
 
         gen_int_rev = jnp.flip(gen_int)
 
-        I0 = I0[: gen_int_rev.size]
+        I0 = I0[-gen_int_rev.size:]
 
         # Sampling inf feedback strength
         inf_feedback_strength, *_ = self.infection_feedback_strength.sample(

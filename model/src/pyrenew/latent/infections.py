@@ -109,12 +109,12 @@ class Infections(RandomVariable):
         if I0.size < gen_int_rev.size:
             raise ValueError(
                 "Initial infections vector must be at least as long as "
-                "the generation interval."
+                "the generation interval. "
                 f"Initial infections vector length: {I0.size}, "
                 f"generation interval length: {gen_int_rev.size}."
             )
         elif I0.size > gen_int_rev.size:
-            I0_vec = I0[: gen_int_rev.size]
+            I0_vec = I0[-gen_int_rev.size:]
         else:
             I0_vec = I0
 
