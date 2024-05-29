@@ -31,8 +31,8 @@ class InfectionsSample(NamedTuple):
 class Infections(RandomVariable):
     r"""Latent infections
 
-    This class samples infections given Rt, initial infections, and generation
-    interval.
+    This class samples infections given Rt,
+    initial infections, and generation interval.
 
     Notes
     -----
@@ -79,7 +79,7 @@ class Infections(RandomVariable):
         I0: ArrayLike,
         gen_int: ArrayLike,
         **kwargs,
-    ) -> tuple:
+    ) -> InfectionsSample:
         """
         Samples infections given Rt, initial infections, and generation
         interval.
@@ -89,9 +89,11 @@ class Infections(RandomVariable):
         Rt : ArrayLike
             Reproduction number.
         I0 : ArrayLike
-            Initial infections.
+            Initial infections vector
+            of the same length as the
+            generation interval.
         gen_int : ArrayLike
-            Generation interval.
+            Generation interval pmf vector.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
@@ -107,7 +109,18 @@ class Infections(RandomVariable):
             )
 
         gen_int_rev = jnp.flip(gen_int)
-        recent_I0 = I0[-gen_int_rev.size :]
+
+        if I0.size < gen_int_rev.size:
+            raise ValueError(
+                "Initial infections vector must be at least as long as "
+                "the generation interval. "
+                f"Initial infections vector length: {I0.size}, "
+                f"generation interval length: {gen_int_rev.size}."
+            )
+        elif I0.size > gen_int_rev.size:
+            recent_I0 = I0[-gen_int_rev.size :]
+        else:
+            recent_I0 = I0
 
         all_infections = inf.compute_infections_from_rt(
             I0=recent_I0,

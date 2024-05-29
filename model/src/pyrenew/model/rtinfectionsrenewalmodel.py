@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import pyrenew.datautils as du
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
@@ -284,9 +283,6 @@ class RtInfectionsRenewalModel(Model):
 
         # Sampling initial infections
         i0, *_ = self.sample_i0(**kwargs)
-
-        # Padding i0 to match gen_int
-        i0 = du.pad_x_to_match_y(x=i0, y=gen_int, fill_value=0.0)
 
         # Sampling from the latent process
         latent, *_ = self.sample_infections_latent(

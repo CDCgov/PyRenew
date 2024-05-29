@@ -28,7 +28,7 @@ def test_model_basicrenewal_no_obs_model():
     with pytest.raises(ValueError):
         I0 = DistributionalRV(dist=1, name="I0")
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
 
     latent_infections = Infections()
 
@@ -90,7 +90,7 @@ def test_model_basicrenewal_with_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
 
     latent_infections = Infections()
 
@@ -143,7 +143,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:
 
     Notes
     -----
-    IMPORTANT: If this test breaks, then it could be that you need
+    IMPORTANT: If this test fails, it may be that you need
     to regenerate the figures. To do so, you can the test using the following
     command:
 
@@ -154,7 +154,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:
     """
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
 
     latent_infections = Infections()
 
@@ -192,7 +192,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:
 def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
 
     latent_infections = Infections()
 
@@ -237,6 +237,3 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     # For now the assertion is only about the expected number of rows
     # It should be about the MCMC inference.
     assert inf_mean.to_numpy().shape[0] == 500
-
-
-test_model_basicrenewal_plot()

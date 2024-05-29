@@ -38,15 +38,16 @@ docs/example-with-datasets.md: docs/example-with-datasets.qmd
 	poetry run quarto render docs/example-with-datasets.qmd
 
 docs/py: docs/notebooks
-	jupyter nbconvert --to python docs/pyrenew_demo.ipynb
-	jupyter nbconvert --to python docs/getting-started.ipynb
-	jupyter nbconvert --to python docs/example-with-datasets.ipynb
+	for i in docs/*.ipynb; do \
+		jupyter nbconvert --to python $$i ; \
+	done
 
 docs/notebooks:
-	quarto convert docs/pyrenew_demo.qmd --output docs/pyrenew_demo.ipynb
-	quarto convert docs/getting-started.qmd --output docs/getting-started.ipynb
-	quarto convert docs/example-with-datasets.qmd --output \
-		docs/example-with-datasets.ipynb
+	for i in docs/*.qmd; do \
+		if [ $$i -nt $$(basename $$i .qmd).ipynb ]; then \
+			quarto convert $$i --output docs/$$(basename $$i .qmd).ipynb ; \
+		fi \
+	done
 
 test_images:
 	echo "Generating reference images for tests"

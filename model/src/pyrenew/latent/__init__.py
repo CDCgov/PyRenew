@@ -16,6 +16,7 @@ from pyrenew.latent.infection_seeding_method import (
 )
 from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
 from pyrenew.latent.infections import Infections
+from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
 
 __all__ = [
     "HospitalAdmissions",
@@ -28,4 +29,5 @@ __all__ = [
     "SeedInfectionsFromVec",
     "SeedInfectionsZeroPad",
     "InfectionSeedingProcess",
+    "InfectionsWithFeedback",
 ]

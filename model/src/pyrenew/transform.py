@@ -46,6 +46,8 @@ class IdentityTransform(AbstractTransform):
 
     def transform(self, x: any):  # numpydoc ignore=SS01
         """
+        Transform function
+
         Parameters
         ----------
         x : any
@@ -60,6 +62,8 @@ class IdentityTransform(AbstractTransform):
 
     def inverse(self, x: any):  # numpydoc ignore=SS01
         """
+        Inverse function
+
         Parameters
         ----------
         x : any
@@ -84,6 +88,8 @@ class LogTransform(AbstractTransform):
 
     def transform(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
+        Log transform function
+
         Parameters
         ----------
         x : ArrayLike
@@ -98,6 +104,8 @@ class LogTransform(AbstractTransform):
 
     def inverse(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
+        Inverse of log transform function
+
         Parameters
         ----------
         x : ArrayLike
@@ -123,6 +131,8 @@ class LogitTransform(AbstractTransform):
 
     def transform(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
+        Logit transform function
+
         Parameters
         ----------
         x : ArrayLike
@@ -137,6 +147,8 @@ class LogitTransform(AbstractTransform):
 
     def inverse(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
+        Inverse of logit transform function
+
         Parameters
         ----------
         x : ArrayLike
@@ -175,6 +187,8 @@ class ScaledLogitTransform(AbstractTransform):
 
     def transform(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
+        Scaled logit transform function
+
         Parameters
         ----------
         x : ArrayLike
@@ -189,6 +203,8 @@ class ScaledLogitTransform(AbstractTransform):
 
     def inverse(self, x: ArrayLike):  # numpydoc ignore=SS01
         """
+        Inverse of scaled logit transform function
+
         Parameters
         ----------
         x : ArrayLike

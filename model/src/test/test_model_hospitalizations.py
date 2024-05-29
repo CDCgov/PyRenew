@@ -43,7 +43,7 @@ def test_model_hosp_no_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -139,7 +139,7 @@ def test_model_hosp_with_obs_model():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -218,7 +218,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -308,7 +308,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -343,15 +343,14 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = jnp.array([1, 1, 1, 1, 2, 2])
     weekday = jnp.tile(weekday, 10)
     weekday = weekday / weekday.sum()
-    weekday = weekday[:31]
+    weekday = weekday[:35]
 
     weekday = DeterministicVariable(weekday)
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
+    hosp_report_prob_dist = hosp_report_prob_dist[:35]
     hosp_report_prob_dist = hosp_report_prob_dist / hosp_report_prob_dist.sum()
-
-    hosp_report_prob_dist = hosp_report_prob_dist[:31]
 
     hosp_report_prob_dist = DeterministicVariable(vars=hosp_report_prob_dist)
 
