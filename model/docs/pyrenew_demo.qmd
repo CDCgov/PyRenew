@@ -65,8 +65,7 @@ from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.process import RtRandomWalkProcess
-from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
-from pyrenew.latent.infection_seeding_method import SeedInfectionsZeroPad
+from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsZeroPad
 ```
 
 To initialize the model, we first define initial conditions, including:

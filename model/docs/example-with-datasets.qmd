@@ -144,9 +144,7 @@ The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to ho
 ```{python}
 #| label: initializing-rest-of-model
 from pyrenew import model, process, observation
-from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
-from pyrenew.latent.infection_seeding_method import SeedInfectionsZeroPad
-from pyrenew.latent import Infections0
+from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsZeroPad, Infections0
 
 # Infection process
 latent_inf = latent.Infections()
