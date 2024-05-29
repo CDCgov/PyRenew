@@ -66,6 +66,14 @@ class LogTransform(nt.Transform):
         """
         return self.transform.__call__(y)
 
+    def tree_flatten(self) -> tuple:  # numpydoc ignore=GL08
+        return (self.domain,), (("domain",), dict())
+
+    def __eq__(self, other) -> bool:  # numpydoc ignore=GL08
+        if not isinstance(other, LogTransform):
+            return False
+        return self.domain == other.domain
+
 
 class RtRandomWalkProcess(RandomVariable):
     r"""Rt Randomwalk Process
