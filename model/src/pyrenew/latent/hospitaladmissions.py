@@ -30,6 +30,7 @@ class HospAdmissionsSample(NamedTuple):
     def __repr__(self):
         return f"HospAdmissionsSample(infection_hosp_rate={self.IRH}, predicted={self.predicted})"
 
+
 class HospitalAdmissions(RandomVariable):
     r"""
     Latent hospital admissions
