@@ -49,7 +49,7 @@ class RtPeriodicDiffProcess(Model):
         period_size: int,
         log_rt_prior: RandomVariable,
         autoreg: RandomVariable,
-        sigma_r: RandomVariable,
+        periodic_diff_sd: RandomVariable,
         site_name: str = "rt_periodic_diff",
     ) -> None:
         """
@@ -58,7 +58,7 @@ class RtPeriodicDiffProcess(Model):
         Parameters
         ----------
         n_obs : int
-            Number of observations.
+            Size of the returned sample.
         data_starts : int
             Relative point at which data starts, must be between 0 and
             period_size - 1.
@@ -66,7 +66,7 @@ class RtPeriodicDiffProcess(Model):
             Log Rt prior for the first two observations.
         autoreg : RandomVariable
             Autoregressive parameter.
-        sigma_r : RandomVariable
+        periodic_diff_sd : RandomVariable
             Standard deviation of the noise.
         site_name : str, optional
             Name of the site. Defaults to "rt_periodic_diff".
@@ -81,7 +81,7 @@ class RtPeriodicDiffProcess(Model):
             data_starts,
             log_rt_prior,
             autoreg,
-            sigma_r,
+            periodic_diff_sd,
         )
 
         self.n_obs = n_obs
@@ -90,7 +90,7 @@ class RtPeriodicDiffProcess(Model):
         self.n_periods = int(jnp.ceil(n_obs / period_size))
         self.log_rt_prior = log_rt_prior
         self.autoreg = autoreg
-        self.sigma_r = sigma_r
+        self.periodic_diff_sd = periodic_diff_sd
         self.site_name = site_name
 
         return None
@@ -101,7 +101,7 @@ class RtPeriodicDiffProcess(Model):
         data_starts: int,
         prior: any,
         autoreg: any,
-        sigma_r: any,
+        periodic_diff_sd: any,
     ) -> None:
         """
         Validate the input parameters.
@@ -117,7 +117,7 @@ class RtPeriodicDiffProcess(Model):
             Log Rt prior for the first two observations.
         autoreg : any
             Autoregressive parameter.
-        sigma_r : any
+        periodic_diff_sd : any
             Standard deviation of the noise.
 
         Returns
@@ -126,6 +126,10 @@ class RtPeriodicDiffProcess(Model):
         """
 
         # Nweeks should be a positive integer
+        assert isinstance(
+            n_obs, int
+        ), f"n_obs should be an integer. It is {type(n_obs)}."
+
         assert n_obs > 0, f"n_obs should be a positive integer. It is {n_obs}."
 
         # Data starts should be a positive integer
@@ -136,7 +140,7 @@ class RtPeriodicDiffProcess(Model):
 
         _assert_sample_and_rtype(prior)
         _assert_sample_and_rtype(autoreg)
-        _assert_sample_and_rtype(sigma_r)
+        _assert_sample_and_rtype(periodic_diff_sd)
 
         return None
 
@@ -191,7 +195,7 @@ class RtPeriodicDiffProcess(Model):
         # Initial sample
         log_rt_prior = self.log_rt_prior.sample(**kwargs)[0]
         b = self.autoreg.sample(**kwargs)[0]
-        s_r = self.sigma_r.sample(**kwargs)[0]
+        s_r = self.periodic_diff_sd.sample(**kwargs)[0]
 
         # Running the process
         ar_diff = FirstDifferenceARProcess(autoreg=b, noise_sd=s_r)
