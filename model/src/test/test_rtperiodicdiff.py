@@ -54,7 +54,7 @@ def test_rtweeklydiff() -> None:
         "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
         "autoreg": DeterministicVariable(jnp.array([0.7])),
-        "sigma_r": DeterministicVariable(jnp.array([0.1])),
+        "periodic_diff_sd": DeterministicVariable(jnp.array([0.1])),
         "site_name": "test",
     }
 
@@ -100,7 +100,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
         "log_rt_prior": DeterministicVariable(jnp.array([0.0, 0.0])),
         # No autoregression!
         "autoreg": DeterministicVariable(jnp.array([0.0])),
-        "sigma_r": DeterministicVariable(jnp.array([0.1])),
+        "periodic_diff_sd": DeterministicVariable(jnp.array([0.1])),
         "site_name": "test",
     }
 
@@ -135,7 +135,7 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
         "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
         "autoreg": DeterministicVariable(jnp.array([0.7])),
-        "sigma_r": DeterministicVariable(jnp.array([0.1])),
+        "periodic_diff_sd": DeterministicVariable(jnp.array([0.1])),
         "site_name": "test",
     }
 
@@ -157,3 +157,30 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
     assert_array_equal(ans0, ans1)
 
     return None
+
+
+def test_rtperiodicdiff_smallsample():
+    """Checks basic functionality of the process with a small sample size."""
+
+    params = {
+        "n_obs": 6,
+        "data_starts": 0,
+        "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
+        "autoreg": DeterministicVariable(jnp.array([0.7])),
+        "periodic_diff_sd": DeterministicVariable(jnp.array([0.1])),
+        "site_name": "test",
+    }
+
+    rtwd = RtWeeklyDiffProcess(**params)
+
+    assert rtwd.n_periods == 1
+
+    np.random.seed(223)
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        rt = rtwd.sample().rt
+
+    # Checking that the shape of the sampled Rt is correct
+    assert rt.shape == (params["n_obs"],)
+
+    # Check that all values in rt are the same
+    assert jnp.all(rt == rt[0])

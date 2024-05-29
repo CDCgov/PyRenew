@@ -231,7 +231,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
         data_starts: int,
         log_rt_prior: RandomVariable,
         autoreg: RandomVariable,
-        sigma_r: RandomVariable,
+        periodic_diff_sd: RandomVariable,
         site_name: str = "rt_weekly_diff",
     ) -> None:
         """
@@ -247,7 +247,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
             Log Rt prior for the first two observations.
         autoreg : RandomVariable
             Autoregressive parameter.
-        sigma_r : RandomVariable
+        periodic_diff_sd : RandomVariable
             Standard deviation of the noise.
         site_name : str, optional
             Name of the site. Defaults to "rt_weekly_diff".
@@ -267,7 +267,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
             period_size=7,
             log_rt_prior=log_rt_prior,
             autoreg=autoreg,
-            sigma_r=sigma_r,
+            periodic_diff_sd=periodic_diff_sd,
             site_name=site_name,
         )
 
