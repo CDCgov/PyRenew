@@ -50,12 +50,13 @@ with seed(rng_seed=np.random.randint(0,1000)):
 plt.plot(np.exp(q_samp[0]))
 ```
 
-Next, import several additional functions from the `latent` module of the `pyrenew` package to model infections, hospital admissions, initial infections, and hospitalization rate due to infection.
+Next, import several additional functions from the `latent` module of the `pyrenew` package to model infections and hospital admissions.
 
 ```{python}
 from pyrenew.latent import (
-    Infections, HospitalAdmissions, Infections0, InfectHospRate,
+    Infections, HospitalAdmissions,
 )
+from pyrenew.metaclass import DistributionalRV
 ```
 
 Additionally, import several classes from Pyrenew, including a Poisson observation process, determininstic PMF and variable classes, the Pyrenew hospitalization model, and a renewal model (Rt) random walk process:
@@ -88,7 +89,7 @@ To initialize the model, we first define initial conditions, including:
 gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
 # 2) Initial infections
-I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
 # 3) The latent infections process
 latent_infections = Infections()
@@ -102,8 +103,9 @@ inf_hosp_int = DeterministicPMF(
 
 latent_admissions = HospitalAdmissions(
     infection_to_admission_interval=inf_hosp_int,
-    infect_hosp_rate_dist = InfectHospRate(
+    infect_hosp_rate_dist = DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
+            name="IHR"
             ),
     )
 

@@ -50,10 +50,11 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.process import RtRandomWalkProcess
-from pyrenew.latent import Infections, Infections0
+from pyrenew.latent import Infections
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
+from pyrenew.metaclass import DistributionalRV
 ```
 
 The pyrenew package models the real-time reproductive number $R_t$, the ratio of new infections at time $t$ to previous infections at some time $t-s$, as a renewal process model. Our basic renewal process model defines five components:
@@ -72,7 +73,7 @@ To initialize these five components within the renewal modeling framework, we es
 
 (1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
-(2) an instance of the `Infections0` class, with a log-normal distribution with mean = 0 and standard deviation = 1 as input
+(2) an instance of the `DistributionalRV` class, with a log-normal distribution with mean = 0 and standard deviation = 1 as input.
 
 (3) an instance of the `RtRandomWalkProcess` class with default values
 
@@ -86,7 +87,7 @@ To initialize these five components within the renewal modeling framework, we es
 gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
 # (2) Initial infections (inferred with a prior)
-I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
 # (3) The random process for Rt
 rt_proc = RtRandomWalkProcess()
@@ -118,7 +119,7 @@ The following diagram summarizes how the modules interact via composition; notab
 %%| include: true
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
-    i0["(2) I0\n(Infections0)"]
+    i0["(2) I0\n(DistributionalRV)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     inf["(4) latent_infections\n(Infections)"]
     obs["(5) observation_process\n(PoissonObservation)"]
@@ -215,7 +216,7 @@ flowchart LR
 
     subgraph latent[Latent module]
         inf["latent_infections\n(Infections)"]
-        i0["I0\n(Infections0)"]
+        i0["I0\n(DistributionalRV)"]
     end
 
     subgraph process[Process module]
