@@ -26,9 +26,10 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import Infections0, InfectionsWithFeedback
+from pyrenew.latent import InfectionsWithFeedback
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.process import RtRandomWalkProcess
+from pyrenew.metaclass import DistributionalRVSample
 ```
 
 The following code-chunk defines the model components. Notice that for both the generation interval and the infection feedback, we use a deterministic PMF with equal probabilities:
@@ -37,7 +38,7 @@ The following code-chunk defines the model components. Notice that for both the 
 #| label: model-components
 gen_int = DeterministicPMF(jnp.array([0.25, 0.5, 0.15, 0.1]))
 
-I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+I0 = DistributionalRVSample(dist=dist.LogNormal(0, 1), name="I0")
 
 latent_infections = InfectionsWithFeedback(
   infection_feedback_strength = DeterministicVariable(1.1),
