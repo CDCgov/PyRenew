@@ -65,7 +65,7 @@ def logistic_susceptibility_adjustment(
         i.e. the incidence given an infinite
         number of available susceptible individuals.
     frac_susceptible : float
-        fraction of remainin susceptible individuals
+        fraction of remaining susceptible individuals
         in the population
     n_population : float
         Total size of the population.
