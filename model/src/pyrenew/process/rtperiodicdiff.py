@@ -7,7 +7,7 @@ from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
 from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
 
 
-class RtPeriodicDiffProcessProcessSample(NamedTuple):
+class RtPeriodicDiffProcessSample(NamedTuple):
     """
     A container for holding the output from `process.RtWeeklyDiffProcess.sample()`.
 
@@ -20,7 +20,7 @@ class RtPeriodicDiffProcessProcessSample(NamedTuple):
     rt: ArrayLike | None = None
 
     def __repr__(self):
-        return f"RtPeriodicDiffProcessProcessSample(rt={self.rt})"
+        return f"RtPeriodicDiffProcessSample(rt={self.rt})"
 
 
 class RtPeriodicDiffProcess(RandomVariable):
@@ -76,7 +76,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         self.validate(
             data_starts=data_starts,
             period_size=period_size,
-            prior=log_rt_prior,
+            log_rt_prior=log_rt_prior,
             autoreg=autoreg,
             periodic_diff_sd=periodic_diff_sd,
         )
@@ -94,7 +94,7 @@ class RtPeriodicDiffProcess(RandomVariable):
     def validate(
         data_starts: int,
         period_size: int,
-        prior: any,
+        log_rt_prior: any,
         autoreg: any,
         periodic_diff_sd: any,
     ) -> None:
@@ -108,7 +108,7 @@ class RtPeriodicDiffProcess(RandomVariable):
             period_size - 1.
         period_size : int
             Size of the period.
-        prior : any
+        log_rt_prior : any
             Log Rt prior for the first two observations.
         autoreg : any
             Autoregressive parameter.
@@ -144,7 +144,7 @@ class RtPeriodicDiffProcess(RandomVariable):
             f"to {period_size - 1}."
         )
 
-        _assert_sample_and_rtype(prior)
+        _assert_sample_and_rtype(log_rt_prior)
         _assert_sample_and_rtype(autoreg)
         _assert_sample_and_rtype(periodic_diff_sd)
 
@@ -179,7 +179,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         self,
         duration: int,
         **kwargs,
-    ) -> RtPeriodicDiffProcessProcessSample:
+    ) -> RtPeriodicDiffProcessSample:
         """
         Samples the periodic Rt with autoregressive difference.
 
@@ -193,7 +193,7 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         Returns
         -------
-        RtPeriodicDiffProcessProcessSample
+        RtPeriodicDiffProcessSample
             Named tuple with "rt".
         """
 
@@ -213,7 +213,7 @@ class RtPeriodicDiffProcess(RandomVariable):
             init_rate_of_change=log_rt_prior[1] - log_rt_prior[0],
         )[0]
 
-        return RtPeriodicDiffProcessProcessSample(
+        return RtPeriodicDiffProcessSample(
             rt=jnp.repeat(jnp.exp(log_rt.flatten()), self.period_size)[
                 self.data_starts : (self.data_starts + duration)
             ],
