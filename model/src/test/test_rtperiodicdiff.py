@@ -93,7 +93,6 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     """Checks step size averages close to 0"""
 
     params = {
-        # "n_timepoints": 1000,
         "data_starts": 0,
         "log_rt_prior": DeterministicVariable(jnp.array([0.0, 0.0])),
         # No autoregression!

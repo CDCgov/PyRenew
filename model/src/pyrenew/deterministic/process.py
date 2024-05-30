@@ -13,7 +13,7 @@ class DeterministicProcess(DeterministicVariable):
 
     def sample(
         self,
-        n_timepoints: int,
+        duration: int,
         **kwargs,
     ) -> tuple:
         """
@@ -21,7 +21,7 @@ class DeterministicProcess(DeterministicVariable):
 
         Parameters
         ----------
-        n_timepoints : int
+        duration : int
             Number of timepoints to sample.
         **kwargs : dict, optional
             Ignored.
@@ -34,9 +34,9 @@ class DeterministicProcess(DeterministicVariable):
 
         res, *_ = super().sample(**kwargs)
 
-        dif = n_timepoints - res.shape[0]
+        dif = duration - res.shape[0]
 
         if dif > 0:
             return (jnp.hstack([res, jnp.repeat(res[-1], dif)]),)
 
-        return (res[:n_timepoints],)
+        return (res[:duration],)

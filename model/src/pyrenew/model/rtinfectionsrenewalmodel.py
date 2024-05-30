@@ -274,7 +274,7 @@ class RtInfectionsRenewalModel(Model):
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.sample_rt(
-            n_timepoints=n_timepoints,
+            duration=n_timepoints,
             **kwargs,
         )
 

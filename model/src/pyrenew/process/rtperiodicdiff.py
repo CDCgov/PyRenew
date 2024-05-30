@@ -3,7 +3,7 @@ from typing import NamedTuple
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
-from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
 from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
 
 
@@ -23,7 +23,7 @@ class RtPeriodicDiffProcessProcessSample(NamedTuple):
         return f"RtPeriodicDiffProcessProcessSample(rt={self.rt})"
 
 
-class RtPeriodicDiffProcess(Model):
+class RtPeriodicDiffProcess(RandomVariable):
     r"""
     Periodic Rt with autoregressive difference.
 
