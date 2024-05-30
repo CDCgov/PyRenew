@@ -32,7 +32,11 @@ class RtInfectionsRenewalSample(NamedTuple):
     sampled_infections: ArrayLike | None = None
 
     def __repr__(self):
-        return f"RtInfectionsRenewalSample(Rt={self.Rt}, latent_infections={self.latent_infections}, sampled_infections={self.sampled_infections})"
+        return (
+            f"RtInfectionsRenewalSample(Rt={self.Rt}, "
+            f"latent_infections={self.latent_infections}, "
+            f"sampled_infections={self.sampled_infections})"
+        )
 
 
 class RtInfectionsRenewalModel(Model):
@@ -246,7 +250,7 @@ class RtInfectionsRenewalModel(Model):
 
     def sample(
         self,
-        n_timepoints: int,
+        n_timepoints: int | None = None,
         observed_infections: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
@@ -256,7 +260,7 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints : int, optional
             Number of timepoints to sample.
         observed_infections : ArrayLike | None, optional
             Observed infections. Defaults to None.
@@ -267,10 +271,29 @@ class RtInfectionsRenewalModel(Model):
             Additional keyword arguments passed through to internal sample()
             calls, if any
 
+        Notes
+        -----
+        When `observed_admissions` is None, `n_timepoints` must be specified.
+        If both are specified, they must have the same length, otherwise an
+        exception is raised.
+
         Returns
         -------
         RtInfectionsRenewalSample
         """
+
+        if n_timepoints is None:
+            if observed_infections is not None:
+                n_timepoints = len(observed_infections)
+            else:
+                raise ValueError(
+                    "n_timepoints or observed_infections must be provided."
+                )
+        elif observed_infections is not None:
+            if n_timepoints != len(observed_infections):
+                raise ValueError(
+                    "n_timepoints and observed_infections must have the same length."
+                )
 
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
