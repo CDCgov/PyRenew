@@ -196,7 +196,6 @@ def test_model_hosp_with_obs_model():
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
         observed_admissions=model1_samp.sampled_admissions,
-        n_timepoints=30,
     )
 
     inf = model1.spread_draws(["predicted_admissions"])
@@ -286,7 +285,6 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
         observed_admissions=model1_samp.sampled_admissions,
-        n_timepoints=30,
     )
 
     inf = model1.spread_draws(["predicted_admissions"])
@@ -307,6 +305,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     """
 
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    n_obs_to_generate = 30
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
@@ -343,7 +342,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = jnp.array([1, 1, 1, 1, 2, 2])
     weekday = jnp.tile(weekday, 10)
     weekday = weekday / weekday.sum()
-    weekday = weekday[:31]
+    weekday = weekday[:n_obs_to_generate]
 
     weekday = DeterministicVariable(weekday)
 
@@ -351,7 +350,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
     hosp_report_prob_dist = hosp_report_prob_dist / hosp_report_prob_dist.sum()
 
-    hosp_report_prob_dist = hosp_report_prob_dist[:31]
+    hosp_report_prob_dist = hosp_report_prob_dist[:n_obs_to_generate]
 
     hosp_report_prob_dist = DeterministicVariable(vars=hosp_report_prob_dist)
 
@@ -376,7 +375,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints=30)
+        model1_samp = model1.sample(n_timepoints=n_obs_to_generate)
 
     obs = jnp.hstack(
         [jnp.repeat(jnp.nan, 5), model1_samp.sampled_admissions[5:]]
@@ -388,7 +387,6 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
         observed_admissions=obs,
-        n_timepoints=30,
         padding=5,
     )
 

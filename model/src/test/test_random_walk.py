@@ -16,8 +16,12 @@ def test_rw_can_be_sampled():
 
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with and without inits
-        rw_normal.sample(3532, init=jnp.array([50.0]))
-        rw_normal.sample(5023)
+        ans0 = rw_normal.sample(3532, init=jnp.array([50.0]))
+        ans1 = rw_normal.sample(5023)
+
+        # check that the samples are of the right shape
+        assert ans0[0].shape == (3532,)
+        assert ans1[0].shape == (5023,)
 
 
 def test_rw_samples_correctly_distributed():
@@ -34,6 +38,9 @@ def test_rw_samples_correctly_distributed():
         init_arr = jnp.array([532.0])
         with numpyro.handlers.seed(rng_seed=62):
             samples, *_ = rw_normal.sample(n_samples, init=init_arr)
+
+            # Checking the shape
+            assert samples.shape == (n_samples,)
 
             # diffs should not be greater than
             # 4 sigma
