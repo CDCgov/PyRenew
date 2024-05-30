@@ -9,3 +9,4 @@ This section contains tutorials that demonstrate how to use the `pyrenew` packag
    getting-started
    example-with-datasets
    pyrenew_demo
+   extending_pyrenew

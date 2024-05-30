@@ -113,10 +113,8 @@ class Infections(RandomVariable):
                 f"Initial infections vector length: {I0.size}, "
                 f"generation interval length: {gen_int_rev.size}."
             )
-        elif I0.size > gen_int_rev.size:
-            I0_vec = I0[-gen_int_rev.size :]
         else:
-            I0_vec = I0
+            I0_vec = I0[-gen_int_rev.size :]
 
         all_infections = inf.compute_infections_from_rt(
             I0=I0_vec,

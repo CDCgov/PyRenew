@@ -37,6 +37,9 @@ docs/getting-started.md: docs/getting-started.qmd
 docs/example-with-datasets.md: docs/example-with-datasets.qmd
 	poetry run quarto render docs/example-with-datasets.qmd
 
+docs/extending_pyrenew.md: docs/extending_pyrenew.qmd
+	poetry run quarto render docs/extending_pyrenew.qmd
+
 docs/py: docs/notebooks
 	for i in docs/*.ipynb; do \
 		jupyter nbconvert --to python $$i ; \

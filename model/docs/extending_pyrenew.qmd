@@ -41,7 +41,7 @@ gen_int = DeterministicPMF(jnp.array([0.25, 0.5, 0.15, 0.1]))
 I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
 latent_infections = InfectionsWithFeedback(
-  infection_feedback_strength = DeterministicVariable(1.1),
+  infection_feedback_strength = DeterministicVariable(0.05),
   infection_feedback_pmf = gen_int,
 )
 
@@ -61,7 +61,7 @@ model0 = RtInfectionsRenewalModel(
 )
 ```
 
-And simulate it:
+And simulate it from:
 
 ```{python}
 #| label: simulate1
@@ -171,7 +171,7 @@ class InfFeedback(RandomVariable):
 
         # Baseline infections
         I0_vec = du.pad_x_to_match_y(x=I0, y=Rt)
-        I0_vec = jnp.flip(I0_vec)
+        I0_vec_rev = jnp.flip(I0_vec)
 
         # Generation interval
         gen_int = du.pad_x_to_match_y(x=gen_int, y=Rt)
@@ -191,7 +191,7 @@ class InfFeedback(RandomVariable):
 
         # Generating the infections with feedback
         all_infections, Rt_adj = compute_infections_from_rt_with_feedback(
-            I0=I0_vec,
+            I0=I0_vec_rev,
             Rt_raw=Rt,
             infection_feedback_strength=inf_feedback_strength,
             reversed_generation_interval_pmf=gen_int_rev,
@@ -243,14 +243,14 @@ with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
 Comparing `model0` with `model1`:
 
 ```{python}
-#| label: fig-simulate2
-#| fig-cap: Simulated infections with no observation process
+#| label: fig-model0-vs-model1
+#| fig-cap: Comparing latent infections from model 0 and model 1
 import matplotlib.pyplot as plt
 fig, ax = plt.subplots(ncols=2)
 ax[0].plot(model0_samp.latent_infections)
 ax[1].plot(model1_samp.latent_infections)
-ax[0].set_xlabel("Time")
-ax[1].set_xlabel("Time")
+ax[0].set_xlabel("Time (model 0)")
+ax[1].set_xlabel("Time (model 1)")
 ax[0].set_ylabel("Infections")
 plt.show()
 ```
