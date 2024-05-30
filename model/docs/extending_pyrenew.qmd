@@ -16,7 +16,7 @@ Where $\mathcal{R}^u(t)$ is the unadjusted reproduction number, $g(t)$ is the ge
 
 ## The expected outcome
 
-Before we start, let's simulate the model with the original `InfectionsWithFeedback` class. We will simulate the model with no observation process. The following code-chunk loads the required libraries and defines the model components:
+Before we start, let's simulate the model with the original `InfectionsWithFeedback` class. To keep it simple, we will simulate the model with no observation process, in other words, only with latent infections. The following code-chunk loads the required libraries and defines the model components:
 
 ```{python}
 #| label: setup
@@ -37,11 +37,12 @@ The following code-chunk defines the model components. Notice that for both the 
 ```{python}
 #| label: model-components
 gen_int = DeterministicPMF(jnp.array([0.25, 0.5, 0.15, 0.1]))
+feedback_strength = DeterministicVariable(0.05)
 
 I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
 latent_infections = InfectionsWithFeedback(
-  infection_feedback_strength = DeterministicVariable(0.05),
+  infection_feedback_strength = feedback_strength,
   infection_feedback_pmf = gen_int,
 )
 
@@ -136,6 +137,7 @@ from pyrenew.metaclass import RandomVariable
 from pyrenew.latent import compute_infections_from_rt_with_feedback
 from pyrenew import datautils as du
 from jax.typing import ArrayLike
+import jax.numpy as jnp
 
 class InfFeedback(RandomVariable):
     """Latent infections"""
@@ -169,33 +171,31 @@ class InfFeedback(RandomVariable):
     ) -> tuple:
         """Sample infections with feedback"""
 
-        # Baseline infections
-        I0_vec = du.pad_x_to_match_y(x=I0, y=Rt)
-        I0_vec_rev = jnp.flip(I0_vec)
-
         # Generation interval
-        gen_int = du.pad_x_to_match_y(x=gen_int, y=Rt)
         gen_int_rev = jnp.flip(gen_int)
+
+        # Baseline infections
+        I0_vec = I0[-gen_int_rev.size :]
 
         # Sampling inf feedback strength and adjusting the shape
         inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
             **kwargs,
         )
         inf_feedback_strength = du.pad_x_to_match_y(
-            x=inf_feedback_strength, y=Rt
+            x=inf_feedback_strength, y=Rt, fill_value=inf_feedback_strength[0]
         )
 
         # Sampling inf feedback and adjusting the shape
         inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
-        inf_feedback_pmf = du.pad_x_to_match_y(x=inf_feedback_pmf, y=Rt)
+        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
         # Generating the infections with feedback
         all_infections, Rt_adj = compute_infections_from_rt_with_feedback(
-            I0=I0_vec_rev,
+            I0=I0_vec,
             Rt_raw=Rt,
             infection_feedback_strength=inf_feedback_strength,
             reversed_generation_interval_pmf=gen_int_rev,
-            reversed_infection_feedback_pmf=inf_feedback_pmf,
+            reversed_infection_feedback_pmf=inf_fb_pmf_rev,
         )
 
         # Storing adjusted Rt for future use
@@ -222,7 +222,7 @@ The core of the class is implemented in the `sample()` method. Things to highlig
 ```{python}
 #| label: simulation2
 latent_infections2 = InfFeedback(
-  infection_feedback_strength = gen_int,
+  infection_feedback_strength = feedback_strength,
   infection_feedback_pmf = gen_int,
 )
 
@@ -240,7 +240,7 @@ with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
     model1_samp = model1.sample(n_timepoints=30)
 ```
 
-Comparing `model0` with `model1`:
+Comparing `model0` with `model1`, these two should match:
 
 ```{python}
 #| label: fig-model0-vs-model1
