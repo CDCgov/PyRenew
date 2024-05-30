@@ -1,14 +1,15 @@
 """This is a demo"""
 import jax.numpy as jnp
 import numpyro as npro
+import numpyro.distributions as dist
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
-    Infections0,
     InfectionSeedingProcess,
     SeedInfectionsExponential,
     SeedInfectionsFromVec,
     SeedInfectionsZeroPad,
 )
+from pyrenew.metaclass import DistributionalRV
 
 n_timepoints = 10
 rng_seed = 1
@@ -25,7 +26,9 @@ SeedInfectionsFromVec(n_timepoints).seed_infections(I0_long)
 
 # Testing SeedInfections functions within InfectionSeedingProcess
 zero_pad_model = InfectionSeedingProcess(
-    Infections0(),
+    DistributionalRV(
+        dist=dist.LogNormal(loc=jnp.log(80 / 0.05), scale=1.5), name="I0"
+    ),
     SeedInfectionsZeroPad(n_timepoints),
 )
 with npro.handlers.seed(rng_seed=rng_seed):
@@ -33,8 +36,12 @@ with npro.handlers.seed(rng_seed=rng_seed):
 zero_pad_dat
 
 exp_model = InfectionSeedingProcess(
-    Infections0(),
-    SeedInfectionsExponential(n_timepoints, DeterministicVariable(0.5)),
+    DistributionalRV(
+        dist=dist.LogNormal(loc=jnp.log(80 / 0.05), scale=1.5), name="I0"
+    ),
+    SeedInfectionsExponential(
+        n_timepoints, DeterministicVariable(0.5), t_I_pre_seed=0
+    ),
 )
 with npro.handlers.seed(rng_seed=rng_seed):
     exp_dat = exp_model.sample()

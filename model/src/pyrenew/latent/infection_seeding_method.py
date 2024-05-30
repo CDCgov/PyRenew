@@ -56,14 +56,19 @@ class SeedInfectionsFromVec(InfectionSeedMethod):
 
 
 class SeedInfectionsExponential(InfectionSeedMethod):
-    def __init__(self, n_timepoints: int, rate: RandomVariable):
+    def __init__(
+        self, n_timepoints: int, rate: RandomVariable, t_I_pre_seed: int = 0
+    ):
         super().__init__(n_timepoints)
         self.rate = rate
+        self.t_I_pre_seed = t_I_pre_seed
 
     def seed_infections(self, I_pre_seed: ArrayLike):
         if I_pre_seed.size != 1:
             raise ValueError(
                 f"I_pre_seed must be an array of size 1. Got size {I_pre_seed.size}."
             )
-        rate = jnp.array(self.rate.sample())
-        return I_pre_seed * jnp.exp(rate * jnp.arange(self.n_timepoints))
+        (rate,) = self.rate.sample()
+        return I_pre_seed * jnp.exp(
+            rate * (jnp.arange(self.n_timepoints) - self.t_I_pre_seed)
+        )
