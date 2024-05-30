@@ -155,7 +155,7 @@ I0 = InfectionSeedingProcess(
     name="I0"
     ),
     # SeedInfectionsZeroPad(gen_int_array.size)
-    SeedInfectionsExponential(gen_int_array.size, deterministic.DeterministicVariable(0.5), t_I_pre_seed=gen_int_array.size - 1)
+    SeedInfectionsExponential(gen_int_array.size, deterministic.DeterministicVariable(0.5))
     )
 
 # Generation interval and Rt
