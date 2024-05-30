@@ -57,10 +57,15 @@ class SeedInfectionsFromVec(InfectionSeedMethod):
 
 class SeedInfectionsExponential(InfectionSeedMethod):
     def __init__(
-        self, n_timepoints: int, rate: RandomVariable, t_I_pre_seed: int = 0
+        self,
+        n_timepoints: int,
+        rate: RandomVariable,
+        t_I_pre_seed: int | None = None,
     ):
         super().__init__(n_timepoints)
         self.rate = rate
+        if t_I_pre_seed is None:
+            t_I_pre_seed = n_timepoints - 1
         self.t_I_pre_seed = t_I_pre_seed
 
     def seed_infections(self, I_pre_seed: ArrayLike):
