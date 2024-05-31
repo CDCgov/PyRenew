@@ -25,6 +25,14 @@ Mathematics Utilities Module
    :undoc-members:
    :show-inheritance:
 
+Transformations Module
+----------------------
+
+.. automodule:: pyrenew.transformation
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Regression Module
 -----------------
 
