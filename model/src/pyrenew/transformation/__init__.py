@@ -1,6 +1,6 @@
 """
 This module exposes numpyro's transformations module to the user,
-and adds customed transformations to it.
+and defines and adds additional custom transformations
 """
 
 from numpyro.distributions.transforms import *  # noqa: F403
