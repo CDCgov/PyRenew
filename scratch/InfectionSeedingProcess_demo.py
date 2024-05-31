@@ -40,7 +40,7 @@ exp_model = InfectionSeedingProcess(
         dist=dist.LogNormal(loc=jnp.log(80 / 0.05), scale=1.5), name="I0"
     ),
     SeedInfectionsExponential(
-        n_timepoints, DeterministicVariable(0.5), t_I_pre_seed=0
+        n_timepoints, DeterministicVariable(0.5), t_pre_seed=0
     ),
 )
 with npro.handlers.seed(rng_seed=rng_seed):
