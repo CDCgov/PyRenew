@@ -17,6 +17,14 @@ Infections
    :undoc-members:
    :show-inheritance:
 
+Infection Functions
+-------------------
+
+.. automodule:: pyrenew.latent.infection_functions
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 Infection Seeding Process
 -------------------------
 
