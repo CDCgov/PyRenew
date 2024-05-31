@@ -25,10 +25,10 @@ Mathematics Utilities Module
    :undoc-members:
    :show-inheritance:
 
-Transform Utility Module
-------------------------
+Transformations Module
+----------------------
 
-.. automodule:: pyrenew.transform
+.. automodule:: pyrenew.transformation
    :members:
    :undoc-members:
    :show-inheritance:
