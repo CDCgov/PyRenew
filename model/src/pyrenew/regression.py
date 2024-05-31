@@ -10,7 +10,7 @@ from abc import ABCMeta, abstractmethod
 
 import numpyro
 import numpyro.distributions as dist
-import pyrenew.transformation as nt
+import pyrenew.transformation as t
 from jax.typing import ArrayLike
 
 
@@ -44,7 +44,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         fixed_predictor_values: ArrayLike,
         intercept_prior: dist.Distribution,
         coefficient_priors: dist.Distribution,
-        transform: nt.Transform = None,
+        transform: t.Transform = None,
         intercept_suffix="_intercept",
         coefficient_suffix="_coefficients",
     ) -> None:
@@ -90,7 +90,7 @@ class GLMPrediction(AbstractRegressionPrediction):
             Default `"_coefficients"`.
         """
         if transform is None:
-            transform = nt.IdentityTransform()
+            transform = t.IdentityTransform()
 
         self.name = name
         self.fixed_predictor_values = fixed_predictor_values

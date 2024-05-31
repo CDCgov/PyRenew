@@ -3,7 +3,7 @@
 
 import numpyro as npro
 import numpyro.distributions as dist
-import pyrenew.transformation as nt
+import pyrenew.transformation as t
 from pyrenew.metaclass import RandomVariable
 from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
 
@@ -27,7 +27,7 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_dist: dist.Distribution = dist.TruncatedNormal(
             loc=1.2, scale=0.2, low=0
         ),
-        Rt_transform: nt.Transform | None = None,
+        Rt_transform: t.Transform | None = None,
         Rt_rw_dist: dist.Distribution = dist.Normal(0, 0.025),
     ) -> None:
         """
@@ -51,7 +51,7 @@ class RtRandomWalkProcess(RandomVariable):
         """
 
         if Rt_transform is None:
-            Rt_transform = nt.ExpTransform().inv
+            Rt_transform = t.ExpTransform().inv
 
         RtRandomWalkProcess.validate(Rt0_dist, Rt_transform, Rt_rw_dist)
 
@@ -64,7 +64,7 @@ class RtRandomWalkProcess(RandomVariable):
     @staticmethod
     def validate(
         Rt0_dist: dist.Distribution,
-        Rt_transform: nt.Transform,
+        Rt_transform: t.Transform,
         Rt_rw_dist: dist.Distribution,
     ) -> None:
         """
@@ -90,7 +90,7 @@ class RtRandomWalkProcess(RandomVariable):
             Rt_transform is not numpyro.distributions.transforms.Transform.
         """
         assert isinstance(Rt0_dist, dist.Distribution)
-        assert isinstance(Rt_transform, nt.Transform)
+        assert isinstance(Rt_transform, t.Transform)
         assert isinstance(Rt_rw_dist, dist.Distribution)
 
     def sample(
