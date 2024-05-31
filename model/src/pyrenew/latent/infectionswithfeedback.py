@@ -37,16 +37,6 @@ class InfectionsWithFeedback(RandomVariable):
     This class computes infections, given Rt, initial infections, and generation
     interval.
 
-    Parameters
-    ----------
-    infection_feedback_strength : RandomVariable
-        Infection feedback strength.
-    infection_feedback_pmf : RandomVariable
-        Infection feedback pmf.
-    infections_mean_varname : str, optional
-        Name to be assigned to the deterministic variable in the model.
-        Defaults to "latent_infections".
-
     Notes
     -----
     This function implements the following renewal process (reproduced from
