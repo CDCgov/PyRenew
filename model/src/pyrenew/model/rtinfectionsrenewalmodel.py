@@ -281,7 +281,7 @@ class RtInfectionsRenewalModel(Model):
 
         if n_timepoints_to_simulate is None:
             if observed_infections is not None:
-                n_timepoints_to_simulate = len(observed_infections)
+                n_timepoints = len(observed_infections)
             else:
                 raise ValueError(
                     "Either n_timepoints_to_simulate or observed_infections "
@@ -292,7 +292,8 @@ class RtInfectionsRenewalModel(Model):
                 "Either n_timepoints_to_simulate or observed_infections "
                 "must be provided, but not both."
             )
-
+        else:
+            n_timepoints = n_timepoints_to_simulate
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.sample_rt(

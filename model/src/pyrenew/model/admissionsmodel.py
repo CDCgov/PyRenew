@@ -223,16 +223,17 @@ class HospitalAdmissionsModel(Model):
                     "n_timepoints_to_simulate must be provided if "
                     "observed_admissions is None."
                 )
-            n_timepoints_to_simulate = len(observed_admissions)
+            n_timepoints = len(observed_admissions)
         elif observed_admissions is not None:
             raise ValueError(
                 "Either n_timepoints_to_simulate or observed_admissions "
                 "must be passed, but not both."
             )
-
+        else:
+            n_timepoints = n_timepoints_to_simulate
         # Getting the initial quantities from the basic model
         basic_model = self.basic_renewal.sample(
-            n_timepoints_to_simulate=n_timepoints_to_simulate,
+            n_timepoints_to_simulate=n_timepoints,
             observed_infections=None,
             padding=padding,
             **kwargs,
