@@ -73,7 +73,7 @@ To initialize the model, we first define initial conditions, including:
 
 1) deterministic generation time, defined as an instance of the `DeterministicPMF` class, which gives the probability of each possible outcome for a discrete random variable given as a JAX NumPy array of four possible outcomes
 
-2) initial infections at the start of simulation as a log-normal distribution with mean = 0 and standard deviation = 1
+2) initial infections at the start of the renew process as a log-normal distribution with mean = 0 and standard deviation = 1. Infections before this time are assumed to be 0.
 
 3) latent infections as an instance of the `Infections` class with default settings
 

@@ -77,7 +77,7 @@ To initialize these five components within the renewal modeling framework, we es
 
 (1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
-(2) an instance of the `InfectionSeedingProcess` class, with a log-normal distribution with mean = 0 and standard deviation = 1 as input
+(2) an instance of the `InfectionSeedingProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `SeedInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
 
 (3) an instance of the `RtRandomWalkProcess` class with default values
 

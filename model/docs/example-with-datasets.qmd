@@ -154,7 +154,6 @@ I0 = InfectionSeedingProcess(
     dist=dist.LogNormal(loc=jnp.log(100), scale=0.5),
     name="I0"
     ),
-    # SeedInfectionsZeroPad(gen_int_array.size)
     SeedInfectionsExponential(gen_int_array.size, deterministic.DeterministicVariable(0.5))
     )
 
