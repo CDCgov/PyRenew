@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import numpyro as npro
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
@@ -64,6 +65,7 @@ class DeterministicVariable(RandomVariable):
 
     def sample(
         self,
+        record=True,
         **kwargs,
     ) -> tuple:
         """
@@ -71,6 +73,8 @@ class DeterministicVariable(RandomVariable):
 
         Parameters
         ----------
+        record : bool, optional
+            Whether to record the value of the deterministic RandomVariable. Defaults to True.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
@@ -80,5 +84,6 @@ class DeterministicVariable(RandomVariable):
         tuple
             Containing the stored values during construction.
         """
-
+        if record:
+            npro.deterministic(self.label, self.vars)
         return (self.vars,)
