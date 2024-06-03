@@ -8,6 +8,7 @@ from abc import ABCMeta, abstractmethod
 from typing import NamedTuple, get_type_hints
 
 import jax
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import numpyro as npro
 import polars as pl
@@ -216,10 +217,12 @@ class DistributionalRV(RandomVariable):
         DistributionalRVSample
         """
         return DistributionalRVSample(
-            value=npro.sample(
-                name=self.name,
-                fn=self.dist,
-                obs=obs,
+            value=jnp.atleast_1d(
+                npro.sample(
+                    name=self.name,
+                    fn=self.dist,
+                    obs=obs,
+                )
             ),
         )
 

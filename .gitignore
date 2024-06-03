@@ -342,3 +342,4 @@ replay_pid*
 .DS_Store
 
 /.quarto/
+*_files

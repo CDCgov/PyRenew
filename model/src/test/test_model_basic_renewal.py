@@ -132,7 +132,26 @@ def test_model_basicrenewal_with_obs_model():
 
 
 @pytest.mark.mpl_image_compare
-def test_model_basicrenewal_plot() -> plt.Figure:  # numpydoc ignore=GL08
+def test_model_basicrenewal_plot() -> plt.Figure:
+    """
+    Check that the posterior sample looks the same (reproducibility)
+
+    Returns
+    -------
+    plt.Figure
+        The figure object
+
+    Notes
+    -----
+    IMPORTANT: If this test fails, it may be that you need
+    to regenerate the figures. To do so, you can the test using the following
+    command:
+
+      poetry run pytest --mpl-generate-path=src/test/baseline
+
+    This will skip validating the figure and save the new figure in the
+    `src/test/baseline` folder.
+    """
     gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
