@@ -92,13 +92,13 @@ def test_model_hosp_no_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model0_samp = model0.sample(n_timepoints=30)
+        model0_samp = model0.sample(n_timepoints_to_simulate=30)
 
     model0.observation_process = NullObservation()
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model0.sample(n_timepoints=30)
+        model1_samp = model0.sample(n_timepoints_to_simulate=30)
 
     np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
     np.testing.assert_array_equal(
@@ -116,8 +116,7 @@ def test_model_hosp_no_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        obs_mean=model0_samp.sampled_admissions,
-        n_timepoints=30,
+        observed_admissions=model0_samp.latent_admissions,
     )
 
     inf = model0.spread_draws(["observed_admissions"])
@@ -189,7 +188,7 @@ def test_model_hosp_with_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints=30)
+        model1_samp = model1.sample(n_timepoints_to_simulate=30)
 
     model1.run(
         num_warmup=500,
@@ -278,7 +277,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints=30)
+        model1_samp = model1.sample(n_timepoints_to_simulate=30)
 
     model1.run(
         num_warmup=500,
@@ -375,7 +374,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints=n_obs_to_generate)
+        model1_samp = model1.sample(n_timepoints_to_simulate=n_obs_to_generate)
 
     obs = jnp.hstack(
         [jnp.repeat(jnp.nan, 5), model1_samp.sampled_admissions[5:]]

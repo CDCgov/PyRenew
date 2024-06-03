@@ -184,7 +184,7 @@ class HospitalAdmissionsModel(Model):
 
     def sample(
         self,
-        n_timepoints: int | None = None,
+        n_timepoints_to_simulate: int | None = None,
         observed_admissions: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
@@ -194,7 +194,7 @@ class HospitalAdmissionsModel(Model):
 
         Parameters
         ----------
-        n_timepoints : int, optional
+        n_timepoints_to_simulate : int, optional
             Number of timepoints to sample (passed to the basic renewal model).
         observed_admissions : ArrayLike, optional
             The observed hospitalization data (passed to the basic renewal
@@ -205,12 +205,6 @@ class HospitalAdmissionsModel(Model):
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
             calls, should there be any.
-
-        Notes
-        -----
-        When `observed_admissions` is None, `n_timepoints` must be specified.
-        If both are specified, they must have the same length, otherwise an
-        exception is raised.
 
         Returns
         -------
@@ -223,22 +217,22 @@ class HospitalAdmissionsModel(Model):
         sample_observed_admissions : For sampling observed hospital admissions
         """
 
-        if n_timepoints is None:
-            if observed_admissions is not None:
-                n_timepoints = len(observed_admissions)
-            else:
+        if n_timepoints_to_simulate is None:
+            if observed_admissions is None:
                 raise ValueError(
-                    "n_timepoints must be specified if observed_admissions is None"
+                    "n_timepoints_to_simulate must be provided if "
+                    "observed_admissions is None."
                 )
+            n_timepoints_to_simulate = len(observed_admissions)
         elif observed_admissions is not None:
-            if n_timepoints != len(observed_admissions):
-                raise ValueError(
-                    "n_timepoints must match length of observed_admissions"
-                )
+            raise ValueError(
+                "Either n_timepoints_to_simulate or observed_admissions "
+                "must be passed, but not both."
+            )
 
         # Getting the initial quantities from the basic model
         basic_model = self.basic_renewal.sample(
-            n_timepoints=n_timepoints,
+            n_timepoints_to_simulate=n_timepoints_to_simulate,
             observed_infections=None,
             padding=padding,
             **kwargs,

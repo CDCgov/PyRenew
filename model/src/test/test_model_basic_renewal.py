@@ -46,13 +46,13 @@ def test_model_basicrenewal_no_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model0_samp = model0.sample(n_timepoints=30)
+        model0_samp = model0.sample(n_timepoints_to_simulate=30)
 
     # Generating
     model0.observation_process = NullObservation()
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model0.sample(n_timepoints=30)
+        model1_samp = model0.sample(n_timepoints_to_simulate=30)
 
     np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
     np.testing.assert_array_equal(
@@ -66,8 +66,7 @@ def test_model_basicrenewal_no_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_infections=model0_samp.sampled_infections,
-        n_timepoints=30,
+        observed_infections=model0_samp.latent_infections,
     )
 
     inf = model0.spread_draws(["latent_infections"])
@@ -109,14 +108,13 @@ def test_model_basicrenewal_with_obs_model():
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints=30)
+        model1_samp = model1.sample(n_timepoints_to_simulate=30)
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
         observed_infections=model1_samp.sampled_infections,
-        n_timepoints=30,
     )
 
     inf = model1.spread_draws(["latent_infections"])
@@ -154,14 +152,13 @@ def test_model_basicrenewal_plot() -> plt.Figure:  # numpydoc ignore=GL08
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints=30)
+        model1_samp = model1.sample(n_timepoints_to_simulate=30)
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
         observed_infections=model1_samp.sampled_infections,
-        n_timepoints=30,
     )
 
     return model1.plot_posterior(
@@ -192,7 +189,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints=30)
+        model1_samp = model1.sample(n_timepoints_to_simulate=30)
 
     new_obs = jnp.hstack(
         [jnp.repeat(jnp.nan, 5), model1_samp.sampled_infections[5:]],
@@ -203,7 +200,6 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
         observed_infections=new_obs,
-        n_timepoints=30,
         padding=5,
     )
 

@@ -249,7 +249,7 @@ class RtInfectionsRenewalModel(Model):
 
     def sample(
         self,
-        n_timepoints: int | None = None,
+        n_timepoints_to_simulate: int | None = None,
         observed_infections: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
@@ -259,7 +259,7 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        n_timepoints : int, optional
+        n_timepoints_to_simulate : int, optional
             Number of timepoints to sample.
         observed_infections : ArrayLike | None, optional
             Observed infections. Defaults to None.
@@ -272,32 +272,31 @@ class RtInfectionsRenewalModel(Model):
 
         Notes
         -----
-        When `observed_admissions` is None, `n_timepoints` must be specified.
-        If both are specified, they must have the same length, otherwise an
-        exception is raised.
+        Either `observed_admissions` or `n_timepoints_to_simulate` must be specified, not both.
 
         Returns
         -------
         RtInfectionsRenewalSample
         """
 
-        if n_timepoints is None:
+        if n_timepoints_to_simulate is None:
             if observed_infections is not None:
-                n_timepoints = len(observed_infections)
+                n_timepoints_to_simulate = len(observed_infections)
             else:
                 raise ValueError(
-                    "n_timepoints or observed_infections must be provided."
+                    "Either n_timepoints_to_simulate or observed_infections "
+                    "must be provided."
                 )
         elif observed_infections is not None:
-            if n_timepoints != len(observed_infections):
-                raise ValueError(
-                    "n_timepoints and observed_infections must have the same length."
-                )
+            raise ValueError(
+                "Either n_timepoints_to_simulate or observed_infections "
+                "must be provided, but not both."
+            )
 
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.sample_rt(
-            duration=n_timepoints,
+            duration=n_timepoints_to_simulate,
             **kwargs,
         )
 
