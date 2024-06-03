@@ -26,7 +26,7 @@ test:
 	poetry run pytest --mpl --mpl-default-tolerance=10
 
 docs: docs/pyrenew_demo.md docs/getting-started.md \
-	docs/example-with-datasets.md
+	docs/example-with-datasets.md docs/extending_pyrenew.md
 
 docs/pyrenew_demo.md: docs/pyrenew_demo.qmd
 	poetry run quarto render docs/pyrenew_demo.qmd
