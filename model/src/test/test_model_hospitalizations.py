@@ -90,7 +90,6 @@ def test_model_hosp_no_timepoints_or_observations():
         observation_process=observed_admissions,
     )
 
-    # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError):
@@ -153,7 +152,6 @@ def test_model_hosp_both_timepoints_and_observations():
         observation_process=observed_admissions,
     )
 
-    # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError):
