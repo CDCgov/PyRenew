@@ -1,6 +1,7 @@
 # numpydoc ignore=GL08
 
 import numpy.testing as testing
+import polars as pl
 from pyrenew.datasets import (
     load_generation_interval,
     load_infection_admission_interval,
@@ -13,6 +14,8 @@ def test_loading_wastewater():
     df = load_wastewater()
     assert len(df) > 0
     assert df.shape == (635, 14)
+    assert df["date"].dtype == pl.Date
+    assert df["forecast_date"].dtype == pl.Date
 
     testing.assert_approx_equal(df["daily_hosp_admits"].mean(), 12.8888, 3)
     testing.assert_approx_equal(df["load_sewage"].mean(), 3.841025, 3)
