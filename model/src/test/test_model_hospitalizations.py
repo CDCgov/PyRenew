@@ -7,6 +7,7 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 import polars as pl
+import pytest
 from pyrenew.deterministic import (
     DeterministicPMF,
     DeterministicVariable,
@@ -374,6 +375,18 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        with pytest.raises(Exception, match="Either"):
+            model1.sample(
+                n_timepoints_to_simulate=None, observed_admissions=None
+            )
+
+        # Checking error
+        with pytest.raises(Exception, match="Cannot pass both"):
+            model1.sample(
+                n_timepoints_to_simulate=n_obs_to_generate,
+                observed_admissions=1,
+            )
+
         model1_samp = model1.sample(n_timepoints_to_simulate=n_obs_to_generate)
 
     obs = jnp.hstack(

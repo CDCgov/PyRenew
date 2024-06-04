@@ -62,6 +62,26 @@ def test_model_basicrenewal_no_obs_model():
         model0_samp.sampled_infections, model1_samp.sampled_infections
     )
 
+    # Checking error passing none
+    with pytest.raises(Exception, match="Either"):
+        model0.run(
+            num_warmup=500,
+            num_samples=500,
+            rng_key=jax.random.PRNGKey(272),
+            observed_infections=None,
+            n_timepoints_to_simulate=None,
+        )
+
+    # Checking error (passing both)
+    with pytest.raises(Exception, match="Cannot pass both"):
+        model0.run(
+            num_warmup=500,
+            num_samples=500,
+            rng_key=jax.random.PRNGKey(272),
+            observed_infections=model0_samp.latent_infections,
+            n_timepoints_to_simulate=1,
+        )
+
     model0.run(
         num_warmup=500,
         num_samples=500,
