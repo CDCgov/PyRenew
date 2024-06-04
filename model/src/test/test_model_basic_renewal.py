@@ -42,7 +42,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
 
     np.random.seed(2203)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Either"):
             model1.sample(
                 n_timepoints_to_simulate=None, observed_infections=None
             )
@@ -73,7 +73,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     np.random.seed(2203)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Cannot pass both"):
             model1.sample(
                 n_timepoints_to_simulate=30,
                 observed_infections=jnp.repeat(jnp.nan, 30),
@@ -124,26 +124,6 @@ def test_model_basicrenewal_no_obs_model():
     np.testing.assert_array_equal(
         model0_samp.sampled_infections, model1_samp.sampled_infections
     )
-
-    # Checking error passing none
-    with pytest.raises(Exception, match="Either"):
-        model0.run(
-            num_warmup=500,
-            num_samples=500,
-            rng_key=jax.random.PRNGKey(272),
-            observed_infections=None,
-            n_timepoints_to_simulate=None,
-        )
-
-    # Checking error (passing both)
-    with pytest.raises(Exception, match="Cannot pass both"):
-        model0.run(
-            num_warmup=500,
-            num_samples=500,
-            rng_key=jax.random.PRNGKey(272),
-            observed_infections=model0_samp.latent_infections,
-            n_timepoints_to_simulate=1,
-        )
 
     model0.run(
         num_warmup=500,

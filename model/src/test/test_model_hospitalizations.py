@@ -92,7 +92,7 @@ def test_model_hosp_no_timepoints_or_observations():
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Either"):
             model1.sample(
                 n_timepoints_to_simulate=None, observed_admissions=None
             )
@@ -154,7 +154,7 @@ def test_model_hosp_both_timepoints_and_observations():
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Cannot pass both"):
             model1.sample(
                 n_timepoints_to_simulate=30,
                 observed_admissions=jnp.repeat(jnp.nan, 30),
@@ -500,18 +500,6 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        with pytest.raises(Exception, match="Either"):
-            model1.sample(
-                n_timepoints_to_simulate=None, observed_admissions=None
-            )
-
-        # Checking error
-        with pytest.raises(Exception, match="Cannot pass both"):
-            model1.sample(
-                n_timepoints_to_simulate=n_obs_to_generate,
-                observed_admissions=1,
-            )
-
         model1_samp = model1.sample(n_timepoints_to_simulate=n_obs_to_generate)
 
     obs = jnp.hstack(
