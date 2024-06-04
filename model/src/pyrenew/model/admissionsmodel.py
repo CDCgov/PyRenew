@@ -184,7 +184,7 @@ class HospitalAdmissionsModel(Model):
 
     def sample(
         self,
-        n_timepoints: int,
+        n_timepoints_to_simulate: int | None = None,
         observed_admissions: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
@@ -194,7 +194,7 @@ class HospitalAdmissionsModel(Model):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints_to_simulate : int, optional
             Number of timepoints to sample (passed to the basic renewal model).
         observed_admissions : ArrayLike, optional
             The observed hospitalization data (passed to the basic renewal
@@ -216,10 +216,26 @@ class HospitalAdmissionsModel(Model):
         sample_latent_admissions : To sample latent hospitalization process
         sample_observed_admissions : For sampling observed hospital admissions
         """
+        if n_timepoints_to_simulate is None and observed_admissions is None:
+            raise ValueError(
+                "Either n_timepoints_to_simulate or observed_admissions "
+                "must be passed."
+            )
+        elif (
+            n_timepoints_to_simulate is not None
+            and observed_admissions is not None
+        ):
+            raise ValueError(
+                "Cannot pass both n_timepoints_to_simulate and observed_admissions."
+            )
+        elif n_timepoints_to_simulate is None:
+            n_timepoints = len(observed_admissions)
+        else:
+            n_timepoints = n_timepoints_to_simulate
 
         # Getting the initial quantities from the basic model
         basic_model = self.basic_renewal.sample(
-            n_timepoints=n_timepoints,
+            n_timepoints_to_simulate=n_timepoints,
             observed_infections=None,
             padding=padding,
             **kwargs,

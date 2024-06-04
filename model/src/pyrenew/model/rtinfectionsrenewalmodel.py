@@ -31,7 +31,11 @@ class RtInfectionsRenewalSample(NamedTuple):
     sampled_infections: ArrayLike | None = None
 
     def __repr__(self):
-        return f"RtInfectionsRenewalSample(Rt={self.Rt}, latent_infections={self.latent_infections}, sampled_infections={self.sampled_infections})"
+        return (
+            f"RtInfectionsRenewalSample(Rt={self.Rt}, "
+            f"latent_infections={self.latent_infections}, "
+            f"sampled_infections={self.sampled_infections})"
+        )
 
 
 class RtInfectionsRenewalModel(Model):
@@ -245,7 +249,7 @@ class RtInfectionsRenewalModel(Model):
 
     def sample(
         self,
-        n_timepoints: int,
+        n_timepoints_to_simulate: int | None = None,
         observed_infections: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
@@ -255,7 +259,7 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints_to_simulate : int, optional
             Number of timepoints to sample.
         observed_infections : ArrayLike | None, optional
             Observed infections. Defaults to None.
@@ -266,11 +270,31 @@ class RtInfectionsRenewalModel(Model):
             Additional keyword arguments passed through to internal sample()
             calls, if any
 
+        Notes
+        -----
+        Either `observed_admissions` or `n_timepoints_to_simulate` must be specified, not both.
+
         Returns
         -------
         RtInfectionsRenewalSample
         """
 
+        if n_timepoints_to_simulate is None and observed_infections is None:
+            raise ValueError(
+                "Either n_timepoints_to_simulate or observed_infections "
+                "must be passed."
+            )
+        elif (
+            n_timepoints_to_simulate is not None
+            and observed_infections is not None
+        ):
+            raise ValueError(
+                "Cannot pass both n_timepoints_to_simulate and observed_infections."
+            )
+        elif n_timepoints_to_simulate is None:
+            n_timepoints = len(observed_infections)
+        else:
+            n_timepoints = n_timepoints_to_simulate
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.sample_rt(

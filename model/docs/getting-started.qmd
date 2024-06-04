@@ -139,7 +139,7 @@ Using `numpyro`, we can simulate data using the `sample()` member function of `R
 #| label: simulate
 np.random.seed(223)
 with npro.handlers.seed(rng_seed = np.random.randint(1, 60)):
-    sim_data = model1.sample(n_timepoints=30)
+    sim_data = model1.sample(n_timepoints_to_simulate=30)
 
 sim_data
 ```
@@ -154,11 +154,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, 31), sim_data.Rt)
+axs[0].plot(range(0, len(sim_data.Rt)), sim_data.Rt)
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, 31), sim_data.sampled_infections)
+axs[1].plot(range(0, len(sim_data.Rt)), sim_data.sampled_infections)
 axs[1].set_ylabel('Infections')
 
 fig.suptitle('Basic renewal model')
@@ -177,7 +177,6 @@ model1.run(
     num_warmup=2000,
     num_samples=1000,
     observed_infections=sim_data.sampled_infections,
-    n_timepoints = len(sim_data[1])-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )

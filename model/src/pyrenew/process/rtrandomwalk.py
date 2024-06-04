@@ -108,6 +108,7 @@ class RtRandomWalkProcess(RandomVariable):
         Returns
         -------
         tuple
+            With a single array of shape (duration,).
         """
 
         Rt0 = npro.sample("Rt0", self.Rt0_dist)

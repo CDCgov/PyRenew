@@ -65,6 +65,7 @@ class FirstDifferenceARProcess(RandomVariable):
         Returns
         -------
         tuple
+            With a single array of shape (duration,).
         """
         rates_of_change, *_ = self.rate_of_change_proc.sample(
             duration=duration,
