@@ -36,8 +36,8 @@ The following code-chunk defines the model components. Notice that for both the 
 
 ```{python}
 #| label: model-components
-gen_int = DeterministicPMF(jnp.array([0.25, 0.5, 0.15, 0.1]))
-feedback_strength = DeterministicVariable(0.05)
+gen_int = DeterministicPMF(jnp.array([0.25, 0.5, 0.15, 0.1]), name="gen_int")
+feedback_strength = DeterministicVariable(0.05, name="feedback_strength")
 
 I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
