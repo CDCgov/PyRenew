@@ -23,7 +23,9 @@ def test_model_basicrenewal_no_obs_model():
     from the perspective of the infections. It returns expected, not sampled.
     """
 
-    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicPMF(
+        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+    )
 
     with pytest.raises(ValueError):
         I0 = DistributionalRV(dist=1, name="I0")
@@ -88,7 +90,9 @@ def test_model_basicrenewal_with_obs_model():
     from the perspective of the infections. It returns sampled, not expected.
     """
 
-    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicPMF(
+        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+    )
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
@@ -133,7 +137,9 @@ def test_model_basicrenewal_with_obs_model():
 
 @pytest.mark.mpl_image_compare
 def test_model_basicrenewal_plot() -> plt.Figure:  # numpydoc ignore=GL08
-    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicPMF(
+        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+    )
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
@@ -171,7 +177,9 @@ def test_model_basicrenewal_plot() -> plt.Figure:  # numpydoc ignore=GL08
 
 
 def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
-    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicPMF(
+        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+    )
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 

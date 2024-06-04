@@ -24,7 +24,7 @@ def test_deterministic():
             ]
         )
     )
-    var2 = DeterministicPMF(jnp.array([0.25, 0.25, 0.2, 0.3]))
+    var2 = DeterministicPMF(jnp.array([0.25, 0.25, 0.2, 0.3]), name="var2")
     var3 = DeterministicProcess(jnp.array([1, 2, 3, 4]))
     var4 = NullVariable()
     var5 = NullProcess()
