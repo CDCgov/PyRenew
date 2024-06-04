@@ -17,7 +17,7 @@ class DeterministicVariable(RandomVariable):
     def __init__(
         self,
         vars: ArrayLike,
-        label: str,
+        name: str,
     ) -> None:
         """Default constructor
 
@@ -25,8 +25,8 @@ class DeterministicVariable(RandomVariable):
         ----------
         vars : ArrayLike
             A tuple with arraylike objects.
-        label : str, optional
-            A label to assign to the process.
+        name : str, optional
+            A name to assign to the process.
 
         Returns
         -------
@@ -35,7 +35,7 @@ class DeterministicVariable(RandomVariable):
 
         self.validate(vars)
         self.vars = vars
-        self.label = label
+        self.name = name
 
         return None
 
@@ -85,5 +85,5 @@ class DeterministicVariable(RandomVariable):
             Containing the stored values during construction.
         """
         if record:
-            npro.deterministic(self.label, self.vars)
+            npro.deterministic(self.name, self.vars)
         return (self.vars,)
