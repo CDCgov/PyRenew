@@ -216,6 +216,22 @@ class HospitalAdmissionsModel(Model):
         sample_latent_admissions : To sample latent hospitalization process
         sample_observed_admissions : For sampling observed hospital admissions
         """
+        if n_timepoints_to_simulate is None and observed_admissions is None:
+            raise ValueError(
+                "Either n_timepoints_to_simulate or observed_admissions "
+                "must be passed."
+            )
+        elif (
+            n_timepoints_to_simulate is not None
+            and observed_admissions is not None
+        ):
+            raise ValueError(
+                "Cannot pass both n_timepoints_to_simulate and observed_admissions."
+            )
+        elif n_timepoints_to_simulate is None:
+            n_timepoints = len(observed_admissions)
+        else:
+            n_timepoints = n_timepoints_to_simulate
 
         if n_timepoints_to_simulate is None:
             if observed_admissions is None:

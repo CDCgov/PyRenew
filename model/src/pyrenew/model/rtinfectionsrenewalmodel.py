@@ -279,19 +279,20 @@ class RtInfectionsRenewalModel(Model):
         RtInfectionsRenewalSample
         """
 
-        if n_timepoints_to_simulate is None:
-            if observed_infections is not None:
-                n_timepoints = len(observed_infections)
-            else:
-                raise ValueError(
-                    "Either n_timepoints_to_simulate or observed_infections "
-                    "must be provided."
-                )
-        elif observed_infections is not None:
+        if n_timepoints_to_simulate is None and observed_infections is None:
             raise ValueError(
                 "Either n_timepoints_to_simulate or observed_infections "
-                "must be provided, but not both."
+                "must be passed."
             )
+        elif (
+            n_timepoints_to_simulate is not None
+            and observed_infections is not None
+        ):
+            raise ValueError(
+                "Cannot pass both n_timepoints_to_simulate and observed_infections."
+            )
+        elif n_timepoints_to_simulate is None:
+            n_timepoints = len(observed_infections)
         else:
             n_timepoints = n_timepoints_to_simulate
         # Sampling from Rt (possibly with a given Rt, depending on
