@@ -17,7 +17,7 @@ class DeterministicVariable(RandomVariable):
     def __init__(
         self,
         vars: ArrayLike,
-        label: str = "a_random_variable",
+        label: str,
     ) -> None:
         """Default constructor
 
@@ -26,7 +26,7 @@ class DeterministicVariable(RandomVariable):
         vars : ArrayLike
             A tuple with arraylike objects.
         label : str, optional
-            A label to assign to the process. Defaults to "a_random_variable"
+            A label to assign to the process.
 
         Returns
         -------
