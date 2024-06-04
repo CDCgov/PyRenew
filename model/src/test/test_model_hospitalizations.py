@@ -36,6 +36,131 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
         )
 
 
+def test_model_hosp_no_timepoints_or_observations():
+    """
+    Checks that the Hospitalization model does not run without either n_timepoints_to_simulate or observed_admissions
+    """
+
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+
+    latent_infections = Infections()
+    Rt_process = RtRandomWalkProcess()
+    observed_admissions = PoissonObservation()
+
+    inf_hosp = DeterministicPMF(
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ],
+        ),
+    )
+
+    latent_admissions = HospitalAdmissions(
+        infection_to_admission_interval=inf_hosp,
+        infect_hosp_rate_dist=DistributionalRV(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+        ),
+    )
+
+    model1 = HospitalAdmissionsModel(
+        gen_int=gen_int,
+        I0=I0,
+        Rt_process=Rt_process,
+        latent_infections=latent_infections,
+        latent_admissions=latent_admissions,
+        observation_process=observed_admissions,
+    )
+
+    np.random.seed(223)
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        with pytest.raises(ValueError):
+            model1.sample(
+                n_timepoints_to_simulate=None, observed_admissions=None
+            )
+
+
+def test_model_hosp_both_timepoints_and_observations():
+    """
+    Checks that the Hospitalization model does not run with both n_timepoints_to_simulate and observed_admissions passed
+    """
+
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+
+    latent_infections = Infections()
+    Rt_process = RtRandomWalkProcess()
+    observed_admissions = PoissonObservation()
+
+    inf_hosp = DeterministicPMF(
+        jnp.array(
+            [
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0.25,
+                0.5,
+                0.1,
+                0.1,
+                0.05,
+            ],
+        ),
+    )
+
+    latent_admissions = HospitalAdmissions(
+        infection_to_admission_interval=inf_hosp,
+        infect_hosp_rate_dist=DistributionalRV(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+        ),
+    )
+
+    model1 = HospitalAdmissionsModel(
+        gen_int=gen_int,
+        I0=I0,
+        Rt_process=Rt_process,
+        latent_infections=latent_infections,
+        latent_admissions=latent_admissions,
+        observation_process=observed_admissions,
+    )
+
+    np.random.seed(223)
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        with pytest.raises(ValueError):
+            model1.sample(
+                n_timepoints_to_simulate=30,
+                observed_admissions=jnp.repeat(jnp.nan, 30),
+            )
+
+
 def test_model_hosp_no_obs_model():
     """
     Checks that the partially deterministic
