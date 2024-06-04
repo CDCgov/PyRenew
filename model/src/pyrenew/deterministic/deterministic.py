@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import jax.numpy as jnp
 import numpyro as npro
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
@@ -34,7 +35,7 @@ class DeterministicVariable(RandomVariable):
         """
 
         self.validate(vars)
-        self.vars = vars
+        self.vars = jnp.atleast_1d(vars)
         self.name = name
 
         return None
