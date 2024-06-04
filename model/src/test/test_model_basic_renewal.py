@@ -17,6 +17,69 @@ from pyrenew.observation import PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
 
 
+def test_model_basicrenewal_no_timepoints_or_observations():
+    """
+    Test that the basic renewal model does not run without either n_timepoints_to_simulate or observed_admissions
+    """
+
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+
+    latent_infections = Infections()
+
+    observed_infections = PoissonObservation()
+
+    rt = RtRandomWalkProcess()
+
+    model1 = RtInfectionsRenewalModel(
+        I0=I0,
+        gen_int=gen_int,
+        latent_infections=latent_infections,
+        observation_process=observed_infections,
+        Rt_process=rt,
+    )
+
+    np.random.seed(2203)
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        with pytest.raises(ValueError):
+            model1.sample(
+                n_timepoints_to_simulate=None, observed_infections=None
+            )
+
+
+def test_model_basicrenewal_both_timepoints_and_observations():
+    """
+    Test that the basic renewal model does not run with both n_timepoints_to_simulate and observed_admissions passed
+    """
+
+    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+
+    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+
+    latent_infections = Infections()
+
+    observed_infections = PoissonObservation()
+
+    rt = RtRandomWalkProcess()
+
+    model1 = RtInfectionsRenewalModel(
+        I0=I0,
+        gen_int=gen_int,
+        latent_infections=latent_infections,
+        observation_process=observed_infections,
+        Rt_process=rt,
+    )
+
+    np.random.seed(2203)
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        with pytest.raises(ValueError):
+            model1.sample(
+                n_timepoints_to_simulate=30,
+                observed_infections=jnp.repeat(jnp.nan, 30),
+            )
+
+
 def test_model_basicrenewal_no_obs_model():
     """
     Test the basic semi-deterministic renewal model runs. Semi-deterministic
