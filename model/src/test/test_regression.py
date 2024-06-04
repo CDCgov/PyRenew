@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pyrenew.regression as r
-import pyrenew.transform as t
+import pyrenew.transformation as t
 from numpy.testing import assert_array_almost_equal
 
 

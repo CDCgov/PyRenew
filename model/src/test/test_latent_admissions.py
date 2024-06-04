@@ -24,8 +24,8 @@ def test_admissions_sample():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_rt, *_ = rt.sample(duration=30)
 
-    gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
-    i0 = 10
+    gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
+    i0 = 10 * jnp.ones_like(gen_int)
 
     inf1 = Infections()
 
@@ -56,6 +56,7 @@ def test_admissions_sample():
                 0.05,
             ]
         ),
+        name="inf_hosp",
     )
 
     hosp1 = HospitalAdmissions(

@@ -44,4 +44,5 @@ def load_wastewater() -> pl.DataFrame:
     return pl.read_csv(
         source=files("pyrenew.datasets") / "wastewater.tsv",
         separator="\t",
+        try_parse_dates=True,
     )

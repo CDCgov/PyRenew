@@ -6,7 +6,8 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
-from jax.typing import ArrayLike
+import pyrenew.datautils as du
+from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 
@@ -307,6 +308,14 @@ class RtInfectionsRenewalModel(Model):
 
         # Sampling initial infections
         i0, *_ = self.sample_i0(**kwargs)
+
+        # Padding i0 to match gen_int
+        # PADDING SHOULD BE REMOVED ONCE
+        # https://github.com/CDCgov/multisignal-epi-inference/pull/124
+        # is merged.
+        # SEE ALSO:
+        # https://github.com/CDCgov/multisignal-epi-inference/pull/123#discussion_r1612337288
+        i0 = du.pad_x_to_match_y(x=i0, y=gen_int, fill_value=0.0)
 
         # Sampling from the latent process
         latent, *_ = self.sample_infections_latent(

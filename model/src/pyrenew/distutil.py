@@ -15,7 +15,7 @@ from jax.typing import ArrayLike
 
 
 def validate_discrete_dist_vector(
-    discrete_dist: ArrayLike, tol: float = 1e-20
+    discrete_dist: ArrayLike, tol: float = 1e-5
 ) -> ArrayLike:
     """
     Validate that a vector represents a discrete
@@ -30,7 +30,7 @@ def validate_discrete_dist_vector(
         must sum to 1 within the specified tolerance.
     tol : float, optional
         The tolerance within which the sum of the distribution must
-        be 1. Defaults to 1e-20.
+        be 1. Defaults to 1e-5.
 
     Returns
     -------

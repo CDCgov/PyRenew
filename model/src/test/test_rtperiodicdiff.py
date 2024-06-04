@@ -51,9 +51,13 @@ def test_rtweeklydiff() -> None:
 
     params = {
         "data_starts": 0,
-        "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
-        "autoreg": DeterministicVariable(jnp.array([0.7])),
-        "periodic_diff_sd": DeterministicVariable(jnp.array([0.1])),
+        "log_rt_prior": DeterministicVariable(
+            jnp.array([0.1, 0.2]), name="log_rt_prior"
+        ),
+        "autoreg": DeterministicVariable(jnp.array([0.7]), name="autoreg"),
+        "periodic_diff_sd": DeterministicVariable(
+            jnp.array([0.1]), name="periodic_diff_sd"
+        ),
         "site_name": "test",
     }
     duration = 30
@@ -94,10 +98,14 @@ def test_rtweeklydiff_no_autoregressive() -> None:
 
     params = {
         "data_starts": 0,
-        "log_rt_prior": DeterministicVariable(jnp.array([0.0, 0.0])),
+        "log_rt_prior": DeterministicVariable(
+            jnp.array([0.0, 0.0]), name="log_rt_prior"
+        ),
         # No autoregression!
-        "autoreg": DeterministicVariable(jnp.array([0.0])),
-        "periodic_diff_sd": DeterministicVariable(jnp.array([0.1])),
+        "autoreg": DeterministicVariable(jnp.array([0.0]), name="autoreg"),
+        "periodic_diff_sd": DeterministicVariable(
+            jnp.array([0.1]), name="periodic_diff_sd"
+        ),
         "site_name": "test",
     }
 
@@ -128,9 +136,13 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
 
     params = {
         "data_starts": 0,
-        "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
-        "autoreg": DeterministicVariable(jnp.array([0.7])),
-        "periodic_diff_sd": DeterministicVariable(jnp.array([0.1])),
+        "log_rt_prior": DeterministicVariable(
+            jnp.array([0.1, 0.2]), name="log_rt_prior"
+        ),
+        "autoreg": DeterministicVariable(jnp.array([0.7]), name="autoreg"),
+        "periodic_diff_sd": DeterministicVariable(
+            jnp.array([0.1]), name="periodic_diff_sd"
+        ),
         "site_name": "test",
     }
 
@@ -159,9 +171,13 @@ def test_rtperiodicdiff_smallsample():
 
     params = {
         "data_starts": 0,
-        "log_rt_prior": DeterministicVariable(jnp.array([0.1, 0.2])),
-        "autoreg": DeterministicVariable(jnp.array([0.7])),
-        "periodic_diff_sd": DeterministicVariable(jnp.array([0.1])),
+        "log_rt_prior": DeterministicVariable(
+            jnp.array([0.1, 0.2]), name="log_rt_prior"
+        ),
+        "autoreg": DeterministicVariable(jnp.array([0.7]), name="autoreg"),
+        "periodic_diff_sd": DeterministicVariable(
+            jnp.array([0.1]), name="periodic_diff_sd"
+        ),
         "site_name": "test",
     }
 

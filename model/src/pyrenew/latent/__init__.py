@@ -9,6 +9,7 @@ from pyrenew.latent.infection_functions import (
     logistic_susceptibility_adjustment,
 )
 from pyrenew.latent.infections import Infections
+from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
 
 __all__ = [
     "HospitalAdmissions",
@@ -16,4 +17,5 @@ __all__ = [
     "logistic_susceptibility_adjustment",
     "compute_infections_from_rt",
     "compute_infections_from_rt_with_feedback",
+    "InfectionsWithFeedback",
 ]
