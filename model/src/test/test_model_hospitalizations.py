@@ -41,7 +41,9 @@ def test_model_hosp_no_obs_model():
     Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicPMF(
+        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+    )
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
@@ -70,6 +72,7 @@ def test_model_hosp_no_obs_model():
                 0.05,
             ]
         ),
+        name="inf_hosp",
     )
 
     latent_admissions = HospitalAdmissions(
@@ -137,7 +140,9 @@ def test_model_hosp_with_obs_model():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicPMF(
+        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+    )
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
@@ -168,6 +173,7 @@ def test_model_hosp_with_obs_model():
                 0.05,
             ],
         ),
+        name="inf_hosp",
     )
 
     latent_admissions = HospitalAdmissions(
@@ -216,7 +222,9 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicPMF(
+        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+    )
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
@@ -247,6 +255,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
                 0.05,
             ],
         ),
+        name="inf_hosp",
     )
 
     # Other random components
@@ -306,7 +315,9 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     Checks that the random Hospitalization model runs
     """
 
-    gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+    gen_int = DeterministicPMF(
+        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+    )
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
@@ -337,6 +348,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
                 0.05,
             ],
         ),
+        name="inf_hosp",
     )
 
     # Other random components
@@ -345,7 +357,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = weekday / weekday.sum()
     weekday = weekday[:31]
 
-    weekday = DeterministicVariable(weekday)
+    weekday = DeterministicVariable(weekday, name="weekday")
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
@@ -353,7 +365,9 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     hosp_report_prob_dist = hosp_report_prob_dist[:31]
 
-    hosp_report_prob_dist = DeterministicVariable(vars=hosp_report_prob_dist)
+    hosp_report_prob_dist = DeterministicVariable(
+        vars=hosp_report_prob_dist, name="hosp_report_prob_dist"
+    )
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,

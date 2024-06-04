@@ -68,8 +68,10 @@ def test_infectionsrtfeedback():
 
     # By doing the infection feedback strength 0, Rt = Rt_adjusted
     # So infection should be equal in both
-    inf_feed_strength = DeterministicVariable(jnp.zeros_like(Rt))
-    inf_feedback_pmf = DeterministicPMF(gen_int)
+    inf_feed_strength = DeterministicVariable(
+        jnp.zeros_like(Rt), name="inf_feed_strength"
+    )
+    inf_feedback_pmf = DeterministicPMF(gen_int, name="inf_feedback_pmf")
 
     # Test the InfectionsWithFeedback class
     InfectionsWithFeedback = latent.InfectionsWithFeedback(
@@ -107,8 +109,10 @@ def test_infectionsrtfeedback_feedback():
     I0 = jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
     gen_int = jnp.array([0.4, 0.25, 0.25, 0.1, 0.0, 0.0, 0.0])
 
-    inf_feed_strength = DeterministicVariable(jnp.repeat(0.5, len(Rt)))
-    inf_feedback_pmf = DeterministicPMF(gen_int)
+    inf_feed_strength = DeterministicVariable(
+        jnp.repeat(0.5, len(Rt)), name="inf_feed_strength"
+    )
+    inf_feedback_pmf = DeterministicPMF(gen_int, name="inf_feedback_pmf")
 
     # Test the InfectionsWithFeedback class
     InfectionsWithFeedback = latent.InfectionsWithFeedback(

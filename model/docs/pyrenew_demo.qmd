@@ -86,7 +86,7 @@ To initialize the model, we first define initial conditions, including:
 # Initializing model components:
 
 # 1) A deterministic generation time
-gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int")
 
 # 2) Initial infections
 I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
@@ -99,6 +99,7 @@ latent_infections = Infections()
 # First, define a deterministic infection to hosp pmf
 inf_hosp_int = DeterministicPMF(
     jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),
+    name="inf_hosp_int"
     )
 
 latent_admissions = HospitalAdmissions(

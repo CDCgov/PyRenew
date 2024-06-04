@@ -56,6 +56,7 @@ def test_admissions_sample():
                 0.05,
             ]
         ),
+        name="inf_hosp",
     )
 
     hosp1 = HospitalAdmissions(
