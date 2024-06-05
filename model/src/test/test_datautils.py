@@ -1,13 +1,13 @@
 """
-Tests for the datautils module.
+Tests for the arrayutils module.
 """
 
 import jax.numpy as jnp
-import pyrenew.datautils as du
+import pyrenew.arrayutils as au
 import pytest
 
 
-def test_datautils_pad_to_match():
+def test_arrayutils_pad_to_match():
     """
     Verifies extension when required and error when `fix_y` is True.
     """
@@ -15,7 +15,7 @@ def test_datautils_pad_to_match():
     x = jnp.array([1, 2, 3])
     y = jnp.array([1, 2])
 
-    x_pad, y_pad = du.pad_to_match(x, y)
+    x_pad, y_pad = au.pad_to_match(x, y)
 
     assert x_pad.size == y_pad.size
     assert x_pad.size == 3
@@ -23,7 +23,7 @@ def test_datautils_pad_to_match():
     x = jnp.array([1, 2])
     y = jnp.array([1, 2, 3])
 
-    x_pad, y_pad = du.pad_to_match(x, y)
+    x_pad, y_pad = au.pad_to_match(x, y)
 
     assert x_pad.size == y_pad.size
     assert x_pad.size == 3
@@ -33,10 +33,10 @@ def test_datautils_pad_to_match():
 
     # Verify that the function raises an error when `fix_y` is True
     with pytest.raises(ValueError):
-        x_pad, y_pad = du.pad_to_match(x, y, fix_y=True)
+        x_pad, y_pad = au.pad_to_match(x, y, fix_y=True)
 
 
-def test_datautils_pad_x_to_match_y():
+def test_arrayutils_pad_x_to_match_y():
     """
     Verifies extension when required
     """
@@ -44,6 +44,6 @@ def test_datautils_pad_x_to_match_y():
     x = jnp.array([1, 2])
     y = jnp.array([1, 2, 3])
 
-    x_pad = du.pad_x_to_match_y(x, y)
+    x_pad = au.pad_x_to_match_y(x, y)
 
     assert x_pad.size == 3
