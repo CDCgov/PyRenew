@@ -14,22 +14,30 @@ appropriate array to scan.
 from __future__ import annotations
 
 from typing import Callable
-
+from pyrenew.transform import IdentityTransform
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 
-def new_convolve_scanner(discrete_dist_flipped: ArrayLike) -> Callable:
+def new_convolve_scanner(discrete_dist_flipped: ArrayLike,
+                         transform: Callable = None) -> Callable:
     """
-    Factory function to create a scanner function for
-    convolving a discrete distribution
-    over a time series data subset.
+    Factory function to create a "scanner" function
+    that can be used with :py:func:`jax.lax.scan` to
+    construct an array via backward-looking iterative
+    convolution.
 
     Parameters
     ----------
     discrete_dist_flipped : ArrayLike
         A 1D jax array representing the discrete
         distribution flipped for convolution.
+
+    transform : Callable
+        A transformation to apply to the result
+        of the dot product and multiplication.
+        If None, use the identity transformation.
+        Default None.
 
     Returns
     -------
@@ -40,12 +48,36 @@ def new_convolve_scanner(discrete_dist_flipped: ArrayLike) -> Callable:
         a multiplier, computes the dot product,
         then updates and returns the new history
         subset and the convolution result.
+
+    Notes
+    -----
+    The following iterative operation is found often
+    in renewal processes:
+    
+    .. math::
+        X(t) = f\\left(m(t) * \\left[X(t - n),
+        X(t - n + 1), ... X(t - 1)\right] \\dot \\vec{d} \\right)
+
+    Where `math`:\\vec{d} is a vector of length `math`:n,
+    `math`:m(t) is a scalar for each value of time `math`:t,
+    and `math`:f is a scalar-valued function.
+
+    Given `math`:\\vec{d}, and optionally `math`:f,
+    this factory function returns a new function that
+    peforms one step of this process while scanning along
+    an array of  multipliers (i.e. an array
+    giving the values of `math`:m(t)) using :py:func:jax.lax.scan.
+
     """
+    if transform is None:
+        transform = IdentityTransform()
 
     def _new_scanner(
-        history_subset: ArrayLike, multiplier: float
+            history_subset: ArrayLike, multiplier: float
     ) -> tuple[ArrayLike, float]:  # numpydoc ignore=GL08
-        new_val = multiplier * jnp.dot(discrete_dist_flipped, history_subset)
+        new_val = transform(
+            multiplier * jnp.dot(discrete_dist_flipped,
+                                 history_subset))
         latest = jnp.hstack([history_subset[1:], new_val])
         return latest, new_val
 
@@ -57,9 +89,20 @@ def new_double_scanner(
     transforms: tuple[Callable, Callable],
 ) -> Callable:
     """
-    Factory function to create a scanner function that
-    applies two sequential transformations
-    and convolutions using two discrete distributions.
+    Factory function to create a scanner function
+    that iteratively constructs arrays by applying
+    the dot-product/multiply/transform operation
+    twice per history subset, with the first yielding
+    operation yielding an additional scalar multiplier
+    for the second.
+
+    Notes
+    -----
+    Note that this is equivalent to passing the result
+    of creating a new multiplier array using the output
+    of a first new_convolve_scanner scanner call and then
+    scanning along that array with the output of a second
+    new convolve scanner call, but it is more efficient.
 
     Parameters
     ----------
@@ -76,11 +119,9 @@ def new_double_scanner(
     -------
     Callable
         A scanner function that applies two sequential
-        convolutions and transformations. It takes a history
-        subset and a tuple of multipliers,
-        computes the transformations and dot products,
-        and returns the updated history
-        subset and a tuple of new values.
+        convolutions and transformations to iteratively
+        construct a new array by scanning along an old
+        one.
     """
     d1, d2 = dists
     t1, t2 = transforms
