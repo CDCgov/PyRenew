@@ -54,7 +54,7 @@ def _infection_w_feedback_alt(
             I_vec[t : t + len_gen], np.flip(gen_int)
         )
 
-    return {"infections": I_vec[-T:], "rt": Rt_adj}
+    return {"infections": I_vec, "rt": Rt_adj}
 
 
 def test_infectionsrtfeedback():
