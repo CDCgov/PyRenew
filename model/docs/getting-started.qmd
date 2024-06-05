@@ -42,9 +42,9 @@ This section will show the steps to build a simple renewal model featuring a lat
 We start by loading the needed components to build a basic renewal model:
 
 ```{python}
-#| label: loading-pkgs
-#| output: false
-#| warning: false
+# | label: loading-pkgs
+# | output: false
+# | warning: false
 import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
@@ -86,7 +86,7 @@ To initialize these five components within the renewal modeling framework, we es
 (5) an instance of the `PoissonObservation` class with default values
 
 ```{python}
-#| label: creating-elements
+# | label: creating-elements
 # (1) The generation interval (deterministic)
 pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(pmf_array, name="gen_int")
@@ -94,7 +94,8 @@ gen_int = DeterministicPMF(pmf_array, name="gen_int")
 # (2) Initial infections (inferred with a prior)
 I0 = InfectionSeedingProcess(
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsZeroPad(pmf_array.size))
+    SeedInfectionsZeroPad(pmf_array.size),
+)
 
 # (3) The random process for Rt
 rt_proc = RtRandomWalkProcess()
@@ -109,14 +110,14 @@ observation_process = PoissonObservation()
 With these five pieces, we can build the basic renewal model as an instance of the  `RtInfectionsRenewalModel` class:
 
 ```{python}
-#| label: model-creation
+# | label: model-creation
 model1 = RtInfectionsRenewalModel(
-    gen_int             = gen_int,
-    I0                  = I0,
-    Rt_process          = rt_proc,
-    latent_infections   = latent_infections,
-    observation_process = observation_process,
-    )
+    gen_int=gen_int,
+    I0=I0,
+    Rt_process=rt_proc,
+    latent_infections=latent_infections,
+    observation_process=observation_process,
+)
 ```
 
 The following diagram summarizes how the modules interact via composition; notably, `gen_int`, `I0`, `rt_proc`, `latent_infections`, and `observed_infections` are instances of `RandomVariable`, which means these can be easily replaced to generate a different instance of the `RtInfectionsRenewalModel` class:
@@ -143,9 +144,9 @@ flowchart TB
 Using `numpyro`, we can simulate data using the `sample()` member function of `RtInfectionsRenewalModel`. The `sample()` method of the `RtInfectionsRenewalModel` class returns a list composed of the `Rt` and `infections` sequences, called `sim_data`:
 
 ```{python}
-#| label: simulate
+# | label: simulate
 np.random.seed(223)
-with npro.handlers.seed(rng_seed = np.random.randint(1, 60)):
+with npro.handlers.seed(rng_seed=np.random.randint(1, 60)):
     sim_data = model1.sample(n_timepoints_to_simulate=30)
 
 sim_data
@@ -154,22 +155,22 @@ sim_data
 To understand what has been accomplished here, visualize an $R_t$ sample path (left panel) and infections over time (right panel):
 
 ```{python}
-#| label: fig-basic
-#| fig-cap: Rt and Infections
+# | label: fig-basic
+# | fig-cap: Rt and Infections
 import matplotlib.pyplot as plt
 
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
 axs[0].plot(sim_data.Rt)
-axs[0].set_ylabel('Rt')
+axs[0].set_ylabel("Rt")
 
 # Infections plot
 axs[1].plot(sim_data.sampled_infections)
-axs[1].set_ylabel('Infections')
+axs[1].set_ylabel("Infections")
 
-fig.suptitle('Basic renewal model')
-fig.supxlabel('Time')
+fig.suptitle("Basic renewal model")
+fig.supxlabel("Time")
 plt.tight_layout()
 plt.show()
 ```
@@ -177,7 +178,7 @@ plt.show()
 To fit the model, we can use the `run()` method of the `RtInfectionsRenewalModel` class (an inherited method from the metaclass `Model`). `model1.run()` will call the `run` method of the `model1` object, which will generate an instance of model MCMC simulation, with 2000 warm-up iterations for the MCMC algorithm, used to tune the parameters of the MCMC algorithm to improve efficiency of the sampling process. From the posterior distribution of the model parameters, 1000 samples will be drawn and used to estimate the posterior distributions and compute summary statistics. Observed data is provided to the model using the `sim_data` object previously generated. `mcmc_args` provides additional arguments for the MCMC algorithm.
 
 ```{python}
-#| label: model-fit
+# | label: model-fit
 import jax
 
 model1.run(
@@ -186,7 +187,7 @@ model1.run(
     observed_infections=sim_data.sampled_infections,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
-    )
+)
 ```
 
 Now, let's investigate the output, particularly the posterior distribution of the $R_t$ estimates:

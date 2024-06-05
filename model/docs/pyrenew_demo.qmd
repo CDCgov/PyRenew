@@ -21,9 +21,9 @@ pip install git+https://github.com/CDCgov/multisignal-epi-inference@main#subdire
 To begin, run the following import section to call external modules and functions necessary to run the `pyrenew` demo. The `import` statement imports the module and the `as` statement renames the module for use within this script. The `from` statement imports a specific function from a module (named after the `.`) within a package (named before the `.`).
 
 ```{python}
-#| output: false
-#| label: loading-pkgs
-#| warning: false
+# | output: false
+# | label: loading-pkgs
+# | warning: false
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import jax
@@ -40,11 +40,11 @@ from pyrenew.process import SimpleRandomWalkProcess
 To understand the simple random walk process underlying the sampling within the renewal process model, we first examine a single random walk path. Using the `sample` method from an instance of the `SimpleRandomWalkProcess` class, we first create an instance of the `SimpleRandomWalkProcess` class with a normal distribution of mean = 0 and standard deviation = 0.0001 as its input. Next, the `with` statement sets the seed for the random number generator for the duration of the block that follows. Inside the `with` block, the `q_samp = q.sample(duration=100)` generates the sample instance over a duration of 100 time units. Finally, this single random walk process is visualized using `matplot.pyplot` to plot the exponential of the sample instance.
 
 ```{python}
-#| label: fig-randwalk
-#| fig-cap: Random walk example
+# | label: fig-randwalk
+# | fig-cap: Random walk example
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
-with seed(rng_seed=np.random.randint(0,1000)):
+with seed(rng_seed=np.random.randint(0, 1000)):
     q_samp = q.sample(duration=100)
 
 plt.plot(np.exp(q_samp[0]))
@@ -54,7 +54,8 @@ Next, import several additional functions from the `latent` module of the `pyren
 
 ```{python}
 from pyrenew.latent import (
-    Infections, HospitalAdmissions,
+    Infections,
+    HospitalAdmissions,
 )
 from pyrenew.metaclass import DistributionalRV
 ```
@@ -93,7 +94,8 @@ gen_int = DeterministicPMF(pmf_array, name="gen_int")
 # 2) Initial infections
 I0 = InfectionSeedingProcess(
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsZeroPad(pmf_array.size))
+    SeedInfectionsZeroPad(pmf_array.size),
+)
 
 # 3) The latent infections process
 latent_infections = Infections()
@@ -102,17 +104,16 @@ latent_infections = Infections()
 
 # First, define a deterministic infection to hosp pmf
 inf_hosp_int = DeterministicPMF(
-    jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),
-    name="inf_hosp_int"
-    )
+    jnp.array([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.25, 0.5, 0.1, 0.1, 0.05]),
+    name="inf_hosp_int",
+)
 
 latent_admissions = HospitalAdmissions(
     infection_to_admission_interval=inf_hosp_int,
-    infect_hosp_rate_dist = DistributionalRV(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05),
-            name="IHR"
-            ),
-    )
+    infect_hosp_rate_dist=DistributionalRV(
+        dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+    ),
+)
 
 # 5) An observation process for the hospital admissions
 admissions_process = PoissonObservation()
@@ -132,8 +133,8 @@ hospmodel = HospitalAdmissionsModel(
     latent_admissions=latent_admissions,
     observation_process=admissions_process,
     latent_infections=latent_infections,
-    Rt_process=Rt_process
-    )
+    Rt_process=Rt_process,
+)
 ```
 
 Next, we sample from the `hospmodel` for 30 time steps and view the output of a single run:
@@ -168,7 +169,7 @@ hospmodel.run(
     observed_admissions=x.sampled_admissions,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
-    )
+)
 ```
 
 Print a summary of the model:
@@ -181,25 +182,31 @@ Next, we will use the `spread_draws` function from the `pyrenew.mcmcutils` modul
 
 ```{python}
 from pyrenew.mcmcutils import spread_draws
+
 samps = spread_draws(hospmodel.mcmc.get_samples(), [("Rt", "time")])
 ```
 
 We visualize these samples below, with individual possible Rt estimates over time shown in light blue, and the overall mean estimate Rt shown in dark blue.
 
 ```{python}
-#| label: fig-sampled-rt
-#| fig-cap: Posterior Rt
+# | label: fig-sampled-rt
+# | fig-cap: Posterior Rt
 import numpy as np
 import polars as pl
+
 fig, ax = plt.subplots(figsize=[4, 5])
 
 ax.plot(x[0])
 samp_ids = np.random.randint(size=25, low=0, high=999)
 for samp_id in samp_ids:
-    sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col('time'))
-    ax.plot(sub_samps.select("time").to_numpy(),
-            sub_samps.select("Rt").to_numpy(), color="darkblue", alpha=0.1)
-ax.set_ylim([0.4, 1/.4])
+    sub_samps = samps.filter(pl.col("draw") == samp_id).sort(pl.col("time"))
+    ax.plot(
+        sub_samps.select("time").to_numpy(),
+        sub_samps.select("Rt").to_numpy(),
+        color="darkblue",
+        alpha=0.1,
+    )
+ax.set_ylim([0.4, 1 / 0.4])
 ax.set_yticks([0.5, 1, 2])
 ax.set_yscale("log")
 ```
