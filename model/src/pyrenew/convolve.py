@@ -14,7 +14,7 @@ appropriate array to scan.
 from __future__ import annotations
 
 from typing import Callable
-from pyrenew.transform import IdentityTransform
+from pyrenew.transformation import IdentityTransform
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 

@@ -7,6 +7,7 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from pyrenew.convolve import new_convolve_scanner, new_double_scanner
+from pyrenew.transformation import IdentityTransform, ExpTransform
 
 
 def compute_infections_from_rt(
@@ -174,7 +175,7 @@ def compute_infections_from_rt_with_feedback(
             reversed_infection_feedback_pmf,
             reversed_generation_interval_pmf,
         ),
-        transforms=(jnp.exp, lambda x: x),
+        transforms=(ExpTransform(), IdentityTransform()),
     )
     latest, infs_and_R_adj = jax.lax.scan(
         f=feedback_scanner,
