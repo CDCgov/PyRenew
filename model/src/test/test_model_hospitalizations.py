@@ -13,7 +13,12 @@ from pyrenew.deterministic import (
     DeterministicVariable,
     NullObservation,
 )
-from pyrenew.latent import HospitalAdmissions, Infections
+from pyrenew.latent import (
+    HospitalAdmissions,
+    Infections,
+    InfectionSeedingProcess,
+    SeedInfectionsZeroPad,
+)
 from pyrenew.metaclass import DistributionalRV, RandomVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
@@ -177,7 +182,10 @@ def test_model_hosp_no_obs_model():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -275,7 +283,10 @@ def test_model_hosp_with_obs_model():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -356,7 +367,10 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -449,7 +463,12 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
     n_obs_to_generate = 30
 
-    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        infection_seed_method=SeedInfectionsZeroPad(
+            n_timepoints=gen_int.size()
+        ),
+    )
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()

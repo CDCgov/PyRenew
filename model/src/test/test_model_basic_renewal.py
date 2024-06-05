@@ -10,7 +10,11 @@ import numpyro.distributions as dist
 import polars as pl
 import pytest
 from pyrenew.deterministic import DeterministicPMF, NullObservation
-from pyrenew.latent import Infections
+from pyrenew.latent import (
+    Infections,
+    InfectionSeedingProcess,
+    SeedInfectionsZeroPad,
+)
 from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
@@ -97,7 +101,10 @@ def test_model_basicrenewal_no_obs_model():
     with pytest.raises(ValueError):
         I0 = DistributionalRV(dist=1, name="I0")
 
-    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
 
@@ -160,7 +167,10 @@ def test_model_basicrenewal_with_obs_model():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
 
@@ -225,7 +235,10 @@ def test_model_basicrenewal_plot() -> plt.Figure:
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
 
@@ -264,7 +277,10 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(jnp.zeros(4), 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
 
