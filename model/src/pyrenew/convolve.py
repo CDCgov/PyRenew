@@ -96,14 +96,6 @@ def new_double_scanner(
     operation yielding an additional scalar multiplier
     for the second.
 
-    Notes
-    -----
-    Note that this is equivalent to passing the result
-    of creating a new multiplier array using the output
-    of a first new_convolve_scanner scanner call and then
-    scanning along that array with the output of a second
-    new convolve scanner call, but it is more efficient.
-
     Parameters
     ----------
     dists : tuple[ArrayLike, ArrayLike]
@@ -120,10 +112,11 @@ def new_double_scanner(
     Returns
     -------
     Callable
-        A scanner function that applies two sequential
-        convolutions and transformations to iteratively
-        construct a new array by scanning along an old
-        one.
+        A scanner function that applies two sets of
+        convolution, multiply, and transform operations
+        in sequence to construct a new array by scanning
+        along a pair of input arrays that are equal in
+        length to each other.
     """
     d1, d2 = dists
     t1, t2 = [x if x is not None else IdentityTransform()
