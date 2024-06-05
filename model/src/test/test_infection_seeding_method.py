@@ -12,8 +12,8 @@ from pyrenew.latent import (
 def test_seed_infections_exponential():
     """Check that the SeedInfectionsExponential class generates the correct number of infections at each time point."""
     n_timepoints = 10
-    rate_RV = DeterministicVariable(0.5)
-    I_pre_seed_RV = DeterministicVariable(10.0)
+    rate_RV = DeterministicVariable(0.5, name="rate_RV")
+    I_pre_seed_RV = DeterministicVariable(10.0, name="I_pre_seed_RV")
     default_t_pre_seed = n_timepoints - 1
 
     (I_pre_seed,) = I_pre_seed_RV.sample()
@@ -52,7 +52,7 @@ def test_seed_infections_zero_pad():
     """Check that the SeedInfectionsZeroPad class generates the correct number of infections at each time point."""
 
     n_timepoints = 10
-    I_pre_seed_RV = DeterministicVariable(10.0)
+    I_pre_seed_RV = DeterministicVariable(10.0, name="I_pre_seed_RV")
     (I_pre_seed,) = I_pre_seed_RV.sample()
 
     infections = SeedInfectionsZeroPad(n_timepoints).seed_infections(
@@ -67,7 +67,7 @@ def test_seed_infections_zero_pad():
 def test_seed_infections_from_vec():
     """Check that the SeedInfectionsFromVec class generates the correct number of infections at each time point."""
     n_timepoints = 10
-    I_pre_seed_RV = DeterministicVariable(np.arange(10))
+    I_pre_seed_RV = DeterministicVariable(np.arange(10), name="I_pre_seed_RV")
     (I_pre_seed,) = I_pre_seed_RV.sample()
 
     infections = SeedInfectionsFromVec(n_timepoints).seed_infections(
