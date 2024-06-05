@@ -154,7 +154,7 @@ I0 = InfectionSeedingProcess(
     dist=dist.LogNormal(loc=jnp.log(100), scale=0.5),
     name="I0"
     ),
-    SeedInfectionsExponential(gen_int_array.size, deterministic.DeterministicVariable(0.5))
+    SeedInfectionsExponential(gen_int_array.size, deterministic.DeterministicVariable(0.5, name="rate"))
     )
 
 # Generation interval and Rt
