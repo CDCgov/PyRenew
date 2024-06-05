@@ -9,7 +9,7 @@ from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
 
 class RtPeriodicDiffProcessSample(NamedTuple):
     """
-    A container for holding the output from `process.RtWeeklyDiffProcess.sample()`.
+    A container for holding the output from `process.RtPeriodicDiffProcess.sample()`.
 
     Attributes
     ----------
