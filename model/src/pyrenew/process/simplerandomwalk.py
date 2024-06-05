@@ -57,12 +57,13 @@ class SimpleRandomWalkProcess(RandomVariable):
         Returns
         -------
         tuple
+            With a single array of shape (duration,).
         """
 
         if init is None:
             init = npro.sample(name + "_init", self.error_distribution)
         diffs = npro.sample(
-            name + "_diffs", self.error_distribution.expand((duration,))
+            name + "_diffs", self.error_distribution.expand((duration - 1,))
         )
 
         return (init + jnp.cumsum(jnp.pad(diffs, [1, 0], constant_values=0)),)

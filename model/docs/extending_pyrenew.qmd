@@ -69,7 +69,7 @@ And simulate it from:
 # Sampling and fitting model 0 (with no obs for infections)
 np.random.seed(223)
 with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-    model0_samp = model0.sample(n_timepoints=30)
+    model0_samp = model0.sample(n_timepoints_to_simulate=30)
 ```
 
 ```{python}
@@ -237,7 +237,7 @@ model1 = RtInfectionsRenewalModel(
 # Sampling and fitting model 0 (with no obs for infections)
 np.random.seed(223)
 with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-    model1_samp = model1.sample(n_timepoints=30)
+    model1_samp = model1.sample(n_timepoints_to_simulate=30)
 ```
 
 Comparing `model0` with `model1`, these two should match:
