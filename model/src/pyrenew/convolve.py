@@ -86,7 +86,7 @@ def new_convolve_scanner(discrete_dist_flipped: ArrayLike,
 
 def new_double_scanner(
     dists: tuple[ArrayLike, ArrayLike],
-    transforms: tuple[Callable, Callable],
+    transforms: tuple[Callable, Callable] = (None, None),
 ) -> Callable:
     """
     Factory function to create a scanner function
@@ -113,7 +113,9 @@ def new_double_scanner(
     transforms : tuple[Callable, Callable]
         A tuple of two functions, each transforming the
         output of the dot product at each
-        convolution stage.
+        convolution stage. If either is None,
+        the identity transformation will be used
+        at that step. Default (None, None)
 
     Returns
     -------
@@ -124,7 +126,8 @@ def new_double_scanner(
         one.
     """
     d1, d2 = dists
-    t1, t2 = transforms
+    t1, t2 = [x if x is not None else IdentityTransform()
+              for x in transforms]
 
     def _new_scanner(
         history_subset: ArrayLike,
