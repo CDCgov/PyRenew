@@ -5,7 +5,7 @@ from typing import NamedTuple
 
 import jax.numpy as jnp
 import numpyro as npro
-import pyrenew.datautils as du
+import pyrenew.arrayutils as au
 import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
@@ -170,7 +170,7 @@ class InfectionsWithFeedback(RandomVariable):
 
         # Making sure inf_feedback_strength spans the Rt length
         if inf_feedback_strength.size == 1:
-            inf_feedback_strength = du.pad_x_to_match_y(
+            inf_feedback_strength = au.pad_x_to_match_y(
                 x=inf_feedback_strength,
                 y=Rt,
                 fill_value=inf_feedback_strength[0],

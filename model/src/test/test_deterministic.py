@@ -22,10 +22,11 @@ def test_deterministic():
             [
                 1,
             ]
-        )
+        ),
+        name="var1",
     )
-    var2 = DeterministicPMF(jnp.array([0.25, 0.25, 0.2, 0.3]))
-    var3 = DeterministicProcess(jnp.array([1, 2, 3, 4]))
+    var2 = DeterministicPMF(jnp.array([0.25, 0.25, 0.2, 0.3]), name="var2")
+    var3 = DeterministicProcess(jnp.array([1, 2, 3, 4]), name="var3")
     var4 = NullVariable()
     var5 = NullProcess()
 
@@ -42,12 +43,12 @@ def test_deterministic():
         jnp.array([0.25, 0.25, 0.2, 0.3]),
     )
     testing.assert_array_equal(
-        var3.sample(n_timepoints=5)[0],
+        var3.sample(duration=5)[0],
         jnp.array([1, 2, 3, 4, 4]),
     )
 
     testing.assert_array_equal(
-        var3.sample(n_timepoints=3)[0],
+        var3.sample(duration=3)[0],
         jnp.array(
             [
                 1,
@@ -58,4 +59,4 @@ def test_deterministic():
     )
 
     testing.assert_equal(var4.sample()[0], None)
-    testing.assert_equal(var5.sample(n_timepoints=1)[0], None)
+    testing.assert_equal(var5.sample(duration=1)[0], None)

@@ -14,7 +14,7 @@ from pyrenew.metaclass import RandomVariable
 
 class HospAdmissionsSample(NamedTuple):
     """
-    A container for holding the output from HospAdmissionsSample.sample.
+    A container to hold the output of `latent.HospAdmissions.sample()`.
 
     Attributes
     ----------
@@ -94,9 +94,11 @@ class HospitalAdmissions(RandomVariable):
         """
 
         if weekday_effect_dist is None:
-            weekday_effect_dist = DeterministicVariable(1)
+            weekday_effect_dist = DeterministicVariable(1, "weekday_effect")
         if hosp_report_prob_dist is None:
-            hosp_report_prob_dist = DeterministicVariable(1)
+            hosp_report_prob_dist = DeterministicVariable(
+                1, "hosp_report_prob"
+            )
 
         HospitalAdmissions.validate(
             infect_hosp_rate_dist,

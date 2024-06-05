@@ -14,7 +14,7 @@ from pyrenew.metaclass import RandomVariable
 
 class InfectionsSample(NamedTuple):
     """
-    A container for holding the output from the InfectionsSample.
+    A container for holding the output from `latent.Infections.sample()`.
 
     Attributes
     ----------
@@ -117,10 +117,8 @@ class Infections(RandomVariable):
                 f"Initial infections vector length: {I0.size}, "
                 f"generation interval length: {gen_int_rev.size}."
             )
-        elif I0.size > gen_int_rev.size:
-            recent_I0 = I0[-gen_int_rev.size :]
         else:
-            recent_I0 = I0
+            recent_I0 = I0[-gen_int_rev.size :]
 
         all_infections = inf.compute_infections_from_rt(
             I0=recent_I0,

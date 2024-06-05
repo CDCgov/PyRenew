@@ -80,14 +80,14 @@ class NullProcess(NullVariable):
 
     def sample(
         self,
-        n_timepoints: int,
+        duration: int,
         **kwargs,
     ) -> tuple:
         """Retrieve the value of the Null (None)
 
         Parameters
         ----------
-        n_timepoints : int
+        duration : int
             Number of timepoints to sample (ignored).
         **kwargs : dict, optional
             Ignored.

@@ -26,7 +26,7 @@ test:
 	poetry run pytest --mpl --mpl-default-tolerance=10
 
 docs: docs/pyrenew_demo.md docs/getting-started.md \
-	docs/example-with-datasets.md
+	docs/example-with-datasets.md docs/extending_pyrenew.md
 
 docs/pyrenew_demo.md: docs/pyrenew_demo.qmd
 	poetry run quarto render docs/pyrenew_demo.qmd
@@ -36,6 +36,9 @@ docs/getting-started.md: docs/getting-started.qmd
 
 docs/example-with-datasets.md: docs/example-with-datasets.qmd
 	poetry run quarto render docs/example-with-datasets.qmd
+
+docs/extending_pyrenew.md: docs/extending_pyrenew.qmd
+	poetry run quarto render docs/extending_pyrenew.qmd
 
 docs/py: docs/notebooks
 	for i in docs/*.ipynb; do \

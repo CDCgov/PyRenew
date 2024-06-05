@@ -88,7 +88,7 @@ To initialize the model, we first define initial conditions, including:
 
 # 1) A deterministic generation time
 pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
-gen_int = DeterministicPMF(pmf_array)
+gen_int = DeterministicPMF(pmf_array, name="gen_int")
 
 # 2) Initial infections
 I0 = InfectionSeedingProcess(
@@ -103,6 +103,7 @@ latent_infections = Infections()
 # First, define a deterministic infection to hosp pmf
 inf_hosp_int = DeterministicPMF(
     jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),
+    name="inf_hosp_int"
     )
 
 latent_admissions = HospitalAdmissions(
@@ -139,7 +140,7 @@ Next, we sample from the `hospmodel` for 30 time steps and view the output of a 
 
 ```{python}
 with seed(rng_seed=np.random.randint(1, 60)):
-    x = hospmodel.sample(n_timepoints=30)
+    x = hospmodel.sample(n_timepoints_to_simulate=30)
 x
 ```
 
@@ -165,7 +166,6 @@ hospmodel.run(
     num_warmup=1000,
     num_samples=1000,
     observed_admissions=x.sampled_admissions,
-    n_timepoints = len(x.sampled_admissions)-5,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )
