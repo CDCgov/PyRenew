@@ -4,6 +4,7 @@
 
 from pyrenew.process.ar import ARProcess
 from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
+from pyrenew.process.periodiceffect import PeriodicEffect, WeeklyEffect
 from pyrenew.process.rtperiodicdiff import (
     RtPeriodicDiffProcess,
     RtWeeklyDiffProcess,
@@ -18,4 +19,6 @@ __all__ = [
     "SimpleRandomWalkProcess",
     "RtPeriodicDiffProcess",
     "RtWeeklyDiffProcess",
+    "PeriodicEffect",
+    "WeeklyEffect",
 ]

@@ -3,6 +3,7 @@ from typing import NamedTuple
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
+from pyrenew.arrayutils import PeriodicBroadcaster
 from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
 from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
 
@@ -73,9 +74,13 @@ class RtPeriodicDiffProcess(RandomVariable):
         None
         """
 
-        self.validate(
+        self.broadcaster = PeriodicBroadcaster(
             data_starts=data_starts,
             period_size=period_size,
+            broadcast_type="repeat",
+        )
+
+        self.validate(
             log_rt_prior=log_rt_prior,
             autoreg=autoreg,
             periodic_diff_sd=periodic_diff_sd,
@@ -92,8 +97,6 @@ class RtPeriodicDiffProcess(RandomVariable):
 
     @staticmethod
     def validate(
-        data_starts: int,
-        period_size: int,
         log_rt_prior: any,
         autoreg: any,
         periodic_diff_sd: any,
@@ -103,11 +106,6 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         Parameters
         ----------
-        data_starts : int
-            Relative point at which data starts, must be between 0 and
-            period_size - 1.
-        period_size : int
-            Size of the period.
         log_rt_prior : any
             Log Rt prior for the first two observations.
         autoreg : any
@@ -119,30 +117,6 @@ class RtPeriodicDiffProcess(RandomVariable):
         -------
         None
         """
-
-        # Period size should be a positive integer
-        assert isinstance(
-            period_size, int
-        ), f"period_size should be an integer. It is {type(period_size)}."
-
-        assert (
-            period_size > 0
-        ), f"period_size should be a positive integer. It is {period_size}."
-
-        # Data starts should be a positive integer
-        assert isinstance(
-            data_starts, int
-        ), f"data_starts should be an integer. It is {type(data_starts)}."
-
-        assert (
-            0 <= data_starts
-        ), f"data_starts should be a positive integer. It is {data_starts}."
-
-        assert data_starts <= period_size - 1, (
-            "data_starts should be less than or equal to period_size - 1."
-            f"It is {data_starts}. It should be less than or equal "
-            f"to {period_size - 1}."
-        )
 
         _assert_sample_and_rtype(log_rt_prior)
         _assert_sample_and_rtype(autoreg)
@@ -214,9 +188,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         )[0]
 
         return RtPeriodicDiffProcessSample(
-            rt=jnp.repeat(jnp.exp(log_rt.flatten()), self.period_size)[
-                self.data_starts : (self.data_starts + duration)
-            ],
+            rt=self.broadcaster(jnp.exp(log_rt.flatten()), duration),
         )
 
 
