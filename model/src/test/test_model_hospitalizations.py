@@ -549,17 +549,19 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model1.sample(n_timepoints_to_simulate=n_obs_to_generate)
 
-    # obs = jnp.hstack(
-    #     [jnp.repeat(jnp.nan, 5), model1_samp.sampled_admissions[5:]]
-    # )
-
+    obs = jnp.hstack(
+        [
+            jnp.repeat(jnp.nan, 5),
+            model1_samp.sampled_admissions[5 + gen_int.size() :],
+        ]
+    )
     # Running with padding
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_admissions=model1_samp.sampled_admissions,
-        # padding=5,
+        observed_admissions=obs,
+        padding=5,
     )
 
     inf = model1.spread_draws(["predicted_admissions"])
