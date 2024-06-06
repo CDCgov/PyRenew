@@ -23,7 +23,7 @@ from pyrenew.transformation import IdentityTransform
 def new_convolve_scanner(
     discrete_dist_flipped: ArrayLike, transform: Callable = None
 ) -> Callable:
-    """
+    r"""
     Factory function to create a "scanner" function
     that can be used with :py:func:`jax.lax.scan` to
     construct an array via backward-looking iterative
@@ -57,14 +57,14 @@ def new_convolve_scanner(
     in renewal processes:
 
     .. math::
-        X(t) = f\\left(m(t) * \\left[X(t - n),
-        X(t - n + 1), ... X(t - 1)\right] \\dot \\vec{d} \\right)
+        X(t) = f\left(m(t) * \left[X(t - n),
+        X(t - n + 1), ... X(t - 1)\right] \dot \vec{d} \right)
 
-    Where `math`:\\vec{d} is a vector of length `math`:n,
+    Where `math`:\vec{d} is a vector of length `math`:n,
     `math`:m(t) is a scalar for each value of time `math`:t,
     and `math`:f is a scalar-valued function.
 
-    Given `math`:\\vec{d}, and optionally `math`:f,
+    Given `math`:\vec{d}, and optionally `math`:f,
     this factory function returns a new function that
     peforms one step of this process while scanning along
     an array of  multipliers (i.e. an array
