@@ -13,6 +13,7 @@ below_LOD = "below_LOD"
 lod_sewage = "lod_sewage"
 lod = "lod"
 LOD = "LOD"
+ans = "ans"
 
 [files]
 extend-exclude = [
