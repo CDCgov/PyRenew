@@ -1,0 +1,64 @@
+---
+title: "Porting An Existing Model (Epidemia) To MSR"
+format: gfm
+engine: jupyter
+---
+
+## Introduction
+
+One aim of the Multisignal Signal Renewal (hereafter referred to as MSR[^msr_v_pyrenew]) project is to make statistical inference and simulation (mostly within the context of infectious disease modeling) more flexible.
+
+[^msr_v_pyrenew]: The author of this tutorial prefers the use of MSR to `pyrenew`, which the reader may have seen in other MSR tutorials.
+
+With flexible infectious disease model tooling, one might expect to be able to re-implement existing, external infectious disease models. Such capabilities are possible with MSR.
+
+In this walk-through, we will demonstrate how to re-implement a model created for influenza forecasting (hereafter referred to as `cfaepim`) using the [Epidemia](https://github.com/CDCgov/multisignal-epi-inference) framework.
+
+If you have not already seen MSR in use, please reference some of other tutorials:
+
+* [Getting Started]()
+* [Extending Pyrenew]()
+* [Pyrenew Demo]()
+
+## An Epidemia Model For Influenza
+
+The
+
+
+```r
+build_light_rt <- function(
+    rt_intercept_prior_mode,
+    rt_intercept_prior_scale,
+    max_rt,
+    rw_prior_scale
+) {
+    rt_model <- epidemia::epirt(
+      formula = as.formula(
+        sprintf(
+          paste0(
+            "R(location, date) ~ 1 + ",
+            "rw(time = week, gr = location, prior_scale = %f)"
+          ),
+          rw_prior_scale
+        )
+      ),
+      prior_intercept = rstanarm::normal(
+        location = rt_intercept_prior_mode,
+        scale = rt_intercept_prior_scale
+      ),
+      link = epidemia::scaled_logit(K = max_rt)
+    )
+    return(rt_model)}
+```
+
+## MSR Re-Implementation
+
+## Model Validation And Comparison
+
+## Resources
+
+* [Epidemia's Website]()
+* [Epidemia Model Description Page]()
+* [Epidemia Model Scheme Page]()
+* [Epidemia Model Implementation Page]()
+*
