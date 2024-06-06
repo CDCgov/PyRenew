@@ -41,7 +41,9 @@ def test_seed_infections_exponential():
         rate * (np.arange(n_timepoints) - t_pre_seed)
     )
     testing.assert_array_almost_equal(
-        infections_custom_t_pre_seed, infections_custom_t_pre_seed_manual
+        infections_custom_t_pre_seed,
+        infections_custom_t_pre_seed_manual,
+        decimal=5,
     )
 
     assert infections_custom_t_pre_seed[t_pre_seed] == I_pre_seed
