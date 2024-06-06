@@ -237,21 +237,11 @@ def test_model_hosp_no_obs_model():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model0_samp = model0.sample(n_timepoints_to_simulate=30)
 
-    # model0_samp.latent_infections.size
-    # model0_samp.latent_admissions.size
-    # model0_samp.sampled_admissions.size
-    # model0_samp.Rt.size
-
     model0.observation_process = NullObservation()
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model0.sample(n_timepoints_to_simulate=30)
-
-    # model1_samp.latent_infections.size
-    # model1_samp.latent_admissions.size
-    # model1_samp.sampled_admissions.size
-    # model1_samp.Rt.size
 
     np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
     np.testing.assert_array_equal(
