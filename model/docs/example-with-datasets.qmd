@@ -122,14 +122,15 @@ With these two in hand, we can start building the model. First, we will define t
 
 ```{python}
 #| label: latent-hosp
-from pyrenew import latent, deterministic
+from pyrenew import latent, deterministic, metaclass
 import jax.numpy as jnp
 import numpyro.distributions as dist
 
-inf_hosp_int = deterministic.DeterministicPMF(inf_hosp_int)
+inf_hosp_int = deterministic.DeterministicPMF(inf_hosp_int, name="inf_hosp_int")
 
-hosp_rate = latent.InfectHospRate(
-    dist=dist.LogNormal(jnp.log(0.05), 0.1)
+hosp_rate = metaclass.DistributionalRV(
+    dist=dist.LogNormal(jnp.log(0.05), 0.1),
+    name="IHR",
 )
 
 latent_hosp = latent.HospitalAdmissions(
@@ -138,18 +139,21 @@ latent_hosp = latent.HospitalAdmissions(
     )
 ```
 
-The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospitalization interval as input. The `hosp_rate` is an `InfectHospRate` object that takes the infection to hospitalization rate as input. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospitalization rate. Now, we can define the rest of the other components:
+The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospitalization interval as input. The `hosp_rate` is a `DistributionalRV` object that takes a numpyro distribution to represent the infection to hospitalization rate. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospitalization rate. Now, we can define the rest of the other components:
 
 ```{python}
 #| label: initializing-rest-of-model
-from pyrenew import model, process, observation
+from pyrenew import model, process, observation, metaclass
 
 # Infection process
 latent_inf = latent.Infections()
-I0 = latent.Infections0(I0_dist=dist.LogNormal(loc=jnp.log(80/.05), scale=1.5))
+I0 = metaclass.DistributionalRV(
+    dist=dist.LogNormal(loc=jnp.log(80/.05), scale=1.5),
+    name="I0"
+    )
 
 # Generation interval and Rt
-gen_int = deterministic.DeterministicPMF(gen_int)
+gen_int = deterministic.DeterministicPMF(gen_int, name="gen_int")
 rtproc = process.RtRandomWalkProcess(
     Rt_rw_dist=dist.Normal(0, 0.1)
 )
@@ -183,7 +187,7 @@ timeframe = 120
 
 np.random.seed(223)
 with npro.handlers.seed(rng_seed = np.random.randint(1, timeframe)):
-    sim_data = hosp_model.sample(n_timepoints=timeframe)
+    sim_data = hosp_model.sample(n_timepoints_to_simulate=timeframe)
 ```
 
 ```{python}
@@ -194,11 +198,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(range(0, timeframe + 1), sim_data.Rt)
+axs[0].plot(range(0, timeframe), sim_data.Rt)
 axs[0].set_ylabel('Rt')
 
 # Infections plot
-axs[1].plot(range(0, timeframe + 1), sim_data.sampled_admissions)
+axs[1].plot(range(0, timeframe), sim_data.sampled_admissions)
 axs[1].set_ylabel('Infections')
 axs[1].set_yscale('log')
 
@@ -210,7 +214,7 @@ plt.show()
 
 ## Fitting the model
 
-We can fit the model to the data. We will use the `run` method of the model object. The two inputs this model requires are `n_timepoints` and `observed_admissions`
+We can fit the model to the data. We will use the `run` method of the model object:
 
 
 ```{python}
@@ -220,7 +224,6 @@ import jax
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat.shape[0] - 1,
     observed_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
@@ -259,7 +262,6 @@ dat_w_padding = np.hstack((np.repeat(np.nan, days_to_impute), dat_w_padding))
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat_w_padding.shape[0] - 1,
     observed_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
@@ -308,7 +310,7 @@ class WeekdayEffect(metaclass.RandomVariable):
         len : int
             The number of observations
         """
-        self.nweeks = jnp.ceil(len/7).astype(int)
+        self.nweeks = int(jnp.ceil(len/7))
         self.len = len
 
     @staticmethod
@@ -357,7 +359,6 @@ Running the model (with the same padding as before):
 hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    n_timepoints=dat_w_padding.shape[0] - 1,
     observed_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),

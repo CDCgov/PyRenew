@@ -71,6 +71,7 @@ class ARProcess(RandomVariable):
         Returns
         -------
         tuple
+            With a single array of shape (duration,).
         """
         order = self.autoreg.shape[0]
         if inits is None:
@@ -85,7 +86,8 @@ class ARProcess(RandomVariable):
             return new_carry, new_term
 
         noise = numpyro.sample(
-            name + "_noise", dist.Normal(0, self.noise_sd).expand((duration,))
+            name + "_noise",
+            dist.Normal(0, self.noise_sd).expand((duration - inits.size,)),
         )
 
         last, ts = lax.scan(_ar_scanner, inits - self.mean, noise)

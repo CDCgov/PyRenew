@@ -3,9 +3,9 @@
 
 import numpyro as npro
 import numpyro.distributions as dist
+import pyrenew.transformation as t
 from pyrenew.metaclass import RandomVariable
 from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
-from pyrenew.transform import AbstractTransform, LogTransform
 
 
 class RtRandomWalkProcess(RandomVariable):
@@ -27,7 +27,7 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_dist: dist.Distribution = dist.TruncatedNormal(
             loc=1.2, scale=0.2, low=0
         ),
-        Rt_transform: AbstractTransform = LogTransform(),
+        Rt_transform: t.Transform | None = None,
         Rt_rw_dist: dist.Distribution = dist.Normal(0, 0.025),
     ) -> None:
         """
@@ -38,9 +38,10 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_dist : dist.Distribution, optional
             Initial distribution of Rt, defaults to
             dist.TruncatedNormal( loc=1.2, scale=0.2, low=0 )
-        Rt_transform : AbstractTransform, optional
+
+        Rt_transform : numpyro.distributions.transformers.Transform, optional
             Transformation applied to the sampled Rt0, defaults
-            to LogTransform().
+            to ExpTransform().inv.
         Rt_rw_dist : dist.Distribution, optional
             Randomwalk process, defaults to dist.Normal(0, 0.025)
 
@@ -48,6 +49,10 @@ class RtRandomWalkProcess(RandomVariable):
         -------
         None
         """
+
+        if Rt_transform is None:
+            Rt_transform = t.ExpTransform().inv
+
         RtRandomWalkProcess.validate(Rt0_dist, Rt_transform, Rt_rw_dist)
 
         self.Rt0_dist = Rt0_dist
@@ -59,7 +64,7 @@ class RtRandomWalkProcess(RandomVariable):
     @staticmethod
     def validate(
         Rt0_dist: dist.Distribution,
-        Rt_transform: AbstractTransform,
+        Rt_transform: t.Transform,
         Rt_rw_dist: dist.Distribution,
     ) -> None:
         """
@@ -69,9 +74,8 @@ class RtRandomWalkProcess(RandomVariable):
         ----------
         Rt0_dist : dist.Distribution, optional
             Initial distribution of Rt, expected dist.Distribution
-        Rt_transform : any
-            Transformation applied to the sampled Rt0, expected
-            AbstractTransform
+        Rt_transform : numpyro.distributions.transforms.Transform
+            Transformation applied to the sampled Rt0.
         Rt_rw_dist : any
             Randomwalk process, expected dist.Distribution.
 
@@ -83,15 +87,15 @@ class RtRandomWalkProcess(RandomVariable):
         ------
         AssertionError
             If Rt0_dist or Rt_rw_dist are not dist.Distribution or if
-            Rt_transform is not AbstractTransform.
+            Rt_transform is not numpyro.distributions.transforms.Transform.
         """
         assert isinstance(Rt0_dist, dist.Distribution)
-        assert isinstance(Rt_transform, AbstractTransform)
+        assert isinstance(Rt_transform, t.Transform)
         assert isinstance(Rt_rw_dist, dist.Distribution)
 
     def sample(
         self,
-        n_timepoints: int,
+        duration: int,
         **kwargs,
     ) -> tuple:
         """
@@ -99,7 +103,7 @@ class RtRandomWalkProcess(RandomVariable):
 
         Parameters
         ----------
-        n_timepoints : int
+        duration : int
             Number of timepoints to sample.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
@@ -108,6 +112,7 @@ class RtRandomWalkProcess(RandomVariable):
         Returns
         -------
         tuple
+            With a single array of shape (duration,).
         """
 
         Rt0 = npro.sample("Rt0", self.Rt0_dist)
@@ -115,11 +120,11 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_trans = self.Rt_transform(Rt0)
         Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)
         Rt_trans_ts, *_ = Rt_trans_proc.sample(
-            duration=n_timepoints,
+            duration=duration,
             name="Rt_transformed_rw",
             init=Rt0_trans,
         )
 
-        Rt = npro.deterministic("Rt", self.Rt_transform.inverse(Rt_trans_ts))
+        Rt = npro.deterministic("Rt", self.Rt_transform.inv(Rt_trans_ts))
 
         return (Rt,)

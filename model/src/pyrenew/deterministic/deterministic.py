@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 
+import jax.numpy as jnp
+import numpyro as npro
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
@@ -16,7 +18,7 @@ class DeterministicVariable(RandomVariable):
     def __init__(
         self,
         vars: ArrayLike,
-        label: str = "a_random_variable",
+        name: str,
     ) -> None:
         """Default constructor
 
@@ -24,8 +26,8 @@ class DeterministicVariable(RandomVariable):
         ----------
         vars : ArrayLike
             A tuple with arraylike objects.
-        label : str, optional
-            A label to assign to the process. Defaults to "a_random_variable"
+        name : str, optional
+            A name to assign to the process.
 
         Returns
         -------
@@ -33,8 +35,8 @@ class DeterministicVariable(RandomVariable):
         """
 
         self.validate(vars)
-        self.vars = vars
-        self.label = label
+        self.vars = jnp.atleast_1d(vars)
+        self.name = name
 
         return None
 
@@ -64,6 +66,7 @@ class DeterministicVariable(RandomVariable):
 
     def sample(
         self,
+        record=True,
         **kwargs,
     ) -> tuple:
         """
@@ -71,6 +74,8 @@ class DeterministicVariable(RandomVariable):
 
         Parameters
         ----------
+        record : bool, optional
+            Whether to record the value of the deterministic RandomVariable. Defaults to True.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
@@ -80,5 +85,6 @@ class DeterministicVariable(RandomVariable):
         tuple
             Containing the stored values during construction.
         """
-
+        if record:
+            npro.deterministic(self.name, self.vars)
         return (self.vars,)

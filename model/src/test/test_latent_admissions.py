@@ -7,7 +7,8 @@ import numpy.testing as testing
 import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.deterministic import DeterministicPMF
-from pyrenew.latent import HospitalAdmissions, InfectHospRate, Infections
+from pyrenew.latent import HospitalAdmissions, Infections
+from pyrenew.metaclass import DistributionalRV
 from pyrenew.process import RtRandomWalkProcess
 
 
@@ -21,10 +22,10 @@ def test_admissions_sample():
     np.random.seed(223)
     rt = RtRandomWalkProcess()
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt, *_ = rt.sample(n_timepoints=30)
+        sim_rt, *_ = rt.sample(duration=30)
 
-    gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
-    i0 = 10
+    gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
+    i0 = 10 * jnp.ones_like(gen_int)
 
     inf1 = Infections()
 
@@ -55,12 +56,13 @@ def test_admissions_sample():
                 0.05,
             ]
         ),
+        name="inf_hosp",
     )
 
     hosp1 = HospitalAdmissions(
         infection_to_admission_interval=inf_hosp,
-        infect_hosp_rate_dist=InfectHospRate(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05),
+        infect_hosp_rate_dist=DistributionalRV(
+            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
