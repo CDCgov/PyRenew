@@ -22,7 +22,7 @@ def test_double_scanner_reduces_to_single():
 
     scanner_a = pc.new_convolve_scanner(to_scan_a, transform_a)
 
-    double_scanner_a = pc.new_double_scanner(
+    double_scanner_a = pc.new_double_convolve_scanner(
         (jnp.array([523, 2, -0.5233]),
          to_scan_a),
         (lambda x: 1, transform_a))

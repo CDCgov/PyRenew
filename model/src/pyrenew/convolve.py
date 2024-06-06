@@ -84,7 +84,7 @@ def new_convolve_scanner(discrete_dist_flipped: ArrayLike,
     return _new_scanner
 
 
-def new_double_scanner(
+def new_double_convolve_scanner(
     dists: tuple[ArrayLike, ArrayLike],
     transforms: tuple[Callable, Callable] = (None, None),
 ) -> Callable:

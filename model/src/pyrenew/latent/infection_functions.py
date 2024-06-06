@@ -6,7 +6,9 @@ from __future__ import annotations
 import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
-from pyrenew.convolve import new_convolve_scanner, new_double_scanner
+from pyrenew.convolve import (
+    new_convolve_scanner,
+    new_double_convolve_scanner)
 from pyrenew.transformation import IdentityTransform, ExpTransform
 
 
@@ -170,7 +172,7 @@ def compute_infections_from_rt_with_feedback(
     reductions in contact rate due to awareness of high incidence,
     et cetera.
     """
-    feedback_scanner = new_double_scanner(
+    feedback_scanner = new_double_convolve_scanner(
         dists=(
             reversed_infection_feedback_pmf,
             reversed_generation_interval_pmf,
