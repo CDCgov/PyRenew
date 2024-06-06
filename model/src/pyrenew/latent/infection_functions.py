@@ -6,10 +6,8 @@ from __future__ import annotations
 import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
-from pyrenew.convolve import (
-    new_convolve_scanner,
-    new_double_convolve_scanner)
-from pyrenew.transformation import IdentityTransform, ExpTransform
+from pyrenew.convolve import new_convolve_scanner, new_double_convolve_scanner
+from pyrenew.transformation import ExpTransform, IdentityTransform
 
 
 def compute_infections_from_rt(

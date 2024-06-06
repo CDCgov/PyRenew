@@ -14,13 +14,15 @@ appropriate array to scan.
 from __future__ import annotations
 
 from typing import Callable
-from pyrenew.transformation import IdentityTransform
+
 import jax.numpy as jnp
 from jax.typing import ArrayLike
+from pyrenew.transformation import IdentityTransform
 
 
-def new_convolve_scanner(discrete_dist_flipped: ArrayLike,
-                         transform: Callable = None) -> Callable:
+def new_convolve_scanner(
+    discrete_dist_flipped: ArrayLike, transform: Callable = None
+) -> Callable:
     """
     Factory function to create a "scanner" function
     that can be used with :py:func:`jax.lax.scan` to
@@ -53,7 +55,7 @@ def new_convolve_scanner(discrete_dist_flipped: ArrayLike,
     -----
     The following iterative operation is found often
     in renewal processes:
-    
+
     .. math::
         X(t) = f\\left(m(t) * \\left[X(t - n),
         X(t - n + 1), ... X(t - 1)\right] \\dot \\vec{d} \\right)
@@ -73,11 +75,11 @@ def new_convolve_scanner(discrete_dist_flipped: ArrayLike,
         transform = IdentityTransform()
 
     def _new_scanner(
-            history_subset: ArrayLike, multiplier: float
+        history_subset: ArrayLike, multiplier: float
     ) -> tuple[ArrayLike, float]:  # numpydoc ignore=GL08
         new_val = transform(
-            multiplier * jnp.dot(discrete_dist_flipped,
-                                 history_subset))
+            multiplier * jnp.dot(discrete_dist_flipped, history_subset)
+        )
         latest = jnp.hstack([history_subset[1:], new_val])
         return latest, new_val
 
@@ -119,8 +121,7 @@ def new_double_convolve_scanner(
         length to each other.
     """
     d1, d2 = dists
-    t1, t2 = [x if x is not None else IdentityTransform()
-              for x in transforms]
+    t1, t2 = [x if x is not None else IdentityTransform() for x in transforms]
 
     def _new_scanner(
         history_subset: ArrayLike,
