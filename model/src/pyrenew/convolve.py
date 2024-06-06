@@ -69,7 +69,6 @@ def new_convolve_scanner(
     peforms one step of this process while scanning along
     an array of  multipliers (i.e. an array
     giving the values of `math`:m(t)) using :py:func:jax.lax.scan.
-
     """
     if transform is None:
         transform = IdentityTransform()

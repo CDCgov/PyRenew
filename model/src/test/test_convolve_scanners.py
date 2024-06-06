@@ -1,3 +1,8 @@
+"""
+Unit tests for the iterative convolution
+scanner function factories found in pyrenew.convolve
+"""
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -16,8 +21,22 @@ def test_double_scanner_reduces_to_single():
 
     multipliers = jnp.array(np.random.normal(0, 0.5, size=500))
 
-    def transform_a(x):
-        return x / 0.25 + 0.025
+    def transform_a(x: any):
+        """
+        transformation associated with
+        array to_scan_a
+
+        Parameters
+        ----------
+        x: any
+            input value
+
+        Returns
+        -------
+        The result of 4 * x + 0.025, where x is the input
+        value
+        """
+        return 4 * x + 0.025
 
     scanner_a = pc.new_convolve_scanner(to_scan_a, transform_a)
 
