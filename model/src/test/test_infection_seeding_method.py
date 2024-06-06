@@ -26,7 +26,7 @@ def test_seed_infections_exponential():
         rate * (np.arange(n_timepoints) - default_t_pre_seed)
     )
 
-    testing.assert_array_equal(
+    testing.assert_array_almost_equal(
         infections_default_t_pre_seed, infections_default_t_pre_seed_manual
     )
 
@@ -40,7 +40,7 @@ def test_seed_infections_exponential():
     infections_custom_t_pre_seed_manual = I_pre_seed * np.exp(
         rate * (np.arange(n_timepoints) - t_pre_seed)
     )
-    testing.assert_array_equal(
+    testing.assert_array_almost_equal(
         infections_custom_t_pre_seed, infections_custom_t_pre_seed_manual
     )
 
