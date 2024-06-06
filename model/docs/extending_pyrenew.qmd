@@ -30,16 +30,24 @@ from pyrenew.latent import InfectionsWithFeedback
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.metaclass import DistributionalRV
+from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsExponential
 ```
 
 The following code-chunk defines the model components. Notice that for both the generation interval and the infection feedback, we use a deterministic PMF with equal probabilities:
 
 ```{python}
 # | label: model-components
-gen_int = DeterministicPMF(jnp.array([0.25, 0.5, 0.15, 0.1]), name="gen_int")
+gen_int_array = jnp.array([0.25, 0.5, 0.15, 0.1])
+gen_int = DeterministicPMF(gen_int_array, name="gen_int")
 feedback_strength = DeterministicVariable(0.05, name="feedback_strength")
 
-I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+I0 = InfectionSeedingProcess(
+    DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+    SeedInfectionsExponential(
+        gen_int_array.size,
+        DeterministicVariable(0.5, name="rate"),
+    ),
+)
 
 latent_infections = InfectionsWithFeedback(
     infection_feedback_strength=feedback_strength,
@@ -90,8 +98,9 @@ plt.show()
 
 All instances of PyRenew's `RandomVariable` should have at least three functions: `__init__()`, `validate()`, and `sample()`. The `__init__()` function is the constructor and initializes the class. The `validate()` function checks if the class is correctly initialized. Finally, the `sample()` method contains the core of the class; it should return a tuple or named tuple. The following is a minimal example of a `RandomVariable` class based on `numpyro.distributions.Normal`:
 
-```python
+```{python}
 from pyrenew.metaclass import RandomVariable
+
 
 class MyNormal(RandomVariable):
     def __init__(self, loc, scale):
