@@ -123,6 +123,9 @@ def test_model_basicrenewal_no_obs_model():
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model0_samp = model0.sample(n_timepoints_to_simulate=30)
+    model0_samp.Rt
+    model0_samp.latent_infections
+    model0_samp.sampled_infections
 
     # Generating
     model0.observation_process = NullObservation()
