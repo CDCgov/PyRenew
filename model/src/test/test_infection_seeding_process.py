@@ -49,9 +49,9 @@ def test_infection_seeding_process():
             SeedInfectionsFromVec(n_timepoints),
         )
 
-        with pytest.raises(TypeError):
-            InfectionSeedingProcess(
-                "vec_model",
-                DeterministicVariable(jnp.arange(n_timepoints), name="I0"),
-                3,
-            )
+    with pytest.raises(TypeError):
+        InfectionSeedingProcess(
+            "vec_model",
+            DeterministicVariable(jnp.arange(n_timepoints), name="I0"),
+            3,
+        )
