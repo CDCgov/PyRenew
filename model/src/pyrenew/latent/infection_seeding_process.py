@@ -56,10 +56,12 @@ class InfectionSeedingProcess(RandomVariable):
         if not isinstance(I_pre_seed_rv, RandomVariable):
             raise TypeError(
                 "I_pre_seed_rv must be an instance of RandomVariable"
+                f"Got {type(I_pre_seed_rv)}"
             )
         if not isinstance(infection_seed_method, InfectionSeedMethod):
             raise TypeError(
                 "infection_seed_method must be an instance of InfectionSeedMethod"
+                f"Got {type(infection_seed_method)}"
             )
 
     def sample(self) -> tuple:

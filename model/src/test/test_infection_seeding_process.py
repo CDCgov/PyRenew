@@ -2,6 +2,7 @@
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
+import pytest
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     InfectionSeedingProcess,
@@ -39,3 +40,18 @@ def test_infection_seeding_process():
     for model in [zero_pad_model, exp_model, vec_model]:
         with npro.handlers.seed(rng_seed=1):
             model.sample()
+
+    # Check that the InfectionSeedingProcess class raises an error when the wrong type of I0 is passed
+    with pytest.raises(TypeError):
+        InfectionSeedingProcess(
+            "vec_model",
+            jnp.arange(n_timepoints),
+            SeedInfectionsFromVec(n_timepoints),
+        )
+
+        with pytest.raises(TypeError):
+            InfectionSeedingProcess(
+                "vec_model",
+                DeterministicVariable(jnp.arange(n_timepoints), name="I0"),
+                3,
+            )

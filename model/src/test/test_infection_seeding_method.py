@@ -95,14 +95,30 @@ def test_seed_infections_zero_pad():
         np.pad(I_pre_seed_2, (n_timepoints - I_pre_seed_2.size, 0)),
     )
 
+    # Check that the SeedInfectionsZeroPad class raises an error when the length of I_pre_seed is greater than n_timepoints.
+    with pytest.raises(ValueError):
+        SeedInfectionsZeroPad(1).seed_infections(I_pre_seed_2)
+
 
 def test_seed_infections_from_vec():
     """Check that the SeedInfectionsFromVec class generates the correct number of infections at each time point."""
     n_timepoints = 10
-    I_pre_seed_RV = DeterministicVariable(np.arange(10), name="I_pre_seed_RV")
-    (I_pre_seed,) = I_pre_seed_RV.sample()
+    I_pre_seed = np.arange(n_timepoints)
 
     infections = SeedInfectionsFromVec(n_timepoints).seed_infections(
         I_pre_seed
     )
     testing.assert_array_equal(infections, I_pre_seed)
+
+    # Check that the SeedInfectionsFromVec class raises an error when the length of I_pre_seed is not equal to n_timepoints.
+    I_pre_seed_2 = np.arange(n_timepoints - 1)
+    with pytest.raises(ValueError):
+        SeedInfectionsFromVec(n_timepoints).seed_infections(I_pre_seed_2)
+
+    n_timepoints_float = 10.0
+    with pytest.raises(TypeError):
+        SeedInfectionsFromVec(n_timepoints_float).seed_infections(I_pre_seed)
+
+    n_timepoints_neg = -10
+    with pytest.raises(TypeError):
+        SeedInfectionsFromVec(n_timepoints_neg).seed_infections(I_pre_seed)
