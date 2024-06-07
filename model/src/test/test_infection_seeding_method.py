@@ -1,6 +1,7 @@
 # numpydoc ignore=GL08
 import numpy as np
 import numpy.testing as testing
+import pytest
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     SeedInfectionsExponential,
@@ -33,6 +34,24 @@ def test_seed_infections_exponential():
     # assert that infections at default t_pre_seed is I_pre_seed
     assert infections_default_t_pre_seed[default_t_pre_seed] == I_pre_seed
 
+    # test for failure with non-scalar rate or I_pre_seed
+    rate_RV_2 = DeterministicVariable(np.array([0.5, 0.5]), name="rate_RV")
+    with pytest.raises(ValueError):
+        SeedInfectionsExponential(
+            n_timepoints, rate=rate_RV_2
+        ).seed_infections(I_pre_seed)
+
+    I_pre_seed_RV_2 = DeterministicVariable(
+        np.array([10.0, 10.0]), name="I_pre_seed_RV"
+    )
+    (I_pre_seed_2,) = I_pre_seed_RV_2.sample()
+
+    with pytest.raises(ValueError):
+        SeedInfectionsExponential(n_timepoints, rate=rate_RV).seed_infections(
+            I_pre_seed_2
+        )
+
+    # test non-default t_pre_seed
     t_pre_seed = 6
     infections_custom_t_pre_seed = SeedInfectionsExponential(
         n_timepoints, rate=rate_RV, t_pre_seed=t_pre_seed
