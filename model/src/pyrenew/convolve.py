@@ -57,18 +57,17 @@ def new_convolve_scanner(
     in renewal processes:
 
     .. math::
-        X(t) = f\left(m(t) * \left[X(t - n),
-        X(t - n + 1), ... X(t - 1)\right] \dot \vec{d} \right)
+        X(t) = f\left(m(t) * \left[X(t - n), X(t - n + 1), ... X(t - 1)\right] \dot \vec{d} \right)
 
-    Where `math`:\vec{d} is a vector of length `math`:n,
-    `math`:m(t) is a scalar for each value of time `math`:t,
-    and `math`:f is a scalar-valued function.
+    Where :math:`\vec{d}` is a vector of length :math:`n`,
+    :math:`m(t)` is a scalar for each value of time :math:`t`,
+    and :math:`f` is a scalar-valued function.
 
-    Given `math`:\vec{d}, and optionally `math`:f,
+    Given :math:`\vec{d}`, and optionally :math:`f`,
     this factory function returns a new function that
     peforms one step of this process while scanning along
     an array of  multipliers (i.e. an array
-    giving the values of `math`:m(t)) using :py:func:jax.lax.scan.
+    giving the values of :math:`m(t)`) using :func:`jax.lax.scan`.
     """
     if transform is None:
         transform = IdentityTransform()
