@@ -6,7 +6,7 @@ from pyrenew.metaclass import RandomVariable
 
 
 class InfectionSeedingProcess(RandomVariable):
-    """Generate an initial infectioon history"""
+    """Generate an initial infection history"""
 
     def __init__(
         self,
@@ -31,7 +31,6 @@ class InfectionSeedingProcess(RandomVariable):
         self.I_pre_seed_rv = I_pre_seed_rv
         self.infection_seed_method = infection_seed_method
 
-        return None
 
     @staticmethod
     def validate(

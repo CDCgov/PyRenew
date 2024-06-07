@@ -68,7 +68,11 @@ class InfectionSeedMethod(metaclass=ABCMeta):
 
 
 class SeedInfectionsZeroPad(InfectionSeedMethod):
-    """Pad the seed infections with zeros at the beginning of the time series."""
+    """
+    Create a seed infection vector of specified length by 
+    padding a shorter vector with an appropriate number of 
+    zeros at the beginning of the time series.
+    """
 
     def seed_infections(self, I_pre_seed: ArrayLike):
         """Pad the seed infections with zeros at the beginning of the time series.
@@ -85,10 +89,10 @@ class SeedInfectionsZeroPad(InfectionSeedMethod):
         """
         if self.n_timepoints < I_pre_seed.size:
             raise ValueError(
-                f"I_pre_seed must be at least as long as n_timepoints. Got I_pre_seed of size {I_pre_seed.size} and and n_timepoints of size {self.n_timepoints}."
+                "I_pre_seed must be no longer than n_timepoints. "
+                f"Got I_pre_seed of size {I_pre_seed.size} and "
+                f" n_timepoints of size {self.n_timepoints}."
             )
-        # alternative implementation:
-        # return jnp.hstack([jnp.zeros(self.n_timepoints - I_pre_seed.size), I_pre_seed])
         return jnp.pad(I_pre_seed, (self.n_timepoints - I_pre_seed.size, 0))
 
 
@@ -110,13 +114,15 @@ class SeedInfectionsFromVec(InfectionSeedMethod):
         """
         if I_pre_seed.size != self.n_timepoints:
             raise ValueError(
-                f"I_pre_seed must have the same size as n_timepoints. Got I_pre_seed of size {I_pre_seed.size} and and n_timepoints of size {self.n_timepoints}."
+                "I_pre_seed must have the same size as n_timepoints. "
+                f"Got I_pre_seed of size {I_pre_seed.size} "
+                f"and n_timepoints of size {self.n_timepoints}."
             )
         return jnp.array(I_pre_seed)
 
 
 class SeedInfectionsExponential(InfectionSeedMethod):
-    """Generate seed infections according to exponential growth.
+    r"""Generate seed infections according to exponential growth.
 
     Notes
     -----
@@ -126,7 +132,9 @@ class SeedInfectionsExponential(InfectionSeedMethod):
 
     Where :math:`I_p` is ``I_pre_seed``, :math:`r` is ``rate``, and :math:`t_p` is ``t_pre_seed``.
     This ensures that :math:`I(t_p) = I_p`.
-    We default to ``t_pre_seed = n_timepoints - 1``, so that ``I_pre_seed`` represents the number of incident infections immediately before the renewal process begins.
+    We default to ``t_pre_seed = n_timepoints - 1``, so that 
+    ``I_pre_seed`` represents the number of incident infections immediately 
+    before the renewal process begins.
     """
 
     def __init__(
