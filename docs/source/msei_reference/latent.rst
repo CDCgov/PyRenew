@@ -28,7 +28,7 @@ Infection Functions
 Infection Seeding Process
 -------------------------
 
-.. automodule:: pyrenew.latent.infection_process
+.. automodule:: pyrenew.latent.infection_seeding_process
    :members:
    :undoc-members:
    :show-inheritance:
