@@ -105,20 +105,14 @@ class Infections(RandomVariable):
         """
         if I0.size < gen_int.size:
             raise ValueError(
-                f"Initial infections must be at least as long as the generation interval. Got {I0.size} initial infections and {gen_int.size} generation interval."
-            )
-
-        gen_int_rev = jnp.flip(gen_int)
-
-        if I0.size < gen_int_rev.size:
-            raise ValueError(
                 "Initial infections vector must be at least as long as "
                 "the generation interval. "
                 f"Initial infections vector length: {I0.size}, "
-                f"generation interval length: {gen_int_rev.size}."
+                f"generation interval length: {gen_int.size}."
             )
-        else:
-            recent_I0 = I0[-gen_int_rev.size :]
+
+        gen_int_rev = jnp.flip(gen_int)
+        recent_I0 = I0[-gen_int_rev.size :]
 
         all_infections = inf.compute_infections_from_rt(
             I0=recent_I0,
