@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
+import pyrenew.arrayutils as au
 from jax.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
@@ -68,7 +69,7 @@ class HospitalAdmissionsModel(Model):
             The infections latent process (passed to RtInfectionsRenewalModel).
         gen_int : RandomVariable
             Generation time (passed to RtInfectionsRenewalModel)
-        IO : RandomVariable
+        I0 : RandomVariable
             Initial infections (passed to RtInfectionsRenewalModel)
         Rt_process : RandomVariable
             Rt process  (passed to RtInfectionsRenewalModel).
@@ -250,28 +251,35 @@ class HospitalAdmissionsModel(Model):
             infections=basic_model.latent_infections,
             **kwargs,
         )
-
-        # Sampling the hospital admissions
-        if self.observation_process is not None:
-            if (observed_admissions is not None) and (padding > 0):
-                sampled_na = jnp.repeat(jnp.nan, padding)
-
-                sampled_observed, *_ = self.sample_admissions_process(
-                    predicted=latent[padding:],
-                    observed_admissions=observed_admissions[padding:],
-                    **kwargs,
-                )
-
-                sampled = jnp.hstack([sampled_na, sampled_observed])
-
-            else:
-                sampled, *_ = self.sample_admissions_process(
+        i0_size = len(latent) - n_timepoints
+        if self.observation_process is None:
+            sampled = None
+        else:
+            if observed_admissions is None:
+                sampled_obs, *_ = self.sample_admissions_process(
                     predicted=latent,
                     observed_admissions=observed_admissions,
                     **kwargs,
                 )
-        else:
-            sampled = None
+            else:
+                observed_admissions = au.pad_x_to_match_y(
+                    observed_admissions, latent, jnp.nan, pad_direction="start"
+                )
+
+                sampled_obs, *_ = self.sample_admissions_process(
+                    predicted=latent[i0_size + padding :],
+                    observed_admissions=observed_admissions[
+                        i0_size + padding :
+                    ],
+                    **kwargs,
+                )
+            # this is to accommodate the current version of test_model_hosp_no_obs_model. Not sure if we want this behavior
+            if sampled_obs is None:
+                sampled = None
+            else:
+                sampled = au.pad_x_to_match_y(
+                    sampled_obs, latent, jnp.nan, pad_direction="start"
+                )
 
         return HospModelSample(
             Rt=basic_model.Rt,

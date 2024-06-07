@@ -10,7 +10,11 @@ import numpyro.distributions as dist
 import polars as pl
 import pytest
 from pyrenew.deterministic import DeterministicPMF, NullObservation
-from pyrenew.latent import Infections
+from pyrenew.latent import (
+    Infections,
+    InfectionSeedingProcess,
+    SeedInfectionsZeroPad,
+)
 from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
@@ -97,7 +101,11 @@ def test_model_basicrenewal_no_obs_model():
     with pytest.raises(ValueError):
         I0 = DistributionalRV(dist=1, name="I0")
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        "I0_seeding",
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
 
@@ -116,6 +124,9 @@ def test_model_basicrenewal_no_obs_model():
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model0_samp = model0.sample(n_timepoints_to_simulate=30)
+    model0_samp.Rt
+    model0_samp.latent_infections
+    model0_samp.sampled_infections
 
     # Generating
     model0.observation_process = NullObservation()
@@ -160,7 +171,11 @@ def test_model_basicrenewal_with_obs_model():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        "I0_seeding",
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
 
@@ -225,7 +240,11 @@ def test_model_basicrenewal_plot() -> plt.Figure:
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        "I0_seeding",
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
 
@@ -264,7 +283,11 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        "I0_seeding",
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
 

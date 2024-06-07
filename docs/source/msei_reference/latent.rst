@@ -25,4 +25,20 @@ Infection Functions
    :undoc-members:
    :show-inheritance:
 
+Infection Seeding Process
+-------------------------
+
+.. automodule:: pyrenew.latent.infection_seeding_process
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Infection Seeding Method
+------------------------
+
+.. automodule:: pyrenew.latent.infection_seeding_method
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 .. todo:: Determine and naming order of these modules.

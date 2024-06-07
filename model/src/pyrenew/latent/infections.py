@@ -103,24 +103,24 @@ class Infections(RandomVariable):
         InfectionsSample
             Named tuple with "infections".
         """
-
-        gen_int_rev = jnp.flip(gen_int)
-
-        if I0.size < gen_int_rev.size:
+        if I0.size < gen_int.size:
             raise ValueError(
                 "Initial infections vector must be at least as long as "
                 "the generation interval. "
                 f"Initial infections vector length: {I0.size}, "
-                f"generation interval length: {gen_int_rev.size}."
+                f"generation interval length: {gen_int.size}."
             )
-        else:
-            I0_vec = I0[-gen_int_rev.size :]
+
+        gen_int_rev = jnp.flip(gen_int)
+        recent_I0 = I0[-gen_int_rev.size :]
 
         all_infections = inf.compute_infections_from_rt(
-            I0=I0_vec,
+            I0=recent_I0,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
         )
+
+        all_infections = jnp.hstack([I0, all_infections])
 
         npro.deterministic(self.infections_mean_varname, all_infections)
 

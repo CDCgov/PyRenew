@@ -86,3 +86,15 @@ class DeterministicPMF(RandomVariable):
         """
 
         return self.basevar.sample(**kwargs)
+
+    def size(self) -> int:
+        """
+        Returns the size of the PMF
+
+        Returns
+        -------
+        int
+            The size of the PMF
+        """
+
+        return self.basevar.vars.size
