@@ -40,12 +40,15 @@ def pad_to_match(
     y_len = y.size
     pad_size = abs(x_len - y_len)
 
-    pad_width = {"start": (pad_size, 0), "end": (0, pad_size)}.get(pad_direction, None)
-   
+    pad_width = {"start": (pad_size, 0), "end": (0, pad_size)}.get(
+        pad_direction, None
+    )
+
     if pad_width is None:
-         raise ValueError(
-           "pad_direction must be either 'start' or 'end'."
-           f" Got {pad_direction}.")
+        raise ValueError(
+            "pad_direction must be either 'start' or 'end'."
+            f" Got {pad_direction}."
+        )
 
     if x_len > y_len:
         if fix_y:
