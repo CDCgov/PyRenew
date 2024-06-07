@@ -150,11 +150,13 @@ from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsExponential
 # Infection process
 latent_inf = latent.Infections()
 I0 = InfectionSeedingProcess(
+    "I0_seeding",
     metaclass.DistributionalRV(
         dist=dist.LogNormal(loc=jnp.log(100), scale=0.5), name="I0"
     ),
     SeedInfectionsExponential(
-        gen_int_array.size, deterministic.DeterministicVariable(0.5, name="rate")
+        gen_int_array.size,
+        deterministic.DeterministicVariable(0.5, name="rate"),
     ),
 )
 

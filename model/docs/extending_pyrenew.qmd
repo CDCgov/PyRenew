@@ -42,6 +42,7 @@ gen_int = DeterministicPMF(gen_int_array, name="gen_int")
 feedback_strength = DeterministicVariable(0.05, name="feedback_strength")
 
 I0 = InfectionSeedingProcess(
+    "I0_seeding",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     SeedInfectionsExponential(
         gen_int_array.size,
