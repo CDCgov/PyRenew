@@ -61,7 +61,6 @@ class InfectionSeedMethod(metaclass=ABCMeta):
         ArrayLike
             An array of length ``n_timepoints`` with the number of seeded infections at each time point.
         """
-        pass
 
     def __call__(self, I_pre_seed: ArrayLike):
         return self.seed_infections(I_pre_seed)
