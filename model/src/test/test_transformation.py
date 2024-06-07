@@ -5,20 +5,22 @@ Tests for transformations
 """
 
 import jax.numpy as jnp
-import pyrenew.transform as t
+import pyrenew.transformation as t
 from numpy.testing import assert_array_almost_equal
 
 
-def generic_inversion_test(transform, test_vals, decimal=1e-8, **kwargs):
+def generic_inversion_test(
+    transform, test_vals, decimal=1e-8, **kwargs
+) -> None:
     """
     Generic test for inverting a
     pyrenew transform, confirming
     that f^-1(f(x)) = x for the
-    x values givein in `test_vals`
+    x values give in in `test_vals`
 
     Parameters
     ----------
-    transform : pyrenew.transform.AbstractTransform
+    transform : numpyro.distributions.transforms.Transform
         Uninstantiated transformation to instantiate
         and test
 
@@ -38,28 +40,22 @@ def generic_inversion_test(transform, test_vals, decimal=1e-8, **kwargs):
 
     assert_array_almost_equal(
         test_vals,
-        instantiated.inverse(instantiated(test_vals)),
-        decimal=decimal,
-    )
-    assert_array_almost_equal(
-        test_vals,
-        instantiated.inverse(instantiated.transform(test_vals)),
+        instantiated.inv(instantiated(test_vals)),
         decimal=decimal,
     )
 
+    return None
 
-def test_invert_dists():  # numpydoc ignore=GL08
-    generic_inversion_test(
-        t.LogTransform, jnp.array([1.52, 0.21, 1563.52, 23.523, 1.2352e7])
-    )
-    generic_inversion_test(
-        t.LogitTransform, jnp.array([0.99235, 0.13242, 0.5, 0.235, 0.862])
-    )
+
+def test_invert_dists() -> None:
+    """
+    Test the inversion of the
+    built-in transformations
+    """
     generic_inversion_test(
         t.ScaledLogitTransform,
         50 * jnp.array([0.99235, 0.13242, 0.5, 0.235, 0.862]),
         x_max=50,
     )
-    generic_inversion_test(
-        t.IdentityTransform, jnp.array([0.99235, 0.13242, 0.5, 0.235, 0.862])
-    )
+
+    return None

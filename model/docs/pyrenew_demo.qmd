@@ -50,12 +50,13 @@ with seed(rng_seed=np.random.randint(0,1000)):
 plt.plot(np.exp(q_samp[0]))
 ```
 
-Next, import several additional functions from the `latent` module of the `pyrenew` package to model infections, hospital admissions, initial infections, and hospitalization rate due to infection.
+Next, import several additional functions from the `latent` module of the `pyrenew` package to model infections and hospital admissions.
 
 ```{python}
 from pyrenew.latent import (
-    Infections, HospitalAdmissions, Infections0, InfectHospRate,
+    Infections, HospitalAdmissions,
 )
+from pyrenew.metaclass import DistributionalRV
 ```
 
 Additionally, import several classes from Pyrenew, including a Poisson observation process, determininstic PMF and variable classes, the Pyrenew hospitalization model, and a renewal model (Rt) random walk process:
@@ -85,10 +86,10 @@ To initialize the model, we first define initial conditions, including:
 # Initializing model components:
 
 # 1) A deterministic generation time
-gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]))
+gen_int = DeterministicPMF(jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int")
 
 # 2) Initial infections
-I0 = Infections0(I0_dist=dist.LogNormal(0, 1))
+I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
 # 3) The latent infections process
 latent_infections = Infections()
@@ -98,12 +99,14 @@ latent_infections = Infections()
 # First, define a deterministic infection to hosp pmf
 inf_hosp_int = DeterministicPMF(
     jnp.array([0, 0, 0,0,0,0,0,0,0,0,0,0,0, 0.25, 0.5, 0.1, 0.1, 0.05]),
+    name="inf_hosp_int"
     )
 
 latent_admissions = HospitalAdmissions(
     infection_to_admission_interval=inf_hosp_int,
-    infect_hosp_rate_dist = InfectHospRate(
+    infect_hosp_rate_dist = DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
+            name="IHR"
             ),
     )
 
@@ -133,7 +136,7 @@ Next, we sample from the `hospmodel` for 30 time steps and view the output of a 
 
 ```{python}
 with seed(rng_seed=np.random.randint(1, 60)):
-    x = hospmodel.sample(n_timepoints=30)
+    x = hospmodel.sample(n_timepoints_to_simulate=30)
 x
 ```
 
@@ -159,7 +162,6 @@ hospmodel.run(
     num_warmup=1000,
     num_samples=1000,
     observed_admissions=x.sampled_admissions,
-    n_timepoints = len(x.sampled_admissions)-1,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     )

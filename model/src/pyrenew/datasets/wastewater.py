@@ -48,4 +48,5 @@ def load_wastewater() -> pl.DataFrame:  # numpydoc ignore=SS06,SA01,EX01
     return pl.read_csv(
         source=files("pyrenew.datasets") / "wastewater.tsv",
         separator="\t",
+        try_parse_dates=True,
     )

@@ -14,7 +14,7 @@ from pyrenew.metaclass import RandomVariable
 
 class InfectionsSample(NamedTuple):
     """
-    A container for holding the output from the InfectionsSample.
+    A container for holding the output from `latent.Infections.sample()`.
 
     Attributes
     ----------
@@ -31,8 +31,8 @@ class InfectionsSample(NamedTuple):
 class Infections(RandomVariable):
     r"""Latent infections
 
-    This class samples infections given Rt, initial infections, and generation
-    interval.
+    This class samples infections given Rt,
+    initial infections, and generation interval.
 
     Notes
     -----
@@ -79,7 +79,7 @@ class Infections(RandomVariable):
         I0: ArrayLike,
         gen_int: ArrayLike,
         **kwargs,
-    ) -> tuple:
+    ) -> InfectionsSample:
         """
         Samples infections given Rt, initial infections, and generation
         interval.
@@ -89,9 +89,11 @@ class Infections(RandomVariable):
         Rt : ArrayLike
             Reproduction number.
         I0 : ArrayLike
-            Initial infections.
+            Initial infections vector
+            of the same length as the
+            generation interval.
         gen_int : ArrayLike
-            Generation interval.
+            Generation interval pmf vector.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
@@ -104,10 +106,17 @@ class Infections(RandomVariable):
 
         gen_int_rev = jnp.flip(gen_int)
 
-        n_lead = gen_int_rev.size - 1
-        I0_vec = jnp.hstack([jnp.zeros(n_lead), I0])
+        if I0.size < gen_int_rev.size:
+            raise ValueError(
+                "Initial infections vector must be at least as long as "
+                "the generation interval. "
+                f"Initial infections vector length: {I0.size}, "
+                f"generation interval length: {gen_int_rev.size}."
+            )
+        else:
+            I0_vec = I0[-gen_int_rev.size :]
 
-        all_infections = inf.sample_infections_rt(
+        all_infections = inf.compute_infections_from_rt(
             I0=I0_vec,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,

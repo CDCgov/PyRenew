@@ -5,3 +5,6 @@
 
 /.quarto/
 _compiled
+
+*.ipynb
+*.py

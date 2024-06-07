@@ -5,11 +5,14 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import get_type_hints
+from typing import NamedTuple, get_type_hints
 
 import jax
+import jax.numpy as jnp
 import matplotlib.pyplot as plt
+import numpyro as npro
 import polars as pl
+from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS
 from pyrenew.mcmcutils import plot_posterior, spread_draws
 
@@ -127,6 +130,101 @@ class RandomVariable(metaclass=ABCMeta):
         Validation of kwargs to be implemented in subclasses.
         """
         pass
+
+
+class DistributionalRVSample(NamedTuple):
+    """
+    Named tuple for the sample method of DistributionalRV
+
+    Attributes
+    ----------
+    value : ArrayLike
+        Sampled value from the distribution.
+    """
+
+    value: ArrayLike | None = None
+
+    def __repr__(self) -> str:
+        """
+        Representation of the DistributionalRVSample
+        """
+        return f"DistributionalRVSample(value={self.value})"
+
+
+class DistributionalRV(RandomVariable):
+    """
+    Wrapper class for random variables that sample from a single `numpyro.distributions.Distribution`.
+    """
+
+    def __init__(
+        self,
+        dist: npro.distributions.Distribution,
+        name: str,
+    ):
+        """
+        Default constructor for DistributionalRV.
+
+        Parameters
+        ----------
+        dist : npro.distributions.Distribution
+            Distribution of the random variable.
+        name : str
+            Name of the random variable.
+
+        Returns
+        -------
+        None
+        """
+
+        self.validate(dist)
+
+        self.dist = dist
+        self.name = name
+
+        return None
+
+    @staticmethod
+    def validate(dist: any) -> None:
+        """
+        Validation of the distribution to be implemented in subclasses.
+        """
+        if not isinstance(dist, npro.distributions.Distribution):
+            raise ValueError(
+                "dist should be an instance of "
+                f"numpyro.distributions.Distribution, got {dist}"
+            )
+
+        return None
+
+    def sample(
+        self,
+        obs: ArrayLike | None = None,
+        **kwargs,
+    ) -> DistributionalRVSample:
+        """
+        Sample from the distribution.
+
+        Parameters
+        ----------
+        obs : ArrayLike, optional
+            Observations passed as the `obs` argument to `numpyro.sample()`. Default `None`.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal sample calls,
+            should there be any.
+
+        Returns
+        -------
+        DistributionalRVSample
+        """
+        return DistributionalRVSample(
+            value=jnp.atleast_1d(
+                npro.sample(
+                    name=self.name,
+                    fn=self.dist,
+                    obs=obs,
+                )
+            ),
+        )
 
 
 class Model(metaclass=ABCMeta):
