@@ -63,6 +63,19 @@ def test_seed_infections_zero_pad():
         infections, np.pad(I_pre_seed, (n_timepoints - I_pre_seed.size, 0))
     )
 
+    I_pre_seed_RV_2 = DeterministicVariable(
+        np.array([10.0, 10.0]), name="I_pre_seed_RV"
+    )
+    (I_pre_seed_2,) = I_pre_seed_RV_2.sample()
+
+    infections_2 = SeedInfectionsZeroPad(n_timepoints).seed_infections(
+        I_pre_seed_2
+    )
+    testing.assert_array_equal(
+        infections_2,
+        np.pad(I_pre_seed_2, (n_timepoints - I_pre_seed_2.size, 0)),
+    )
+
 
 def test_seed_infections_from_vec():
     """Check that the SeedInfectionsFromVec class generates the correct number of infections at each time point."""
