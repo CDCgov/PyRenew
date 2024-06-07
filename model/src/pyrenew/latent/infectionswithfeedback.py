@@ -139,7 +139,7 @@ class InfectionsWithFeedback(RandomVariable):
             Reproduction number.
         I0 : ArrayLike
             Initial infections, as an array
-            of the same length as the generation
+            at least as long as the generation
             interval PMF.
         gen_int : ArrayLike
             Generation interval PMF.
