@@ -16,14 +16,30 @@ In this walk-through, we will demonstrate how to re-implement a model created fo
 
 If you have not already seen MSR in use, please reference some of other tutorials:
 
-* [Getting Started]()
-* [Extending Pyrenew]()
-* [Pyrenew Demo]()
+* [Getting Started](https://cdcgov.github.io/multisignal-epi-inference/tutorials/getting-started.html)
+* [Extending Pyrenew](https://cdcgov.github.io/multisignal-epi-inference/tutorials/extending_pyrenew.html)
+* [Pyrenew Demo](https://cdcgov.github.io/multisignal-epi-inference/tutorials/pyrenew_demo.html)
+
+
+## Libraries And Data
+
+```python
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+import jax
+import jax.numpy as jnp
+import numpy as np
+from numpyro.handlers import seed
+import numpyro.distributions as dist
+
+from pyrenew.process import SimpleRandomWalkProcess
+```
 
 ## An Epidemia Model For Influenza
 
-The
+The `cfaepim` model is private within the CDC organization. Nonetheless, there are code snippets that the author has permission to share for the sake of this tutorial.
 
+Suppose we have
 
 ```r
 build_light_rt <- function(
@@ -57,8 +73,7 @@ build_light_rt <- function(
 
 ## Resources
 
-* [Epidemia's Website]()
-* [Epidemia Model Description Page]()
-* [Epidemia Model Scheme Page]()
-* [Epidemia Model Implementation Page]()
-*
+* [Epidemia's Website](https://imperialcollegelondon.github.io/epidemia/index.html)
+* [Epidemia Model Description Page](https://imperialcollegelondon.github.io/epidemia/articles/model-description.html)
+* [Epidemia Model Schematic Page](https://imperialcollegelondon.github.io/epidemia/articles/model-schematic.html)
+* [Epidemia Model Implementation Page](https://imperialcollegelondon.github.io/epidemia/articles/model-implementation.html)
