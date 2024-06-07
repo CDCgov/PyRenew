@@ -34,28 +34,24 @@ def pad_to_match(
     tuple[ArrayLike, ArrayLike]
         Tuple of the two arrays with the same length.
     """
-    if pad_direction not in ["start", "end"]:
-        raise ValueError(
-            "pad_direction must be either 'start' or 'end'."
-            + f" Got {pad_direction}."
-        )
     x = jnp.atleast_1d(x)
     y = jnp.atleast_1d(y)
-
     x_len = x.size
     y_len = y.size
     pad_size = abs(x_len - y_len)
 
-    if pad_direction == "start":
-        pad_width = (pad_size, 0)
-    elif pad_direction == "end":
-        pad_width = (0, pad_size)
+    pad_width = {"start": (pad_size, 0), "end": (0, pad_size)}.get(pad_direction, None)
+   
+    if pad_width is None:
+         raise ValueError(
+           "pad_direction must be either 'start' or 'end'."
+           f" Got {pad_direction}.")
 
     if x_len > y_len:
         if fix_y:
             raise ValueError(
                 "Cannot fix y when x is longer than y."
-                + f" x_len: {x_len}, y_len: {y_len}."
+                f" x_len: {x_len}, y_len: {y_len}."
             )
         y = jnp.pad(y, pad_width, constant_values=fill_value)
 
