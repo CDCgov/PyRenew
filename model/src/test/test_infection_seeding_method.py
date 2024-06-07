@@ -110,7 +110,6 @@ def test_seed_infections_from_vec():
     )
     testing.assert_array_equal(infections, I_pre_seed)
 
-    # Check that the SeedInfectionsFromVec class raises an error when the length of I_pre_seed is not equal to n_timepoints.
     I_pre_seed_2 = np.arange(n_timepoints - 1)
     with pytest.raises(ValueError):
         SeedInfectionsFromVec(n_timepoints).seed_infections(I_pre_seed_2)
@@ -120,5 +119,5 @@ def test_seed_infections_from_vec():
         SeedInfectionsFromVec(n_timepoints_float).seed_infections(I_pre_seed)
 
     n_timepoints_neg = -10
-    with pytest.raises(TypeError):
+    with pytest.raises(ValueError):
         SeedInfectionsFromVec(n_timepoints_neg).seed_infections(I_pre_seed)
