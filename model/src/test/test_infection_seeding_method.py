@@ -47,7 +47,6 @@ def test_seed_infections_exponential():
     )
 
     assert infections_custom_t_pre_seed[t_pre_seed] == I_pre_seed
-    return None
 
 
 def test_seed_infections_zero_pad():
@@ -63,7 +62,6 @@ def test_seed_infections_zero_pad():
     testing.assert_array_equal(
         infections, np.pad(I_pre_seed, (n_timepoints - I_pre_seed.size, 0))
     )
-    return None
 
 
 def test_seed_infections_from_vec():
@@ -76,4 +74,3 @@ def test_seed_infections_from_vec():
         I_pre_seed
     )
     testing.assert_array_equal(infections, I_pre_seed)
-    return None

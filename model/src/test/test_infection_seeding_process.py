@@ -37,4 +37,3 @@ def test_infection_seeding_process():
         with npro.handlers.seed(rng_seed=1):
             model.sample()
 
-    return None
