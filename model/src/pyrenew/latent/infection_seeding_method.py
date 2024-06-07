@@ -127,7 +127,7 @@ class SeedInfectionsExponential(InfectionSeedMethod):
     -----
     The number of incident infections at time `t` is given by:
 
-    .. math:: I(t) = I_p \exp \left( r (t - t_p) \\right)
+    .. math:: I(t) = I_p \exp \left( r (t - t_p) \right)
 
     Where :math:`I_p` is ``I_pre_seed``, :math:`r` is ``rate``, and :math:`t_p` is ``t_pre_seed``.
     This ensures that :math:`I(t_p) = I_p`.
