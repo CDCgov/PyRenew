@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import pyrenew.datautils as du
+import pyrenew.arrayutils as au
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
@@ -15,7 +15,7 @@ from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 # Output class of the RtInfectionsRenewalModel
 class RtInfectionsRenewalSample(NamedTuple):
     """
-    A container for holding the output from RtInfectionsRenewalModel.sample().
+    A container for holding the output from `model.RtInfectionsRenewalModel.sample()`.
 
     Attributes
     ----------
@@ -32,7 +32,11 @@ class RtInfectionsRenewalSample(NamedTuple):
     sampled_infections: ArrayLike | None = None
 
     def __repr__(self):
-        return f"RtInfectionsRenewalSample(Rt={self.Rt}, latent_infections={self.latent_infections}, sampled_infections={self.sampled_infections})"
+        return (
+            f"RtInfectionsRenewalSample(Rt={self.Rt}, "
+            f"latent_infections={self.latent_infections}, "
+            f"sampled_infections={self.sampled_infections})"
+        )
 
 
 class RtInfectionsRenewalModel(Model):
@@ -246,7 +250,7 @@ class RtInfectionsRenewalModel(Model):
 
     def sample(
         self,
-        n_timepoints: int,
+        n_timepoints_to_simulate: int | None = None,
         observed_infections: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
@@ -256,7 +260,7 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints_to_simulate : int, optional
             Number of timepoints to sample.
         observed_infections : ArrayLike | None, optional
             Observed infections. Defaults to None.
@@ -267,15 +271,35 @@ class RtInfectionsRenewalModel(Model):
             Additional keyword arguments passed through to internal sample()
             calls, if any
 
+        Notes
+        -----
+        Either `observed_admissions` or `n_timepoints_to_simulate` must be specified, not both.
+
         Returns
         -------
         RtInfectionsRenewalSample
         """
 
+        if n_timepoints_to_simulate is None and observed_infections is None:
+            raise ValueError(
+                "Either n_timepoints_to_simulate or observed_infections "
+                "must be passed."
+            )
+        elif (
+            n_timepoints_to_simulate is not None
+            and observed_infections is not None
+        ):
+            raise ValueError(
+                "Cannot pass both n_timepoints_to_simulate and observed_infections."
+            )
+        elif n_timepoints_to_simulate is None:
+            n_timepoints = len(observed_infections)
+        else:
+            n_timepoints = n_timepoints_to_simulate
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.sample_rt(
-            n_timepoints=n_timepoints,
+            duration=n_timepoints,
             **kwargs,
         )
 
@@ -291,7 +315,7 @@ class RtInfectionsRenewalModel(Model):
         # is merged.
         # SEE ALSO:
         # https://github.com/CDCgov/multisignal-epi-inference/pull/123#discussion_r1612337288
-        i0 = du.pad_x_to_match_y(x=i0, y=gen_int, fill_value=0.0)
+        i0 = au.pad_x_to_match_y(x=i0, y=gen_int, fill_value=0.0)
 
         # Sampling from the latent process
         latent, *_ = self.sample_infections_latent(

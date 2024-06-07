@@ -1,5 +1,5 @@
 """
-Utility functions for data processing.
+Utility functions for processing arrays.
 """
 
 import jax.numpy as jnp
