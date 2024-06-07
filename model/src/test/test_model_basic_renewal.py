@@ -102,6 +102,7 @@ def test_model_basicrenewal_no_obs_model():
         I0 = DistributionalRV(dist=1, name="I0")
 
     I0 = InfectionSeedingProcess(
+        "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
@@ -171,6 +172,7 @@ def test_model_basicrenewal_with_obs_model():
     )
 
     I0 = InfectionSeedingProcess(
+        "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
@@ -239,6 +241,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:
     )
 
     I0 = InfectionSeedingProcess(
+        "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
@@ -281,6 +284,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     )
 
     I0 = InfectionSeedingProcess(
+        "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )

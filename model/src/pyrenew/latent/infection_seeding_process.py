@@ -10,6 +10,7 @@ class InfectionSeedingProcess(RandomVariable):
 
     def __init__(
         self,
+        name,
         I_pre_seed_rv: RandomVariable,
         infection_seed_method: InfectionSeedMethod,
     ) -> None:
@@ -17,6 +18,8 @@ class InfectionSeedingProcess(RandomVariable):
 
         Parameters
         ----------
+        name : str
+            A name to assign to the RandomVariable.
         I_pre_seed_rv : RandomVariable
             A RandomVariable representing the number of infections that occur at some time before the renewal process begins. Each `infection_seed_method` uses this random variable in different ways.
         infection_seed_method : InfectionSeedMethod
@@ -30,6 +33,7 @@ class InfectionSeedingProcess(RandomVariable):
 
         self.I_pre_seed_rv = I_pre_seed_rv
         self.infection_seed_method = infection_seed_method
+        self.name = name
 
     @staticmethod
     def validate(
@@ -68,6 +72,6 @@ class InfectionSeedingProcess(RandomVariable):
         """
         (I_pre_seed,) = self.I_pre_seed_rv.sample()
         infection_seeding = self.infection_seed_method(I_pre_seed)
-        npro.deterministic("infection_seeding", infection_seeding)
+        npro.deterministic(self.name, infection_seeding)
 
         return (infection_seeding,)

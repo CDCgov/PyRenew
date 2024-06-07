@@ -17,11 +17,13 @@ def test_infection_seeding_process():
     n_timepoints = 10
 
     zero_pad_model = InfectionSeedingProcess(
+        "zero_pad_model",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints),
     )
 
     exp_model = InfectionSeedingProcess(
+        "exp_model",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsExponential(
             n_timepoints, DeterministicVariable(0.5, name="rate")
@@ -29,6 +31,7 @@ def test_infection_seeding_process():
     )
 
     vec_model = InfectionSeedingProcess(
+        "vec_model",
         DeterministicVariable(jnp.arange(n_timepoints), name="I0"),
         SeedInfectionsFromVec(n_timepoints),
     )

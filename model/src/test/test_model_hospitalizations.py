@@ -183,6 +183,7 @@ def test_model_hosp_no_obs_model():
     )
 
     I0 = InfectionSeedingProcess(
+        "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
@@ -284,6 +285,7 @@ def test_model_hosp_with_obs_model():
     )
 
     I0 = InfectionSeedingProcess(
+        "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
@@ -368,6 +370,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     )
 
     I0 = InfectionSeedingProcess(
+        "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
@@ -464,6 +467,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     n_obs_to_generate = 30
 
     I0 = InfectionSeedingProcess(
+        "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
