@@ -36,4 +36,3 @@ def test_infection_seeding_process():
     for model in [zero_pad_model, exp_model, vec_model]:
         with npro.handlers.seed(rng_seed=1):
             model.sample()
-
