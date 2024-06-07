@@ -69,8 +69,8 @@ class InfectionSeedMethod(metaclass=ABCMeta):
 
 class SeedInfectionsZeroPad(InfectionSeedMethod):
     """
-    Create a seed infection vector of specified length by 
-    padding a shorter vector with an appropriate number of 
+    Create a seed infection vector of specified length by
+    padding a shorter vector with an appropriate number of
     zeros at the beginning of the time series.
     """
 
@@ -132,8 +132,8 @@ class SeedInfectionsExponential(InfectionSeedMethod):
 
     Where :math:`I_p` is ``I_pre_seed``, :math:`r` is ``rate``, and :math:`t_p` is ``t_pre_seed``.
     This ensures that :math:`I(t_p) = I_p`.
-    We default to ``t_pre_seed = n_timepoints - 1``, so that 
-    ``I_pre_seed`` represents the number of incident infections immediately 
+    We default to ``t_pre_seed = n_timepoints - 1``, so that
+    ``I_pre_seed`` represents the number of incident infections immediately
     before the renewal process begins.
     """
 

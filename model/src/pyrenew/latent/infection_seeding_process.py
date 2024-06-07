@@ -31,7 +31,6 @@ class InfectionSeedingProcess(RandomVariable):
         self.I_pre_seed_rv = I_pre_seed_rv
         self.infection_seed_method = infection_seed_method
 
-
     @staticmethod
     def validate(
         I_pre_seed_rv: RandomVariable,
