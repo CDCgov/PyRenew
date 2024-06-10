@@ -25,20 +25,21 @@ install:
 test:
 	poetry run pytest --mpl --mpl-default-tolerance=10
 
-docs: docs/pyrenew_demo.md docs/getting-started.md \
-	docs/example-with-datasets.md docs/extending_pyrenew.md
+# Automatically get all .qmd files in the docs directory
+QMD_FILES := $(wildcard docs/*.qmd)
 
-docs/pyrenew_demo.md: docs/pyrenew_demo.qmd
-	poetry run quarto render docs/pyrenew_demo.qmd
+# Derive the corresponding markdown files
+MD_FILES := $(QMD_FILES:.qmd=.md)
 
-docs/getting-started.md: docs/getting-started.qmd
-	poetry run quarto render docs/getting-started.qmd
+# Target to build all markdown files
+docs: $(MD_FILES)
 
-docs/example-with-datasets.md: docs/example-with-datasets.qmd
-	poetry run quarto render docs/example-with-datasets.qmd
+# Pattern rule to build a markdown file from a qmd file
+docs/%.md: docs/%.qmd
+	poetry run quarto render $<
 
-docs/extending_pyrenew.md: docs/extending_pyrenew.qmd
-	poetry run quarto render docs/extending_pyrenew.qmd
+# Phony target to ensure docs are built
+.PHONY: docs
 
 docs/py: docs/notebooks
 	for i in docs/*.ipynb; do \
