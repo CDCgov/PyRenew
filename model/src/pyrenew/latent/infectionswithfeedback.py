@@ -37,6 +37,16 @@ class InfectionsWithFeedback(RandomVariable):
     This class computes infections, given Rt, initial infections, and generation
     interval.
 
+    Parameters
+    ----------
+    infection_feedback_strength : RandomVariable
+        Infection feedback strength.
+    infection_feedback_pmf : RandomVariable
+        Infection feedback pmf.
+    infections_mean_varname : str, optional
+        Name to be assigned to the deterministic variable in the model.
+        Defaults to "latent_infections".
+
     Notes
     -----
     This function implements the following renewal process (reproduced from
@@ -129,7 +139,7 @@ class InfectionsWithFeedback(RandomVariable):
             Reproduction number.
         I0 : ArrayLike
             Initial infections, as an array
-            at least as long as the
+            at least as long as the generation
             interval PMF.
         gen_int : ArrayLike
             Generation interval PMF.
@@ -184,6 +194,9 @@ class InfectionsWithFeedback(RandomVariable):
             reversed_generation_interval_pmf=gen_int_rev,
             reversed_infection_feedback_pmf=inf_fb_pmf_rev,
         )
+
+        # Appending initial infections to the infections
+        all_infections = jnp.hstack([I0, all_infections])
 
         npro.deterministic("Rt_adjusted", Rt_adj)
 
