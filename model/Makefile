@@ -35,6 +35,7 @@ docs/%.ipynb: docs/%.qmd
 
 # Pattern rule to build a Python file from a notebook file
 docs/%.py: docs/%.ipynb
+	sed -i '' 's/"cell_type": "raw"/"cell_type": "markdown"/g' $<
 	poetry run jupyter nbconvert --to python $<
 
 # Automatically get all .qmd files in the docs directory
