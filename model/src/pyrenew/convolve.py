@@ -64,14 +64,14 @@ def new_convolve_scanner(
     in renewal processes:
 
     .. math::
-        X(t) = f\left(m(t) * \left[X(t - n), X(t - n + 1),
-        ... X(t - 1)\right] \dot \vec{d} \right)
+        X(t) = f\left(m(t) \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
+        \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d} \right)
 
-    Where :math:`\vec{d}` is a vector of length :math:`n`,
+    Where :math:`\mathbf{d}` is a vector of length :math:`n`,
     :math:`m(t)` is a scalar for each value of time :math:`t`,
     and :math:`f` is a scalar-valued function.
 
-    Given :math:`\vec{d}`, and optionally :math:`f`,
+    Given :math:`\mathbf{d}`, and optionally :math:`f`,
     this factory function returns a new function that
     peforms one step of this process while scanning along
     an array of  multipliers (i.e. an array
