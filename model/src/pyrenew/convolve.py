@@ -98,7 +98,7 @@ def new_double_convolve_scanner(
     arrays_to_convolve: tuple[ArrayLike, ArrayLike],
     transforms: tuple[Callable, Callable] = (None, None),
 ) -> Callable:
-    """
+    r"""
     Factory function to create a scanner function
     that iteratively constructs arrays by applying
     the dot-product/multiply/transform operation
@@ -133,6 +133,32 @@ def new_double_convolve_scanner(
         in sequence to construct a new array by scanning
         along a pair of input arrays that are equal in
         length to each other.
+
+    Notes
+    -----
+    Using the same notation as in the documentation for
+    :func:`new_convolve_scanner`, this function aids in
+    applying the iterative operation:
+
+    .. math::
+        \begin{aligned}
+        Y(t) &= f_1 \left(m_1(t)
+           \begin{bmatrix}
+                X(t - n) \\
+                X(t - n + 1) \\
+                \vdots{} \\
+                X(t - 1)
+        \end{bmatrix} \cdot{} \mathbf{d}_1 \right) \\ \\
+        X(t) &= f_2 \left(
+           m_2(t) Y(t)
+        \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
+        \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d}_2 \right)
+        \end{aligned}
+
+    Where :math:`\mathbf{d}_1` and :math:`\mathbf{d}_2` are vectors of
+    length :math:`n`, :math:`m_1(t)` and :math:`m_2(t)` are scalars
+    for each value of time :math:`t`, and :math:`f_1` and :math:`f_2`
+    are scalar-valued functions.
     """
     arr1, arr2 = arrays_to_convolve
     t1, t2 = [x if x is not None else IdentityTransform() for x in transforms]
