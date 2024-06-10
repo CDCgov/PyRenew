@@ -18,10 +18,11 @@ from typing import Callable
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from pyrenew.transformation import IdentityTransform
+import pyrenew.arrayutils as au
 
 
 def new_convolve_scanner(
-    discrete_dist_flipped: ArrayLike, transform: Callable = None
+    array_to_convolve: ArrayLike, transform: Callable = None
 ) -> Callable:
     r"""
     Factory function to create a "scanner" function
@@ -31,9 +32,9 @@ def new_convolve_scanner(
 
     Parameters
     ----------
-    discrete_dist_flipped : ArrayLike
-        A 1D jax array representing the discrete
-        distribution flipped for convolution.
+    array_to_convolve : ArrayLike
+        A 1D jax array to convolve with subsets of the
+        iteratively constructed history array.
 
     transform : Callable
         A transformation to apply to the result
@@ -46,10 +47,14 @@ def new_convolve_scanner(
     Callable
         A scanner function that can be used with
         jax.lax.scan for convolution.
-        This function takes a history subset and
-        a multiplier, computes the dot product,
-        then updates and returns the new history
-        subset and the convolution result.
+        This function takes a history subset array and
+        a scalar, computes the dot product of
+        the supplied convolution array with the history
+        subset array, multiplies by the scalar, and
+        returns the resulting value and a new history subset
+        array formed by the 2nd-through-last entries
+        of the old history subset array followed by that same
+        resulting value.
 
     Notes
     -----
@@ -57,7 +62,8 @@ def new_convolve_scanner(
     in renewal processes:
 
     .. math::
-        X(t) = f\left(m(t) * \left[X(t - n), X(t - n + 1), ... X(t - 1)\right] \dot \vec{d} \right)
+        X(t) = f\left(m(t) * \left[X(t - n), X(t - n + 1),
+        ... X(t - 1)\right] \dot \vec{d} \right)
 
     Where :math:`\vec{d}` is a vector of length :math:`n`,
     :math:`m(t)` is a scalar for each value of time :math:`t`,
@@ -72,11 +78,14 @@ def new_convolve_scanner(
     if transform is None:
         transform = IdentityTransform()
 
+    au.validate_arraylike(array_to_convolve,
+                          "array_to_convolve")
+
     def _new_scanner(
         history_subset: ArrayLike, multiplier: float
     ) -> tuple[ArrayLike, float]:  # numpydoc ignore=GL08
         new_val = transform(
-            multiplier * jnp.dot(discrete_dist_flipped, history_subset)
+            multiplier * jnp.dot(array_to_convolve, history_subset)
         )
         latest = jnp.hstack([history_subset[1:], new_val])
         return latest, new_val
@@ -85,7 +94,7 @@ def new_convolve_scanner(
 
 
 def new_double_convolve_scanner(
-    dists: tuple[ArrayLike, ArrayLike],
+    arrays_to_convolve: tuple[ArrayLike, ArrayLike],
     transforms: tuple[Callable, Callable] = (None, None),
 ) -> Callable:
     """
@@ -98,16 +107,22 @@ def new_double_convolve_scanner(
 
     Parameters
     ----------
-    dists : tuple[ArrayLike, ArrayLike]
-        A tuple of two 1D jax arrays, each representing a
-        discrete distribution for the
-        two stages of convolution.
+    arrays_to_convolve : tuple[ArrayLike, ArrayLike]
+        A tuple of two 1D jax arrays, one for
+        each of the two stages of convolution.
+        The first entry in the arrays_to_convolve
+        tuple will be convolved with the
+        current history subset array first, the
+        the second entry will be convolved with
+        it second.
     transforms : tuple[Callable, Callable]
         A tuple of two functions, each transforming the
         output of the dot product at each
-        convolution stage. If either is None,
-        the identity transformation will be used
-        at that step. Default (None, None)
+        convolution stage. The first entry in the transforms
+        tuple will be applied first, then the second will
+        be applied.
+        If either entry is None, the identity transformation
+        will be used in its place. Default (None, None).
 
     Returns
     -------
@@ -118,7 +133,7 @@ def new_double_convolve_scanner(
         along a pair of input arrays that are equal in
         length to each other.
     """
-    d1, d2 = dists
+    arr1, arr2 = arrays_to_convolve
     t1, t2 = [x if x is not None else IdentityTransform() for x in transforms]
 
     def _new_scanner(
@@ -126,8 +141,8 @@ def new_double_convolve_scanner(
         multipliers: tuple[float, float],
     ) -> tuple[ArrayLike, tuple[float, float]]:  # numpydoc ignore=GL08
         m1, m2 = multipliers
-        m_net1 = t1(m1 * jnp.dot(d1, history_subset))
-        new_val = t2(m2 * m_net1 * jnp.dot(d2, history_subset))
+        m_net1 = t1(m1 * jnp.dot(arr1, history_subset))
+        new_val = t2(m2 * m_net1 * jnp.dot(arr2, history_subset))
         latest = jnp.hstack([history_subset[1:], new_val])
         return latest, (new_val, m_net1)
 

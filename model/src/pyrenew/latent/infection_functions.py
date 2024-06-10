@@ -171,7 +171,7 @@ def compute_infections_from_rt_with_feedback(
     et cetera.
     """
     feedback_scanner = new_double_convolve_scanner(
-        dists=(
+        arrays_to_convolve=(
             reversed_infection_feedback_pmf,
             reversed_generation_interval_pmf,
         ),
