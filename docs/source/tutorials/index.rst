@@ -6,7 +6,7 @@ This section contains tutorials that demonstrate how to use the `pyrenew` packag
 .. toctree::
    :maxdepth: 2
 
-   getting-started
-   example-with-datasets
+   getting_started
+   example_with_datasets
    pyrenew_demo
    extending_pyrenew
