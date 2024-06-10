@@ -111,10 +111,11 @@ def validate_arraylike(obj_to_validate: any, obj_name: str) -> None:
     -------
     None
     """
-    if not isinstance(obj_to_validate,
-                      ArrayLike):
-        raise ValueError(f"{obj_name} must be a JAX array "
-                         "or behave like one, got "
-                         f"{type(obj_to_validate)}."
-                         "See documentation for jax.typing.ArrayLike"
-                         "for more.")
+    if not isinstance(obj_to_validate, ArrayLike):
+        raise ValueError(
+            f"{obj_name} must be a JAX array "
+            "or behave like one, got "
+            f"{type(obj_to_validate)}."
+            "See documentation for jax.typing.ArrayLike"
+            "for more."
+        )

@@ -69,21 +69,18 @@ def test_validate_arraylike():
     are passed but does not raise an error
     when ArrayLike objects are passed.
     """
-    for non_array in [
-            [], {}, "a_string",
-            lambda x: x + 5]:
+    for non_array in [[], {}, "a_string", lambda x: x + 5]:
         with pytest.raises(ValueError):
-            au.validate_arraylike(non_array,
-                                  "a_test_non_array")
+            au.validate_arraylike(non_array, "a_test_non_array")
 
     for my_arraylike in [
-            352.0,
-            5,
-            jnp.array([3, 2, 3]),
-            np.array([1, 2, 3]),
-            jnp.array(5.344),
-            np.array(-32.32),
-            jnp.array([[[3, 2.3, 1]]]),
-            np.array([[[3, 2.3, 1]]])
+        352.0,
+        5,
+        jnp.array([3, 2, 3]),
+        np.array([1, 2, 3]),
+        jnp.array(5.344),
+        np.array(-32.32),
+        jnp.array([[[3, 2.3, 1]]]),
+        np.array([[[3, 2.3, 1]]]),
     ]:
         au.validate_arraylike(my_arraylike, "a_test_arraylike")
