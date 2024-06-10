@@ -7,9 +7,11 @@ Factory functions for
 calculating convolutions of timeseries
 with discrete distributions
 of times-to-event using
-jax.lax.scan. Factories generate functions
-that can be passed to scan with an
-appropriate array to scan.
+:py:func:`jax.lax.scan`.
+Factories generate functions
+that can be passed to
+:py:func:`jax.lax.scan` with an
+appropriate array to scan along.
 """
 from __future__ import annotations
 
@@ -46,7 +48,7 @@ def new_convolve_scanner(
     -------
     Callable
         A scanner function that can be used with
-        jax.lax.scan for convolution.
+        :py:func:`jax.lax.scan` for convolution.
         This function takes a history subset array and
         a scalar, computes the dot product of
         the supplied convolution array with the history
@@ -73,7 +75,7 @@ def new_convolve_scanner(
     this factory function returns a new function that
     peforms one step of this process while scanning along
     an array of  multipliers (i.e. an array
-    giving the values of :math:`m(t)`) using :func:`jax.lax.scan`.
+    giving the values of :math:`m(t)`) using :py:func:`jax.lax.scan`.
     """
     if transform is None:
         transform = IdentityTransform()
