@@ -3,7 +3,6 @@ CONTAINER=podman
 # CONTAINER_REGISTRY=
 # CONTAINER_URL=
 
-
 # Help target listing the available targets
 help:
 	@echo "Available targets"
@@ -14,6 +13,7 @@ help:
 	@echo "  docs           : Render the documentation"
 	@echo "  clean          : Clean the generated files"
 	@echo "  docs/notebooks : Convert the Quarto files to Jupyter notebooks"
+	@echo "  docs/py        : Convert the Jupyter notebooks to Python scripts"
 	@echo "  test_images    : Generate reference images for tests"
 	@echo "  image-build    : Build the podman/Docker image"
 	@echo "  image-run      : Run the podman/Docker image"
@@ -25,33 +25,41 @@ install:
 test:
 	poetry run pytest --mpl --mpl-default-tolerance=10
 
+# Pattern rule to build a markdown file from a qmd file
+docs/%.md: docs/%.qmd
+	poetry run quarto render $<
+
+# Pattern rule to build a notebook file from a qmd file
+docs/%.ipynb: docs/%.qmd
+	poetry run quarto convert $< --output $@
+
+# Pattern rule to build a Python file from a notebook file
+docs/%.py: docs/%.ipynb
+	poetry run jupyter nbconvert --to python $<
+
 # Automatically get all .qmd files in the docs directory
 QMD_FILES := $(wildcard docs/*.qmd)
 
 # Derive the corresponding markdown files
 MD_FILES := $(QMD_FILES:.qmd=.md)
 
+# Derive the corresponding notebook files
+NOTEBOOK_FILES := $(QMD_FILES:.qmd=.ipynb)
+
+# Derive the corresponding Python files
+PY_FILES := $(NOTEBOOK_FILES:.ipynb=.py)
+
 # Target to build all markdown files
 docs: $(MD_FILES)
 
-# Pattern rule to build a markdown file from a qmd file
-docs/%.md: docs/%.qmd
-	poetry run quarto render $<
+# Target to build all notebook files
+docs/notebooks: $(NOTEBOOK_FILES)
+
+# Target to build all Python files
+docs/py: $(PY_FILES)
 
 # Phony target to ensure docs are built
-.PHONY: docs
-
-docs/py: docs/notebooks
-	for i in docs/*.ipynb; do \
-		jupyter nbconvert --to python $$i ; \
-	done
-
-docs/notebooks:
-	for i in docs/*.qmd; do \
-		if [ $$i -nt $$(basename $$i .qmd).ipynb ]; then \
-			quarto convert $$i --output docs/$$(basename $$i .qmd).ipynb ; \
-		fi \
-	done
+.PHONY: docs docs/notebooks docs/py
 
 test_images:
 	echo "Generating reference images for tests"
@@ -59,11 +67,7 @@ test_images:
 
 clean:
 	rm -rf docs/*_files/
-	for i in .py, .md, .ipynb; do \
-		rm -f docs/getting-started.$$i; \
-		rm -f docs/pyrenew_demo.$$i; \
-		rm -f docs/example-with-datasets.$$i; \
-	done
+	rm -f $(MD_FILES) $(NOTEBOOK_FILES) $(PY_FILES)
 
 image-build: Dockerfile
 	$(CONTAINER) build -t pyrenew:latest .
