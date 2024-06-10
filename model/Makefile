@@ -45,30 +45,30 @@ QMD_FILES := $(wildcard docs/*.qmd)
 MD_FILES := $(QMD_FILES:.qmd=.md)
 
 # Derive the corresponding notebook files
-NOTEBOOK_FILES := $(QMD_FILES:.qmd=.ipynb)
+IPYNB_FILES := $(QMD_FILES:.qmd=.ipynb)
 
 # Derive the corresponding Python files
-PY_FILES := $(NOTEBOOK_FILES:.ipynb=.py)
+PY_FILES := $(IPYNB_FILES:.ipynb=.py)
+
+# Target to build all docs
+docs: docs_md docs_ipynb docs_py
 
 # Target to build all markdown files
-docs: $(MD_FILES)
+docs_md: $(MD_FILES)
 
 # Target to build all notebook files
-docs/notebooks: $(NOTEBOOK_FILES)
+docs_ipynb: $(NOTEBOOK_FILES)
 
 # Target to build all Python files
-docs/py: $(PY_FILES)
+docs_py: $(PY_FILES)
 
-# Phony target to ensure docs are built
-.PHONY: docs docs/notebooks docs/py
+docs_clean:
+	rm -rf docs/*_files/
+	rm -f $(MD_FILES) $(IPYNB_FILES) $(PY_FILES)
 
 test_images:
 	echo "Generating reference images for tests"
 	poetry run pytest --mpl-generate-path=src/test/baseline
-
-clean:
-	rm -rf docs/*_files/
-	rm -f $(MD_FILES) $(NOTEBOOK_FILES) $(PY_FILES)
 
 image-build: Dockerfile
 	$(CONTAINER) build -t pyrenew:latest .
@@ -91,5 +91,5 @@ image-push:
 	fi
 	$(CONTAINER) push pyrenew:latest $(CONTAINER_URL)/pyrenew:latest
 
-.PHONY: install test docs clean docs/notebooks docs/py test_images image-build \
-	image-run
+.PHONY: install test docs docs_md docs_ipynb docs_py docs_clean test_images \
+		image-build image-run
