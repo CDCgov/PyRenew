@@ -16,3 +16,11 @@ Infection to admission interval
    :members:
    :undoc-members:
    :show-inheritance:
+
+Simulated Wastewater Data
+-------------------------
+
+.. automodule:: pyrenew.datasets.wastewater
+   :members:
+   :undoc-members:
+   :show-inheritance:
