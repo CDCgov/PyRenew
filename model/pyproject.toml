@@ -2,7 +2,7 @@
 name = "pyrenew"
 version = "0.1.0"
 description = "Pyrenew: a package for Bayesian renewal modeling with JAX and Numpyro"
-authors = ["Dylan H. Morris <dylan@dylanhmorris.com>"]
+authors = ["CFA"]
 license = "Apache 2.0"
 readme = "README.md"
 include = [{path = "datasets/*.tsv"}]
@@ -10,7 +10,7 @@ exclude = [{path = "datasets/*.rds"}]
 
 
 [tool.poetry.dependencies]
-python = "^3.10"
+python = "^3.11"
 numpyro = "^0.13.2"
 jax = "^0.4.24"
 numpy = "^1.26.4"
