@@ -17,6 +17,7 @@ lod_sewage = "lod_sewage"
 lod = "lod"
 LOD = "LOD"
 ans = "ans"
+arange = "arange"
 
 [files]
 extend-exclude = [
