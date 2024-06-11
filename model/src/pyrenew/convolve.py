@@ -18,9 +18,7 @@ from __future__ import annotations
 from typing import Callable
 
 import jax.numpy as jnp
-import pyrenew.arrayutils as au
 from jax.typing import ArrayLike
-from pyrenew.transformation import IdentityTransform
 
 
 def new_convolve_scanner(
@@ -76,8 +74,6 @@ def new_convolve_scanner(
     an array of  multipliers (i.e. an array
     giving the values of :math:`m(t)`) using :py:func:`jax.lax.scan`.
     """
-    au.validate_arraylike(array_to_convolve, "array_to_convolve")
-
     def _new_scanner(
         history_subset: ArrayLike, multiplier: float
     ) -> tuple[ArrayLike, float]:  # numpydoc ignore=GL08
