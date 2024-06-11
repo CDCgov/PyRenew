@@ -2,9 +2,6 @@
 extend-ignore-identifiers-re = [
     "AttributeID.*Supress.*",
 ]
-extend-ignore-words-re = [
-    "j?np\\.arange\\(",
-]
 
 [default.extend-identifiers]
 AttributeIDSupressMenu = "AttributeIDSupressMenu"
