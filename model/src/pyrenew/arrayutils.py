@@ -89,33 +89,6 @@ def pad_x_to_match_y(
     Array
         Padded array.
     """
-    return pad_to_match(x, y, fill_value=fill_value, fix_y=True)[0]
-
-
-def validate_arraylike(obj_to_validate: any, obj_name: str) -> None:
-    """
-    Validate that a passed argument is jax.typing.ArrayLike,
-    raising an informative error if it is not.
-
-    Parameters
-    ----------
-    obj_to_validate : any
-        Object to validate.
-
-    obj_name : str
-        Name of the object to validate,
-        for the error message if validation
-        fails.
-
-    Returns
-    -------
-    None
-    """
-    if not isinstance(obj_to_validate, ArrayLike):
-        raise ValueError(
-            f"{obj_name} must be a JAX array "
-            "or behave like one, got "
-            f"{type(obj_to_validate)}."
-            "See documentation for jax.typing.ArrayLike"
-            "for more."
-        )
+    return pad_to_match(
+        x, y, fill_value=fill_value, pad_direction=pad_direction, fix_y=True
+    )[0]
