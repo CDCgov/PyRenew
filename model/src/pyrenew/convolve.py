@@ -24,7 +24,8 @@ from pyrenew.transformation import IdentityTransform
 
 
 def new_convolve_scanner(
-    array_to_convolve: ArrayLike, transform: Callable = None
+        array_to_convolve: ArrayLike,
+        transform: Callable,
 ) -> Callable:
     r"""
     Factory function to create a "scanner" function
@@ -41,8 +42,6 @@ def new_convolve_scanner(
     transform : Callable
         A transformation to apply to the result
         of the dot product and multiplication.
-        If None, use the identity transformation.
-        Default None.
 
     Returns
     -------
@@ -77,9 +76,6 @@ def new_convolve_scanner(
     an array of  multipliers (i.e. an array
     giving the values of :math:`m(t)`) using :py:func:`jax.lax.scan`.
     """
-    if transform is None:
-        transform = IdentityTransform()
-
     au.validate_arraylike(array_to_convolve, "array_to_convolve")
 
     def _new_scanner(
@@ -96,7 +92,7 @@ def new_convolve_scanner(
 
 def new_double_convolve_scanner(
     arrays_to_convolve: tuple[ArrayLike, ArrayLike],
-    transforms: tuple[Callable, Callable] = (None, None),
+    transforms: tuple[Callable, Callable],
 ) -> Callable:
     r"""
     Factory function to create a scanner function
@@ -122,8 +118,6 @@ def new_double_convolve_scanner(
         convolution stage. The first entry in the transforms
         tuple will be applied first, then the second will
         be applied.
-        If either entry is None, the identity transformation
-        will be used in its place. Default (None, None).
 
     Returns
     -------
@@ -161,7 +155,7 @@ def new_double_convolve_scanner(
     are scalar-valued functions.
     """
     arr1, arr2 = arrays_to_convolve
-    t1, t2 = [x if x is not None else IdentityTransform() for x in transforms]
+    t1, t2 = transforms
 
     def _new_scanner(
         history_subset: ArrayLike,

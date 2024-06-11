@@ -41,7 +41,9 @@ def compute_infections_from_rt(
     ArrayLike
         The timeseries of infections, as a JAX array
     """
-    incidence_func = new_convolve_scanner(reversed_generation_interval_pmf)
+    incidence_func = new_convolve_scanner(
+        reversed_generation_interval_pmf,
+        IdentityTransform())
 
     latest, all_infections = jax.lax.scan(f=incidence_func, init=I0, xs=Rt)
 
@@ -76,6 +78,8 @@ def logistic_susceptibility_adjustment(
     float
         The adjusted value of I(t)
 
+    References
+    ----------
     .. [1] Bhatt, Samir, et al.
     "Semi-mechanistic Bayesian modelling of
     COVID-19 with renewal processes."
