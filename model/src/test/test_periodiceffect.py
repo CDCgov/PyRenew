@@ -7,7 +7,7 @@ import numpy as np
 import numpyro as npro
 from numpy.testing import assert_array_equal
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.process import DayOfTheWeekEffect, PeriodicEffect
+from pyrenew.process import DayOfWeekEffect, PeriodicEffect
 
 
 def test_periodiceffect() -> None:
@@ -74,7 +74,7 @@ def test_weeklyeffect() -> None:
     duration = 30
 
     pe = PeriodicEffect(**params)
-    pe2 = DayOfTheWeekEffect(**params2)
+    pe2 = DayOfWeekEffect(**params2)
 
     ans1 = pe.sample(duration=duration).value
     ans2 = pe2.sample(duration=duration).value

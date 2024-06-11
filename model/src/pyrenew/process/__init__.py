@@ -4,7 +4,7 @@
 
 from pyrenew.process.ar import ARProcess
 from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
-from pyrenew.process.periodiceffect import DayOfTheWeekEffect, PeriodicEffect
+from pyrenew.process.periodiceffect import DayOfWeekEffect, PeriodicEffect
 from pyrenew.process.rtperiodicdiff import (
     RtPeriodicDiffProcess,
     RtWeeklyDiffProcess,
@@ -20,5 +20,5 @@ __all__ = [
     "RtPeriodicDiffProcess",
     "RtWeeklyDiffProcess",
     "PeriodicEffect",
-    "DayOfTheWeekEffect",
+    "DayOfWeekEffect",
 ]
