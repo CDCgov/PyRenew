@@ -2,8 +2,8 @@
 extend-ignore-identifiers-re = [
     "AttributeID.*Supress.*",
 ]
-extend-ingore-words-re = [
-    "j?np[.]arange\\(",
+extend-ignore-words-re = [
+    "j?np[.]arange",
 ]
 
 [default.extend-identifiers]
