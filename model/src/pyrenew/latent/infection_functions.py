@@ -42,8 +42,8 @@ def compute_infections_from_rt(
         The timeseries of infections, as a JAX array
     """
     incidence_func = new_convolve_scanner(
-        reversed_generation_interval_pmf,
-        IdentityTransform())
+        reversed_generation_interval_pmf, IdentityTransform()
+    )
 
     latest, all_infections = jax.lax.scan(f=incidence_func, init=I0, xs=Rt)
 

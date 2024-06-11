@@ -22,8 +22,8 @@ from jax.typing import ArrayLike
 
 
 def new_convolve_scanner(
-        array_to_convolve: ArrayLike,
-        transform: Callable,
+    array_to_convolve: ArrayLike,
+    transform: Callable,
 ) -> Callable:
     r"""
     Factory function to create a "scanner" function
