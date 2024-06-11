@@ -14,6 +14,7 @@ lod_sewage = "lod_sewage"
 lod = "lod"
 LOD = "LOD"
 ans = "ans"
+"jnp.arange" = "jnp.arange"
 
 [files]
 extend-exclude = [
