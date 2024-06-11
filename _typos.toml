@@ -2,6 +2,9 @@
 extend-ignore-identifiers-re = [
     "AttributeID.*Supress.*",
 ]
+extend-ingore-words-re = [
+    "j?np[.]arange\\(",
+]
 
 [default.extend-identifiers]
 AttributeIDSupressMenu = "AttributeIDSupressMenu"
@@ -14,7 +17,6 @@ lod_sewage = "lod_sewage"
 lod = "lod"
 LOD = "LOD"
 ans = "ans"
-"jnp.arange" = "jnp.arange"
 
 [files]
 extend-exclude = [
