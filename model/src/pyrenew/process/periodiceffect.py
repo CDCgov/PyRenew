@@ -106,7 +106,7 @@ class PeriodicEffect(RandomVariable):
         )
 
 
-class WeeklyEffect(PeriodicEffect):
+class DayOfTheWeekEffect(PeriodicEffect):
     """
     Weekly effect with repeating values from a prior.
     """
@@ -117,7 +117,7 @@ class WeeklyEffect(PeriodicEffect):
         prior: RandomVariable,
     ):
         """
-        Default constructor for WeeklyEffect class.
+        Default constructor for DayOfTheWeekEffect class.
 
         Parameters
         ----------
@@ -132,7 +132,7 @@ class WeeklyEffect(PeriodicEffect):
         None
         """
 
-        WeeklyEffect.validate(data_starts)
+        DayOfTheWeekEffect.validate(data_starts)
 
         super().__init__(data_starts=data_starts, period_size=7, prior=prior)
 
