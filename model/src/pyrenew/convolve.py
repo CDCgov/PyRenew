@@ -74,6 +74,7 @@ def new_convolve_scanner(
     an array of  multipliers (i.e. an array
     giving the values of :math:`m(t)`) using :py:func:`jax.lax.scan`.
     """
+
     def _new_scanner(
         history_subset: ArrayLike, multiplier: float
     ) -> tuple[ArrayLike, float]:  # numpydoc ignore=GL08
