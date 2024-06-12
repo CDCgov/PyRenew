@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 import jax.numpy as jnp
 import numpyro as npro
