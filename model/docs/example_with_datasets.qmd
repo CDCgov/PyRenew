@@ -23,7 +23,7 @@ H(t) & = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
 \end{align*}
 $$
 
-Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to hospitalization rate, and $\omega(t)$ is the day-of-the-week effect at time $t$; the last section provides an example building such `RandomVariable`.
+Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to hospitalization rate, and $\omega(t)$ is the day-of-the-week effect at time $t$; the last section provides an example building such a `RandomVariable`.
 
 The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to hospitalization rate. The latent infections are modeled as a renewal process:
 
@@ -299,7 +299,7 @@ out2 = hosp_model.plot_posterior(var="latent_infections", ylab="Latent Infection
 
 ## Round 2: Incorporating day-of-the-week effects
 
-We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-weekday effect distribution. To do this, we will create a new instance of `RandomVariable` to model the effect. The class will be based on a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0. The random variable will be repeated for the number of weeks in the dataset.
+We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect distribution. To do this, we will create a new instance of `RandomVariable` to model the effect. The class will be based on a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0. The random variable will be repeated for the number of weeks in the dataset.
 
 ```{python}
 # | label: weekly-effect
