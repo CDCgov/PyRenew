@@ -83,19 +83,19 @@ def test_model_hosp_no_timepoints_or_observations():
     )
 
     latent_admissions = HospitalAdmissions(
-        infection_to_admission_interval=inf_hosp,
-        infect_hosp_rate_dist=DistributionalRV(
+        infection_to_admission_interval_rv=inf_hosp,
+        infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
     model1 = HospitalAdmissionsModel(
-        gen_int=gen_int,
-        I0=I0,
-        Rt_process=Rt_process,
-        latent_infections=latent_infections,
-        latent_admissions=latent_admissions,
-        observation_process=observed_admissions,
+        gen_int_rv=gen_int,
+        I0_rv=I0,
+        Rt_process_rv=Rt_process,
+        latent_infections_rv=latent_infections,
+        latent_hosp_admissions_rv=latent_admissions,
+        hosp_admission_obs_process_rv=observed_admissions,
     )
 
     np.random.seed(223)
@@ -148,19 +148,19 @@ def test_model_hosp_both_timepoints_and_observations():
     )
 
     latent_admissions = HospitalAdmissions(
-        infection_to_admission_interval=inf_hosp,
-        infect_hosp_rate_dist=DistributionalRV(
+        infection_to_admission_interval_rv=inf_hosp,
+        infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
     model1 = HospitalAdmissionsModel(
-        gen_int=gen_int,
-        I0=I0,
-        Rt_process=Rt_process,
-        latent_infections=latent_infections,
-        latent_admissions=latent_admissions,
-        observation_process=observed_admissions,
+        gen_int_rv=gen_int,
+        I0_rv=I0,
+        Rt_process_rv=Rt_process,
+        latent_infections_rv=latent_infections,
+        latent_hosp_admissions_rv=latent_admissions,
+        hosp_admission_obs_process_rv=observed_admissions,
     )
 
     np.random.seed(223)
@@ -168,7 +168,7 @@ def test_model_hosp_both_timepoints_and_observations():
         with pytest.raises(ValueError, match="Cannot pass both"):
             model1.sample(
                 n_timepoints_to_simulate=30,
-                observed_admissions=jnp.repeat(jnp.nan, 30),
+                observed_hosp_admissions=jnp.repeat(jnp.nan, 30),
             )
 
 
@@ -217,20 +217,20 @@ def test_model_hosp_no_obs_model():
     )
 
     latent_admissions = HospitalAdmissions(
-        infection_to_admission_interval=inf_hosp,
-        admissions_predicted_varname="observed_admissions",
-        infect_hosp_rate_dist=DistributionalRV(
+        infection_to_admission_interval_rv=inf_hosp,
+        observed_hosp_admissions_varname="observed_admissions",
+        infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
     model0 = HospitalAdmissionsModel(
-        gen_int=gen_int,
-        I0=I0,
-        Rt_process=Rt_process,
-        latent_infections=latent_infections,
-        latent_admissions=latent_admissions,
-        observation_process=None,
+        gen_int_rv=gen_int,
+        I0_rv=I0,
+        Rt_process_rv=Rt_process,
+        latent_infections_rv=latent_infections,
+        latent_hosp_admissions_rv=latent_admissions,
+        hosp_admission_obs_process_rv=None,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -248,19 +248,22 @@ def test_model_hosp_no_obs_model():
     np.testing.assert_array_equal(
         model0_samp.latent_infections, model1_samp.latent_infections
     )
-    np.testing.assert_array_equal(model0_samp.IHR, model1_samp.IHR)
     np.testing.assert_array_equal(
-        model0_samp.latent_admissions, model1_samp.latent_admissions
+        model0_samp.infection_hosp_rate, model1_samp.infection_hosp_rate
     )
     np.testing.assert_array_equal(
-        model0_samp.sampled_admissions, model1_samp.sampled_admissions
+        model0_samp.latent_hosp_admissions, model1_samp.latent_hosp_admissions
+    )
+    np.testing.assert_array_equal(
+        model0_samp.sampled_observed_hosp_admissions,
+        model1_samp.sampled_observed_hosp_admissions,
     )
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_admissions=model0_samp.latent_admissions,
+        observed_hosp_admissions=model0_samp.latent_hosp_admissions,
     )
 
     inf = model0.spread_draws(["observed_admissions"])
@@ -321,19 +324,19 @@ def test_model_hosp_with_obs_model():
     )
 
     latent_admissions = HospitalAdmissions(
-        infection_to_admission_interval=inf_hosp,
-        infect_hosp_rate_dist=DistributionalRV(
+        infection_to_admission_interval_rv=inf_hosp,
+        infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
     model1 = HospitalAdmissionsModel(
-        gen_int=gen_int,
-        I0=I0,
-        Rt_process=Rt_process,
-        latent_infections=latent_infections,
-        latent_admissions=latent_admissions,
-        observation_process=observed_admissions,
+        gen_int_rv=gen_int,
+        I0_rv=I0,
+        Rt_process_rv=Rt_process,
+        latent_infections_rv=latent_infections,
+        latent_hosp_admissions_rv=latent_admissions,
+        hosp_admission_obs_process_rv=observed_admissions,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -345,13 +348,13 @@ def test_model_hosp_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_admissions=model1_samp.sampled_admissions,
+        observed_hosp_admissions=model1_samp.sampled_observed_hosp_admissions,
     )
 
-    inf = model1.spread_draws(["predicted_admissions"])
+    inf = model1.spread_draws(["observed_hosp_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("predicted_admissions").mean())
+        .agg(pl.col("observed_hosp_admissions").mean())
         .sort(pl.col("draw"))
     )
 
@@ -415,21 +418,21 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     weekday = UniformProbForTest("weekday")
 
     latent_admissions = HospitalAdmissions(
-        infection_to_admission_interval=inf_hosp,
-        weekday_effect_dist=weekday,
-        hosp_report_prob_dist=hosp_report_prob_dist,
-        infect_hosp_rate_dist=DistributionalRV(
+        infection_to_admission_interval_rv=inf_hosp,
+        weekday_effect_rv=weekday,
+        hosp_report_prob_rv=hosp_report_prob_dist,
+        infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
     model1 = HospitalAdmissionsModel(
-        I0=I0,
-        gen_int=gen_int,
-        Rt_process=Rt_process,
-        latent_infections=latent_infections,
-        latent_admissions=latent_admissions,
-        observation_process=observed_admissions,
+        I0_rv=I0,
+        gen_int_rv=gen_int,
+        Rt_process_rv=Rt_process,
+        latent_infections_rv=latent_infections,
+        latent_hosp_admissions_rv=latent_admissions,
+        hosp_admission_obs_process_rv=observed_admissions,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -441,13 +444,13 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_admissions=model1_samp.sampled_admissions,
+        observed_hosp_admissions=model1_samp.sampled_observed_hosp_admissions,
     )
 
-    inf = model1.spread_draws(["predicted_admissions"])
+    inf = model1.spread_draws(["observed_hosp_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("predicted_admissions").mean())
+        .agg(pl.col("observed_hosp_admissions").mean())
         .sort(pl.col("draw"))
     )
 
@@ -521,21 +524,21 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
 
     latent_admissions = HospitalAdmissions(
-        infection_to_admission_interval=inf_hosp,
-        weekday_effect_dist=weekday,
-        hosp_report_prob_dist=hosp_report_prob_dist,
-        infect_hosp_rate_dist=DistributionalRV(
+        infection_to_admission_interval_rv=inf_hosp,
+        weekday_effect_rv=weekday,
+        hosp_report_prob_rv=hosp_report_prob_dist,
+        infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
     model1 = HospitalAdmissionsModel(
-        I0=I0,
-        gen_int=gen_int,
-        Rt_process=Rt_process,
-        latent_infections=latent_infections,
-        latent_admissions=latent_admissions,
-        observation_process=observed_admissions,
+        I0_rv=I0,
+        gen_int_rv=gen_int,
+        Rt_process_rv=Rt_process,
+        latent_infections_rv=latent_infections,
+        latent_hosp_admissions_rv=latent_admissions,
+        hosp_admission_obs_process_rv=observed_admissions,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -546,7 +549,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     obs = jnp.hstack(
         [
             jnp.repeat(jnp.nan, 5),
-            model1_samp.sampled_admissions[5 + gen_int.size() :],
+            model1_samp.sampled_observed_hosp_admissions[5 + gen_int.size() :],
         ]
     )
     # Running with padding
@@ -554,14 +557,14 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_admissions=obs,
+        observed_hosp_admissions=obs,
         padding=5,
     )
 
-    inf = model1.spread_draws(["predicted_admissions"])
+    inf = model1.spread_draws(["observed_hosp_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("predicted_admissions").mean())
+        .agg(pl.col("observed_hosp_admissions").mean())
         .sort(pl.col("draw"))
     )
 

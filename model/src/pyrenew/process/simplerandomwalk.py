@@ -34,7 +34,7 @@ class SimpleRandomWalkProcess(RandomVariable):
 
     def sample(
         self,
-        duration: int,
+        n_timepoints: int,
         name: str = "randomwalk",
         init: float = None,
         **kwargs,
@@ -44,7 +44,7 @@ class SimpleRandomWalkProcess(RandomVariable):
 
         Parameters
         ----------
-        duration : int
+        n_timepoints : int
             Length of the walk.
         name : str, optional
             Passed to numpyro.sample, by default "randomwalk"
@@ -57,13 +57,14 @@ class SimpleRandomWalkProcess(RandomVariable):
         Returns
         -------
         tuple
-            With a single array of shape (duration,).
+            With a single array of shape (n_timepoints,).
         """
 
         if init is None:
             init = npro.sample(name + "_init", self.error_distribution)
         diffs = npro.sample(
-            name + "_diffs", self.error_distribution.expand((duration - 1,))
+            name + "_diffs",
+            self.error_distribution.expand((n_timepoints - 1,)),
         )
 
         return (init + jnp.cumsum(jnp.pad(diffs, [1, 0], constant_values=0)),)
