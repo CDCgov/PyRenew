@@ -63,11 +63,11 @@ With all the components defined, we can build the model:
 ```{python}
 # | label: build1
 model0 = RtInfectionsRenewalModel(
-    gen_int=gen_int,
-    I0=I0,
-    latent_infections=latent_infections,
-    Rt_process=rt,
-    observation_process=None,
+    gen_int_rv=gen_int,
+    I0_rv=I0,
+    latent_infections_rv=latent_infections,
+    Rt_process_rv=rt,
+    infection_obs_process_rv=None,
 )
 ```
 
@@ -239,11 +239,11 @@ latent_infections2 = InfFeedback(
 )
 
 model1 = RtInfectionsRenewalModel(
-    gen_int=gen_int,
-    I0=I0,
-    latent_infections=latent_infections2,
-    Rt_process=rt,
-    observation_process=None,
+    gen_int_rv=gen_int,
+    I0_rv=I0,
+    latent_infections_rv=latent_infections2,
+    Rt_process_rv=rt,
+    infection_obs_process_rv=None,
 )
 
 # Sampling and fitting model 0 (with no obs for infections)
