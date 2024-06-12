@@ -37,6 +37,12 @@ class HospModelSample(NamedTuple):
     sampled_observed_hosp_admissions: ArrayLike | None = None
 
     def __repr__(self):
+        """String representation of the HospModelSample
+
+        Returns
+        -------
+        str
+        """
         return (
             f"HospModelSample(Rt={self.Rt}, "
             f"latent_infections={self.latent_infections}, "
@@ -296,13 +302,6 @@ class HospitalAdmissionsModel(Model):
                         i0_size + padding :
                     ],
                     **kwargs,
-                )
-                # this is to accommodate the current version of test_model_hosp_no_obs_model. Not sure if we want this behavior
-                sampled_observed_hosp_admissions = au.pad_x_to_match_y(
-                    sampled_observed_hosp_admissions,
-                    latent_hosp_admissions,
-                    jnp.nan,
-                    pad_direction="start",
                 )
 
         return HospModelSample(
