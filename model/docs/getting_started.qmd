@@ -113,11 +113,11 @@ With these five pieces, we can build the basic renewal model as an instance of t
 ```{python}
 # | label: model-creation
 model1 = RtInfectionsRenewalModel(
-    gen_int=gen_int,
-    I0=I0,
-    Rt_process=rt_proc,
-    latent_infections=latent_infections,
-    observation_process=observation_process,
+    gen_int_rv=gen_int,
+    I0_rv=I0,
+    Rt_process_rv=rt_proc,
+    latent_infections_rv=latent_infections,
+    infection_obs_process_rv=observation_process,
 )
 ```
 
@@ -167,7 +167,7 @@ axs[0].plot(sim_data.Rt)
 axs[0].set_ylabel("Rt")
 
 # Infections plot
-axs[1].plot(sim_data.sampled_infections)
+axs[1].plot(sim_data.sampled_observed_infections)
 axs[1].set_ylabel("Infections")
 
 fig.suptitle("Basic renewal model")
@@ -185,7 +185,7 @@ import jax
 model1.run(
     num_warmup=2000,
     num_samples=1000,
-    observed_infections=sim_data.sampled_infections,
+    observed_infections=sim_data.sampled_observed_infections,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
 )

@@ -39,11 +39,11 @@ def test_model_basicrenewal_no_timepoints_or_observations():
     rt = RtRandomWalkProcess()
 
     model1 = RtInfectionsRenewalModel(
-        I0=I0,
-        gen_int=gen_int,
-        latent_infections=latent_infections,
-        observation_process=observed_infections,
-        Rt_process=rt,
+        I0_rv=I0,
+        gen_int_rv=gen_int,
+        latent_infections_rv=latent_infections,
+        infection_obs_process_rv=observed_infections,
+        Rt_process_rv=rt,
     )
 
     np.random.seed(2203)
@@ -72,11 +72,11 @@ def test_model_basicrenewal_both_timepoints_and_observations():
     rt = RtRandomWalkProcess()
 
     model1 = RtInfectionsRenewalModel(
-        I0=I0,
-        gen_int=gen_int,
-        latent_infections=latent_infections,
-        observation_process=observed_infections,
-        Rt_process=rt,
+        I0_rv=I0,
+        gen_int_rv=gen_int,
+        latent_infections_rv=latent_infections,
+        infection_obs_process_rv=observed_infections,
+        Rt_process_rv=rt,
     )
 
     np.random.seed(2203)
@@ -112,12 +112,12 @@ def test_model_basicrenewal_no_obs_model():
     rt = RtRandomWalkProcess()
 
     model0 = RtInfectionsRenewalModel(
-        gen_int=gen_int,
-        I0=I0,
-        latent_infections=latent_infections,
-        Rt_process=rt,
+        gen_int_rv=gen_int,
+        I0_rv=I0,
+        latent_infections_rv=latent_infections,
+        Rt_process_rv=rt,
         # Explicitly use None, this should call the NullObservation
-        observation_process=None,
+        infection_obs_process_rv=None,
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
@@ -126,10 +126,10 @@ def test_model_basicrenewal_no_obs_model():
         model0_samp = model0.sample(n_timepoints_to_simulate=30)
     model0_samp.Rt
     model0_samp.latent_infections
-    model0_samp.sampled_infections
+    model0_samp.sampled_observed_infections
 
     # Generating
-    model0.observation_process = NullObservation()
+    model0.infection_obs_process_rv = NullObservation()
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model0.sample(n_timepoints_to_simulate=30)
@@ -139,7 +139,8 @@ def test_model_basicrenewal_no_obs_model():
         model0_samp.latent_infections, model1_samp.latent_infections
     )
     np.testing.assert_array_equal(
-        model0_samp.sampled_infections, model1_samp.sampled_infections
+        model0_samp.sampled_observed_infections,
+        model1_samp.sampled_observed_infections,
     )
 
     model0.run(
@@ -184,11 +185,11 @@ def test_model_basicrenewal_with_obs_model():
     rt = RtRandomWalkProcess()
 
     model1 = RtInfectionsRenewalModel(
-        I0=I0,
-        gen_int=gen_int,
-        latent_infections=latent_infections,
-        observation_process=observed_infections,
-        Rt_process=rt,
+        I0_rv=I0,
+        gen_int_rv=gen_int,
+        latent_infections_rv=latent_infections,
+        infection_obs_process_rv=observed_infections,
+        Rt_process_rv=rt,
     )
 
     # Sampling and fitting model 1 (with obs infections)
@@ -200,7 +201,7 @@ def test_model_basicrenewal_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
-        observed_infections=model1_samp.sampled_infections,
+        observed_infections=model1_samp.sampled_observed_infections,
     )
 
     inf = model1.spread_draws(["latent_infections"])
@@ -253,11 +254,11 @@ def test_model_basicrenewal_plot() -> plt.Figure:
     rt = RtRandomWalkProcess()
 
     model1 = RtInfectionsRenewalModel(
-        I0=I0,
-        gen_int=gen_int,
-        latent_infections=latent_infections,
-        observation_process=observed_infections,
-        Rt_process=rt,
+        I0_rv=I0,
+        gen_int_rv=gen_int,
+        latent_infections_rv=latent_infections,
+        infection_obs_process_rv=observed_infections,
+        Rt_process_rv=rt,
     )
 
     # Sampling and fitting model 1 (with obs infections)
@@ -269,12 +270,12 @@ def test_model_basicrenewal_plot() -> plt.Figure:
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
-        observed_infections=model1_samp.sampled_infections,
+        observed_infections=model1_samp.sampled_observed_infections,
     )
 
     return model1.plot_posterior(
         var="latent_infections",
-        obs_signal=model1_samp.sampled_infections,
+        obs_signal=model1_samp.sampled_observed_infections,
     )
 
 
@@ -296,11 +297,11 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     rt = RtRandomWalkProcess()
 
     model1 = RtInfectionsRenewalModel(
-        I0=I0,
-        gen_int=gen_int,
-        latent_infections=latent_infections,
-        observation_process=observed_infections,
-        Rt_process=rt,
+        I0_rv=I0,
+        gen_int_rv=gen_int,
+        latent_infections_rv=latent_infections,
+        infection_obs_process_rv=observed_infections,
+        Rt_process_rv=rt,
     )
 
     # Sampling and fitting model 1 (with obs infections)
@@ -309,7 +310,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         model1_samp = model1.sample(n_timepoints_to_simulate=30)
 
     new_obs = jnp.hstack(
-        [jnp.repeat(jnp.nan, 5), model1_samp.sampled_infections[5:]],
+        [jnp.repeat(jnp.nan, 5), model1_samp.sampled_observed_infections[5:]],
     )
 
     model1.run(

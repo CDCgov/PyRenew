@@ -87,11 +87,11 @@ class HospitalAdmissionsModel(Model):
         None
         """
         self.basic_renewal = RtInfectionsRenewalModel(
-            gen_int=gen_int_rv,
-            I0=I0_rv,
-            latent_infections=latent_infections_rv,
-            observation_process=None,  # why is this None?
-            Rt_process=Rt_process_rv,
+            gen_int_rv=gen_int_rv,
+            I0_rv=I0_rv,
+            latent_infections_rv=latent_infections_rv,
+            infection_obs_process_rv=None,  # why is this None?
+            Rt_process_rv=Rt_process_rv,
         )
 
         HospitalAdmissionsModel.validate(
