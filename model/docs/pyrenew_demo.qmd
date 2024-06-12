@@ -112,8 +112,8 @@ inf_hosp_int = DeterministicPMF(
 )
 
 latent_admissions = HospitalAdmissions(
-    infection_to_admission_interval=inf_hosp_int,
-    infect_hosp_rate_dist=DistributionalRV(
+    infection_to_admission_interval_rv=inf_hosp_int,
+    infect_hosp_rate_rv=DistributionalRV(
         dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
     ),
 )
@@ -131,12 +131,12 @@ The `HospitalAdmissionsModel` is then initialized using the initial conditions j
 ```{python}
 # Initializing the model
 hospmodel = HospitalAdmissionsModel(
-    gen_int=gen_int,
-    I0=I0,
-    latent_admissions=latent_admissions,
-    observation_process=admissions_process,
-    latent_infections=latent_infections,
-    Rt_process=Rt_process,
+    gen_int_rv=gen_int,
+    I0_rv=I0,
+    latent_hosp_admissions_rv=latent_admissions,
+    hosp_admission_obs_process_rv=admissions_process,
+    latent_infections_rv=latent_infections,
+    Rt_process_rv=Rt_process,
 )
 ```
 
@@ -151,13 +151,13 @@ x
 Visualizations of the single model output show (top) infections over the 30 time steps, (middle) hospital admissions over the 30 time steps, and (bottom)
 
 ```{python}
-#| label: fig-hosp
-#| fig-cap: Infections
+# | label: fig-hosp
+# | fig-cap: Infections
 fig, ax = plt.subplots(nrows=3, sharex=True)
 ax[0].plot(x.latent_infections)
-ax[0].set_ylim([1/5, 5])
-ax[1].plot(x.latent_admissions)
-ax[2].plot(x.sampled_admissions, 'o')
+ax[0].set_ylim([1 / 5, 5])
+ax[1].plot(x.latent_hosp_admissions)
+ax[2].plot(x.sampled_observed_hosp_admissions, "o")
 for axis in ax[:-1]:
     axis.set_yscale("log")
 ```
@@ -169,7 +169,7 @@ To fit the `hospmodel` to the simulated data, we call `hospmodel.run()`, an MCMC
 hospmodel.run(
     num_warmup=1000,
     num_samples=1000,
-    observed_admissions=x.sampled_admissions,
+    observed_hosp_admissions=x.sampled_observed_hosp_admissions,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
 )

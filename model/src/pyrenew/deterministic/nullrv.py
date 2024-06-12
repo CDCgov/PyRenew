@@ -129,7 +129,7 @@ class NullObservation(NullVariable):
 
     def sample(
         self,
-        predicted: ArrayLike,
+        mu: ArrayLike,
         obs: ArrayLike | None = None,
         name: str | None = None,
         **kwargs,
@@ -139,8 +139,8 @@ class NullObservation(NullVariable):
 
         Parameters
         ----------
-        predicted : ArrayLike
-            Rate parameter of the Poisson distribution.
+        mu : ArrayLike
+            Rate parameter of the Poisson distribution. #TODO
         obs : ArrayLike, optional
             Observed data. Defaults to None.
         name : str, optional
