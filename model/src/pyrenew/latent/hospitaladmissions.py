@@ -66,8 +66,8 @@ class HospitalAdmissions(RandomVariable):
         infection_to_admission_interval_rv: RandomVariable,
         infect_hosp_rate_rv: RandomVariable,
         observed_hosp_admissions_varname: str = "observed_hosp_admissions",
-        weekday_effect_rv: Optional[RandomVariable] = None,
-        hosp_report_prob_rv: Optional[RandomVariable] = None,
+        weekday_effect_rv: RandomVariable | None = None,
+        hosp_report_prob_rv: RandomVariable | None = None,
     ) -> None:
         """
         Default constructor
