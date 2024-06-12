@@ -140,7 +140,7 @@ class NullObservation(NullVariable):
         Parameters
         ----------
         mu : ArrayLike
-            Rate parameter of the Poisson distribution. #TODO
+            Unused parameter, represents mean of non-null distributions
         obs : ArrayLike, optional
             Observed data. Defaults to None.
         name : str, optional
