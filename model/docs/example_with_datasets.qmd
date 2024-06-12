@@ -127,7 +127,9 @@ from pyrenew import latent, deterministic, metaclass
 import jax.numpy as jnp
 import numpyro.distributions as dist
 
-inf_hosp_int = deterministic.DeterministicPMF(inf_hosp_int, name="inf_hosp_int")
+inf_hosp_int = deterministic.DeterministicPMF(
+    inf_hosp_int, name="inf_hosp_int"
+)
 
 hosp_rate = metaclass.DistributionalRV(
     dist=dist.LogNormal(jnp.log(0.05), 0.1),
@@ -135,8 +137,8 @@ hosp_rate = metaclass.DistributionalRV(
 )
 
 latent_hosp = latent.HospitalAdmissions(
-    infection_to_admission_interval=inf_hosp_int,
-    infect_hosp_rate_dist=hosp_rate,
+    infection_to_admission_interval_rv=inf_hosp_int,
+    infect_hosp_rate_rv=hosp_rate,
 )
 ```
 
@@ -173,12 +175,12 @@ Notice all the components are `RandomVariable` instances. We can now build the m
 ```{python}
 # | label: init-model
 hosp_model = model.HospitalAdmissionsModel(
-    latent_infections=latent_inf,
-    latent_admissions=latent_hosp,
-    I0=I0,
-    gen_int=gen_int,
-    Rt_process=rtproc,
-    observation_process=obs,
+    latent_infections_rv=latent_inf,
+    latent_hosp_admissions_rv=latent_hosp,
+    I0_rv=I0,
+    gen_int_rv=gen_int,
+    Rt_process_rv=rtproc,
+    hosp_admission_obs_process_rv=obs,
 )
 ```
 
@@ -208,7 +210,7 @@ axs[0].plot(sim_data.Rt)
 axs[0].set_ylabel("Rt")
 
 # Infections plot
-axs[1].plot(sim_data.sampled_admissions)
+axs[1].plot(sim_data.sampled_observed_hosp_admissions)
 axs[1].set_ylabel("Infections")
 axs[1].set_yscale("log")
 
@@ -230,7 +232,7 @@ import jax
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    observed_admissions=dat["daily_hosp_admits"].to_numpy(),
+    observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
 )
@@ -244,7 +246,7 @@ We can use the `plot_posterior` method to visualize the results[^capture]:
 # | label: fig-output-hospital-admissions
 # | fig-cap: Hospital Admissions posterior distribution
 out = hosp_model.plot_posterior(
-    var="predicted_admissions",
+    var="observed_hosp_admissions",
     ylab="Hospital Admissions",
     obs_signal=dat["daily_hosp_admits"].to_numpy(),
 )
@@ -268,7 +270,7 @@ dat_w_padding = np.hstack((np.repeat(np.nan, days_to_impute), dat_w_padding))
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    observed_admissions=dat_w_padding,
+    observed_hosp_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute,  # Padding the model
@@ -281,7 +283,7 @@ And plotting the results:
 # | label: fig-output-admissions-with-padding
 # | fig-cap: Hospital Admissions posterior distribution
 out = hosp_model.plot_posterior(
-    var="predicted_admissions",
+    var="observed_hosp_admissions",
     ylab="Hospital Admissions",
     obs_signal=dat_w_padding,
 )
@@ -343,18 +345,18 @@ Notice that the instance's `nweeks` and `len` members are passed during construc
 ```{python}
 # | label: latent-hosp-weekday
 latent_hosp_wday_effect = latent.HospitalAdmissions(
-    infection_to_admission_interval=inf_hosp_int,
-    infect_hosp_rate_dist=hosp_rate,
-    weekday_effect_dist=weekday_effect,
+    infection_to_admission_interval_rv=inf_hosp_int,
+    infect_hosp_rate_rv=hosp_rate,
+    weekday_effect_rv=weekday_effect,
 )
 
 hosp_model_weekday = model.HospitalAdmissionsModel(
-    latent_infections=latent_inf,
-    latent_admissions=latent_hosp_wday_effect,
-    I0=I0,
-    gen_int=gen_int,
-    Rt_process=rtproc,
-    observation_process=obs,
+    latent_infections_rv=latent_inf,
+    latent_hosp_admissions_rv=latent_hosp_wday_effect,
+    I0_rv=I0,
+    gen_int_rv=gen_int,
+    Rt_process_rv=rtproc,
+    hosp_admission_obs_process_rv=obs,
 )
 ```
 
@@ -365,7 +367,7 @@ Running the model (with the same padding as before):
 hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    observed_admissions=dat_w_padding,
+    observed_hosp_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute,
@@ -378,7 +380,7 @@ And plotting the results:
 # | label: fig-output-admissions-padding-and-weekday
 # | fig-cap: Hospital Admissions posterior distribution
 out = hosp_model_weekday.plot_posterior(
-    var="predicted_admissions",
+    var="observed_hosp_admissions",
     ylab="Hospital Admissions",
     obs_signal=dat_w_padding,
 )
