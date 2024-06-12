@@ -25,7 +25,7 @@ from pyrenew import process, deterministic
 ```{python}
 # The random process for Rt
 rt_proc = process.RtWeeklyDiffProcess(
-  data_starts = 0,
+  offset = 0,
   log_rt_prior = deterministic.DeterministicVariable(
       jnp.array([0.1, 0.2]), name="log_rt_prior"
   ),
@@ -74,7 +74,7 @@ mysimplex = dist.TransformedDistribution(
 
 # Constructing the day of week effect
 dayofweek = process.DayOfWeekEffect(
-  data_starts = 0,
+  offset = 0,
   prior=metaclass.DistributionalRV(mysimplex, "simp")
 )
 ```

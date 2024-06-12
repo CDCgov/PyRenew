@@ -17,7 +17,7 @@ def test_periodiceffect() -> None:
     rv = DeterministicVariable(x, name="weekly-sample")
 
     params = {
-        "data_starts": 0,
+        "offset": 0,
         "prior": rv,
         "period_size": 7,
     }
@@ -39,7 +39,7 @@ def test_periodiceffect() -> None:
 
     # Checking start off a different day of the week
     np.random.seed(223)
-    params["data_starts"] = 5
+    params["offset"] = 5
     pe = PeriodicEffect(**params)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         ans2 = pe.sample(duration=duration).value
@@ -61,13 +61,13 @@ def test_weeklyeffect() -> None:
     rv = DeterministicVariable(x, name="weekly-sample")
 
     params = {
-        "data_starts": 2,
+        "offset": 2,
         "prior": rv,
         "period_size": 7,
     }
 
     params2 = {
-        "data_starts": 2,
+        "offset": 2,
         "prior": rv,
     }
 

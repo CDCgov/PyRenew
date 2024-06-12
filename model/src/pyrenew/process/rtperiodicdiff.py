@@ -45,7 +45,7 @@ class RtPeriodicDiffProcess(RandomVariable):
 
     def __init__(
         self,
-        data_starts: int,
+        offset: int,
         period_size: int,
         log_rt_prior: RandomVariable,
         autoreg: RandomVariable,
@@ -57,7 +57,7 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         Parameters
         ----------
-        data_starts : int
+        offset : int
             Relative point at which data starts, must be between 0 and
             period_size - 1.
         log_rt_prior : RandomVariable
@@ -75,7 +75,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         """
 
         self.broadcaster = PeriodicBroadcaster(
-            data_starts=data_starts,
+            offset=offset,
             period_size=period_size,
             broadcast_type="repeat",
         )
@@ -87,7 +87,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         )
 
         self.period_size = period_size
-        self.data_starts = data_starts
+        self.offset = offset
         self.log_rt_prior = log_rt_prior
         self.autoreg = autoreg
         self.periodic_diff_sd = periodic_diff_sd
@@ -199,7 +199,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
 
     def __init__(
         self,
-        data_starts: int,
+        offset: int,
         log_rt_prior: RandomVariable,
         autoreg: RandomVariable,
         periodic_diff_sd: RandomVariable,
@@ -210,7 +210,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
 
         Parameters
         ----------
-        data_starts : int
+        offset : int
             Relative point at which data starts, must be between 0 and 6.
         log_rt_prior : RandomVariable
             Log Rt prior for the first two observations.
@@ -227,7 +227,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
         """
 
         super().__init__(
-            data_starts=data_starts,
+            offset=offset,
             period_size=7,
             log_rt_prior=log_rt_prior,
             autoreg=autoreg,

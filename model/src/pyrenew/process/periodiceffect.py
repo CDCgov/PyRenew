@@ -31,7 +31,7 @@ class PeriodicEffect(RandomVariable):
 
     def __init__(
         self,
-        data_starts: int,
+        offset: int,
         period_size: int,
         prior: RandomVariable,
     ):
@@ -40,7 +40,7 @@ class PeriodicEffect(RandomVariable):
 
         Parameters
         ----------
-        data_starts : int
+        offset : int
             Relative point at which data starts, must be between 0 and
             period_size - 1.
         period_size : int
@@ -56,7 +56,7 @@ class PeriodicEffect(RandomVariable):
         PeriodicEffect.validate(prior)
 
         self.broadcaster = au.PeriodicBroadcaster(
-            data_starts=data_starts,
+            offset=offset,
             period_size=period_size,
             broadcast_type="tile",
         )
@@ -113,7 +113,7 @@ class DayOfWeekEffect(PeriodicEffect):
 
     def __init__(
         self,
-        data_starts: int,
+        offset: int,
         prior: RandomVariable,
     ):
         """
@@ -121,7 +121,7 @@ class DayOfWeekEffect(PeriodicEffect):
 
         Parameters
         ----------
-        data_starts : int
+        offset : int
             Relative point at which data starts, must be between 0 and
             6.
         prior : RandomVariable
@@ -132,30 +132,30 @@ class DayOfWeekEffect(PeriodicEffect):
         None
         """
 
-        DayOfWeekEffect.validate(data_starts)
+        DayOfWeekEffect.validate(offset)
 
-        super().__init__(data_starts=data_starts, period_size=7, prior=prior)
+        super().__init__(offset=offset, period_size=7, prior=prior)
 
         return None
 
     @staticmethod
     def validate(
-        data_starts: int,
+        offset: int,
     ):
         """
         Validate the input parameters.
 
         Parameters
         ----------
-        data_starts : int
+        offset : int
             Relative point at which data starts, must be between 0 and 6.
 
         Returns
         -------
         None
         """
-        assert isinstance(data_starts, int), "data_starts must be an integer."
+        assert isinstance(offset, int), "offset must be an integer."
 
-        assert 0 <= data_starts <= 6, "data_starts must be between 0 and 6."
+        assert 0 <= offset <= 6, "offset must be between 0 and 6."
 
         return None

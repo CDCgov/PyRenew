@@ -120,7 +120,7 @@ class PeriodicBroadcaster:
 
     def __init__(
         self,
-        data_starts: int,
+        offset: int,
         period_size: int,
         broadcast_type: str,
     ) -> None:
@@ -129,7 +129,7 @@ class PeriodicBroadcaster:
 
         Parameters
         ----------
-        data_starts : int
+        offset : int
             Relative point at which data starts, must be between 0 and
             period_size - 1.
         period_size : int
@@ -147,27 +147,25 @@ class PeriodicBroadcaster:
         """
 
         self.validate(
-            data_starts=data_starts,
+            offset=offset,
             period_size=period_size,
             broadcast_type=broadcast_type,
         )
 
         self.period_size = period_size
-        self.data_starts = data_starts
+        self.offset = offset
         self.broadcast_type = broadcast_type
 
         return None
 
     @staticmethod
-    def validate(
-        data_starts: int, period_size: int, broadcast_type: str
-    ) -> None:
+    def validate(offset: int, period_size: int, broadcast_type: str) -> None:
         """
         Validate the input parameters.
 
         Parameters
         ----------
-        data_starts : int
+        offset : int
             Relative point at which data starts, must be between 0 and
             period_size - 1.
         period_size : int
@@ -191,16 +189,16 @@ class PeriodicBroadcaster:
 
         # Data starts should be a positive integer
         assert isinstance(
-            data_starts, int
-        ), f"data_starts should be an integer. It is {type(data_starts)}."
+            offset, int
+        ), f"offset should be an integer. It is {type(offset)}."
 
         assert (
-            0 <= data_starts
-        ), f"data_starts should be a positive integer. It is {data_starts}."
+            0 <= offset
+        ), f"offset should be a positive integer. It is {offset}."
 
-        assert data_starts <= period_size - 1, (
-            "data_starts should be less than or equal to period_size - 1."
-            f"It is {data_starts}. It should be less than or equal "
+        assert offset <= period_size - 1, (
+            "offset should be less than or equal to period_size - 1."
+            f"It is {offset}. It should be less than or equal "
             f"to {period_size - 1}."
         )
 
@@ -233,7 +231,7 @@ class PeriodicBroadcaster:
         The broadcasting is done by repeating or tiling the data. When
         self.broadcast_type = "repeat", the function will repeat each value of the data `self.period_size` times until it reaches `n_timepoints`. When self.broadcast_type = "tile", the function will tile the data until it reaches `n_timepoints`.
 
-        Using the `data_starts` parameter, the function will start the broadcast from the `data_starts`-th element of the data. If the data is shorter than `n_timepoints`, the function will repeat or tile the data until it reaches `n_timepoints`.
+        Using the `offset` parameter, the function will start the broadcast from the `offset`-th element of the data. If the data is shorter than `n_timepoints`, the function will repeat or tile the data until it reaches `n_timepoints`.
 
         Returns
         -------
@@ -243,9 +241,9 @@ class PeriodicBroadcaster:
 
         if self.broadcast_type == "repeat":
             return jnp.repeat(data, self.period_size)[
-                self.data_starts : (self.data_starts + n_timepoints)
+                self.offset : (self.offset + n_timepoints)
             ]
         else:
             return jnp.tile(
                 data, int(jnp.ceil(n_timepoints / self.period_size))
-            )[self.data_starts : (self.data_starts + n_timepoints)]
+            )[self.offset : (self.offset + n_timepoints)]
