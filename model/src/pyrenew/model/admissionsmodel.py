@@ -37,12 +37,6 @@ class HospModelSample(NamedTuple):
     sampled_observed_hosp_admissions: ArrayLike | None = None
 
     def __repr__(self):
-        """String representation of the HospModelSample
-
-        Returns
-        -------
-        str
-        """
         return (
             f"HospModelSample(Rt={self.Rt}, "
             f"latent_infections={self.latent_infections}, "

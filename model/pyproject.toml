@@ -49,6 +49,11 @@ ignore = [
     "SS06",
     "RT05"
 ]
+exclude = [  # don't report on objects that match any of these regex
+    '\.undocumented_method$',
+    '\.__repr__$',
+    '\.__call__$'
+]
 
 [build-system]
 requires = ["poetry-core"]
