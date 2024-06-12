@@ -66,7 +66,7 @@ class HospitalAdmissions(RandomVariable):
         infection_to_admission_interval_rv: RandomVariable,
         infect_hosp_rate_rv: RandomVariable,
         observed_hosp_admissions_varname: str = "observed_hosp_admissions",
-        dayofweek_effect_rv: RandomVariable | None = None,
+        day_of_week_effect_rv: RandomVariable | None = None,
         hosp_report_prob_rv: RandomVariable | None = None,
     ) -> None:
         """
@@ -82,7 +82,7 @@ class HospitalAdmissions(RandomVariable):
         observed_hosp_admissions_varname : str
             Name to assign to the deterministic component in numpyro of
             observed hospital admissions.
-        dayofweek_effect_rv : RandomVariable, optional
+        day_of_week_effect_rv : RandomVariable, optional
             Day of the week effect.
         hosp_report_prob_rv  : RandomVariable, optional
             Random variable for the hospital admission reporting
@@ -93,14 +93,14 @@ class HospitalAdmissions(RandomVariable):
         None
         """
 
-        if dayofweek_effect_rv is None:
-            dayofweek_effect_rv = DeterministicVariable(1, "weekday_effect")
+        if day_of_week_effect_rv is None:
+            day_of_week_effect_rv = DeterministicVariable(1, "weekday_effect")
         if hosp_report_prob_rv is None:
             hosp_report_prob_rv = DeterministicVariable(1, "hosp_report_prob")
 
         HospitalAdmissions.validate(
             infect_hosp_rate_rv,
-            dayofweek_effect_rv,
+            day_of_week_effect_rv,
             hosp_report_prob_rv,
         )
 
@@ -109,7 +109,7 @@ class HospitalAdmissions(RandomVariable):
         )
 
         self.infect_hosp_rate_rv = infect_hosp_rate_rv
-        self.dayofweek_effect_rv = dayofweek_effect_rv
+        self.day_of_week_effect_rv = day_of_week_effect_rv
         self.hosp_report_prob_rv = hosp_report_prob_rv
         self.infection_to_admission_interval_rv = (
             infection_to_admission_interval_rv
@@ -119,7 +119,7 @@ class HospitalAdmissions(RandomVariable):
     @staticmethod
     def validate(
         infect_hosp_rate_rv: Any,
-        dayofweek_effect_rv: Any,
+        day_of_week_effect_rv: Any,
         hosp_report_prob_rv: Any,
     ) -> None:
         """
@@ -130,7 +130,7 @@ class HospitalAdmissions(RandomVariable):
         ----------
         infect_hosp_rate_rv : Any
             Possibly incorrect input for infection to hospitalization rate distribution.
-        dayofweek_effect_rv : Any
+        day_of_week_effect_rv : Any
             Possibly incorrect input for day of the week effect.
         hosp_report_prob_rv : Any
             Possibly incorrect input for distribution or fixed value for the
@@ -147,7 +147,7 @@ class HospitalAdmissions(RandomVariable):
             that the validation has failed.
         """
         assert isinstance(infect_hosp_rate_rv, RandomVariable)
-        assert isinstance(dayofweek_effect_rv, RandomVariable)
+        assert isinstance(day_of_week_effect_rv, RandomVariable)
         assert isinstance(hosp_report_prob_rv, RandomVariable)
 
         return None
@@ -191,7 +191,7 @@ class HospitalAdmissions(RandomVariable):
         # Applying the day of the week effect
         observed_hosp_admissions = (
             observed_hosp_admissions
-            * self.dayofweek_effect_rv.sample(**kwargs)[0]
+            * self.day_of_week_effect_rv.sample(**kwargs)[0]
         )
 
         # Applying probability of hospitalization effect

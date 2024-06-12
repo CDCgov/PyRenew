@@ -346,7 +346,7 @@ Notice that the instance's `nweeks` and `len` members are passed during construc
 latent_hosp_wday_effect = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
     infect_hosp_rate_rv=hosp_rate,
-    dayofweek_effect_rv=dayofweek_effect,
+    day_of_week_effect_rv=dayofweek_effect,
 )
 
 hosp_model_weekday = model.HospitalAdmissionsModel(
