@@ -68,6 +68,7 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsZeroPad
+import pyrenew.transformation as t
 ```
 
 To initialize the model, we first define initial conditions, including:
@@ -123,7 +124,11 @@ admissions_process = PoissonObservation()
 
 # 6) A random walk process (it could be deterministic using
 # pyrenew.process.DeterministicProcess())
-Rt_process = RtRandomWalkProcess()
+Rt_process = RtRandomWalkProcess(
+    Rt0_dist = dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+    Rt_transform = t.ExpTransform().inv,
+    Rt_rw_dist = dist.Normal(0, 0.025),
+)
 ```
 
 The `HospitalAdmissionsModel` is then initialized using the initial conditions just defined:

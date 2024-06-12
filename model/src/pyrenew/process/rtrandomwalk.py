@@ -24,34 +24,26 @@ class RtRandomWalkProcess(RandomVariable):
 
     def __init__(
         self,
-        Rt0_dist: dist.Distribution = dist.TruncatedNormal(
-            loc=1.2, scale=0.2, low=0
-        ),
-        Rt_transform: t.Transform | None = None,
-        Rt_rw_dist: dist.Distribution = dist.Normal(0, 0.025),
+        Rt0_dist: dist.Distribution,
+        Rt_transform: t.Transform,
+        Rt_rw_dist: dist.Distribution,
     ) -> None:
         """
         Default constructor
 
         Parameters
         ----------
-        Rt0_dist : dist.Distribution, optional
-            Initial distribution of Rt, defaults to
-            dist.TruncatedNormal( loc=1.2, scale=0.2, low=0 )
-
-        Rt_transform : numpyro.distributions.transformers.Transform, optional
-            Transformation applied to the sampled Rt0, defaults
-            to ExpTransform().inv.
-        Rt_rw_dist : dist.Distribution, optional
-            Randomwalk process, defaults to dist.Normal(0, 0.025)
+        Rt0_dist : dist.Distribution
+            Initial distribution of Rt.
+        Rt_transform : numpyro.distributions.transformers.Transform
+            Transformation applied to the sampled Rt0.
+        Rt_rw_dist : dist.Distribution
+            Randomwalk process.
 
         Returns
         -------
         None
         """
-
-        if Rt_transform is None:
-            Rt_transform = t.ExpTransform().inv
 
         RtRandomWalkProcess.validate(Rt0_dist, Rt_transform, Rt_rw_dist)
 
