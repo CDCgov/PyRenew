@@ -85,7 +85,7 @@ Like before, we can use the `sample` method to generate samples from the day of 
 with npro.handlers.seed(rng_seed=20):
     sim_data = dayofweek.sample(duration=30)
 
-# Plotting the Rt values
+# Plotting the effect values
 import matplotlib.pyplot as plt
 
 plt.plot(sim_data.value)
