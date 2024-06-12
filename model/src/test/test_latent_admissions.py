@@ -60,16 +60,16 @@ def test_admissions_sample():
     )
 
     hosp1 = HospitalAdmissions(
-        infection_to_admission_interval=inf_hosp,
-        infect_hosp_rate_dist=DistributionalRV(
+        infection_to_admission_interval_rv=inf_hosp,
+        infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
     )
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_hosp_1 = hosp1.sample(latent=inf_sampled1[0])
+        sim_hosp_1 = hosp1.sample(latent_infections=inf_sampled1[0])
 
     testing.assert_array_less(
-        sim_hosp_1.predicted,
+        sim_hosp_1.observed_hosp_admissions,
         inf_sampled1[0],
     )

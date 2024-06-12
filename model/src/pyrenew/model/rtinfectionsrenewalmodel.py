@@ -242,7 +242,7 @@ class RtInfectionsRenewalModel(Model):
         tuple
         """
         return self.observation_process.sample(
-            predicted=predicted,
+            mu=predicted,
             obs=observed_infections,
             name=name,
             **kwargs,
