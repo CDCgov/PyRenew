@@ -49,7 +49,7 @@ class HospitalAdmissions(RandomVariable):
     by the probability of being hospitalized :math:`p_\mathrm{hosp}(t)`.
 
     To account for day-of-week effects in hospital reporting, we use an
-    estimated *day of the weekday effect* :math:`\omega(t)`. If :math:`t` and :math:`t'`
+    estimated *day of the week effect* :math:`\omega(t)`. If :math:`t` and :math:`t'`
     are the same day of the week, :math:`\omega(t) = \omega(t')`. The seven
     values that :math:`\omega(t)` takes on are constrained to have mean 1.
 
