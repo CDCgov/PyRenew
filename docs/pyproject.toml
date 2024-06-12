@@ -28,7 +28,6 @@ exclude = [  # don't report on objects that match any of these regex
     '\.__init__$',
 ]
 
-
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"

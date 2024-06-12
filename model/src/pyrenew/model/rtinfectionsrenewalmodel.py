@@ -308,15 +308,7 @@ class RtInfectionsRenewalModel(Model):
 
         # Sampling initial infections
         i0, *_ = self.sample_i0(**kwargs)
-
-        # Padding i0 to match gen_int
-        # PADDING SHOULD BE REMOVED ONCE
-        # https://github.com/CDCgov/multisignal-epi-inference/pull/124
-        # is merged.
-        # SEE ALSO:
-        # https://github.com/CDCgov/multisignal-epi-inference/pull/123#discussion_r1612337288
-        i0 = au.pad_x_to_match_y(x=i0, y=gen_int, fill_value=0.0)
-
+        i0_size = i0.size
         # Sampling from the latent process
         latent, *_ = self.sample_infections_latent(
             Rt=Rt,
@@ -325,25 +317,28 @@ class RtInfectionsRenewalModel(Model):
             **kwargs,
         )
 
-        # Using the predicted infections to sample from the observation process
-        if (observed_infections is not None) and (padding > 0):
-            sampled_pad = jnp.repeat(jnp.nan, padding)
-
+        if observed_infections is None:
             sampled_obs, *_ = self.sample_infections_obs(
-                predicted=latent[padding:],
-                observed_infections=observed_infections[padding:],
-                **kwargs,
-            )
-
-            sampled = jnp.hstack([sampled_pad, sampled_obs])
-
-        else:
-            sampled, *_ = self.sample_infections_obs(
                 predicted=latent,
                 observed_infections=observed_infections,
                 **kwargs,
             )
+        else:
+            observed_infections = au.pad_x_to_match_y(
+                observed_infections, latent, jnp.nan, pad_direction="start"
+            )
 
+            sampled_obs, *_ = self.sample_infections_obs(
+                predicted=latent[i0_size + padding :],
+                observed_infections=observed_infections[i0_size + padding :],
+                **kwargs,
+            )
+
+        sampled = au.pad_x_to_match_y(
+            sampled_obs, latent, jnp.nan, pad_direction="start"
+        )
+
+        Rt = au.pad_x_to_match_y(Rt, latent, jnp.nan, pad_direction="start")
         return RtInfectionsRenewalSample(
             Rt=Rt,
             latent_infections=latent,

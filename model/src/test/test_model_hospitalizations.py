@@ -13,7 +13,12 @@ from pyrenew.deterministic import (
     DeterministicVariable,
     NullObservation,
 )
-from pyrenew.latent import HospitalAdmissions, Infections
+from pyrenew.latent import (
+    HospitalAdmissions,
+    Infections,
+    InfectionSeedingProcess,
+    SeedInfectionsZeroPad,
+)
 from pyrenew.metaclass import DistributionalRV, RandomVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
@@ -177,7 +182,11 @@ def test_model_hosp_no_obs_model():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        "I0_seeding",
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -275,7 +284,11 @@ def test_model_hosp_with_obs_model():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        "I0_seeding",
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -356,7 +369,11 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        "I0_seeding",
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -449,7 +466,11 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
     n_obs_to_generate = 30
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = InfectionSeedingProcess(
+        "I0_seeding",
+        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    )
 
     latent_infections = Infections()
     Rt_process = RtRandomWalkProcess()
@@ -483,17 +504,17 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     # Other random components
     weekday = jnp.array([1, 1, 1, 1, 2, 2])
-    weekday = jnp.tile(weekday, 10)
     weekday = weekday / weekday.sum()
-    weekday = weekday[:n_obs_to_generate]
+    weekday = jnp.tile(weekday, 10)
+    # weekday = weekday[:n_obs_to_generate]
+    weekday = weekday[:34]
 
     weekday = DeterministicVariable(weekday, name="weekday")
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
+    hosp_report_prob_dist = hosp_report_prob_dist[:34]
     hosp_report_prob_dist = hosp_report_prob_dist / hosp_report_prob_dist.sum()
-
-    hosp_report_prob_dist = hosp_report_prob_dist[:n_obs_to_generate]
 
     hosp_report_prob_dist = DeterministicVariable(
         vars=hosp_report_prob_dist, name="hosp_report_prob_dist"
@@ -523,9 +544,11 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         model1_samp = model1.sample(n_timepoints_to_simulate=n_obs_to_generate)
 
     obs = jnp.hstack(
-        [jnp.repeat(jnp.nan, 5), model1_samp.sampled_admissions[5:]]
+        [
+            jnp.repeat(jnp.nan, 5),
+            model1_samp.sampled_admissions[5 + gen_int.size() :],
+        ]
     )
-
     # Running with padding
     model1.run(
         num_warmup=500,
