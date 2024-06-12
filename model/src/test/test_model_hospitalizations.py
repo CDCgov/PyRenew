@@ -419,7 +419,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        weekday_effect_rv=weekday,
+        dayofweek_effect_rv=weekday,
         hosp_report_prob_rv=hosp_report_prob_dist,
         infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
@@ -525,7 +525,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        weekday_effect_rv=weekday,
+        dayofweek_effect_rv=weekday,
         hosp_report_prob_rv=hosp_report_prob_dist,
         infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"

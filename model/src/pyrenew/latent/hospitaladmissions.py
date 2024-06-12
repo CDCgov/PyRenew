@@ -49,7 +49,7 @@ class HospitalAdmissions(RandomVariable):
     by the probability of being hospitalized :math:`p_\mathrm{hosp}(t)`.
 
     To account for day-of-week effects in hospital reporting, we use an
-    estimated *weekday effect* :math:`\omega(t)`. If :math:`t` and :math:`t'`
+    estimated *day of the weekday effect* :math:`\omega(t)`. If :math:`t` and :math:`t'`
     are the same day of the week, :math:`\omega(t) = \omega(t')`. The seven
     values that :math:`\omega(t)` takes on are constrained to have mean 1.
 
@@ -66,7 +66,7 @@ class HospitalAdmissions(RandomVariable):
         infection_to_admission_interval_rv: RandomVariable,
         infect_hosp_rate_rv: RandomVariable,
         observed_hosp_admissions_varname: str = "observed_hosp_admissions",
-        weekday_effect_rv: RandomVariable | None = None,
+        dayofweek_effect_rv: RandomVariable | None = None,
         hosp_report_prob_rv: RandomVariable | None = None,
     ) -> None:
         """
@@ -82,8 +82,8 @@ class HospitalAdmissions(RandomVariable):
         observed_hosp_admissions_varname : str
             Name to assign to the deterministic component in numpyro of
             observed hospital admissions.
-        weekday_effect_rv : RandomVariable, optional
-            Weekday effect.
+        dayofweek_effect_rv : RandomVariable, optional
+            Day of the week effect.
         hosp_report_prob_rv  : RandomVariable, optional
             Random variable for the hospital admission reporting
             probability. Defaults to 1 (full reporting).
@@ -93,14 +93,14 @@ class HospitalAdmissions(RandomVariable):
         None
         """
 
-        if weekday_effect_rv is None:
-            weekday_effect_rv = DeterministicVariable(1, "weekday_effect")
+        if dayofweek_effect_rv is None:
+            dayofweek_effect_rv = DeterministicVariable(1, "weekday_effect")
         if hosp_report_prob_rv is None:
             hosp_report_prob_rv = DeterministicVariable(1, "hosp_report_prob")
 
         HospitalAdmissions.validate(
             infect_hosp_rate_rv,
-            weekday_effect_rv,
+            dayofweek_effect_rv,
             hosp_report_prob_rv,
         )
 
@@ -109,7 +109,7 @@ class HospitalAdmissions(RandomVariable):
         )
 
         self.infect_hosp_rate_rv = infect_hosp_rate_rv
-        self.weekday_effect_rv = weekday_effect_rv
+        self.dayofweek_effect_rv = dayofweek_effect_rv
         self.hosp_report_prob_rv = hosp_report_prob_rv
         self.infection_to_admission_interval_rv = (
             infection_to_admission_interval_rv
@@ -119,7 +119,7 @@ class HospitalAdmissions(RandomVariable):
     @staticmethod
     def validate(
         infect_hosp_rate_rv: Any,
-        weekday_effect_rv: Any,
+        dayofweek_effect_rv: Any,
         hosp_report_prob_rv: Any,
     ) -> None:
         """
@@ -130,8 +130,8 @@ class HospitalAdmissions(RandomVariable):
         ----------
         infect_hosp_rate_rv : Any
             Possibly incorrect input for infection to hospitalization rate distribution.
-        weekday_effect_rv : Any
-            Possibly incorrect input for weekday effect.
+        dayofweek_effect_rv : Any
+            Possibly incorrect input for day of the week effect.
         hosp_report_prob_rv : Any
             Possibly incorrect input for distribution or fixed value for the
             hospital admission reporting probability.
@@ -147,7 +147,7 @@ class HospitalAdmissions(RandomVariable):
             that the validation has failed.
         """
         assert isinstance(infect_hosp_rate_rv, RandomVariable)
-        assert isinstance(weekday_effect_rv, RandomVariable)
+        assert isinstance(dayofweek_effect_rv, RandomVariable)
         assert isinstance(hosp_report_prob_rv, RandomVariable)
 
         return None
@@ -188,10 +188,10 @@ class HospitalAdmissions(RandomVariable):
             mode="full",
         )[: infection_hosp_rate_t.shape[0]]
 
-        # Applying weekday effect
+        # Applying the day of the week effect
         observed_hosp_admissions = (
             observed_hosp_admissions
-            * self.weekday_effect_rv.sample(**kwargs)[0]
+            * self.dayofweek_effect_rv.sample(**kwargs)[0]
         )
 
         # Applying probability of hospitalization effect

@@ -160,7 +160,7 @@ h_t & \sim \text{CountDistribution}(\theta(H(t)))
 \end{align}
 $$
 
-Where $\omega(t)$ is a weekday effect, $p_{hosp}(t)$ is the probability of hospitalization, $d(\tau)$ is akin to incubation but representing infection to hospitalization time, $I(t)$ is the incidence, and $\text{CountDistribution}(\theta)$ can be a Negative Binomial or Poisson distribution (for example,). More details are provided in the documentation of the wastewater model ([link](https://github.com/cdcent/cfa-forecast-renewal-ww/blob/e7976925d5eea960ae1b907cddb857bce88f3d7a/model_definition.md#wastewater-component)).
+Where $\omega(t)$ is a day-of-the-week effect, $p_{hosp}(t)$ is the probability of hospitalization, $d(\tau)$ is akin to incubation but representing infection to hospitalization time, $I(t)$ is the incidence, and $\text{CountDistribution}(\theta)$ can be a Negative Binomial or Poisson distribution (for example,). More details are provided in the documentation of the wastewater model ([link](https://github.com/cdcent/cfa-forecast-renewal-ww/blob/e7976925d5eea960ae1b907cddb857bce88f3d7a/model_definition.md#wastewater-component)).
 
 ### Wastewater
 

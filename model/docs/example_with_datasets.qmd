@@ -23,7 +23,7 @@ H(t) & = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
 \end{align*}
 $$
 
-Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to hospitalization rate, and $\omega(t)$ is the weekday effect at time $t$; the last section provides an example building a weekday effect `RandomVariable`.
+Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to hospitalization rate, and $\omega(t)$ is the day-of-the-week effect at time $t$; the last section provides an example building such `RandomVariable`.
 
 The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to hospitalization rate. The latent infections are modeled as a renewal process:
 
@@ -307,10 +307,10 @@ from pyrenew import metaclass
 import numpyro as npro
 
 class DayOfWeekEffect(metaclass.RandomVariable):
-    """Weekday effect distribution"""
+    """Day of the week effect"""
 
     def __init__(self, len: int):
-        """Initialize the weekday effect distribution
+        """Initialize the day of the week effect distribution
         Parameters
         ----------
         len : int
@@ -335,18 +335,18 @@ class DayOfWeekEffect(metaclass.RandomVariable):
         return jnp.tile(ans, self.nweeks)[: self.len]
 
 
-# Initializing the weekday effect
+# Initializing the RV
 dayofweek_effect = DayOfWeekEffect(dat.shape[0])
 ```
 
-Notice that the instance's `nweeks` and `len` members are passed during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new weekday effect, we can rebuild the latent hospitalization model:
+Notice that the instance's `nweeks` and `len` members are passed during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new effect, we can rebuild the latent hospitalization model:
 
 ```{python}
 # | label: latent-hosp-weekday
 latent_hosp_wday_effect = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
     infect_hosp_rate_rv=hosp_rate,
-    weekday_effect_rv=weekday_effect,
+    dayofweek_effect_rv=dayofweek_effect,
 )
 
 hosp_model_weekday = model.HospitalAdmissionsModel(
