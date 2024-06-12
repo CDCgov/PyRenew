@@ -26,14 +26,14 @@ class PeriodicEffectSample(NamedTuple):
 
 class PeriodicEffect(RandomVariable):
     """
-    Periodic effect with repeating values from a prior.
+    Periodic effect with repeating values from a random variable.
     """
 
     def __init__(
         self,
         offset: int,
         period_size: int,
-        prior: RandomVariable,
+        quantity_to_broadcast: RandomVariable,
     ):
         """
         Default constructor for PeriodicEffect class.
@@ -45,15 +45,15 @@ class PeriodicEffect(RandomVariable):
             period_size - 1.
         period_size : int
             Size of the period.
-        prior : RandomVariable
-            Prior distribution.
+        quantity_to_broadcast : RandomVariable
+            Values to be broadcasted (repeated or tiled).
 
         Returns
         -------
         None
         """
 
-        PeriodicEffect.validate(prior)
+        PeriodicEffect.validate(quantity_to_broadcast)
 
         self.broadcaster = au.PeriodicBroadcaster(
             offset=offset,
@@ -61,24 +61,24 @@ class PeriodicEffect(RandomVariable):
             broadcast_type="tile",
         )
 
-        self.prior = prior
+        self.quantity_to_broadcast = quantity_to_broadcast
 
     @staticmethod
-    def validate(prior: RandomVariable) -> None:
+    def validate(quantity_to_broadcast: RandomVariable) -> None:
         """
-        Validate the prior.
+        Validate the broadcasting quatity.
 
         Parameters
         ----------
-        prior : RandomVariable
-            Prior distribution.
+        quantity_to_broadcast : RandomVariable
+            Values to be broadcasted (repeated or tiled).
 
         Returns
         -------
         None
         """
 
-        _assert_sample_and_rtype(prior)
+        _assert_sample_and_rtype(quantity_to_broadcast)
 
         return None
 
@@ -91,7 +91,7 @@ class PeriodicEffect(RandomVariable):
         duration : int
             Number of timepoints to sample.
         **kwargs : dict, optional
-            Additional keyword arguments passed through to the prior.
+            Additional keyword arguments passed through to the `quantity_to_broadcast`.
 
         Returns
         -------
@@ -100,7 +100,7 @@ class PeriodicEffect(RandomVariable):
 
         return PeriodicEffectSample(
             value=self.broadcaster(
-                data=self.prior.sample(**kwargs)[0],
+                data=self.quantity_to_broadcast.sample(**kwargs)[0],
                 n_timepoints=duration,
             )
         )
@@ -108,13 +108,13 @@ class PeriodicEffect(RandomVariable):
 
 class DayOfWeekEffect(PeriodicEffect):
     """
-    Weekly effect with repeating values from a prior.
+    Weekly effect with repeating values from a random variable.
     """
 
     def __init__(
         self,
         offset: int,
-        prior: RandomVariable,
+        quantity_to_broadcast: RandomVariable,
     ):
         """
         Default constructor for DayOfWeekEffect class.
@@ -124,8 +124,8 @@ class DayOfWeekEffect(PeriodicEffect):
         offset : int
             Relative point at which data starts, must be between 0 and
             6.
-        prior : RandomVariable
-            Prior distribution.
+        quantity_to_broadcast : RandomVariable
+            Values to be broadcasted (repeated or tiled).
 
         Returns
         -------
@@ -134,7 +134,11 @@ class DayOfWeekEffect(PeriodicEffect):
 
         DayOfWeekEffect.validate(offset)
 
-        super().__init__(offset=offset, period_size=7, prior=prior)
+        super().__init__(
+            offset=offset,
+            period_size=7,
+            quantity_to_broadcast=quantity_to_broadcast,
+        )
 
         return None
 

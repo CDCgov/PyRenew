@@ -18,7 +18,7 @@ def test_periodiceffect() -> None:
 
     params = {
         "offset": 0,
-        "prior": rv,
+        "quantity_to_broadcast": rv,
         "period_size": 7,
     }
 
@@ -62,13 +62,13 @@ def test_weeklyeffect() -> None:
 
     params = {
         "offset": 2,
-        "prior": rv,
+        "quantity_to_broadcast": rv,
         "period_size": 7,
     }
 
     params2 = {
         "offset": 2,
-        "prior": rv,
+        "quantity_to_broadcast": rv,
     }
 
     duration = 30
