@@ -5,6 +5,12 @@ TUTORIALS_DIR=docs/source/tutorials
 # For each *qmd file in model/docs, create a corresponding rst file
 # under docs/source/tutorial
 COUNTER=0
+
+# Removing everything under docs/source/tutorials/*rst with the exception of the index.rst file.
+# This is to ensure that the index.rst file is not deleted.
+find $TUTORIALS_DIR -type f -name '*.rst' -not -name 'index.rst' -exec rm -f {} \;
+
+
 for qmd in model/docs/*.qmd; do
     # Capture the basename
     bname=$(basename $qmd .qmd)
