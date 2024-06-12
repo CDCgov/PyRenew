@@ -204,7 +204,7 @@ class PeriodicBroadcaster:
 
         # Broadcast type should be either "repeat" or "tile"
         assert broadcast_type in ["repeat", "tile"], (
-            "broadcast_type should be either 'repeat' or 'tile'."
+            "broadcast_type should be either 'repeat' or 'tile'. "
             f"It is {broadcast_type}."
         )
 
@@ -243,7 +243,7 @@ class PeriodicBroadcaster:
             return jnp.repeat(data, self.period_size)[
                 self.offset : (self.offset + n_timepoints)
             ]
-        else:
+        elif self.broadcast_type == "tile":
             return jnp.tile(
                 data, int(jnp.ceil(n_timepoints / self.period_size))
             )[self.offset : (self.offset + n_timepoints)]
