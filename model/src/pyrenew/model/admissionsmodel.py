@@ -129,36 +129,6 @@ class HospitalAdmissionsModel(Model):
         )
         return None
 
-    def sample_latent_hosp_admissions(
-        self,
-        latent_infections: ArrayLike,
-        **kwargs,
-    ) -> tuple:
-        """
-        Sample number of hospital admissions
-
-        Parameters
-        ----------
-        infections : ArrayLike
-            The predicted infections array.
-        **kwargs : dict, optional
-            Additional keyword arguments passed through to internal
-            sample() calls, should there be any.
-
-        Returns
-        -------
-        tuple
-
-        See Also
-        --------
-        latent_hosp_admissions.sample : For sampling latent hospital admissions
-        """
-
-        return self.latent_hosp_admissions_rv.sample(
-            latent_infections=latent_infections,
-            **kwargs,
-        )
-
     def sample_admissions_process(
         self,
         observed_hosp_admissions_mean: ArrayLike,
@@ -224,7 +194,6 @@ class HospitalAdmissionsModel(Model):
         See Also
         --------
         basic_renewal.sample : For sampling the basic renewal model
-        sample_latent_hosp_admissions : To sample latent hospitalization process
         sample_observed_admissions : For sampling observed hospital admissions
         """
         if (
@@ -260,7 +229,7 @@ class HospitalAdmissionsModel(Model):
             infection_hosp_rate,
             latent_hosp_admissions,
             *_,
-        ) = self.sample_latent_hosp_admissions(
+        ) = self.latent_hosp_admissions_rv.sample(
             latent_infections=basic_model.latent_infections,
             **kwargs,
         )
@@ -272,11 +241,13 @@ class HospitalAdmissionsModel(Model):
                 (
                     sampled_observed_hosp_admissions,
                     *_,
-                ) = self.sample_admissions_process(
-                    observed_hosp_admissions_mean=latent_hosp_admissions,
-                    observed_hosp_admissions=observed_hosp_admissions,
+                ) = self.hosp_admission_obs_process_rv.sample(
+                    mu=latent_hosp_admissions,
+                    obs=observed_hosp_admissions,
+                    name="sampled_observed_hosp_admissions",
                     **kwargs,
                 )
+
             else:
                 observed_hosp_admissions = au.pad_x_to_match_y(
                     observed_hosp_admissions,
@@ -288,13 +259,10 @@ class HospitalAdmissionsModel(Model):
                 (
                     sampled_observed_hosp_admissions,
                     *_,
-                ) = self.sample_admissions_process(
-                    observed_hosp_admissions_mean=latent_hosp_admissions[
-                        i0_size + padding :
-                    ],
-                    observed_hosp_admissions=observed_hosp_admissions[
-                        i0_size + padding :
-                    ],
+                ) = self.hosp_admission_obs_process_rv.sample(
+                    mu=latent_hosp_admissions[i0_size + padding :],
+                    obs=observed_hosp_admissions[i0_size + padding :],
+                    name="sampled_observed_hosp_admissions",
                     **kwargs,
                 )
 
