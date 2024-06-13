@@ -8,6 +8,7 @@ import numpyro as npro
 import numpyro.distributions as dist
 import polars as pl
 import pytest
+from pyrenew import transformation as t
 from pyrenew.deterministic import (
     DeterministicPMF,
     DeterministicVariable,
@@ -53,7 +54,11 @@ def test_model_hosp_no_timepoints_or_observations():
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
-    Rt_process = RtRandomWalkProcess()
+    Rt_process = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
     observed_admissions = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
@@ -118,7 +123,11 @@ def test_model_hosp_both_timepoints_and_observations():
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
     latent_infections = Infections()
-    Rt_process = RtRandomWalkProcess()
+    Rt_process = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
     observed_admissions = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
@@ -189,7 +198,11 @@ def test_model_hosp_no_obs_model():
     )
 
     latent_infections = Infections()
-    Rt_process = RtRandomWalkProcess()
+    Rt_process = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
     inf_hosp = DeterministicPMF(
         jnp.array(
             [
@@ -294,7 +307,11 @@ def test_model_hosp_with_obs_model():
     )
 
     latent_infections = Infections()
-    Rt_process = RtRandomWalkProcess()
+    Rt_process = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
     observed_admissions = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
@@ -379,7 +396,11 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     )
 
     latent_infections = Infections()
-    Rt_process = RtRandomWalkProcess()
+    Rt_process = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
     observed_admissions = PoissonObservation()
 
     inf_hosp = DeterministicPMF(
@@ -476,7 +497,11 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
 
     latent_infections = Infections()
-    Rt_process = RtRandomWalkProcess()
+    Rt_process = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
     observed_admissions = PoissonObservation()
 
     inf_hosp = DeterministicPMF(

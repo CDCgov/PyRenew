@@ -8,6 +8,7 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 import polars as pl
+import pyrenew.transformation as t
 import pytest
 from pyrenew.deterministic import DeterministicPMF, NullObservation
 from pyrenew.latent import (
@@ -36,7 +37,11 @@ def test_model_basicrenewal_no_timepoints_or_observations():
 
     observed_infections = PoissonObservation()
 
-    rt = RtRandomWalkProcess()
+    rt = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -69,7 +74,11 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     observed_infections = PoissonObservation()
 
-    rt = RtRandomWalkProcess()
+    rt = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -109,7 +118,11 @@ def test_model_basicrenewal_no_obs_model():
 
     latent_infections = Infections()
 
-    rt = RtRandomWalkProcess()
+    rt = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
 
     model0 = RtInfectionsRenewalModel(
         gen_int_rv=gen_int,
@@ -182,7 +195,11 @@ def test_model_basicrenewal_with_obs_model():
 
     observed_infections = PoissonObservation()
 
-    rt = RtRandomWalkProcess()
+    rt = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -251,7 +268,11 @@ def test_model_basicrenewal_plot() -> plt.Figure:
 
     observed_infections = PoissonObservation()
 
-    rt = RtRandomWalkProcess()
+    rt = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -294,7 +315,11 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
 
     observed_infections = PoissonObservation()
 
-    rt = RtRandomWalkProcess()
+    rt = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,

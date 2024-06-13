@@ -6,6 +6,7 @@ import numpy as np
 import numpy.testing as testing
 import numpyro as npro
 import numpyro.distributions as dist
+from pyrenew import transformation as t
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import HospitalAdmissions, Infections
 from pyrenew.metaclass import DistributionalRV
@@ -20,7 +21,12 @@ def test_admissions_sample():
 
     # Generating Rt and Infections to compute the hospital admissions
     np.random.seed(223)
-    rt = RtRandomWalkProcess()
+
+    rt = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_rt, *_ = rt.sample(n_timepoints=30)
 
