@@ -129,40 +129,6 @@ class HospitalAdmissionsModel(Model):
         )
         return None
 
-    def sample_admissions_process(
-        self,
-        observed_hosp_admissions_mean: ArrayLike,
-        observed_hosp_admissions: ArrayLike,
-        name: str | None = None,
-        **kwargs,
-    ) -> tuple:
-        """
-        Sample number of hospital admissions
-
-        Parameters
-        ----------
-        observed_hosp_admissions_mean : ArrayLike
-            The mean of the predictive distribution for observed hospital admissions.
-        obs : ArrayLike
-            The observed hospitalization data (to fit).
-        name : str, optional
-            Name of the random variable. Defaults to None.
-        **kwargs : dict, optional
-            Additional keyword arguments passed through to internal
-            obs calls, should there be any.
-
-        Returns
-        -------
-        tuple
-        """
-
-        return self.hosp_admission_obs_process_rv.sample(
-            mu=observed_hosp_admissions_mean,
-            obs=observed_hosp_admissions,
-            name=name,
-            **kwargs,
-        )
-
     def sample(
         self,
         n_timepoints_to_simulate: int | None = None,
