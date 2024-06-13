@@ -45,7 +45,7 @@ with npro.handlers.seed(rng_seed=20):
 # Plotting the Rt values
 import matplotlib.pyplot as plt
 
-plt.plot(sim_data.rt)
+plt.step(np.arange(len(sim_data.rt)), sim_data.rt, where="post")
 plt.xlabel("Time")
 plt.ylabel("Rt")
 plt.title("Simulated Rt values")
