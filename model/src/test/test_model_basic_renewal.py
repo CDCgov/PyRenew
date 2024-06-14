@@ -55,7 +55,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError, match="Either"):
             model1.sample(
-                n_timepoints_to_simulate=None, observed_infections=None
+                n_timepoints_to_simulate=None, data_observed_infections=None
             )
 
 
@@ -93,7 +93,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
         with pytest.raises(ValueError, match="Cannot pass both"):
             model1.sample(
                 n_timepoints_to_simulate=30,
-                observed_infections=jnp.repeat(jnp.nan, 30),
+                data_observed_infections=jnp.repeat(jnp.nan, 30),
             )
 
 
@@ -139,7 +139,7 @@ def test_model_basicrenewal_no_obs_model():
         model0_samp = model0.sample(n_timepoints_to_simulate=30)
     model0_samp.Rt
     model0_samp.latent_infections
-    model0_samp.sampled_observed_infections
+    model0_samp.observed_infections
 
     # Generating
     model0.infection_obs_process_rv = NullObservation()
@@ -152,15 +152,15 @@ def test_model_basicrenewal_no_obs_model():
         model0_samp.latent_infections, model1_samp.latent_infections
     )
     np.testing.assert_array_equal(
-        model0_samp.sampled_observed_infections,
-        model1_samp.sampled_observed_infections,
+        model0_samp.observed_infections,
+        model1_samp.observed_infections,
     )
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(272),
-        observed_infections=model0_samp.latent_infections,
+        data_observed_infections=model0_samp.latent_infections,
     )
 
     inf = model0.spread_draws(["latent_infections"])
@@ -218,7 +218,7 @@ def test_model_basicrenewal_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
-        observed_infections=model1_samp.sampled_observed_infections,
+        data_observed_infections=model1_samp.observed_infections,
     )
 
     inf = model1.spread_draws(["latent_infections"])
@@ -291,12 +291,12 @@ def test_model_basicrenewal_plot() -> plt.Figure:
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
-        observed_infections=model1_samp.sampled_observed_infections,
+        data_observed_infections=model1_samp.observed_infections,
     )
 
     return model1.plot_posterior(
         var="latent_infections",
-        obs_signal=model1_samp.sampled_observed_infections,
+        obs_signal=model1_samp.observed_infections,
     )
 
 
@@ -335,14 +335,14 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         model1_samp = model1.sample(n_timepoints_to_simulate=30)
 
     new_obs = jnp.hstack(
-        [jnp.repeat(jnp.nan, 5), model1_samp.sampled_observed_infections[5:]],
+        [jnp.repeat(jnp.nan, 5), model1_samp.observed_infections[5:]],
     )
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jax.random.PRNGKey(22),
-        observed_infections=new_obs,
+        data_observed_infections=new_obs,
         padding=5,
     )
 
