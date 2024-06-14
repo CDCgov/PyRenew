@@ -11,6 +11,7 @@ import jax
 import jax.numpy as jnp
 import jax.random as jr
 import matplotlib.pyplot as plt
+import numpy as np
 import numpyro as npro
 import polars as pl
 from jax.typing import ArrayLike
@@ -341,10 +342,7 @@ class Model(metaclass=ABCMeta):
                 mcmc_args=mcmc_args,
             )
         if rng_key is None:
-            rand_int_key = jr.PRNGKey(0)
-            rand_int = jr.randint(
-                rand_int_key, shape=(), minval=0, maxval=100000
-            )
+            rand_int = np.random.randint(0, 100000)
             rng_key = jr.PRNGKey(rand_int)
 
         self.mcmc.run(rng_key=rng_key, **kwargs)
