@@ -70,6 +70,6 @@ def test_admissions_sample():
         sim_hosp_1 = hosp1.sample(latent_infections=inf_sampled1[0])
 
     testing.assert_array_less(
-        sim_hosp_1.observed_hosp_admissions,
+        sim_hosp_1.latent_hospital_admissions,
         inf_sampled1[0],
     )

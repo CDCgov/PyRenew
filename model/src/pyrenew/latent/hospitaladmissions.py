@@ -12,7 +12,7 @@ from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 
 
-class HospAdmissionsSample(NamedTuple):
+class HospitalAdmissionsSample(NamedTuple):
     """
     A container to hold the output of `latent.HospAdmissions.sample()`.
 
@@ -20,15 +20,15 @@ class HospAdmissionsSample(NamedTuple):
     ----------
     infection_hosp_rate : float, optional
         The infection-to-hospitalization rate. Defaults to None.
-    observed_hosp_admissions : ArrayLike or None
-        The observed number of hospital admissions. Defaults to None.
+    latent_hospital_admissions : ArrayLike or None
+        The computed number of hospital admissions. Defaults to None.
     """
 
     infection_hosp_rate: float | None = None
-    observed_hosp_admissions: ArrayLike | None = None
+    latent_hospital_admissions: ArrayLike | None = None
 
     def __repr__(self):
-        return f"HospAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, observed_hosp_admissions={self.observed_hosp_admissions})"
+        return f"HospitalAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, latent_hospital_admissions={self.latent_hospital_admissions})"
 
 
 class HospitalAdmissions(RandomVariable):
@@ -65,7 +65,7 @@ class HospitalAdmissions(RandomVariable):
         self,
         infection_to_admission_interval_rv: RandomVariable,
         infect_hosp_rate_rv: RandomVariable,
-        observed_hosp_admissions_varname: str = "observed_hosp_admissions",
+        latent_hospital_admissions_varname: str = "latent_hospital_admissions",
         day_of_week_effect_rv: RandomVariable | None = None,
         hosp_report_prob_rv: RandomVariable | None = None,
     ) -> None:
@@ -79,7 +79,7 @@ class HospitalAdmissions(RandomVariable):
             pyrenew.observations.Deterministic).
         infect_hosp_rate_rv : RandomVariable
             Infection to hospitalization rate random variable.
-        observed_hosp_admissions_varname : str
+        latent_hospital_admissions_varname : str
             Name to assign to the deterministic component in numpyro of
             observed hospital admissions.
         day_of_week_effect_rv : RandomVariable, optional
@@ -104,8 +104,8 @@ class HospitalAdmissions(RandomVariable):
             hosp_report_prob_rv,
         )
 
-        self.observed_hosp_admissions_varname = (
-            observed_hosp_admissions_varname
+        self.latent_hospital_admissions_varname = (
+            latent_hospital_admissions_varname
         )
 
         self.infect_hosp_rate_rv = infect_hosp_rate_rv
@@ -156,7 +156,7 @@ class HospitalAdmissions(RandomVariable):
         self,
         latent_infections: ArrayLike,
         **kwargs,
-    ) -> HospAdmissionsSample:
+    ) -> HospitalAdmissionsSample:
         """
         Samples from the observation process
 
@@ -170,7 +170,7 @@ class HospitalAdmissions(RandomVariable):
 
         Returns
         -------
-        HospAdmissionsSample
+        HospitalAdmissionsSample
         """
 
         infection_hosp_rate, *_ = self.infect_hosp_rate_rv.sample(**kwargs)
@@ -182,28 +182,28 @@ class HospitalAdmissions(RandomVariable):
             *_,
         ) = self.infection_to_admission_interval_rv.sample(**kwargs)
 
-        observed_hosp_admissions = jnp.convolve(
+        latent_hospital_admissions = jnp.convolve(
             infection_hosp_rate_t,
             infection_to_admission_interval_rv,
             mode="full",
         )[: infection_hosp_rate_t.shape[0]]
 
         # Applying the day of the week effect
-        observed_hosp_admissions = (
-            observed_hosp_admissions
+        latent_hospital_admissions = (
+            latent_hospital_admissions
             * self.day_of_week_effect_rv.sample(**kwargs)[0]
         )
 
         # Applying probability of hospitalization effect
-        observed_hosp_admissions = (
-            observed_hosp_admissions
+        latent_hospital_admissions = (
+            latent_hospital_admissions
             * self.hosp_report_prob_rv.sample(**kwargs)[0]
         )
 
         npro.deterministic(
-            self.observed_hosp_admissions_varname, observed_hosp_admissions
+            self.latent_hospital_admissions_varname, latent_hospital_admissions
         )
 
-        return HospAdmissionsSample(
-            infection_hosp_rate, observed_hosp_admissions
+        return HospitalAdmissionsSample(
+            infection_hosp_rate, latent_hospital_admissions
         )

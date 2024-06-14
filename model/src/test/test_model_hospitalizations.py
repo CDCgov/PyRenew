@@ -218,7 +218,7 @@ def test_model_hosp_no_obs_model():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        observed_hosp_admissions_varname="observed_admissions",
+        latent_hospital_admissions_varname="latent_hospital_admissions",
         infect_hosp_rate_rv=DistributionalRV(
             dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
         ),
@@ -266,10 +266,10 @@ def test_model_hosp_no_obs_model():
         observed_hosp_admissions=model0_samp.latent_hosp_admissions,
     )
 
-    inf = model0.spread_draws(["observed_admissions"])
+    inf = model0.spread_draws(["latent_hospital_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("observed_admissions").mean())
+        .agg(pl.col("latent_hospital_admissions").mean())
         .sort(pl.col("draw"))
     )
 
@@ -351,10 +351,10 @@ def test_model_hosp_with_obs_model():
         observed_hosp_admissions=model1_samp.sampled_observed_hosp_admissions,
     )
 
-    inf = model1.spread_draws(["observed_hosp_admissions"])
+    inf = model1.spread_draws(["latent_hospital_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("observed_hosp_admissions").mean())
+        .agg(pl.col("latent_hospital_admissions").mean())
         .sort(pl.col("draw"))
     )
 
@@ -447,10 +447,10 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         observed_hosp_admissions=model1_samp.sampled_observed_hosp_admissions,
     )
 
-    inf = model1.spread_draws(["observed_hosp_admissions"])
+    inf = model1.spread_draws(["latent_hospital_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("observed_hosp_admissions").mean())
+        .agg(pl.col("latent_hospital_admissions").mean())
         .sort(pl.col("draw"))
     )
 
@@ -561,10 +561,10 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         padding=5,
     )
 
-    inf = model1.spread_draws(["observed_hosp_admissions"])
+    inf = model1.spread_draws(["latent_hospital_admissions"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("observed_hosp_admissions").mean())
+        .agg(pl.col("latent_hospital_admissions").mean())
         .sort(pl.col("draw"))
     )
 
