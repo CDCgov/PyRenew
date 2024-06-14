@@ -313,7 +313,7 @@ class Model(metaclass=ABCMeta):
         self,
         num_warmup,
         num_samples,
-        rng_key: jax.random.PRNGKey | None = None,
+        rng_key: ArrayLike | None = None,
         nuts_args: dict = None,
         mcmc_args: dict = None,
         **kwargs,
