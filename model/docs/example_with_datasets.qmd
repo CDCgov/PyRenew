@@ -214,7 +214,7 @@ axs[0].plot(sim_data.Rt)
 axs[0].set_ylabel("Rt")
 
 # Infections plot
-axs[1].plot(sim_data.sampled_observed_hosp_admissions)
+axs[1].plot(sim_data.observed_hosp_admissions)
 axs[1].set_ylabel("Infections")
 axs[1].set_yscale("log")
 
@@ -236,7 +236,7 @@ import jax
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
+    data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
 )
@@ -281,7 +281,7 @@ dat_w_padding = np.pad(
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    observed_hosp_admissions=dat_w_padding,
+    data_observed_hosp_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute,  # Padding the model
@@ -382,7 +382,7 @@ Running the model (with the same padding as before):
 hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    observed_hosp_admissions=dat_w_padding,
+    data_observed_hosp_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute,
