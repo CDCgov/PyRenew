@@ -23,19 +23,19 @@ class RtInfectionsRenewalSample(NamedTuple):
         The reproduction number over time. Defaults to None.
     latent_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
-    sampled_observed_infections : ArrayLike | None, optional
+    observed_infections : ArrayLike | None, optional
         The sampled infections. Defaults to None.
     """
 
     Rt: float | None = None
     latent_infections: ArrayLike | None = None
-    sampled_observed_infections: ArrayLike | None = None
+    observed_infections: ArrayLike | None = None
 
     def __repr__(self):
         return (
             f"RtInfectionsRenewalSample(Rt={self.Rt}, "
             f"latent_infections={self.latent_infections}, "
-            f"sampled_observed_infections={self.sampled_observed_infections})"
+            f"observed_infections={self.observed_infections})"
         )
 
 
@@ -216,7 +216,7 @@ class RtInfectionsRenewalModel(Model):
     def sample_infection_obs_process(
         self,
         observed_infections_mean: ArrayLike,
-        observed_infections: ArrayLike | None = None,
+        data_observed_infections: ArrayLike | None = None,
         name: str | None = None,
         **kwargs,
     ) -> tuple:
@@ -229,7 +229,7 @@ class RtInfectionsRenewalModel(Model):
         ----------
         observed_infections_mean : ArrayLike
             The mean of the observed infections distribution.
-        observed_infections : ArrayLike | None, optional
+        data_observed_infections : ArrayLike | None, optional
             The observed infection values, if any, for inference. Defaults to None.
         name : str | None, optional
             Name of the random variable passed to the RandomVariable. Defaults to None.
@@ -243,7 +243,7 @@ class RtInfectionsRenewalModel(Model):
         """
         return self.infection_obs_process_rv.sample(
             mu=observed_infections_mean,
-            obs=observed_infections,
+            obs=data_observed_infections,
             name=name,
             **kwargs,
         )
@@ -251,7 +251,7 @@ class RtInfectionsRenewalModel(Model):
     def sample(
         self,
         n_timepoints_to_simulate: int | None = None,
-        observed_infections: ArrayLike | None = None,
+        data_observed_infections: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
     ) -> RtInfectionsRenewalSample:
@@ -262,7 +262,7 @@ class RtInfectionsRenewalModel(Model):
         ----------
         n_timepoints_to_simulate : int, optional
             Number of timepoints to sample.
-        observed_infections : ArrayLike | None, optional
+        data_observed_infections : ArrayLike | None, optional
             Observed infections. Defaults to None.
         padding : int, optional
             Number of padding timepoints to add to the beginning of the
@@ -273,27 +273,30 @@ class RtInfectionsRenewalModel(Model):
 
         Notes
         -----
-        Either `observed_admissions` or `n_timepoints_to_simulate` must be specified, not both.
+        Either `data_observed_infections` or `n_timepoints_to_simulate` must be specified, not both.
 
         Returns
         -------
         RtInfectionsRenewalSample
         """
 
-        if n_timepoints_to_simulate is None and observed_infections is None:
+        if (
+            n_timepoints_to_simulate is None
+            and data_observed_infections is None
+        ):
             raise ValueError(
-                "Either n_timepoints_to_simulate or observed_infections "
+                "Either n_timepoints_to_simulate or data_observed_infections "
                 "must be passed."
             )
         elif (
             n_timepoints_to_simulate is not None
-            and observed_infections is not None
+            and data_observed_infections is not None
         ):
             raise ValueError(
-                "Cannot pass both n_timepoints_to_simulate and observed_infections."
+                "Cannot pass both n_timepoints_to_simulate and data_observed_infections."
             )
         elif n_timepoints_to_simulate is None:
-            n_timepoints = len(observed_infections)
+            n_timepoints = len(data_observed_infections)
         else:
             n_timepoints = n_timepoints_to_simulate
         # Sampling from Rt (possibly with a given Rt, depending on
@@ -317,36 +320,38 @@ class RtInfectionsRenewalModel(Model):
             **kwargs,
         )
 
-        if observed_infections is None:
+        if data_observed_infections is None:
             (
-                sampled_observed_infections,
+                observed_infections,
                 *_,
             ) = self.sample_infection_obs_process(
                 observed_infections_mean=latent_infections,
-                observed_infections=observed_infections,
+                data_observed_infections=data_observed_infections,
                 **kwargs,
             )
         else:
-            observed_infections = au.pad_x_to_match_y(
-                observed_infections,
+            data_observed_infections = au.pad_x_to_match_y(
+                data_observed_infections,
                 latent_infections,
                 jnp.nan,
                 pad_direction="start",
             )
 
             (
-                sampled_observed_infections,
+                observed_infections,
                 *_,
             ) = self.sample_infection_obs_process(
                 observed_infections_mean=latent_infections[
                     I0_size + padding :
                 ],
-                observed_infections=observed_infections[I0_size + padding :],
+                data_observed_infections=data_observed_infections[
+                    I0_size + padding :
+                ],
                 **kwargs,
             )
 
-        sampled_observed_infections = au.pad_x_to_match_y(
-            sampled_observed_infections,
+        observed_infections = au.pad_x_to_match_y(
+            observed_infections,
             latent_infections,
             jnp.nan,
             pad_direction="start",
@@ -358,5 +363,5 @@ class RtInfectionsRenewalModel(Model):
         return RtInfectionsRenewalSample(
             Rt=Rt,
             latent_infections=latent_infections,
-            sampled_observed_infections=sampled_observed_infections,
+            observed_infections=observed_infections,
         )
