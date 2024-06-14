@@ -246,7 +246,7 @@ We can use the `plot_posterior` method to visualize the results[^capture]:
 # | label: fig-output-hospital-admissions
 # | fig-cap: Hospital Admissions posterior distribution
 out = hosp_model.plot_posterior(
-    var="observed_hosp_admissions",
+    var="latent_hospital_admissions",
     ylab="Hospital Admissions",
     obs_signal=dat["daily_hosp_admits"].to_numpy(),
 )
@@ -283,7 +283,7 @@ And plotting the results:
 # | label: fig-output-admissions-with-padding
 # | fig-cap: Hospital Admissions posterior distribution
 out = hosp_model.plot_posterior(
-    var="observed_hosp_admissions",
+    var="latent_hospital_admissions",
     ylab="Hospital Admissions",
     obs_signal=dat_w_padding,
 )
@@ -379,7 +379,7 @@ And plotting the results:
 # | label: fig-output-admissions-padding-and-weekday
 # | fig-cap: Hospital Admissions posterior distribution
 out = hosp_model_weekday.plot_posterior(
-    var="observed_hosp_admissions",
+    var="latent_hospital_admissions",
     ylab="Hospital Admissions",
     obs_signal=dat_w_padding,
 )
