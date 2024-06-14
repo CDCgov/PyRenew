@@ -252,7 +252,11 @@ We can use the `plot_posterior` method to visualize the results[^capture]:
 out = hosp_model.plot_posterior(
     var="observed_hosp_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat["daily_hosp_admits"].to_numpy(),
+    obs_signal=np.pad(
+        dat["daily_hosp_admits"].to_numpy().astype(float),
+        (gen_int_array.size, 0),
+        constant_values=np.nan,
+    ),
 )
 ```
 
@@ -266,10 +270,13 @@ We can use the padding argument to solve the overestimation of hospital admissio
 # | label: model-fit-padding
 days_to_impute = 21
 
-dat_w_padding = dat["daily_hosp_admits"].to_numpy()
-
 # Add 21 Nas to the beginning of dat_w_padding
-dat_w_padding = np.hstack((np.repeat(np.nan, days_to_impute), dat_w_padding))
+dat_w_padding = np.pad(
+    dat["daily_hosp_admits"].to_numpy().astype(float),
+    (days_to_impute, 0),
+    constant_values=np.nan,
+)
+
 
 hosp_model.run(
     num_samples=2000,
@@ -289,7 +296,9 @@ And plotting the results:
 out = hosp_model.plot_posterior(
     var="observed_hosp_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat_w_padding,
+    obs_signal=np.pad(
+        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
+    ),
 )
 ```
 
@@ -298,7 +307,9 @@ We can also take a look at the latent infections:
 ```{python}
 # | label: fig-output-infections-with-padding
 # | fig-cap: Hospital Admissions posterior distribution
-out2 = hosp_model.plot_posterior(var="latent_infections", ylab="Latent Infections")
+out2 = hosp_model.plot_posterior(
+    var="latent_infections", ylab="Latent Infections"
+)
 ```
 
 ## Round 2: Incorporating weekday effects
@@ -386,6 +397,8 @@ And plotting the results:
 out = hosp_model_weekday.plot_posterior(
     var="observed_hosp_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat_w_padding,
+    obs_signal=np.pad(
+        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
+    ),
 )
 ```
