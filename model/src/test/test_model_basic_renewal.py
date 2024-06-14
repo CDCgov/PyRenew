@@ -146,9 +146,8 @@ def test_model_basicrenewal_no_obs_model():
     model0.run(
         num_warmup=500,
         num_samples=500,
-        rng_key=jax.random.PRNGKey(272),
         observed_infections=model0_samp.latent_infections,
-    )
+    )  # no rng_key
 
     inf = model0.spread_draws(["latent_infections"])
     inf_mean = (
@@ -200,7 +199,7 @@ def test_model_basicrenewal_with_obs_model():
     model1.run(
         num_warmup=500,
         num_samples=500,
-        rng_key=jax.random.PRNGKey(22),
+        rng_key=jax.random.key(22),
         observed_infections=model1_samp.sampled_observed_infections,
     )
 
@@ -269,7 +268,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:
     model1.run(
         num_warmup=500,
         num_samples=500,
-        rng_key=jax.random.PRNGKey(22),
+        rng_key=jax.random.key(22),
         observed_infections=model1_samp.sampled_observed_infections,
     )
 
@@ -316,7 +315,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     model1.run(
         num_warmup=500,
         num_samples=500,
-        rng_key=jax.random.PRNGKey(22),
+        rng_key=jax.random.key(22),
         observed_infections=new_obs,
         padding=5,
     )

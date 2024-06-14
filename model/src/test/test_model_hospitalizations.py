@@ -262,7 +262,7 @@ def test_model_hosp_no_obs_model():
     model0.run(
         num_warmup=500,
         num_samples=500,
-        rng_key=jax.random.PRNGKey(272),
+        rng_key=jax.random.key(272),
         observed_hosp_admissions=model0_samp.latent_hosp_admissions,
     )
 
@@ -347,7 +347,7 @@ def test_model_hosp_with_obs_model():
     model1.run(
         num_warmup=500,
         num_samples=500,
-        rng_key=jax.random.PRNGKey(272),
+        rng_key=jax.random.key(272),
         observed_hosp_admissions=model1_samp.sampled_observed_hosp_admissions,
     )
 
@@ -443,7 +443,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     model1.run(
         num_warmup=500,
         num_samples=500,
-        rng_key=jax.random.PRNGKey(272),
+        rng_key=jax.random.key(272),
         observed_hosp_admissions=model1_samp.sampled_observed_hosp_admissions,
     )
 
@@ -556,7 +556,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     model1.run(
         num_warmup=500,
         num_samples=500,
-        rng_key=jax.random.PRNGKey(272),
+        rng_key=jax.random.key(272),
         observed_hosp_admissions=obs,
         padding=5,
     )
