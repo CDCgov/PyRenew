@@ -300,6 +300,7 @@ out2 = hosp_model.plot_posterior(var="latent_infections", ylab="Latent Infection
 ## Round 2: Incorporating day-of-the-week effects
 
 We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect distribution. To do this, we will create a new instance of `RandomVariable` to model the effect. The class will be based on a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0. The random variable will be repeated for the number of weeks in the dataset.
+Note a similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
 
 ```{python}
 # | label: weekly-effect
