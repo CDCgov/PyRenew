@@ -11,6 +11,7 @@ import jax.random as jr
 import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
+import pyrenew.transformation as t
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
     Infections,
@@ -40,7 +41,11 @@ def test_rng_keys_produce_correct_samples():
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation()
-    rt = RtRandomWalkProcess()
+    rt = RtRandomWalkProcess(
+        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+        Rt_transform=t.ExpTransform().inv,
+        Rt_rw_dist=dist.Normal(0, 0.025),
+    )
 
     # set up base models for testing
     model_01 = RtInfectionsRenewalModel(
@@ -88,35 +93,35 @@ def test_rng_keys_produce_correct_samples():
     model_01.run(
         num_warmup=50,
         num_samples=50,
-        observed_infections=model_01_samp.sampled_observed_infections,
+        data_observed_infections=model_01_samp.observed_infections,
         rng_key=jr.key(54),  # rng_key specified, instance 1
         mcmc_args=dict(progress_bar=True),
     )
     model_02.run(
         num_warmup=50,
         num_samples=50,
-        observed_infections=model_01_samp.sampled_observed_infections,
+        data_observed_infections=model_01_samp.observed_infections,
         rng_key=jr.key(54),  # rng_key specified, instance 2
         mcmc_args=dict(progress_bar=True),
     )
     model_03.run(
         num_warmup=50,
         num_samples=50,
-        observed_infections=model_01_samp.sampled_observed_infections,
+        data_observed_infections=model_01_samp.observed_infections,
         rng_key=None,  # rng_key None, instance 1
         mcmc_args=dict(progress_bar=True),
     )
     model_04.run(
         num_warmup=50,
         num_samples=50,
-        observed_infections=model_01_samp.sampled_observed_infections,
+        data_observed_infections=model_01_samp.observed_infections,
         rng_key=None,  # rng_key None, instance 2
         mcmc_args=dict(progress_bar=True),
     )
     model_05.run(
         num_warmup=50,
         num_samples=50,
-        observed_infections=model_01_samp.sampled_observed_infections,
+        data_observed_infections=model_01_samp.observed_infections,
         rng_key=jr.key(74),  # different, but specified rng_key
         mcmc_args=dict(progress_bar=True),
     )
