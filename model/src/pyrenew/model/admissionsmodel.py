@@ -26,7 +26,7 @@ class HospModelSample(NamedTuple):
         The infected hospitalization rate. Defaults to None.
     latent_hosp_admissions : ArrayLike | None, optional
         The estimated latent hospitalizations. Defaults to None.
-    sampled_observed_hosp_admissions : ArrayLike | None, optional
+    observed_hosp_admissions : ArrayLike | None, optional
         The sampled or observed hospital admissions. Defaults to None.
     """
 
@@ -34,7 +34,7 @@ class HospModelSample(NamedTuple):
     latent_infections: ArrayLike | None = None
     infection_hosp_rate: float | None = None
     latent_hosp_admissions: ArrayLike | None = None
-    sampled_observed_hosp_admissions: ArrayLike | None = None
+    observed_hosp_admissions: ArrayLike | None = None
 
     def __repr__(self):
         return (
@@ -42,7 +42,7 @@ class HospModelSample(NamedTuple):
             f"latent_infections={self.latent_infections}, "
             f"infection_hosp_rate={self.infection_hosp_rate}, "
             f"latent_hosp_admissions={self.latent_hosp_admissions}, "
-            f"sampled_observed_hosp_admissions={self.sampled_observed_hosp_admissions}"
+            f"observed_hosp_admissions={self.observed_hosp_admissions}"
         )
 
 
@@ -162,7 +162,7 @@ class HospitalAdmissionsModel(Model):
     def sample_admissions_process(
         self,
         observed_hosp_admissions_mean: ArrayLike,
-        observed_hosp_admissions: ArrayLike,
+        data_observed_hosp_admissions: ArrayLike,
         name: str | None = None,
         **kwargs,
     ) -> tuple:
@@ -188,7 +188,7 @@ class HospitalAdmissionsModel(Model):
 
         return self.hosp_admission_obs_process_rv.sample(
             mu=observed_hosp_admissions_mean,
-            obs=observed_hosp_admissions,
+            obs=data_observed_hosp_admissions,
             name=name,
             **kwargs,
         )
@@ -196,7 +196,7 @@ class HospitalAdmissionsModel(Model):
     def sample(
         self,
         n_timepoints_to_simulate: int | None = None,
-        observed_hosp_admissions: ArrayLike | None = None,
+        data_observed_hosp_admissions: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
     ) -> HospModelSample:
@@ -207,7 +207,7 @@ class HospitalAdmissionsModel(Model):
         ----------
         n_timepoints_to_simulate : int, optional
             Number of timepoints to sample (passed to the basic renewal model).
-        observed_hosp_admissions : ArrayLike, optional
+        data_observed_hosp_admissions : ArrayLike, optional
             The observed hospitalization data (passed to the basic renewal
             model). Defaults to None (simulation, rather than fit).
         padding : int, optional
@@ -229,28 +229,28 @@ class HospitalAdmissionsModel(Model):
         """
         if (
             n_timepoints_to_simulate is None
-            and observed_hosp_admissions is None
+            and data_observed_hosp_admissions is None
         ):
             raise ValueError(
-                "Either n_timepoints_to_simulate or observed_hosp_admissions "
+                "Either n_timepoints_to_simulate or data_observed_hosp_admissions "
                 "must be passed."
             )
         elif (
             n_timepoints_to_simulate is not None
-            and observed_hosp_admissions is not None
+            and data_observed_hosp_admissions is not None
         ):
             raise ValueError(
-                "Cannot pass both n_timepoints_to_simulate and observed_hosp_admissions."
+                "Cannot pass both n_timepoints_to_simulate and data_observed_hosp_admissions."
             )
         elif n_timepoints_to_simulate is None:
-            n_timepoints = len(observed_hosp_admissions)
+            n_timepoints = len(data_observed_hosp_admissions)
         else:
             n_timepoints = n_timepoints_to_simulate
 
         # Getting the initial quantities from the basic model
         basic_model = self.basic_renewal.sample(
             n_timepoints_to_simulate=n_timepoints,
-            observed_infections=None,
+            data_observed_infections=None,
             padding=padding,
             **kwargs,
         )
@@ -266,33 +266,33 @@ class HospitalAdmissionsModel(Model):
         )
         i0_size = len(latent_hosp_admissions) - n_timepoints
         if self.hosp_admission_obs_process_rv is None:
-            sampled_observed_hosp_admissions = None
+            observed_hosp_admissions = None
         else:
-            if observed_hosp_admissions is None:
+            if data_observed_hosp_admissions is None:
                 (
-                    sampled_observed_hosp_admissions,
+                    observed_hosp_admissions,
                     *_,
                 ) = self.sample_admissions_process(
                     observed_hosp_admissions_mean=latent_hosp_admissions,
-                    observed_hosp_admissions=observed_hosp_admissions,
+                    data_observed_hosp_admissions=data_observed_hosp_admissions,
                     **kwargs,
                 )
             else:
-                observed_hosp_admissions = au.pad_x_to_match_y(
-                    observed_hosp_admissions,
+                data_observed_hosp_admissions = au.pad_x_to_match_y(
+                    data_observed_hosp_admissions,
                     latent_hosp_admissions,
                     jnp.nan,
                     pad_direction="start",
                 )
 
                 (
-                    sampled_observed_hosp_admissions,
+                    observed_hosp_admissions,
                     *_,
                 ) = self.sample_admissions_process(
                     observed_hosp_admissions_mean=latent_hosp_admissions[
                         i0_size + padding :
                     ],
-                    observed_hosp_admissions=observed_hosp_admissions[
+                    data_observed_hosp_admissions=data_observed_hosp_admissions[
                         i0_size + padding :
                     ],
                     **kwargs,
@@ -303,5 +303,5 @@ class HospitalAdmissionsModel(Model):
             latent_infections=basic_model.latent_infections,
             infection_hosp_rate=infection_hosp_rate,
             latent_hosp_admissions=latent_hosp_admissions,
-            sampled_observed_hosp_admissions=sampled_observed_hosp_admissions,
+            observed_hosp_admissions=observed_hosp_admissions,
         )
