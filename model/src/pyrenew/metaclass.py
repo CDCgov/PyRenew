@@ -342,7 +342,9 @@ class Model(metaclass=ABCMeta):
                 mcmc_args=mcmc_args,
             )
         if rng_key is None:
-            rand_int = np.random.randint(0, 100000)
+            rand_int = np.random.randint(
+                np.iinfo(np.int64).min, np.iinfo(np.int64).max
+            )
             rng_key = jr.key(rand_int)
 
         self.mcmc.run(rng_key=rng_key, **kwargs)
