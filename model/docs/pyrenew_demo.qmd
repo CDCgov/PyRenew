@@ -153,7 +153,7 @@ with seed(rng_seed=np.random.randint(1, 60)):
 x
 ```
 
-Visualizations of the single model output show (top) infections over the 30 time steps, (middle) hospital admissions over the 30 time steps, and (bottom)
+Visualizations of the single model output show (top) infections over the 30 time steps, (middle) hospital admissions over the 30 time steps, and observed hospital admissions (bottom)
 
 ```{python}
 # | label: fig-hosp
