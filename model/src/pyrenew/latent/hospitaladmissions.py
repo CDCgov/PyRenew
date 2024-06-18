@@ -178,13 +178,13 @@ class HospitalAdmissions(RandomVariable):
         infection_hosp_rate_t = infection_hosp_rate * latent_infections
 
         (
-            infection_to_admission_interval_rv,
+            infection_to_admission_interval,
             *_,
         ) = self.infection_to_admission_interval_rv.sample(**kwargs)
 
         latent_hospital_admissions = jnp.convolve(
             infection_hosp_rate_t,
-            infection_to_admission_interval_rv,
+            infection_to_admission_interval,
             mode="full",
         )[: infection_hosp_rate_t.shape[0]]
 
