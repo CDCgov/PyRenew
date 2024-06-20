@@ -67,10 +67,6 @@ docs_clean:
 	rm -rf docs/*_files/
 	rm -f $(MD_FILES) $(IPYNB_FILES) $(PY_FILES)
 
-test_images:
-	echo "Generating reference images for tests"
-	poetry run pytest --mpl-generate-path=src/test/baseline
-
 image-build: Dockerfile
 	$(CONTAINER) build -t pyrenew:latest .
 

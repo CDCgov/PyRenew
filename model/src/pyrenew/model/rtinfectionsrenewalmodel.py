@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
+import numpyro as npro
 import pyrenew.arrayutils as au
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
@@ -19,7 +20,7 @@ class RtInfectionsRenewalSample(NamedTuple):
 
     Attributes
     ----------
-    Rt : float | None, optional
+    Rt : ArrayLike | None, optional
         The reproduction number over time. Defaults to None.
     latent_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
@@ -27,13 +28,14 @@ class RtInfectionsRenewalSample(NamedTuple):
         The sampled infections. Defaults to None.
     """
 
-    Rt: float | None = None
+    Rt: ArrayLike | None = None
     latent_infections: ArrayLike | None = None
     observed_infections: ArrayLike | None = None
 
     def __repr__(self):
         return (
-            f"RtInfectionsRenewalSample(Rt={self.Rt}, "
+            f"RtInfectionsRenewalSample("
+            f"Rt={self.Rt}, "
             f"latent_infections={self.latent_infections}, "
             f"observed_infections={self.observed_infections})"
         )
@@ -311,57 +313,41 @@ class RtInfectionsRenewalModel(Model):
 
         # Sampling initial infections
         I0, *_ = self.sample_I0(**kwargs)
-        I0_size = I0.size
         # Sampling from the latent process
-        latent_infections, *_ = self.sample_infections_latent(
+        post_seed_latent_infections, *_ = self.sample_infections_latent(
             Rt=Rt,
             gen_int=gen_int,
             I0=I0,
             **kwargs,
         )
 
-        if data_observed_infections is None:
-            (
-                observed_infections,
-                *_,
-            ) = self.sample_infection_obs_process(
-                observed_infections_mean=latent_infections,
-                data_observed_infections=data_observed_infections,
-                **kwargs,
-            )
-        else:
-            data_observed_infections = au.pad_x_to_match_y(
-                data_observed_infections,
-                latent_infections,
-                jnp.nan,
-                pad_direction="start",
-            )
+        if data_observed_infections is not None:
+            data_observed_infections = data_observed_infections[padding:]
 
-            (
-                observed_infections,
-                *_,
-            ) = self.sample_infection_obs_process(
-                observed_infections_mean=latent_infections[
-                    I0_size + padding :
-                ],
-                data_observed_infections=data_observed_infections[
-                    I0_size + padding :
-                ],
-                **kwargs,
-            )
+        observed_infections, *_ = self.sample_infection_obs_process(
+            observed_infections_mean=post_seed_latent_infections[padding:],
+            data_observed_infections=data_observed_infections,
+            **kwargs,
+        )
+
+        all_latent_infections = jnp.hstack([I0, post_seed_latent_infections])
+        npro.deterministic("latent_infections", all_latent_infections)
 
         observed_infections = au.pad_x_to_match_y(
             observed_infections,
-            latent_infections,
+            all_latent_infections,
+            jnp.nan,
+            pad_direction="start",
+        )
+        Rt = au.pad_x_to_match_y(
+            Rt,
+            all_latent_infections,
             jnp.nan,
             pad_direction="start",
         )
 
-        Rt = au.pad_x_to_match_y(
-            Rt, latent_infections, jnp.nan, pad_direction="start"
-        )
         return RtInfectionsRenewalSample(
             Rt=Rt,
-            latent_infections=latent_infections,
+            latent_infections=all_latent_infections,
             observed_infections=observed_infections,
         )
