@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import numpyro as npro
 import pyrenew.latent.infection_functions as inf
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
@@ -18,11 +17,11 @@ class InfectionsSample(NamedTuple):
 
     Attributes
     ----------
-    infections : ArrayLike | None, optional
+    post_seed_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
     """
 
-    infections: ArrayLike | None = None
+    post_seed_infections: ArrayLike | None = None
 
     def __repr__(self):
         return f"InfectionsSample(infections={self.infections})"
@@ -103,25 +102,21 @@ class Infections(RandomVariable):
         InfectionsSample
             Named tuple with "infections".
         """
-
-        gen_int_rev = jnp.flip(gen_int)
-
-        if I0.size < gen_int_rev.size:
+        if I0.size < gen_int.size:
             raise ValueError(
                 "Initial infections vector must be at least as long as "
                 "the generation interval. "
                 f"Initial infections vector length: {I0.size}, "
-                f"generation interval length: {gen_int_rev.size}."
+                f"generation interval length: {gen_int.size}."
             )
-        else:
-            I0_vec = I0[-gen_int_rev.size :]
 
-        all_infections = inf.compute_infections_from_rt(
-            I0=I0_vec,
+        gen_int_rev = jnp.flip(gen_int)
+        recent_I0 = I0[-gen_int_rev.size :]
+
+        post_seed_infections = inf.compute_infections_from_rt(
+            I0=recent_I0,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        npro.deterministic(self.infections_mean_varname, all_infections)
-
-        return InfectionsSample(all_infections)
+        return InfectionsSample(post_seed_infections)

@@ -24,34 +24,29 @@ class RtRandomWalkProcess(RandomVariable):
 
     def __init__(
         self,
-        Rt0_dist: dist.Distribution = dist.TruncatedNormal(
-            loc=1.2, scale=0.2, low=0
-        ),
+        Rt0_dist: dist.Distribution,
+        Rt_rw_dist: dist.Distribution,
         Rt_transform: t.Transform | None = None,
-        Rt_rw_dist: dist.Distribution = dist.Normal(0, 0.025),
     ) -> None:
         """
         Default constructor
 
         Parameters
         ----------
-        Rt0_dist : dist.Distribution, optional
-            Initial distribution of Rt, defaults to
-            dist.TruncatedNormal( loc=1.2, scale=0.2, low=0 )
-
+        Rt0_dist : dist.Distribution
+            Initial distribution of Rt.
+        Rt_rw_dist : dist.Distribution
+            Randomwalk process.
         Rt_transform : numpyro.distributions.transformers.Transform, optional
-            Transformation applied to the sampled Rt0, defaults
-            to ExpTransform().inv.
-        Rt_rw_dist : dist.Distribution, optional
-            Randomwalk process, defaults to dist.Normal(0, 0.025)
+            Transformation applied to the sampled Rt0. If None, the identity
+            transformation is used.
 
         Returns
         -------
         None
         """
-
         if Rt_transform is None:
-            Rt_transform = t.ExpTransform().inv
+            Rt_transform = t.IdentityTransform()
 
         RtRandomWalkProcess.validate(Rt0_dist, Rt_transform, Rt_rw_dist)
 
@@ -95,7 +90,7 @@ class RtRandomWalkProcess(RandomVariable):
 
     def sample(
         self,
-        duration: int,
+        n_timepoints: int,
         **kwargs,
     ) -> tuple:
         """
@@ -103,7 +98,7 @@ class RtRandomWalkProcess(RandomVariable):
 
         Parameters
         ----------
-        duration : int
+        n_timepoints : int
             Number of timepoints to sample.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
@@ -112,7 +107,7 @@ class RtRandomWalkProcess(RandomVariable):
         Returns
         -------
         tuple
-            With a single array of shape (duration,).
+            With a single array of shape (n_timepoints,).
         """
 
         Rt0 = npro.sample("Rt0", self.Rt0_dist)
@@ -120,7 +115,7 @@ class RtRandomWalkProcess(RandomVariable):
         Rt0_trans = self.Rt_transform(Rt0)
         Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)
         Rt_trans_ts, *_ = Rt_trans_proc.sample(
-            duration=duration,
+            n_timepoints=n_timepoints,
             name="Rt_transformed_rw",
             init=Rt0_trans,
         )

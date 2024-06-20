@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
+import numpyro as npro
 import pyrenew.arrayutils as au
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
@@ -19,23 +20,24 @@ class RtInfectionsRenewalSample(NamedTuple):
 
     Attributes
     ----------
-    Rt : float | None, optional
+    Rt : ArrayLike | None, optional
         The reproduction number over time. Defaults to None.
     latent_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
-    sampled_infections : ArrayLike | None, optional
+    observed_infections : ArrayLike | None, optional
         The sampled infections. Defaults to None.
     """
 
-    Rt: float | None = None
+    Rt: ArrayLike | None = None
     latent_infections: ArrayLike | None = None
-    sampled_infections: ArrayLike | None = None
+    observed_infections: ArrayLike | None = None
 
     def __repr__(self):
         return (
-            f"RtInfectionsRenewalSample(Rt={self.Rt}, "
+            f"RtInfectionsRenewalSample("
+            f"Rt={self.Rt}, "
             f"latent_infections={self.latent_infections}, "
-            f"sampled_infections={self.sampled_infections})"
+            f"observed_infections={self.observed_infections})"
         )
 
 
@@ -49,28 +51,28 @@ class RtInfectionsRenewalModel(Model):
 
     def __init__(
         self,
-        latent_infections: RandomVariable,
-        gen_int: RandomVariable,
-        I0: RandomVariable,
-        Rt_process: RandomVariable,
-        observation_process: RandomVariable = None,
+        latent_infections_rv: RandomVariable,
+        gen_int_rv: RandomVariable,
+        I0_rv: RandomVariable,
+        Rt_process_rv: RandomVariable,
+        infection_obs_process_rv: RandomVariable = None,
     ) -> None:
         """
         Default constructor
 
         Parameters
         ----------
-        latent_infections : RandomVariable
+        latent_infections_rv : RandomVariable
             Infections latent process (e.g.,
             pyrenew.latent.Infections.).
-        gen_int : RandomVariable
+        gen_int_rv : RandomVariable
             The generation interval.
-        I0 : RandomVariable
+        I0_rv : RandomVariable
             The initial infections.
-        Rt_process : RandomVariable
+        Rt_process_rv : RandomVariable
             The sample function of the process should return a tuple where the
             first element is the drawn Rt.
-        observation_process : RandomVariable
+        infection_obs_process_rv : RandomVariable
             Infections observation process (e.g.,
             pyrenew.observations.Poisson.).
 
@@ -79,30 +81,30 @@ class RtInfectionsRenewalModel(Model):
         None
         """
 
-        if observation_process is None:
-            observation_process = NullObservation()
+        if infection_obs_process_rv is None:
+            infection_obs_process_rv = NullObservation()
 
         RtInfectionsRenewalModel.validate(
-            gen_int=gen_int,
-            i0=I0,
-            latent_infections=latent_infections,
-            observation_process=observation_process,
-            Rt_process=Rt_process,
+            gen_int_rv=gen_int_rv,
+            I0_rv=I0_rv,
+            latent_infections_rv=latent_infections_rv,
+            infection_obs_process_rv=infection_obs_process_rv,
+            Rt_process_rv=Rt_process_rv,
         )
 
-        self.gen_int = gen_int
-        self.i0 = I0
-        self.latent_infections = latent_infections
-        self.observation_process = observation_process
-        self.Rt_process = Rt_process
+        self.gen_int_rv = gen_int_rv
+        self.I0_rv = I0_rv
+        self.latent_infections_rv = latent_infections_rv
+        self.infection_obs_process_rv = infection_obs_process_rv
+        self.Rt_process_rv = Rt_process_rv
 
     @staticmethod
     def validate(
-        gen_int: any,
-        i0: any,
-        latent_infections: any,
-        observation_process: any,
-        Rt_process: any,
+        gen_int_rv: any,
+        I0_rv: any,
+        latent_infections_rv: any,
+        infection_obs_process_rv: any,
+        Rt_process_rv: any,
     ) -> None:
         """
         Verifies types and status (RV) of the generation interval, initial
@@ -110,15 +112,15 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        gen_int : any
+        gen_int_rv : any
             The generation interval. Expects RandomVariable.
-        i0 : any
+        I0_rv : any
             The initial infections. Expects RandomVariable.
-        latent_infections : any
+        latent_infections_rv : any
             Infections latent process. Expects RandomVariable.
-        observation_process : any
+        infection_obs_process_rv : any
             Infections observation process. Expects RandomVariable.
-        Rt_process : any
+        Rt_process_rv : any
             The sample function of the process should return a tuple where the
             first element is the drawn Rt. Expects RandomVariable.
 
@@ -130,11 +132,11 @@ class RtInfectionsRenewalModel(Model):
         --------
         _assert_sample_and_rtype : Perform type-checking and verify RV
         """
-        _assert_sample_and_rtype(gen_int, skip_if_none=False)
-        _assert_sample_and_rtype(i0, skip_if_none=False)
-        _assert_sample_and_rtype(latent_infections, skip_if_none=False)
-        _assert_sample_and_rtype(observation_process, skip_if_none=False)
-        _assert_sample_and_rtype(Rt_process, skip_if_none=False)
+        _assert_sample_and_rtype(gen_int_rv, skip_if_none=False)
+        _assert_sample_and_rtype(I0_rv, skip_if_none=False)
+        _assert_sample_and_rtype(latent_infections_rv, skip_if_none=False)
+        _assert_sample_and_rtype(infection_obs_process_rv, skip_if_none=False)
+        _assert_sample_and_rtype(Rt_process_rv, skip_if_none=False)
         return None
 
     def sample_rt(
@@ -154,7 +156,7 @@ class RtInfectionsRenewalModel(Model):
         -------
         tuple
         """
-        return self.Rt_process.sample(**kwargs)
+        return self.Rt_process_rv.sample(**kwargs)
 
     def sample_gen_int(
         self,
@@ -173,9 +175,9 @@ class RtInfectionsRenewalModel(Model):
         -------
         tuple
         """
-        return self.gen_int.sample(**kwargs)
+        return self.gen_int_rv.sample(**kwargs)
 
-    def sample_i0(
+    def sample_I0(
         self,
         **kwargs,
     ) -> tuple:
@@ -186,13 +188,13 @@ class RtInfectionsRenewalModel(Model):
         ----------
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
-            sample_i0 calls, should there be any.
+            sample_I0 calls, should there be any.
 
         Returns
         -------
         tuple
         """
-        return self.i0.sample(**kwargs)
+        return self.I0_rv.sample(**kwargs)
 
     def sample_infections_latent(
         self,
@@ -211,12 +213,12 @@ class RtInfectionsRenewalModel(Model):
         -------
         tuple
         """
-        return self.latent_infections.sample(**kwargs)
+        return self.latent_infections_rv.sample(**kwargs)
 
-    def sample_infections_obs(
+    def sample_infection_obs_process(
         self,
-        predicted: ArrayLike,
-        observed_infections: ArrayLike | None = None,
+        observed_infections_mean: ArrayLike,
+        data_observed_infections: ArrayLike | None = None,
         name: str | None = None,
         **kwargs,
     ) -> tuple:
@@ -227,9 +229,9 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        predicted : ArrayLike
-            The predicted infecteds.
-        observed_infections : ArrayLike | None, optional
+        observed_infections_mean : ArrayLike
+            The mean of the observed infections distribution.
+        data_observed_infections : ArrayLike | None, optional
             The observed infection values, if any, for inference. Defaults to None.
         name : str | None, optional
             Name of the random variable passed to the RandomVariable. Defaults to None.
@@ -241,9 +243,9 @@ class RtInfectionsRenewalModel(Model):
         -------
         tuple
         """
-        return self.observation_process.sample(
-            predicted=predicted,
-            obs=observed_infections,
+        return self.infection_obs_process_rv.sample(
+            mu=observed_infections_mean,
+            obs=data_observed_infections,
             name=name,
             **kwargs,
         )
@@ -251,7 +253,7 @@ class RtInfectionsRenewalModel(Model):
     def sample(
         self,
         n_timepoints_to_simulate: int | None = None,
-        observed_infections: ArrayLike | None = None,
+        data_observed_infections: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
     ) -> RtInfectionsRenewalSample:
@@ -262,7 +264,7 @@ class RtInfectionsRenewalModel(Model):
         ----------
         n_timepoints_to_simulate : int, optional
             Number of timepoints to sample.
-        observed_infections : ArrayLike | None, optional
+        data_observed_infections : ArrayLike | None, optional
             Observed infections. Defaults to None.
         padding : int, optional
             Number of padding timepoints to add to the beginning of the
@@ -273,33 +275,36 @@ class RtInfectionsRenewalModel(Model):
 
         Notes
         -----
-        Either `observed_admissions` or `n_timepoints_to_simulate` must be specified, not both.
+        Either `data_observed_infections` or `n_timepoints_to_simulate` must be specified, not both.
 
         Returns
         -------
         RtInfectionsRenewalSample
         """
 
-        if n_timepoints_to_simulate is None and observed_infections is None:
+        if (
+            n_timepoints_to_simulate is None
+            and data_observed_infections is None
+        ):
             raise ValueError(
-                "Either n_timepoints_to_simulate or observed_infections "
+                "Either n_timepoints_to_simulate or data_observed_infections "
                 "must be passed."
             )
         elif (
             n_timepoints_to_simulate is not None
-            and observed_infections is not None
+            and data_observed_infections is not None
         ):
             raise ValueError(
-                "Cannot pass both n_timepoints_to_simulate and observed_infections."
+                "Cannot pass both n_timepoints_to_simulate and data_observed_infections."
             )
         elif n_timepoints_to_simulate is None:
-            n_timepoints = len(observed_infections)
+            n_timepoints = len(data_observed_infections)
         else:
             n_timepoints = n_timepoints_to_simulate
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.sample_rt(
-            duration=n_timepoints,
+            n_timepoints=n_timepoints,
             **kwargs,
         )
 
@@ -307,45 +312,42 @@ class RtInfectionsRenewalModel(Model):
         gen_int, *_ = self.sample_gen_int(**kwargs)
 
         # Sampling initial infections
-        i0, *_ = self.sample_i0(**kwargs)
-
-        # Padding i0 to match gen_int
-        # PADDING SHOULD BE REMOVED ONCE
-        # https://github.com/CDCgov/multisignal-epi-inference/pull/124
-        # is merged.
-        # SEE ALSO:
-        # https://github.com/CDCgov/multisignal-epi-inference/pull/123#discussion_r1612337288
-        i0 = au.pad_x_to_match_y(x=i0, y=gen_int, fill_value=0.0)
-
+        I0, *_ = self.sample_I0(**kwargs)
         # Sampling from the latent process
-        latent, *_ = self.sample_infections_latent(
+        post_seed_latent_infections, *_ = self.sample_infections_latent(
             Rt=Rt,
             gen_int=gen_int,
-            I0=i0,
+            I0=I0,
             **kwargs,
         )
 
-        # Using the predicted infections to sample from the observation process
-        if (observed_infections is not None) and (padding > 0):
-            sampled_pad = jnp.repeat(jnp.nan, padding)
+        if data_observed_infections is not None:
+            data_observed_infections = data_observed_infections[padding:]
 
-            sampled_obs, *_ = self.sample_infections_obs(
-                predicted=latent[padding:],
-                observed_infections=observed_infections[padding:],
-                **kwargs,
-            )
+        observed_infections, *_ = self.sample_infection_obs_process(
+            observed_infections_mean=post_seed_latent_infections[padding:],
+            data_observed_infections=data_observed_infections,
+            **kwargs,
+        )
 
-            sampled = jnp.hstack([sampled_pad, sampled_obs])
+        all_latent_infections = jnp.hstack([I0, post_seed_latent_infections])
+        npro.deterministic("latent_infections", all_latent_infections)
 
-        else:
-            sampled, *_ = self.sample_infections_obs(
-                predicted=latent,
-                observed_infections=observed_infections,
-                **kwargs,
-            )
+        observed_infections = au.pad_x_to_match_y(
+            observed_infections,
+            all_latent_infections,
+            jnp.nan,
+            pad_direction="start",
+        )
+        Rt = au.pad_x_to_match_y(
+            Rt,
+            all_latent_infections,
+            jnp.nan,
+            pad_direction="start",
+        )
 
         return RtInfectionsRenewalSample(
             Rt=Rt,
-            latent_infections=latent,
-            sampled_infections=sampled,
+            latent_infections=all_latent_infections,
+            observed_infections=observed_infections,
         )

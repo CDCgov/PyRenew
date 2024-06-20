@@ -6,7 +6,8 @@ from __future__ import annotations
 import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
-from pyrenew.convolve import new_convolve_scanner, new_double_scanner
+from pyrenew.convolve import new_convolve_scanner, new_double_convolve_scanner
+from pyrenew.transformation import ExpTransform, IdentityTransform
 
 
 def compute_infections_from_rt(
@@ -40,7 +41,9 @@ def compute_infections_from_rt(
     ArrayLike
         The timeseries of infections, as a JAX array
     """
-    incidence_func = new_convolve_scanner(reversed_generation_interval_pmf)
+    incidence_func = new_convolve_scanner(
+        reversed_generation_interval_pmf, IdentityTransform()
+    )
 
     latest, all_infections = jax.lax.scan(f=incidence_func, init=I0, xs=Rt)
 
@@ -75,6 +78,8 @@ def logistic_susceptibility_adjustment(
     float
         The adjusted value of I(t)
 
+    References
+    ----------
     .. [1] Bhatt, Samir, et al.
     "Semi-mechanistic Bayesian modelling of
     COVID-19 with renewal processes."
@@ -169,12 +174,12 @@ def compute_infections_from_rt_with_feedback(
     reductions in contact rate due to awareness of high incidence,
     et cetera.
     """
-    feedback_scanner = new_double_scanner(
-        dists=(
+    feedback_scanner = new_double_convolve_scanner(
+        arrays_to_convolve=(
             reversed_infection_feedback_pmf,
             reversed_generation_interval_pmf,
         ),
-        transforms=(jnp.exp, lambda x: x),
+        transforms=(ExpTransform(), IdentityTransform()),
     )
     latest, infs_and_R_adj = jax.lax.scan(
         f=feedback_scanner,

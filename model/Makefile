@@ -3,7 +3,6 @@ CONTAINER=podman
 # CONTAINER_REGISTRY=
 # CONTAINER_URL=
 
-
 # Help target listing the available targets
 help:
 	@echo "Available targets"
@@ -12,8 +11,10 @@ help:
 	@echo "  install        : Install the project dependencies"
 	@echo "  test           : Run the tests"
 	@echo "  docs           : Render the documentation"
-	@echo "  clean          : Clean the generated files"
-	@echo "  docs/notebooks : Convert the Quarto files to Jupyter notebooks"
+	@echo "  docs_clean     : Remove the generated documentation files"
+	@echo "  docs_md        : Convert the Quarto files to rendered Markdown files"
+	@echo "  docs_ipynb     : Convert the Quarto files to Jupyter notebooks"
+	@echo "  docs_py        : Convert the Jupyter notebooks to Python scripts"
 	@echo "  test_images    : Generate reference images for tests"
 	@echo "  image-build    : Build the podman/Docker image"
 	@echo "  image-run      : Run the podman/Docker image"
@@ -25,44 +26,46 @@ install:
 test:
 	poetry run pytest --mpl --mpl-default-tolerance=10
 
-docs: docs/pyrenew_demo.md docs/getting-started.md \
-	docs/example-with-datasets.md docs/extending_pyrenew.md
+# Pattern rule to build a markdown file from a qmd file
+docs/%.md: docs/%.qmd
+	poetry run quarto render $<
 
-docs/pyrenew_demo.md: docs/pyrenew_demo.qmd
-	poetry run quarto render docs/pyrenew_demo.qmd
+# Pattern rule to build a notebook file from a qmd file
+docs/%.ipynb: docs/%.qmd
+	poetry run quarto convert $< --output $@
 
-docs/getting-started.md: docs/getting-started.qmd
-	poetry run quarto render docs/getting-started.qmd
+# Pattern rule to build a Python file from a notebook file
+docs/%.py: docs/%.ipynb
+	sed -i '' 's/"cell_type": "raw"/"cell_type": "markdown"/g' $<
+	poetry run jupyter nbconvert --to python $<
 
-docs/example-with-datasets.md: docs/example-with-datasets.qmd
-	poetry run quarto render docs/example-with-datasets.qmd
+# Automatically get all .qmd files in the docs directory
+QMD_FILES := $(wildcard docs/*.qmd)
 
-docs/extending_pyrenew.md: docs/extending_pyrenew.qmd
-	poetry run quarto render docs/extending_pyrenew.qmd
+# Derive the corresponding markdown files
+MD_FILES := $(QMD_FILES:.qmd=.md)
 
-docs/py: docs/notebooks
-	for i in docs/*.ipynb; do \
-		jupyter nbconvert --to python $$i ; \
-	done
+# Derive the corresponding notebook files
+IPYNB_FILES := $(QMD_FILES:.qmd=.ipynb)
 
-docs/notebooks:
-	for i in docs/*.qmd; do \
-		if [ $$i -nt $$(basename $$i .qmd).ipynb ]; then \
-			quarto convert $$i --output docs/$$(basename $$i .qmd).ipynb ; \
-		fi \
-	done
+# Derive the corresponding Python files
+PY_FILES := $(IPYNB_FILES:.ipynb=.py)
 
-test_images:
-	echo "Generating reference images for tests"
-	poetry run pytest --mpl-generate-path=src/test/baseline
+# Target to build all docs
+docs: docs_md docs_ipynb docs_py
 
-clean:
+# Target to build all markdown files
+docs_md: $(MD_FILES)
+
+# Target to build all notebook files
+docs_ipynb: $(NOTEBOOK_FILES)
+
+# Target to build all Python files
+docs_py: $(PY_FILES)
+
+docs_clean:
 	rm -rf docs/*_files/
-	for i in .py, .md, .ipynb; do \
-		rm -f docs/getting-started.$$i; \
-		rm -f docs/pyrenew_demo.$$i; \
-		rm -f docs/example-with-datasets.$$i; \
-	done
+	rm -f $(MD_FILES) $(IPYNB_FILES) $(PY_FILES)
 
 image-build: Dockerfile
 	$(CONTAINER) build -t pyrenew:latest .
@@ -85,5 +88,5 @@ image-push:
 	fi
 	$(CONTAINER) push pyrenew:latest $(CONTAINER_URL)/pyrenew:latest
 
-.PHONY: install test docs clean docs/notebooks docs/py test_images image-build \
-	image-run
+.PHONY: install test docs docs_md docs_ipynb docs_py docs_clean test_images \
+		image-build image-run

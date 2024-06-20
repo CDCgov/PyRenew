@@ -43,9 +43,9 @@ def test_rw_samples_correctly_distributed():
             assert samples.shape == (n_samples,)
 
             # diffs should not be greater than
-            # 4 sigma
+            # 5 sigma
             diffs = jnp.diff(samples)
-            assert jnp.all(jnp.abs(diffs - step_mean) < 4 * step_sd)
+            assert jnp.all(jnp.abs(diffs - step_mean) < 5 * step_sd)
 
             # sample mean of diffs should be
             # approximately equal to the

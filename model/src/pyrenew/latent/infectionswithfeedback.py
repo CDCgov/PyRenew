@@ -17,17 +17,17 @@ class InfectionsRtFeedbackSample(NamedTuple):
 
     Attributes
     ----------
-    infections : ArrayLike | None, optional
+    post_seed_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
     rt : ArrayLike | None, optional
         The adjusted reproduction number. Defaults to None.
     """
 
-    infections: ArrayLike | None = None
+    post_seed_infections: ArrayLike | None = None
     rt: ArrayLike | None = None
 
     def __repr__(self):
-        return f"InfectionsSample(infections={self.infections}, rt={self.rt})"
+        return f"InfectionsSample(post_seed_infections={self.post_seed_infections}, rt={self.rt})"
 
 
 class InfectionsWithFeedback(RandomVariable):
@@ -36,6 +36,16 @@ class InfectionsWithFeedback(RandomVariable):
 
     This class computes infections, given Rt, initial infections, and generation
     interval.
+
+    Parameters
+    ----------
+    infection_feedback_strength : RandomVariable
+        Infection feedback strength.
+    infection_feedback_pmf : RandomVariable
+        Infection feedback pmf.
+    infections_mean_varname : str, optional
+        Name to be assigned to the deterministic variable in the model.
+        Defaults to "latent_infections".
 
     Notes
     -----
@@ -129,7 +139,7 @@ class InfectionsWithFeedback(RandomVariable):
             Reproduction number.
         I0 : ArrayLike
             Initial infections, as an array
-            at least as long as the
+            at least as long as the generation
             interval PMF.
         gen_int : ArrayLike
             Generation interval PMF.
@@ -177,7 +187,10 @@ class InfectionsWithFeedback(RandomVariable):
 
         inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
-        all_infections, Rt_adj = inf.compute_infections_from_rt_with_feedback(
+        (
+            post_seed_infections,
+            Rt_adj,
+        ) = inf.compute_infections_from_rt_with_feedback(
             I0=I0,
             Rt_raw=Rt,
             infection_feedback_strength=inf_feedback_strength,
@@ -185,9 +198,11 @@ class InfectionsWithFeedback(RandomVariable):
             reversed_infection_feedback_pmf=inf_fb_pmf_rev,
         )
 
+        # Appending initial infections to the infections
+
         npro.deterministic("Rt_adjusted", Rt_adj)
 
         return InfectionsRtFeedbackSample(
-            infections=all_infections,
+            post_seed_infections=post_seed_infections,
             rt=Rt_adj,
         )

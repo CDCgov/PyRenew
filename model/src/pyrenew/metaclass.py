@@ -9,7 +9,9 @@ from typing import NamedTuple, get_type_hints
 
 import jax
 import jax.numpy as jnp
+import jax.random as jr
 import matplotlib.pyplot as plt
+import numpy as np
 import numpyro as npro
 import polars as pl
 from jax.typing import ArrayLike
@@ -312,7 +314,7 @@ class Model(metaclass=ABCMeta):
         self,
         num_warmup,
         num_samples,
-        rng_key: jax.random.PRNGKey = jax.random.PRNGKey(54),
+        rng_key: ArrayLike | None = None,
         nuts_args: dict = None,
         mcmc_args: dict = None,
         **kwargs,
@@ -339,6 +341,11 @@ class Model(metaclass=ABCMeta):
                 nuts_args=nuts_args,
                 mcmc_args=mcmc_args,
             )
+        if rng_key is None:
+            rand_int = np.random.randint(
+                np.iinfo(np.int64).min, np.iinfo(np.int64).max
+            )
+            rng_key = jr.key(rand_int)
 
         self.mcmc.run(rng_key=rng_key, **kwargs)
 

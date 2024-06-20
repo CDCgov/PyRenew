@@ -2,7 +2,7 @@
 name = "pyrenew"
 version = "0.1.0"
 description = "Pyrenew: a package for Bayesian renewal modeling with JAX and Numpyro"
-authors = ["Dylan H. Morris <dylan@dylanhmorris.com>"]
+authors = ["CFA"]
 license = "Apache 2.0"
 readme = "README.md"
 include = [{path = "datasets/*.tsv"}]
@@ -10,11 +10,11 @@ exclude = [{path = "datasets/*.rds"}]
 
 
 [tool.poetry.dependencies]
-python = "^3.10"
-numpyro = "^0.13.2"
-jax = "^0.4.24"
+python = "^3.12"
+numpyro = "^0.15.0"
+jax = "^0.4.25"
 numpy = "^1.26.4"
-polars = "^0.20.13"
+polars = "^0.20.16"
 pillow = "^10.3.0" # See #56 on CDCgov/multisignal-epi-inference
 nbconvert = "^7.16.4"
 pytest-mpl = "^0.17.0"
@@ -41,6 +41,13 @@ checks = [
     "PR04",
     "PR07",
     "RT01"
+]
+ignore = [
+    "ES01",
+    "SA01",
+    "EX01",
+    "SS06",
+    "RT05"
 ]
 exclude = [  # don't report on objects that match any of these regex
     '\.undocumented_method$',

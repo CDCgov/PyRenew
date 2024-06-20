@@ -35,6 +35,16 @@ def test_arrayutils_pad_to_match():
     with pytest.raises(ValueError):
         x_pad, y_pad = au.pad_to_match(x, y, fix_y=True)
 
+    # Verify function works with both padding directions
+    x_pad, y_pad = au.pad_to_match(x, y, pad_direction="start")
+
+    assert x_pad.size == y_pad.size
+    assert x_pad.size == 3
+
+    # Verify function raises an error when pad_direction is not "start" or "end"
+    with pytest.raises(ValueError):
+        x_pad, y_pad = au.pad_to_match(x, y, pad_direction="middle")
+
 
 def test_arrayutils_pad_x_to_match_y():
     """

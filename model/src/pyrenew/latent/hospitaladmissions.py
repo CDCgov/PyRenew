@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, NamedTuple, Optional
+from typing import Any, NamedTuple
 
 import jax.numpy as jnp
 import numpyro as npro
@@ -12,7 +12,7 @@ from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 
 
-class HospAdmissionsSample(NamedTuple):
+class HospitalAdmissionsSample(NamedTuple):
     """
     A container to hold the output of `latent.HospAdmissions.sample()`.
 
@@ -20,15 +20,15 @@ class HospAdmissionsSample(NamedTuple):
     ----------
     infection_hosp_rate : float, optional
         The infection-to-hospitalization rate. Defaults to None.
-    predicted : ArrayLike or None
-        The predicted number of hospital admissions. Defaults to None.
+    latent_hospital_admissions : ArrayLike or None
+        The computed number of hospital admissions. Defaults to None.
     """
 
     infection_hosp_rate: float | None = None
-    predicted: ArrayLike | None = None
+    latent_hospital_admissions: ArrayLike | None = None
 
     def __repr__(self):
-        return f"HospAdmissionsSample(infection_hosp_rate={self.IRH}, predicted={self.predicted})"
+        return f"HospitalAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, latent_hospital_admissions={self.latent_hospital_admissions})"
 
 
 class HospitalAdmissions(RandomVariable):
@@ -49,7 +49,7 @@ class HospitalAdmissions(RandomVariable):
     by the probability of being hospitalized :math:`p_\mathrm{hosp}(t)`.
 
     To account for day-of-week effects in hospital reporting, we use an
-    estimated *weekday effect* :math:`\omega(t)`. If :math:`t` and :math:`t'`
+    estimated *day of the week effect* :math:`\omega(t)`. If :math:`t` and :math:`t'`
     are the same day of the week, :math:`\omega(t) = \omega(t')`. The seven
     values that :math:`\omega(t)` takes on are constrained to have mean 1.
 
@@ -63,29 +63,29 @@ class HospitalAdmissions(RandomVariable):
 
     def __init__(
         self,
-        infection_to_admission_interval: RandomVariable,
-        infect_hosp_rate_dist: RandomVariable,
-        admissions_predicted_varname: str = "predicted_admissions",
-        weekday_effect_dist: Optional[RandomVariable] = None,
-        hosp_report_prob_dist: Optional[RandomVariable] = None,
+        infection_to_admission_interval_rv: RandomVariable,
+        infect_hosp_rate_rv: RandomVariable,
+        latent_hospital_admissions_varname: str = "latent_hospital_admissions",
+        day_of_week_effect_rv: RandomVariable | None = None,
+        hosp_report_prob_rv: RandomVariable | None = None,
     ) -> None:
         """
         Default constructor
 
         Parameters
         ----------
-        infection_to_admission_interval : RandomVariable
+        infection_to_admission_interval_rv : RandomVariable
             pmf for reporting (informing) hospital admissions (see
             pyrenew.observations.Deterministic).
-        infect_hosp_rate_dist : RandomVariable
-            Infection to hospitalization rate distribution.
-        admissions_predicted_varname : str
+        infect_hosp_rate_rv : RandomVariable
+            Infection to hospitalization rate random variable.
+        latent_hospital_admissions_varname : str
             Name to assign to the deterministic component in numpyro of
-            predicted hospital admissions.
-        weekday_effect_dist : RandomVariable, optional
-            Weekday effect.
-        hosp_report_prob_dist  : RandomVariable, optional
-            Distribution or fixed value for the hospital admission reporting
+            observed hospital admissions.
+        day_of_week_effect_rv : RandomVariable, optional
+            Day of the week effect.
+        hosp_report_prob_rv  : RandomVariable, optional
+            Random variable for the hospital admission reporting
             probability. Defaults to 1 (full reporting).
 
         Returns
@@ -93,31 +93,34 @@ class HospitalAdmissions(RandomVariable):
         None
         """
 
-        if weekday_effect_dist is None:
-            weekday_effect_dist = DeterministicVariable(1, "weekday_effect")
-        if hosp_report_prob_dist is None:
-            hosp_report_prob_dist = DeterministicVariable(
-                1, "hosp_report_prob"
-            )
+        if day_of_week_effect_rv is None:
+            day_of_week_effect_rv = DeterministicVariable(1, "weekday_effect")
+        if hosp_report_prob_rv is None:
+            hosp_report_prob_rv = DeterministicVariable(1, "hosp_report_prob")
 
         HospitalAdmissions.validate(
-            infect_hosp_rate_dist,
-            weekday_effect_dist,
-            hosp_report_prob_dist,
+            infect_hosp_rate_rv,
+            day_of_week_effect_rv,
+            hosp_report_prob_rv,
         )
 
-        self.admissions_predicted_varname = admissions_predicted_varname
+        self.latent_hospital_admissions_varname = (
+            latent_hospital_admissions_varname
+        )
 
-        self.infect_hosp_rate_dist = infect_hosp_rate_dist
-        self.weekday_effect_dist = weekday_effect_dist
-        self.hosp_report_prob_dist = hosp_report_prob_dist
-        self.infection_to_admission_interval = infection_to_admission_interval
+        self.infect_hosp_rate_rv = infect_hosp_rate_rv
+        self.day_of_week_effect_rv = day_of_week_effect_rv
+        self.hosp_report_prob_rv = hosp_report_prob_rv
+        self.infection_to_admission_interval_rv = (
+            infection_to_admission_interval_rv
+        )
+        # Why isn't infection_to_admission_interval_rv validated?
 
     @staticmethod
     def validate(
-        infect_hosp_rate_dist: Any,
-        weekday_effect_dist: Any,
-        hosp_report_prob_dist: Any,
+        infect_hosp_rate_rv: Any,
+        day_of_week_effect_rv: Any,
+        hosp_report_prob_rv: Any,
     ) -> None:
         """
         Validates that the IHR, weekday effects, and probability of being
@@ -125,11 +128,11 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        infect_hosp_rate_dist : Any
+        infect_hosp_rate_rv : Any
             Possibly incorrect input for infection to hospitalization rate distribution.
-        weekday_effect_dist : Any
-            Possibly incorrect input for weekday effect.
-        hosp_report_prob_dist : Any
+        day_of_week_effect_rv : Any
+            Possibly incorrect input for day of the week effect.
+        hosp_report_prob_rv : Any
             Possibly incorrect input for distribution or fixed value for the
             hospital admission reporting probability.
 
@@ -143,17 +146,17 @@ class HospitalAdmissions(RandomVariable):
             If the object `distr` is not an instance of `dist.Distribution`, indicating
             that the validation has failed.
         """
-        assert isinstance(infect_hosp_rate_dist, RandomVariable)
-        assert isinstance(weekday_effect_dist, RandomVariable)
-        assert isinstance(hosp_report_prob_dist, RandomVariable)
+        assert isinstance(infect_hosp_rate_rv, RandomVariable)
+        assert isinstance(day_of_week_effect_rv, RandomVariable)
+        assert isinstance(hosp_report_prob_rv, RandomVariable)
 
         return None
 
     def sample(
         self,
-        latent: ArrayLike,
+        latent_infections: ArrayLike,
         **kwargs,
-    ) -> HospAdmissionsSample:
+    ) -> HospitalAdmissionsSample:
         """
         Samples from the observation process
 
@@ -167,35 +170,40 @@ class HospitalAdmissions(RandomVariable):
 
         Returns
         -------
-        HospAdmissionsSample
+        HospitalAdmissionsSample
         """
 
-        infection_hosp_rate, *_ = self.infect_hosp_rate_dist.sample(**kwargs)
+        infection_hosp_rate, *_ = self.infect_hosp_rate_rv.sample(**kwargs)
 
-        infection_hosp_rate_t = infection_hosp_rate * latent
+        infection_hosp_rate_t = infection_hosp_rate * latent_infections
 
         (
             infection_to_admission_interval,
             *_,
-        ) = self.infection_to_admission_interval.sample(**kwargs)
+        ) = self.infection_to_admission_interval_rv.sample(**kwargs)
 
-        predicted_admissions = jnp.convolve(
-            infection_hosp_rate_t, infection_to_admission_interval, mode="full"
+        latent_hospital_admissions = jnp.convolve(
+            infection_hosp_rate_t,
+            infection_to_admission_interval,
+            mode="full",
         )[: infection_hosp_rate_t.shape[0]]
 
-        # Applying weekday effect
-        predicted_admissions = (
-            predicted_admissions * self.weekday_effect_dist.sample(**kwargs)[0]
+        # Applying the day of the week effect
+        latent_hospital_admissions = (
+            latent_hospital_admissions
+            * self.day_of_week_effect_rv.sample(**kwargs)[0]
         )
 
         # Applying probability of hospitalization effect
-        predicted_admissions = (
-            predicted_admissions
-            * self.hosp_report_prob_dist.sample(**kwargs)[0]
+        latent_hospital_admissions = (
+            latent_hospital_admissions
+            * self.hosp_report_prob_rv.sample(**kwargs)[0]
         )
 
         npro.deterministic(
-            self.admissions_predicted_varname, predicted_admissions
+            self.latent_hospital_admissions_varname, latent_hospital_admissions
         )
 
-        return HospAdmissionsSample(infection_hosp_rate, predicted_admissions)
+        return HospitalAdmissionsSample(
+            infection_hosp_rate, latent_hospital_admissions
+        )
