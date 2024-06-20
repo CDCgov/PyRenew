@@ -163,13 +163,13 @@ class InfFeedback(RandomVariable):
         self,
         infection_feedback_strength: RandomVariable,
         infection_feedback_pmf: RandomVariable,
-        infections_mean_varname: str = "latent_infections",
+        infections_varname: str = "latent_infections",
     ) -> None:
         """Constructor"""
 
         self.infection_feedback_strength = infection_feedback_strength
         self.infection_feedback_pmf = infection_feedback_pmf
-        self.infections_mean_varname = infections_mean_varname
+        self.infections_varname = infections_varname
 
         return None
 
