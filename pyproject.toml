@@ -15,7 +15,6 @@ optional = true
 
 [tool.poetry.group.dev.dependencies]
 numpydoc = "^1.7.0"
-ipykernel = "^6.29.4"
 
 [tool.numpydoc_validation]
 checks = [
