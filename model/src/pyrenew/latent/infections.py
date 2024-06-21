@@ -46,19 +46,6 @@ class Infections(RandomVariable):
     :math:`g(t-\tau)` is the generation interval.
     """
 
-    def __init__(
-        self,
-    ) -> None:
-        """
-        Default constructor for Infections class.
-
-        Returns
-        -------
-        None
-        """
-
-        return None
-
     @staticmethod
     def validate() -> None:  # numpydoc ignore=GL08
         return None
