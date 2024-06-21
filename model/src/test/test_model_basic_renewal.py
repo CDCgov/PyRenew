@@ -241,7 +241,6 @@ def test_model_basicrenewal_with_obs_model():
     assert inf_mean.to_numpy().shape[0] == 500
 
 
-
 def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
