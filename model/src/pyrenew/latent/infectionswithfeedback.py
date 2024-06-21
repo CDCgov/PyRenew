@@ -43,7 +43,7 @@ class InfectionsWithFeedback(RandomVariable):
         Infection feedback strength.
     infection_feedback_pmf : RandomVariable
         Infection feedback pmf.
-    infections_varname : str
+    latent_infections_varname : str
         Name to be assigned to the deterministic variable in the model.
 
     Notes
@@ -69,7 +69,7 @@ class InfectionsWithFeedback(RandomVariable):
         self,
         infection_feedback_strength: RandomVariable,
         infection_feedback_pmf: RandomVariable,
-        infections_varname: str,
+        latent_infections_varname: str,
     ) -> None:
         """
         Default constructor for Infections class.
@@ -80,7 +80,7 @@ class InfectionsWithFeedback(RandomVariable):
             Infection feedback strength.
         infection_feedback_pmf : RandomVariable
             Infection feedback pmf.
-        infections_varname : str, optional
+        latent_infections_varname : str, optional
             Name to be assigned to the deterministic variable in the model.
             Defaults to "latent_infections".
 
@@ -93,7 +93,7 @@ class InfectionsWithFeedback(RandomVariable):
 
         self.infection_feedback_strength = infection_feedback_strength
         self.infection_feedback_pmf = infection_feedback_pmf
-        self.infections_varname = infections_varname
+        self.latent_infections_varname = latent_infections_varname
 
         return None
 
@@ -198,6 +198,7 @@ class InfectionsWithFeedback(RandomVariable):
         all_infections = jnp.hstack([I0, all_infections])
 
         npro.deterministic("Rt_adjusted", Rt_adj)
+        npro.deterministic(self.latent_infections_varname, all_infections)
 
         return InfectionsRtFeedbackSample(
             infections=all_infections,

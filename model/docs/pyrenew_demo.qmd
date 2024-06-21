@@ -100,7 +100,7 @@ I0 = InfectionSeedingProcess(
 )
 
 # 3) The latent infections process
-latent_infections = Infections(infections_varname="latent_infections")
+latent_infections = Infections(latent_infections_varname="latent_infections")
 
 # 4) The latent hospitalization process:
 

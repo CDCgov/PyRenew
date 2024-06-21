@@ -77,10 +77,12 @@ def test_infectionsrtfeedback():
     InfectionsWithFeedback = latent.InfectionsWithFeedback(
         infection_feedback_strength=inf_feed_strength,
         infection_feedback_pmf=inf_feedback_pmf,
-        infections_varname="latent_infections",
+        latent_infections_varname="latent_infections",
     )
 
-    infections = latent.Infections(infections_varname="latent_infections")
+    infections = latent.Infections(
+        latent_infections_varname="latent_infections"
+    )
 
     with npro.handlers.seed(rng_seed=0):
         samp1 = InfectionsWithFeedback.sample(
@@ -119,10 +121,12 @@ def test_infectionsrtfeedback_feedback():
     InfectionsWithFeedback = latent.InfectionsWithFeedback(
         infection_feedback_strength=inf_feed_strength,
         infection_feedback_pmf=inf_feedback_pmf,
-        infections_varname="latent_infections",
+        latent_infections_varname="latent_infections",
     )
 
-    infections = latent.Infections(infections_varname="latent_infections")
+    infections = latent.Infections(
+        latent_infections_varname="latent_infections"
+    )
 
     with npro.handlers.seed(rng_seed=0):
         samp1 = InfectionsWithFeedback.sample(

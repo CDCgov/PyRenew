@@ -49,14 +49,14 @@ class Infections(RandomVariable):
 
     def __init__(
         self,
-        infections_varname: str,
+        latent_infections_varname: str,
     ) -> None:
         """
         Default constructor for Infections class.
 
         Parameters
         ----------
-        infections_varname : str
+        latent_infections_varname : str
             Name to be assigned to the deterministic variable in the model.
 
         Returns
@@ -64,7 +64,7 @@ class Infections(RandomVariable):
         None
         """
 
-        self.infections_varname = infections_varname
+        self.latent_infections_varname = latent_infections_varname
 
         return None
 
@@ -121,6 +121,6 @@ class Infections(RandomVariable):
 
         all_infections = jnp.hstack([I0, all_infections])
 
-        npro.deterministic(self.infections_varname, all_infections)
+        npro.deterministic(self.latent_infections_varname, all_infections)
 
         return InfectionsSample(all_infections)
