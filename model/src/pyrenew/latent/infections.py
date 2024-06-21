@@ -49,16 +49,15 @@ class Infections(RandomVariable):
 
     def __init__(
         self,
-        infections_varname: str = "latent_infections",
+        infections_varname: str,
     ) -> None:
         """
         Default constructor for Infections class.
 
         Parameters
         ----------
-        infections_varname : str, optional
+        infections_varname : str
             Name to be assigned to the deterministic variable in the model.
-            Defaults to "latent_infections".
 
         Returns
         -------

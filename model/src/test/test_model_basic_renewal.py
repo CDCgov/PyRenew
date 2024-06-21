@@ -34,7 +34,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
 
     observed_infections = PoissonObservation()
 
@@ -71,7 +71,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
 
     observed_infections = PoissonObservation()
 
@@ -117,7 +117,7 @@ def test_model_basicrenewal_no_obs_model():
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
@@ -192,7 +192,7 @@ def test_model_basicrenewal_with_obs_model():
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
 
     observed_infections = PoissonObservation()
 
@@ -265,7 +265,7 @@ def test_model_basicrenewal_plot() -> plt.Figure:
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
 
     observed_infections = PoissonObservation()
 
@@ -312,7 +312,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
 
     observed_infections = PoissonObservation()
 

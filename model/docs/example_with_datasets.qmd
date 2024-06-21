@@ -150,7 +150,7 @@ from pyrenew import model, process, observation, metaclass, transformation
 from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsExponential
 
 # Infection process
-latent_inf = latent.Infections()
+latent_inf = latent.Infections(infections_varname="latent_infections")
 I0 = InfectionSeedingProcess(
     "I0_seeding",
     metaclass.DistributionalRV(

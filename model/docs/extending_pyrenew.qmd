@@ -54,6 +54,7 @@ I0 = InfectionSeedingProcess(
 latent_infections = InfectionsWithFeedback(
     infection_feedback_strength=feedback_strength,
     infection_feedback_pmf=gen_int,
+    infections_varname="latent_infections",
 )
 
 rt = RtRandomWalkProcess(
@@ -163,7 +164,7 @@ class InfFeedback(RandomVariable):
         self,
         infection_feedback_strength: RandomVariable,
         infection_feedback_pmf: RandomVariable,
-        infections_varname: str = "latent_infections",
+        infections_varname: str,
     ) -> None:
         """Constructor"""
 
@@ -241,6 +242,7 @@ The core of the class is implemented in the `sample()` method. Things to highlig
 latent_infections2 = InfFeedback(
     infection_feedback_strength=feedback_strength,
     infection_feedback_pmf=gen_int,
+    infections_varname="latent_infections",
 )
 
 model1 = RtInfectionsRenewalModel(

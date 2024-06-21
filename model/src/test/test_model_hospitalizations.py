@@ -54,7 +54,7 @@ def test_model_hosp_no_timepoints_or_observations():
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
     Rt_process = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
         Rt_transform=t.ExpTransform().inv,
@@ -123,7 +123,7 @@ def test_model_hosp_both_timepoints_and_observations():
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
     Rt_process = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
         Rt_transform=t.ExpTransform().inv,
@@ -198,7 +198,7 @@ def test_model_hosp_no_obs_model():
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
     Rt_process = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
         Rt_transform=t.ExpTransform().inv,
@@ -307,7 +307,7 @@ def test_model_hosp_with_obs_model():
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
     Rt_process = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
         Rt_transform=t.ExpTransform().inv,
@@ -396,7 +396,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
     Rt_process = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
         Rt_transform=t.ExpTransform().inv,
@@ -497,7 +497,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections()
+    latent_infections = Infections(infections_varname="latent_infections")
     Rt_process = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
         Rt_transform=t.ExpTransform().inv,

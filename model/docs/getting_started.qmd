@@ -107,7 +107,7 @@ rt_proc = RtRandomWalkProcess(
 )
 
 # (4) Latent infection process (which will use 1 and 2)
-latent_infections = Infections()
+latent_infections = Infections(infections_varname="latent_infections")
 
 # (5) The observed infections process (with mean at the latent infections)
 observation_process = PoissonObservation()
