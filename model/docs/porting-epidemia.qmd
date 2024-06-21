@@ -1,120 +1,164 @@
----
-title: "Porting An Existing Model (Epidemia) To MSR"
-format: gfm
-engine: jupyter
----
-
-\newpage
-
 # Introduction
 
-\lettrine[lines=5, depth=0]{O}{ne} aim of the Multisignal Signal Renewal (hereafter referred to as MSR[^msr_v_pyrenew]) project is to make [statistical inference](https://en.wikipedia.org/wiki/Statistical_inference) and [simulation](https://en.wikipedia.org/wiki/Simulation) (mostly within the context of infectious disease modeling) more flexible. With flexible infectious disease model tooling, one might expect to be able to re-implement existing, external infectious disease models. Such capabilities are possible with MSR.
+\lettrine[lines=5, depth=0]{O}{ne} aim of the Multisignal Signal Renewal (hereafter referred to as MSR[^msr_v_pyrenew]) project is to make [statistical inference](https://en.wikipedia.org/wiki/Statistical_inference) and [simulation](https://en.wikipedia.org/wiki/Simulation) (mostly within the context of infectious disease modeling) more flexible. MSR users might expect to be able to re-implement existing, external (as in not pre-packaged) infectious disease models. Such capabilities are possible with MSR.
 
-[^msr_v_pyrenew]: The author of this tutorial prefers the use of MSR to `pyrenew`, which the reader may have seen used in other MSR tutorials.
+[^msr_v_pyrenew]: The author of this tutorial prefers the use of _MSR_ to `pyrenew`, which the reader may have seen used in other MSR tutorials and which is the name of the MSR project's downloadable package.
 
-In this walk-through, the author will demonstrate how to re-implement a model (hereafter referred to as `cfaepim`[^cfaepim]) created for influenza forecasting using the [Epidemia](https://github.com/CDCgov/multisignal-epi-inference) framework. Beyond re-implementing the models, the author also compares their discrepancies on daily influenza incidence data from [NHSN](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh)[^flusight].
+In this walk-through, the author will demonstrate how to implement a model (hereafter referred to as `cfaepim`[^cfaepim]) that was created for influenza forecasting using the [Epidemia](https://github.com/CDCgov/multisignal-epi-inference) framework. A comparison of current behavioral discrepancies in the models using daily influenza incidence data from [NHSN](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh)[^flusight] is also included.
 
 [^flusight]: For forecasts from influenza models using this data, see [here](https://github.com/cdcepi/FluSight-forecasts). For more information regarding how this data has been used for influenza forecasting, see [here](https://github.com/cdcepi/FluSight-forecast-hub/tree/main/target-data).
 
-[^cfaepim]: The `cfaepim` model is contained with private CDC repository; however, the author of this tutorial has received permission to reproduce the parts of the model code from [the author](https://github.com/dylanhmorris) of the repository.
+[^cfaepim]: The `cfaepim` model is contained within a private [CDC](https://github.com/cdcent) repository. However, the author of this tutorial has received permission to reproduce the parts of the model code from [the author](https://github.com/dylanhmorris) of the repository.
+
+__Overview__: The author first outlines some _know-requisites_[^itali], i.e. activities and terms that should be completed and understood, respectively, prior to consuming this tutorials. Next, the author showcases an example `cfaepim` forecast and some historical influenza hospitalization data. After this, the author briefly describes Epidemia and the class of problems it is aimed at handling. Then, the author mathematically details components of `cfaepim`. Finally, the author demonstrates how these components can be instantiated in MSR and then uses this instantiation to forecast influenza hospitalizations.
+
+[^itali]: Block quotes or lengthy italicized sections of writing are very unlikely to be the author's own writing and instead likely originated from code in this tutorial or from description that can be found on Epidemia's website.
 
 # Know-Requisites
 
-First, if you have not already installed MSR, please do the following: `pip3 install` followed by a space and then
+First, if you have not already installed the `pyrenew` package within MSR, please do the following: `pip3 install` followed by a space and then
 
 ```
 git+https://github.com/CDCgov/multisignal-epi-inference@main#subdirectory=model
 ```
 
-Ideally, this tutorial should not be the first tutorial you engage with in trying to get a sense of MSR's utility. Leading up to this tutorial, the author believes it is reasonable for the reader to proceed through _at least_ the following tutorials beforehand, in descending order:
+Ideally, this tutorial is not the first MSR tutorial you've encountered. The author believes it is reasonable for the reader to proceed through _at least_ one of the following tutorials before continuing this current tutorial. In ascending order (low to high, starting from the first entry) of background knowledge required:
 
 * [Pyrenew Demo](https://cdcgov.github.io/multisignal-epi-inference/tutorials/pyrenew_demo.html)
 * [Getting Started](https://cdcgov.github.io/multisignal-epi-inference/tutorials/getting-started.html)
 * [Extending Pyrenew](https://cdcgov.github.io/multisignal-epi-inference/tutorials/extending_pyrenew.html)
 * [Fitting A Hospital Admissions-Only Model](https://cdcgov.github.io/multisignal-epi-inference/tutorials/example-with-datasets.html)
 
-
-## Terms
-
-The reader might find having the definitions of the following terms useful.
-
-__Basic Reproduction Number__ [@van2002reproduction, pp. 32-33]
-
-> The basic reproduction number, denoted $\mathscr{R}_0$, is 'the expected number of secondary cases produced, in a completely susceptible population, by a typical infective individual' [2]; see also [5, p. 17]. If $\mathscr{R}_0 < 1$, then on average an infected individual produces less than one new infected individual over the course of its infectious period, and the infection cannot grow. Conversely, if $\mathscr{R}_0 > 1$, then each infected individual produces, on average, more than one new infection, and the disease can invade the population. For the case of a single infected compartment, $\mathscr{R}_0$ is simply the product of the infection rate and the mean duration of the infection. However, for more complicated models with several infected compartments this simple heuristic definition of $\mathscr{R}_0$ is insufficient. A more general basic reproduction number can be defined as the number of new infections produced by a typical infective individual in a population at a [disease free equilibrium (DFE)].
-
-__Generation Interval__ [@champredon2018equivalence, pp.3258 and pp.3267, respectively]
-
-> The generation interval is the interval between the time when an individual is infected by an infector and the time when this infector was infected.
-
-and
-
-> The generation interval is rarely observed (because the actual transmission time is usually not observed), but through contact tracing it is possible to directly observe the _serial interval_ (i.e., the interval of time between the onset of symptoms for the infector and her/his infectee).
-
-<!-- __Stochastic Process__ []
-__Renewal Process__ [] -->
-
-
-__Renewal Equation__ (Historical) [@champredon2018equivalence, pp.3258,3267]
-
-> The renewal equation was introduced by Euler in 1767 [@euler1767recherches] in his work on population dynamics and was reframed in a modern continuous formulation by Lotka in 1907 [@lotka1907relation]. Lotka's formulation is usually expressed as $$B(t) = \int^{\infty}_0 B(t-a) p(a) \nu(a) da$$ where $B(t)$ is the number of births at time $t$, $p(a)$ is the probability of survival to age $a$, and $\nu(a)$ is the fertility at age $a$. This equation was derived for demographic studies and has been adapted to epidemics using an "age of infection" model that was described in the seminal work of Kermack and McKendrick in 1927 [@kermack1927contribution]. This epidemic model changes the interpretation of the variables: $B(t)$ represents the number of new infectious individuals at time $t$, $p(a)$ the probability to be infectious a time units after acquiring the disease, and $\nu(a)$ the "transmission potential" that is, the average number of secondary infections at "infection age" $a$.
-
-__Renewal Equation__ (Epidemiology) [@pakkanen2023unifying, pp.35]
-
-> The form of this renewal equation when only considering $\mathscr{R}_0$ is exactly what is commonly used in epidemic modelling where the incidence of infections $I(t)$ follows a renewal equation given by $$I(t) = \mathscr{R}_0 \int_0^{\infty} I(t-u)g(u)du$$ where $g(\cdot)$ is the probability density function (PDF) of the generation interval. Introducing a time-varying reproduction number $\mathscr{R}(t)$ within the Bellman–Harris process in general does not simply entail replacing $\mathscr{R}_0$ with $\mathscr{R}(t)$ in the renewal equation.
+See the Appendix for Terms (e.g., _basic reproduction number_) relevant to this tutorial.
 
 # Short Tour Of The Data
 
-Before proceeding further, a check in of the data is warranted:
+The `cfaepim` repository was used during the 2023-24 respiratory season to forecast weekly influenza hospitalizations in US territories. For certain weeks during the respiratory season, some territories (e.g., Kansas (KS)) experienced major delays and misreports. To handle these reporting inadequacies, `cfaepim` was equipped with measures to handle anomalies; the user is able to select start and cutoff intervals, in addition to exclusion intervals, for particular territories and epiweeks. As an example for the `2024-03-30` target reporting date, data from the following epiweeks were excluded from fitting for Arizona, due reporting inadequacies:
 
-[PLACEHOLDER]
+```yaml
+[location_specific_excluded_dates]
+AZ = ["2024-03-04", "2024-03-09",
+      "2024-03-11", "2024-03-16"]
+```
+
+A showcasing of some of the `cfaepim` forecasts and historical trends is in order.
+
+![The 4 week projected influenza hospitalizations (quantilized) for target epiweek 2024-03-30. The `cfaepim` forecast was made excluding the epiweek ending on 2024-03-20; this exclusion was reported in the epiweek's `output` folder.](./source/figures/NY_cfaepim_2024-03-30_snapshot.png){ width=75% }
+
+![Historical influenza hospitalizations for NY preceding the target epiweek 2024-03-30, along with a quantilized `cfaepim` forecast.](./source/figures/NY_cfaepim_2024-03-30_historical.png){ width=75% }
+
 
 <!-- ![Description](path){ width=50% }  -->
 
 # Short Tour Of Epidemia
 
-The following comes from Epidemia's Introduction page:
+As described in Epidemia's Introduction page:
 
 > The open-source R (R Core Team [2020](https://imperialcollegelondon.github.io/epidemia/articles/model-introduction.html#ref-rcore_2011)) package **epidemia** provides a framework for Bayesian, regression-oriented modeling of the temporal dynamics of infectious diseases. Typically, but not exclusively, these models are fit to areal time-series; i.e. aggregated event counts for a given population and period. Disease dynamics are described explicitly; observed data are linked to latent infections, which are in turn modeled as a self-exciting process tempered by time-varying reproduction numbers. Regression models are specified for several objects in the model. For example, reproduction numbers are expressed as a transformed predictor, which may include both covariates and autoregressive terms. A range of prior distributions can be specified for unknown parameters by leveraging the functionality of **rstanarm** (Goodrich et al. [2020](https://imperialcollegelondon.github.io/epidemia/articles/model-introduction.html#ref-goodrich_2020)). Multilevel models are supported by partially pooling covariate effects appearing in the predictor for reproduction numbers between multiple populations.
 
-While not necessary for this understanding tutorial, perusing the following pages on Epidemia might aid the reader:
+While not _necessary_ for this tutorial, perusing the following pages on Epidemia might aid the reader in understanding Epidemia:
 
 * [Epidemia's Website](https://imperialcollegelondon.github.io/epidemia/index.html)
 * [Epidemia Model Description Page](https://imperialcollegelondon.github.io/epidemia/articles/model-description.html)
 * [Epidemia Model Schematic Page](https://imperialcollegelondon.github.io/epidemia/articles/model-schematic.html)
 * [Epidemia Model Implementation Page](https://imperialcollegelondon.github.io/epidemia/articles/model-implementation.html)
 
-Given `cfaepim` is an influenza forecasting model, the author describes the Epidemia modeling approach (following the language used in Epidemia's Model Description page) with influenza data in mind.
+<!-- Given `cfaepim` is an influenza forecasting model, the author describes the Epidemia modeling approach (following the language used in Epidemia's Model Description page) with influenza data in mind. -->
 
 <!-- Consider the United States (US) as consisting of a single homogeneous population. This population can be stratified by the US's 50 states and additional territories (e.g., Puetro Rico). -->
 
-Suppose, over some interval of time, we observe daily influenza hospitalization counts for some region. This non-negative time series be represented as $Y = (Y_1, \dotsc, Y_n)$, where $Y_i$ represents the influenza hospitalization count for day $i$. Note that $Y_t$, i.e. the influenza hospitalization count for day $t$ can be...
+## Problem Statement
 
-> ...modeled as deriving from past new infections is, $s<t$, and some parameter $\alpha_t>0$, a multiplier, which in most contexts represents an instantaneous _ascertainment rate_. The general model can be expressed as $$Y_t \sim p(y_t, \phi)$$ $$y_t = \alpha_t \sum_{s<t}i_s \pi_{t-s}$$ where $y_t$ is the expected value of the data distribution and $\phi$ is an auxiliary parameter. $\pi_k$ is typically the time distribution from an infection to an observation, which we refer to as the infection to observation distribution. More generally, however, $\pi_k$ can be used to obtain any linear combination of past infections. New infections $i_t$ at times $t>0$ are modeled through a renewal equation, and are tempered by a non-negative parameter $\mathscr{R}_t$ which represents the reproduction number at time $t$. Formally $$i_t = \mathscr{R}_t \sum_{s<t}i_s g_{t-s}$$ where $g_k$ is a probability mass function for the time between infections. The recursion is initialized with seeded infections $i_{v:0}, v<0$, which are treated as unknown parameters. All parameters are assigned priors, i.e. $$i_{v:0},\mathscr{R},\phi,\alpha \sim p(\cdot)$$ where $\mathscr{R} = (\mathscr{R}_1,\dotsc,\mathscr{R}_n)$ and $\alpha=(\alpha_1,\dotsc,\alpha_n)$. The posterior distribution is then proportional to prior and likelihood, i.e.  $$p(i_{v:0},\mathscr{R},\phi,\alpha∣Y)\propto p(i_{v:0})p(\mathscr{R})p(\phi)p(\alpha)\prod_t p(Y_t∣y_t,\phi)$$.
+The following description is a slightly reworded version of some of Epidemia's introduction page, geared towards influenza hospitalization forecasting:
 
-In the description above, the reader is confronted with some questions:
+Suppose, over some interval of time, we observe daily influenza hospitalization counts for some region. This non-negative time series can be represented as $$Y = (Y_1, \dotsc, Y_n)$$.
 
-* What choice if sampling distribution $p(y_t, \phi)$ should be made?
-* What priors $p(\cdot)$ are adequate, given existing uncertainties?
-* What considerations are there for handling susceptibles?
-* How should transmission be modelled, i.e. choosing $\mathscr{R}$?
-* What are appropriate link functions for $g$?
+Further, note that $Y_t$, i.e. the influenza hospitalization count for day $t$, $1 \leq t \leq n$, can be...
 
-These questions will be addressed in the following section.
+> ...modeled as deriving from past new infections $i_s$, $s<t$, and some parameter $\alpha_t>0$, a multiplier, which in most contexts represents an instantaneous _ascertainment rate_. The general model can be expressed as $$Y_t \sim p(y_t, \phi)$$ $$y_t = \alpha_t \sum_{s<t}i_s \pi_{t-s}$$ where $y_t$ is the expected value of the data distribution and $\phi$ is an auxiliary parameter. $\pi_k$ is typically the time distribution from an infection to an observation, which we refer to as the infection to observation distribution. More generally, however, $\pi_k$ can be used to obtain any linear combination of past infections. New infections $i_t$ at times $t>0$ are modeled through a renewal equation, and are tempered by a non-negative parameter $\mathscr{R}_t$ which represents the reproduction number at time $t$. Formally $$i_t = \mathscr{R}_t \sum_{s<t}i_s g_{t-s}$$ where $g_k$ is a probability mass function for the time between infections. The recursion is initialized with seeded infections $i_{v:0}, v<0$, which are treated as unknown parameters. All parameters are assigned priors, i.e. $$i_{v:0},\mathscr{R},\phi,\alpha \sim p(\cdot)$$ where $\mathscr{R} = (\mathscr{R}_1,\dotsc,\mathscr{R}_n)$ and $\alpha=(\alpha_1,\dotsc,\alpha_n)$. The posterior distribution is then proportional to prior and likelihood, i.e.  $$p(i_{v:0},\mathscr{R},\phi,\alpha∣Y)\propto p(i_{v:0})p(\mathscr{R})p(\phi)p(\alpha)\prod_t p(Y_t∣y_t,\phi)$$.
 
-# Epidemia Forecasting In Influenza
-
-Creating models in Epidemia general involves setting up a transmission component and an observation component, and then bringing the latter two together while also addressing other needs, e.g. the link function $g$.
-
-<!--
-Use parameters and priors
-
--->
+The aforementioned Epidemia schematics page is worth reproducing; see the Appendix.
 
 
+# Epidemia For Influenza And MSR Equivalent
+
+The `cfaepim` model consists of pre- and post-processing components that interface with a model instantiated via Epidemia. This Epidemia model is separated into three sections: (1) a transmission component, (2) an observation component, and (3) a function that integrates the other Epidemia-related components[^full_model].
+
+[^full_model]: For references to the full `model.R` code, please reference the Appendix.
+
+## Parameters & Priors
+
+The values below will be referenced in subsequent sections. Skimming these values now might prove useful. The author of this tutorial does not currently have justifications for the values of the variables.
+
+
+```yaml
+day_of_week_effect_prior_modes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+day_of_week_effect_prior_scales = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+holiday_eff_prior_mode = -0.2
+holiday_eff_prior_scale = 0.2
+post_holiday_eff_prior_mode = 0.0
+post_holiday_eff_prior_scale = 0.2
+recency_eff_prior_mode = 0.0
+recency_eff_prior_scale = 0.1
+recency_effect_length = 0
+
+generation_time_dist = [0.233, 0.359, 0.198, 0.103, 0.053, 0.027, 0.014, 0.007, 0.003, 0.002, 0.001]
+ihr_intercept_prior_mode = -6.5
+ihr_intercept_prior_scale = 0.5
+inf_model_prior_infections_per_capita = 0.0001
+inf_model_seeds = 8
+inf_to_hosp_dist = [0.05, 0.1, 0.175, 0.225, 0.175, 0.125, 0.075, 0.05, 0.025]
+max_rt = 3.0
+n_pre_observation_days = 14
+non_obs_effect_prior_mode = -50
+non_obs_effect_prior_scale = 0.01
+reciprocal_dispersion_prior_mode = 10
+reciprocal_dispersion_prior_scale = 5
+reference_day_of_week = 4
+rt_intercept_prior_mode = -0.4054651
+rt_intercept_prior_scale = 0.3
+seed = 54321
+susceptible_fraction_prior_mode = 0.9
+susceptible_fraction_prior_scale = 0.1
+weekly_rw_prior_scale = 0.25
+first_fitting_date = "2023-09-15"
+
+[mcmc]
+adapt_delta = 0.9
+max_treedepth = 12
+n_chains = 1
+n_warmup = 1000
+n_iter = 2000
+```
 
 ## Transmission Component
 
-In `cfaepim`, the transmission component is built in the following manner:
+In `cfaepim`, the influenza hospitalizations for each US territory are modelled separately, as though influenza transmission, infection, and observation within each territory's boundaries is completely independent of other territories. This corresponds to an "unpooled" modelling case (see [Epidemia's partial pooling page](https://imperialcollegelondon.github.io/epidemia/articles/partial-pooling.html)). For each US territory, $\mathscr{R}_t$ can be modelled via a transformed linear predictor. In particular,
+
+$$\mathscr{R}_t = g^{-1}(\eta_t)$$
+
+where $g$ is a _scaled-logit_ link function and $\eta$ is a linear predictor.
+
+The link function for `cfaepim` is given by:
+
+$$g^{-1}(x) = \frac{K}{1 + e^{-x}}$$
+
+with $K = 3$ since `max_rt = 3.0`. As for each territory's linear predictor $\eta$ at time $t$, we have
+
+$$\eta_t = \beta_0 + W_t$$
+
+where $W_t$ is a random walk satisfying $$W_t = W_{t-1} + \gamma_t$$ with $t > 0$ and $W_0 = 0$, and $\gamma_t \sim \mathcal{N}(0, \sigma)$, where $\sigma \sim \mathcal{N}^{+}(0, 0.25)$ since `weekly_rw_prior_scale = 0.25`. Note that the $\mathscr{R}_t$ intercept, i.e. $\beta_0$, has a prior. Since `rt_intercept_prior_mode = -0.4054651` and  `rt_intercept_prior_scale = 0.3`, $\beta_0 \sim \mathcal{N}(-0.4054651, 0.3)$.
+
+<!--
+Questions
+
+Why is the link function the way it is?
+Why choose mode for location parameter?
+-->
+
+
+The corresponding code in `cfaepim`:
+
 
 ```r
 #' Build the R(t) component of a "covariate
@@ -161,12 +205,83 @@ build_light_rt <- function(rt_intercept_prior_mode,
 }
 ```
 
+<!-- The above transmission model is used for generating influenza hospitalization forecasts for individual US territories. The output of the model is a vector of $\mathscr{R}$ daily values.  -->
+
+
+
+
+
+<!-- consists of a random walk where $\beta_0 = 1$ and $\beta_1 \sim \mathcal{N}(0 )#
+
+rt_intercept_prior_mode = -0.4054651
+rt_intercept_prior_scale = 0.3 -->
+
+<!-- With respect to `prior_scale`, see _[Adds random walks with independent Gaussian steps to the parameterization of the time-varying reproduction number](https://imperialcollegelondon.github.io/epidemia/reference/rw.html)_:
+
+> The steps of the walks are independent zero mean normal with an unknown scale hyperparameter. This scale is given a half-normal prior. prior_scale sets the scale parameter of this hyperprior -->
+
+
+<!-- Consider a particular US territory (`location`) at a particular date $t$ (`date`).  -->
+
+<!-- Epidemia permits modelling the unobserved influenza $\mathscr{R}_t$ for this US territory at this date $t$ as a transformed linear predictor. In particular,
+
+* $\mathbf{\mathscr{R}} = g^{-1}(\eta)$
+* $\eta = \beta_0 + $ is a linear predictor, in this instance a weekly random walk for the location with
+
+In particular, $\mathscr{R} = g^{-1}(\eta)$, where $g^{-1} = \frac{K}{1 + e^{-x}}$ (with $K = 3$, since `max_rt = 3`).
+
+The link function $g$ here is:
+
+$$g(x) = \log(\frac{x}{K-x})$$
+
+where $K > 0$. Note $g^{-1}(x) = \frac{K}{1 + e^{-x}}$. Note also that
+
+In particular, this mode
+
+
+prior mode -->
+
+
+
 ## Observation Component
 
-In `cfaepim`, the observation component is built in the following manner:
+Proceeding, each US territory has is own time series of observed influenza hospitalizations $Y = (Y_1, \dotsc, Y_n)$. The observed influenza hospitalizations at time $t$ are given by $$Y_t \sim p(y_t, \phi)$$ where $p(y_t, \phi)$ is the sampling distribution with auxiliary parameter $\phi$. Note that since `reciprocal_dispersion_prior_mode = 10` and `reciprocal_dispersion_prior_scale = 5`, we have $\phi \sim \mathcal{N}(10, 5)$. Since `family = "neg_binom"`, $\phi$ represents the reciprocal dispersion of the sampling distribution.
+
+The expected value for the observed influenza hospitalizations on day $t$, i.e. $y_t$, is given by $$y_t = \alpha_t \sum_{s<t}i_s \pi_{t-s}$$ with $s < t$ and where
+
+* $\pi_{k}$ is the _time distribution from an infection to an observation_
+* $i_s$ are new infections as modelled via a renewal equation
+* $\alpha_t>0$ _represents an instantaneous ascertainment rate_, which in this instance means the rate of influenza infections that become hospitalizations at time $t$, transformed by the logit-link (since `link = "logit"`) function $g$, where $$g^{-1}(x) = \frac{1}{1 + e^{-x}}$$
+
+Within `cfaepim`, the linear predictor for $\alpha_t$ consists of
+
+* A _day of the week effect on observation probability, relative to the reference day of the week_ (`day_of_week`).
+* A holiday effect, if the day is a holiday (`is_holiday`).
+* A post-holiday effect, if the day occurs after a holiday (`is_post_holiday`).
+
+We have:
+
+$$
+\begin{aligned}
+\alpha_t &= g^{-1}(\eta_t)\\
+\eta_t &= \sum_{i=0}^9 \beta_i
+\end{aligned}
+$$
+
+where
+
+* the infection to hospitalization delay distribution intercept $\beta_0 \sim \mathcal{N}(-6.5, 0.5)$, since `ihr_intercept_prior_mode = -6.5` and `ihr_intercept_prior_scale = 0.5` .
+* each of the covariates $\beta_1, \dotsc, \beta_6$ have priors, $\beta_i \sim \mathcal{N}(0, 0.25) \quad i = 1, \dotsc, 6$, corresponding, to the week from Sunday to Friday (where the reference date is Saturday), respectively (see `day_of_week_effect_prior_modes` and `day_of_week_effect_prior_scales`).
+* the covariate $\beta_7 \sim \mathcal{N}(-0.2, 0.2)$, since `holiday_eff_prior_mode = -0.2` and `holiday_eff_prior_scale = 0.2`, and refers to the holiday effect.
+* the covariate $\beta_8 \sim \mathcal{N}(0, 0.2)$, since `post_holiday_eff_prior_mode = 0.0` and `post_holiday_eff_prior_scale = 0.2`, and refers to the post-holiday effect.
+* the covariate $\beta_9 \sim \mathcal{N}(-50, 0.01)$, since `non_obs_effect_prior_mode = -50` and `non_obs_effect_prior_scale = 0.01`, and refers to the _change in the observation probability during the nonobservation (seeding) period_.
+
+Within `cfaepim`, we have the infection to hospitalization delay distribution as $$\pi = \begin{bmatrix} 0.05 & 0.1 &  0.175 & 0.225 &  0.175 &  0.125 & 0.075 &  0.05 & 0.025\end{bmatrix}$$ given the selected value for `inf_to_hosp_dist`.
+
+
+The corresponding code in `cfaepim`:
 
 ```r
-
 #' Build the observation component of a "covariate
 #' light" epidemia model.
 #'
@@ -203,7 +318,7 @@ In `cfaepim`, the observation component is built in the following manner:
 #' negative number.
 #' Specified on the transformed scale (see `link` parameter).
 #' @param non_obs_effect_prior_scale Normal prior
-#' scalefor the change in the observation probability
+#' scale for the change in the observation probability
 #' during the nonobservation (seeding) period. Useful
 #' for model initialization. Should typically be a small
 #' number, to enforce the large negative effect given in
@@ -284,7 +399,7 @@ build_light_obs <- function(inf_to_hosp_dist,
 
 ## Influenza Model
 
-In `cfaepim`, the influenza model "covariate light" is built in the following manner:
+The corresponding code in `cfaepim`:
 
 ```r
 #' Build a complete "covariate light" epidemia
@@ -423,99 +538,1057 @@ build_state_light_model <- function(
 }
 ```
 
-## Parameters & Priors
-
-Although the author has not yet presented the parameters chosen, representing them now seems likely to help interpret the subsequent code sections.
-
-For some of these,
+## Additional Components
 
 
-```yaml
-day_of_week_effect_prior_modes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-day_of_week_effect_prior_scales = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
-holiday_eff_prior_mode = -0.2
-holiday_eff_prior_scale = 0.2
-post_holiday_eff_prior_mode = 0.0
-post_holiday_eff_prior_scale = 0.2
-recency_eff_prior_mode = 0.0
-recency_eff_prior_scale = 0.1
-recency_effect_length = 0
+The corresponding code in `cfaepim`:
 
-generation_time_dist = [0.233, 0.359, 0.198, 0.103, 0.053, 0.027, 0.014, 0.007, 0.003, 0.002, 0.001]
-ihr_intercept_prior_mode = -6.5
-ihr_intercept_prior_scale = 0.5
-inf_model_prior_infections_per_capita = 0.0001
-inf_model_seeds = 8
-inf_to_hosp_dist = [0.05, 0.1, 0.175, 0.225, 0.175, 0.125, 0.075, 0.05, 0.025]
-max_rt = 3.0
-n_pre_observation_days = 14
-non_obs_effect_prior_mode = -50
-non_obs_effect_prior_scale = 0.01
-reciprocal_dispersion_prior_mode = 10
-reciprocal_dispersion_prior_scale = 5
-reference_day_of_week = 4
-rt_intercept_prior_mode = -0.4054651
-rt_intercept_prior_scale = 0.3
-seed = 54321
-susceptible_fraction_prior_mode = 0.9
-susceptible_fraction_prior_scale = 0.1
-weekly_rw_prior_scale = 0.25
-first_fitting_date = "2023-09-15"
+```r
+#' Augment a set of epidemia data with a
+#' preobservation period
+#'
+#' This allows for more robust initialization
+#' of the renewal process.
+#'
+#' @param data The data to augment
+#' @param n_pre_observation_days number of
+#' pre-observation days with which to augment it.
+#' @return the augmented data frame, as a [tibble::tibble()]
+#' @export
+add_pre_observation_period <- function(data,
+                                       n_pre_observation_days) {
+  pre_observation_data <- tibble::tibble(
+    date = min(data$date) - n_pre_observation_days:1,
+    hosp = NA,
+    nonobservation_period = TRUE,
+    location = data$location[1],
+    population = data$population[1],
+    day_of_week = factor(
+      lubridate::wday(date,
+        label = TRUE
+      ),
+      ordered = FALSE,
+      levels = levels(data$day_of_week)
+    ),
+    is_holiday = FALSE,
+    is_post_holiday = FALSE,
+    recency = 0,
+    week = data$week[1] ## this prevents RW during seeding
+  )
 
-[mcmc]
-adapt_delta = 0.9
-max_treedepth = 12
-n_chains = 1
-n_warmup = 1000
-n_iter = 2000
+  aug_data <- pre_observation_data |>
+    dplyr::bind_rows(data) |>
+    dplyr::mutate(hosp = ifelse(nonobservation_period,
+      0,
+      hosp
+    ))
+  print(aug_data |> tail())
+  return(aug_data)
+}
 ```
 
-## Example Output
 
-# Resources
+
+# Appendix
+
+## Terms
+
+The reader might find having the definitions of the following terms useful.
+
+__Basic Reproduction Number__ [@van2002reproduction, pp. 32-33]
+
+> The basic reproduction number, denoted $\mathscr{R}_0$, is 'the expected number of secondary cases produced, in a completely susceptible population, by a typical infective individual' [2]; see also [5, p. 17]. If $\mathscr{R}_0 < 1$, then on average an infected individual produces less than one new infected individual over the course of its infectious period, and the infection cannot grow. Conversely, if $\mathscr{R}_0 > 1$, then each infected individual produces, on average, more than one new infection, and the disease can invade the population. For the case of a single infected compartment, $\mathscr{R}_0$ is simply the product of the infection rate and the mean duration of the infection. However, for more complicated models with several infected compartments this simple heuristic definition of $\mathscr{R}_0$ is insufficient. A more general basic reproduction number can be defined as the number of new infections produced by a typical infective individual in a population at a [disease free equilibrium (DFE)].
+
+__Generation Interval__ [@champredon2018equivalence, pp.3258-3267]
+
+> The generation interval is the interval between the time when an individual is infected by an infector and the time when this infector was infected.
+
+and
+
+> The generation interval is rarely observed (because the actual transmission time is usually not observed), but through contact tracing it is possible to directly observe the _serial interval_ (i.e., the interval of time between the onset of symptoms for the infector and her/his infectee).
+
+
+__Renewal Equation__ (Historical) [@champredon2018equivalence, pp.3258-3267]
+
+> The renewal equation was introduced by Euler in 1767 [@euler1767recherches] in his work on population dynamics and was reframed in a modern continuous formulation by Lotka in 1907 [@lotka1907relation]. Lotka's formulation is usually expressed as $$B(t) = \int^{\infty}_0 B(t-a) p(a) \nu(a) da$$ where $B(t)$ is the number of births at time $t$, $p(a)$ is the probability of survival to age $a$, and $\nu(a)$ is the fertility at age $a$. This equation was derived for demographic studies and has been adapted to epidemics using an "age of infection" model that was described in the seminal work of Kermack and McKendrick in 1927 [@kermack1927contribution]. This epidemic model changes the interpretation of the variables: $B(t)$ represents the number of new infectious individuals at time $t$, $p(a)$ the probability to be infectious a time units after acquiring the disease, and $\nu(a)$ the "transmission potential" that is, the average number of secondary infections at "infection age" $a$.
+
+__Renewal Equation__ (Epidemiology) [@pakkanen2023unifying, pp.35]
+
+> The form of this renewal equation when only considering $\mathscr{R}_0$ is exactly what is commonly used in epidemic modelling where the incidence of infections $I(t)$ follows a renewal equation given by $$I(t) = \mathscr{R}_0 \int_0^{\infty} I(t-u)g(u)du$$ where $g(\cdot)$ is the probability density function (PDF) of the generation interval. Introducing a time-varying reproduction number $\mathscr{R}(t)$ within the Bellman–Harris process in general does not simply entail replacing $\mathscr{R}_0$ with $\mathscr{R}(t)$ in the renewal equation.
+
+## Epidemia Schematics Page
+
+> We provide schematics for different parts of the model outlined [here](https://imperialcollegelondon.github.io/epidemia/articles/model-description.html). These are useful because they clarify how different model objects, including data and parameters, are related to one another.
+>
+> Figure [2.1](https://imperialcollegelondon.github.io/epidemia/articles/model-schematic.html#fig:schem-obs) illustrates a complete observational model, and in particular details the model for multipliers $\alpha_t$. Figure [3.1](https://imperialcollegelondon.github.io/epidemia/articles/model-schematic.html#fig:schem-inf) presents the basic infection model, and also shows the GLM-style model for reproduction numbers $\mathscr{R}_t$. Finally Figure [4.1](https://imperialcollegelondon.github.io/epidemia/articles/model-schematic.html#fig:schem-latent) shows treating latent infections as parameters.
+>
+> All mathematical notation shown in the figures corresponds to that used in the model description article. Each node is outlined in a color corresponding to the type of object considered. These are interpreted as follows.
+>
+> -   **Grey**: A user provided object or quantity that is assumed to be known.
+-   **Green**: A model parameter that is, generally speaking, directly sampled. Occasionally **epidemia** will sample a transformation of this parameter for efficiency purposes.
+-   **Red**: A transformed parameter. This is a quantity that is a deterministic function of other model parameters.
+-   **Orange**: A quantity that is either a parameter or transformed parameter, depending on the context.
+-   **Blue**: An observation.
+
+![From Epidemia's site: _A schematic for observational models. Only one observational model is shown here, however the figure makes clear that additional models may be included. The model for the multiplier $\alpha_t$ is shown in the shaded green region. This is very similar in form to the transmission model shown in Figure 3.1. Infections shown at the bottom may be directly from either the basic infection model, or from an extended model (as described in the model description)._](./source/figures/Epidemia_02.png){ width=75% }
+
+![From Epidemia's site: _A schematic showing both the basic infection model and the transmission model (the green region). Here infections are a transformed parameter, and are recursively linked to previous infections. The model for $\mathscr{R}_t$ is similar to a GLM, however autocorrelation terms can be included. $\eta_t$ is the predictor for the reproduction number at time $t$, and is one element of the predictor $\eta$ introduced in the model description._](./source/figures/Epidemia_03.png){ width=75% }
+
+![From Epidemia's site: _Shows schematic for adding variation to the infection process._](./source/figures/Epidemia_04.png){ width=75% }
+
+## `cfaepim` Model, Fit, And Forecast Code
+
+The full code from `model.R`, `fit.R`, and `forecast.R`.
+
+
+### Model
+
+```r
+#' Augment a set of epidemia data with a
+#' preobservation period
+#'
+#' This allows for more robust initialization
+#' of the renewal process.
+#'
+#' @param data The data to augment
+#' @param n_pre_observation_days number of
+#' pre-observation days with which to augment it.
+#' @return the augmented data frame, as a [tibble::tibble()]
+#' @export
+add_pre_observation_period <- function(data,
+                                       n_pre_observation_days) {
+  pre_observation_data <- tibble::tibble(
+    date = min(data$date) - n_pre_observation_days:1,
+    hosp = NA,
+    nonobservation_period = TRUE,
+    location = data$location[1],
+    population = data$population[1],
+    day_of_week = factor(
+      lubridate::wday(date,
+        label = TRUE
+      ),
+      ordered = FALSE,
+      levels = levels(data$day_of_week)
+    ),
+    is_holiday = FALSE,
+    is_post_holiday = FALSE,
+    recency = 0,
+    week = data$week[1] ## this prevents RW during seeding
+  )
+
+  aug_data <- pre_observation_data |>
+    dplyr::bind_rows(data) |>
+    dplyr::mutate(hosp = ifelse(nonobservation_period,
+      0,
+      hosp
+    ))
+  print(aug_data |> tail())
+  return(aug_data)
+}
+
+#' Build the R(t) component of a "covariate
+#' light" epidemia model.
+#'
+#' @param rt_intercept_prior_mode prior mode
+#' for R(t) intercept. Prior is Normal on the
+#' transformed (scaled logit) scale.
+#' @param rt_intercept_prior_scale prior standard
+#' deviation (scale) for R(t) intercept. Prior is
+#' Normal on the transformed (scaled logit) scale.
+#' @param max_rt Maximum permitted R(t) value (upper
+#' limit of the scaled logit), on the natural scale.
+#' R(t) will be permitted to range between 0 and
+#' this value.
+#' @param rw_prior_scale prior standard deviation
+#' (scale parameter) for the random walk on R(t).
+#' Random walk steps are Normal on the transformed
+#' (scaled logit) scale.
+#' @return the R(t) model, as the output
+#' of an [epidemia::epirt()] call.
+#' @export
+build_light_rt <- function(rt_intercept_prior_mode,
+                           rt_intercept_prior_scale,
+                           max_rt,
+                           rw_prior_scale) {
+  rt_model <- epidemia::epirt(
+    formula = as.formula(
+      sprintf(
+        paste0(
+          "R(location, date) ~ 1 + ",
+          "rw(time = week, gr = location, prior_scale = %f)"
+        ),
+        rw_prior_scale
+      )
+    ),
+    prior_intercept = rstanarm::normal(
+      location = rt_intercept_prior_mode,
+      scale = rt_intercept_prior_scale
+    ),
+    link = epidemia::scaled_logit(K = max_rt)
+  )
+
+  return(rt_model)
+}
+
+#' Build the observation component of a "covariate
+#' light" epidemia model.
+#'
+#' @param inf_to_hosp_dist infection to hospitalization
+#' delay distribution, passed as the `i2o` parameter
+#' to [epidemia::epiobs()].
+#' @param ihr_intercept_prior_mode Normal prior mode for
+#' the overall infection (observed) hospitalization rate
+#' (i.e. the probability that an arbitrary infected individual
+#' gets observed admitted to the hospital), before taking
+#' into account any covariates.
+#' Specified on the transformed scale (see `link` parameter).
+#' @param ihr_intercept_prior_scale Normal prior scale for the
+#' intercept of the regression predicting the
+#' infection (observed) hospitalization rate
+#' (i.e. the probability that an arbitrary infected individual
+#' gets observed admitted to the hospital), before taking
+#' into account any covariates.
+#' Specified on the transformed scale (see `link` parameter).
+#' @param day_of_week_eff_prior_modes Normal prior
+#' modes for the day of the week effect on observation
+#' probability, relative to the reference day of the week.
+#' Should be a vector of length 6.
+#' Specified on the transformed scale (see `link` parameter).
+#' @param day_of_week_eff_prior_scales Normal prior
+#' scales for the day of the week effect on observation
+#' probability, relative to the reference day of the week.
+#' Should be a vector of length 6.
+#' Specified on the transformed scale (see `link` parameter).
+#' @param non_obs_effect_prior_mode Normal prior
+#' mode for the change in the observation probability
+#' during the nonobservation (seeding) period. Useful
+#' for model initialization. Should typically be a large
+#' negative number.
+#' Specified on the transformed scale (see `link` parameter).
+#' @param non_obs_effect_prior_scale Normal prior
+#' scalefor the change in the observation probability
+#' during the nonobservation (seeding) period. Useful
+#' for model initialization. Should typically be a small
+#' number, to enforce the large negative effect given in
+#' non_obs_effect_prior_mode.
+#' Specified on the transformed scale (see `link` parameter).
+#' @param inv_dispersion_prior_mode Normal prior mode
+#' for the reciprocal dispersion of the negative binomial
+#' observation process.
+#' @param inv_dispersion_prior_mode Normal prior scale
+#' for the reciprocal dispersion of the negative binomial
+#' observation process.
+#' @param link link function for the observation model,
+#' passed as the `link` parameter to [epidemia::epiobs()]
+#' Default `"logit"`.
+#' @return the observation model, as the output
+#' of an [epidemia::epiobs()] call.
+#' @export
+build_light_obs <- function(inf_to_hosp_dist,
+                            ihr_intercept_prior_mode,
+                            ihr_intercept_prior_scale,
+                            day_of_week_eff_prior_modes,
+                            day_of_week_eff_prior_scales,
+                            holiday_eff_prior_mode,
+                            holiday_eff_prior_scale,
+                            post_holiday_eff_prior_mode,
+                            post_holiday_eff_prior_scale,
+                            non_obs_effect_prior_mode,
+                            non_obs_effect_prior_scale,
+                            inv_dispersion_prior_mode,
+                            inv_dispersion_prior_scale,
+                            link = "logit") {
+  return(epidemia::epiobs(
+    formula = as.formula(paste0(
+      "hosp ~ 1 + day_of_week + ",
+      "is_holiday + ",
+      "is_post_holiday + ",
+      "nonobservation_period"
+    )),
+    ## Add a covariate for the
+    ## nonobservation window to
+    ## leave an initial evolution
+    ## period with no observations
+    i2o = inf_to_hosp_dist,
+    link = link,
+    family = "neg_binom",
+    prior_intercept = rstanarm::normal(
+      location = ihr_intercept_prior_mode,
+      scale = ihr_intercept_prior_scale
+    ),
+    prior = rstanarm::normal(
+      location = c(
+        day_of_week_eff_prior_modes,
+        holiday_eff_prior_mode,
+        post_holiday_eff_prior_mode,
+        non_obs_effect_prior_mode
+      ),
+      ## a large negative non_obs_effect
+      ## effectively conditions on detection
+      ## prob = 0 outside the observation period
+      scale = c(
+        day_of_week_eff_prior_scales,
+        holiday_eff_prior_scale,
+        post_holiday_eff_prior_scale,
+        non_obs_effect_prior_scale
+        ## non-obs prior scale
+        ## should be small to
+        ## enforce non-obs effect
+        ## close to (large negative) mode
+      )
+    ),
+    prior_aux = rstanarm::normal(
+      location = inv_dispersion_prior_mode,
+      scale = inv_dispersion_prior_scale
+    )
+  ))
+}
+
+#' Build a complete "covariate light" epidemia
+#' model
+#'
+#' For the given state with
+#' the given parameter list
+#'
+#' @param state state for which to build the model
+#' @param clean_data data frame of all fitting data
+#' @param params the parameter list
+#' @param n_warmup number of warmup samples for Stan to draw per chain.
+#' Default `1000`.
+#' @param n_iter total number of iterations for Stan per chain.
+#' Default `2000`.
+#' @param n_chains number of separate NUTS chains to run.
+#' Default `4`.
+#' @param max_treedepth maximum treedepth for NUTS,
+#' passed to [rstan::sampling()]. Default `11`.
+#' @param adapt_delta target acceptance probability
+#' for NUTS adaptation, passed to [rstan::sampling()].
+#' Default `0.85`.
+#' @param refresh How often to print Stan progress
+#' to terminal. Default `0` (never).
+#' @return a list of arguments that can be passed
+#' to [epidemia::epim()]
+#' @export
+build_state_light_model <- function(
+    state,
+    clean_data,
+    params,
+    n_warmup = 1000,
+    n_iter = 2000,
+    n_chains = 4,
+    max_treedepth = 11,
+    adapt_delta = 0.85,
+    refresh = 0) {
+  rw_prior_scale <- params$weekly_rw_prior_scale
+  rt_model <- build_light_rt(
+    params$rt_intercept_prior_mode,
+    params$rt_intercept_prior_scale,
+    params$max_rt,
+    params$weekly_rw_prior_scale
+  )
+  ## make sure day_of_week is properly
+  ## set up as a factor
+  dow_levels <- levels(
+    lubridate::wday("2023-01-01",
+      label = TRUE,
+      week_start = params$reference_day_of_week
+    )
+  )
+  clean_data <- clean_data |>
+    dplyr::mutate(
+      day_of_week = factor(day_of_week,
+        ordered = FALSE,
+        levels = dow_levels
+      )
+    )
+  # create the mean infections per day to use in prior_seeds
+  # to population adjust the seeded infections
+  mode_ihr <- plogis(params$ihr_intercept_prior_mode)
+  state_data <- clean_data |>
+    dplyr::filter(location == !!state)
+  mean_inf_df <- state_data |>
+    dplyr::distinct(location, population, first_week_hosp) |>
+    dplyr::mutate(
+      mean_seed_inf_per_day = (
+        (params$inf_model_prior_infections_per_capita * population) +
+          (first_week_hosp / (!!mode_ihr * 7))
+      )
+    )
+
+  mean_inf_val <- mean_inf_df$mean_seed_inf_per_day[1]
+  infection_model <- epidemia::epiinf(
+    params$generation_time_dist,
+    seed_days = params$inf_model_seeds,
+    prior_seeds = rstanarm::exponential(1 / mean_inf_val),
+    pop_adjust = TRUE,
+    pops = "population",
+    prior_susc = rstanarm::normal(
+      location = params$susceptible_fraction_prior_mode,
+      scale = params$susceptible_fraction_prior_scale
+    )
+  )
+  obs_model <- build_light_obs(
+    params$inf_to_hosp_dist,
+    params$ihr_intercept_prior_mode,
+    params$ihr_intercept_prior_scale,
+    params$day_of_week_effect_prior_modes,
+    params$day_of_week_effect_prior_scales,
+    params$holiday_eff_prior_mode,
+    params$holiday_eff_prior_scale,
+    params$post_holiday_eff_prior_mode,
+    params$post_holiday_eff_prior_scale,
+    params$non_obs_effect_prior_mode,
+    params$non_obs_effect_prior_scale,
+    params$reciprocal_dispersion_prior_mode,
+    params$reciprocal_dispersion_prior_scale
+  )
+  stan_data <- state_data |>
+    dplyr::select(
+      date,
+      location,
+      population,
+      hosp,
+      day_of_week,
+      is_holiday,
+      is_post_holiday,
+      recency,
+      nonobservation_period,
+      week
+    )
+  aug_stan_data <- add_pre_observation_period(
+    stan_data,
+    params$n_pre_observation_days
+  )
+  epim_args <- list(
+    rt = rt_model,
+    obs = obs_model,
+    inf = infection_model,
+    data = aug_stan_data,
+    warmup = n_warmup,
+    iter = n_iter,
+    seed = params$seed,
+    chains = n_chains,
+    refresh = refresh,
+    control = list(
+      max_treedepth = max_treedepth,
+      adapt_delta = adapt_delta
+    )
+  )
+  return(epim_args)
+}
+```
+
+### Fit
+
+```r
+#!/usr/bin/env Rscript
+
+#' fit forecast models for a given report date
+#'
+#' @param report_date report date for which
+#' to run the analysis
+#' @param output_parent_directory report will
+#' be saved in a subdirectory named after the report date,
+#' but within this parent directory. Defaults to creating
+#' and/or using a directory named `"output"` within the
+#' current working directory for this purpose.
+#' @param data_cutoff_date Unless use data through
+#' the given date. If `NULL`, use all
+#' available data. Default `NULL`.
+#' @param locations Only fit these locations.
+#' If `NULL`, use all available locations.
+#' Default `NULL`.
+#' @param param_path Where to look for a parameter
+#' file. Default to a file named `"params.toml"`
+#' within a directory named `"data"` within the
+#' current working directory.
+#' @param location_data_path Where to look for a FluSight
+#' `locations.csv` containing locations to fit and their
+#' populations. Default to a file named `"locations.csv"`
+#' within a directory named `"data"` within the
+#' current working directory.
+#' @param healthdata_api_key_id API key ID for authenticating
+#' to HealthData.gov SODA API. Not required, but polite.
+#' Default `NULL`
+#' @param healthdata_api_key_secret Corresponding
+#' API key secrete for authenticating
+#' to HealthData.gov SODA API. Not required, but polite.
+#' Default `NULL`.
+#' @param overwrite_params Overwrite an existing
+#' archived parameter file if it exists?
+#' Boolean, default `FALSE`. If `FALSE`
+#' and an archived parameter file already
+#' exists, the pipeline will error out.
+#' @return `TRUE` on success.
+fit <- function(report_date,
+                output_parent_directory = "output",
+                data_cutoff_date = NULL,
+                locations = NULL,
+                param_path = fs::path("data", "params.toml"),
+                location_data_path = fs::path("data", "locations.csv"),
+                healthdata_api_key_id = NULL,
+                healthdata_api_key_secret = NULL,
+                overwrite_params = FALSE) {
+  cli::cli_inform("Using working directory {fs::path_wd()}")
+
+  report_outdir <- fs::path(
+    output_parent_directory,
+    report_date
+  )
+
+  fs::dir_create(report_outdir)
+
+  data_save_path <- fs::path(
+    report_outdir,
+    paste0(report_date, "_clean_data", ".tsv")
+  )
+
+  param_save_path <- fs::path(
+    report_outdir,
+    paste0(report_date, "_config", ".toml")
+  )
+
+  cli::cli_inform("reading in run parameters from {param_path}")
+  params <- RcppTOML::parseTOML(param_path)
+
+  cli::cli_inform("Archiving parameters at {param_save_path}")
+  fs::file_copy(param_path,
+    param_save_path,
+    overwrite = overwrite_params
+  )
+
+  cli::cli_inform("Pulling and cleaning data")
+  clean_data <- cfaepim::get_data(
+    params$first_fitting_date,
+    location_data_path,
+    api_key_id = healthdata_api_key_id,
+    api_key_secret = healthdata_api_key_secret,
+    recency_effect_length = params$recency_effect_length
+  )
+
+  for (loc in unique(clean_data$location)) {
+    loc_start_date <- params$location_specific_start_dates[[loc]]
+    loc_cutoff_date <- params$location_specific_cutoff_dates[[loc]]
+
+    if (!is.null(loc_start_date)) {
+      cli::cli_inform(paste0(
+        "Using custom start date {loc_start_date} ",
+        "for location {loc}"
+      ))
+      clean_data <- clean_data |>
+        dplyr::filter(location != !!loc | date >= !!loc_start_date)
+    }
+
+    if (!is.null(loc_cutoff_date)) {
+      cli::cli_inform(paste0(
+        "Using custom cutoff date {loc_cutoff_date} ",
+        "for location {loc}"
+      ))
+      clean_data <- clean_data |>
+        dplyr::filter(location != !!loc | date <= !!loc_cutoff_date)
+    }
+  }
+
+  if (!is.null(data_cutoff_date)) {
+    clean_data <- clean_data |>
+      dplyr::filter(date <= data_cutoff_date)
+  }
+
+  unobserved_dates <- params$location_specific_excluded_dates |>
+    stack() |>
+    tibble::as_tibble() |>
+    dplyr::mutate(
+      date = as.Date(values),
+      location = ind,
+      nonobservation_period = TRUE
+    ) |>
+    dplyr::select(
+      date,
+      location,
+      nonobservation_period
+    )
+
+  clean_data <- clean_data |>
+    dplyr::left_join(
+      unobserved_dates,
+      by = c("location", "date")
+    ) |>
+    dplyr::mutate(
+      nonobservation_period =
+        tidyr::replace_na(
+          nonobservation_period,
+          FALSE
+        )
+    )
+
+
+  cli::cli_inform("Archiving cleaned data at {data_save_path}")
+  readr::write_tsv(clean_data, data_save_path)
+
+  if (!is.null(locations)) {
+    loc_vec <- as.character(locations)
+  } else {
+    loc_vec <- clean_data |>
+      dplyr::distinct(location) |>
+      dplyr::pull()
+  }
+  names(loc_vec) <- loc_vec
+
+  cli::cli_alert("Fitting the following locations: {loc_vec}")
+
+  cli::cli_alert("Setting up models")
+  fitting_args <- lapply(loc_vec,
+    cfaepim::build_state_light_model,
+    clean_data = clean_data,
+    params = params,
+    adapt_delta = params$mcmc$adapt_delta,
+    max_treedepth = params$mcmc$max_treedepth,
+    n_chains = params$mcmc$n_chains,
+    n_warmup = params$mcmc$n_warmup,
+    n_iter = params$mcmc$n_iter
+  )
+
+  cli::cli_alert("{length(fitting_args)} models to fit")
+  cli::cli_alert("Starting model fit at {Sys.time()}")
+
+  raw_results <- cfaepim::fit_future(
+    fitting_args,
+    save_results = TRUE,
+    overwrite_existing = FALSE,
+    save_dir = report_outdir,
+    save_filename_pattern = paste0("_", report_date, "_epim_results")
+  )
+
+  print(raw_results[[1]])
+
+  cli::cli_alert("Model fit finished at {Sys.time()}")
+
+  return(TRUE)
+}
+
+argv_parser <- argparser::arg_parser(
+  paste0(
+    "Run Epidemia forecast analysis ",
+    "for a given report date"
+  )
+) |>
+  argparser::add_argument(
+    "report_date",
+    help = "Date for which to generate a forecast report"
+  ) |>
+  argparser::add_argument(
+    "--data-cutoff",
+    help = "Only use data up to this date for forecasting"
+  ) |>
+  argparser::add_argument(
+    "--locations",
+    help = "Only fit to these locations"
+  ) |>
+  argparser::add_argument(
+    "--outdir",
+    help = paste0(
+      "Write forecast output to a timestamped ",
+      "subdirectory of this directory"
+    ),
+    default = "output"
+  ) |>
+  argparser::add_argument(
+    "--params",
+    help = "Path to parameter file",
+    default = "data/params.toml"
+  ) |>
+  argparser::add_argument(
+    "--overwrite-params",
+    help = "Overwrite an existing archived parameter file?",
+    default = FALSE
+  )
+
+argv <- argparser::parse_args(argv_parser)
+
+n_cores_use <- parallel::detectCores() - 1
+future::plan(future::multicore(workers = n_cores_use))
+
+if (is.na(argv$data_cutoff)) {
+  argv$data_cutoff <- NULL
+}
+if (is.na(argv$locations)) {
+  argv$locations <- NULL
+} else {
+  argv$locations <- unlist(strsplit(
+    argv$locations,
+    " "
+  ))
+}
+
+## hack to make argparser slightly more system-agnostic
+if (argv$params == "data/params.toml") {
+  argv$params <- fs::path("data", "params.toml")
+}
+
+api_creds <- cfaepim::get_api_credentials()
+
+fit(
+  argv$report_date,
+  argv$outdir,
+  data_cutoff_date = argv$data_cutoff,
+  locations = argv$locations,
+  param_path = argv$params,
+  healthdata_api_key_id = api_creds$id,
+  healthdata_api_key_secret = api_creds$key,
+  overwrite_params = argv$overwrite_params
+)
+```
+
+### Forecast
+
+```r
+#' synthetic_forecast_data
+#'
+#' Given a dataframe of timeseries data used
+#' for epidemia model fitting,
+#' produce a synthetic dataframe
+#' in the same format to use for
+#' forward projection. This is required
+#' because the rstanarm::posterior_predict
+#' function that epidemia uses expects a
+#' dataframe in the same format as the one
+#' used to fit, with both covariates and
+#' (unused) observations
+#'
+#' @param data data frame used for model fitting
+#' @param start_date first date to forecast
+#' @param end_date last date to forecast
+#' @return tibble of synthetic data
+#' @export
+synthetic_forecast_data <- function(data,
+                                    start_date,
+                                    end_date) {
+  data <- data |> dplyr::ungroup()
+  first_forecast_date <- lubridate::ymd(start_date)
+  last_forecast_date <- lubridate::ymd(end_date)
+  last_data_date <- as.Date(max(data$date))
+  last_data_week <- max(data$week)
+
+  if (last_forecast_date > last_data_date) {
+    new_dates <- seq(
+      last_data_date + 1,
+      last_forecast_date,
+      by = "day"
+    )
+
+    ## index synthetic weeks to weeks as
+    ## in the dataset
+    n_days_final_week <- data |>
+      dplyr::filter(week == !!last_data_week) |>
+      dplyr::pull() |>
+      length()
+
+    if (n_days_final_week > 7) {
+      cli::cli_abort(paste0(
+        "Final week in dataset to ",
+        "augment contains more than ",
+        "seven entries; check the dataset"
+      ))
+    } else if (n_days_final_week < 1) {
+      cli::cli_abort(paste0(
+        "Final week in dataset to ",
+        "augment contains no entries; ",
+        "check the dataset"
+      ))
+    }
+
+    last_week_day_count <- (n_days_final_week - 1L)
+
+    new_weeks <- (
+      last_data_week + floor(as.numeric(
+        new_dates - last_data_date + last_week_day_count,
+        "weeks"
+      ))
+    )
+
+    holidays <- as.Date(c(
+      "2023-11-23",
+      "2023-12-25",
+      "2023-12-31",
+      "2024-01-01"
+    ))
+
+    new_rows <- tibble::tibble(
+      date = !!new_dates,
+      week = !!new_weeks,
+      location = !!data$location[1],
+      hosp = 9999,
+      population = !!data$population[1]
+    ) |>
+      add_date_properties(recency_effect_length = 0)
+
+    result <- dplyr::bind_rows(data, new_rows) |>
+      dplyr::distinct(date, .keep_all = TRUE)
+  } else {
+    result <- data
+  }
+
+  result <- result |>
+    dplyr::mutate(
+      nonobservation_period = 0L,
+      hosp = ifelse(date >= first_forecast_date,
+        hosp,
+        NA ## only forecast needed days
+      )
+    ) |>
+    dplyr::select(-group)
+  return(result)
+}
+
+#' forecast
+#'
+#' Given an epidemia model fit (`epimodel` object),
+#' the data used to fit it, and the final day of the
+#' forecast period, return a set of forecasts (
+#' as well as posterior predictive retrocasts
+#' for the fitting period, for the given signals.
+#'
+#' @param fit epidemia model fit as an `epimodel` object.
+#' @param start_date first day of the forecast period
+#' @param end_date last day of the forecast period
+#' @param signals vector of signals to forecast. Default `c('hosp')`.
+#' @param seed seed for the posterior predictive pseudorandom
+#' number generator, passed to [epidemia::posterior_predict()].
+#' Default `NULL`.
+#' @return posterior predictive output, in the list format
+#' generated by `rstanarm::posterior_predict`
+#' @export
+forecast <- function(fit,
+                     start_date,
+                     end_date,
+                     signals = c("hosp"),
+                     seed = NULL) {
+  old_data <- fit$data
+  forecast_synth_data <- synthetic_forecast_data(
+    old_data,
+    start_date,
+    end_date
+  )
+
+  return(epidemia::posterior_predict(fit,
+    newdata = forecast_synth_data,
+    types = signals,
+    seed = seed
+  ))
+}
+
+
+#' pivot_forecast_to_long
+#'
+#' Take in the output of `rstanarm::posterior_predict`
+#' and return a tidy tibble of long-form posterior
+#' predictive draws.
+#'
+#' @param forecast output of `rstanarm::posterior_predict`
+#' to pivot.
+#' @param signal_name name of the signal being forecast.
+#' Default 'hosp'.
+#' @param time_name name for the column that will contain
+#' the values of the `forecast$time` vector. Default
+#' "date".
+#' @return the forecast pivoted to tidy long format
+#' @export
+pivot_forecast_to_long <- function(forecast,
+                                   signal_name = "hosp",
+                                   time_name = "date") {
+  draws_wide <- tibble::tibble(as.data.frame(forecast$draws))
+  names(draws_wide) <- forecast$time
+  draws_long <- draws_wide |>
+    dplyr::mutate(
+      .draw = dplyr::row_number()
+    ) |>
+    tidyr::pivot_longer(
+      cols = -.draw,
+      names_to = time_name,
+      values_to = signal_name
+    )
+  return(draws_long)
+}
+
+#' Produce a daily forecast for a given state
+#'
+#' @param state_abbr State to forecast, as
+#' two-letter USPS abbreviation
+#' @param results_list A list of `epimodel`` objects,
+#' each corresponding to a single state fit.
+#' @param start_date First date to forecast
+#' @param end_date Last date to forecast
+#' @param fitting_data data used to fit the model
+#' @param seed seed for the pseudorandom number
+#' generator for posterior prediction (passed to
+#' [epidemia::posterior_predict()]. Default `NULL`.
+#' @param verbose Boolean. Give verbose output
+#' to the terminal? Default `FALSE`.
+#' @return state forecast, as a .draw-indexed, tidy
+#' [tibble::tibble] object.
+#' @export
+daily_state_forecast <- function(state_abbr,
+                                 results_list,
+                                 start_date,
+                                 end_date,
+                                 fitting_data,
+                                 seed = NULL,
+                                 verbose = FALSE) {
+  state_result <- results_list[[state_abbr]]
+  state_data <- fitting_data |>
+    dplyr::filter(location == !!state_abbr)
+
+
+  if (!all(state_result$data$location == state_abbr)) {
+    cli::cli_abort(paste0(
+      "Could not find a result in the provided ",
+      "`results_list` whose fitting data matched ",
+      "the provided state abbreviation ",
+      "{state_abbr}. Check that the abbreviation ",
+      "is correct and that the indices of ",
+      "`results_list` and the values of ",
+      "`data$location` for the entries of that ",
+      "list are two-letter USPS state abbreviations."
+    ))
+  }
+
+  if (verbose) {
+    cli::cli_inform("Forecasting for {state_abbr}\n")
+  }
+
+  state_forecast <- forecast(
+    state_result,
+    start_date,
+    end_date,
+    seed = seed
+  ) |>
+    pivot_forecast_to_long() |>
+    dplyr::filter(date >= as.Date(!!start_date))
+
+  return(state_forecast)
+}
+
+
+#' Forecast hospitalizations and
+#' output them in FluSight format
+#'
+#' @param data all data (unfilted by location)
+#' data used to fit the models, as a `tibble`
+#' @param results epidemia results, saved
+#' as a list of `epimodel` objects
+#' @param output_path Path to save the FluSight formatted
+#' .csv file.
+#' @param reference_date reference date for the forecast.
+#' Should typically be the Saturday that concludes an
+#' epiweek.
+#' @param horizons vector of forecast horizons to compute,
+#' in weeks ahead of the reference_date.
+#' Default `-1:3` (FluSight 2023/24 requested horizons)
+#' @param seed seed for the posterior predictive
+#' pseudorandom random number generator, passed
+#' to [epidemia::posterior_predict()]. Default `NULL`.
+#' @return The formatted output that has been
+#' saved to disk, as a [tibble::tibble()], on
+#' success.
+#' @export
+forecast_and_output_flusight <- function(
+    data,
+    results,
+    output_path,
+    reference_date,
+    horizons = -1:3,
+    seed = NULL) {
+  set.seed(seed)
+
+  nation_state_crosswalk <- forecasttools::flusight_location_table
+
+
+  cli::cli_inform("Producing daily state forecasts...")
+
+  start_date <- (
+    lubridate::date(reference_date) +
+      lubridate::weeks(min(horizons)) -
+      lubridate::weeks(1) -
+      lubridate::days(1)
+  )
+
+  end_date <- (
+    lubridate::date(reference_date) +
+      lubridate::weeks(max(horizons)) +
+      lubridate::days(1)
+  )
+
+  state_vec <- names(results)
+  names(state_vec) <- state_vec
+
+  state_daily_forecast_list <- lapply(
+    state_vec,
+    daily_state_forecast,
+    results_list = results,
+    start_date = start_date,
+    end_date = end_date,
+    fitting_data = data,
+    verbose = TRUE,
+    seed = 62352
+  )
+
+  cli::cli_inform("Summarizing daily forecasts to epiweekly...")
+
+  state_weekly_forecasts <- future.apply::future_lapply(
+    state_daily_forecast_list,
+    forecasttools::daily_to_epiweekly,
+    value_col = "hosp",
+    id_cols = c(".draw"),
+    weekly_value_name = "weekly_hosp"
+  )
+
+  cli::cli_inform("Formatting output for FluSight...")
+
+  state_flusight_tables <- list()
+  full_table <- tibble::tibble()
+
+  for (state in names(state_weekly_forecasts)) {
+    state_flusight_table <- forecasttools::trajectories_to_quantiles(
+      state_weekly_forecasts[[state]],
+      timepoint_cols = c("epiweek", "epiyear"),
+      value_col = "weekly_hosp"
+    ) |>
+      dplyr::mutate(
+        location = forecasttools::loc_abbr_to_flusight_code(state)
+      ) |>
+      forecasttools:::get_flusight_table(
+        reference_date,
+        horizons = horizons
+      )
+
+    full_table <- dplyr::bind_rows(
+      full_table,
+      state_flusight_table
+    )
+  }
+
+  full_table <- full_table |>
+    dplyr::arrange(
+      location,
+      reference_date,
+      horizon,
+      output_type,
+      output_type_id
+    )
+  readr::write_csv(
+    full_table,
+    output_path
+  )
+  return(full_table)
+}
+```
+
+## Full MSR Implementation
+
+
+
+##  Resources
 
 
 
 # References
-
-<!-- MSR allows users to simulate basic [renewal processes](https://en.wikipedia.org/wiki/Renewal_theory). -->
-
-
-<!-- Outline:
-
-* An Epidemia Model For Influenza
-* Preparing Data For MSR
-* Model Validation And Comparison -->
-
-
-<!--
-- \usepackage{minted}
-- \setminted[python]{breaklines=true, tabsize=4}
-- \setminted[r]{breaklines=true, tabsize=2}
-
-- \usepackage{float}
-- \let\origfigure\figure
-- \let\endorigfigure\endfigure
-- \renewenvironment{figure}[1][H]{\origfigure[H]}{\endorigfigure}
--
-- - \setminted[python]{frame=single, framesep=2mm, rulecolor=\color{black}, numbersep=5pt, breaklines=true, tabsize=4, linenos=false, xleftmargin=5mm, xrightmargin=5mm}
--
-- \inputminted{python}{./source/code/example.py}
--
-def load_NHSN(data_path: str):
-    """
-    Loads NHSN hospitalization data from tsv file
-    path.
-
-    Parameters
-    ----------
-    data_path : str
-        The path to the tsv file to be read.
-
-    Returns
-    -------
-    pl.DataFrame
-        A polars dataframe of NHSN hospitalization
-        data.
-    """
-    return pl.read_csv(data_path, separator="\t", infer_schema_length=10000)-->
