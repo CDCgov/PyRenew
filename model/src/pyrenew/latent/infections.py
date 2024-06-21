@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
+import numpyro as npro
 import pyrenew.latent.infection_functions as inf
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
@@ -118,6 +119,7 @@ class Infections(RandomVariable):
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-npro.deterministic(self.latent_infections_varname, post_seed_infections)
+        npro.deterministic(
+            self.latent_infections_varname, post_seed_infections
+        )
         return InfectionsSample(post_seed_infections)
-
