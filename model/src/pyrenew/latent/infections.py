@@ -52,11 +52,6 @@ class Infections(RandomVariable):
         """
         Default constructor for Infections class.
 
-        Parameters
-        ----------
-        latent_infections_varname : str
-            Name to be assigned to the deterministic variable in the model.
-
         Returns
         -------
         None

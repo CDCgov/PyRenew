@@ -43,8 +43,6 @@ class InfectionsWithFeedback(RandomVariable):
         Infection feedback strength.
     infection_feedback_pmf : RandomVariable
         Infection feedback pmf.
-    latent_infections_varname : str
-        Name to be assigned to the deterministic variable in the model.
 
     Notes
     -----
@@ -79,9 +77,6 @@ class InfectionsWithFeedback(RandomVariable):
             Infection feedback strength.
         infection_feedback_pmf : RandomVariable
             Infection feedback pmf.
-        latent_infections_varname : str, optional
-            Name to be assigned to the deterministic variable in the model.
-            Defaults to "latent_infections".
 
         Returns
         -------

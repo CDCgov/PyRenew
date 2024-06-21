@@ -150,7 +150,7 @@ from pyrenew import model, process, observation, metaclass, transformation
 from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsExponential
 
 # Infection process
-latent_inf = latent.Infections(latent_infections_varname="latent_infections")
+latent_inf = latent.Infections()
 I0 = InfectionSeedingProcess(
     "I0_seeding",
     metaclass.DistributionalRV(
@@ -165,9 +165,9 @@ I0 = InfectionSeedingProcess(
 # Generation interval and Rt
 gen_int = deterministic.DeterministicPMF(gen_int, name="gen_int")
 rtproc = process.RtRandomWalkProcess(
-    Rt0_dist = dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-    Rt_transform = transformation.ExpTransform().inv,
-    Rt_rw_dist = dist.Normal(0, 0.025),
+    Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+    Rt_transform=transformation.ExpTransform().inv,
+    Rt_rw_dist=dist.Normal(0, 0.025),
 )
 
 # The observation model
@@ -308,7 +308,7 @@ We can also take a look at the latent infections:
 # | label: fig-output-infections-with-padding
 # | fig-cap: Hospital Admissions posterior distribution
 out2 = hosp_model.plot_posterior(
-    var="latent_infections", ylab="Latent Infections"
+    var="all_latent_infections", ylab="Latent Infections"
 )
 ```
 

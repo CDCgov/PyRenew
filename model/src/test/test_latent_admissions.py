@@ -33,7 +33,7 @@ def test_admissions_sample():
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
     i0 = 10 * jnp.ones_like(gen_int)
 
-    inf1 = Infections(latent_infections_varname="latent_infections")
+    inf1 = Infections()
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         inf_sampled1 = inf1.sample(Rt=sim_rt, gen_int=gen_int, I0=i0)

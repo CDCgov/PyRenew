@@ -33,9 +33,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
-    latent_infections = Infections(
-        latent_infections_varname="latent_infections"
-    )
+    latent_infections = Infections()
 
     observed_infections = PoissonObservation()
 
@@ -72,9 +70,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
 
-    latent_infections = Infections(
-        latent_infections_varname="latent_infections"
-    )
+    latent_infections = Infections()
 
     observed_infections = PoissonObservation()
 
@@ -120,9 +116,7 @@ def test_model_basicrenewal_no_obs_model():
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections(
-        latent_infections_varname="latent_infections"
-    )
+    latent_infections = Infections()
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
@@ -169,10 +163,10 @@ def test_model_basicrenewal_no_obs_model():
         data_observed_infections=model0_samp.latent_infections,
     )
 
-    inf = model0.spread_draws(["latent_infections"])
+    inf = model0.spread_draws(["all_latent_infections"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("latent_infections").mean())
+        .agg(pl.col("all_latent_infections").mean())
         .sort(pl.col("draw"))
     )
 
@@ -197,9 +191,7 @@ def test_model_basicrenewal_with_obs_model():
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections(
-        latent_infections_varname="latent_infections"
-    )
+    latent_infections = Infections()
 
     observed_infections = PoissonObservation()
 
@@ -229,10 +221,10 @@ def test_model_basicrenewal_with_obs_model():
         data_observed_infections=model1_samp.observed_infections,
     )
 
-    inf = model1.spread_draws(["latent_infections"])
+    inf = model1.spread_draws(["all_latent_infections"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("latent_infections").mean())
+        .agg(pl.col("all_latent_infections").mean())
         .sort(pl.col("draw"))
     )
 
@@ -252,9 +244,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
 
-    latent_infections = Infections(
-        latent_infections_varname="latent_infections"
-    )
+    latent_infections = Infections()
 
     observed_infections = PoissonObservation()
 
@@ -289,11 +279,11 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         padding=5,
     )
 
-    inf = model1.spread_draws(["latent_infections"])
+    inf = model1.spread_draws(["all_latent_infections"])
 
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("latent_infections").mean())
+        .agg(pl.col("all_latent_infections").mean())
         .sort(pl.col("draw"))
     )
 

@@ -29,7 +29,7 @@ def test_infections_as_deterministic():
 
     gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
 
-    inf1 = Infections(latent_infections_varname="latent_infections")
+    inf1 = Infections()
 
     obs = dict(
         Rt=sim_rt,

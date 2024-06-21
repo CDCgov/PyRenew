@@ -31,9 +31,7 @@ def create_test_model():  # numpydoc ignore=GL08
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
     )
-    latent_infections = Infections(
-        latent_infections_varname="latent_infections"
-    )
+    latent_infections = Infections()
     observed_infections = PoissonObservation()
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
