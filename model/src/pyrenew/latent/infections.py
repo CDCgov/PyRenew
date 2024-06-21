@@ -25,7 +25,7 @@ class InfectionsSample(NamedTuple):
     post_seed_infections: ArrayLike | None = None
 
     def __repr__(self):
-        return f"InfectionsSample(infections={self.infections})"
+        return f"InfectionsSample(post_seed_infections={self.post_seed_infections})"
 
 
 class Infections(RandomVariable):
