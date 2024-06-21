@@ -200,7 +200,9 @@ class InfectionsWithFeedback(RandomVariable):
         # Appending initial infections to the infections
 
         npro.deterministic("Rt_adjusted", Rt_adj)
-
+        npro.deterministic(
+            self.latent_infections_varname, post_seed_infections
+        )
         return InfectionsRtFeedbackSample(
             post_seed_infections=post_seed_infections,
             rt=Rt_adj,
