@@ -69,7 +69,6 @@ class InfectionsWithFeedback(RandomVariable):
         self,
         infection_feedback_strength: RandomVariable,
         infection_feedback_pmf: RandomVariable,
-        latent_infections_varname: str,
     ) -> None:
         """
         Default constructor for Infections class.
@@ -93,7 +92,6 @@ class InfectionsWithFeedback(RandomVariable):
 
         self.infection_feedback_strength = infection_feedback_strength
         self.infection_feedback_pmf = infection_feedback_pmf
-        self.latent_infections_varname = latent_infections_varname
 
         return None
 
@@ -200,9 +198,7 @@ class InfectionsWithFeedback(RandomVariable):
         # Appending initial infections to the infections
 
         npro.deterministic("Rt_adjusted", Rt_adj)
-        npro.deterministic(
-            self.latent_infections_varname, post_seed_infections
-        )
+
         return InfectionsRtFeedbackSample(
             post_seed_infections=post_seed_infections,
             rt=Rt_adj,
