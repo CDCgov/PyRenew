@@ -6,7 +6,6 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import numpyro as npro
 import pyrenew.latent.infection_functions as inf
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
@@ -18,11 +17,11 @@ class InfectionsSample(NamedTuple):
 
     Attributes
     ----------
-    infections : ArrayLike | None, optional
+    post_seed_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
     """
 
-    infections: ArrayLike | None = None
+    post_seed_infections: ArrayLike | None = None
 
     def __repr__(self):
         return f"InfectionsSample(infections={self.infections})"
@@ -113,14 +112,12 @@ class Infections(RandomVariable):
         gen_int_rev = jnp.flip(gen_int)
         recent_I0 = I0[-gen_int_rev.size :]
 
-        all_infections = inf.compute_infections_from_rt(
+        post_seed_infections = inf.compute_infections_from_rt(
             I0=recent_I0,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        all_infections = jnp.hstack([I0, all_infections])
+npro.deterministic(self.latent_infections_varname, post_seed_infections)
+        return InfectionsSample(post_seed_infections)
 
-        npro.deterministic(self.latent_infections_varname, all_infections)
-
-        return InfectionsSample(all_infections)
