@@ -220,7 +220,7 @@ class RtInfectionsRenewalModel(Model):
         )
 
         all_latent_infections = jnp.hstack([I0, post_seed_latent_infections])
-        npro.deterministic("latent_infections", all_latent_infections)
+        npro.deterministic("all_latent_infections", all_latent_infections)
 
         observed_infections = au.pad_x_to_match_y(
             observed_infections,
