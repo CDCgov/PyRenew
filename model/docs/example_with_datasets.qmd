@@ -292,7 +292,7 @@ And plotting the results:
 
 ```{python}
 # | label: fig-output-admissions-with-padding
-# | fig-cap: Hospital Admissions posterior distribution
+# | fig-cap: Hospital Admissions
 out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
@@ -302,14 +302,42 @@ out = hosp_model.plot_posterior(
 )
 ```
 
+We can visualize the distribution of latent hospital admissions using:
+```{python}
+# | label: fig-output-admission-distribution
+# | fig-cap: Hospital Admissions posterior distribution
+import arviz as az
+
+idata = az.from_numpyro(hosp_model.mcmc)
+fig, axes = plt.subplots(figsize=(5,22))
+az.plot_forest(
+    idata.posterior['latent_hospital_admissions'],
+    hdi_prob=0.95,
+    ax=axes
+);
+```
+
 We can also take a look at the latent infections:
 
 ```{python}
 # | label: fig-output-infections-with-padding
-# | fig-cap: Hospital Admissions posterior distribution
+# | fig-cap: Latent infections
 out2 = hosp_model.plot_posterior(
     var="latent_infections", ylab="Latent Infections"
 )
+```
+and the distribution of latent infections
+
+```{python}
+# | label: fig-output-infections-distribution
+# | fig-cap: Latent infections posterior distribution
+
+fig, axes = plt.subplots(figsize=(5,22))
+az.plot_forest(
+    idata.posterior['latent_infections'],
+    hdi_prob=0.95,
+    ax=axes
+);
 ```
 
 ## Round 2: Incorporating day-of-the-week effects

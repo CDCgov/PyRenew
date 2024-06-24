@@ -204,7 +204,7 @@ Now, let's investigate the output, particularly the posterior distribution of th
 out = model1.plot_posterior(var="Rt")
 ```
 
-We can also use ArviZ package to create model diagnostics and visualizations. Below we use `plot_trace` to inspect the trace of daily $R_t$ estimates.
+We can use ArviZ package to create model diagnostics and visualizations. Below we use `plot_trace` to inspect the trace of daily $R_t$ estimates.
 
 ```{python}
 #| label: viz_trace
@@ -220,7 +220,10 @@ We can inspect distribution of daily $R_t$ estimates
 ```{python}
 #| label: viz_forest
 #| fig-cap: Daily Rt estimates
-az.plot_forest(idata.posterior['Rt'],hdi_prob=0.95);
+az.plot_forest(
+    idata.posterior['Rt'],
+    hdi_prob=0.95,
+);
 ```
 ## Architecture of pyrenew
 
