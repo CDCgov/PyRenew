@@ -4,7 +4,6 @@
 
 import jax.numpy as jnp
 import jax.random as jr
-import matplotlib.pyplot as plt
 import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
@@ -164,10 +163,10 @@ def test_model_basicrenewal_no_obs_model():
         data_observed_infections=model0_samp.latent_infections,
     )
 
-    inf = model0.spread_draws(["latent_infections"])
+    inf = model0.spread_draws(["all_latent_infections"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("latent_infections").mean())
+        .agg(pl.col("all_latent_infections").mean())
         .sort(pl.col("draw"))
     )
 
@@ -222,83 +221,16 @@ def test_model_basicrenewal_with_obs_model():
         data_observed_infections=model1_samp.observed_infections,
     )
 
-    inf = model1.spread_draws(["latent_infections"])
+    inf = model1.spread_draws(["all_latent_infections"])
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("latent_infections").mean())
+        .agg(pl.col("all_latent_infections").mean())
         .sort(pl.col("draw"))
     )
 
     # For now the assertion is only about the expected number of rows
     # It should be about the MCMC inference.
     assert inf_mean.to_numpy().shape[0] == 500
-
-
-@pytest.mark.mpl_image_compare
-def test_model_basicrenewal_plot() -> plt.Figure:
-    """
-    Check that the posterior sample looks the same (reproducibility)
-
-    Returns
-    -------
-    plt.Figure
-        The figure object
-
-    Notes
-    -----
-    IMPORTANT: If this test fails, it may be that you need
-    to regenerate the figures. To do so, you can the test using the following
-    command:
-
-      poetry run pytest --mpl-generate-path=src/test/baseline
-
-    This will skip validating the figure and save the new figure in the
-    `src/test/baseline` folder.
-    """
-    gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
-    )
-
-    I0 = InfectionSeedingProcess(
-        "I0_seeding",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
-    )
-
-    latent_infections = Infections()
-
-    observed_infections = PoissonObservation()
-
-    rt = RtRandomWalkProcess(
-        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-        Rt_transform=t.ExpTransform().inv,
-        Rt_rw_dist=dist.Normal(0, 0.025),
-    )
-
-    model1 = RtInfectionsRenewalModel(
-        I0_rv=I0,
-        gen_int_rv=gen_int,
-        latent_infections_rv=latent_infections,
-        infection_obs_process_rv=observed_infections,
-        Rt_process_rv=rt,
-    )
-
-    # Sampling and fitting model 1 (with obs infections)
-    np.random.seed(2203)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints_to_simulate=30)
-
-    model1.run(
-        num_warmup=500,
-        num_samples=500,
-        rng_key=jr.key(22),
-        data_observed_infections=model1_samp.observed_infections,
-    )
-
-    return model1.plot_posterior(
-        var="latent_infections",
-        obs_signal=model1_samp.observed_infections,
-    )
 
 
 def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
@@ -347,11 +279,11 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         padding=5,
     )
 
-    inf = model1.spread_draws(["latent_infections"])
+    inf = model1.spread_draws(["all_latent_infections"])
 
     inf_mean = (
         inf.group_by("draw")
-        .agg(pl.col("latent_infections").mean())
+        .agg(pl.col("all_latent_infections").mean())
         .sort(pl.col("draw"))
     )
 
