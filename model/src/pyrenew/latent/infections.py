@@ -24,7 +24,7 @@ class InfectionsSample(NamedTuple):
     post_seed_infections: ArrayLike | None = None
 
     def __repr__(self):
-        return f"InfectionsSample(infections={self.infections})"
+        return f"InfectionsSample(post_seed_infections={self.post_seed_infections})"
 
 
 class Infections(RandomVariable):
@@ -45,28 +45,6 @@ class Infections(RandomVariable):
     :math:`R(t)` is the reproduction number at time :math:`t`, and
     :math:`g(t-\tau)` is the generation interval.
     """
-
-    def __init__(
-        self,
-        infections_mean_varname: str = "latent_infections",
-    ) -> None:
-        """
-        Default constructor for Infections class.
-
-        Parameters
-        ----------
-        infections_mean_varname : str, optional
-            Name to be assigned to the deterministic variable in the model.
-            Defaults to "latent_infections".
-
-        Returns
-        -------
-        None
-        """
-
-        self.infections_mean_varname = infections_mean_varname
-
-        return None
 
     @staticmethod
     def validate() -> None:  # numpydoc ignore=GL08
