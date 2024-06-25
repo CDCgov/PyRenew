@@ -323,6 +323,7 @@ az.plot_hdi(
     y_data,
     hdi_prob=0.9,
     color='C0',
+    smooth=False,
     fill_kwargs={'alpha':0.3},
     ax=axes,
 )
@@ -332,10 +333,15 @@ az.plot_hdi(
     y_data,
     hdi_prob=0.5,
     color='C0',
+    smooth=False,
     fill_kwargs={'alpha':0.6},
     ax=axes,
 )
 
+#Add mean of the posterior to the figure
+mean_latent_hosp_admission = az.summary(idata.posterior['latent_hospital_admissions'])['mean']
+axes.plot(x_data,mean_latent_hosp_admission, color='C0', label='Mean')
+axes.legend()
 axes.set_ylabel('Latent Hospital Admissions',fontsize=10);
 ```
 
@@ -362,6 +368,7 @@ az.plot_hdi(
     y_data,
     hdi_prob=0.9,
     color='C0',
+    smooth=False,
     fill_kwargs={'alpha':0.3},
     ax=axes,
 )
@@ -371,10 +378,15 @@ az.plot_hdi(
     y_data,
     hdi_prob=0.5,
     color='C0',
+    smooth=False,
     fill_kwargs={'alpha':0.6},
     ax=axes,
 )
 
+#Add mean of the posterior to the figure
+mean_latent_infection = az.summary(idata.posterior['all_latent_infections'])['mean']
+axes.plot(x_data,mean_latent_infection, color='C0', label='Mean')
+axes.legend()
 axes.set_ylabel('Latent Infections',fontsize=10);
 ```
 
