@@ -248,7 +248,10 @@ az.plot_hdi(
     ax=axes,
 )
 
-axes.set_ylabel('$R_t$ estimates',fontsize=10);
+#Add mean of the posterior to the figure
+mean_Rt = az.summary(idata.posterior['Rt'])['mean']
+axes.plot(x_data,mean_Rt, color='black', linestyle='-', label='Mean $R_t$')
+axes.set_ylabel('$R_t$ estimates',fontsize=15);
 ```
 
 and latent infections:
@@ -278,6 +281,7 @@ az.plot_hdi(
     ax=axes,
 )
 
+#Add mean of the posterior to the figure
 axes.set_ylabel('Latent Infections',fontsize=10);
 ```
 
