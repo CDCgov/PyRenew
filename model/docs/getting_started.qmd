@@ -204,27 +204,83 @@ Now, let's investigate the output, particularly the posterior distribution of th
 out = model1.plot_posterior(var="Rt")
 ```
 
-We can use [ArviZ](https://www.arviz.org/) package to create model diagnostics and visualizations. Below we use `plot_trace` to inspect the trace of daily $R_t$ estimates.
-
+We can use [ArviZ](https://www.arviz.org/) package to create model diagnostics and visualizations. We start by converting the fitted model to ArviZ InferenceData object
 ```{python}
-#| label: viz_trace
-#| fig-cap: Trace plot of Rt posterior distribution
+#| label: convert-inference-data
 import arviz as az
 idata = az.from_numpyro(model1.mcmc)
+```
+
+Below we use `plot_trace` to inspect the trace of the $R_t$ estimates.
+
+```{python}
+#| label: fig-trace-Rt
+#| fig-cap: Trace plot of Rt posterior distribution
+
 az.plot_trace(idata.posterior["Rt"],compact=True);
 #set compact=False for separate trace for each Rt
 ```
 
-We can inspect distribution of daily $R_t$ estimates
+We can inspect distribution of the $R_t$ estimates
 
 ```{python}
-#| label: viz_forest
-#| fig-cap: Daily Rt estimates
-az.plot_forest(
-    idata.posterior['Rt'],
-    hdi_prob=0.95,
-);
+#| label: fig-hdi-Rt
+#| fig-cap: High density interval for Rt estimates
+x_data = idata.posterior['Rt_dim_0']
+y_data = idata.posterior['Rt']
+
+fig, axes = plt.subplots(figsize=(6,5))
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.9,
+    color='C0',
+    fill_kwargs={'alpha':0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.5,
+    color='C0',
+    fill_kwargs={'alpha':0.6},
+    ax=axes,
+)
+
+axes.set_ylabel('$R_t$ estimates',fontsize=10);
 ```
+
+and latent infections:
+
+```{python}
+#| label: fig-hdi-latent-infections
+#| fig-cap: High density interval for latent infections
+x_data = idata.posterior['all_latent_infections_dim_0']
+y_data = idata.posterior['all_latent_infections']
+
+fig, axes = plt.subplots(figsize=(6,5))
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.9,
+    color='C0',
+    fill_kwargs={'alpha':0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.5,
+    color='C0',
+    fill_kwargs={'alpha':0.6},
+    ax=axes,
+)
+
+axes.set_ylabel('Latent Infections',fontsize=10);
+```
+
 ## Architecture of pyrenew
 
 `pyrenew` leverages `numpyro`'s flexibility to build models via composition. As a principle, most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`. From them, the following four sub-modules arise:

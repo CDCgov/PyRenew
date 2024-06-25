@@ -302,19 +302,41 @@ out = hosp_model.plot_posterior(
 )
 ```
 
-We can visualize the distribution of latent hospital admissions using:
+We can use [ArviZ](https://www.arviz.org/) to visualize the results. Convert the fitted model to Arviz InferenceData object:
 ```{python}
-# | label: fig-output-admission-distribution
-# | fig-cap: Hospital Admissions posterior distribution
+# | label: convert-inferenceData
 import arviz as az
 
 idata = az.from_numpyro(hosp_model.mcmc)
-fig, axes = plt.subplots(figsize=(5,22))
-az.plot_forest(
-    idata.posterior['latent_hospital_admissions'],
-    hdi_prob=0.95,
-    ax=axes
-);
+```
+Below we plot $90 \%$ and $50 \%$ highest density interval for latent hospital admissions using [plot_hdi](https://python.arviz.org/en/stable/api/generated/arviz.plot_hdi.html):
+
+```{python}
+# | label: fig-output-admission-distribution
+# | fig-cap: Hospital Admissions posterior distribution
+x_data = idata.posterior['latent_hospital_admissions_dim_0']
+y_data = idata.posterior['latent_hospital_admissions']
+
+fig, axes = plt.subplots(figsize=(6,5))
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.9,
+    color='C0',
+    fill_kwargs={'alpha':0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.5,
+    color='C0',
+    fill_kwargs={'alpha':0.6},
+    ax=axes,
+)
+
+axes.set_ylabel('Latent Hospital Admissions',fontsize=10);
 ```
 
 We can also take a look at the latent infections:
@@ -331,13 +353,29 @@ and the distribution of latent infections
 ```{python}
 # | label: fig-output-infections-distribution
 # | fig-cap: Latent infections posterior distribution
+x_data = idata.posterior['all_latent_infections_dim_0']
+y_data = idata.posterior['all_latent_infections']
 
-fig, axes = plt.subplots(figsize=(5,22))
-az.plot_forest(
-    idata.posterior['all_latent_infections'],
-    hdi_prob=0.95,
-    ax=axes
-);
+fig, axes = plt.subplots(figsize=(6,5))
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.9,
+    color='C0',
+    fill_kwargs={'alpha':0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.5,
+    color='C0',
+    fill_kwargs={'alpha':0.6},
+    ax=axes,
+)
+
+axes.set_ylabel('Latent Infections',fontsize=10);
 ```
 
 ## Round 2: Incorporating day-of-the-week effects
