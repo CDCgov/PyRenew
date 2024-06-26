@@ -230,7 +230,7 @@ az.plot_trace(
 and now the remaining $R_t$ estimates:
 
 ```{python}
-#| label: fig2-trace-Rt
+#| label: fig-trace-Rt2
 #| fig-cap: Trace plot of Rt posterior distribution
 az.plot_trace(
     idata.posterior,
