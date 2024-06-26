@@ -306,7 +306,6 @@ We can use [ArviZ](https://www.arviz.org/) to visualize the results. Convert the
 ```{python}
 # | label: convert-inferenceData
 import arviz as az
-
 idata = az.from_numpyro(hosp_model.mcmc)
 ```
 Below we plot $90 \%$ and $50 \%$ highest density interval for latent hospital admissions using [plot_hdi](https://python.arviz.org/en/stable/api/generated/arviz.plot_hdi.html):
@@ -342,7 +341,8 @@ az.plot_hdi(
 mean_latent_hosp_admission = az.summary(idata.posterior['latent_hospital_admissions'])['mean']
 axes.plot(x_data,mean_latent_hosp_admission, color='C0', label='Mean')
 axes.legend()
-axes.set_ylabel('Latent Hospital Admissions',fontsize=10);
+axes.set_xlabel('Time', fontsize=10)
+axes.set_ylabel('Posterior distribution (hospital admissions)',fontsize=10);
 ```
 
 We can also take a look at the latent infections:
@@ -387,7 +387,8 @@ az.plot_hdi(
 mean_latent_infection = az.summary(idata.posterior['all_latent_infections'])['mean']
 axes.plot(x_data,mean_latent_infection, color='C0', label='Mean')
 axes.legend()
-axes.set_ylabel('Latent Infections',fontsize=10);
+axes.set_xlabel('Time', fontsize=10)
+axes.set_ylabel('Posterior distribution (latent infections)',fontsize=10);
 ```
 
 ## Round 2: Incorporating day-of-the-week effects
