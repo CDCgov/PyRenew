@@ -62,7 +62,7 @@ class PeriodicEffect(RandomVariable):
         )
 
         self.set_timeseries(
-            timeseries_start=offset,
+            timeseries_start=0,
             timeseries_unit=1,
         )
 

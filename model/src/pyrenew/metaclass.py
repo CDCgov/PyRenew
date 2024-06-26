@@ -137,33 +137,32 @@ class RandomVariable(metaclass=ABCMeta):
 
         Parameters
         ----------
-        ts_start : int
-            The start of the time series.
-        ts_unit : int
-            The unit of the time series, e.g., 1: Daily, 7: Weekly.
+        timeseries_start : int
+            The start of the time series relative to the model time. It could be negative, indicating that the sample returns observations prior to the model time.
+        timeseries_unit : int
+            The unit of the time series, e.g., 1: Daily, 7: Weekly. If explicitly passed as `None`, it is set to 1.
 
         Returns
         -------
         None
         """
 
-        # Period size should be a positive integer
-        assert isinstance(
-            timeseries_unit, int
-        ), f"timeseries_unit should be an integer. It is {type(timeseries_unit)}."
+        if timeseries_unit is None:
+            timeseries_unit = 1
+        else:
+            # Period size should be a positive integer
+            assert isinstance(
+                timeseries_unit, int
+            ), f"timeseries_unit should be an integer. It is {type(timeseries_unit)}."
 
-        assert (
-            timeseries_unit > 0
-        ), f"timeseries_unit should be a positive integer. It is {timeseries_unit}."
+            assert (
+                timeseries_unit > 0
+            ), f"timeseries_unit should be a positive integer. It is {timeseries_unit}."
 
         # Data starts should be a positive integer
         assert isinstance(
             timeseries_start, int
         ), f"timeseries_start should be an integer. It is {type(timeseries_start)}."
-
-        assert (
-            0 <= timeseries_start
-        ), f"timeseries_start should be a positive integer. It is {timeseries_start}."
 
         self.timeseries_start = timeseries_start
         self.timeseries_unit = timeseries_unit
