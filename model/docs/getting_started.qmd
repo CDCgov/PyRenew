@@ -232,7 +232,7 @@ We inspect the posterior distribution of $R_t$ by plotting the $90 \%$ and $50 \
 
 ```{python}
 #| label: fig-hdi-Rt
-#| fig-cap: High density interval for Rt estimates
+#| fig-cap: High density interval for Effective Reproduction Number
 x_data = idata.posterior['Rt_dim_0']
 y_data = idata.posterior['Rt']
 
@@ -256,18 +256,19 @@ az.plot_hdi(
 )
 
 #Add mean of the posterior to the figure
-mean_Rt = az.summary(idata.posterior['Rt'])['mean']
-axes.plot(x_data,mean_Rt, color='C0', label='Mean $R_t$')
+mean_Rt = np.mean(idata.posterior['Rt'],axis=1)
+axes.plot(x_data,mean_Rt[0], color='C0', label='Mean')
 axes.legend()
+axes.set_title('Posterior Effective Reproduction Number', fontsize=10)
 axes.set_xlabel('Time', fontsize=10)
-axes.set_ylabel('Posterior distribution ($R_t$)', fontsize=10);
+axes.set_ylabel('$R_t$', fontsize=10);
 ```
 
 and latent infections:
 
 ```{python}
 #| label: fig-hdi-latent-infections
-#| fig-cap: High density interval for latent infections
+#| fig-cap: High density interval for Latent Infections
 x_data = idata.posterior['all_latent_infections_dim_0']
 y_data = idata.posterior['all_latent_infections']
 
@@ -293,11 +294,12 @@ az.plot_hdi(
 )
 
 #Add mean of the posterior to the figure
-mean_latent_infection = az.summary(idata.posterior['all_latent_infections'])['mean']
-axes.plot(x_data,mean_latent_infection, color='C0', label='Mean')
+mean_latent_infection = np.mean(idata.posterior['all_latent_infections'],axis=1)
+axes.plot(x_data,mean_latent_infection[0], color='C0', label='Mean')
 axes.legend()
+axes.set_title('Posterior Latent Infections',fontsize=10)
 axes.set_xlabel('Time', fontsize=10)
-axes.set_ylabel('Posterior distribution (latent infections)',fontsize=10);
+axes.set_ylabel('Latent Infections',fontsize=10);
 ```
 
 ## Architecture of pyrenew
