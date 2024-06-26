@@ -5,7 +5,7 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import NamedTuple, get_type_hints
+from typing import Callable, NamedTuple, get_type_hints
 
 import jax
 import jax.numpy as jnp
@@ -15,7 +15,7 @@ import numpy as np
 import numpyro as npro
 import polars as pl
 from jax.typing import ArrayLike
-from numpyro.infer import MCMC, NUTS
+from numpyro.infer import MCMC, NUTS, Predictive
 from pyrenew.mcmcutils import plot_posterior, spread_draws
 
 
@@ -412,3 +412,76 @@ class Model(metaclass=ABCMeta):
             draws_col=draws_col,
             obs_col=obs_col,
         )
+
+    def posterior_predictive(
+        self,
+        rng_key: ArrayLike | None = None,
+        *args,
+        guide: Callable | None = None,
+        params: dict | None = None,
+        num_samples: int | None = None,
+        return_sites: list[str] | None = None,
+        infer_discrete: bool = False,
+        parallel: bool = False,
+        batch_ndims: int | None = None,
+        exclude_deterministic: bool = True,
+        **kwargs,
+    ) -> dict:
+        if self.mcmc is None:
+            raise ValueError(
+                "No posterior samples available. Run model with model.run()."
+            )
+
+        if rng_key is None:
+            rand_int = np.random.randint(
+                np.iinfo(np.int64).min, np.iinfo(np.int64).max
+            )
+            rng_key = jr.key(rand_int)
+
+        return Predictive(
+            model=self.sample,
+            posterior_samples=self.mcmc.get_samples(),
+            *args,
+            guide=guide,
+            params=params,
+            num_samples=num_samples,
+            return_sites=return_sites,
+            infer_discrete=infer_discrete,
+            parallel=parallel,
+            batch_ndims=batch_ndims,
+            exclude_deterministic=exclude_deterministic,
+        )(rng_key, **kwargs)
+
+    def prior_predictive(
+        self,
+        rng_key: ArrayLike | None = None,
+        *args,
+        guide: Callable | None = None,
+        params: dict | None = None,
+        num_samples: int = None,
+        return_sites: list[str] | None = None,
+        infer_discrete: bool = False,
+        parallel: bool = False,
+        batch_ndims: int | None = None,
+        exclude_deterministic: bool = True,
+        **kwargs,
+    ) -> dict:
+        if rng_key is None:
+            rand_int = np.random.randint(
+                np.iinfo(np.int64).min, np.iinfo(np.int64).max
+            )
+            rng_key = jr.key(rand_int)
+
+        return Predictive(
+            model=self.sample,
+            posterior_samples=None,
+            *args,
+            guide=guide,
+            params=params,
+            num_samples=num_samples,
+            return_sites=return_sites,
+            infer_discrete=infer_discrete,
+            parallel=parallel,
+            batch_ndims=batch_ndims,
+            exclude_deterministic=exclude_deterministic,
+        )(rng_key, **kwargs)

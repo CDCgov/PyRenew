@@ -483,3 +483,67 @@ out = hosp_model_weekday.plot_posterior(
     ),
 )
 ```
+
+
+
+```{python}
+idata_weekday = az.from_numpyro(hosp_model_weekday.mcmc, posterior_predictive=hosp_model_weekday.posterior_predictive(n_timepoints_to_simulate=1))
+```
+
+```{python}
+# | label: fig-output-infections-distribution
+# | fig-cap: Posterior Latent Infections
+
+fig, axes = plt.subplots(figsize=(6, 5))
+az.plot_hdi(
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.posterior_predictive["negbinom_rv"],
+    hdi_prob=0.9,
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.posterior_predictive["negbinom_rv"],
+    hdi_prob=0.5,
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.6},
+    ax=axes,
+)
+
+# Add mean of the posterior to the figure
+mean_latent_infection = np.mean(
+    idata_weekday.posterior_predictive["negbinom_rv"], axis=1
+)
+plt.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
+plt.scatter(
+    idata_weekday.observed_data["negbinom_rv_dim_0"]
+    + gen_int_array.size
+    + days_to_impute,
+    idata_weekday.observed_data["negbinom_rv"],
+    color="black",
+)
+axes.legend()
+axes.set_title("Posterior Predictive Infections", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Observed Infections", fontsize=10);
+```
+
+```{python}
+# What is this?
+az.plot_ppc(idata_weekday, alpha=0.03, textsize=14)
+```
+
+```{python}
+# Can we get this working?
+az.plot_lm(idata=idata_weekday, y="negbinom_rv", kind_pp="")
+```
+
+```{python}
+# or this?
+az.plot_ts(idata=idata_weekday, y="negbinom_rv")
+```
