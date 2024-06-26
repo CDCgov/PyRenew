@@ -212,7 +212,7 @@ import arviz as az
 idata = az.from_numpyro(model1.mcmc)
 ```
 
-Below we use `plot_trace` to inspect the trace of the first $20$ $R_t$ estimates.
+Below we use `plot_trace` to inspect the trace of the first 10 $R_t$ estimates.
 
 ```{python}
 #| label: fig-trace-Rt
@@ -222,23 +222,11 @@ plt.rcParams['figure.constrained_layout.use'] = True
 az.plot_trace(
     idata.posterior,
     var_names=['Rt'],
-    coords={'Rt_dim_0': np.arange(19)},
+    coords={'Rt_dim_0': np.arange(10)},
     compact=False,
 );
 ```
 
-and now the remaining $R_t$ estimates:
-
-```{python}
-#| label: fig-trace-Rt2
-#| fig-cap: Trace plot of Rt posterior distribution
-az.plot_trace(
-    idata.posterior,
-    var_names=['Rt'],
-    coords={'Rt_dim_0': np.arange(19,34)},
-    compact=False,
-);
-```
 
 We inspect the posterior distribution of $R_t$ by plotting the $90 \%$ and $50 \%$ highest density interval:
 
@@ -306,7 +294,7 @@ az.plot_hdi(
 
 #Add mean of the posterior to the figure
 mean_latent_infection = az.summary(idata.posterior['all_latent_infections'])['mean']
-axes.plot(x_data,mean_latent_infection, color='C0', label='mean')
+axes.plot(x_data,mean_latent_infection, color='C0', label='Mean')
 axes.legend()
 axes.set_xlabel('Time', fontsize=10)
 axes.set_ylabel('Posterior distribution (latent infections)',fontsize=10);
