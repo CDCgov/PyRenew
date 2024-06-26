@@ -308,7 +308,7 @@ We can use [ArviZ](https://www.arviz.org/) to visualize the results. Convert the
 import arviz as az
 idata = az.from_numpyro(hosp_model.mcmc)
 ```
-Below we plot $90 \%$ and $50 \%$ highest density interval for latent hospital admissions using [plot_hdi](https://python.arviz.org/en/stable/api/generated/arviz.plot_hdi.html):
+Below we plot 90% and 50% highest density interval for latent hospital admissions using [plot_hdi](https://python.arviz.org/en/stable/api/generated/arviz.plot_hdi.html):
 
 ```{python}
 # | label: fig-output-admission-distribution
