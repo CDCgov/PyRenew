@@ -61,6 +61,11 @@ class PeriodicEffect(RandomVariable):
             broadcast_type="tile",
         )
 
+        self.set_timeseries(
+            timeseries_start=offset,
+            timeseries_unit=1,
+        )
+
         self.quantity_to_broadcast = quantity_to_broadcast
 
     @staticmethod

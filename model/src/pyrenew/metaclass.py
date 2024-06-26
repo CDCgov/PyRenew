@@ -95,13 +95,80 @@ def _assert_sample_and_rtype(
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
+
+    Notes
+    -----
+    `RandomVariable`s in `pyrenew` can be time-aware, meaning that they can
+    have a `timeseries_start` and `timeseries_unit` attribute. These attributes
+    are expected to be used internally mostly for tasks including padding,
+    alignment of time series, and other time-aware operations.
+
+    Both attributes give information about the output of the `sample()` method,
+    in other words, the relative time units of the returning value.
+
+    Attributes
+    ----------
+    timeseries_start : int
+        The start of the time series.
+    timeseries_unit : int
+        The unit of the time series, e.g., 1: Daily, 7: Weekly.
     """
+
+    timeseries_start: int = None
+    timeseries_unit: int = None
+
+    def __init_subclass__(cls) -> None:
+        """Initializes the subclass with default values."""
+        cls.timeseries_unit = 1
 
     def __init__(self, **kwargs):
         """
         Default constructor
         """
         pass
+
+    def set_timeseries(
+        self,
+        timeseries_start: int,
+        timeseries_unit: int,
+    ) -> None:
+        """
+        Set the time series start and unit
+
+        Parameters
+        ----------
+        ts_start : int
+            The start of the time series.
+        ts_unit : int
+            The unit of the time series, e.g., 1: Daily, 7: Weekly.
+
+        Returns
+        -------
+        None
+        """
+
+        # Period size should be a positive integer
+        assert isinstance(
+            timeseries_unit, int
+        ), f"timeseries_unit should be an integer. It is {type(timeseries_unit)}."
+
+        assert (
+            timeseries_unit > 0
+        ), f"timeseries_unit should be a positive integer. It is {timeseries_unit}."
+
+        # Data starts should be a positive integer
+        assert isinstance(
+            timeseries_start, int
+        ), f"timeseries_start should be an integer. It is {type(timeseries_start)}."
+
+        assert (
+            0 <= timeseries_start
+        ), f"timeseries_start should be a positive integer. It is {timeseries_start}."
+
+        self.timeseries_start = timeseries_start
+        self.timeseries_unit = timeseries_unit
+
+        return None
 
     @abstractmethod
     def sample(
