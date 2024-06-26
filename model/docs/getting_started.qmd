@@ -228,7 +228,7 @@ az.plot_trace(
 ```
 
 
-We inspect the posterior distribution of $R_t$ by plotting the $90 \%$ and $50 \%$ highest density interval:
+We inspect the posterior distribution of $R_t$ by plotting the 90% and 50% highest density intervals:
 
 ```{python}
 #| label: fig-hdi-Rt
