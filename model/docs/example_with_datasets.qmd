@@ -306,6 +306,7 @@ We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start
 ```{python}
 # | label: convert-inferenceData
 import arviz as az
+
 idata = az.from_numpyro(hosp_model.mcmc)
 ```
 We obtain the summary of model diagnostics and print the diagnostics for `latent_hospital_admissions[1]`
@@ -314,10 +315,10 @@ We obtain the summary of model diagnostics and print the diagnostics for `latent
 # | warning: false
 diagnostic_stats_summary = az.summary(
     idata.posterior,
-    kind='diagnostics',
-    )
+    kind="diagnostics",
+)
 
-print(diagnostic_stats_summary.loc['latent_hospital_admissions[1]'])
+print(diagnostic_stats_summary.loc["latent_hospital_admissions[1]"])
 ```
 
 Below we plot 90% and 50% highest density intervals for latent hospital admissions using [plot_hdi](https://python.arviz.org/en/stable/api/generated/arviz.plot_hdi.html):
@@ -325,17 +326,17 @@ Below we plot 90% and 50% highest density intervals for latent hospital admissio
 ```{python}
 # | label: fig-output-admission-distribution
 # | fig-cap: Hospital Admissions posterior distribution
-x_data = idata.posterior['latent_hospital_admissions_dim_0']
-y_data = idata.posterior['latent_hospital_admissions']
+x_data = idata.posterior["latent_hospital_admissions_dim_0"]
+y_data = idata.posterior["latent_hospital_admissions"]
 
-fig, axes = plt.subplots(figsize=(6,5))
+fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     x_data,
     y_data,
     hdi_prob=0.9,
-    color='C0',
+    color="C0",
     smooth=False,
-    fill_kwargs={'alpha':0.3},
+    fill_kwargs={"alpha": 0.3},
     ax=axes,
 )
 
@@ -343,19 +344,21 @@ az.plot_hdi(
     x_data,
     y_data,
     hdi_prob=0.5,
-    color='C0',
+    color="C0",
     smooth=False,
-    fill_kwargs={'alpha':0.6},
+    fill_kwargs={"alpha": 0.6},
     ax=axes,
 )
 
-#Add mean of the posterior to the figure
-mean_latent_hosp_admission = np.mean(idata.posterior['latent_hospital_admissions'],axis=1)
-axes.plot(x_data,mean_latent_hosp_admission[0], color='C0', label='Mean')
+# Add mean of the posterior to the figure
+mean_latent_hosp_admission = np.mean(
+    idata.posterior["latent_hospital_admissions"], axis=1
+)
+axes.plot(x_data, mean_latent_hosp_admission[0], color="C0", label="Mean")
 axes.legend()
-axes.set_title('Posterior Hospital Admissions', fontsize=10)
-axes.set_xlabel('Time', fontsize=10)
-axes.set_ylabel('Hospital Admissions',fontsize=10);
+axes.set_title("Posterior Hospital Admissions", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Hospital Admissions", fontsize=10);
 ```
 
 We can also take a look at the latent infections:
@@ -372,17 +375,17 @@ and the distribution of latent infections
 ```{python}
 # | label: fig-output-infections-distribution
 # | fig-cap: Posterior Latent Infections
-x_data = idata.posterior['all_latent_infections_dim_0']
-y_data = idata.posterior['all_latent_infections']
+x_data = idata.posterior["all_latent_infections_dim_0"]
+y_data = idata.posterior["all_latent_infections"]
 
-fig, axes = plt.subplots(figsize=(6,5))
+fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     x_data,
     y_data,
     hdi_prob=0.9,
-    color='C0',
+    color="C0",
     smooth=False,
-    fill_kwargs={'alpha':0.3},
+    fill_kwargs={"alpha": 0.3},
     ax=axes,
 )
 
@@ -390,19 +393,21 @@ az.plot_hdi(
     x_data,
     y_data,
     hdi_prob=0.5,
-    color='C0',
+    color="C0",
     smooth=False,
-    fill_kwargs={'alpha':0.6},
+    fill_kwargs={"alpha": 0.6},
     ax=axes,
 )
 
-#Add mean of the posterior to the figure
-mean_latent_infection = np.mean(idata.posterior['all_latent_infections'],axis=1)
-axes.plot(x_data,mean_latent_infection[0], color='C0', label='Mean')
+# Add mean of the posterior to the figure
+mean_latent_infection = np.mean(
+    idata.posterior["all_latent_infections"], axis=1
+)
+axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
 axes.legend()
-axes.set_title('Posterior Latent Infections', fontsize=10)
-axes.set_xlabel('Time', fontsize=10)
-axes.set_ylabel('Latent Infections',fontsize=10);
+axes.set_title("Posterior Latent Infections", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Latent Infections", fontsize=10);
 ```
 
 ## Round 2: Incorporating day-of-the-week effects
@@ -414,6 +419,7 @@ Note a similar weekday effect is implemented in its own module, with example cod
 # | label: weekly-effect
 from pyrenew import metaclass
 import numpyro as npro
+
 
 class DayOfWeekEffect(metaclass.RandomVariable):
     """Day of the week effect"""
