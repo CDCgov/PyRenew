@@ -238,7 +238,7 @@ hosp_model.run(
     num_warmup=2000,
     data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False,num_chains=2),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
 )
 ```
 
@@ -283,7 +283,7 @@ hosp_model.run(
     num_warmup=2000,
     data_observed_hosp_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False,num_chains=2),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
     padding=days_to_impute,  # Padding the model
 )
 ```
