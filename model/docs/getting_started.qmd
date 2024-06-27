@@ -192,7 +192,7 @@ model1.run(
     num_samples=1000,
     data_observed_infections=sim_data.observed_infections,
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False),
+    mcmc_args=dict(progress_bar=False,num_chains=2),
 )
 ```
 
@@ -210,6 +210,18 @@ We can use [ArviZ](https://www.arviz.org/) package to create model diagnostics a
 #| label: convert-inference-data
 import arviz as az
 idata = az.from_numpyro(model1.mcmc)
+```
+
+and use the InferenceData to compute the model-fit diagnostics. Here, we show diagnostic summary for the first 10 effective reproduction number $R_t$.
+
+```{python}
+#| label: diagnostics
+diagnostic_stats_summary = az.summary(
+    idata.posterior['Rt'],
+    kind='diagnostics',
+    )
+
+print(diagnostic_stats_summary[:10])
 ```
 
 Below we use `plot_trace` to inspect the trace of the first 10 $R_t$ estimates.
