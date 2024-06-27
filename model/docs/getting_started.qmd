@@ -199,27 +199,28 @@ model1.run(
 Now, let's investigate the output, particularly the posterior distribution of the $R_t$ estimates:
 
 ```{python}
-#| label: fig-output-rt
-#| fig-cap: Rt posterior distribution
+# | label: fig-output-rt
+# | fig-cap: Rt posterior distribution
 out = model1.plot_posterior(var="Rt")
 ```
 
 We can use [ArviZ](https://www.arviz.org/) package to create model diagnostics and visualizations. We start by converting the fitted model to ArviZ InferenceData object:
 
 ```{python}
-#| label: convert-inference-data
+# | label: convert-inference-data
 import arviz as az
+
 idata = az.from_numpyro(model1.mcmc)
 ```
 
 and use the InferenceData to compute the model-fit diagnostics. Here, we show diagnostic summary for the first 10 effective reproduction number $R_t$.
 
 ```{python}
-#| label: diagnostics
+# | label: diagnostics
 diagnostic_stats_summary = az.summary(
-    idata.posterior['Rt'],
-    kind='diagnostics',
-    )
+    idata.posterior["Rt"],
+    kind="diagnostics",
+)
 
 print(diagnostic_stats_summary[:10])
 ```
@@ -227,14 +228,14 @@ print(diagnostic_stats_summary[:10])
 Below we use `plot_trace` to inspect the trace of the first 10 $R_t$ estimates.
 
 ```{python}
-#| label: fig-trace-Rt
-#| fig-cap: Trace plot of Rt posterior distribution
-plt.rcParams['figure.constrained_layout.use'] = True
+# | label: fig-trace-Rt
+# | fig-cap: Trace plot of Rt posterior distribution
+plt.rcParams["figure.constrained_layout.use"] = True
 
 az.plot_trace(
     idata.posterior,
-    var_names=['Rt'],
-    coords={'Rt_dim_0': np.arange(10)},
+    var_names=["Rt"],
+    coords={"Rt_dim_0": np.arange(10)},
     compact=False,
 );
 ```
@@ -243,18 +244,18 @@ az.plot_trace(
 We inspect the posterior distribution of $R_t$ by plotting the 90% and 50% highest density intervals:
 
 ```{python}
-#| label: fig-hdi-Rt
-#| fig-cap: High density interval for Effective Reproduction Number
-x_data = idata.posterior['Rt_dim_0']
-y_data = idata.posterior['Rt']
+# | label: fig-hdi-Rt
+# | fig-cap: High density interval for Effective Reproduction Number
+x_data = idata.posterior["Rt_dim_0"]
+y_data = idata.posterior["Rt"]
 
-fig, axes = plt.subplots(figsize=(6,5))
+fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     x_data,
     y_data,
     hdi_prob=0.9,
-    color='C0',
-    fill_kwargs={'alpha':0.3},
+    color="C0",
+    fill_kwargs={"alpha": 0.3},
     ax=axes,
 )
 
@@ -262,36 +263,36 @@ az.plot_hdi(
     x_data,
     y_data,
     hdi_prob=0.5,
-    color='C0',
-    fill_kwargs={'alpha':0.6},
+    color="C0",
+    fill_kwargs={"alpha": 0.6},
     ax=axes,
 )
 
-#Add mean of the posterior to the figure
-mean_Rt = np.mean(idata.posterior['Rt'],axis=1)
-axes.plot(x_data,mean_Rt[0], color='C0', label='Mean')
+# Add mean of the posterior to the figure
+mean_Rt = np.mean(idata.posterior["Rt"], axis=1)
+axes.plot(x_data, mean_Rt[0], color="C0", label="Mean")
 axes.legend()
-axes.set_title('Posterior Effective Reproduction Number', fontsize=10)
-axes.set_xlabel('Time', fontsize=10)
-axes.set_ylabel('$R_t$', fontsize=10);
+axes.set_title("Posterior Effective Reproduction Number", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("$R_t$", fontsize=10);
 ```
 
 and latent infections:
 
 ```{python}
-#| label: fig-hdi-latent-infections
-#| fig-cap: High density interval for Latent Infections
-x_data = idata.posterior['all_latent_infections_dim_0']
-y_data = idata.posterior['all_latent_infections']
+# | label: fig-hdi-latent-infections
+# | fig-cap: High density interval for Latent Infections
+x_data = idata.posterior["all_latent_infections_dim_0"]
+y_data = idata.posterior["all_latent_infections"]
 
-fig, axes = plt.subplots(figsize=(6,5))
+fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     x_data,
     y_data,
     hdi_prob=0.9,
-    color='C0',
+    color="C0",
     smooth=False,
-    fill_kwargs={'alpha':0.3},
+    fill_kwargs={"alpha": 0.3},
     ax=axes,
 )
 
@@ -299,19 +300,21 @@ az.plot_hdi(
     x_data,
     y_data,
     hdi_prob=0.5,
-    color='C0',
+    color="C0",
     smooth=False,
-    fill_kwargs={'alpha':0.6},
+    fill_kwargs={"alpha": 0.6},
     ax=axes,
 )
 
-#Add mean of the posterior to the figure
-mean_latent_infection = np.mean(idata.posterior['all_latent_infections'],axis=1)
-axes.plot(x_data,mean_latent_infection[0], color='C0', label='Mean')
+# Add mean of the posterior to the figure
+mean_latent_infection = np.mean(
+    idata.posterior["all_latent_infections"], axis=1
+)
+axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
 axes.legend()
-axes.set_title('Posterior Latent Infections',fontsize=10)
-axes.set_xlabel('Time', fontsize=10)
-axes.set_ylabel('Latent Infections',fontsize=10);
+axes.set_title("Posterior Latent Infections", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Latent Infections", fontsize=10);
 ```
 
 ## Architecture of pyrenew

@@ -25,16 +25,16 @@ from pyrenew import process, deterministic
 ```{python}
 # The random process for Rt
 rt_proc = process.RtWeeklyDiffProcess(
-  offset = 0,
-  log_rt_prior = deterministic.DeterministicVariable(
-      jnp.array([0.1, 0.2]), name="log_rt_prior"
-  ),
-  autoreg = deterministic.DeterministicVariable(
-    jnp.array([0.7]), name="autoreg"
+    offset=0,
+    log_rt_prior=deterministic.DeterministicVariable(
+        jnp.array([0.1, 0.2]), name="log_rt_prior"
     ),
-  periodic_diff_sd = deterministic.DeterministicVariable(
-      jnp.array([0.1]), name="periodic_diff_sd"
-  ),
+    autoreg=deterministic.DeterministicVariable(
+        jnp.array([0.7]), name="autoreg"
+    ),
+    periodic_diff_sd=deterministic.DeterministicVariable(
+        jnp.array([0.1]), name="periodic_diff_sd"
+    ),
 )
 ```
 
@@ -69,13 +69,13 @@ from pyrenew import transformation, metaclass
 # Building the transformed prior: Dirichlet * 7
 mysimplex = dist.TransformedDistribution(
     dist.Dirichlet(concentration=jnp.ones(7)),
-    transformation.AffineTransform(loc=0, scale=7.0)
+    transformation.AffineTransform(loc=0, scale=7.0),
 )
 
 # Constructing the day of week effect
 dayofweek = process.DayOfWeekEffect(
-  offset = 0,
-  quantity_to_broadcast=metaclass.DistributionalRV(mysimplex, "simp")
+    offset=0,
+    quantity_to_broadcast=metaclass.DistributionalRV(mysimplex, "simp"),
 )
 ```
 
