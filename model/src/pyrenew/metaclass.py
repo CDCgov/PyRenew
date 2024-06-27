@@ -415,8 +415,8 @@ class Model(metaclass=ABCMeta):
 
     def posterior_predictive(
         self,
-        rng_key: ArrayLike | None = None,
         *args,
+        rng_key: ArrayLike | None = None,
         guide: Callable | None = None,
         params: dict | None = None,
         num_samples: int | None = None,
@@ -454,8 +454,8 @@ class Model(metaclass=ABCMeta):
 
     def prior_predictive(
         self,
-        rng_key: ArrayLike | None = None,
         *args,
+        rng_key: ArrayLike | None = None,
         guide: Callable | None = None,
         params: dict | None = None,
         num_samples: int = None,
