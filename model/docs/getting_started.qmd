@@ -97,6 +97,7 @@ I0 = InfectionSeedingProcess(
     "I0_seeding",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     SeedInfectionsZeroPad(pmf_array.size),
+    t_unit=1,
 )
 
 # (3) The random process for Rt

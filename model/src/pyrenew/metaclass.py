@@ -99,7 +99,7 @@ class RandomVariable(metaclass=ABCMeta):
     Notes
     -----
     `RandomVariable`s in `pyrenew` can be time-aware, meaning that they can
-    have a `timeseries_start` and `timeseries_unit` attribute. These attributes
+    have a `t_start` and `t_unit` attribute. These attributes
     are expected to be used internally mostly for tasks including padding,
     alignment of time series, and other time-aware operations.
 
@@ -108,18 +108,14 @@ class RandomVariable(metaclass=ABCMeta):
 
     Attributes
     ----------
-    timeseries_start : int
+    t_start : int
         The start of the time series.
-    timeseries_unit : int
+    t_unit : int
         The unit of the time series, e.g., 1: Daily, 7: Weekly.
     """
 
-    timeseries_start: int = None
-    timeseries_unit: int = None
-
-    def __init_subclass__(cls) -> None:
-        """Initializes the subclass with default values."""
-        cls.timeseries_unit = 1
+    t_start: int = None
+    t_unit: int = None
 
     def __init__(self, **kwargs):
         """
@@ -129,43 +125,40 @@ class RandomVariable(metaclass=ABCMeta):
 
     def set_timeseries(
         self,
-        timeseries_start: int,
-        timeseries_unit: int,
+        t_start: int,
+        t_unit: int,
     ) -> None:
         """
         Set the time series start and unit
 
         Parameters
         ----------
-        timeseries_start : int
+        t_start : int
             The start of the time series relative to the model time. It could be negative, indicating that the sample returns observations prior to the model time.
-        timeseries_unit : int
-            The unit of the time series, e.g., 1: Daily, 7: Weekly. If explicitly passed as `None`, it is set to 1.
+        t_unit : int
+            The unit of the time series, e.g., 1: Daily, 7: Weekly.
 
         Returns
         -------
         None
         """
+        # Timeseries unit should be a positive integer
+        assert isinstance(
+            t_unit, int
+        ), f"t_unit should be an integer. It is {type(t_unit)}."
 
-        if timeseries_unit is None:
-            timeseries_unit = 1
-        else:
-            # Period size should be a positive integer
-            assert isinstance(
-                timeseries_unit, int
-            ), f"timeseries_unit should be an integer. It is {type(timeseries_unit)}."
-
-            assert (
-                timeseries_unit > 0
-            ), f"timeseries_unit should be a positive integer. It is {timeseries_unit}."
+        # Timeseries unit should be a positive integer
+        assert (
+            t_unit > 0
+        ), f"t_unit should be a positive integer. It is {t_unit}."
 
         # Data starts should be a positive integer
         assert isinstance(
-            timeseries_start, int
-        ), f"timeseries_start should be an integer. It is {type(timeseries_start)}."
+            t_start, int
+        ), f"t_start should be an integer. It is {type(t_start)}."
 
-        self.timeseries_start = timeseries_start
-        self.timeseries_unit = timeseries_unit
+        self.t_start = t_start
+        self.t_unit = t_unit
 
         return None
 

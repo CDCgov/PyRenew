@@ -160,6 +160,7 @@ I0 = InfectionSeedingProcess(
         gen_int_array.size,
         deterministic.DeterministicVariable(0.5, name="rate"),
     ),
+    t_unit=1,
 )
 
 # Generation interval and Rt
