@@ -238,7 +238,7 @@ hosp_model.run(
     num_warmup=2000,
     data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
 )
 ```
 
@@ -283,7 +283,7 @@ hosp_model.run(
     num_warmup=2000,
     data_observed_hosp_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
     padding=days_to_impute,  # Padding the model
 )
 ```
@@ -302,12 +302,24 @@ out = hosp_model.plot_posterior(
 )
 ```
 
-We can use [ArviZ](https://www.arviz.org/) to visualize the results. Convert the fitted model to Arviz InferenceData object:
+We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by converting the fitted model to Arviz InferenceData object:
 ```{python}
 # | label: convert-inferenceData
 import arviz as az
 idata = az.from_numpyro(hosp_model.mcmc)
 ```
+We obtain the summary of model diagnostics and print the diagnostics for `latent_hospital_admissions[1]`
+```{python}
+# | label: diagnostics
+# | warning: false
+diagnostic_stats_summary = az.summary(
+    idata.posterior,
+    kind='diagnostics',
+    )
+
+print(diagnostic_stats_summary.loc['latent_hospital_admissions[1]'])
+```
+
 Below we plot 90% and 50% highest density intervals for latent hospital admissions using [plot_hdi](https://python.arviz.org/en/stable/api/generated/arviz.plot_hdi.html):
 
 ```{python}
