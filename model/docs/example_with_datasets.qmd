@@ -302,13 +302,13 @@ out = hosp_model.plot_posterior(
 )
 ```
 
-We can use [ArviZ](https://www.arviz.org/) to visualize the results. Convert the fitted model to Arviz InferenceData object:
+We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by converting the fitted model to Arviz InferenceData object:
 ```{python}
 # | label: convert-inferenceData
 import arviz as az
 idata = az.from_numpyro(hosp_model.mcmc)
 ```
-Compute model diagnostics:
+We obtain the summary of model diagnostics and print the diagnostics for `latent_hospital_admissions[1]`
 ```{python}
 # | label: diagnostics
 # | warning: false
