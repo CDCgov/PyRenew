@@ -73,6 +73,7 @@ def test_weeklyeffect() -> None:
     params2 = {
         "offset": 2,
         "quantity_to_broadcast": rv,
+        "t_start": 0,
     }
 
     duration = 30
