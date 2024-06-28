@@ -2,7 +2,7 @@
 
 ## Github Workflow
 - You should request reviews for pull requests from `multisignal-epi-inference-devs`, unless you have a good reason to request reviews from a smaller group.
-- Reviews from all of `multisignal-epi-inference-devs` are encouraged, but we require an approving review from @dylanhmorris, @damonbayer, or @gvegayon is required before a pull request can be merged to `main`.
+- Reviews from all of `multisignal-epi-inference-devs` are encouraged, but an approving review from @dylanhmorris, @damonbayer, or @gvegayon is required before a pull request can be merged to `main`.
 - If your pull request has not received a review at the time of the next standup, use standup to find a reviewer.
 - If you create a draft pull request, indicate what, if anything, about the current pull request should be reviewed.
 - Only mark a pull request as "ready for review" if you think it is ready to be merged. This indicates that a thorough, all-encompassing review should be given.
