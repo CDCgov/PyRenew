@@ -427,6 +427,13 @@ class Model(metaclass=ABCMeta):
         exclude_deterministic: bool = True,
         **kwargs,
     ) -> dict:
+        """
+        A wrapper for numpyro.infer.Predictive to generate posterior predictive samples.
+
+        Returns
+        -------
+        dict
+        """
         if self.mcmc is None:
             raise ValueError(
                 "No posterior samples available. Run model with model.run()."
@@ -438,7 +445,7 @@ class Model(metaclass=ABCMeta):
             )
             rng_key = jr.key(rand_int)
 
-        return Predictive(
+        predictive = Predictive(
             model=self.sample,
             posterior_samples=self.mcmc.get_samples(),
             *args,
@@ -450,7 +457,9 @@ class Model(metaclass=ABCMeta):
             parallel=parallel,
             batch_ndims=batch_ndims,
             exclude_deterministic=exclude_deterministic,
-        )(rng_key, **kwargs)
+        )
+
+        return predictive(rng_key, **kwargs)
 
     def prior_predictive(
         self,
@@ -466,13 +475,21 @@ class Model(metaclass=ABCMeta):
         exclude_deterministic: bool = True,
         **kwargs,
     ) -> dict:
+        """
+        A wrapper for numpyro.infer.Predictive to generate prior predictive samples.
+
+        Returns
+        -------
+        dict
+        """
+
         if rng_key is None:
             rand_int = np.random.randint(
                 np.iinfo(np.int64).min, np.iinfo(np.int64).max
             )
             rng_key = jr.key(rand_int)
 
-        return Predictive(
+        predictive = Predictive(
             model=self.sample,
             posterior_samples=None,
             *args,
@@ -484,4 +501,6 @@ class Model(metaclass=ABCMeta):
             parallel=parallel,
             batch_ndims=batch_ndims,
             exclude_deterministic=exclude_deterministic,
-        )(rng_key, **kwargs)
+        )
+
+        return predictive(rng_key, **kwargs)
