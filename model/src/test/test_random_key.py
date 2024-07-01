@@ -66,7 +66,7 @@ def prior_predictive_test_model(
 ):  # numpydoc ignore=GL08
     prior_predictive_samples = test_model.prior_predictive(
         rng_key=rng_key,
-        num_samples=20,
+        numpyro_predictive_args={"num_samples": 20},
         n_timepoints_to_simulate=n_timepoints_to_simulate,
     )
     return prior_predictive_samples

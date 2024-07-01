@@ -5,7 +5,7 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Callable, NamedTuple, get_type_hints
+from typing import NamedTuple, get_type_hints
 
 import jax
 import jax.numpy as jnp
@@ -415,20 +415,19 @@ class Model(metaclass=ABCMeta):
 
     def posterior_predictive(
         self,
-        *args,
         rng_key: ArrayLike | None = None,
-        guide: Callable | None = None,
-        params: dict | None = None,
-        num_samples: int | None = None,
-        return_sites: list[str] | None = None,
-        infer_discrete: bool = False,
-        parallel: bool = False,
-        batch_ndims: int | None = None,
-        exclude_deterministic: bool = True,
+        numpyro_predictive_args: dict = {},
         **kwargs,
     ) -> dict:
         """
         A wrapper for numpyro.infer.Predictive to generate posterior predictive samples.
+
+        Parameters
+        ----------
+        rng_key : ArrayLike, optional
+            Random key for the Predictive function call. Defaults to None.
+        numpyro_predictive_args : dict, optional
+            Dictionary of arguments to be passed to numpyro.inference.Predictive.
 
         Returns
         -------
@@ -448,35 +447,26 @@ class Model(metaclass=ABCMeta):
         predictive = Predictive(
             model=self.sample,
             posterior_samples=self.mcmc.get_samples(),
-            *args,
-            guide=guide,
-            params=params,
-            num_samples=num_samples,
-            return_sites=return_sites,
-            infer_discrete=infer_discrete,
-            parallel=parallel,
-            batch_ndims=batch_ndims,
-            exclude_deterministic=exclude_deterministic,
+            **numpyro_predictive_args,
         )
 
         return predictive(rng_key, **kwargs)
 
     def prior_predictive(
         self,
-        *args,
         rng_key: ArrayLike | None = None,
-        guide: Callable | None = None,
-        params: dict | None = None,
-        num_samples: int = None,
-        return_sites: list[str] | None = None,
-        infer_discrete: bool = False,
-        parallel: bool = False,
-        batch_ndims: int | None = None,
-        exclude_deterministic: bool = True,
+        numpyro_predictive_args: dict = {},
         **kwargs,
     ) -> dict:
         """
         A wrapper for numpyro.infer.Predictive to generate prior predictive samples.
+
+        Parameters
+        ----------
+        rng_key : ArrayLike, optional
+            Random key for the Predictive function call. Defaults to None.
+        numpyro_predictive_args : dict, optional
+            Dictionary of arguments to be passed to numpyro.inference.Predictive.
 
         Returns
         -------
@@ -492,15 +482,7 @@ class Model(metaclass=ABCMeta):
         predictive = Predictive(
             model=self.sample,
             posterior_samples=None,
-            *args,
-            guide=guide,
-            params=params,
-            num_samples=num_samples,
-            return_sites=return_sites,
-            infer_discrete=infer_discrete,
-            parallel=parallel,
-            batch_ndims=batch_ndims,
-            exclude_deterministic=exclude_deterministic,
+            **numpyro_predictive_args,
         )
 
         return predictive(rng_key, **kwargs)
