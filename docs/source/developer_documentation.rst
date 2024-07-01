@@ -51,17 +51,34 @@ New module or classes
 
 For example, under the `docs/source/msei_reference`, the `index.rst` file lists the `HospitalAdmissions` model by adding the following entry:
 
-```rst
-Hospital Admissions
--------------------
+.. code-block::
+   Hospital Admissions
+   -------------------
 
-.. automodule:: pyrenew.latent.hospitaladmissions
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
+   .. automodule:: pyrenew.latent.hospitaladmissions
+      :members:
+      :undoc-members:
+      :show-inheritance:
 
 This entry tells Sphinx to generate documentation for the `HospitalAdmissions` model and its members.
+
+New tutorials
+~~~~~~~~~~~~~
+
+`PyRenew` tutorials are `quarto documents <https://quarto.org>`__ located under `./docs/source/tutorials`. Tutorials are automatically rendered using GitHub actions (see the Workflow file `here <https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/website.yaml>`__). To make the new tutorial available in the website, developers should follow these steps:
+
+1. Create a new `quarto` file in the `./docs/source/tutorials` directory. For instance, the `example_with_datasets.qmd` file was added to the repository.
+
+2. Add an entry in the `./docs/source/tutorials/index.rst`, for example:
+
+.. code-block::
+   .. toctree::
+      :maxdepth: 2
+
+      getting_started
+      example_with_datasets
+
+3. Add an rst entry with the same basename as the `quarto` file in the `./docs/source/tutorials` directory. For instance, the `example_with_datasets.rst` file was added to the repository. This last step can be done running the bash script `./.pre-commit-rst-placeholder.sh`. Note the script should be executed by `pre-commit`.
 
 
 Adding new pages
@@ -74,19 +91,19 @@ Sphinx also allows adding arbitrary pages. For instance, all the `PyRenew` tutor
 
 2. Make sure the new `rst` file is included in an indexed file, for instance, `./docs/source/general/ctoc.rst`. Here is how it looks:
 
-```rst
-Complete Table Of Contents
-==========================
+.. code-block::
+   Complete Table Of Contents
+   ==========================
 
-.. toctree::
-   :maxdepth: 2
+   .. toctree::
+      :maxdepth: 2
 
-   ../index
-   ../msei_reference/index
-   ../tutorials/index
-   ../genindex
-   ../developer_documentation
-```
+      ../index
+      ../msei_reference/index
+      ../tutorials/index
+      ../genindex
+      ../developer_documentation
+
 
 The last entry is the `developer_documentation` page.
 
