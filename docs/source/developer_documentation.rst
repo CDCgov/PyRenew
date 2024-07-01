@@ -73,7 +73,7 @@ New tutorials
 2. Add an entry in the ``./docs/source/tutorials/index.rst``, for example:
 
 .. code-block:: RST
-   
+
    .. toctree::
       :maxdepth: 2
           getting_started
@@ -93,7 +93,7 @@ Sphinx also allows adding arbitrary pages. For instance, all the ``PyRenew`` tut
 2. Make sure the new ``rst`` file is included in an indexed file, for instance, ``./docs/source/general/ctoc.rst``. Here is how it looks:
 
 .. code-block::
-    
+
    Complete Table Of Contents
    ==========================
 
