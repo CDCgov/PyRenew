@@ -44,9 +44,10 @@ jobs:
       - name: Render documents
         run: |
             poetry run quarto render README.md --to rst -o index2.rst
-            cd docs/source
+            mv docs/source/tutorials model/
+            cd model
             mkdir _compiled_qmd
-            mv ../../index2.rst _compiled_qmd
+            mv ../index2.rst _compiled_qmd
             for file in $(find tutorials -name '*.qmd'); do
                 poetry run quarto render $file --to rst --output-dir ../_compiled_qmd
             done
@@ -60,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: tutorials
-          path: docs/source/_compiled_qmd/
+          path: model/_compiled_qmd/
 
   build:
     needs: render-docs
