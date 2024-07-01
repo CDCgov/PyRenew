@@ -38,23 +38,29 @@ jobs:
       - name: install package
         run: poetry install --with dev -C model
 
+      # This section renders the quarto documents (and the README file)
+      # and moves them to the docs/source/_compiled_qmd directory
+      # which is then uploaded as an artifact.
       - name: Render documents
         run: |
             poetry run quarto render README.md --to rst -o index2.rst
-            cd model
-            mkdir _compiled
-            mv ../index2.rst _compiled
-            for file in $(find docs -name '*.qmd'); do
-                poetry run quarto render $file --to rst --output-dir ../_compiled
+            cd docs/source
+            mkdir _compiled_qmd
+            mv ../../index2.rst _compiled_qmd
+            for file in $(find tutorials -name '*.qmd'); do
+                poetry run quarto render $file --to rst --output-dir ../_compiled_qmd
             done
-            sed -i 's/.. code:: mermaid/.. mermaid::/g' _compiled/*.rst
+            # Replace the code directive with the mermaid directive
+            # to use the mermaid extension. Otherwise, the rendered mermaid
+            # diagrams are ugly.
+            sed -i 's/.. code:: mermaid/.. mermaid::/g' _compiled_qmd/*.rst
 
       # Upload
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
           name: tutorials
-          path: model/_compiled/
+          path: docs/source/_compiled_qmd/
 
   build:
     needs: render-docs
