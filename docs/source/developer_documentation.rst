@@ -65,9 +65,9 @@ This entry tells Sphinx to generate documentation for the ``HospitalAdmissions``
 New tutorials
 ~~~~~~~~~~~~~
 
-``PyRenew`` tutorials are `quarto documents <https://quarto.org>`__ located under `./docs/source/tutorials <https://github.com/CDCgov/multisignal-epi-inference/tree/main/docs/source/tutorials>`__. Tutorials are automatically rendered using GitHub actions (see the Workflow file `here <https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/website.yaml>`__). To make the new tutorial available in the website, developers should follow these steps:
+``PyRenew`` tutorials are `quarto documents <https://quarto.org>`__ located under `./model/docs <https://github.com/CDCgov/multisignal-epi-inference/tree/main/model/docs>`__. Tutorials are automatically rendered using GitHub actions (see the Workflow file `here <https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/website.yaml>`__). To make the new tutorial available in the website, developers should follow these steps:
 
-1. Create a new ``quarto`` file in the ``./docs/source/tutorials`` directory. For instance, the ``example_with_datasets.qmd`` file was added to the repository.
+1. Create a new ``quarto`` file in the ``./model/docs`` directory. For instance, the ``example_with_datasets.qmd`` file was added to the repository.
 
 2. Add an entry in the ``./docs/source/tutorials/index.rst``, for example:
 
