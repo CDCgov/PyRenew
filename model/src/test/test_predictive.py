@@ -42,5 +42,10 @@ model = RtInfectionsRenewalModel(
 )
 
 
-with pytest.raises(ValueError, match="No posterior"):
-    model.posterior_predictive(n_timepoints_to_simulate=10)
+def test_posterior_predictive_no_posterior():
+    """
+    Tests that posterior predictive samples are not generated when
+    no posterior samples are available.
+    """
+    with pytest.raises(ValueError, match="No posterior"):
+        model.posterior_predictive(n_timepoints_to_simulate=10)
