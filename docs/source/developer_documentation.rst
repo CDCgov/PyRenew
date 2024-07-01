@@ -51,14 +51,15 @@ New module or classes
 
 For example, under the ``./docs/source/msei_reference``, the ``index.rst`` file lists the ``HospitalAdmissions`` model by adding the following entry:
 
-.. code-block::
-    Hospital Admissions
-    -------------------
+.. code-block:: RST
 
-    .. automodule:: pyrenew.latent.hospitaladmissions
-       :members:
-       :undoc-members:
-       :show-inheritance:
+  Hospital Admissions
+  -------------------
+
+  .. automodule:: pyrenew.latent.hospitaladmissions
+     :members:
+     :undoc-members:
+     :show-inheritance:
 
 This entry tells Sphinx to generate documentation for the ``HospitalAdmissions`` model and its members.
 
@@ -71,12 +72,12 @@ New tutorials
 
 2. Add an entry in the ``./docs/source/tutorials/index.rst``, for example:
 
-.. code-block::
-    .. toctree::
-       :maxdepth: 2
-
-       getting_started
-       example_with_datasets
+.. code-block:: RST
+   
+   .. toctree::
+      :maxdepth: 2
+          getting_started
+          example_with_datasets
 
 3. Add an rst entry with the same basename as the ``quarto`` file in the ``./docs/source/tutorials`` directory. For instance, the `example_with_datasets.rst` file was added to the repository. This last step can be done running the bash script `./.pre-commit-rst-placeholder.sh <https://github.com/CDCgov/multisignal-epi-inference/blob/main/.pre-commit-rst-placeholder.sh>`__. Note the script should be executed by ``pre-commit``.
 
@@ -92,11 +93,12 @@ Sphinx also allows adding arbitrary pages. For instance, all the ``PyRenew`` tut
 2. Make sure the new ``rst`` file is included in an indexed file, for instance, ``./docs/source/general/ctoc.rst``. Here is how it looks:
 
 .. code-block::
-    Complete Table Of Contents
-    ==========================
+    
+   Complete Table Of Contents
+   ==========================
 
-    .. toctree::
-       :maxdepth: 2
+   .. toctree::
+      :maxdepth: 2
 
        ../index
        ../msei_reference/index
