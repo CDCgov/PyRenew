@@ -11,6 +11,7 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
+from numpy.testing import assert_array_equal, assert_raises
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
     Infections,
@@ -116,65 +117,83 @@ def test_rng_keys_produce_correct_samples():
         for elt in list(zip(models, n_timepoints_to_simulate, rng_keys))
     ]
     # using same rng_key should get same run samples
-    assert np.array_equal(
+    assert_array_equal(
         models[0].mcmc.get_samples()["Rt"][0],
         models[1].mcmc.get_samples()["Rt"][0],
     )
 
-    assert np.array_equal(
+    assert_array_equal(
         prior_predictive_list[0]["Rt"][0],
         prior_predictive_list[1]["Rt"][0],
     )
 
-    assert np.array_equal(
+    assert_array_equal(
         posterior_predictive_list[0]["Rt"][0],
         posterior_predictive_list[1]["Rt"][0],
     )
 
     # using None for rng_key should get different run samples
-    assert not np.array_equal(
+    assert_raises(  # negate assert_array_equal
+        AssertionError,
+        assert_array_equal,
         models[2].mcmc.get_samples()["Rt"][0],
         models[3].mcmc.get_samples()["Rt"][0],
     )
 
-    assert not np.array_equal(
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
         prior_predictive_list[2]["Rt"][0],
         prior_predictive_list[3]["Rt"][0],
     )
 
-    assert not np.array_equal(
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
         posterior_predictive_list[2]["Rt"][0],
         posterior_predictive_list[3]["Rt"][0],
     )
 
     # using None vs preselected rng_key should get different samples
-    assert not np.array_equal(
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
         models[0].mcmc.get_samples()["Rt"][0],
         models[2].mcmc.get_samples()["Rt"][0],
     )
 
-    assert not np.array_equal(
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
         prior_predictive_list[0]["Rt"][0],
         prior_predictive_list[2]["Rt"][0],
     )
 
-    assert not np.array_equal(
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
         posterior_predictive_list[0]["Rt"][0],
         posterior_predictive_list[2]["Rt"][0],
     )
 
     # using two different non-None rng keys should get different samples
-    assert not np.array_equal(
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
         models[1].mcmc.get_samples()["Rt"][0],
         models[4].mcmc.get_samples()["Rt"][0],
     )
 
-    assert not np.array_equal(
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
         prior_predictive_list[1]["Rt"][0],
         prior_predictive_list[4]["Rt"][0],
     )
 
-    assert not np.array_equal(
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
         posterior_predictive_list[1]["Rt"][0],
         posterior_predictive_list[4]["Rt"][0],
     )
