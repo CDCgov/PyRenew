@@ -427,7 +427,9 @@ class Model(metaclass=ABCMeta):
         rng_key : ArrayLike, optional
             Random key for the Predictive function call. Defaults to None.
         numpyro_predictive_args : dict, optional
-            Dictionary of arguments to be passed to numpyro.inference.Predictive.
+            Dictionary of arguments to be passed to the numpyro.inference.Predictive constructor.
+**kwargs 
+    Additional named arguments passed to the `__call__()` method of numpyro.inference.Predictive
 
         Returns
         -------
@@ -466,7 +468,9 @@ class Model(metaclass=ABCMeta):
         rng_key : ArrayLike, optional
             Random key for the Predictive function call. Defaults to None.
         numpyro_predictive_args : dict, optional
-            Dictionary of arguments to be passed to numpyro.inference.Predictive.
+            Dictionary of arguments to be passed to the numpyro.inference.Predictive constructor.
+**kwargs 
+    Additional named arguments passed to the `__call__()` method of numpyro.inference.Predictive
 
         Returns
         -------
