@@ -35,8 +35,8 @@ PyRenew Principles
 -  ``Model`` class conventions
 
    -  Composing models is discouraged.
-   -  Returning anything from a ``Model`` is discouraged. Instead, sample from models using ``Predictive`` or our ``prior_predictive`` or ``posterior_predictive`` functions.
-   -  Using ``numpyro.deterministic`` within a ``RandomVariable`` is discouraged. Only use at the ``numpyro.deterministic`` ``Model`` level.
+   -  Returning anything from ``Model.sample`` is discouraged. Instead, sample from models using ``Predictive`` or our ``prior_predictive`` or ``posterior_predictive`` functions. 
+   -  Using ``numpyro.deterministic`` within a ``RandomVariable`` is discouraged. Only use at the ``numpyro.deterministic`` ``Model`` level. If something might need to be recorded from a ``RandomVariable``, it should be returned from the ``RandomVariable`` so it can be recorded at the ``Model`` level.
    -  Using default site names in a ``RandomVariable`` is discouraged. Only use default site names at the ``Model`` level.
    -  Use ``DeterministicVariable``\ s instead of constants within a model.
 
