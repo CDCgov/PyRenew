@@ -19,7 +19,7 @@ Installation for Developers
 Coding Conventions
 ------------------
 
-A variety of coding conventions are enforced by automated tools in continuous integeration (black, isort, ruff, numpydoc-validation)
+A variety of coding conventions are enforced by automated tools in continuous integeration ([black](https://github.com/psf/black), [isort](https://github.com/PyCQA/isort), [ruff](https://github.com/astral-sh/ruff), [numpydoc-validation](https://github.com/numpy/numpydoc)) via [pre-commit](https://github.com/pre-commit/pre-commit) hooks.
 
 PyRenew Principles
 ------------------
