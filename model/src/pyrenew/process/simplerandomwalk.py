@@ -71,7 +71,8 @@ class SimpleRandomWalkProcess(RandomVariable):
 
         # return (init + jnp.cumsum(jnp.pad(diffs, [1, 0], constant_values=0)),)
 
-        def transition(x_prev, _):  # numpydoc ignore=GL08
+        def transition(x_prev, _):
+            # numpydoc ignore=GL08
             diff = npro.sample(name + "_diffs", self.error_distribution)
             x_curr = x_prev + diff
             return x_curr, x_curr
@@ -79,7 +80,7 @@ class SimpleRandomWalkProcess(RandomVariable):
         # Error occurs when I call scan:
         _, x = scan(transition, init=init, xs=None, length=n_timepoints - 1)
 
-        return (jnp.hstack([jnp.atleast_1d(init), x]),)
+        return (jnp.hstack([init, x]),)
 
     @staticmethod
     def validate():
