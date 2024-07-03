@@ -238,8 +238,29 @@ hosp_model.run(
     num_warmup=2000,
     data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False, num_chains=2),
+    mcmc_args=dict(progress_bar=False, num_chains=1),
 )
+```
+Test `posterior_predictive` and `prior_predictive` methods
+```{python}
+import arviz as az
+
+idata = az.from_numpyro(hosp_model.mcmc,
+                        posterior_predictive=hosp_model.posterior_predictive(data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy().astype(float)))
+
+az.plot_lm("negbinom_rv",
+           idata=idata,
+);
+```
+The posterior predictive samples are simply the observed data. Looking at prior predictive
+
+```{python}
+prior_pred = hosp_model.prior_predictive(
+    data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy().astype(float),
+    numpyro_predictive_args={"num_samples": 100},
+)
+# Not the best way but can still see prior_predictive is the same as observed hospital data
+prior_pred["negbinom_rv"]
 ```
 
 We can use the `plot_posterior` method to visualize the results[^capture]:
