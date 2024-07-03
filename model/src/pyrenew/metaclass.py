@@ -98,12 +98,12 @@ class RandomVariable(metaclass=ABCMeta):
 
     Notes
     -----
-    `RandomVariable`s in `pyrenew` can be time-aware, meaning that they can
-    have a `t_start` and `t_unit` attribute. These attributes
+    RandomVariables in pyrenew can be time-aware, meaning that they can
+    have a t_start and t_unit attribute. These attributes
     are expected to be used internally mostly for tasks including padding,
     alignment of time series, and other time-aware operations.
 
-    Both attributes give information about the output of the `sample()` method,
+    Both attributes give information about the output of the sample() method,
     in other words, the relative time units of the returning value.
 
     Attributes
