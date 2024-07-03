@@ -1,6 +1,8 @@
 Developer Documentation
 =======================
 
+**Note this document is a work in progress. Contrbitions to all sections are welcome.**
+
 Github Workflow
 ---------------
 
