@@ -527,7 +527,9 @@ We can use ArviZ to visualize the posterior predictive distributions.
 # | label: posterior-predictive-distribution
 idata_weekday = az.from_numpyro(
     hosp_model_weekday.mcmc,
-    posterior_predictive=hosp_model_weekday.posterior_predictive(n_timepoints_to_simulate=1)
+    posterior_predictive=hosp_model_weekday.posterior_predictive(
+        n_timepoints_to_simulate=len(dat_w_padding)
+    ),
 )
 ```
 Below we plot the posterior predictive distributions using equal tailed bayesian credible intervals:
