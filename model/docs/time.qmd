@@ -4,7 +4,7 @@ format: gfm
 engine: jupyter
 ---
 
-Every `pyrenew` model has a _fundamental discrete time unit_. All other time-aware arrays should be expressible as integer multiples of this fundamental unit.
+Every `pyrenew` model has a _fundamental discrete time unit_. All time-aware arrays used in the model should have units expressible as integer multiples of this fundamental unit.
 
 The fundamental time unit should represent a period of fixed (or approximately fixed) duration. That is, "days" could make for a good fundamental time unit; "months" would not, since different months represent different absolute lengths of time. 
 
