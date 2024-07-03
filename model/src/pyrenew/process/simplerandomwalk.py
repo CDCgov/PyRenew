@@ -64,21 +64,17 @@ class SimpleRandomWalkProcess(RandomVariable):
         if init is None:
             init = npro.sample(name + "_init", self.error_distribution)
 
-        # diffs = npro.sample(
-        #     name + "_diffs",
-        #     self.error_distribution.expand((n_timepoints - 1,)),
-        # )
-
-        # return (init + jnp.cumsum(jnp.pad(diffs, [1, 0], constant_values=0)),)
-
         def transition(x_prev, _):
             # numpydoc ignore=GL08
             diff = npro.sample(name + "_diffs", self.error_distribution)
             x_curr = x_prev + diff
             return x_curr, x_curr
 
-        # Error occurs when I call scan:
-        _, x = scan(transition, init=init, xs=None, length=n_timepoints - 1)
+        _, x = scan(
+            transition,
+            init=init,
+            xs=jnp.arange(n_timepoints - 1),
+        )
 
         return (jnp.hstack([init, x]),)
 
