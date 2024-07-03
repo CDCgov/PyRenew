@@ -15,7 +15,7 @@ import numpy as np
 import numpyro as npro
 import polars as pl
 from jax.typing import ArrayLike
-from numpyro.infer import MCMC, NUTS
+from numpyro.infer import MCMC, NUTS, Predictive
 from pyrenew.mcmcutils import plot_posterior, spread_draws
 
 
@@ -412,3 +412,81 @@ class Model(metaclass=ABCMeta):
             draws_col=draws_col,
             obs_col=obs_col,
         )
+
+    def posterior_predictive(
+        self,
+        rng_key: ArrayLike | None = None,
+        numpyro_predictive_args: dict = {},
+        **kwargs,
+    ) -> dict:
+        """
+        A wrapper for numpyro.infer.Predictive to generate posterior predictive samples.
+
+        Parameters
+        ----------
+        rng_key : ArrayLike, optional
+            Random key for the Predictive function call. Defaults to None.
+        numpyro_predictive_args : dict, optional
+            Dictionary of arguments to be passed to the numpyro.inference.Predictive constructor.
+        **kwargs
+            Additional named arguments passed to the `__call__()` method of numpyro.inference.Predictive
+
+        Returns
+        -------
+        dict
+        """
+        if self.mcmc is None:
+            raise ValueError(
+                "No posterior samples available. Run model with model.run()."
+            )
+
+        if rng_key is None:
+            rand_int = np.random.randint(
+                np.iinfo(np.int64).min, np.iinfo(np.int64).max
+            )
+            rng_key = jr.key(rand_int)
+
+        predictive = Predictive(
+            model=self.sample,
+            posterior_samples=self.mcmc.get_samples(),
+            **numpyro_predictive_args,
+        )
+
+        return predictive(rng_key, **kwargs)
+
+    def prior_predictive(
+        self,
+        rng_key: ArrayLike | None = None,
+        numpyro_predictive_args: dict = {},
+        **kwargs,
+    ) -> dict:
+        """
+        A wrapper for numpyro.infer.Predictive to generate prior predictive samples.
+
+        Parameters
+        ----------
+        rng_key : ArrayLike, optional
+            Random key for the Predictive function call. Defaults to None.
+        numpyro_predictive_args : dict, optional
+            Dictionary of arguments to be passed to the numpyro.inference.Predictive constructor.
+        **kwargs
+            Additional named arguments passed to the `__call__()` method of numpyro.inference.Predictive
+
+        Returns
+        -------
+        dict
+        """
+
+        if rng_key is None:
+            rand_int = np.random.randint(
+                np.iinfo(np.int64).min, np.iinfo(np.int64).max
+            )
+            rng_key = jr.key(rand_int)
+
+        predictive = Predictive(
+            model=self.sample,
+            posterior_samples=None,
+            **numpyro_predictive_args,
+        )
+
+        return predictive(rng_key, **kwargs)

@@ -11,6 +11,7 @@ import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
+from numpy.testing import assert_array_equal, assert_raises
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
     Infections,
@@ -48,7 +49,7 @@ def create_test_model():  # numpydoc ignore=GL08
     return model
 
 
-def sample_test_model(
+def run_test_model(
     test_model, observed_infections, rng_key
 ):  # numpydoc ignore=GL08
     test_model.run(
@@ -58,6 +59,26 @@ def sample_test_model(
         rng_key=rng_key,
         mcmc_args=dict(progress_bar=True),
     )
+
+
+def prior_predictive_test_model(
+    test_model, n_timepoints_to_simulate, rng_key
+):  # numpydoc ignore=GL08
+    prior_predictive_samples = test_model.prior_predictive(
+        rng_key=rng_key,
+        numpyro_predictive_args={"num_samples": 20},
+        n_timepoints_to_simulate=n_timepoints_to_simulate,
+    )
+    return prior_predictive_samples
+
+
+def posterior_predictive_test_model(
+    test_model, n_timepoints_to_simulate, rng_key
+):  # numpydoc ignore=GL08
+    posterior_predictive_samples = test_model.posterior_predictive(
+        rng_key=rng_key, n_timepoints_to_simulate=n_timepoints_to_simulate
+    )
+    return posterior_predictive_samples
 
 
 def test_rng_keys_produce_correct_samples():
@@ -70,44 +91,109 @@ def test_rng_keys_produce_correct_samples():
     # set up singular epidemiological process
 
     # set up base models for testing
-    model_01 = create_test_model()
-    model_02 = create_test_model()
-    model_03 = create_test_model()
-    model_04 = create_test_model()
-    model_05 = create_test_model()
-
+    models = [create_test_model() for _ in range(5)]
+    n_timepoints_to_simulate = [30] * len(models)
     # sample only a single model and use that model's samples
     # as the observed_infections for the rest of the models
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model_01_samp = model_01.sample(n_timepoints_to_simulate=30)
+        model_sample = models[0].sample(
+            n_timepoints_to_simulate=n_timepoints_to_simulate[0]
+        )
+    obs_infections = [model_sample.observed_infections] * len(models)
+    rng_keys = [jr.key(54), jr.key(54), None, None, jr.key(74)]
 
     # run test models with the different keys
-    models = [model_01, model_02, model_03, model_04, model_05]
-    rng_keys = [jr.key(54), jr.key(54), None, None, jr.key(74)]
-    obs_infections = [model_01_samp.observed_infections] * len(models)
-    for elt in list(zip(models, obs_infections, rng_keys)):
-        sample_test_model(*elt)
 
+    for elt in list(zip(models, obs_infections, rng_keys)):
+        run_test_model(*elt)
+
+    prior_predictive_list = [
+        prior_predictive_test_model(*elt)
+        for elt in list(zip(models, n_timepoints_to_simulate, rng_keys))
+    ]
+
+    posterior_predictive_list = [
+        posterior_predictive_test_model(*elt)
+        for elt in list(zip(models, n_timepoints_to_simulate, rng_keys))
+    ]
     # using same rng_key should get same run samples
-    assert np.array_equal(
-        model_01.mcmc.get_samples()["Rt"][0],
-        model_02.mcmc.get_samples()["Rt"][0],
+    assert_array_equal(
+        models[0].mcmc.get_samples()["Rt"][0],
+        models[1].mcmc.get_samples()["Rt"][0],
+    )
+
+    assert_array_equal(
+        prior_predictive_list[0]["Rt"][0],
+        prior_predictive_list[1]["Rt"][0],
+    )
+
+    assert_array_equal(
+        posterior_predictive_list[0]["Rt"][0],
+        posterior_predictive_list[1]["Rt"][0],
     )
 
     # using None for rng_key should get different run samples
-    assert not np.array_equal(
-        model_03.mcmc.get_samples()["Rt"][0],
-        model_04.mcmc.get_samples()["Rt"][0],
+    assert_raises(  # negate assert_array_equal
+        AssertionError,
+        assert_array_equal,
+        models[2].mcmc.get_samples()["Rt"][0],
+        models[3].mcmc.get_samples()["Rt"][0],
+    )
+
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
+        prior_predictive_list[2]["Rt"][0],
+        prior_predictive_list[3]["Rt"][0],
+    )
+
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
+        posterior_predictive_list[2]["Rt"][0],
+        posterior_predictive_list[3]["Rt"][0],
     )
 
     # using None vs preselected rng_key should get different samples
-    assert not np.array_equal(
-        model_01.mcmc.get_samples()["Rt"][0],
-        model_03.mcmc.get_samples()["Rt"][0],
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
+        models[0].mcmc.get_samples()["Rt"][0],
+        models[2].mcmc.get_samples()["Rt"][0],
+    )
+
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
+        prior_predictive_list[0]["Rt"][0],
+        prior_predictive_list[2]["Rt"][0],
+    )
+
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
+        posterior_predictive_list[0]["Rt"][0],
+        posterior_predictive_list[2]["Rt"][0],
     )
 
     # using two different non-None rng keys should get different samples
-    assert not np.array_equal(
-        model_02.mcmc.get_samples()["Rt"][0],
-        model_05.mcmc.get_samples()["Rt"][0],
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
+        models[1].mcmc.get_samples()["Rt"][0],
+        models[4].mcmc.get_samples()["Rt"][0],
+    )
+
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
+        prior_predictive_list[1]["Rt"][0],
+        prior_predictive_list[4]["Rt"][0],
+    )
+
+    assert_raises(
+        AssertionError,
+        assert_array_equal,
+        posterior_predictive_list[1]["Rt"][0],
+        posterior_predictive_list[4]["Rt"][0],
     )
