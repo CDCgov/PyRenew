@@ -52,7 +52,7 @@ class PeriodicEffect(RandomVariable):
         t_start : int
             Start time of the process.
         t_unit : int
-            Unit of time.
+            Unit of time relative to the model's fundamental (smallest) time unit. 
 
         Returns
         -------
