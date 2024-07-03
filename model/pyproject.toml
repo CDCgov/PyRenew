@@ -12,7 +12,8 @@ exclude = [{path = "datasets/*.rds"}]
 [tool.poetry.dependencies]
 python = "^3.12"
 numpyro = "^0.15.0"
-jax = "^0.4.25"
+jax = "0.4.29"
+jaxlib = "0.4.29"
 numpy = "^1.26.4"
 polars = "^0.20.16"
 pillow = "^10.3.0" # See #56 on CDCgov/multisignal-epi-inference
