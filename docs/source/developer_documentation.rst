@@ -111,21 +111,3 @@ Sphinx also allows adding arbitrary pages. For instance, all the ``PyRenew`` tut
 
 
 The last entry is the ``developer_documentation`` page.
-
-Additional Developer Info
--------------------------
-
--  makefile
--  numpydocs
--  How does typos work?
--  download artifact for website preview
--  How to create a new tutorial
--  How to add documentation for a new module to the website
--
-
-Background Information
-----------------------
-
--  renewal papers
--  JAX
--  Numpyro
