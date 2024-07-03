@@ -94,7 +94,7 @@ Sphinx also allows adding arbitrary pages. For instance, all the ``PyRenew`` tut
 
 2. Make sure the new ``rst`` file is included in an indexed file, for instance, ``./docs/source/general/ctoc.rst``. Here is how it looks:
 
-.. code-block::
+.. code-block:: RST
    Complete Table Of Contents
    ==========================
 
