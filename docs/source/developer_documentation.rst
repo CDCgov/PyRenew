@@ -34,7 +34,7 @@ PyRenew Principles
    -  Use the ``observed_`` for the output of sample statements where ``obs`` is a ``data_`` prefixed object.
    -  Thus, code which may reasonably written like ``infections = infections.sample(x, obs=infections)`` should instead be written ``observed_infections = infections_rv.sample(x, obs=data_infections)``.
 
--  ``Model`` class conventions
+-  Class conventions
 
    -  Composing models is discouraged.
    -  Returning anything from ``Model.sample`` is discouraged. Instead, sample from models using ``Predictive`` or our ``prior_predictive`` or ``posterior_predictive`` functions.
