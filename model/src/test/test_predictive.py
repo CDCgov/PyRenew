@@ -25,6 +25,7 @@ I0 = InfectionSeedingProcess(
     "I0_seeding",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    t_unit=1,
 )
 latent_infections = Infections()
 observed_infections = PoissonObservation()

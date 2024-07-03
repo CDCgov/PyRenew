@@ -13,6 +13,8 @@ class InfectionSeedingProcess(RandomVariable):
         name,
         I_pre_seed_rv: RandomVariable,
         infection_seed_method: InfectionSeedMethod,
+        t_unit: int,
+        t_start: int | None = None,
     ) -> None:
         """Default class constructor for InfectionSeedingProcess
 
@@ -24,6 +26,14 @@ class InfectionSeedingProcess(RandomVariable):
             A RandomVariable representing the number of infections that occur at some time before the renewal process begins. Each `infection_seed_method` uses this random variable in different ways.
         infection_seed_method : InfectionSeedMethod
             An `InfectionSeedMethod` that generates the seed infections for the renewal process.
+        t_unit : int
+            The unit of time for the time series passed to `RandomVariable.set_timeseries`.
+        t_start : int, optional
+            The relative starting time of the time series. If `None`, the relative starting time is set to `-infection_seed_method.n_timepoints`.
+
+        Notes
+        -----
+        The relative starting time of the time series (`t_start`) is set to `-infection_seed_method.n_timepoints`.
 
         Returns
         -------
@@ -34,6 +44,13 @@ class InfectionSeedingProcess(RandomVariable):
         self.I_pre_seed_rv = I_pre_seed_rv
         self.infection_seed_method = infection_seed_method
         self.name = name
+        if t_start is None:
+            t_start = -infection_seed_method.n_timepoints
+
+        self.set_timeseries(
+            t_start=t_start,
+            t_unit=t_unit,
+        )
 
     @staticmethod
     def validate(

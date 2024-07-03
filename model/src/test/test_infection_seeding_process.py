@@ -21,6 +21,7 @@ def test_infection_seeding_process():
         "zero_pad_model",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints),
+        t_unit=1,
     )
 
     exp_model = InfectionSeedingProcess(
@@ -29,12 +30,14 @@ def test_infection_seeding_process():
         SeedInfectionsExponential(
             n_timepoints, DeterministicVariable(0.5, name="rate")
         ),
+        t_unit=1,
     )
 
     vec_model = InfectionSeedingProcess(
         "vec_model",
         DeterministicVariable(jnp.arange(n_timepoints), name="I0"),
         SeedInfectionsFromVec(n_timepoints),
+        t_unit=1,
     )
 
     for model in [zero_pad_model, exp_model, vec_model]:
@@ -47,6 +50,7 @@ def test_infection_seeding_process():
             "vec_model",
             jnp.arange(n_timepoints),
             SeedInfectionsFromVec(n_timepoints),
+            t_unit=1,
         )
 
     with pytest.raises(TypeError):
@@ -54,4 +58,5 @@ def test_infection_seeding_process():
             "vec_model",
             DeterministicVariable(jnp.arange(n_timepoints), name="I0"),
             3,
+            t_unit=1,
         )

@@ -95,13 +95,82 @@ def _assert_sample_and_rtype(
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
+
+    Notes
+    -----
+    RandomVariables in pyrenew can be time-aware, meaning that they can
+    have a t_start and t_unit attribute. These attributes
+    are expected to be used internally mostly for tasks including padding,
+    alignment of time series, and other time-aware operations.
+
+    Both attributes give information about the output of the sample() method,
+    in other words, the relative time units of the returning value.
+
+    Attributes
+    ----------
+    t_start : int
+        The start of the time series.
+    t_unit : int
+        The unit of the time series relative to the model's fundamental
+        (smallest) time unit. e.g. if the fundamental unit is days,
+        then 1 corresponds to units of days and 7 to units of weeks.
     """
+
+    t_start: int = None
+    t_unit: int = None
 
     def __init__(self, **kwargs):
         """
         Default constructor
         """
         pass
+
+    def set_timeseries(
+        self,
+        t_start: int,
+        t_unit: int,
+    ) -> None:
+        """
+        Set the time series start and unit
+
+        Parameters
+        ----------
+        t_start : int
+            The start of the time series relative to the
+            model time. It could be negative, indicating
+            that the sample() method returns timepoints
+            that occur prior to the model t = 0.
+
+        t_unit : int
+            The unit of the time series relative
+            to the model's fundamental (smallest)
+            time unit. e.g. if the fundamental unit
+            is days, then 1 corresponds to units of
+            days and 7 to units of weeks.
+
+        Returns
+        -------
+        None
+        """
+        # Timeseries unit should be a positive integer
+        assert isinstance(
+            t_unit, int
+        ), f"t_unit should be an integer. It is {type(t_unit)}."
+
+        # Timeseries unit should be a positive integer
+        assert (
+            t_unit > 0
+        ), f"t_unit should be a positive integer. It is {t_unit}."
+
+        # Data starts should be a positive integer
+        assert isinstance(
+            t_start, int
+        ), f"t_start should be an integer. It is {type(t_start)}."
+
+        self.t_start = t_start
+        self.t_unit = t_unit
+
+        return None
 
     @abstractmethod
     def sample(
