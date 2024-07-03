@@ -6,11 +6,11 @@ engine: jupyter
 
 Every `pyrenew` model has a _fundamental discrete time unit_. All time-aware arrays used in the model should have units expressible as integer multiples of this fundamental unit.
 
-The fundamental time unit should represent a period of fixed (or approximately fixed) duration. That is, "days" could make for a good fundamental time unit; "months" would not, since different months represent different absolute lengths of time. 
+The fundamental time unit should represent a period of fixed (or approximately fixed) duration. That is, "days" could make for a good fundamental time unit; "months" would not, since different months represent different absolute lengths of time.
 
 For many infectious disease renewal models of interest, the fundamental time unit will be days, and we will proceed with this tutorial treating days as our fundamental unit.
 
- `pyrenew` deals with time having `RandomVariable`s carry information about (i) their own time unit expressed relative to the fundamental unit (`t_unit`) and (ii) the starting time, `t_start`, measured relative to `t = 0` in model time in units of the `RandomVariable`'s time unit. 
+ `pyrenew` deals with time having `RandomVariable`s carry information about (i) their own time unit expressed relative to the fundamental unit (`t_unit`) and (ii) the starting time, `t_start`, measured relative to `t = 0` in model time in units of the `RandomVariable`'s time unit.
 
 The tuple `(t_unit, t_start)` can encode different types of time series data. For example:
 
