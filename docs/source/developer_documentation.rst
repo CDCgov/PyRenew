@@ -16,8 +16,8 @@ Github Workflow
 Installation for Developers
 ---------------------------
 
--  poetry install with dev dependencies
--  pre-commit install
+-  ``poetry install --with dev``
+-  ``pre-commit install``
 
 Coding Conventions
 ------------------
