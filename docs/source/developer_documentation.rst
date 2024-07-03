@@ -7,7 +7,7 @@ Github Workflow
 -  You should request reviews for pull requests from ``multisignal-epi-inference-devs``, unless you have a good reason to request reviews from a smaller group.
 -  Reviews from all of ``multisignal-epi-inference-devs`` are  encouraged, but an approving review from a `codeowner <https://github.com/CDCgov/multisignal-epi-inference/blob/main/.github/CODEOWNERS>`_ (@dylanhmorris, @damonbayer, or @gvegayon) is required before a pull request can be merged to ``main``.
 -  For CDC contributors, If your pull request has not received a review at the time of the next standup, use standup to find a reviewer.
-- External contributors should expect to receive a review withing a few days of creating a pull request.
+-  External contributors should expect to receive a review within a few days of creating a pull request.
 -  If you create a draft pull request, indicate what, if anything, about the current pull request should be reviewed.
 -  Only mark a pull request as “ready for review” if you think it is ready to be merged. This indicates that a thorough, all-encompassing review should be given.
 
@@ -35,7 +35,7 @@ PyRenew Principles
 -  ``Model`` class conventions
 
    -  Composing models is discouraged.
-   -  Returning anything from ``Model.sample`` is discouraged. Instead, sample from models using ``Predictive`` or our ``prior_predictive`` or ``posterior_predictive`` functions. 
+   -  Returning anything from ``Model.sample`` is discouraged. Instead, sample from models using ``Predictive`` or our ``prior_predictive`` or ``posterior_predictive`` functions.
    -  Using ``numpyro.deterministic`` within a ``RandomVariable`` is discouraged. Only use at the ``numpyro.deterministic`` ``Model`` level. If something might need to be recorded from a ``RandomVariable``, it should be returned from the ``RandomVariable`` so it can be recorded at the ``Model`` level.
    -  Using default site names in a ``RandomVariable`` is discouraged. Only use default site names at the ``Model`` level.
    -  Use ``DeterministicVariable``\ s instead of constants within a model.
