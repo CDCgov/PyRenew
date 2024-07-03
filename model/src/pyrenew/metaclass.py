@@ -111,8 +111,8 @@ class RandomVariable(metaclass=ABCMeta):
     t_start : int
         The start of the time series.
     t_unit : int
-        The unit of the time series relative to the model's fundamental 
-         (smallest) time unit. e.g. if the fundamental unit is days, 
+        The unit of the time series relative to the model's fundamental
+         (smallest) time unit. e.g. if the fundamental unit is days,
          then 1 corresponds to units of days and 7 to units of weeks.
     """
 
@@ -138,8 +138,8 @@ class RandomVariable(metaclass=ABCMeta):
         t_start : int
             The start of the time series relative to the model time. It could be negative, indicating that the sample returns observations prior to the model time.
         t_unit : int
-        The unit of the time series relative to the model's fundamental 
-         (smallest) time unit. e.g. if the fundamental unit is days, 
+        The unit of the time series relative to the model's fundamental
+         (smallest) time unit. e.g. if the fundamental unit is days,
          then 1 corresponds to units of days and 7 to units of weeks.
 
         Returns
