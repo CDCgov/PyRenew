@@ -1,10 +1,8 @@
 ---
-title: "Untitled"
-format: html
+title: "Fitting a basic renewal model"
+format: gfm
+engine: jupyter
 ---
-
-
-## Basic renewal model
 
 This document will show the steps to build a simple renewal model featuring a latent infection process, a random walk Rt process, and an observation process for the reported infections.
 
@@ -31,7 +29,7 @@ from pyrenew.metaclass import DistributionalRV
 import pyrenew.transformation as t
 ```
 
-The pyrenew package models the real-time reproductive number $R_t$, the ratio of new infections at time $t$ to previous infections at some time $t-s$, as a renewal process model. Our basic renewal process model defines five components:
+The pyrenew package models the real-time reproductive number $R_t$, the average number of secondary infections caused by an infected individual, as a renewal process model. Our basic renewal process model defines five components:
 
 (1) generation interval, the times between infections
 
@@ -173,8 +171,14 @@ Now, let's investigate the output, particularly the posterior distribution of th
 # | fig-cap: Rt posterior distribution
 out = model1.plot_posterior(var="Rt")
 ```
+We can use the `get_samples` method to extract samples from the model
+```{python}
+# | label: get-model-fitted-samples
+Rt_samp = model1.mcmc.get_samples()["Rt"]
+latent_infection_samp = model1.mcmc.get_samples()["all_latent_infections"]
+```
 
-We can use [ArviZ](https://www.arviz.org/) package to create model diagnostics and visualizations. We start by converting the fitted model to ArviZ InferenceData object:
+We can also convert the fitted model to [ArviZ](https://www.arviz.org/) InferenceData object and use ArviZ package to extarct samples, calculate statistics, create model diagnostics and visualizations.
 
 ```{python}
 # | label: convert-inference-data
