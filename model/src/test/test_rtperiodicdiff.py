@@ -50,7 +50,7 @@ def test_rtweeklydiff() -> None:
     """Checks basic functionality of the process"""
 
     params = {
-        "data_starts": 0,
+        "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.1, 0.2]), name="log_rt_prior"
         ),
@@ -78,7 +78,7 @@ def test_rtweeklydiff() -> None:
 
     # Checking start off a different day of the week
     np.random.seed(223)
-    params["data_starts"] = 5
+    params["offset"] = 5
     rtwd = RtWeeklyDiffProcess(**params)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         rt2 = rtwd.sample(duration=duration).rt
@@ -97,7 +97,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     """Checks step size averages close to 0"""
 
     params = {
-        "data_starts": 0,
+        "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.0, 0.0]), name="log_rt_prior"
         ),
@@ -135,7 +135,7 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
     """Checks that the 'manual' reconstruction is correct"""
 
     params = {
-        "data_starts": 0,
+        "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.1, 0.2]), name="log_rt_prior"
         ),
@@ -170,7 +170,7 @@ def test_rtperiodicdiff_smallsample():
     """Checks basic functionality of the process with a small sample size."""
 
     params = {
-        "data_starts": 0,
+        "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.1, 0.2]), name="log_rt_prior"
         ),

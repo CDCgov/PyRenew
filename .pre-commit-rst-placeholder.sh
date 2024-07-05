@@ -5,6 +5,24 @@ TUTORIALS_DIR=docs/source/tutorials
 # For each *qmd file in model/docs, create a corresponding rst file
 # under docs/source/tutorial
 COUNTER=0
+
+# Removing everything under docs/source/tutorials/*rst with the exception of the index.rst file.
+# This is to ensure that the index.rst file is not deleted.
+RST_FILES=$(find $TUTORIALS_DIR -type f -name '*.rst' -not -name 'index.rst')
+
+# Counting which of the rst files are not in model/docs
+for rst in $RST_FILES; do
+    # Capture the basename
+    bname=$(basename $rst .rst)
+
+    # Check if the corresponding qmd file exists
+    if [ ! -f model/docs/${bname}.qmd ]; then
+        echo "Removing $rst"
+        rm $rst
+        COUNTER=$((COUNTER+1))
+    fi
+done
+
 for qmd in model/docs/*.qmd; do
     # Capture the basename
     bname=$(basename $qmd .qmd)

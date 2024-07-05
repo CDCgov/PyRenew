@@ -10,3 +10,5 @@ This section contains tutorials that demonstrate how to use the `pyrenew` packag
    example_with_datasets
    pyrenew_demo
    extending_pyrenew
+   periodic_effects
+   time

@@ -23,7 +23,7 @@ H(t) & = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
 \end{align*}
 $$
 
-Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to hospitalization rate, and $\omega(t)$ is the weekday effect at time $t$; the last section provides an example building a weekly effect `RandomVariable`.
+Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to hospitalization rate, and $\omega(t)$ is the day-of-the-week effect at time $t$; the last section provides an example building such a `RandomVariable`.
 
 The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to hospitalization rate. The latent infections are modeled as a renewal process:
 
@@ -160,14 +160,15 @@ I0 = InfectionSeedingProcess(
         gen_int_array.size,
         deterministic.DeterministicVariable(0.5, name="rate"),
     ),
+    t_unit=1,
 )
 
 # Generation interval and Rt
 gen_int = deterministic.DeterministicPMF(gen_int, name="gen_int")
 rtproc = process.RtRandomWalkProcess(
-    Rt0_dist = dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-    Rt_transform = transformation.ExpTransform().inv,
-    Rt_rw_dist = dist.Normal(0, 0.025),
+    Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+    Rt_transform=transformation.ExpTransform().inv,
+    Rt_rw_dist=dist.Normal(0, 0.025),
 )
 
 # The observation model
@@ -214,7 +215,7 @@ axs[0].plot(sim_data.Rt)
 axs[0].set_ylabel("Rt")
 
 # Infections plot
-axs[1].plot(sim_data.sampled_observed_hosp_admissions)
+axs[1].plot(sim_data.observed_hosp_admissions)
 axs[1].set_ylabel("Infections")
 axs[1].set_yscale("log")
 
@@ -236,9 +237,9 @@ import jax
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
+    data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
 )
 ```
 
@@ -250,9 +251,13 @@ We can use the `plot_posterior` method to visualize the results[^capture]:
 # | label: fig-output-hospital-admissions
 # | fig-cap: Hospital Admissions posterior distribution
 out = hosp_model.plot_posterior(
-    var="observed_hosp_admissions",
+    var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat["daily_hosp_admits"].to_numpy(),
+    obs_signal=np.pad(
+        dat["daily_hosp_admits"].to_numpy().astype(float),
+        (gen_int_array.size, 0),
+        constant_values=np.nan,
+    ),
 )
 ```
 
@@ -266,17 +271,20 @@ We can use the padding argument to solve the overestimation of hospital admissio
 # | label: model-fit-padding
 days_to_impute = 21
 
-dat_w_padding = dat["daily_hosp_admits"].to_numpy()
-
 # Add 21 Nas to the beginning of dat_w_padding
-dat_w_padding = np.hstack((np.repeat(np.nan, days_to_impute), dat_w_padding))
+dat_w_padding = np.pad(
+    dat["daily_hosp_admits"].to_numpy().astype(float),
+    (days_to_impute, 0),
+    constant_values=np.nan,
+)
+
 
 hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
-    observed_hosp_admissions=dat_w_padding,
+    data_observed_hosp_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
     padding=days_to_impute,  # Padding the model
 )
 ```
@@ -285,25 +293,128 @@ And plotting the results:
 
 ```{python}
 # | label: fig-output-admissions-with-padding
-# | fig-cap: Hospital Admissions posterior distribution
+# | fig-cap: Hospital Admissions
 out = hosp_model.plot_posterior(
-    var="observed_hosp_admissions",
+    var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat_w_padding,
+    obs_signal=np.pad(
+        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
+    ),
 )
+```
+
+We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by converting the fitted model to Arviz InferenceData object:
+```{python}
+# | label: convert-inferenceData
+import arviz as az
+
+idata = az.from_numpyro(hosp_model.mcmc)
+```
+We obtain the summary of model diagnostics and print the diagnostics for `latent_hospital_admissions[1]`
+```{python}
+# | label: diagnostics
+# | warning: false
+diagnostic_stats_summary = az.summary(
+    idata.posterior,
+    kind="diagnostics",
+)
+
+print(diagnostic_stats_summary.loc["latent_hospital_admissions[1]"])
+```
+
+Below we plot 90% and 50% highest density intervals for latent hospital admissions using [plot_hdi](https://python.arviz.org/en/stable/api/generated/arviz.plot_hdi.html):
+
+```{python}
+# | label: fig-output-admission-distribution
+# | fig-cap: Hospital Admissions posterior distribution
+x_data = idata.posterior["latent_hospital_admissions_dim_0"]
+y_data = idata.posterior["latent_hospital_admissions"]
+
+fig, axes = plt.subplots(figsize=(6, 5))
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.9,
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.5,
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.6},
+    ax=axes,
+)
+
+# Add mean of the posterior to the figure
+mean_latent_hosp_admission = np.mean(
+    idata.posterior["latent_hospital_admissions"], axis=1
+)
+axes.plot(x_data, mean_latent_hosp_admission[0], color="C0", label="Mean")
+axes.legend()
+axes.set_title("Posterior Hospital Admissions", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Hospital Admissions", fontsize=10);
 ```
 
 We can also take a look at the latent infections:
 
 ```{python}
 # | label: fig-output-infections-with-padding
-# | fig-cap: Hospital Admissions posterior distribution
-out2 = hosp_model.plot_posterior(var="latent_infections", ylab="Latent Infections")
+# | fig-cap: Latent infections
+out2 = hosp_model.plot_posterior(
+    var="all_latent_infections", ylab="Latent Infections"
+)
+```
+and the distribution of latent infections
+
+```{python}
+# | label: fig-output-infections-distribution
+# | fig-cap: Posterior Latent Infections
+x_data = idata.posterior["all_latent_infections_dim_0"]
+y_data = idata.posterior["all_latent_infections"]
+
+fig, axes = plt.subplots(figsize=(6, 5))
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.9,
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.5,
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.6},
+    ax=axes,
+)
+
+# Add mean of the posterior to the figure
+mean_latent_infection = np.mean(
+    idata.posterior["all_latent_infections"], axis=1
+)
+axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
+axes.legend()
+axes.set_title("Posterior Latent Infections", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Latent Infections", fontsize=10);
 ```
 
-## Round 2: Incorporating weekday effects
+## Round 2: Incorporating day-of-the-week effects
 
-We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a weekday effect distribution. To do this, we will create a new instance of `RandomVariable` to model the weekday effect. The weekday effect will be a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0. The weekday effect will be repeated for the number of weeks in the dataset.
+We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect distribution. To do this, we will create a new instance of `RandomVariable` to model the effect. The class will be based on a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0. The random variable will be repeated for the number of weeks in the dataset.
+Note a similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
 
 ```{python}
 # | label: weekly-effect
@@ -311,11 +422,11 @@ from pyrenew import metaclass
 import numpyro as npro
 
 
-class WeekdayEffect(metaclass.RandomVariable):
-    """Weekday effect distribution"""
+class DayOfWeekEffect(metaclass.RandomVariable):
+    """Day of the week effect"""
 
     def __init__(self, len: int):
-        """Initialize the weekday effect distribution
+        """Initialize the day of the week effect distribution
         Parameters
         ----------
         len : int
@@ -330,7 +441,7 @@ class WeekdayEffect(metaclass.RandomVariable):
 
     def sample(self, **kwargs):
         ans = npro.sample(
-            name="weekday_effect",
+            name="dayofweek_effect",
             fn=npro.distributions.TruncatedNormal(
                 loc=1.0, scale=0.5, low=0.1, high=10.0
             ),
@@ -340,18 +451,18 @@ class WeekdayEffect(metaclass.RandomVariable):
         return jnp.tile(ans, self.nweeks)[: self.len]
 
 
-# Initializing the weekday effect
-weekday_effect = WeekdayEffect(dat.shape[0])
+# Initializing the RV
+dayofweek_effect = DayOfWeekEffect(dat.shape[0])
 ```
 
-Notice that the instance's `nweeks` and `len` members are passed during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new weekday effect, we can rebuild the latent hospitalization model:
+Notice that the instance's `nweeks` and `len` members are passed during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new effect, we can rebuild the latent hospitalization model:
 
 ```{python}
 # | label: latent-hosp-weekday
 latent_hosp_wday_effect = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
     infect_hosp_rate_rv=hosp_rate,
-    weekday_effect_rv=weekday_effect,
+    day_of_week_effect_rv=dayofweek_effect,
 )
 
 hosp_model_weekday = model.HospitalAdmissionsModel(
@@ -371,7 +482,7 @@ Running the model (with the same padding as before):
 hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    observed_hosp_admissions=dat_w_padding,
+    data_observed_hosp_admissions=dat_w_padding,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute,
@@ -384,8 +495,10 @@ And plotting the results:
 # | label: fig-output-admissions-padding-and-weekday
 # | fig-cap: Hospital Admissions posterior distribution
 out = hosp_model_weekday.plot_posterior(
-    var="observed_hosp_admissions",
+    var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=dat_w_padding,
+    obs_signal=np.pad(
+        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
+    ),
 )
 ```

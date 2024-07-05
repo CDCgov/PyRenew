@@ -9,11 +9,13 @@ from typing import NamedTuple, get_type_hints
 
 import jax
 import jax.numpy as jnp
+import jax.random as jr
 import matplotlib.pyplot as plt
+import numpy as np
 import numpyro as npro
 import polars as pl
 from jax.typing import ArrayLike
-from numpyro.infer import MCMC, NUTS
+from numpyro.infer import MCMC, NUTS, Predictive
 from pyrenew.mcmcutils import plot_posterior, spread_draws
 
 
@@ -93,13 +95,82 @@ def _assert_sample_and_rtype(
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
+
+    Notes
+    -----
+    RandomVariables in pyrenew can be time-aware, meaning that they can
+    have a t_start and t_unit attribute. These attributes
+    are expected to be used internally mostly for tasks including padding,
+    alignment of time series, and other time-aware operations.
+
+    Both attributes give information about the output of the sample() method,
+    in other words, the relative time units of the returning value.
+
+    Attributes
+    ----------
+    t_start : int
+        The start of the time series.
+    t_unit : int
+        The unit of the time series relative to the model's fundamental
+        (smallest) time unit. e.g. if the fundamental unit is days,
+        then 1 corresponds to units of days and 7 to units of weeks.
     """
+
+    t_start: int = None
+    t_unit: int = None
 
     def __init__(self, **kwargs):
         """
         Default constructor
         """
         pass
+
+    def set_timeseries(
+        self,
+        t_start: int,
+        t_unit: int,
+    ) -> None:
+        """
+        Set the time series start and unit
+
+        Parameters
+        ----------
+        t_start : int
+            The start of the time series relative to the
+            model time. It could be negative, indicating
+            that the sample() method returns timepoints
+            that occur prior to the model t = 0.
+
+        t_unit : int
+            The unit of the time series relative
+            to the model's fundamental (smallest)
+            time unit. e.g. if the fundamental unit
+            is days, then 1 corresponds to units of
+            days and 7 to units of weeks.
+
+        Returns
+        -------
+        None
+        """
+        # Timeseries unit should be a positive integer
+        assert isinstance(
+            t_unit, int
+        ), f"t_unit should be an integer. It is {type(t_unit)}."
+
+        # Timeseries unit should be a positive integer
+        assert (
+            t_unit > 0
+        ), f"t_unit should be a positive integer. It is {t_unit}."
+
+        # Data starts should be a positive integer
+        assert isinstance(
+            t_start, int
+        ), f"t_start should be an integer. It is {type(t_start)}."
+
+        self.t_start = t_start
+        self.t_unit = t_unit
+
+        return None
 
     @abstractmethod
     def sample(
@@ -312,7 +383,7 @@ class Model(metaclass=ABCMeta):
         self,
         num_warmup,
         num_samples,
-        rng_key: jax.random.PRNGKey = jax.random.PRNGKey(54),
+        rng_key: ArrayLike | None = None,
         nuts_args: dict = None,
         mcmc_args: dict = None,
         **kwargs,
@@ -339,6 +410,11 @@ class Model(metaclass=ABCMeta):
                 nuts_args=nuts_args,
                 mcmc_args=mcmc_args,
             )
+        if rng_key is None:
+            rand_int = np.random.randint(
+                np.iinfo(np.int64).min, np.iinfo(np.int64).max
+            )
+            rng_key = jr.key(rand_int)
 
         self.mcmc.run(rng_key=rng_key, **kwargs)
 
@@ -405,3 +481,81 @@ class Model(metaclass=ABCMeta):
             draws_col=draws_col,
             obs_col=obs_col,
         )
+
+    def posterior_predictive(
+        self,
+        rng_key: ArrayLike | None = None,
+        numpyro_predictive_args: dict = {},
+        **kwargs,
+    ) -> dict:
+        """
+        A wrapper for numpyro.infer.Predictive to generate posterior predictive samples.
+
+        Parameters
+        ----------
+        rng_key : ArrayLike, optional
+            Random key for the Predictive function call. Defaults to None.
+        numpyro_predictive_args : dict, optional
+            Dictionary of arguments to be passed to the numpyro.inference.Predictive constructor.
+        **kwargs
+            Additional named arguments passed to the `__call__()` method of numpyro.inference.Predictive
+
+        Returns
+        -------
+        dict
+        """
+        if self.mcmc is None:
+            raise ValueError(
+                "No posterior samples available. Run model with model.run()."
+            )
+
+        if rng_key is None:
+            rand_int = np.random.randint(
+                np.iinfo(np.int64).min, np.iinfo(np.int64).max
+            )
+            rng_key = jr.key(rand_int)
+
+        predictive = Predictive(
+            model=self.sample,
+            posterior_samples=self.mcmc.get_samples(),
+            **numpyro_predictive_args,
+        )
+
+        return predictive(rng_key, **kwargs)
+
+    def prior_predictive(
+        self,
+        rng_key: ArrayLike | None = None,
+        numpyro_predictive_args: dict = {},
+        **kwargs,
+    ) -> dict:
+        """
+        A wrapper for numpyro.infer.Predictive to generate prior predictive samples.
+
+        Parameters
+        ----------
+        rng_key : ArrayLike, optional
+            Random key for the Predictive function call. Defaults to None.
+        numpyro_predictive_args : dict, optional
+            Dictionary of arguments to be passed to the numpyro.inference.Predictive constructor.
+        **kwargs
+            Additional named arguments passed to the `__call__()` method of numpyro.inference.Predictive
+
+        Returns
+        -------
+        dict
+        """
+
+        if rng_key is None:
+            rand_int = np.random.randint(
+                np.iinfo(np.int64).min, np.iinfo(np.int64).max
+            )
+            rng_key = jr.key(rand_int)
+
+        predictive = Predictive(
+            model=self.sample,
+            posterior_samples=None,
+            **numpyro_predictive_args,
+        )
+
+        return predictive(rng_key, **kwargs)

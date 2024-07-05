@@ -49,6 +49,7 @@ I0 = InfectionSeedingProcess(
         gen_int_array.size,
         DeterministicVariable(0.5, name="rate"),
     ),
+    t_unit=1,
 )
 
 latent_infections = InfectionsWithFeedback(
@@ -57,9 +58,9 @@ latent_infections = InfectionsWithFeedback(
 )
 
 rt = RtRandomWalkProcess(
-    Rt0_dist = dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-    Rt_transform = t.ExpTransform().inv,
-    Rt_rw_dist = dist.Normal(0, 0.025),
+    Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+    Rt_transform=t.ExpTransform().inv,
+    Rt_rw_dist=dist.Normal(0, 0.025),
 )
 ```
 
@@ -163,13 +164,11 @@ class InfFeedback(RandomVariable):
         self,
         infection_feedback_strength: RandomVariable,
         infection_feedback_pmf: RandomVariable,
-        infections_mean_varname: str = "latent_infections",
     ) -> None:
         """Constructor"""
 
         self.infection_feedback_strength = infection_feedback_strength
         self.infection_feedback_pmf = infection_feedback_pmf
-        self.infections_mean_varname = infections_mean_varname
 
         return None
 

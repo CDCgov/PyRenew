@@ -97,13 +97,14 @@ I0 = InfectionSeedingProcess(
     "I0_seeding",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     SeedInfectionsZeroPad(pmf_array.size),
+    t_unit=1,
 )
 
 # (3) The random process for Rt
 rt_proc = RtRandomWalkProcess(
-    Rt0_dist = dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-    Rt_transform = t.ExpTransform().inv,
-    Rt_rw_dist = dist.Normal(0, 0.025),
+    Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+    Rt_transform=t.ExpTransform().inv,
+    Rt_rw_dist=dist.Normal(0, 0.025),
 )
 
 # (4) Latent infection process (which will use 1 and 2)
@@ -172,7 +173,7 @@ axs[0].plot(sim_data.Rt)
 axs[0].set_ylabel("Rt")
 
 # Infections plot
-axs[1].plot(sim_data.sampled_observed_infections)
+axs[1].plot(sim_data.observed_infections)
 axs[1].set_ylabel("Infections")
 
 fig.suptitle("Basic renewal model")
@@ -190,18 +191,131 @@ import jax
 model1.run(
     num_warmup=2000,
     num_samples=1000,
-    observed_infections=sim_data.sampled_observed_infections,
+    data_observed_infections=sim_data.observed_infections,
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
 )
 ```
 
 Now, let's investigate the output, particularly the posterior distribution of the $R_t$ estimates:
 
 ```{python}
-#| label: fig-output-rt
-#| fig-cap: Rt posterior distribution
+# | label: fig-output-rt
+# | fig-cap: Rt posterior distribution
 out = model1.plot_posterior(var="Rt")
+```
+
+We can use [ArviZ](https://www.arviz.org/) package to create model diagnostics and visualizations. We start by converting the fitted model to ArviZ InferenceData object:
+
+```{python}
+# | label: convert-inference-data
+import arviz as az
+
+idata = az.from_numpyro(model1.mcmc)
+```
+
+and use the InferenceData to compute the model-fit diagnostics. Here, we show diagnostic summary for the first 10 effective reproduction number $R_t$.
+
+```{python}
+# | label: diagnostics
+diagnostic_stats_summary = az.summary(
+    idata.posterior["Rt"],
+    kind="diagnostics",
+)
+
+print(diagnostic_stats_summary[:10])
+```
+
+Below we use `plot_trace` to inspect the trace of the first 10 $R_t$ estimates.
+
+```{python}
+# | label: fig-trace-Rt
+# | fig-cap: Trace plot of Rt posterior distribution
+plt.rcParams["figure.constrained_layout.use"] = True
+
+az.plot_trace(
+    idata.posterior,
+    var_names=["Rt"],
+    coords={"Rt_dim_0": np.arange(10)},
+    compact=False,
+);
+```
+
+
+We inspect the posterior distribution of $R_t$ by plotting the 90% and 50% highest density intervals:
+
+```{python}
+# | label: fig-hdi-Rt
+# | fig-cap: High density interval for Effective Reproduction Number
+x_data = idata.posterior["Rt_dim_0"]
+y_data = idata.posterior["Rt"]
+
+fig, axes = plt.subplots(figsize=(6, 5))
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.9,
+    color="C0",
+    fill_kwargs={"alpha": 0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.5,
+    color="C0",
+    fill_kwargs={"alpha": 0.6},
+    ax=axes,
+)
+
+# Add mean of the posterior to the figure
+mean_Rt = np.mean(idata.posterior["Rt"], axis=1)
+axes.plot(x_data, mean_Rt[0], color="C0", label="Mean")
+axes.legend()
+axes.set_title("Posterior Effective Reproduction Number", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("$R_t$", fontsize=10);
+```
+
+and latent infections:
+
+```{python}
+# | label: fig-hdi-latent-infections
+# | fig-cap: High density interval for Latent Infections
+x_data = idata.posterior["all_latent_infections_dim_0"]
+y_data = idata.posterior["all_latent_infections"]
+
+fig, axes = plt.subplots(figsize=(6, 5))
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.9,
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    x_data,
+    y_data,
+    hdi_prob=0.5,
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.6},
+    ax=axes,
+)
+
+# Add mean of the posterior to the figure
+mean_latent_infection = np.mean(
+    idata.posterior["all_latent_infections"], axis=1
+)
+axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
+axes.legend()
+axes.set_title("Posterior Latent Infections", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Latent Infections", fontsize=10);
 ```
 
 ## Architecture of pyrenew

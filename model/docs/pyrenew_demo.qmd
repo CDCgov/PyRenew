@@ -97,6 +97,7 @@ I0 = InfectionSeedingProcess(
     "I0_seeding",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     SeedInfectionsZeroPad(pmf_array.size),
+    t_unit=1,
 )
 
 # 3) The latent infections process
@@ -125,9 +126,9 @@ admissions_process = PoissonObservation()
 # 6) A random walk process (it could be deterministic using
 # pyrenew.process.DeterministicProcess())
 Rt_process = RtRandomWalkProcess(
-    Rt0_dist = dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-    Rt_transform = t.ExpTransform().inv,
-    Rt_rw_dist = dist.Normal(0, 0.025),
+    Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
+    Rt_transform=t.ExpTransform().inv,
+    Rt_rw_dist=dist.Normal(0, 0.025),
 )
 ```
 
@@ -153,7 +154,7 @@ with seed(rng_seed=np.random.randint(1, 60)):
 x
 ```
 
-Visualizations of the single model output show (top) infections over the 30 time steps, (middle) hospital admissions over the 30 time steps, and (bottom)
+Visualizations of the single model output show (top) infections over the 30 time steps, (middle) hospital admissions over the 30 time steps, and observed hospital admissions (bottom)
 
 ```{python}
 # | label: fig-hosp
@@ -162,7 +163,7 @@ fig, ax = plt.subplots(nrows=3, sharex=True)
 ax[0].plot(x.latent_infections)
 ax[0].set_ylim([1 / 5, 5])
 ax[1].plot(x.latent_hosp_admissions)
-ax[2].plot(x.sampled_observed_hosp_admissions, "o")
+ax[2].plot(x.observed_hosp_admissions, "o")
 for axis in ax[:-1]:
     axis.set_yscale("log")
 ```
@@ -174,7 +175,7 @@ To fit the `hospmodel` to the simulated data, we call `hospmodel.run()`, an MCMC
 hospmodel.run(
     num_warmup=1000,
     num_samples=1000,
-    observed_hosp_admissions=x.sampled_observed_hosp_admissions,
+    data_observed_hosp_admissions=x.observed_hosp_admissions,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
 )
