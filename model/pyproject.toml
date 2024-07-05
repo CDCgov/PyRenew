@@ -10,7 +10,7 @@ exclude = [{path = "datasets/*.rds"}]
 
 
 [tool.poetry.dependencies]
-python = "^3.12"
+python = "^3.11"
 numpyro = "^0.15.0"
 jax = "^0.4.25"
 numpy = "^1.26.4"
