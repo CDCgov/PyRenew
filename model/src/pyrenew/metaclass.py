@@ -381,7 +381,6 @@ class Model(metaclass=ABCMeta):
         if mcmc_args is None:
             mcmc_args = dict()
 
-        # placeholder for changing this
         self.kernel = NUTS(
             model=self.model,
             **nuts_args,
