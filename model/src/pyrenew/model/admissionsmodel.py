@@ -5,8 +5,6 @@ from __future__ import annotations
 
 from typing import NamedTuple
 
-import jax.numpy as jnp
-import pyrenew.arrayutils as au
 from jax.typing import ArrayLike
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
@@ -202,32 +200,15 @@ class HospitalAdmissionsModel(Model):
         i0_size = len(latent_hosp_admissions) - n_timepoints
         if self.hosp_admission_obs_process_rv is None:
             observed_hosp_admissions = None
-        else:
-            if data_observed_hosp_admissions is None:
-                (
-                    observed_hosp_admissions,
-                    *_,
-                ) = self.hosp_admission_obs_process_rv.sample(
-                    mu=latent_hosp_admissions,
-                    obs=data_observed_hosp_admissions,
-                    **kwargs,
-                )
-            else:
-                data_observed_hosp_admissions = au.pad_x_to_match_y(
-                    data_observed_hosp_admissions,
-                    latent_hosp_admissions,
-                    jnp.nan,
-                    pad_direction="start",
-                )
 
-                (
-                    observed_hosp_admissions,
-                    *_,
-                ) = self.hosp_admission_obs_process_rv.sample(
-                    mu=latent_hosp_admissions[i0_size + padding :],
-                    obs=data_observed_hosp_admissions[i0_size + padding :],
-                    **kwargs,
-                )
+        (
+            observed_hosp_admissions,
+            *_,
+        ) = self.hosp_admission_obs_process_rv.sample(
+            mu=latent_hosp_admissions[i0_size + padding :],
+            obs=data_observed_hosp_admissions,
+            **kwargs,
+        )
 
         return HospModelSample(
             Rt=basic_model.Rt,

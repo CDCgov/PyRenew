@@ -210,9 +210,6 @@ class RtInfectionsRenewalModel(Model):
             **kwargs,
         )
 
-        if data_observed_infections is not None:
-            data_observed_infections = data_observed_infections[padding:]
-
         observed_infections, *_ = self.infection_obs_process_rv.sample(
             mu=post_seed_latent_infections[padding:],
             obs=data_observed_infections,
