@@ -296,7 +296,7 @@ ax.set_xlabel("Days")
 plt.show()
 ```
 
-We can assess model fit by comparing the model prediction with the observed data. Below we use the [`plot_ppc`](https://python.arviz.org/en/latest/api/generated/arviz.plot_ppc.html) to compare the posterior predictive samples with the observed data for the first two time period. This allows us to check how well the model predictions approximate observed data.
+We can assess model fit by comparing the model prediction with the observed data. Below we use the [`plot_ppc`](https://python.arviz.org/en/latest/api/generated/arviz.plot_ppc.html) to compare the posterior predictive samples with the observed data for the first two time steps. This allows us to check how well the model predictions approximate observed data.
 
 ```{python}
 # | label: fig-output-posterior-predictive-check-plot
