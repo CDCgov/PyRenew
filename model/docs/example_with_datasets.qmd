@@ -262,7 +262,8 @@ out = hosp_model.plot_posterior(
 Test `posterior_predictive` and `prior_predictive` methods
 
 ```{python}
-# | label: demonstrate us of predictive methods
+# | label: fig-demonstrate-use-of-predictive-methods
+# | fig-cap: Hospital Admissions posterior distribution with plot_lm
 import arviz as az
 
 idata = az.from_numpyro(
