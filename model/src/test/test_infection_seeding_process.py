@@ -6,8 +6,8 @@ import pytest
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     InfectionSeedingProcess,
+    SeedInfectionsExponentialGrowth,
     SeedInfectionsFromVec,
-    SeedInfectionsViaExpGrowth,
     SeedInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV
@@ -27,7 +27,7 @@ def test_infection_seeding_process():
     exp_model = InfectionSeedingProcess(
         "exp_model",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsViaExpGrowth(
+        SeedInfectionsExponentialGrowth(
             n_timepoints, DeterministicVariable(0.5, name="rate")
         ),
         t_unit=1,

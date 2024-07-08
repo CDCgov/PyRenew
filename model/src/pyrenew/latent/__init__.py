@@ -10,8 +10,8 @@ from pyrenew.latent.infection_functions import (
 )
 from pyrenew.latent.infection_seeding_method import (
     InfectionSeedMethod,
+    SeedInfectionsExponentialGrowth,
     SeedInfectionsFromVec,
-    SeedInfectionsViaExpGrowth,
     SeedInfectionsZeroPad,
 )
 from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
@@ -25,7 +25,7 @@ __all__ = [
     "compute_infections_from_rt",
     "compute_infections_from_rt_with_feedback",
     "InfectionSeedMethod",
-    "SeedInfectionsViaExpGrowth",
+    "SeedInfectionsExponentialGrowth",
     "SeedInfectionsFromVec",
     "SeedInfectionsZeroPad",
     "InfectionSeedingProcess",

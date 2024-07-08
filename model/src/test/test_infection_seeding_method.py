@@ -4,14 +4,14 @@ import numpy.testing as testing
 import pytest
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
+    SeedInfectionsExponentialGrowth,
     SeedInfectionsFromVec,
-    SeedInfectionsViaExpGrowth,
     SeedInfectionsZeroPad,
 )
 
 
 def test_seed_infections_exponential():
-    """Check that the SeedInfectionsViaExpGrowth class generates the correct number of infections at each time point."""
+    """Check that the SeedInfectionsExponentialGrowth class generates the correct number of infections at each time point."""
     n_timepoints = 10
     rate_RV = DeterministicVariable(0.5, name="rate_RV")
     I_pre_seed_RV = DeterministicVariable(10.0, name="I_pre_seed_RV")
@@ -20,7 +20,7 @@ def test_seed_infections_exponential():
     (I_pre_seed,) = I_pre_seed_RV.sample()
     (rate,) = rate_RV.sample()
 
-    infections_default_t_pre_seed = SeedInfectionsViaExpGrowth(
+    infections_default_t_pre_seed = SeedInfectionsExponentialGrowth(
         n_timepoints, rate=rate_RV
     ).seed_infections(I_pre_seed)
     infections_default_t_pre_seed_manual = I_pre_seed * np.exp(
@@ -37,7 +37,7 @@ def test_seed_infections_exponential():
     # test for failure with non-scalar rate or I_pre_seed
     rate_RV_2 = DeterministicVariable(np.array([0.5, 0.5]), name="rate_RV")
     with pytest.raises(ValueError):
-        SeedInfectionsViaExpGrowth(
+        SeedInfectionsExponentialGrowth(
             n_timepoints, rate=rate_RV_2
         ).seed_infections(I_pre_seed)
 
@@ -47,13 +47,13 @@ def test_seed_infections_exponential():
     (I_pre_seed_2,) = I_pre_seed_RV_2.sample()
 
     with pytest.raises(ValueError):
-        SeedInfectionsViaExpGrowth(n_timepoints, rate=rate_RV).seed_infections(
-            I_pre_seed_2
-        )
+        SeedInfectionsExponentialGrowth(
+            n_timepoints, rate=rate_RV
+        ).seed_infections(I_pre_seed_2)
 
     # test non-default t_pre_seed
     t_pre_seed = 6
-    infections_custom_t_pre_seed = SeedInfectionsViaExpGrowth(
+    infections_custom_t_pre_seed = SeedInfectionsExponentialGrowth(
         n_timepoints, rate=rate_RV, t_pre_seed=t_pre_seed
     ).seed_infections(I_pre_seed)
     infections_custom_t_pre_seed_manual = I_pre_seed * np.exp(

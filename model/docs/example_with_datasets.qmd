@@ -147,7 +147,7 @@ The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to ho
 ```{python}
 # | label: initializing-rest-of-model
 from pyrenew import model, process, observation, metaclass, transformation
-from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsViaExpGrowth
+from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsExponentialGrowth
 
 # Infection process
 latent_inf = latent.Infections()
@@ -156,7 +156,7 @@ I0 = InfectionSeedingProcess(
     metaclass.DistributionalRV(
         dist=dist.LogNormal(loc=jnp.log(100), scale=0.5), name="I0"
     ),
-    SeedInfectionsViaExpGrowth(
+    SeedInfectionsExponentialGrowth(
         gen_int_array.size,
         deterministic.DeterministicVariable(0.5, name="rate"),
     ),
