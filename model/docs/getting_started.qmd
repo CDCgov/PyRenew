@@ -4,7 +4,7 @@ format: gfm
 engine: jupyter
 ---
 
-`pyrenew` is a flexible tool for simulating and making statistical inferences from epidemiologic models, with an emphasis on renewal models. Built on [`numpyro`](https://num.pyro.ai/en/latest/getting_started.html), `pyrenew` provides core components for model building and pre-defined models for processing various observational processes.
+`pyrenew` is a flexible tool for simulating and making statistical inferences from epidemiologic models, with an emphasis on renewal models. Built on `numpyro`, `pyrenew` provides core components for model building and pre-defined models for processing various observational processes.
 
 ## Prerequisites
 
