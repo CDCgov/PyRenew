@@ -262,7 +262,8 @@ out = hosp_model.plot_posterior(
 Test `posterior_predictive` and `prior_predictive` methods
 
 ```{python}
-# | label: demonstrate us of predictive methods
+# | label: fig-demonstrate-use-of-predictive-methods
+# | fig-cap: Hospital Admissions posterior distribution with plot_lm
 import arviz as az
 
 idata = az.from_numpyro(
@@ -343,9 +344,7 @@ And plotting the results:
 out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=np.pad(
-        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
-    ),
+    obs_signal=np.pad(dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan),
 )
 ```
 
@@ -449,9 +448,7 @@ az.plot_hdi(
 )
 
 # Add mean of the posterior to the figure
-mean_latent_infection = np.mean(
-    idata.posterior["all_latent_infections"], axis=1
-)
+mean_latent_infection = np.mean(idata.posterior["all_latent_infections"], axis=1)
 axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
