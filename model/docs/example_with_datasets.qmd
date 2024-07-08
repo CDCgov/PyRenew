@@ -279,6 +279,9 @@ idata = az.from_numpyro(
 az.plot_lm(
     "negbinom_rv",
     idata=idata,
+    kind_pp="hdi",
+    y_kwargs={"color": "black"},
+    y_hat_fill_kwargs={"color": "C0"},
 );
 ```
 
