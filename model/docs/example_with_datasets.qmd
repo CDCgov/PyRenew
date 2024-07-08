@@ -282,7 +282,7 @@ az.plot_lm(
 );
 ```
 
-We can also use the [`plot_ppc`](https://python.arviz.org/en/latest/api/generated/arviz.plot_ppc.html) to compare the posterior predictive samples with the observed data.
+We can also use the `plot_ppc` method to compare the posterior predictive samples with the observed data.
 
 ```{python}
 # | label: fig-output-posterior-predictive-check-plot
