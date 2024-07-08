@@ -279,7 +279,7 @@ idata = az.from_numpyro(
 az.plot_lm(
     "negbinom_rv",
     idata=idata,
-)
+);
 ```
 
 We can also use the [`plot_ppc`](https://python.arviz.org/en/latest/api/generated/arviz.plot_ppc.html) to compare the posterior predictive samples with the observed data.
