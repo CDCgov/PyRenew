@@ -259,11 +259,10 @@ out = hosp_model.plot_posterior(
 )
 ```
 
-Test `posterior_predictive` and `prior_predictive` methods
+Test `posterior_predictive` and `prior_predictive` methods to generate posterior and prior predictive samples.
 
 ```{python}
-# | label: fig-demonstrate-use-of-predictive-methods
-# | fig-cap: Hospital Admissions posterior distribution with plot_lm
+# | label: demonstrate-use-of-predictive-methods
 import arviz as az
 
 idata = az.from_numpyro(
@@ -276,7 +275,11 @@ idata = az.from_numpyro(
         numpyro_predictive_args={"num_samples": 1000},
     ),
 )
-
+```
+We will use `plot_lm` method from ArviZ to plot the posterior predictive distribution and observed data below:
+```{python}
+# | label: fig-posterior-predictive
+# | fig-cap: Hospital Admissions posterior distribution with plot_lm
 fig, ax = plt.subplots()
 az.plot_lm(
     "negbinom_rv",
