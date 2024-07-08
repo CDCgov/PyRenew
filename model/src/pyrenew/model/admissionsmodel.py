@@ -176,7 +176,7 @@ class HospitalAdmissionsModel(Model):
                 "Cannot pass both n_timepoints_to_simulate and data_observed_hosp_admissions."
             )
         elif n_timepoints_to_simulate is None:
-            n_timepoints = len(data_observed_hosp_admissions)
+            n_timepoints = len(data_observed_hosp_admissions) + padding
         else:
             n_timepoints = n_timepoints_to_simulate
 
