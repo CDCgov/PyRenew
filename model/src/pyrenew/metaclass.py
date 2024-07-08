@@ -320,7 +320,7 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> tuple:
         """
-        Sample method of the model
+        Sample method of the model.
 
         The method design in the class should have at least kwargs.
 
@@ -335,6 +335,22 @@ class Model(metaclass=ABCMeta):
         tuple
         """
         pass
+
+    def model(self, **kwargs) -> tuple:
+        """
+        Alias for the sample method.
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal `sample()`
+            calls, should there be any.
+
+        Returns
+        -------
+        tuple
+        """
+        return self.sample(**kwargs)
 
     def _init_model(
         self,
@@ -367,7 +383,7 @@ class Model(metaclass=ABCMeta):
 
         # placeholder for changing this
         self.kernel = NUTS(
-            model=self.sample,
+            model=self.model,
             **nuts_args,
         )
 
