@@ -227,6 +227,7 @@ plt.show()
 ## Fitting the model
 
 We can fit the model to the data. We will use the `run` method of the model object:
+
 ```{python}
 # | label: model-fit
 import jax
@@ -239,6 +240,7 @@ hosp_model.run(
     mcmc_args=dict(progress_bar=False, num_chains=2),
 )
 ```
+
 We can use the `plot_posterior` method to visualize the results[^capture]:
 
 [^capture]: The output is captured to avoid `quarto` from displaying the output twice.
@@ -256,7 +258,9 @@ out = hosp_model.plot_posterior(
     ),
 )
 ```
+
 Test `posterior_predictive` and `prior_predictive` methods
+
 ```{python}
 # | label: demonstrate us of predictive methods
 import arviz as az
@@ -277,7 +281,9 @@ az.plot_lm(
     idata=idata,
 )
 ```
+
 We can also use the [`plot_ppc`](https://python.arviz.org/en/latest/api/generated/arviz.plot_ppc.html) to compare the posterior predictive samples with the observed data.
+
 ```{python}
 # | label: fig-output-posterior-predictive-check-plot
 # | fig-cap: Posterior Predictive Infections
@@ -315,6 +321,7 @@ hosp_model.run(
     padding=days_to_impute,  # Padding the model
 )
 ```
+
 And plotting the results:
 
 ```{python}
@@ -330,6 +337,7 @@ out = hosp_model.plot_posterior(
 ```
 
 We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by converting the fitted model to Arviz InferenceData object:
+
 ```{python}
 # | label: convert-inferenceData
 idata = az.from_numpyro(hosp_model.mcmc)
@@ -397,6 +405,7 @@ out2 = hosp_model.plot_posterior(
     var="all_latent_infections", ylab="Latent Infections"
 )
 ```
+
 and the distribution of latent infections
 
 ```{python}
