@@ -303,7 +303,11 @@ We can assess model fit by comparing the model prediction with the observed data
 # | fig-cap: Posterior Predictive Infections
 fig, ax = plt.subplots(1, 2, figsize=(9, 5))
 az.plot_ppc(
-    idata, kind="scatter", coords={"negbinom_rv_dim_0": [0, 1]}, flatten=[], ax=ax
+    idata,
+    kind="scatter",
+    coords={"negbinom_rv_dim_0": [0, 1]},
+    flatten=[],
+    ax=ax,
 )
 
 fig.suptitle("Posterior Predictive Check Plots")
@@ -347,7 +351,9 @@ And plotting the results:
 out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=np.pad(dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan),
+    obs_signal=np.pad(
+        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
+    ),
 )
 ```
 
@@ -451,7 +457,9 @@ az.plot_hdi(
 )
 
 # Add mean of the posterior to the figure
-mean_latent_infection = np.mean(idata.posterior["all_latent_infections"], axis=1)
+mean_latent_infection = np.mean(
+    idata.posterior["all_latent_infections"], axis=1
+)
 axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
