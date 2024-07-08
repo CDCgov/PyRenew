@@ -532,7 +532,7 @@ class Model(metaclass=ABCMeta):
             rng_key = jr.key(rand_int)
 
         predictive = Predictive(
-            model=self.sample,
+            model=self.model,
             posterior_samples=self.mcmc.get_samples(),
             **numpyro_predictive_args,
         )
@@ -569,7 +569,7 @@ class Model(metaclass=ABCMeta):
             rng_key = jr.key(rand_int)
 
         predictive = Predictive(
-            model=self.sample,
+            model=self.model,
             posterior_samples=None,
             **numpyro_predictive_args,
         )
