@@ -276,26 +276,36 @@ idata = az.from_numpyro(
     ),
 )
 
+fig, ax = plt.subplots()
 az.plot_lm(
     "negbinom_rv",
     idata=idata,
     kind_pp="hdi",
     y_kwargs={"color": "black"},
     y_hat_fill_kwargs={"color": "C0"},
-);
+    axes=ax,
+)
+
+ax.set_title("Posterior Predictive Plot")
+ax.set_ylabel("Hospital Admissions")
+ax.set_xlabel("Days")
+plt.show()
 ```
 
-We can also use the [`plot_ppc`](https://python.arviz.org/en/latest/api/generated/arviz.plot_ppc.html) to compare the posterior predictive samples with the observed data.
+We can assess model fit by comparing the model prediction with the observed data. Below we use the [`plot_ppc`](https://python.arviz.org/en/latest/api/generated/arviz.plot_ppc.html) to compare the posterior predictive samples with the observed data for the first two time period. This allows us to check how well the model predictions approximate observed data.
 
 ```{python}
 # | label: fig-output-posterior-predictive-check-plot
 # | fig-cap: Posterior Predictive Infections
+fig, ax = plt.subplots(1, 2, figsize=(9, 5))
 az.plot_ppc(
-    idata,
-    kind="scatter",
-    coords={"negbinom_rv_dim_0": [0, 1]},
-    flatten=[],
-);
+    idata, kind="scatter", coords={"negbinom_rv_dim_0": [0, 1]}, flatten=[], ax=ax
+)
+
+fig.suptitle("Posterior Predictive Check Plots")
+ax[0].set_xlabel("Hospital Admissions[0]")
+ax[1].set_xlabel("Hospital Admissions[1]")
+plt.show()
 ```
 
 The first half of the model is not looking good. The reason is that the infection to hospitalization interval PMF makes it unlikely to observe admissions from the beginning. The following section shows how to fix this.
