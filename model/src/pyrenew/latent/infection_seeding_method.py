@@ -120,7 +120,7 @@ class SeedInfectionsFromVec(InfectionSeedMethod):
         return jnp.array(I_pre_seed)
 
 
-class SeedInfectionsExponential(InfectionSeedMethod):
+class SeedInfectionsExponentialGrowth(InfectionSeedMethod):
     r"""Generate seed infections according to exponential growth.
 
     Notes
@@ -142,7 +142,7 @@ class SeedInfectionsExponential(InfectionSeedMethod):
         rate: RandomVariable,
         t_pre_seed: int | None = None,
     ):
-        """Default constructor for the ``SeedInfectionsExponential`` class.
+        """Default constructor for the ``SeedInfectionsExponentialGrowth`` class.
 
         Parameters
         ----------
