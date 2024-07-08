@@ -323,7 +323,9 @@ And plotting the results:
 out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=np.pad(dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan),
+    obs_signal=np.pad(
+        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
+    ),
 )
 ```
 
@@ -332,7 +334,9 @@ We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start
 # | label: convert-inferenceData
 idata = az.from_numpyro(hosp_model.mcmc)
 ```
+
 We obtain the summary of model diagnostics and print the diagnostics for `latent_hospital_admissions[1]`
+
 ```{python}
 # | label: diagnostics
 # | warning: false
@@ -524,12 +528,19 @@ out = hosp_model_weekday.plot_posterior(
     ),
 )
 ```
+
 We can use ArviZ to visualize the posterior predictive distributions.
+
 ```{python}
 # | label: posterior-predictive-distribution
-idata_weekday = az.from_numpyro(hosp_model_weekday.mcmc,
-posterior_predictive=hosp_model_weekday.posterior_predictive(n_timepoints_to_simulate=len(dat_w_padding)))
+idata_weekday = az.from_numpyro(
+    hosp_model_weekday.mcmc,
+    posterior_predictive=hosp_model_weekday.posterior_predictive(
+        n_timepoints_to_simulate=len(dat_w_padding)
+    ),
+)
 ```
+
 Below we plot the posterior predictive distributions using equal tailed bayesian credible intervals:
 
 ```{python}
@@ -545,7 +556,9 @@ def compute_eti(dataset, eti_prob):
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
-    hdi_data=compute_eti(idata_weekday.posterior_predictive["negbinom_rv"], 0.9),
+    hdi_data=compute_eti(
+        idata_weekday.posterior_predictive["negbinom_rv"], 0.9
+    ),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.3},
@@ -554,7 +567,9 @@ az.plot_hdi(
 
 az.plot_hdi(
     idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
-    hdi_data=compute_eti(idata_weekday.posterior_predictive["negbinom_rv"], 0.5),
+    hdi_data=compute_eti(
+        idata_weekday.posterior_predictive["negbinom_rv"], 0.5
+    ),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.6},
@@ -566,10 +581,14 @@ mean_latent_infection = np.mean(
     idata_weekday.posterior_predictive["negbinom_rv"], axis=1
 )
 
-plt.plot(idata_weekday.posterior_predictive["negbinom_rv_dim_0"], mean_latent_infection[0], color="C0", label="Mean")
+plt.plot(
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
+    mean_latent_infection[0],
+    color="C0",
+    label="Mean",
+)
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"]
-    + days_to_impute,
+    idata_weekday.observed_data["negbinom_rv_dim_0"] + days_to_impute,
     idata_weekday.observed_data["negbinom_rv"],
     color="black",
 )
