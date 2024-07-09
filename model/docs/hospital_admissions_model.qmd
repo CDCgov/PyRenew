@@ -410,7 +410,7 @@ We can look at individual draws from the posterior distribution of latent infect
 out2 = hosp_model.plot_posterior(var="all_latent_infections", ylab="Latent Infections")
 ```
 
-We can also look at credible intervals for the posterior distribution latent infections:
+We can also look at credible intervals for the posterior distribution of latent infections:
 
 ```{python}
 # | label: fig-output-infections-distribution
