@@ -29,6 +29,60 @@ from pyrenew.metaclass import DistributionalRV
 import pyrenew.transformation as t
 ```
 
+## Architecture of pyrenew
+
+`pyrenew` leverages `numpyro`'s flexibility to build models via composition. As a principle, most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`. From them, the following four sub-modules arise:
+
+-   The `process` sub-module,
+-   The `deterministic` sub-module,
+-   The `observation` sub-module,
+-   The `latent` sub-module, and
+-   The `models` sub-module
+
+The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`. The following diagram shows a detailed view of how metaclasses, modules, and classes interact to create the `RtInfectionsRenewalModel` instantiated in the next section:
+
+```mermaid
+%%| label: overview-of-RtInfectionsRenewalModel
+%%| include: true
+flowchart LR
+    rand((RandomVariable\nmetaclass))
+    models((Model\nmetaclass))
+
+    subgraph observations[Observations module]
+        obs["observation_process\n(PoissonObservation)"]
+    end
+
+    subgraph latent[Latent module]
+        inf["latent_infections\n(Infections)"]
+        i0["I0\n(DistributionalRV)"]
+    end
+
+    subgraph process[Process module]
+        rt["rt_proc\n(RtRandomWalkProcess)"]
+    end
+
+    subgraph deterministic[Deterministic module]
+        detpmf["gen_int\n(DeterministicPMF)"]
+    end
+
+    subgraph model[Model module]
+        model1["model1\n(RtInfectionsRenewalModel)"]
+    end
+
+    rand-->|Inherited by|observations
+    rand-->|Inherited by|process
+    rand-->|Inherited by|latent
+    rand-->|Inherited by|deterministic
+    models-->|Inherited by|model
+
+    detpmf-->|Composes|model1
+    i0-->|Composes|model1
+    rt-->|Composes|model1
+    obs-->|Composes|model1
+    inf-->|Composes|model1
+```
+
+
 The pyrenew package models the real-time reproductive number $R_t$, the average number of secondary infections caused by an infected individual, as a renewal process model. Our basic renewal process model defines five components:
 
 (1) generation interval, the times between infections
@@ -289,57 +343,4 @@ axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
 axes.set_ylabel("Latent Infections", fontsize=10);
-```
-
-## Architecture of pyrenew
-
-`pyrenew` leverages `numpyro`'s flexibility to build models via composition. As a principle, most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`. From them, the following four sub-modules arise:
-
--   The `process` sub-module,
--   The `deterministic` sub-module,
--   The `observation` sub-module,
--   The `latent` sub-module, and
--   The `models` sub-module
-
-The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`. The following diagram shows a detailed view of how metaclasses, modules, and classes interact to create the `RtInfectionsRenewalModel` instantiated in the previous section:
-
-```mermaid
-%%| label: overview-of-RtInfectionsRenewalModel
-%%| include: true
-flowchart LR
-    rand((RandomVariable\nmetaclass))
-    models((Model\nmetaclass))
-
-    subgraph observations[Observations module]
-        obs["observation_process\n(PoissonObservation)"]
-    end
-
-    subgraph latent[Latent module]
-        inf["latent_infections\n(Infections)"]
-        i0["I0\n(DistributionalRV)"]
-    end
-
-    subgraph process[Process module]
-        rt["rt_proc\n(RtRandomWalkProcess)"]
-    end
-
-    subgraph deterministic[Deterministic module]
-        detpmf["gen_int\n(DeterministicPMF)"]
-    end
-
-    subgraph model[Model module]
-        model1["model1\n(RtInfectionsRenewalModel)"]
-    end
-
-    rand-->|Inherited by|observations
-    rand-->|Inherited by|process
-    rand-->|Inherited by|latent
-    rand-->|Inherited by|deterministic
-    models-->|Inherited by|model
-
-    detpmf-->|Composes|model1
-    i0-->|Composes|model1
-    rt-->|Composes|model1
-    obs-->|Composes|model1
-    inf-->|Composes|model1
 ```
