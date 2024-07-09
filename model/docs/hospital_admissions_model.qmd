@@ -1,5 +1,5 @@
 ---
-title: Fitting a Hospital Admissions-only Model
+title: Fitting a hospital admissions-only model
 format: gfm
 engine: jupyter
 ---
