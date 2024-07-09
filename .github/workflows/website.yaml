@@ -48,7 +48,7 @@ jobs:
                 poetry run quarto render $file --to rst --output-dir ../_compiled
             done
             for rst_file in _compiled/*.rst; do
-                poetry run python docs/post_process_rst.py "$rst_file"
+                poetry run python ../docs/post_process_rst.py "$rst_file"
             done
 
       # Upload
