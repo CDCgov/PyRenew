@@ -47,7 +47,9 @@ jobs:
             for file in $(find docs -name '*.qmd'); do
                 poetry run quarto render $file --to rst --output-dir ../_compiled
             done
-            sed -i 's/.. code:: mermaid/.. mermaid::/g' _compiled/*.rst
+            for rst_file in _compiled/*.rst; do
+                poetry run python ../docs/post_process_rst.py "$rst_file"
+            done
 
       # Upload
       - name: Upload artifacts
