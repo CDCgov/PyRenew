@@ -29,7 +29,7 @@ from pyrenew.metaclass import DistributionalRV
 import pyrenew.transformation as t
 ```
 
-## Architecture of pyrenew
+## Architecture of `RtInfectionsRenewalModel`
 
 `pyrenew` leverages `numpyro`'s flexibility to build models via composition. As a principle, most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`. From them, the following four sub-modules arise:
 
