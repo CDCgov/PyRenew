@@ -33,8 +33,7 @@ docs/%.md: docs/%.qmd
 # Pattern rule to build a reStructuredText file from a qmd file
 docs/%.rst: docs/%.qmd
 	poetry run quarto render $< --to rst
-	sed -i.bak 's/.. code:: mermaid/.. mermaid::/g' docs/$*.rst
-	rm docs/$*.rst.bak
+	poetry run python ../docs/post_process_rst.py $@
 
 # Pattern rule to build a notebook file from a qmd file
 docs/%.ipynb: docs/%.qmd
