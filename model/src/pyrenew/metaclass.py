@@ -202,6 +202,12 @@ class RandomVariable(metaclass=ABCMeta):
         """
         pass
 
+    def __call__(self, **kwargs):
+        """
+        Alias for the `sample()`.
+        """
+        return self.sample(**kwargs)
+
 
 class DistributionalRVSample(NamedTuple):
     """
