@@ -71,7 +71,7 @@ docs_md: $(MD_FILES)
 docs_rst: $(RST_FILES)
 
 # Target to build all notebook files
-docs_ipynb: $(NOTEBOOK_FILES)
+docs_ipynb: $(IPYNB_FILES)
 
 # Target to build all Python files
 docs_py: $(PY_FILES)
