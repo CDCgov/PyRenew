@@ -232,12 +232,13 @@ We can fit the model to the data. We will use the `run` method of the model obje
 # | label: model-fit
 import jax
 
+npro.set_host_device_count(jax.local_device_count())
 hosp_model.run(
     num_samples=1000,
     num_warmup=1000,
     data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False, num_chains=2),
+    mcmc_args=dict(progress_bar=False, num_chains=2, chain_method="sequential"),
 )
 ```
 
@@ -303,12 +304,16 @@ We can assess model fit by comparing the model prediction with the observed data
 # | fig-cap: Posterior Predictive Infections
 fig, ax = plt.subplots(1, 2, figsize=(9, 5))
 az.plot_ppc(
-    idata, kind="scatter", coords={"negbinom_rv_dim_0": [0, 1]}, flatten=[], ax=ax
+    idata,
+    kind="scatter",
+    coords={"negbinom_rv_dim_0": [10, 11]},
+    flatten=[],
+    ax=ax,
 )
 
 fig.suptitle("Posterior Predictive Check Plots")
-ax[0].set_xlabel("Hospital Admissions[0]")
-ax[1].set_xlabel("Hospital Admissions[1]")
+ax[0].set_xlabel("Hospital Admissions[30]")
+ax[1].set_xlabel("Hospital Admissions[31]")
 plt.show()
 ```
 
@@ -411,17 +416,15 @@ axes.set_xlabel("Time", fontsize=10)
 axes.set_ylabel("Hospital Admissions", fontsize=10);
 ```
 
-We can also take a look at the latent infections:
+We can look at individual draws from the posterior distribution of latent infections:
 
 ```{python}
 # | label: fig-output-infections-with-padding
 # | fig-cap: Latent infections
-out2 = hosp_model.plot_posterior(
-    var="all_latent_infections", ylab="Latent Infections"
-)
+out2 = hosp_model.plot_posterior(var="all_latent_infections", ylab="Latent Infections")
 ```
 
-and the distribution of latent infections
+We can also look at credible intervals for the posterior distribution latent infections:
 
 ```{python}
 # | label: fig-output-infections-distribution
