@@ -34,6 +34,8 @@ class PeriodicEffect(RandomVariable):
         offset: int,
         period_size: int,
         quantity_to_broadcast: RandomVariable,
+        t_start: int,
+        t_unit: int,
     ):
         """
         Default constructor for PeriodicEffect class.
@@ -47,6 +49,10 @@ class PeriodicEffect(RandomVariable):
             Size of the period.
         quantity_to_broadcast : RandomVariable
             Values to be broadcasted (repeated or tiled).
+        t_start : int
+            Start time of the process.
+        t_unit : int
+            Unit of time relative to the model's fundamental (smallest) time unit.
 
         Returns
         -------
@@ -59,6 +65,11 @@ class PeriodicEffect(RandomVariable):
             offset=offset,
             period_size=period_size,
             broadcast_type="tile",
+        )
+
+        self.set_timeseries(
+            t_start=t_start,
+            t_unit=t_unit,
         )
 
         self.quantity_to_broadcast = quantity_to_broadcast
@@ -115,6 +126,7 @@ class DayOfWeekEffect(PeriodicEffect):
         self,
         offset: int,
         quantity_to_broadcast: RandomVariable,
+        t_start: int,
     ):
         """
         Default constructor for DayOfWeekEffect class.
@@ -126,6 +138,8 @@ class DayOfWeekEffect(PeriodicEffect):
             6.
         quantity_to_broadcast : RandomVariable
             Values to be broadcasted (repeated or tiled).
+        t_start : int
+            Start time of the process.
 
         Returns
         -------
@@ -138,6 +152,8 @@ class DayOfWeekEffect(PeriodicEffect):
             offset=offset,
             period_size=7,
             quantity_to_broadcast=quantity_to_broadcast,
+            t_start=t_start,
+            t_unit=1,
         )
 
         return None

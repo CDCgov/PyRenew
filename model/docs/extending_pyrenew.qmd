@@ -30,7 +30,7 @@ from pyrenew.latent import InfectionsWithFeedback
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.metaclass import DistributionalRV
-from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsExponential
+from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsExponentialGrowth
 import pyrenew.transformation as t
 ```
 
@@ -45,10 +45,11 @@ feedback_strength = DeterministicVariable(0.05, name="feedback_strength")
 I0 = InfectionSeedingProcess(
     "I0_seeding",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsExponential(
+    SeedInfectionsExponentialGrowth(
         gen_int_array.size,
         DeterministicVariable(0.5, name="rate"),
     ),
+    t_unit=1,
 )
 
 latent_infections = InfectionsWithFeedback(
