@@ -278,7 +278,9 @@ idata = az.from_numpyro(
     ),
 )
 ```
+
 We will use `plot_lm` method from ArviZ to plot the posterior predictive distribution and observed data below:
+
 ```{python}
 # | label: fig-posterior-predictive
 # | fig-cap: Hospital Admissions posterior distribution with plot_lm
@@ -333,7 +335,9 @@ And plotting the results:
 out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=np.pad(dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan),
+    obs_signal=np.pad(
+        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
+    ),
 )
 ```
 
@@ -531,9 +535,7 @@ And plotting the results:
 out = hosp_model_weekday.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=np.pad(
-        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
-    ),
+    obs_signal=np.pad(dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan),
 )
 ```
 
