@@ -1,3 +1,4 @@
+# numpydoc ignore=GL08
 import re
 import sys
 
@@ -8,7 +9,6 @@ def process_rst_file(rst_file):
         content = file.read()
 
     # Replace `.. code:: mermaid` with `.. mermaid::`
-    # .. mermaid::
     modified_content = re.sub(
         r"\.\.\ code::\ mermaid", ".. mermaid::", content
     )
