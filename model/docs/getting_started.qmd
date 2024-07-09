@@ -10,7 +10,7 @@ engine: jupyter
 
 This tutorial assumes some pre-existing knowledge of infectious disease dynamics and Python programming. Before you dive in, we recommend:
 
- - Verifying you have Python3.12 installed. If using wsl on VAP or GFE, the default python interpretor is likely python3.10 but pyrenew requires python3.12 (use tools like [pyenv](https://realpython.com/intro-to-pyenv/) or [compile and install](https://ubuntuhandbook.org/index.php/2023/05/install-python-3-12-ubuntu/) from the [release page](https://www.python.org/downloads/))
+ - Installing Python3 (use tools like [pyenv](https://realpython.com/intro-to-pyenv/) or [compile and install](https://ubuntuhandbook.org/index.php/2023/05/install-python-3-12-ubuntu/) from the [release page](https://www.python.org/downloads/))
  - Familiarity with installing and loading modules in python, and with virtual environment management (we recommend [poetry](https://python-poetry.org/docs/))
  - Familiarity with the concept of a [class](https://realpython.com/python-classes/) and [metaclass](https://realpython.com/courses/python-metaclasses/) in python
  - Familiarity with Bayesian inference, and a working understanding of MCMC methods used to fit Bayesian models to data (some resources are available [here](https://mc-stan.org/docs/2_18/reference-manual/effective-sample-size-section.html), and [here](https://xcelab.net/rm/))
