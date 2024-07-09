@@ -297,26 +297,6 @@ ax.set_xlabel("Days")
 plt.show()
 ```
 
-We can assess model fit by comparing the model prediction with the observed data. Below we use the `plot_ppc` to compare the posterior predictive samples with the observed data for the first two time steps. This allows us to check how well the model predictions approximate observed data.
-
-```{python}
-# | label: fig-output-posterior-predictive-check-plot
-# | fig-cap: Posterior Predictive Infections
-fig, ax = plt.subplots(1, 2, figsize=(9, 5))
-az.plot_ppc(
-    idata,
-    kind="scatter",
-    coords={"negbinom_rv_dim_0": [10, 11]},
-    flatten=[],
-    ax=ax,
-)
-
-fig.suptitle("Posterior Predictive Check Plots")
-ax[0].set_xlabel("Hospital Admissions[30]")
-ax[1].set_xlabel("Hospital Admissions[31]")
-plt.show()
-```
-
 The first half of the model is not looking good. The reason is that the infection to hospitalization interval PMF makes it unlikely to observe admissions from the beginning. The following section shows how to fix this.
 
 ## Padding the model
@@ -413,7 +393,8 @@ axes.plot(x_data, mean_latent_hosp_admission[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Hospital Admissions", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Hospital Admissions", fontsize=10);
+axes.set_ylabel("Hospital Admissions", fontsize=10)
+plt.show()
 ```
 
 We can look at individual draws from the posterior distribution of latent infections:
@@ -459,7 +440,8 @@ axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Latent Infections", fontsize=10);
+axes.set_ylabel("Latent Infections", fontsize=10)
+plt.show()
 ```
 
 ## Round 2: Incorporating day-of-the-week effects
@@ -554,7 +536,7 @@ out = hosp_model_weekday.plot_posterior(
 )
 ```
 
-We can use ArviZ to visualize the posterior predictive distributions.
+We will use ArviZ to visualize the posterior/prior predictive distributions.
 
 ```{python}
 # | label: posterior-predictive-distribution
@@ -562,6 +544,10 @@ idata_weekday = az.from_numpyro(
     hosp_model_weekday.mcmc,
     posterior_predictive=hosp_model_weekday.posterior_predictive(
         n_timepoints_to_simulate=len(dat_w_padding)
+    ),
+    prior=hosp_model_weekday.prior_predictive(
+        n_timepoints_to_simulate=len(dat_w_padding),
+        numpyro_predictive_args={"num_samples": 1000},
     ),
 )
 ```
@@ -581,9 +567,7 @@ def compute_eti(dataset, eti_prob):
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
-    hdi_data=compute_eti(
-        idata_weekday.posterior_predictive["negbinom_rv"], 0.9
-    ),
+    hdi_data=compute_eti(idata_weekday.posterior_predictive["negbinom_rv"], 0.9),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.3},
@@ -592,9 +576,7 @@ az.plot_hdi(
 
 az.plot_hdi(
     idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
-    hdi_data=compute_eti(
-        idata_weekday.posterior_predictive["negbinom_rv"], 0.5
-    ),
+    hdi_data=compute_eti(idata_weekday.posterior_predictive["negbinom_rv"], 0.5),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.6},
@@ -620,5 +602,41 @@ plt.scatter(
 axes.legend()
 axes.set_title("Posterior Predictive Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Observed Infections", fontsize=10);
+axes.set_ylabel("Observed Infections", fontsize=10)
+plt.show()
+```
+And now we plot the prior predictive distributions:
+```{python}
+# | label: fig-output-prior-predictive
+# | fig-cap: Prior Predictive Infections
+fig, axes = plt.subplots(figsize=(6, 5))
+az.plot_hdi(
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.5),
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.6},
+    ax=axes,
+)
+
+plt.scatter(
+    idata_weekday.observed_data["negbinom_rv_dim_0"] + days_to_impute,
+    idata_weekday.observed_data["negbinom_rv"],
+    color="black",
+)
+
+axes.set_title("Prior Predictive Infections", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Observed Infections", fontsize=10)
+plt.yscale("log")
+plt.show()
 ```
