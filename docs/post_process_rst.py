@@ -4,6 +4,7 @@ import sys
 
 
 def process_rst_file(rst_file):
+    # numpydoc ignore=GL08
     # Read the content of the rst file
     with open(rst_file, "r") as file:
         content = file.read()
