@@ -51,16 +51,9 @@ jobs:
             for file in $(find tutorials -name '*.qmd'); do
                 poetry run quarto render $file --to rst --output-dir ../_compiled_qmd
             done
-<<<<<<< HEAD
-            # Replace the code directive with the mermaid directive
-            # to use the mermaid extension. Otherwise, the rendered mermaid
-            # diagrams are ugly.
-            sed -i 's/.. code:: mermaid/.. mermaid::/g' _compiled_qmd/*.rst
-=======
             for rst_file in _compiled/*.rst; do
                 poetry run python ../docs/post_process_rst.py "$rst_file"
             done
->>>>>>> main
 
       # Upload
       - name: Upload artifacts
