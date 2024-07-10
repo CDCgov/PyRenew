@@ -555,7 +555,6 @@ idata_weekday = az.from_numpyro(
         n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy())
         + days_to_impute
         + 28
-        )
     ),
     prior=hosp_model_weekday.prior_predictive(
         n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy())
