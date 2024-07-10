@@ -32,7 +32,7 @@ def test_infections_as_deterministic():
     inf1 = Infections()
 
     obs = dict(
-        Rt=sim_rt,
+        Rt=sim_rt.array,
         I0=jnp.zeros(gen_int.size),
         gen_int=gen_int,
     )

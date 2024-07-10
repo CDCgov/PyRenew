@@ -259,26 +259,26 @@ def test_model_hosp_no_obs_model():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model0.sample(n_timepoints_to_simulate=30)
 
-    np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
+    np.testing.assert_array_equal(model0_samp.Rt.array, model1_samp.Rt.array)
     np.testing.assert_array_equal(
-        model0_samp.latent_infections, model1_samp.latent_infections
+        model0_samp.latent_infections.array, model1_samp.latent_infections.array
     )
     np.testing.assert_array_equal(
-        model0_samp.infection_hosp_rate, model1_samp.infection_hosp_rate
+        model0_samp.infection_hosp_rate.array, model1_samp.infection_hosp_rate.array
     )
     np.testing.assert_array_equal(
-        model0_samp.latent_hosp_admissions, model1_samp.latent_hosp_admissions
+        model0_samp.latent_hosp_admissions.array, model1_samp.latent_hosp_admissions.array
     )
     np.testing.assert_array_equal(
-        model0_samp.observed_hosp_admissions,
-        model1_samp.observed_hosp_admissions,
+        model0_samp.observed_hosp_admissions.array,
+        model1_samp.observed_hosp_admissions.array,
     )
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model0_samp.latent_hosp_admissions,
+        data_observed_hosp_admissions=model0_samp.latent_hosp_admissions.array,
     )
 
     inf = model0.spread_draws(["latent_hospital_admissions"])
@@ -368,7 +368,7 @@ def test_model_hosp_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.array,
     )
 
     inf = model1.spread_draws(["latent_hospital_admissions"])
@@ -469,7 +469,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.array,
     )
 
     inf = model1.spread_draws(["latent_hospital_admissions"])

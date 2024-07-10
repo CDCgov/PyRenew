@@ -94,7 +94,7 @@ def test_infectionsrtfeedback():
             I0=I0,
         )
 
-    assert_array_equal(samp1.post_seed_infections, samp2.post_seed_infections)
+    assert_array_equal(samp1.post_seed_infections.array, samp2.post_seed_infections.array)
     assert_array_equal(samp1.rt.array, Rt)
 
     return None

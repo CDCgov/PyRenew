@@ -220,7 +220,7 @@ def test_model_basicrenewal_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
-        data_observed_infections=model1_samp.observed_infections,
+        data_observed_infections=model1_samp.observed_infections.array,
     )
 
     inf = model1.spread_draws(["all_latent_infections"])
