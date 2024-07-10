@@ -10,7 +10,9 @@ import numpyro as npro
 import pyrenew.arrayutils as au
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
-from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import (
+    Model, RandomVariable, _assert_sample_and_rtype, TimeArray
+)
 
 
 # Output class of the RtInfectionsRenewalModel
@@ -204,9 +206,9 @@ class RtInfectionsRenewalModel(Model):
         I0, *_ = self.I0_rv.sample(**kwargs)
         # Sampling from the latent process
         post_seed_latent_infections, *_ = self.latent_infections_rv.sample(
-            Rt=Rt,
-            gen_int=gen_int,
-            I0=I0,
+            Rt=Rt.array,
+            gen_int=gen_int.array,
+            I0=I0.array,
             **kwargs,
         )
 
@@ -214,29 +216,32 @@ class RtInfectionsRenewalModel(Model):
             data_observed_infections = data_observed_infections[padding:]
 
         observed_infections, *_ = self.infection_obs_process_rv.sample(
-            mu=post_seed_latent_infections[padding:],
+            mu=post_seed_latent_infections.array[padding:],
             obs=data_observed_infections,
             **kwargs,
         )
 
-        all_latent_infections = jnp.hstack([I0, post_seed_latent_infections])
+        all_latent_infections = jnp.hstack(
+            [I0.array, post_seed_latent_infections.array],
+            )
+        
         npro.deterministic("all_latent_infections", all_latent_infections)
 
         observed_infections = au.pad_x_to_match_y(
-            observed_infections,
+            observed_infections.array,
             all_latent_infections,
             jnp.nan,
             pad_direction="start",
         )
         Rt = au.pad_x_to_match_y(
-            Rt,
+            Rt.array,
             all_latent_infections,
             jnp.nan,
             pad_direction="start",
         )
 
         return RtInfectionsRenewalSample(
-            Rt=Rt,
-            latent_infections=all_latent_infections,
-            observed_infections=observed_infections,
+            Rt=TimeArray(Rt),
+            latent_infections=TimeArray(all_latent_infections),
+            observed_infections=TimeArray(observed_infections),
         )

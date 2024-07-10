@@ -6,7 +6,7 @@ from __future__ import annotations
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, TimeArray
 
 
 class PoissonObservation(RandomVariable):
@@ -70,11 +70,11 @@ class PoissonObservation(RandomVariable):
             name = self.parameter_name
 
         return (
-            numpyro.sample(
+            TimeArray(numpyro.sample(
                 name=name,
                 fn=dist.Poisson(rate=mu + self.eps),
                 obs=obs,
-            ),
+            )),
         )
 
     @staticmethod

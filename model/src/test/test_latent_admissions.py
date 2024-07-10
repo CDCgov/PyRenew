@@ -36,7 +36,7 @@ def test_admissions_sample():
     inf1 = Infections()
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        inf_sampled1 = inf1.sample(Rt=sim_rt, gen_int=gen_int, I0=i0)
+        inf_sampled1 = inf1.sample(Rt=sim_rt.array, gen_int=gen_int, I0=i0)
 
     # Testing the hospital admissions
     inf_hosp = DeterministicPMF(
@@ -73,9 +73,9 @@ def test_admissions_sample():
     )
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_hosp_1 = hosp1.sample(latent_infections=inf_sampled1[0])
+        sim_hosp_1 = hosp1.sample(latent_infections=inf_sampled1[0].array)
 
     testing.assert_array_less(
-        sim_hosp_1.latent_hospital_admissions,
-        inf_sampled1[0],
+        sim_hosp_1.latent_hospital_admissions.array,
+        inf_sampled1[0].array,
     )

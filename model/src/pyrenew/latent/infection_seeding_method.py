@@ -176,7 +176,10 @@ class SeedInfectionsExponentialGrowth(InfectionSeedMethod):
             raise ValueError(
                 f"I_pre_seed must be an array of size 1. Got size {I_pre_seed.size}."
             )
+        
         (rate,) = self.rate.sample()
+        rate = rate.array
+
         if rate.size != 1:
             raise ValueError(
                 f"rate must be an array of size 1. Got size {rate.size}."

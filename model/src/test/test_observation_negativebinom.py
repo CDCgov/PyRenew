@@ -21,8 +21,8 @@ def test_negativebinom_deterministic_obs():
         sim_pois2 = negb.sample(mu=rates, obs=rates)
 
     testing.assert_array_equal(
-        sim_pois1,
-        sim_pois2,
+        sim_pois1.array,
+        sim_pois2.array,
     )
 
 
@@ -40,7 +40,7 @@ def test_negativebinom_random_obs():
         sim_pois2 = negb.sample(mu=rates)
 
     testing.assert_array_almost_equal(
-        np.mean(sim_pois1),
-        np.mean(sim_pois2),
+        np.mean(sim_pois1.array),
+        np.mean(sim_pois2.array),
         decimal=1,
     )

@@ -92,6 +92,29 @@ def _assert_sample_and_rtype(
     return None
 
 
+class TimeArray(NamedTuple):
+    """
+    A container for a time-aware array.
+
+    Attributes
+    ----------
+    array: ArrayLike
+        The data array.
+    t_start: int, optional
+        The start time of the data..
+    t_unit: int, optional
+        The unit of time relative to the model's fundamental (smallest) time unit.
+    """
+    array: ArrayLike
+    t_start: int | None = None
+    t_unit: int | None = None
+
+    @staticmethod
+    def to_array(array: ArrayLike | "TimeArray") -> ArrayLike:
+        if isinstance(array, TimeArray):
+            return array.array
+        return array
+
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
@@ -152,6 +175,16 @@ class RandomVariable(metaclass=ABCMeta):
         -------
         None
         """
+
+        # Either both values are None or both are not None
+        assert \
+            (t_unit is not None and t_start is not None) or \
+            (t_unit is None and t_start is None), \
+                "Both t_start and t_unit should be None or not None."
+
+        if t_unit is None and t_start is None:
+            return None
+        
         # Timeseries unit should be a positive integer
         assert isinstance(
             t_unit, int
@@ -288,13 +321,12 @@ class DistributionalRV(RandomVariable):
         DistributionalRVSample
         """
         return DistributionalRVSample(
-            value=jnp.atleast_1d(
+            value=TimeArray(jnp.atleast_1d(
                 npro.sample(
                     name=self.name,
                     fn=self.dist,
                     obs=obs,
-                )
-            ),
+                ))),
         )
 
 

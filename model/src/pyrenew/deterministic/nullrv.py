@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from jax.typing import ArrayLike
+from pyrenew.metaclass import TimeArray
 from pyrenew.deterministic.deterministic import DeterministicVariable
 
 
@@ -46,10 +47,10 @@ class NullVariable(DeterministicVariable):
         Returns
         -------
         tuple
-            Containing None.
+            Containing a TimeArray with None.
         """
 
-        return (None,)
+        return (TimeArray(None),)
 
 
 class NullProcess(NullVariable):
@@ -95,10 +96,10 @@ class NullProcess(NullVariable):
         Returns
         -------
         tuple
-            Containing None.
+            Containing a TimeArray with None.
         """
 
-        return (None,)
+        return (TimeArray(None),)
 
 
 class NullObservation(NullVariable):
@@ -151,7 +152,7 @@ class NullObservation(NullVariable):
         Returns
         -------
         tuple
-            Containing None.
+            Containing a TimeArray with None.
         """
 
-        return (None,)
+        return (TimeArray(None),)

@@ -8,7 +8,9 @@ import numpyro as npro
 import pyrenew.arrayutils as au
 import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import (
+    RandomVariable, _assert_sample_and_rtype, TimeArray
+)
 
 
 class InfectionsRtFeedbackSample(NamedTuple):
@@ -159,6 +161,7 @@ class InfectionsWithFeedback(RandomVariable):
         inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
             **kwargs,
         )
+        inf_feedback_strength = inf_feedback_strength.array
 
         # Making sure inf_feedback_strength spans the Rt length
         if inf_feedback_strength.size == 1:
@@ -177,7 +180,7 @@ class InfectionsWithFeedback(RandomVariable):
         # Sampling inf feedback pmf
         inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
 
-        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
+        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf.array)
 
         (
             post_seed_infections,
@@ -195,6 +198,6 @@ class InfectionsWithFeedback(RandomVariable):
         npro.deterministic("Rt_adjusted", Rt_adj)
 
         return InfectionsRtFeedbackSample(
-            post_seed_infections=post_seed_infections,
-            rt=Rt_adj,
+            post_seed_infections=TimeArray(post_seed_infections),
+            rt=TimeArray(Rt_adj),
         )

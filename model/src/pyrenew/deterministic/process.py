@@ -1,6 +1,7 @@
 # numpydoc ignore=GL08
 
 import jax.numpy as jnp
+from pyrenew.metaclass import TimeArray
 from pyrenew.deterministic.deterministic import DeterministicVariable
 
 
@@ -29,14 +30,25 @@ class DeterministicProcess(DeterministicVariable):
         Returns
         -------
         tuple
-            Containing the stored values during construction.
+            Containing the stored values during construction wrapped in a TimeArray.
         """
 
         res, *_ = super().sample(**kwargs)
 
-        dif = duration - res.shape[0]
+        dif = duration - res.array.shape[0]
 
         if dif > 0:
-            return (jnp.hstack([res, jnp.repeat(res[-1], dif)]),)
+            return (
+                TimeArray(
+                    jnp.hstack([res.array, jnp.repeat(res.array[-1], dif)]), t_start=self.t_start,
+                    t_unit=self.t_unit,
+                    ),
+                    )
 
-        return (res[:duration],)
+        return (
+            TimeArray(
+                array=res.array[:duration],
+                t_start=self.t_start,
+                t_unit=self.t_unit
+            ),
+        )

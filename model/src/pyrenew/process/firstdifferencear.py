@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, TimeArray
 from pyrenew.process import ARProcess
 
 
@@ -72,7 +72,7 @@ class FirstDifferenceARProcess(RandomVariable):
             inits=jnp.atleast_1d(init_rate_of_change),
             name=name + "_rate_of_change",
         )
-        return (init_val + jnp.cumsum(rates_of_change.flatten()),)
+        return (TimeArray(init_val + jnp.cumsum(rates_of_change.array.flatten())),)
 
     @staticmethod
     def validate():

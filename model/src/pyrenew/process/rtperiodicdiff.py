@@ -4,7 +4,7 @@ from typing import NamedTuple
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from pyrenew.arrayutils import PeriodicBroadcaster
-from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype, TimeArray
 from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
 
 
@@ -188,7 +188,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         )[0]
 
         return RtPeriodicDiffProcessSample(
-            rt=self.broadcaster(jnp.exp(log_rt.flatten()), duration),
+            rt=TimeArray(self.broadcaster(jnp.exp(log_rt.flatten()), duration)),
         )
 
 

@@ -4,7 +4,7 @@
 import numpyro as npro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, TimeArray
 from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
 
 
@@ -120,6 +120,6 @@ class RtRandomWalkProcess(RandomVariable):
             init=Rt0_trans,
         )
 
-        Rt = npro.deterministic("Rt", self.Rt_transform.inv(Rt_trans_ts))
+        Rt = npro.deterministic("Rt", self.Rt_transform.inv(Rt_trans_ts.array))
 
-        return (Rt,)
+        return (TimeArray(Rt),)

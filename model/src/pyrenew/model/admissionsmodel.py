@@ -196,7 +196,7 @@ class HospitalAdmissionsModel(Model):
             latent_hosp_admissions,
             *_,
         ) = self.latent_hosp_admissions_rv.sample(
-            latent_infections=basic_model.latent_infections,
+            latent_infections=basic_model.latent_infections.array,
             **kwargs,
         )
         i0_size = len(latent_hosp_admissions) - n_timepoints
@@ -208,14 +208,14 @@ class HospitalAdmissionsModel(Model):
                     observed_hosp_admissions,
                     *_,
                 ) = self.hosp_admission_obs_process_rv.sample(
-                    mu=latent_hosp_admissions[i0_size + padding :],
+                    mu=latent_hosp_admissions.array[i0_size + padding :],
                     obs=data_observed_hosp_admissions,
                     **kwargs,
                 )
             else:
                 data_observed_hosp_admissions = au.pad_x_to_match_y(
-                    data_observed_hosp_admissions,
-                    latent_hosp_admissions,
+                    data_observed_hosp_admissions.array,
+                    latent_hosp_admissions.array,
                     jnp.nan,
                     pad_direction="start",
                 )
@@ -224,7 +224,7 @@ class HospitalAdmissionsModel(Model):
                     observed_hosp_admissions,
                     *_,
                 ) = self.hosp_admission_obs_process_rv.sample(
-                    mu=latent_hosp_admissions[i0_size + padding :],
+                    mu=latent_hosp_admissions.array[i0_size + padding :],
                     obs=data_observed_hosp_admissions[i0_size + padding :],
                     **kwargs,
                 )

@@ -95,7 +95,7 @@ def test_infectionsrtfeedback():
         )
 
     assert_array_equal(samp1.post_seed_infections, samp2.post_seed_infections)
-    assert_array_equal(samp1.rt, Rt)
+    assert_array_equal(samp1.rt.array, Rt)
 
     return None
 
@@ -139,16 +139,16 @@ def test_infectionsrtfeedback_feedback():
         gen_int=gen_int,
         Rt=Rt,
         I0=I0,
-        inf_feedback_strength=inf_feed_strength.sample()[0],
-        inf_feedback_pmf=inf_feedback_pmf.sample()[0],
+        inf_feedback_strength=inf_feed_strength.sample()[0].array,
+        inf_feedback_pmf=inf_feedback_pmf.sample()[0].array,
     )
 
     assert not jnp.array_equal(
-        samp1.post_seed_infections, samp2.post_seed_infections
+        samp1.post_seed_infections.array, samp2.post_seed_infections.array
     )
     assert_array_almost_equal(
-        samp1.post_seed_infections, res["post_seed_infections"]
+        samp1.post_seed_infections.array, res["post_seed_infections"]
     )
-    assert_array_almost_equal(samp1.rt, res["rt"])
+    assert_array_almost_equal(samp1.rt.array, res["rt"])
 
     return None

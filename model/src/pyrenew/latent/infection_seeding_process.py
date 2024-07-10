@@ -2,7 +2,7 @@
 # numpydoc ignore=GL08
 import numpyro as npro
 from pyrenew.latent.infection_seeding_method import InfectionSeedMethod
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, TimeArray
 
 
 class InfectionSeedingProcess(RandomVariable):
@@ -90,7 +90,13 @@ class InfectionSeedingProcess(RandomVariable):
             a tuple where the only element is an array with the number of seeded infections at each time point.
         """
         (I_pre_seed,) = self.I_pre_seed_rv.sample()
-        infection_seeding = self.infection_seed_method(I_pre_seed)
+        infection_seeding = self.infection_seed_method(I_pre_seed.array)
         npro.deterministic(self.name, infection_seeding)
 
-        return (infection_seeding,)
+        return (
+            TimeArray(
+                array=infection_seeding,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+            )

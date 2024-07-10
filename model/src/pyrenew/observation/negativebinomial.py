@@ -8,7 +8,7 @@ import numbers as nums
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, TimeArray
 
 
 class NegativeBinomialObservation(RandomVariable):
@@ -92,14 +92,14 @@ class NegativeBinomialObservation(RandomVariable):
             name = self.parameter_name
 
         return (
-            numpyro.sample(
+            TimeArray(numpyro.sample(
                 name=name,
                 fn=dist.NegativeBinomial2(
                     mean=mu + self.eps,
                     concentration=concentration,
                 ),
                 obs=obs,
-            ),
+            )),
         )
 
     @staticmethod

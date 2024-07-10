@@ -8,7 +8,7 @@ import numpyro
 import numpyro.distributions as dist
 from jax import lax
 from jax.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, TimeArray
 
 
 class ARProcess(RandomVariable):
@@ -91,7 +91,9 @@ class ARProcess(RandomVariable):
         )
 
         last, ts = lax.scan(_ar_scanner, inits - self.mean, noise)
-        return (jnp.hstack([inits, self.mean + ts.flatten()]),)
+        return (
+            TimeArray(jnp.hstack([inits, self.mean + ts.flatten()])),
+            )
 
     @staticmethod
     def validate():  # numpydoc ignore=RT01

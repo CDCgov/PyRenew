@@ -4,7 +4,7 @@
 import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, TimeArray
 
 
 class SimpleRandomWalkProcess(RandomVariable):
@@ -67,7 +67,7 @@ class SimpleRandomWalkProcess(RandomVariable):
             self.error_distribution.expand((n_timepoints - 1,)),
         )
 
-        return (init + jnp.cumsum(jnp.pad(diffs, [1, 0], constant_values=0)),)
+        return (TimeArray(init + jnp.cumsum(jnp.pad(diffs, [1, 0], constant_values=0))),)
 
     @staticmethod
     def validate():

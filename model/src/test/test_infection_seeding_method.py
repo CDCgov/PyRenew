@@ -20,6 +20,9 @@ def test_seed_infections_exponential():
     (I_pre_seed,) = I_pre_seed_RV.sample()
     (rate,) = rate_RV.sample()
 
+    I_pre_seed = I_pre_seed.array
+    rate = rate.array
+
     infections_default_t_pre_seed = SeedInfectionsExponentialGrowth(
         n_timepoints, rate=rate_RV
     ).seed_infections(I_pre_seed)
@@ -49,7 +52,7 @@ def test_seed_infections_exponential():
     with pytest.raises(ValueError):
         SeedInfectionsExponentialGrowth(
             n_timepoints, rate=rate_RV
-        ).seed_infections(I_pre_seed_2)
+        ).seed_infections(I_pre_seed_2.array)
 
     # test non-default t_pre_seed
     t_pre_seed = 6
@@ -88,16 +91,16 @@ def test_seed_infections_zero_pad():
     (I_pre_seed_2,) = I_pre_seed_RV_2.sample()
 
     infections_2 = SeedInfectionsZeroPad(n_timepoints).seed_infections(
-        I_pre_seed_2
+        I_pre_seed_2.array
     )
     testing.assert_array_equal(
         infections_2,
-        np.pad(I_pre_seed_2, (n_timepoints - I_pre_seed_2.size, 0)),
+        np.pad(I_pre_seed_2.array, (n_timepoints - I_pre_seed_2.array.size, 0)),
     )
 
     # Check that the SeedInfectionsZeroPad class raises an error when the length of I_pre_seed is greater than n_timepoints.
     with pytest.raises(ValueError):
-        SeedInfectionsZeroPad(1).seed_infections(I_pre_seed_2)
+        SeedInfectionsZeroPad(1).seed_infections(I_pre_seed_2.array)
 
 
 def test_seed_infections_from_vec():

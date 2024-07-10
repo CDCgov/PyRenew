@@ -148,13 +148,13 @@ def test_model_basicrenewal_no_obs_model():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model0.sample(n_timepoints_to_simulate=30)
 
-    np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
+    np.testing.assert_array_equal(model0_samp.Rt.array, model1_samp.Rt.array)
     np.testing.assert_array_equal(
-        model0_samp.latent_infections, model1_samp.latent_infections
+        model0_samp.latent_infections.array, model1_samp.latent_infections.array
     )
     np.testing.assert_array_equal(
-        model0_samp.observed_infections,
-        model1_samp.observed_infections,
+        model0_samp.observed_infections.array,
+        model1_samp.observed_infections.array,
     )
 
     model0.run(
@@ -271,7 +271,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         model1_samp = model1.sample(n_timepoints_to_simulate=30)
 
     new_obs = jnp.hstack(
-        [jnp.repeat(jnp.nan, 5), model1_samp.observed_infections[5:]],
+        [jnp.repeat(jnp.nan, 5), model1_samp.observed_infections.array[5:]],
     )
 
     model1.run(

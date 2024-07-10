@@ -66,7 +66,7 @@ def test_rtweeklydiff() -> None:
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        rt = rtwd.sample(duration=duration).rt
+        rt = rtwd.sample(duration=duration).rt.array
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (duration,)
