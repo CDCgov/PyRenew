@@ -208,7 +208,7 @@ class HospitalAdmissionsModel(Model):
                     observed_hosp_admissions,
                     *_,
                 ) = self.hosp_admission_obs_process_rv.sample(
-                    mu=latent_hosp_admissions,
+                    mu=latent_hosp_admissions[i0_size + padding :],
                     obs=data_observed_hosp_admissions,
                     **kwargs,
                 )

@@ -7,7 +7,8 @@ This section contains tutorials that demonstrate how to use the `pyrenew` packag
    :maxdepth: 2
 
    getting_started
-   example_with_datasets
-   pyrenew_demo
+   basic_renewal_model
+   hospital_admissions_model
    extending_pyrenew
    periodic_effects
+   time

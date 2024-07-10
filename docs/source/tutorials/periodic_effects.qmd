@@ -76,6 +76,7 @@ mysimplex = dist.TransformedDistribution(
 dayofweek = process.DayOfWeekEffect(
     offset=0,
     quantity_to_broadcast=metaclass.DistributionalRV(mysimplex, "simp"),
+    t_start=0,
 )
 ```
 
