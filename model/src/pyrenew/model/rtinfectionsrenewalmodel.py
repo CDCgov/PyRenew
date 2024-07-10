@@ -189,7 +189,7 @@ class RtInfectionsRenewalModel(Model):
         elif n_timepoints_to_simulate is None:
             n_timepoints = len(data_observed_infections) + padding
         else:
-            n_timepoints = n_timepoints_to_simulate
+            n_timepoints = n_timepoints_to_simulate + padding
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.Rt_process_rv.sample(

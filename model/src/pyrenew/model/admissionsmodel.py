@@ -182,11 +182,11 @@ class HospitalAdmissionsModel(Model):
         elif n_timepoints_to_simulate is None:
             n_timepoints = len(data_observed_hosp_admissions) + padding
         else:
-            n_timepoints = n_timepoints_to_simulate
+            n_timepoints = n_timepoints_to_simulate + padding
 
         # Getting the initial quantities from the basic model
         basic_model = self.basic_renewal.sample(
-            n_timepoints_to_simulate=n_timepoints,
+            n_timepoints_to_simulate=n_timepoints - padding,
             data_observed_infections=None,
             padding=padding,
             **kwargs,
@@ -202,6 +202,14 @@ class HospitalAdmissionsModel(Model):
             **kwargs,
         )
         i0_size = len(latent_hosp_admissions) - n_timepoints
+        print(f"len(latent_hosp_admissions): {len(latent_hosp_admissions)}")
+        print(f"n_timepoints: {n_timepoints}")
+        print(f"padding: {padding}")
+        print(f"i0_size: {i0_size}")
+        if data_observed_hosp_admissions is not None:
+            print(
+                f"len(data_observed_hosp_admissions): {len(data_observed_hosp_admissions)}"
+            )
         if self.hosp_admission_obs_process_rv is None:
             observed_hosp_admissions = None
 
@@ -209,7 +217,7 @@ class HospitalAdmissionsModel(Model):
             observed_hosp_admissions,
             *_,
         ) = self.hosp_admission_obs_process_rv.sample(
-            mu=latent_hosp_admissions[i0_size + padding :],
+            mu=latent_hosp_admissions[-(n_timepoints - padding) :],
             obs=data_observed_hosp_admissions,
             **kwargs,
         )

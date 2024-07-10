@@ -552,13 +552,12 @@ By increasing `n_timepoints_to_simulate`, we can perform forecasting.
 idata_weekday = az.from_numpyro(
     hosp_model_weekday.mcmc,
     posterior_predictive=hosp_model_weekday.posterior_predictive(
-        n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy())
-        + days_to_impute
-        + 28
+        n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy()) + 28,
+        padding=days_to_impute,
     ),
     prior=hosp_model_weekday.prior_predictive(
-        n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy())
-        + days_to_impute,
+        n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy()),
+        padding=days_to_impute,
         numpyro_predictive_args={"num_samples": 1000},
     ),
 )
@@ -578,7 +577,9 @@ def compute_eti(dataset, eti_prob):
 
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
     color="C0",
     smooth=False,
@@ -587,7 +588,9 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.5),
     color="C0",
     smooth=False,
@@ -596,7 +599,9 @@ az.plot_hdi(
 )
 
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"] + days_to_impute,
+    idata_weekday.observed_data["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     idata_weekday.observed_data["negbinom_rv"],
     color="black",
 )
@@ -614,7 +619,9 @@ And now we plot the posterior predictive distributions:
 # | fig-cap: Posterior Predictive Infections
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     hdi_data=compute_eti(
         idata_weekday.posterior_predictive["negbinom_rv"], 0.9
     ),
@@ -625,7 +632,9 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     hdi_data=compute_eti(
         idata_weekday.posterior_predictive["negbinom_rv"], 0.5
     ),
@@ -641,13 +650,17 @@ mean_latent_infection = np.mean(
 )
 
 plt.plot(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     mean_latent_infection[0],
     color="C0",
     label="Mean",
 )
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"] + days_to_impute,
+    idata_weekday.observed_data["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     idata_weekday.observed_data["negbinom_rv"],
     color="black",
 )
