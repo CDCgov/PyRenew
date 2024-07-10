@@ -6,6 +6,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 from jax.typing import ArrayLike
+from pyrenew.deterministic import NullObservation
 from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
@@ -97,6 +98,9 @@ class HospitalAdmissionsModel(Model):
         )
 
         self.latent_hosp_admissions_rv = latent_hosp_admissions_rv
+        if hosp_admission_obs_process_rv is None:
+            hosp_admission_obs_process_rv = NullObservation()
+
         self.hosp_admission_obs_process_rv = hosp_admission_obs_process_rv
 
     @staticmethod

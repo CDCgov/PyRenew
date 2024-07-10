@@ -16,7 +16,7 @@ def test_rw_can_be_sampled():
 
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with and without inits
-        ans0 = rw_normal.sample(3532, init=jnp.array([50.0]))
+        ans0 = rw_normal.sample(3532, init=50.0)
         ans1 = rw_normal.sample(5023)
 
         # check that the samples are of the right shape
@@ -35,7 +35,7 @@ def test_rw_samples_correctly_distributed():
         [0, 2.253, -3.2521, 1052, 1e-6], [1, 0.025, 3, 1, 0.02]
     ):
         rw_normal = SimpleRandomWalkProcess(dist.Normal(step_mean, step_sd))
-        init_arr = jnp.array([532.0])
+        init_arr = 532.0
         with numpyro.handlers.seed(rng_seed=62):
             samples, *_ = rw_normal.sample(n_samples, init=init_arr)
 
