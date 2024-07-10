@@ -51,7 +51,7 @@ jobs:
             for file in $(find tutorials -name '*.qmd'); do
                 poetry run quarto render $file --to rst --output-dir ../_compiled_qmd
             done
-            for rst_file in _compiled/*.rst; do
+            for rst_file in _compiled_qmd/*.rst; do
                 poetry run python ../docs/post_process_rst.py "$rst_file"
             done
 
