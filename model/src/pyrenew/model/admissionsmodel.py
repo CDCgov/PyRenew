@@ -180,13 +180,15 @@ class HospitalAdmissionsModel(Model):
                 "Cannot pass both n_timepoints_to_simulate and data_observed_hosp_admissions."
             )
         elif n_timepoints_to_simulate is None:
-            n_timepoints = len(data_observed_hosp_admissions) + padding
+            n_datapoints = len(data_observed_hosp_admissions)
         else:
-            n_timepoints = n_timepoints_to_simulate + padding
+            n_datapoints = n_timepoints_to_simulate
+
+        n_timepoints = n_datapoints + padding
 
         # Getting the initial quantities from the basic model
         basic_model = self.basic_renewal.sample(
-            n_timepoints_to_simulate=n_timepoints - padding,
+            n_timepoints_to_simulate=n_datapoints,
             data_observed_infections=None,
             padding=padding,
             **kwargs,
@@ -217,7 +219,7 @@ class HospitalAdmissionsModel(Model):
             observed_hosp_admissions,
             *_,
         ) = self.hosp_admission_obs_process_rv.sample(
-            mu=latent_hosp_admissions[-(n_timepoints - padding) :],
+            mu=latent_hosp_admissions[-n_datapoints:],
             obs=data_observed_hosp_admissions,
             **kwargs,
         )
