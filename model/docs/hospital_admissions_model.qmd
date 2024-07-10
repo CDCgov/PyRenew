@@ -555,11 +555,11 @@ idata_weekday = az.from_numpyro(
 )
 ```
 
-Below we plot the posterior predictive distributions using equal tailed bayesian credible intervals:
+Below we plot the prior predictive distributions using equal tailed bayesian credible intervals:
 
 ```{python}
-# | label: fig-output-posterior-predictive
-# | fig-cap: Posterior Predictive Infections
+# | label: fig-output-prior-predictive
+# | fig-cap: Prior Predictive Infections
 def compute_eti(dataset, eti_prob):
     eti_bdry = dataset.quantile(
         ((1 - eti_prob) / 2, 1 / 2 + eti_prob / 2), dim=("chain", "draw")
@@ -567,6 +567,42 @@ def compute_eti(dataset, eti_prob):
     return eti_bdry.values.T
 
 
+fig, axes = plt.subplots(figsize=(6, 5))
+az.plot_hdi(
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.5),
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.6},
+    ax=axes,
+)
+
+plt.scatter(
+    idata_weekday.observed_data["negbinom_rv_dim_0"] + days_to_impute,
+    idata_weekday.observed_data["negbinom_rv"],
+    color="black",
+)
+
+axes.set_title("Prior Predictive Infections", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Observed Infections", fontsize=10)
+plt.yscale("log")
+plt.show()
+```
+
+And now we plot the posterior predictive distributions:
+```{python}
+# | label: fig-output-posterior-predictive
+# | fig-cap: Posterior Predictive Infections
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
@@ -606,40 +642,5 @@ axes.legend()
 axes.set_title("Posterior Predictive Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
 axes.set_ylabel("Observed Infections", fontsize=10)
-plt.show()
-```
-And now we plot the prior predictive distributions:
-```{python}
-# | label: fig-output-prior-predictive
-# | fig-cap: Prior Predictive Infections
-fig, axes = plt.subplots(figsize=(6, 5))
-az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
-    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
-    color="C0",
-    smooth=False,
-    fill_kwargs={"alpha": 0.3},
-    ax=axes,
-)
-
-az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
-    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.5),
-    color="C0",
-    smooth=False,
-    fill_kwargs={"alpha": 0.6},
-    ax=axes,
-)
-
-plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"] + days_to_impute,
-    idata_weekday.observed_data["negbinom_rv"],
-    color="black",
-)
-
-axes.set_title("Prior Predictive Infections", fontsize=10)
-axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Observed Infections", fontsize=10)
-plt.yscale("log")
 plt.show()
 ```
