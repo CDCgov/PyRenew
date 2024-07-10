@@ -2,7 +2,6 @@ Developer Documentation
 =======================
 
 **Note this document is a work in progress. Contrbitions to all sections are welcome.**
-
 Github Workflow
 ---------------
 
@@ -41,7 +40,6 @@ PyRenew Principles
    -  Using ``numpyro.deterministic`` within a ``RandomVariable`` is discouraged. Only use at the ``numpyro.deterministic`` ``Model`` level. If something might need to be recorded from a ``RandomVariable``, it should be returned from the ``RandomVariable`` so it can be recorded at the ``Model`` level.
    -  Using default site names in a ``RandomVariable`` is discouraged. Only use default site names at the ``Model`` level.
    -  Use ``DeterministicVariable``\ s instead of constants within a model.
-
 
 Adding Documentation to Sphinx
 ------------------------------
@@ -97,7 +95,7 @@ Sphinx also allows adding arbitrary pages. For instance, all the ``PyRenew`` tut
 
 2. Make sure the new ``rst`` file is included in an indexed file, for instance, ``./docs/source/general/ctoc.rst``. Here is how it looks:
 
-.. code-block::
+.. code-block:: RST
 
    Complete Table Of Contents
    ==========================
