@@ -493,6 +493,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
     n_obs_to_generate = 30
+    pad_size = 5
 
     I0 = InfectionSeedingProcess(
         "I0_seeding",
@@ -536,17 +537,17 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
 
     # Other random components
+    total_length = n_obs_to_generate + pad_size + gen_int.size()
     weekday = jnp.array([1, 1, 1, 1, 2, 2])
     weekday = weekday / weekday.sum()
     weekday = jnp.tile(weekday, 10)
-    # weekday = weekday[:n_obs_to_generate]
-    weekday = weekday[:39]
+    weekday = weekday[:total_length]
 
     weekday = DeterministicVariable(weekday, name="weekday")
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
-    hosp_report_prob_dist = hosp_report_prob_dist[:39]
+    hosp_report_prob_dist = hosp_report_prob_dist[:total_length]
     hosp_report_prob_dist = hosp_report_prob_dist / hosp_report_prob_dist.sum()
 
     hosp_report_prob_dist = DeterministicVariable(
@@ -572,7 +573,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
-    pad_size = 5
+
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model1.sample(
