@@ -1,5 +1,5 @@
 ---
-title: Fitting a Hospital Admissions-only Model
+title: Fitting a hospital admissions-only model
 format: gfm
 engine: jupyter
 ---
@@ -233,6 +233,7 @@ We can fit the model to the data. We will use the `run` method of the model obje
 # | label: model-fit
 import jax
 
+npro.set_host_device_count(jax.local_device_count())
 hosp_model.run(
     num_samples=1000,
     num_warmup=1000,
@@ -240,7 +241,9 @@ hosp_model.run(
     .to_numpy()
     .astype(float),
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False, num_chains=2),
+    mcmc_args=dict(
+        progress_bar=False, num_chains=2, chain_method="sequential"
+    ),
 )
 ```
 
@@ -279,7 +282,9 @@ idata = az.from_numpyro(
     ),
 )
 ```
+
 We will use `plot_lm` method from ArviZ to plot the posterior predictive distribution and observed data below:
+
 ```{python}
 # | label: fig-posterior-predictive
 # | fig-cap: Hospital Admissions posterior distribution with plot_lm
@@ -296,26 +301,6 @@ az.plot_lm(
 ax.set_title("Posterior Predictive Plot")
 ax.set_ylabel("Hospital Admissions")
 ax.set_xlabel("Days")
-plt.show()
-```
-
-We can assess model fit by comparing the model prediction with the observed data. Below we use the `plot_ppc` to compare the posterior predictive samples with the observed data for the first two time steps. This allows us to check how well the model predictions approximate observed data.
-
-```{python}
-# | label: fig-output-posterior-predictive-check-plot
-# | fig-cap: Posterior Predictive Infections
-fig, ax = plt.subplots(1, 2, figsize=(9, 5))
-az.plot_ppc(
-    idata,
-    kind="scatter",
-    coords={"negbinom_rv_dim_0": [0, 1]},
-    flatten=[],
-    ax=ax,
-)
-
-fig.suptitle("Posterior Predictive Check Plots")
-ax[0].set_xlabel("Hospital Admissions[0]")
-ax[1].set_xlabel("Hospital Admissions[1]")
 plt.show()
 ```
 
@@ -412,20 +397,19 @@ axes.plot(x_data, mean_latent_hosp_admission[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Hospital Admissions", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Hospital Admissions", fontsize=10);
+axes.set_ylabel("Hospital Admissions", fontsize=10)
+plt.show()
 ```
 
-We can also take a look at the latent infections:
+We can look at individual draws from the posterior distribution of latent infections:
 
 ```{python}
 # | label: fig-output-infections-with-padding
 # | fig-cap: Latent infections
-out2 = hosp_model.plot_posterior(
-    var="all_latent_infections", ylab="Latent Infections"
-)
+out2 = hosp_model.plot_posterior(var="all_latent_infections", ylab="Latent Infections")
 ```
 
-and the distribution of latent infections
+We can also look at credible intervals for the posterior distribution of latent infections:
 
 ```{python}
 # | label: fig-output-infections-distribution
@@ -462,7 +446,8 @@ axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Latent Infections", fontsize=10);
+axes.set_ylabel("Latent Infections", fontsize=10)
+plt.show()
 ```
 
 ## Round 2: Incorporating day-of-the-week effects
@@ -559,7 +544,7 @@ out = hosp_model_weekday.plot_posterior(
 )
 ```
 
-We can use ArviZ to visualize the posterior predictive distributions.
+We will use ArviZ to visualize the posterior/prior predictive distributions.
 By increasing `n_timepoints_to_simulate`, we can perform forecasting.
 
 ```{python}
@@ -570,15 +555,21 @@ idata_weekday = az.from_numpyro(
         n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy())
         + days_to_impute
         + 28
+        )
+    ),
+    prior=hosp_model_weekday.prior_predictive(
+        n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy())
+        + days_to_impute,
+        numpyro_predictive_args={"num_samples": 1000},
     ),
 )
 ```
 
-Below we plot the posterior predictive distributions using equal tailed bayesian credible intervals:
+Below we plot the prior predictive distributions using equal tailed bayesian credible intervals:
 
 ```{python}
-# | label: fig-output-posterior-predictive
-# | fig-cap: Posterior Predictive Infections
+# | label: fig-output-prior-predictive
+# | fig-cap: Prior Predictive Infections
 def compute_eti(dataset, eti_prob):
     eti_bdry = dataset.quantile(
         ((1 - eti_prob) / 2, 1 / 2 + eti_prob / 2), dim=("chain", "draw")
@@ -586,6 +577,42 @@ def compute_eti(dataset, eti_prob):
     return eti_bdry.values.T
 
 
+fig, axes = plt.subplots(figsize=(6, 5))
+az.plot_hdi(
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.5),
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.6},
+    ax=axes,
+)
+
+plt.scatter(
+    idata_weekday.observed_data["negbinom_rv_dim_0"] + days_to_impute,
+    idata_weekday.observed_data["negbinom_rv"],
+    color="black",
+)
+
+axes.set_title("Prior Predictive Infections", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Observed Infections", fontsize=10)
+plt.yscale("log")
+plt.show()
+```
+
+And now we plot the posterior predictive distributions:
+```{python}
+# | label: fig-output-posterior-predictive
+# | fig-cap: Posterior Predictive Infections
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
@@ -628,5 +655,6 @@ plt.scatter(
 axes.legend()
 axes.set_title("Posterior Predictive Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Observed Infections", fontsize=10);
+axes.set_ylabel("Observed Infections", fontsize=10)
+plt.show()
 ```
