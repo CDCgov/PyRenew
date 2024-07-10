@@ -237,9 +237,13 @@ npro.set_host_device_count(jax.local_device_count())
 hosp_model.run(
     num_samples=1000,
     num_warmup=1000,
-    data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
+    data_observed_hosp_admissions=dat["daily_hosp_admits"]
+    .to_numpy()
+    .astype(float),
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False, num_chains=2, chain_method="sequential"),
+    mcmc_args=dict(
+        progress_bar=False, num_chains=2, chain_method="sequential"
+    ),
 )
 ```
 
@@ -310,17 +314,10 @@ We can use the padding argument to solve the overestimation of hospital admissio
 # | label: model-fit-padding
 days_to_impute = 21
 
-# Add 21 Nas to the beginning of dat_w_padding
-dat_w_padding = np.pad(
-    dat["daily_hosp_admits"].to_numpy().astype(float),
-    (days_to_impute, 0),
-    constant_values=np.nan,
-)
-
 hosp_model.run(
     num_samples=1000,
     num_warmup=1000,
-    data_observed_hosp_admissions=dat_w_padding,
+    data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False, num_chains=2),
     padding=days_to_impute,  # Padding the model
@@ -336,7 +333,9 @@ out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
     obs_signal=np.pad(
-        dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan
+        dat["daily_hosp_admits"].to_numpy().astype(float),
+        (gen_int_array.size + days_to_impute, 0),
+        constant_values=np.nan,
     ),
 )
 ```
@@ -440,7 +439,9 @@ az.plot_hdi(
 )
 
 # Add mean of the posterior to the figure
-mean_latent_infection = np.mean(idata.posterior["all_latent_infections"], axis=1)
+mean_latent_infection = np.mean(
+    idata.posterior["all_latent_infections"], axis=1
+)
 axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
@@ -520,7 +521,7 @@ Running the model (with the same padding as before):
 hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
-    data_observed_hosp_admissions=dat_w_padding,
+    data_observed_hosp_admissions=dat["daily_hosp_admits"].to_numpy(),
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False),
     padding=days_to_impute,
@@ -535,21 +536,28 @@ And plotting the results:
 out = hosp_model_weekday.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=np.pad(dat_w_padding, (gen_int_array.size, 0), constant_values=np.nan),
+    obs_signal=np.pad(
+        dat["daily_hosp_admits"].to_numpy().astype(float),
+        (gen_int_array.size + days_to_impute, 0),
+        constant_values=np.nan,
+    ),
 )
 ```
 
 We will use ArviZ to visualize the posterior/prior predictive distributions.
+By increasing `n_timepoints_to_simulate`, we can perform forecasting.
 
 ```{python}
 # | label: posterior-predictive-distribution
 idata_weekday = az.from_numpyro(
     hosp_model_weekday.mcmc,
     posterior_predictive=hosp_model_weekday.posterior_predictive(
-        n_timepoints_to_simulate=len(dat_w_padding)
+        n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy()) + 28,
+        padding=days_to_impute,
     ),
     prior=hosp_model_weekday.prior_predictive(
-        n_timepoints_to_simulate=len(dat_w_padding),
+        n_timepoints_to_simulate=len(dat["daily_hosp_admits"].to_numpy()),
+        padding=days_to_impute,
         numpyro_predictive_args={"num_samples": 1000},
     ),
 )
@@ -569,7 +577,9 @@ def compute_eti(dataset, eti_prob):
 
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
     color="C0",
     smooth=False,
@@ -578,7 +588,9 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.5),
     color="C0",
     smooth=False,
@@ -587,7 +599,9 @@ az.plot_hdi(
 )
 
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"] + days_to_impute,
+    idata_weekday.observed_data["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     idata_weekday.observed_data["negbinom_rv"],
     color="black",
 )
@@ -605,8 +619,12 @@ And now we plot the posterior predictive distributions:
 # | fig-cap: Posterior Predictive Infections
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
-    hdi_data=compute_eti(idata_weekday.posterior_predictive["negbinom_rv"], 0.9),
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
+    hdi_data=compute_eti(
+        idata_weekday.posterior_predictive["negbinom_rv"], 0.9
+    ),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.3},
@@ -614,8 +632,12 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
-    hdi_data=compute_eti(idata_weekday.posterior_predictive["negbinom_rv"], 0.5),
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
+    hdi_data=compute_eti(
+        idata_weekday.posterior_predictive["negbinom_rv"], 0.5
+    ),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.6},
@@ -628,13 +650,17 @@ mean_latent_infection = np.mean(
 )
 
 plt.plot(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"],
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     mean_latent_infection[0],
     color="C0",
     label="Mean",
 )
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"] + days_to_impute,
+    idata_weekday.observed_data["negbinom_rv_dim_0"]
+    + days_to_impute
+    + gen_int.size(),
     idata_weekday.observed_data["negbinom_rv"],
     color="black",
 )
