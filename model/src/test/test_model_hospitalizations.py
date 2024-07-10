@@ -540,13 +540,13 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = weekday / weekday.sum()
     weekday = jnp.tile(weekday, 10)
     # weekday = weekday[:n_obs_to_generate]
-    weekday = weekday[:34]
+    weekday = weekday[:39]
 
     weekday = DeterministicVariable(weekday, name="weekday")
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
-    hosp_report_prob_dist = hosp_report_prob_dist[:34]
+    hosp_report_prob_dist = hosp_report_prob_dist[:39]
     hosp_report_prob_dist = hosp_report_prob_dist / hosp_report_prob_dist.sum()
 
     hosp_report_prob_dist = DeterministicVariable(
