@@ -35,9 +35,9 @@ def test_rw_samples_correctly_distributed():
         [0, 2.253, -3.2521, 1052, 1e-6], [1, 0.025, 3, 1, 0.02]
     ):
         rw_normal = SimpleRandomWalkProcess(dist.Normal(step_mean, step_sd))
-        init_arr = 532.0
+        init = 532.0
         with numpyro.handlers.seed(rng_seed=62):
-            samples, *_ = rw_normal.sample(n_samples, init=init_arr)
+            samples, *_ = rw_normal.sample(n_samples, init=init)
 
             # Checking the shape
             assert samples.shape == (n_samples,)
@@ -60,4 +60,4 @@ def test_rw_samples_correctly_distributed():
             assert jnp.abs(jnp.log(jnp.std(diffs) / step_sd)) < jnp.log(1.1)
 
             # first value should be the init value
-            assert_almost_equal(samples[0], init_arr)
+            assert_almost_equal(samples[0], init)
