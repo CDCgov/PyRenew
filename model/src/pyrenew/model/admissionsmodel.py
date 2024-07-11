@@ -201,8 +201,6 @@ class HospitalAdmissionsModel(Model):
             latent_infections=basic_model.latent_infections,
             **kwargs,
         )
-        if self.hosp_admission_obs_process_rv is None:
-            observed_hosp_admissions = None
 
         (
             observed_hosp_admissions,
