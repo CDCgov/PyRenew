@@ -9,6 +9,7 @@ packages = [{include = "multisignal_epi_inference"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
+numpyro = "^0.15.1"
 
 [tool.poetry.group.dev]
 optional = true
