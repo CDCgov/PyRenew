@@ -582,7 +582,9 @@ def compute_eti(dataset, eti_prob):
 
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"] + +gen_int.size(),
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"]
+    + pad_size
+    + gen_int.size(),
     hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
     color="C0",
     smooth=False,
