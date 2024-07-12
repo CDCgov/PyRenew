@@ -16,7 +16,7 @@ repos:
     hooks:
       - id: generate-rst-placeholders
         name: Tutorials .rst placeholders (local run only)
-        entry: ./.pre-commit-rst-placeholder.sh
+        entry: ./hook_scripts/pre-commit-rst-placeholder.sh
         language: script
         files: 'model/docs/.*\.qmd'
   - repo: https://github.com/psf/black
@@ -43,7 +43,7 @@ repos:
     hooks:
       - id: format-qmd-python
         name: Format Python in QMD
-        entry: python quarto_python_formatter.py "-q --line-length 79"
+        entry: python hook_scripts/quarto_python_formatter.py "-q --line-length 79"
         language: python
         files: \.qmd$
         additional_dependencies: [black]
