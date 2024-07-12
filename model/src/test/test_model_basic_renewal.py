@@ -267,18 +267,17 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
 
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
+    pad_size = 5
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints_to_simulate=30)
-
-    new_obs = jnp.hstack(
-        [jnp.repeat(jnp.nan, 5), model1_samp.observed_infections[5:]],
-    )
+        model1_samp = model1.sample(
+            n_timepoints_to_simulate=30, padding=pad_size
+        )
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
-        data_observed_infections=new_obs,
+        data_observed_infections=model1_samp.observed_infections,
         padding=5,
     )
 

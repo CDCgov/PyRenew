@@ -187,9 +187,9 @@ class RtInfectionsRenewalModel(Model):
                 "Cannot pass both n_timepoints_to_simulate and data_observed_infections."
             )
         elif n_timepoints_to_simulate is None:
-            n_timepoints = len(data_observed_infections)
+            n_timepoints = len(data_observed_infections) + padding
         else:
-            n_timepoints = n_timepoints_to_simulate
+            n_timepoints = n_timepoints_to_simulate + padding
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.Rt_process_rv.sample(
@@ -212,9 +212,6 @@ class RtInfectionsRenewalModel(Model):
             I0=I0,
             **kwargs,
         )
-
-        if data_observed_infections is not None:
-            data_observed_infections = data_observed_infections[padding:]
 
         observed_infections, *_ = self.infection_obs_process_rv.sample(
             mu=post_initialization_latent_infections[padding:],
