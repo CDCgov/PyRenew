@@ -21,7 +21,7 @@ from pyrenew.latent import (
     InfectionSeedingProcess,
     SeedInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV, RandomVariable
+from pyrenew.metaclass import DistributionalRV, RandomVariable, TimeArray
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
@@ -39,7 +39,7 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
 
     def sample(self, **kwargs):  # numpydoc ignore=GL08
         return (
-            npro.sample(name=self.name, fn=dist.Uniform(high=0.99, low=0.01)),
+            TimeArray(npro.sample(name=self.name, fn=dist.Uniform(high=0.99, low=0.01))),
         )
 
 
@@ -269,10 +269,10 @@ def test_model_hosp_no_obs_model():
     np.testing.assert_array_equal(
         model0_samp.latent_hosp_admissions.array, model1_samp.latent_hosp_admissions.array
     )
-    np.testing.assert_array_equal(
-        model0_samp.observed_hosp_admissions.array,
-        model1_samp.observed_hosp_admissions.array,
-    )
+
+    # These are supposed to be none, both
+    assert model0_samp.observed_hosp_admissions is None
+    assert model1_samp.observed_hosp_admissions is None
 
     model0.run(
         num_warmup=500,
@@ -383,6 +383,7 @@ def test_model_hosp_with_obs_model():
     assert inf_mean.to_numpy().shape[0] == 500
 
 
+
 def test_model_hosp_with_obs_model_weekday_phosp_2():
     """
     Checks that the random Hospitalization model runs
@@ -482,7 +483,6 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     # For now the assertion is only about the expected number of rows
     # It should be about the MCMC inference.
     assert inf_mean.to_numpy().shape[0] == 500
-
 
 def test_model_hosp_with_obs_model_weekday_phosp():
     """

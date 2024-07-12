@@ -214,7 +214,7 @@ class HospitalAdmissionsModel(Model):
                 )
             else:
                 data_observed_hosp_admissions = au.pad_x_to_match_y(
-                    data_observed_hosp_admissions.array,
+                    data_observed_hosp_admissions,
                     latent_hosp_admissions.array,
                     jnp.nan,
                     pad_direction="start",

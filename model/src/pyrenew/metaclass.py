@@ -242,11 +242,11 @@ class DistributionalRVSample(NamedTuple):
 
     Attributes
     ----------
-    value : ArrayLike
+    value : TimeArray
         Sampled value from the distribution.
     """
 
-    value: ArrayLike | None = None
+    value: TimeArray | None = None
 
     def __repr__(self) -> str:
         """
