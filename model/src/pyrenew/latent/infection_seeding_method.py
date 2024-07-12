@@ -7,11 +7,11 @@ from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 
-class InfectionSeedMethod(metaclass=ABCMeta):
+class InfectionInitializationMethod(metaclass=ABCMeta):
     """Method for seeding initial infections in a renewal process."""
 
     def __init__(self, n_timepoints: int):
-        """Default constructor for the ``InfectionSeedMethod`` class.
+        """Default constructor for the ``InfectionInitializationMethod`` class.
 
         Parameters
         ----------
@@ -27,7 +27,7 @@ class InfectionSeedMethod(metaclass=ABCMeta):
 
     @staticmethod
     def validate(n_timepoints: int) -> None:
-        """Validate inputs for the ``InfectionSeedMethod`` class constructor
+        """Validate inputs for the ``InfectionInitializationMethod`` class constructor
 
         Parameters
         ----------
@@ -54,7 +54,7 @@ class InfectionSeedMethod(metaclass=ABCMeta):
         Parameters
         ----------
         I_pre_seed : ArrayLike
-            An array representing some number of latent infections to be used with the specified ``InfectionSeedMethod``.
+            An array representing some number of latent infections to be used with the specified ``InfectionInitializationMethod``.
 
         Returns
         -------
@@ -66,7 +66,7 @@ class InfectionSeedMethod(metaclass=ABCMeta):
         return self.seed_infections(I_pre_seed)
 
 
-class SeedInfectionsZeroPad(InfectionSeedMethod):
+class SeedInfectionsZeroPad(InfectionInitializationMethod):
     """
     Create a seed infection vector of specified length by
     padding a shorter vector with an appropriate number of
@@ -95,7 +95,7 @@ class SeedInfectionsZeroPad(InfectionSeedMethod):
         return jnp.pad(I_pre_seed, (self.n_timepoints - I_pre_seed.size, 0))
 
 
-class SeedInfectionsFromVec(InfectionSeedMethod):
+class SeedInfectionsFromVec(InfectionInitializationMethod):
     """Create seed infections from a vector of infections."""
 
     def seed_infections(self, I_pre_seed: ArrayLike):
@@ -120,7 +120,7 @@ class SeedInfectionsFromVec(InfectionSeedMethod):
         return jnp.array(I_pre_seed)
 
 
-class SeedInfectionsExponentialGrowth(InfectionSeedMethod):
+class SeedInfectionsExponentialGrowth(InfectionInitializationMethod):
     r"""Generate seed infections according to exponential growth.
 
     Notes

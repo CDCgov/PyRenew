@@ -14,8 +14,8 @@ import pyrenew.transformation as t
 from numpy.testing import assert_array_equal, assert_raises
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
+    InfectionInitializationProcess,
     Infections,
-    InfectionSeedingProcess,
     SeedInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV
@@ -27,7 +27,7 @@ from pyrenew.process import RtRandomWalkProcess
 def create_test_model():  # numpydoc ignore=GL08
     pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
     gen_int = DeterministicPMF(pmf_array, name="gen_int")
-    I0 = InfectionSeedingProcess(
+    I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),

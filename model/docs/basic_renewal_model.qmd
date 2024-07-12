@@ -19,7 +19,7 @@ import numpyro.distributions as dist
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import (
     Infections,
-    InfectionSeedingProcess,
+    InfectionInitializationProcess,
     SeedInfectionsZeroPad,
 )
 from pyrenew.observation import PoissonObservation

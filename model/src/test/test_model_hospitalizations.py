@@ -17,8 +17,8 @@ from pyrenew.deterministic import (
 )
 from pyrenew.latent import (
     HospitalAdmissions,
+    InfectionInitializationProcess,
     Infections,
-    InfectionSeedingProcess,
     SeedInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV, RandomVariable
@@ -192,7 +192,7 @@ def test_model_hosp_no_obs_model():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = InfectionSeedingProcess(
+    I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
@@ -302,7 +302,7 @@ def test_model_hosp_with_obs_model():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = InfectionSeedingProcess(
+    I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
@@ -392,7 +392,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = InfectionSeedingProcess(
+    I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
@@ -494,7 +494,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
     n_obs_to_generate = 30
 
-    I0 = InfectionSeedingProcess(
+    I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
         SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
