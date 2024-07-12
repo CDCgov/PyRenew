@@ -57,13 +57,15 @@ def process_file(filepath: Path) -> None:  # numpydoc ignore=RT01
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print("Usage: python format_qmd_python.py <filename.qmd>")
+    if len(sys.argv) < 2:
+        print(
+            "Usage: python format_qmd_python.py <filename1.qmd> [filename2.qmd ...]"
+        )
         sys.exit(1)
 
-    filepath = Path(sys.argv[1])
-    if not filepath.exists():
-        print(f"Error: File {filepath} does not exist.", file=sys.stderr)
-        sys.exit(1)
-
-    process_file(filepath)
+    for filepath in sys.argv[1:]:
+        path = Path(filepath)
+        if not path.exists():
+            print(f"Error: File {path} does not exist.", file=sys.stderr)
+            continue
+        process_file(path)
