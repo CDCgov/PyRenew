@@ -1,70 +1,71 @@
 repos:
-    #####
-    # Basic file cleanliness
-    - repo: https://github.com/pre-commit/pre-commit-hooks
-      rev: v4.5.0
-      hooks:
-          - id: check-added-large-files
-          - id: check-yaml
-          - id: check-toml
-          - id: end-of-file-fixer
-          - id: mixed-line-ending
-          - id: trailing-whitespace
-    #####
-    # Python
-    - repo: local
-      hooks:
-          - id: generate-rst-placeholders
-            name: Tutorials .rst placeholders (local run only)
-            entry: ./.pre-commit-rst-placeholder.sh
-            language: script
-            files: 'model/docs/.*\.qmd'
-    - repo: https://github.com/psf/black
-      rev: 23.10.0
-      hooks:
-          - id: black
-            args: ["--line-length", "79"]
-    - repo: https://github.com/PyCQA/isort
-      rev: 5.12.0
-      hooks:
-          - id: isort
-            args: ["--profile", "black", "--line-length", "79"]
-    - repo: https://github.com/astral-sh/ruff-pre-commit
-      rev: v0.1.0
-      hooks:
-          - id: ruff
-    - repo: https://github.com/numpy/numpydoc
-      rev: v1.7.0
-      hooks:
-          - id: numpydoc-validation
-    #####
-    # Quarto
-    - repo: local
-      hooks:
-          - id: format-qmd-python
-            name: Format Python in QMD
-            entry: python quarto_python_formatter.py
-            language: python
-            files: \.qmd$
-            additional_dependencies: [black]
-    #####
-    # Secrets
-    - repo: https://github.com/Yelp/detect-secrets
-      rev: v1.4.0
-      hooks:
-          - id: detect-secrets
-            args:
-                [
-                    "--baseline",
-                    ".secrets.baseline",
-                    "--exclude-files",
-                    "model/docs/*_cache",
-                ]
-            exclude: package.lock.json
-    ####
-    # Typos
-    - repo: https://github.com/crate-ci/typos
-      rev: v1.20.0
-      hooks:
-          - id: typos
-            args: ["--force-exclude"]
+  #####
+  # Basic file cleanliness
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-yaml
+      - id: check-toml
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+      - id: trailing-whitespace
+  #####
+  # Python
+  - repo: local
+    hooks:
+      - id: generate-rst-placeholders
+        name: Tutorials .rst placeholders (local run only)
+        entry: ./.pre-commit-rst-placeholder.sh
+        language: script
+        files: 'model/docs/.*\.qmd'
+  - repo: https://github.com/psf/black
+    rev: 23.10.0
+    hooks:
+      - id: black
+        args: ["--line-length", "79"]
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--line-length", "79"]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.1.0
+    hooks:
+      - id: ruff
+  - repo: https://github.com/numpy/numpydoc
+    rev: v1.7.0
+    hooks:
+      - id: numpydoc-validation
+  #####
+  # Quarto
+  - repo: local
+    hooks:
+      - id: format-qmd-python
+        name: Format Python in QMD
+        entry: python quarto_python_formatter.py
+        language: python
+        files: \.qmd$
+        args: ["-q --line-length 79"]
+        additional_dependencies: [black]
+  #####
+  # Secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args:
+          [
+            "--baseline",
+            ".secrets.baseline",
+            "--exclude-files",
+            "model/docs/*_cache",
+          ]
+        exclude: package.lock.json
+  ####
+  # Typos
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.20.0
+    hooks:
+      - id: typos
+        args: ["--force-exclude"]

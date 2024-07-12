@@ -1,18 +1,21 @@
-# numpydoc ignore=GL08
 #!/usr/bin/env python3
+# numpydoc ignore=GL08
 import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Match
+from typing import List, Match
 
 
-def format_python_code(code: str) -> str:  # numpydoc ignore=RT01
-    """Format Python code using Black."""
+def format_python_code(
+    code: str, black_args: List[str]
+) -> str:  # numpydoc ignore=RT01
+    """Format Python code using Black with custom arguments."""
     try:
+        cmd = ["black", "-"] + black_args
         result = subprocess.run(
-            ["black", "-", "-q", "--line-length", "79"],
+            cmd,
             input=code,
             capture_output=True,
             text=True,
@@ -26,19 +29,23 @@ def format_python_code(code: str) -> str:  # numpydoc ignore=RT01
         return code
 
 
-def replace_code_block(match: Match[str]) -> str:  # numpydoc ignore=RT01
+def replace_code_block(
+    match: Match[str], black_args: List[str]
+) -> str:  # numpydoc ignore=RT01
     """Replace code block with formatted version."""
-    return f"{match.group(1)}\n{format_python_code(match.group(2))}{match.group(3)}"
+    return f"{match.group(1)}\n{format_python_code(match.group(2), black_args)}{match.group(3)}"
 
 
-def process_file(filepath: Path) -> None:  # numpydoc ignore=RT01
+def process_file(
+    filepath: Path, black_args: List[str]
+) -> None:  # numpydoc ignore=RT01
     """Process the given file, formatting Python code blocks."""
     python_code_block_pattern = r"(```\{python\})(.*?)(```)"
     try:
         content = filepath.read_text()
         formatted_content = re.sub(
             python_code_block_pattern,
-            replace_code_block,
+            lambda m: replace_code_block(m, black_args),
             content,
             flags=re.DOTALL,
         )
@@ -57,15 +64,16 @@ def process_file(filepath: Path) -> None:  # numpydoc ignore=RT01
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 3:
         print(
-            "Usage: python format_qmd_python.py <filename1.qmd> [filename2.qmd ...]"
+            'Usage: python quarto_python_formatter.py "BLACK_ARGS" <filename1.qmd> [filename2.qmd ...]'
         )
         sys.exit(1)
 
-    for filepath in sys.argv[1:]:
+    black_args = sys.argv[1].split()
+    for filepath in sys.argv[2:]:
         path = Path(filepath)
         if not path.exists():
             print(f"Error: File {path} does not exist.", file=sys.stderr)
             continue
-        process_file(path)
+        process_file(path, black_args)
