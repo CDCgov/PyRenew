@@ -20,4 +20,4 @@ def test_poisson_obs():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_pois, *_ = pois.sample(mu=rates)
 
-    testing.assert_array_equal(sim_pois, jnp.ceil(sim_pois))
+    testing.assert_array_equal(sim_pois.array, jnp.ceil(sim_pois.array))
