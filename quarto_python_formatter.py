@@ -12,7 +12,7 @@ def format_python_code(code: str) -> str:  # numpydoc ignore=RT01
     """Format Python code using Black."""
     try:
         result = subprocess.run(
-            ["black", "-", "-q"],
+            ["black", "-", "-q", "--line-length", "79"],
             input=code,
             capture_output=True,
             text=True,
