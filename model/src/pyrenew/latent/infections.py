@@ -17,14 +17,14 @@ class InfectionsSample(NamedTuple):
 
     Attributes
     ----------
-    post_seed_infections : ArrayLike | None, optional
+    post_initialization_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
     """
 
-    post_seed_infections: ArrayLike | None = None
+    post_initialization_infections: ArrayLike | None = None
 
     def __repr__(self):
-        return f"InfectionsSample(post_seed_infections={self.post_seed_infections})"
+        return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections})"
 
 
 class Infections(RandomVariable):
@@ -91,10 +91,10 @@ class Infections(RandomVariable):
         gen_int_rev = jnp.flip(gen_int)
         recent_I0 = I0[-gen_int_rev.size :]
 
-        post_seed_infections = inf.compute_infections_from_rt(
+        post_initialization_infections = inf.compute_infections_from_rt(
             I0=recent_I0,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        return InfectionsSample(post_seed_infections)
+        return InfectionsSample(post_initialization_infections)

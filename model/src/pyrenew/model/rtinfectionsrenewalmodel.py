@@ -203,7 +203,10 @@ class RtInfectionsRenewalModel(Model):
         # Sampling initial infections
         I0, *_ = self.I0_rv.sample(**kwargs)
         # Sampling from the latent process
-        post_seed_latent_infections, *_ = self.latent_infections_rv.sample(
+        (
+            post_initialization_latent_infections,
+            *_,
+        ) = self.latent_infections_rv.sample(
             Rt=Rt,
             gen_int=gen_int,
             I0=I0,
@@ -211,12 +214,14 @@ class RtInfectionsRenewalModel(Model):
         )
 
         observed_infections, *_ = self.infection_obs_process_rv.sample(
-            mu=post_seed_latent_infections[padding:],
+            mu=post_initialization_latent_infections[padding:],
             obs=data_observed_infections,
             **kwargs,
         )
 
-        all_latent_infections = jnp.hstack([I0, post_seed_latent_infections])
+        all_latent_infections = jnp.hstack(
+            [I0, post_initialization_latent_infections]
+        )
         npro.deterministic("all_latent_infections", all_latent_infections)
 
         observed_infections = au.pad_x_to_match_y(

@@ -25,18 +25,18 @@ Infection Functions
    :undoc-members:
    :show-inheritance:
 
-Infection Seeding Process
+Infection Initialization Process
 -------------------------
 
-.. automodule:: pyrenew.latent.infection_seeding_process
+.. automodule:: pyrenew.latent.infection_initialization_process
    :members:
    :undoc-members:
    :show-inheritance:
 
-Infection Seeding Method
+Infection Initialization Method
 ------------------------
 
-.. automodule:: pyrenew.latent.infection_seeding_method
+.. automodule:: pyrenew.latent.infection_initialization_method
    :members:
    :undoc-members:
    :show-inheritance:

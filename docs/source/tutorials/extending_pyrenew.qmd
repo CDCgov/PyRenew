@@ -31,8 +31,8 @@ from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.metaclass import DistributionalRV
 from pyrenew.latent import (
-    InfectionSeedingProcess,
-    SeedInfectionsExponentialGrowth,
+    InfectionInitializationProcess,
+    InitializeInfectionsExponentialGrowth,
 )
 import pyrenew.transformation as t
 ```
@@ -45,10 +45,10 @@ gen_int_array = jnp.array([0.25, 0.5, 0.15, 0.1])
 gen_int = DeterministicPMF(gen_int_array, name="gen_int")
 feedback_strength = DeterministicVariable(0.05, name="feedback_strength")
 
-I0 = InfectionSeedingProcess(
-    "I0_seeding",
+I0 = InfectionInitializationProcess(
+    "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsExponentialGrowth(
+    InitializeInfectionsExponentialGrowth(
         gen_int_array.size,
         DeterministicVariable(0.5, name="rate"),
     ),
