@@ -72,7 +72,7 @@ if __name__ == "__main__":
     missing_files = [file for file in sys.argv[2:] if not Path(file).exists()]
     if missing_files:
         raise FileNotFoundError(
-            f"Error: The following file(s) do not exist: {', '.join(missing_files)}."
+            f"The following file(s) do not exist: {', '.join(missing_files)}."
         )
     for filepath in sys.argv[2:]:
         path = Path(filepath)
