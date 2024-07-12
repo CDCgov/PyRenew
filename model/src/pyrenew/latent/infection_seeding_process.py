@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 import numpyro as npro
-from pyrenew.latent.infection_seeding_method import (
+from pyrenew.latent.infection_initialization_process import (
     InfectionInitializationMethod,
 )
 from pyrenew.metaclass import RandomVariable
@@ -88,7 +88,7 @@ class InfectionInitializationProcess(RandomVariable):
             )
 
     def sample(self) -> tuple:
-        """Sample the infection seeding process.
+        """Sample the Infection Initialization Process.
 
         Returns
         -------

@@ -54,7 +54,7 @@ def _infection_w_feedback_alt(
             I_vec[t : t + len_gen], np.flip(gen_int)
         )
 
-    return {"post_initialized_infections": I_vec[I0.size :], "rt": Rt_adj}
+    return {"post_initialization_infections": I_vec[I0.size :], "rt": Rt_adj}
 
 
 def test_infectionsrtfeedback():
@@ -95,7 +95,8 @@ def test_infectionsrtfeedback():
         )
 
     assert_array_equal(
-        samp1.post_initialized_infections, samp2.post_initialized_infections
+        samp1.post_initialization_infections,
+        samp2.post_initialization_infections,
     )
     assert_array_equal(samp1.rt, Rt)
 
@@ -146,10 +147,12 @@ def test_infectionsrtfeedback_feedback():
     )
 
     assert not jnp.array_equal(
-        samp1.post_initialized_infections, samp2.post_initialized_infections
+        samp1.post_initialization_infections,
+        samp2.post_initialization_infections,
     )
     assert_array_almost_equal(
-        samp1.post_initialized_infections, res["post_initialized_infections"]
+        samp1.post_initialization_infections,
+        res["post_initialization_infections"],
     )
     assert_array_almost_equal(samp1.rt, res["rt"])
 

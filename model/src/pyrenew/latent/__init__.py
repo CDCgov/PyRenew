@@ -8,14 +8,12 @@ from pyrenew.latent.infection_functions import (
     compute_infections_from_rt_with_feedback,
     logistic_susceptibility_adjustment,
 )
-from pyrenew.latent.infection_seeding_method import (
+from pyrenew.latent.infection_initialization_process import (
     InfectionInitializationMethod,
+    InfectionInitializationProcess,
     SeedInfectionsExponentialGrowth,
     SeedInfectionsFromVec,
     SeedInfectionsZeroPad,
-)
-from pyrenew.latent.infection_seeding_process import (
-    InfectionInitializationProcess,
 )
 from pyrenew.latent.infections import Infections
 from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback

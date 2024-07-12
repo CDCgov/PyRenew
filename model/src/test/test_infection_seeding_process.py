@@ -13,7 +13,7 @@ from pyrenew.latent import (
 from pyrenew.metaclass import DistributionalRV
 
 
-def test_infection_seeding_process():
+def test_infection_initialization_process():
     """Check that the InfectionInitializationProcess class generates can be sampled from with all InfectionInitializationMethods."""
     n_timepoints = 10
 
