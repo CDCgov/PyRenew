@@ -30,7 +30,10 @@ from pyrenew.latent import InfectionsWithFeedback
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.metaclass import DistributionalRV
-from pyrenew.latent import InfectionInitializationProcess, SeedInfectionsExponentialGrowth
+from pyrenew.latent import (
+    InfectionSeedingProcess,
+    SeedInfectionsExponentialGrowth,
+)
 import pyrenew.transformation as t
 ```
 
