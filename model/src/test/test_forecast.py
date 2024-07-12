@@ -11,7 +11,7 @@ from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
     InfectionInitializationProcess,
     Infections,
-    SeedInfectionsZeroPad,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
@@ -26,7 +26,7 @@ def test_forecast():
     I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
     latent_infections = Infections()

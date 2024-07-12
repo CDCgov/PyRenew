@@ -14,7 +14,7 @@ from pyrenew.deterministic import DeterministicPMF, NullObservation
 from pyrenew.latent import (
     InfectionInitializationProcess,
     Infections,
-    SeedInfectionsZeroPad,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
@@ -113,7 +113,7 @@ def test_model_basicrenewal_no_obs_model():
     I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
@@ -189,7 +189,7 @@ def test_model_basicrenewal_with_obs_model():
     I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
@@ -243,7 +243,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 

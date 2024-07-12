@@ -6,9 +6,9 @@ import pytest
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     InfectionInitializationProcess,
-    SeedInfectionsExponentialGrowth,
-    SeedInfectionsFromVec,
-    SeedInfectionsZeroPad,
+    InitializeInfectionsExponentialGrowth,
+    InitializeInfectionsFromVec,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV
 
@@ -20,14 +20,14 @@ def test_infection_initialization_process():
     zero_pad_model = InfectionInitializationProcess(
         "zero_pad_model",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints),
+        InitializeInfectionsZeroPad(n_timepoints),
         t_unit=1,
     )
 
     exp_model = InfectionInitializationProcess(
         "exp_model",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsExponentialGrowth(
+        InitializeInfectionsExponentialGrowth(
             n_timepoints, DeterministicVariable(0.5, name="rate")
         ),
         t_unit=1,
@@ -36,7 +36,7 @@ def test_infection_initialization_process():
     vec_model = InfectionInitializationProcess(
         "vec_model",
         DeterministicVariable(jnp.arange(n_timepoints), name="I0"),
-        SeedInfectionsFromVec(n_timepoints),
+        InitializeInfectionsFromVec(n_timepoints),
         t_unit=1,
     )
 
@@ -49,7 +49,7 @@ def test_infection_initialization_process():
         InfectionInitializationProcess(
             "vec_model",
             jnp.arange(n_timepoints),
-            SeedInfectionsFromVec(n_timepoints),
+            InitializeInfectionsFromVec(n_timepoints),
             t_unit=1,
         )
 

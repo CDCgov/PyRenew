@@ -19,7 +19,7 @@ from pyrenew.latent import (
     HospitalAdmissions,
     InfectionInitializationProcess,
     Infections,
-    SeedInfectionsZeroPad,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV, RandomVariable
 from pyrenew.model import HospitalAdmissionsModel
@@ -195,7 +195,7 @@ def test_model_hosp_no_obs_model():
     I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
@@ -305,7 +305,7 @@ def test_model_hosp_with_obs_model():
     I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
@@ -395,7 +395,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
@@ -498,7 +498,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     I0 = InfectionInitializationProcess(
         "I0_seeding",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 

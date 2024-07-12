@@ -66,7 +66,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
         return self.seed_infections(I_pre_seed)
 
 
-class SeedInfectionsZeroPad(InfectionInitializationMethod):
+class InitializeInfectionsZeroPad(InfectionInitializationMethod):
     """
     Create a seed infection vector of specified length by
     padding a shorter vector with an appropriate number of
@@ -95,7 +95,7 @@ class SeedInfectionsZeroPad(InfectionInitializationMethod):
         return jnp.pad(I_pre_seed, (self.n_timepoints - I_pre_seed.size, 0))
 
 
-class SeedInfectionsFromVec(InfectionInitializationMethod):
+class InitializeInfectionsFromVec(InfectionInitializationMethod):
     """Create seed infections from a vector of infections."""
 
     def seed_infections(self, I_pre_seed: ArrayLike):
@@ -120,7 +120,7 @@ class SeedInfectionsFromVec(InfectionInitializationMethod):
         return jnp.array(I_pre_seed)
 
 
-class SeedInfectionsExponentialGrowth(InfectionInitializationMethod):
+class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
     r"""Generate seed infections according to exponential growth.
 
     Notes
@@ -142,7 +142,7 @@ class SeedInfectionsExponentialGrowth(InfectionInitializationMethod):
         rate: RandomVariable,
         t_pre_seed: int | None = None,
     ):
-        """Default constructor for the ``SeedInfectionsExponentialGrowth`` class.
+        """Default constructor for the ``InitializeInfectionsExponentialGrowth`` class.
 
         Parameters
         ----------

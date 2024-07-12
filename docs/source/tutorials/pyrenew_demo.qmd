@@ -69,7 +69,7 @@ from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import (
     InfectionInitializationProcess,
-    SeedInfectionsZeroPad,
+    InitializeInfectionsZeroPad,
 )
 import pyrenew.transformation as t
 ```
@@ -99,7 +99,7 @@ gen_int = DeterministicPMF(pmf_array, name="gen_int")
 I0 = InfectionInitializationProcess(
     "I0_seeding",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsZeroPad(pmf_array.size),
+    InitializeInfectionsZeroPad(pmf_array.size),
     t_unit=1,
 )
 
