@@ -253,13 +253,13 @@ def test_model_hosp_no_obs_model():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model0_samp = model0.sample(n_timepoints_to_simulate=30)
 
-    model0.observation_process = NullObservation()
+    model0.hosp_admission_obs_process_rv = NullObservation()
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model0.sample(n_timepoints_to_simulate=30)
 
-    np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
+    np.testing.assert_array_almost_equal(model0_samp.Rt, model1_samp.Rt)
     np.testing.assert_array_equal(
         model0_samp.latent_infections, model1_samp.latent_infections
     )
@@ -493,6 +493,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
     n_obs_to_generate = 30
+    pad_size = 5
 
     I0 = InfectionSeedingProcess(
         "I0_seeding",
@@ -536,17 +537,17 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
 
     # Other random components
+    total_length = n_obs_to_generate + pad_size + gen_int.size()
     weekday = jnp.array([1, 1, 1, 1, 2, 2])
     weekday = weekday / weekday.sum()
     weekday = jnp.tile(weekday, 10)
-    # weekday = weekday[:n_obs_to_generate]
-    weekday = weekday[:34]
+    weekday = weekday[:total_length]
 
     weekday = DeterministicVariable(weekday, name="weekday")
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
-    hosp_report_prob_dist = hosp_report_prob_dist[:34]
+    hosp_report_prob_dist = hosp_report_prob_dist[:total_length]
     hosp_report_prob_dist = hosp_report_prob_dist / hosp_report_prob_dist.sum()
 
     hosp_report_prob_dist = DeterministicVariable(
@@ -572,23 +573,19 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
 
     # Sampling and fitting model 0 (with no obs for infections)
+
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints_to_simulate=n_obs_to_generate)
+        model1_samp = model1.sample(
+            n_timepoints_to_simulate=n_obs_to_generate, padding=pad_size
+        )
 
-    pad_size = 5
-    obs = jnp.hstack(
-        [
-            jnp.repeat(jnp.nan, pad_size),
-            model1_samp.observed_hosp_admissions[pad_size:],
-        ]
-    )
     # Running with padding
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=obs,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
         padding=pad_size,
     )
 
