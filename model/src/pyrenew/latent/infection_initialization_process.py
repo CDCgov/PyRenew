@@ -27,7 +27,7 @@ class InfectionInitializationProcess(RandomVariable):
         I_pre_seed_rv : RandomVariable
             A RandomVariable representing the number of infections that occur at some time before the renewal process begins. Each `infection_seed_method` uses this random variable in different ways.
         infection_seed_method : InfectionInitializationMethod
-            An `InfectionInitializationMethod` that generates the seed infections for the renewal process.
+            An `InfectionInitializationMethod` that generates the initial infections for the renewal process.
         t_unit : int
             The unit of time for the time series passed to `RandomVariable.set_timeseries`.
         t_start : int, optional
@@ -68,7 +68,7 @@ class InfectionInitializationProcess(RandomVariable):
         I_pre_seed_rv : RandomVariable
             A random variable representing the number of infections that occur at some time before the renewal process begins.
         infection_seed_method : InfectionInitializationMethod
-            An method to generate the seed infections.
+            An method to generate the initial infections.
 
         Returns
         -------

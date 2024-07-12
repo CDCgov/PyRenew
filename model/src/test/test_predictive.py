@@ -22,7 +22,7 @@ from pyrenew.process import RtRandomWalkProcess
 pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(pmf_array, name="gen_int")
 I0 = InfectionInitializationProcess(
-    "I0_seeding",
+    "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
     t_unit=1,

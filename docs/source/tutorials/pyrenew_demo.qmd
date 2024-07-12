@@ -97,7 +97,7 @@ gen_int = DeterministicPMF(pmf_array, name="gen_int")
 
 # 2) Initial infections
 I0 = InfectionInitializationProcess(
-    "I0_seeding",
+    "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     InitializeInfectionsZeroPad(pmf_array.size),
     t_unit=1,

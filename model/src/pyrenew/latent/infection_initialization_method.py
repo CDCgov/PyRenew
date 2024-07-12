@@ -16,7 +16,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
         Parameters
         ----------
         n_timepoints : int
-            the number of time points to generate seed infections for
+            the number of time points to generate initial infections for
 
         Returns
         -------
@@ -32,7 +32,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
         Parameters
         ----------
         n_timepoints : int
-            the number of time points to generate seed infections for
+            the number of time points to generate initial infections for
 
         Returns
         -------
@@ -68,13 +68,13 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
 class InitializeInfectionsZeroPad(InfectionInitializationMethod):
     """
-    Create a seed infection vector of specified length by
+    Create an initial infection vector of specified length by
     padding a shorter vector with an appropriate number of
     zeros at the beginning of the time series.
     """
 
     def seed_infections(self, I_pre_seed: ArrayLike):
-        """Pad the seed infections with zeros at the beginning of the time series.
+        """Pad the initial infections with zeros at the beginning of the time series.
 
         Parameters
         ----------
@@ -96,15 +96,15 @@ class InitializeInfectionsZeroPad(InfectionInitializationMethod):
 
 
 class InitializeInfectionsFromVec(InfectionInitializationMethod):
-    """Create seed infections from a vector of infections."""
+    """Create initial infections from a vector of infections."""
 
     def seed_infections(self, I_pre_seed: ArrayLike):
-        """Create seed infections from a vector of infections.
+        """Create initial infections from a vector of infections.
 
         Parameters
         ----------
         I_pre_seed : ArrayLike
-            An array with the same length as ``n_timepoints`` to be used as the seed infections.
+            An array with the same length as ``n_timepoints`` to be used as the initial infections.
 
         Returns
         -------
@@ -121,7 +121,7 @@ class InitializeInfectionsFromVec(InfectionInitializationMethod):
 
 
 class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
-    r"""Generate seed infections according to exponential growth.
+    r"""Generate initial infections according to exponential growth.
 
     Notes
     -----
@@ -147,7 +147,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         Parameters
         ----------
         n_timepoints : int
-            the number of time points to generate seed infections for
+            the number of time points to generate initial infections for
         rate : RandomVariable
             A random variable representing the rate of exponential growth
         t_pre_seed : int | None, optional
@@ -160,7 +160,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         self.t_pre_seed = t_pre_seed
 
     def seed_infections(self, I_pre_seed: ArrayLike):
-        """Generate seed infections according to exponential growth.
+        """Generate initial infections according to exponential growth.
 
         Parameters
         ----------
