@@ -67,7 +67,10 @@ from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.process import RtRandomWalkProcess
-from pyrenew.latent import InfectionInitializationProcess, SeedInfectionsZeroPad
+from pyrenew.latent import (
+    InfectionInitializationProcess,
+    SeedInfectionsZeroPad,
+)
 import pyrenew.transformation as t
 ```
 

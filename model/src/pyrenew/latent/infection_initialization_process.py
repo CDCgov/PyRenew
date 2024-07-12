@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 import numpyro as npro
-from pyrenew.latent.infection_initialization_process import (
+from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
 )
 from pyrenew.metaclass import RandomVariable

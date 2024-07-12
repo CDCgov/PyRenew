@@ -36,7 +36,7 @@ Infection Initialization Process
 Infection Initialization Method
 ------------------------
 
-.. automodule:: pyrenew.latent.infection_initialization_process
+.. automodule:: pyrenew.latent.infection_initialization_method
    :members:
    :undoc-members:
    :show-inheritance:
