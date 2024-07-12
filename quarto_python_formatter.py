@@ -55,9 +55,6 @@ def process_file(
             temp_filepath = Path(temp_file.name)
 
         temp_filepath.replace(filepath)
-        print(
-            f"Python code cells in {filepath} have been formatted using Black."
-        )
     except IOError as e:
         print(f"Error processing file {filepath}: {e}", file=sys.stderr)
         sys.exit(1)
@@ -71,9 +68,12 @@ if __name__ == "__main__":
         sys.exit(1)
 
     black_args = sys.argv[1].split()
+
+    missing_files = [file for file in sys.argv[2:] if not Path(file).exists()]
+    if missing_files:
+        raise FileNotFoundError(
+            f"Error: The following file(s) do not exist: {', '.join(missing_files)}."
+        )
     for filepath in sys.argv[2:]:
         path = Path(filepath)
-        if not path.exists():
-            print(f"Error: File {path} does not exist.", file=sys.stderr)
-            continue
         process_file(path, black_args)
