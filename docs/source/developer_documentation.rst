@@ -2,7 +2,6 @@ Developer Documentation
 =======================
 
 **Note this document is a work in progress. Contrbitions to all sections are welcome.**
-
 Github Workflow
 ---------------
 
@@ -41,7 +40,6 @@ PyRenew Principles
    -  Using ``numpyro.deterministic`` within a ``RandomVariable`` is discouraged. Only use at the ``numpyro.deterministic`` ``Model`` level. If something might need to be recorded from a ``RandomVariable``, it should be returned from the ``RandomVariable`` so it can be recorded at the ``Model`` level.
    -  Using default site names in a ``RandomVariable`` is discouraged. Only use default site names at the ``Model`` level.
    -  Use ``DeterministicVariable``\ s instead of constants within a model.
-
 
 Adding Documentation to Sphinx
 ------------------------------
@@ -84,7 +82,7 @@ To make the new tutorial available in the website, developers should follow thes
           getting_started
           example_with_datasets
 
-3. Add an rst entry with the same basename as the ``quarto`` file in the ``./docs/source/tutorials`` directory. For instance, the `example_with_datasets.rst` file was added to the repository. This last step can be done running the bash script `./.pre-commit-rst-placeholder.sh <https://github.com/CDCgov/multisignal-epi-inference/blob/main/.pre-commit-rst-placeholder.sh>`__. Note the script should be executed by ``pre-commit``.
+3. Add an rst entry with the same basename as the ``quarto`` file in the ``./docs/source/tutorials`` directory. For instance, the `example_with_datasets.rst` file was added to the repository. This last step can be done running the bash script `./hook_scripts/pre-commit-rst-placeholder.sh <https://github.com/CDCgov/multisignal-epi-inference/blob/main/hook_scripts/pre-commit-rst-placeholder.sh>`__. Note the script should be executed by ``pre-commit``.
 
 
 Adding new pages
@@ -97,7 +95,7 @@ Sphinx also allows adding arbitrary pages. For instance, all the ``PyRenew`` tut
 
 2. Make sure the new ``rst`` file is included in an indexed file, for instance, ``./docs/source/general/ctoc.rst``. Here is how it looks:
 
-.. code-block::
+.. code-block:: RST
 
    Complete Table Of Contents
    ==========================
