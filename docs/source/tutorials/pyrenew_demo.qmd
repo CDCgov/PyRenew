@@ -37,7 +37,7 @@ import numpyro.distributions as dist
 from pyrenew.process import SimpleRandomWalkProcess
 ```
 
-To understand the simple random walk process underlying the sampling within the renewal process model, we first examine a single random walk path. Using the `sample` method from an instance of the `SimpleRandomWalkProcess` class, we first create an instance of the `SimpleRandomWalkProcess` class with a normal distribution of mean = 0 and standard deviation = 0.0001 as its input. Next, the `with` statement sets the seed for the random number generator for the n_timepoints of the block that follows. Inside the `with` block, the `q_samp = q.sample(n_timepoints=100)` generates the sample instance over a n_timepoints of 100 time units. Finally, this single random walk process is visualized using `matplot.pyplot` to plot the exponential of the sample instance.
+To understand the simple random walk process underlying the sampling within the renewal process model, we first examine a single random walk path. Using the `sample` method from an instance of the `SimpleRandomWalkProcess` class, we first create an instance of the `SimpleRandomWalkProcess` class with a normal distribution of mean = 0 and standard deviation = 0.0001 as its input. Next, the `with` statement sets the seed for the random number generator for the n_timepoints of the block that follows. Inside the `with` block, the `q_samp = q(n_timepoints=100)` generates the sample instance over a n_timepoints of 100 time units. Finally, this single random walk process is visualized using `matplot.pyplot` to plot the exponential of the sample instance.
 
 ```{python}
 # | label: fig-randwalk
@@ -45,7 +45,7 @@ To understand the simple random walk process underlying the sampling within the 
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
 with seed(rng_seed=np.random.randint(0, 1000)):
-    q_samp = q.sample(n_timepoints=100)
+    q_samp = q(n_timepoints=100)
 
 plt.plot(np.exp(q_samp[0]))
 ```
