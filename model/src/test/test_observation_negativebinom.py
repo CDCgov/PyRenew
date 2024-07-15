@@ -12,7 +12,7 @@ def test_negativebinom_deterministic_obs():
     Check that a deterministic NegativeBinomialObservation can sample
     """
 
-    negb = NegativeBinomialObservation(concentration_prior=10)
+    negb = NegativeBinomialObservation(concentration_rv=10)
 
     np.random.seed(223)
     rates = np.random.randint(1, 5, size=10)
@@ -31,7 +31,7 @@ def test_negativebinom_random_obs():
     Check that a random NegativeBinomialObservation can sample
     """
 
-    negb = NegativeBinomialObservation(concentration_prior=10)
+    negb = NegativeBinomialObservation(concentration_rv=10)
 
     np.random.seed(223)
     rates = np.repeat(5, 20000)

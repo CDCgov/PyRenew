@@ -16,9 +16,8 @@ class NegativeBinomialObservation(RandomVariable):
 
     def __init__(
         self,
-        concentration_prior: dist.Distribution | ArrayLike,
-        concentration_suffix: str | None = "_concentration",
-        parameter_name="negbinom_rv",
+        name: str,
+        concentration_rv: RandomVariable,
         eps: float = 1e-10,
     ) -> None:
         """
@@ -33,10 +32,8 @@ class NegativeBinomialObservation(RandomVariable):
             despite the fact that larger values imply that the distribution
             becomes more Poissonian, while smaller ones imply a greater degree
             of dispersion.
-        concentration_suffix : str | None, optional
-            Suffix for the numpy variable. Defaults to "_concentration".
         parameter_name : str, optional
-            Name for the numpy variable. Defaults to "negbinom_rv".
+            Name for the numpy variable.
         eps : float, optional
             Small value to add to the predicted mean to prevent numerical
             instability. Defaults to 1e-10.
@@ -46,18 +43,9 @@ class NegativeBinomialObservation(RandomVariable):
         None
         """
 
-        NegativeBinomialObservation.validate(concentration_prior)
+        NegativeBinomialObservation.validate(concentration_rv)
 
-        if isinstance(concentration_prior, dist.Distribution):
-            self.sample_prior = lambda: numpyro.sample(
-                self.parameter_name + self.concentration_suffix,
-                concentration_prior,
-            )
-        else:
-            self.sample_prior = lambda: concentration_prior
-
-        self.parameter_name = parameter_name
-        self.concentration_suffix = concentration_suffix
+        self.name = name
         self.eps = eps
 
     def sample(
@@ -86,7 +74,7 @@ class NegativeBinomialObservation(RandomVariable):
         -------
         tuple
         """
-        concentration = self.sample_prior()
+        concentration = self.concentration_rv()
 
         if name is None:
             name = self.parameter_name
