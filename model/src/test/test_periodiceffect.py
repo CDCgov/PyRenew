@@ -30,7 +30,7 @@ def test_periodiceffect() -> None:
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        ans = pe.sample(duration=duration).value
+        ans = pe(duration=duration).value
 
     # Checking that the shape of the sampled Rt is correct
     assert ans.shape == (duration,)
@@ -44,7 +44,7 @@ def test_periodiceffect() -> None:
     params["offset"] = 5
     pe = PeriodicEffect(**params)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        ans2 = pe.sample(duration=duration).value
+        ans2 = pe(duration=duration).value
 
     # Checking that the shape of the sampled Rt is correct
     assert ans2.shape == (duration,)

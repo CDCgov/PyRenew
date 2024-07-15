@@ -197,7 +197,7 @@ class InfFeedback(RandomVariable):
         I0_vec = I0[-gen_int_rev.size :]
 
         # Sampling inf feedback strength and adjusting the shape
-        inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
+        inf_feedback_strength, *_ = self.infection_feedback_strength(
             **kwargs,
         )
         inf_feedback_strength = au.pad_x_to_match_y(
@@ -205,7 +205,7 @@ class InfFeedback(RandomVariable):
         )
 
         # Sampling inf feedback and adjusting the shape
-        inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
+        inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
         inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
         # Generating the infections with feedback
