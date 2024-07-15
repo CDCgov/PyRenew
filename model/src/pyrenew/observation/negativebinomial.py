@@ -25,15 +25,15 @@ class NegativeBinomialObservation(RandomVariable):
 
         Parameters
         ----------
-        concentration_prior : dist.Distribution | numbers.nums
-            Numpyro distribution from which to sample the positive concentration
+        name : str
+            Name for the numpy variable.
+        concentration : RandomVariable
+            Random variable from which to sample the positive concentration
             parameter of the negative binomial. This parameter is sometimes
             called k, phi, or the "dispersion" or "overdispersion" parameter,
             despite the fact that larger values imply that the distribution
             becomes more Poissonian, while smaller ones imply a greater degree
             of dispersion.
-        parameter_name : str, optional
-            Name for the numpy variable.
         eps : float, optional
             Small value to add to the predicted mean to prevent numerical
             instability. Defaults to 1e-10.
