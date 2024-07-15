@@ -13,7 +13,7 @@ from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
 class HospModelSample(NamedTuple):
     """
-    A container for holding the output from `model.HospitalAdmissionsModel.sample()`.
+    A container for holding the output from `model.HospitalAdmissionsModel()`.
 
     Attributes
     ----------

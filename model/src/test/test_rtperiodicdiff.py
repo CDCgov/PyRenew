@@ -153,12 +153,12 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
 
     _, ans0 = lax.scan(
         f=rtwd.autoreg_process,
-        init=np.hstack([params["log_rt_prior"].sample()[0], b]),
+        init=np.hstack([params["log_rt_prior"]()[0], b]),
         xs=noise,
     )
 
     ans1 = _manual_rt_weekly_diff(
-        log_seed=params["log_rt_prior"].sample()[0], sd=noise, b=b
+        log_seed=params["log_rt_prior"]()[0], sd=noise, b=b
     )
 
     assert_array_equal(ans0, ans1)

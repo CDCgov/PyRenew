@@ -142,8 +142,8 @@ def test_infectionsrtfeedback_feedback():
         gen_int=gen_int,
         Rt=Rt,
         I0=I0,
-        inf_feedback_strength=inf_feed_strength.sample()[0],
-        inf_feedback_pmf=inf_feedback_pmf.sample()[0],
+        inf_feedback_strength=inf_feed_strength()[0],
+        inf_feedback_pmf=inf_feedback_pmf()[0],
     )
 
     assert not jnp.array_equal(

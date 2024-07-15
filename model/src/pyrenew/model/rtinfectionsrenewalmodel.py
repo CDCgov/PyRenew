@@ -16,7 +16,7 @@ from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 # Output class of the RtInfectionsRenewalModel
 class RtInfectionsRenewalSample(NamedTuple):
     """
-    A container for holding the output from `model.RtInfectionsRenewalModel.sample()`.
+    A container for holding the output from `model.RtInfectionsRenewalModel()`.
 
     Attributes
     ----------
