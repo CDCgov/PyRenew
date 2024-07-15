@@ -175,7 +175,7 @@ Future possibilities
 ====================
 
 In the future, we might wish to have ``RandomVariable`` constructors
-coerce fixed values to ``DeterminsiticVariables`` via some
+coerce fixed values to ``DeterministicVariables`` via some
 ``ensure_rv()`` function, so that this:
 
 .. code:: python
