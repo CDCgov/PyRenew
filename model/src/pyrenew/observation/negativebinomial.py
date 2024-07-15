@@ -87,7 +87,8 @@ class NegativeBinomialObservation(RandomVariable):
         -------
         tuple
         """
-        concentration = self.concentration_rv.sample()
+        concentration, *_ = self.concentration_rv.sample()
+
         negative_binomial_sample = (
             numpyro.sample(
                 name=self.name,

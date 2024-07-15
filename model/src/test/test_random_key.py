@@ -34,7 +34,7 @@ def create_test_model():  # numpydoc ignore=GL08
         t_unit=1,
     )
     latent_infections = Infections()
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("poisson_rv")
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
         Rt_transform=t.ExpTransform().inv,

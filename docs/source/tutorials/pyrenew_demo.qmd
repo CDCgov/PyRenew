@@ -124,7 +124,7 @@ latent_admissions = HospitalAdmissions(
 )
 
 # 5) An observation process for the hospital admissions
-admissions_process = PoissonObservation()
+admissions_process = PoissonObservation("poisson_rv")
 
 # 6) A random walk process (it could be deterministic using
 # pyrenew.process.DeterministicProcess())
