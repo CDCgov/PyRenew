@@ -3,8 +3,6 @@
 
 from __future__ import annotations
 
-import numbers as nums
-
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
@@ -26,7 +24,7 @@ class NegativeBinomialObservation(RandomVariable):
         Parameters
         ----------
         name : str
-            Name for the numpy variable.
+            Name for the numpyro variable.
         concentration : RandomVariable
             Random variable from which to sample the positive concentration
             parameter of the negative binomial. This parameter is sometimes
@@ -46,13 +44,31 @@ class NegativeBinomialObservation(RandomVariable):
         NegativeBinomialObservation.validate(concentration_rv)
 
         self.name = name
+        self.concentration_rv = concentration_rv
         self.eps = eps
+
+    @staticmethod
+    def validate(concentration_rv: RandomVariable) -> None:
+        """
+        Check that the concentration_rv is actually a RandomVariable
+
+        Parameters
+        ----------
+        concentration_rv : any
+            RandomVariable from which to sample the positive concentration
+            parameter of the negative binomial.
+
+        Returns
+        -------
+        None
+        """
+        assert isinstance(concentration_rv, RandomVariable)
+        return None
 
     def sample(
         self,
         mu: ArrayLike,
         obs: ArrayLike | None = None,
-        name: str | None = None,
         **kwargs,
     ) -> tuple:
         """
@@ -64,9 +80,6 @@ class NegativeBinomialObservation(RandomVariable):
             Mean parameter of the negative binomial distribution.
         obs : ArrayLike, optional
             Observed data, by default None.
-        name : str, optional
-            Name of the random variable if other than that defined during
-            construction, by default None (self.parameter_name).
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample calls, should there be any.
 
@@ -74,14 +87,10 @@ class NegativeBinomialObservation(RandomVariable):
         -------
         tuple
         """
-        concentration = self.concentration_rv()
-
-        if name is None:
-            name = self.parameter_name
-
-        return (
+        concentration = self.concentration_rv.sample()
+        negative_binomial_sample = (
             numpyro.sample(
-                name=name,
+                name=self.name,
                 fn=dist.NegativeBinomial2(
                     mean=mu + self.eps,
                     concentration=concentration,
@@ -89,24 +98,4 @@ class NegativeBinomialObservation(RandomVariable):
                 obs=obs,
             ),
         )
-
-    @staticmethod
-    def validate(concentration_prior: any) -> None:
-        """
-        Check that the concentration prior is actually a nums.Number
-
-        Parameters
-        ----------
-        concentration_prior : any
-            Numpyro distribution from which to sample the positive concentration
-            parameter of the negative binomial. Expected dist.Distribution or
-            numbers.nums
-
-        Returns
-        -------
-        None
-        """
-        assert isinstance(
-            concentration_prior, (dist.Distribution, nums.Number)
-        )
-        return None
+        return (negative_binomial_sample,)
