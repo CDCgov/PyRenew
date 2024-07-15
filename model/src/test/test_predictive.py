@@ -10,9 +10,9 @@ import pyrenew.transformation as t
 import pytest
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
+    InfectionInitializationProcess,
     Infections,
-    InfectionSeedingProcess,
-    SeedInfectionsZeroPad,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
@@ -21,10 +21,10 @@ from pyrenew.process import RtRandomWalkProcess
 
 pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(pmf_array, name="gen_int")
-I0 = InfectionSeedingProcess(
-    "I0_seeding",
+I0 = InfectionInitializationProcess(
+    "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+    InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
     t_unit=1,
 )
 latent_infections = Infections()

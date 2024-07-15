@@ -19,8 +19,8 @@ import numpyro.distributions as dist
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import (
     Infections,
-    InfectionSeedingProcess,
-    SeedInfectionsZeroPad,
+    InfectionInitializationProcess,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
@@ -99,7 +99,7 @@ To initialize these five components within the renewal modeling framework, we es
 
 (1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
-(2) an instance of the `InfectionSeedingProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `SeedInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
+(2) an instance of the `InfectionInitializationProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
 
 (3) an instance of the `RtRandomWalkProcess` class with default values
 
@@ -114,10 +114,10 @@ pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(pmf_array, name="gen_int")
 
 # (2) Initial infections (inferred with a prior)
-I0 = InfectionSeedingProcess(
-    "I0_seeding",
+I0 = InfectionInitializationProcess(
+    "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsZeroPad(pmf_array.size),
+    InitializeInfectionsZeroPad(pmf_array.size),
     t_unit=1,
 )
 
@@ -155,7 +155,7 @@ The following diagram summarizes how the modules interact via composition; notab
 %%| include: true
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
-    i0["(2) I0\n(InfectionSeedingProcess)"]
+    i0["(2) I0\n(InfectionInitializationProcess)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     inf["(4) latent_infections\n(Infections)"]
     obs["(5) observation_process\n(PoissonObservation)"]

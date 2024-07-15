@@ -8,13 +8,15 @@ from pyrenew.latent.infection_functions import (
     compute_infections_from_rt_with_feedback,
     logistic_susceptibility_adjustment,
 )
-from pyrenew.latent.infection_seeding_method import (
-    InfectionSeedMethod,
-    SeedInfectionsExponentialGrowth,
-    SeedInfectionsFromVec,
-    SeedInfectionsZeroPad,
+from pyrenew.latent.infection_initialization_method import (
+    InfectionInitializationMethod,
+    InitializeInfectionsExponentialGrowth,
+    InitializeInfectionsFromVec,
+    InitializeInfectionsZeroPad,
 )
-from pyrenew.latent.infection_seeding_process import InfectionSeedingProcess
+from pyrenew.latent.infection_initialization_process import (
+    InfectionInitializationProcess,
+)
 from pyrenew.latent.infections import Infections
 from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
 
@@ -24,10 +26,10 @@ __all__ = [
     "logistic_susceptibility_adjustment",
     "compute_infections_from_rt",
     "compute_infections_from_rt_with_feedback",
-    "InfectionSeedMethod",
-    "SeedInfectionsExponentialGrowth",
-    "SeedInfectionsFromVec",
-    "SeedInfectionsZeroPad",
-    "InfectionSeedingProcess",
+    "InfectionInitializationMethod",
+    "InitializeInfectionsExponentialGrowth",
+    "InitializeInfectionsFromVec",
+    "InitializeInfectionsZeroPad",
+    "InfectionInitializationProcess",
     "InfectionsWithFeedback",
 ]

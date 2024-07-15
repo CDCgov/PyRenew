@@ -67,7 +67,10 @@ from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.process import RtRandomWalkProcess
-from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsZeroPad
+from pyrenew.latent import (
+    InfectionInitializationProcess,
+    InitializeInfectionsZeroPad,
+)
 import pyrenew.transformation as t
 ```
 
@@ -93,10 +96,10 @@ pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(pmf_array, name="gen_int")
 
 # 2) Initial infections
-I0 = InfectionSeedingProcess(
-    "I0_seeding",
+I0 = InfectionInitializationProcess(
+    "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsZeroPad(pmf_array.size),
+    InitializeInfectionsZeroPad(pmf_array.size),
     t_unit=1,
 )
 
