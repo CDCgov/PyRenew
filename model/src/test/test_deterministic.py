@@ -43,12 +43,12 @@ def test_deterministic():
         jnp.array([0.25, 0.25, 0.2, 0.3]),
     )
     testing.assert_array_equal(
-        var3.sample(duration=5)[0],
+        var3(duration=5)[0],
         jnp.array([1, 2, 3, 4, 4]),
     )
 
     testing.assert_array_equal(
-        var3.sample(duration=3)[0],
+        var3(duration=3)[0],
         jnp.array(
             [
                 1,

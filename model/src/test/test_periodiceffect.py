@@ -81,8 +81,8 @@ def test_weeklyeffect() -> None:
     pe = PeriodicEffect(**params)
     pe2 = DayOfWeekEffect(**params2)
 
-    ans1 = pe.sample(duration=duration).value
-    ans2 = pe2.sample(duration=duration).value
+    ans1 = pe(duration=duration).value
+    ans2 = pe2(duration=duration).value
 
     assert_array_equal(ans1, ans2)
 

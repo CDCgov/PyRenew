@@ -66,7 +66,7 @@ def test_rtweeklydiff() -> None:
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        rt = rtwd.sample(duration=duration).rt
+        rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (duration,)
@@ -81,7 +81,7 @@ def test_rtweeklydiff() -> None:
     params["offset"] = 5
     rtwd = RtWeeklyDiffProcess(**params)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        rt2 = rtwd.sample(duration=duration).rt
+        rt2 = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
     assert rt2.shape == (duration,)
@@ -114,7 +114,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     np.random.seed(223)
     duration = 1000
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        rt = rtwd.sample(duration=duration).rt
+        rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (duration,)
@@ -185,7 +185,7 @@ def test_rtperiodicdiff_smallsample():
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        rt = rtwd.sample(duration=6).rt
+        rt = rtwd(duration=6).rt
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (6,)

@@ -14,7 +14,7 @@ from pyrenew.metaclass import RandomVariable
 
 class HospitalAdmissionsSample(NamedTuple):
     """
-    A container to hold the output of `latent.HospAdmissions()`.
+    A container to hold the output of `latent.HospAdmissions.sample()`.
 
     Attributes
     ----------
@@ -173,14 +173,14 @@ class HospitalAdmissions(RandomVariable):
         HospitalAdmissionsSample
         """
 
-        infection_hosp_rate, *_ = self.infect_hosp_rate_rv.sample(**kwargs)
+        infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
 
         infection_hosp_rate_t = infection_hosp_rate * latent_infections
 
         (
             infection_to_admission_interval,
             *_,
-        ) = self.infection_to_admission_interval_rv.sample(**kwargs)
+        ) = self.infection_to_admission_interval_rv(**kwargs)
 
         latent_hospital_admissions = jnp.convolve(
             infection_hosp_rate_t,
@@ -191,13 +191,12 @@ class HospitalAdmissions(RandomVariable):
         # Applying the day of the week effect
         latent_hospital_admissions = (
             latent_hospital_admissions
-            * self.day_of_week_effect_rv.sample(**kwargs)[0]
+            * self.day_of_week_effect_rv(**kwargs)[0]
         )
 
         # Applying probability of hospitalization effect
         latent_hospital_admissions = (
-            latent_hospital_admissions
-            * self.hosp_report_prob_rv.sample(**kwargs)[0]
+            latent_hospital_admissions * self.hosp_report_prob_rv(**kwargs)[0]
         )
 
         npro.deterministic(

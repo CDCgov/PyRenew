@@ -82,13 +82,13 @@ def test_infectionsrtfeedback():
     infections = latent.Infections()
 
     with npro.handlers.seed(rng_seed=0):
-        samp1 = InfectionsWithFeedback.sample(
+        samp1 = InfectionsWithFeedback(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
         )
 
-        samp2 = infections.sample(
+        samp2 = infections(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
@@ -126,13 +126,13 @@ def test_infectionsrtfeedback_feedback():
     infections = latent.Infections()
 
     with npro.handlers.seed(rng_seed=0):
-        samp1 = InfectionsWithFeedback.sample(
+        samp1 = InfectionsWithFeedback(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
         )
 
-        samp2 = infections.sample(
+        samp2 = infections(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
