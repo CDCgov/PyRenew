@@ -224,12 +224,14 @@ class RtInfectionsRenewalModel(Model):
         )
         npro.deterministic("all_latent_infections", all_latent_infections)
 
-        observed_infections = au.pad_x_to_match_y(
-            observed_infections,
-            all_latent_infections,
-            jnp.nan,
-            pad_direction="start",
-        )
+        if observed_infections is not None:
+            observed_infections = au.pad_x_to_match_y(
+                observed_infections,
+                all_latent_infections,
+                jnp.nan,
+                pad_direction="start",
+            )
+
         Rt = au.pad_x_to_match_y(
             Rt,
             all_latent_infections,

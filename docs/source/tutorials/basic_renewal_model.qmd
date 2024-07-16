@@ -268,6 +268,7 @@ az.plot_trace(
     coords={"Rt_dim_0": np.arange(10)},
     compact=False,
 )
+plt.show()
 ```
 
 
@@ -305,6 +306,7 @@ axes.legend()
 axes.set_title("Posterior Effective Reproduction Number", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
 axes.set_ylabel("$R_t$", fontsize=10)
+plt.show()
 ```
 
 and latent infections:
@@ -345,4 +347,5 @@ axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
 axes.set_ylabel("Latent Infections", fontsize=10)
+plt.show()
 ```
