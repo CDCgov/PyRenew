@@ -197,7 +197,7 @@ class InfFeedback(RandomVariable):
         I0_vec = I0[-gen_int_rev.size :]
 
         # Sampling inf feedback strength and adjusting the shape
-        inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
+        inf_feedback_strength, *_ = self.infection_feedback_strength(
             **kwargs,
         )
         inf_feedback_strength = au.pad_x_to_match_y(
@@ -205,7 +205,7 @@ class InfFeedback(RandomVariable):
         )
 
         # Sampling inf feedback and adjusting the shape
-        inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
+        inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
         inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
         # Generating the infections with feedback
@@ -230,13 +230,13 @@ class InfFeedback(RandomVariable):
 
 The core of the class is implemented in the `sample()` method. Things to highlight from the above code:
 
-1. **Arguments of `sample`**: The `InfFeedback` class will be used within `RtInfectionsRenewalModel` to generate latent infections. During the sampling process, `InfFeedback.sample()` will receive the reproduction number, the initial number of infections, and the generation interval. `RandomVariable.sample()` calls are expected to include the `**kwargs` argument, even if unused.
+1. **Arguments of `sample`**: The `InfFeedback` class will be used within `RtInfectionsRenewalModel` to generate latent infections. During the sampling process, `InfFeedback()` will receive the reproduction number, the initial number of infections, and the generation interval. `RandomVariable()` calls are expected to include the `**kwargs` argument, even if unused.
 
-2. **Calls to `RandomVariable.sample()`**: All calls to `RandomVariable.sample()` are expected to return a tuple or named tuple. In our implementation, we capture the output of `infection_feedback_strength.sample()` and `infection_feedback_pmf.sample()` in the variables `inf_feedback_strength` and `inf_feedback_pmf`, respectively, disregarding the other outputs (i.e., using `*_`).
+2. **Calls to `RandomVariable()`**: All calls to `RandomVariable()` are expected to return a tuple or named tuple. In our implementation, we capture the output of `infection_feedback_strength()` and `infection_feedback_pmf()` in the variables `inf_feedback_strength` and `inf_feedback_pmf`, respectively, disregarding the other outputs (i.e., using `*_`).
 
 3. **Saving computed quantities**: Since `Rt_adj` is not generated via `numpyro.sample()`, we use `numpyro.deterministic()` to record the quantity to a site; allowing us to access it later.
 
-4. **Return type of `InfFeedback.sample()`**: As said before, the `sample()` method should return a tuple or named tuple. In our case, we return a named tuple `InfFeedbackSample` with two fields: `infections` and `rt`.
+4. **Return type of `InfFeedback()`**: As said before, the `sample()` method should return a tuple or named tuple. In our case, we return a named tuple `InfFeedbackSample` with two fields: `infections` and `rt`.
 
 ```{python}
 # | label: simulation2

@@ -82,13 +82,13 @@ def test_infectionsrtfeedback():
     infections = latent.Infections()
 
     with npro.handlers.seed(rng_seed=0):
-        samp1 = InfectionsWithFeedback.sample(
+        samp1 = InfectionsWithFeedback(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
         )
 
-        samp2 = infections.sample(
+        samp2 = infections(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
@@ -126,13 +126,13 @@ def test_infectionsrtfeedback_feedback():
     infections = latent.Infections()
 
     with npro.handlers.seed(rng_seed=0):
-        samp1 = InfectionsWithFeedback.sample(
+        samp1 = InfectionsWithFeedback(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
         )
 
-        samp2 = infections.sample(
+        samp2 = infections(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
@@ -142,8 +142,8 @@ def test_infectionsrtfeedback_feedback():
         gen_int=gen_int,
         Rt=Rt,
         I0=I0,
-        inf_feedback_strength=inf_feed_strength.sample()[0],
-        inf_feedback_pmf=inf_feedback_pmf.sample()[0],
+        inf_feedback_strength=inf_feed_strength()[0],
+        inf_feedback_pmf=inf_feedback_pmf()[0],
     )
 
     assert not jnp.array_equal(

@@ -28,7 +28,7 @@ def test_admissions_sample():
         Rt_rw_dist=dist.Normal(0, 0.025),
     )
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt, *_ = rt.sample(n_timepoints=30)
+        sim_rt, *_ = rt(n_timepoints=30)
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
     i0 = 10 * jnp.ones_like(gen_int)
@@ -36,7 +36,7 @@ def test_admissions_sample():
     inf1 = Infections()
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        inf_sampled1 = inf1.sample(Rt=sim_rt, gen_int=gen_int, I0=i0)
+        inf_sampled1 = inf1(Rt=sim_rt, gen_int=gen_int, I0=i0)
 
     # Testing the hospital admissions
     inf_hosp = DeterministicPMF(
@@ -73,7 +73,7 @@ def test_admissions_sample():
     )
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_hosp_1 = hosp1.sample(latent_infections=inf_sampled1[0])
+        sim_hosp_1 = hosp1(latent_infections=inf_sampled1[0])
 
     testing.assert_array_less(
         sim_hosp_1.latent_hospital_admissions,

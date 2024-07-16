@@ -25,7 +25,7 @@ def _assert_sample_and_rtype(
     """
     Return type-checking for RandomVariable's sample function
 
-    Objects passed as `RandomVariable` should (a) have a sample() method that
+    Objects passed as `RandomVariable` should (a) have a `sample()` method that
     (b) returns either a tuple or a named tuple.
 
     Parameters
@@ -103,7 +103,7 @@ class RandomVariable(metaclass=ABCMeta):
     are expected to be used internally mostly for tasks including padding,
     alignment of time series, and other time-aware operations.
 
-    Both attributes give information about the output of the sample() method,
+    Both attributes give information about the output of the `sample()` method,
     in other words, the relative time units of the returning value.
 
     Attributes
@@ -138,7 +138,7 @@ class RandomVariable(metaclass=ABCMeta):
         t_start : int
             The start of the time series relative to the
             model time. It could be negative, indicating
-            that the sample() method returns timepoints
+            that the `sample()` method returns timepoints
             that occur prior to the model t = 0.
 
         t_unit : int
@@ -201,6 +201,12 @@ class RandomVariable(metaclass=ABCMeta):
         Validation of kwargs to be implemented in subclasses.
         """
         pass
+
+    def __call__(self, **kwargs):
+        """
+        Alias for `sample()`.
+        """
+        return self.sample(**kwargs)
 
 
 class DistributionalRVSample(NamedTuple):
