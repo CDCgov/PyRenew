@@ -40,7 +40,7 @@ rt_proc = process.RtWeeklyDiffProcess(
 
 ```{python}
 with npro.handlers.seed(rng_seed=20):
-    sim_data = rt_proc.sample(duration=30)
+    sim_data = rt_proc(duration=30)
 
 # Plotting the Rt values
 import matplotlib.pyplot as plt
@@ -84,7 +84,7 @@ Like before, we can use the `sample` method to generate samples from the day of 
 
 ```{python}
 with npro.handlers.seed(rng_seed=20):
-    sim_data = dayofweek.sample(duration=30)
+    sim_data = dayofweek(duration=30)
 
 # Plotting the effect values
 import matplotlib.pyplot as plt

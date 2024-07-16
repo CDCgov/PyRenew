@@ -156,7 +156,7 @@ class InfectionsWithFeedback(RandomVariable):
         I0 = I0[-gen_int_rev.size :]
 
         # Sampling inf feedback strength
-        inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
+        inf_feedback_strength, *_ = self.infection_feedback_strength(
             **kwargs,
         )
 
@@ -175,7 +175,7 @@ class InfectionsWithFeedback(RandomVariable):
             )
 
         # Sampling inf feedback pmf
-        inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
+        inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
 
         inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 

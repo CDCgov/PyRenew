@@ -42,7 +42,7 @@ def test_infection_initialization_process():
 
     for model in [zero_pad_model, exp_model, vec_model]:
         with npro.handlers.seed(rng_seed=1):
-            model.sample()
+            model()
 
     # Check that the InfectionInitializationProcess class raises an error when the wrong type of I0 is passed
     with pytest.raises(TypeError):
