@@ -209,7 +209,7 @@ with npro.handlers.seed(rng_seed=np.random.randint(1, timeframe)):
 
 ```{python}
 # | label: fig-basic
-# | fig-cap: Rt and Infections
+# | fig-cap: Rt and Admissions
 import matplotlib.pyplot as plt
 
 fig, axs = plt.subplots(1, 2)
@@ -218,9 +218,9 @@ fig, axs = plt.subplots(1, 2)
 axs[0].plot(sim_data.Rt)
 axs[0].set_ylabel("Rt")
 
-# Infections plot
+# Admissions plot
 axs[1].plot(sim_data.observed_hosp_admissions)
-axs[1].set_ylabel("Infections")
+axs[1].set_ylabel("Admissions")
 axs[1].set_yscale("log")
 
 fig.suptitle("Basic renewal model")
@@ -249,7 +249,7 @@ hosp_model.run(
 )
 ```
 
-We can use the `plot_posterior` method to visualize the results[^capture]:
+We can use the `plot_posterior` method to visualize the results, plotting the observed values against the inferred latent values[^capture]:
 
 [^capture]: The output is captured to avoid `quarto` from displaying the output twice.
 
@@ -267,7 +267,7 @@ out = hosp_model.plot_posterior(
 )
 ```
 
-Test `posterior_predictive` and `prior_predictive` methods to generate posterior and prior predictive samples.
+Test `posterior_predictive` and `prior_predictive` methods to generate posterior and prior predictive samples for observed admissions.
 
 ```{python}
 # | label: demonstrate-use-of-predictive-methods
@@ -572,7 +572,7 @@ Below we plot the prior predictive distributions using equal tailed bayesian cre
 
 ```{python}
 # | label: fig-output-prior-predictive
-# | fig-cap: Prior Predictive Infections
+# | fig-cap: Prior Predictive Admissions
 def compute_eti(dataset, eti_prob):
     eti_bdry = dataset.quantile(
         ((1 - eti_prob) / 2, 1 / 2 + eti_prob / 2), dim=("chain", "draw")
@@ -611,9 +611,9 @@ plt.scatter(
     color="black",
 )
 
-axes.set_title("Prior Predictive Infections", fontsize=10)
+axes.set_title("Prior Predictive Admissions", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Observed Infections", fontsize=10)
+axes.set_ylabel("Observed Admissions", fontsize=10)
 plt.yscale("log")
 plt.show()
 ```
@@ -621,7 +621,7 @@ plt.show()
 And now we plot the posterior predictive distributions with a `{python} n_forecast_points`-day-ahead forecast:
 ```{python}
 # | label: fig-output-posterior-predictive
-# | fig-cap: Posterior Predictive Infections
+# | fig-cap: Posterior Predictive Admissions
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
@@ -670,8 +670,8 @@ plt.scatter(
     color="black",
 )
 axes.legend()
-axes.set_title("Posterior Predictive Infections", fontsize=10)
+axes.set_title("Posterior Predictive Admissions", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Observed Infections", fontsize=10)
+axes.set_ylabel("Observed Admissions", fontsize=10)
 plt.show()
 ```
