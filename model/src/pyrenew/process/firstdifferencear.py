@@ -51,13 +51,13 @@ class FirstDifferenceARProcess(RandomVariable):
         Parameters
         ----------
         duration : int
-            Passed to ARProcess.sample().s
+            Passed to ARProcess()
         init_val : ArrayLike, optional
             Starting point of the AR process, by default None.
         init_rate_of_change : ArrayLike, optional
             Passed to ARProcess.sample, by default None.
         name : str, optional
-            Passed to ARProcess.sample(), by default "trend_rw"
+            Passed to ARProcess(), by default "trend_rw"
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
             calls, should there be any.

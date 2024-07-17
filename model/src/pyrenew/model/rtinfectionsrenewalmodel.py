@@ -192,28 +192,28 @@ class RtInfectionsRenewalModel(Model):
             n_timepoints = n_timepoints_to_simulate + padding
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
-        Rt, *_ = self.Rt_process_rv.sample(
+        Rt, *_ = self.Rt_process_rv(
             n_timepoints=n_timepoints,
             **kwargs,
         )
 
         # Getting the generation interval
-        gen_int, *_ = self.gen_int_rv.sample(**kwargs)
+        gen_int, *_ = self.gen_int_rv(**kwargs)
 
         # Sampling initial infections
-        I0, *_ = self.I0_rv.sample(**kwargs)
+        I0, *_ = self.I0_rv(**kwargs)
         # Sampling from the latent process
         (
             post_initialization_latent_infections,
             *_,
-        ) = self.latent_infections_rv.sample(
+        ) = self.latent_infections_rv(
             Rt=Rt,
             gen_int=gen_int,
             I0=I0,
             **kwargs,
         )
 
-        observed_infections, *_ = self.infection_obs_process_rv.sample(
+        observed_infections, *_ = self.infection_obs_process_rv(
             mu=post_initialization_latent_infections[padding:],
             obs=data_observed_infections,
             **kwargs,
@@ -224,12 +224,14 @@ class RtInfectionsRenewalModel(Model):
         )
         npro.deterministic("all_latent_infections", all_latent_infections)
 
-        observed_infections = au.pad_x_to_match_y(
-            observed_infections,
-            all_latent_infections,
-            jnp.nan,
-            pad_direction="start",
-        )
+        if observed_infections is not None:
+            observed_infections = au.pad_x_to_match_y(
+                observed_infections,
+                all_latent_infections,
+                jnp.nan,
+                pad_direction="start",
+            )
+
         Rt = au.pad_x_to_match_y(
             Rt,
             all_latent_infections,
