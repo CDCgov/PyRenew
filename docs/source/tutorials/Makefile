@@ -1,15 +1,15 @@
 help:
 	@echo "Available targets"
 	@echo "================="
-	@echo "  help           : Show this help message"
-	@echo "  docs           : Render the documentation"
-	@echo "  docs_clean     : Remove the generated documentation files"
-	@echo "  docs_md        : Convert the Quarto files to rendered Markdown files"
-	@echo "  docs_ipynb     : Convert the Quarto files to Jupyter notebooks"
-	@echo "  docs_py        : Convert the Jupyter notebooks to Python scripts"
+	@echo "  help            : Show this help message"
+	@echo "  tutorials       : Render the tutorials"
+	@echo "  tutorials_clean : Remove the generated tutorial files"
+	@echo "  tutorials_md    : Render the tutorials to markdown" 
+	@echo "  tutorials_ipynb : Convert the Quarto files to Jupyter notebooks"
+	@echo "  tutorials_py    : Convert the Jupyter notebooks to Python scripts"
 	@echo ""
 
-.PHONY: help docs docs_md docs_rst docs_ipynb docs_py docs_clean
+.PHONY: help tutorials tutorials_md tutorials_rst tutorials_ipynb tutorials_py tutorials_clean
 
 
 # Pattern rule to build a markdown file from a qmd file
@@ -45,20 +45,20 @@ IPYNB_FILES := $(QMD_FILES:.qmd=.ipynb)
 PY_FILES := $(IPYNB_FILES:.ipynb=.py)
 
 # Target to build all docs
-docs: docs_md docs_ipynb docs_py
+tutorials: tutorials_md tutorials_ipynb tutorials_py
 
 # Target to build all markdown files
-docs_md: $(MD_FILES)
+tutorials_md: $(MD_FILES)
 
 # Target to build all reStructuredText files
-docs_rst: $(RST_FILES)
+tutorials_rst: $(RST_FILES)
 
 # Target to build all notebook files
-docs_ipynb: $(IPYNB_FILES)
+tutorials_ipynb: $(IPYNB_FILES)
 
 # Target to build all Python files
-docs_py: $(PY_FILES)
+tutorials_py: $(PY_FILES)
 
-docs_clean:
+tutorials_clean:
 	rm -rf docs/*_files/
 	rm -f $(MD_FILES) $(IPYNB_FILES) $(PY_FILES)
