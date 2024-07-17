@@ -60,7 +60,7 @@ def test_model_hosp_no_timepoints_or_observations():
         Rt_transform=t.ExpTransform().inv,
         Rt_rw_dist=dist.Normal(0, 0.025),
     )
-    observed_admissions = PoissonObservation()
+    observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
         jnp.array(
@@ -129,7 +129,7 @@ def test_model_hosp_both_timepoints_and_observations():
         Rt_transform=t.ExpTransform().inv,
         Rt_rw_dist=dist.Normal(0, 0.025),
     )
-    observed_admissions = PoissonObservation()
+    observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
         jnp.array(
@@ -315,7 +315,7 @@ def test_model_hosp_with_obs_model():
         Rt_transform=t.ExpTransform().inv,
         Rt_rw_dist=dist.Normal(0, 0.025),
     )
-    observed_admissions = PoissonObservation()
+    observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
         jnp.array(
@@ -405,7 +405,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         Rt_transform=t.ExpTransform().inv,
         Rt_rw_dist=dist.Normal(0, 0.025),
     )
-    observed_admissions = PoissonObservation()
+    observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
         jnp.array(
@@ -508,7 +508,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         Rt_transform=t.ExpTransform().inv,
         Rt_rw_dist=dist.Normal(0, 0.025),
     )
-    observed_admissions = PoissonObservation()
+    observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
         jnp.array(

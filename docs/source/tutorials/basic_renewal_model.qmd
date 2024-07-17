@@ -132,7 +132,7 @@ rt_proc = RtRandomWalkProcess(
 latent_infections = Infections()
 
 # (5) The observed infections process (with mean at the latent infections)
-observation_process = PoissonObservation()
+observation_process = PoissonObservation("poisson_rv")
 ```
 
 With these five pieces, we can build the basic renewal model as an instance of the  `RtInfectionsRenewalModel` class:

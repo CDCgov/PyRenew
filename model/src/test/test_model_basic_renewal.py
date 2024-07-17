@@ -35,7 +35,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
 
     latent_infections = Infections()
 
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("poisson_rv")
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
@@ -72,7 +72,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     latent_infections = Infections()
 
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("possion_rv")
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
@@ -195,7 +195,7 @@ def test_model_basicrenewal_with_obs_model():
 
     latent_infections = Infections()
 
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("poisson_rv")
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
@@ -249,7 +249,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
 
     latent_infections = Infections()
 
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("poisson_rv")
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),

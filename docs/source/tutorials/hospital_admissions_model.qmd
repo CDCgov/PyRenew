@@ -176,7 +176,15 @@ rtproc = process.RtRandomWalkProcess(
 )
 
 # The observation model
-obs = observation.NegativeBinomialObservation(concentration_prior=1.0)
+obs = observation.NegativeBinomialObservation(
+    "negbinom_rv",
+    metaclass.DistributionalRV(
+        dist.TransformedDistribution(
+            dist.HalfNormal(), transformation.PowerTransform(-2)
+        ),
+        "concentration",
+    ),
+)
 ```
 
 Notice all the components are `RandomVariable` instances. We can now build the model:
