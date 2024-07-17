@@ -90,7 +90,7 @@ class DeterministicVariable(RandomVariable):
         Returns
         -------
         tuple
-            Containing the stored values during construction wrapped in a TimeArrayß.
+            Containing the stored values during construction wrapped in a TimeArray.
         """
         if record:
             npro.deterministic(self.name, self.vars)
