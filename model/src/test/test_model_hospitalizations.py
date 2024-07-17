@@ -580,7 +580,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     obs = jnp.hstack(
         [
             jnp.repeat(jnp.nan, pad_size),
-            model1_samp.observed_hosp_admissions[pad_size:],
+            model1_samp.observed_hosp_admissions.array[pad_size:],
         ]
     )
     # Running with padding

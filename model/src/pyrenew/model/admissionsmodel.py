@@ -199,7 +199,7 @@ class HospitalAdmissionsModel(Model):
             latent_infections=basic_model.latent_infections.array,
             **kwargs,
         )
-        i0_size = len(latent_hosp_admissions) - n_timepoints
+        i0_size = len(latent_hosp_admissions.array) - n_timepoints
         if self.hosp_admission_obs_process_rv is None:
             observed_hosp_admissions = None
         else:
