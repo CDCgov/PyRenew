@@ -43,14 +43,14 @@ The following code-chunk defines the model components. Notice that for both the 
 # | label: model-components
 gen_int_array = jnp.array([0.25, 0.5, 0.15, 0.1])
 gen_int = DeterministicPMF(gen_int_array, name="gen_int")
-feedback_strength = DeterministicVariable(0.05, name="feedback_strength")
+feedback_strength = DeterministicVariable(0.01, name="feedback_strength")
 
 I0 = InfectionInitializationProcess(
     "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
     InitializeInfectionsExponentialGrowth(
         gen_int_array.size,
-        DeterministicVariable(0.5, name="rate"),
+        DeterministicVariable(0.05, name="rate"),
     ),
     t_unit=1,
 )
@@ -96,7 +96,7 @@ with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
-ax.plot(model0_samp.latent_infections)
+ax.plot(model0_samp.latent_infections.array)
 ax.set_xlabel("Time")
 ax.set_ylabel("Infections")
 plt.show()
@@ -153,7 +153,7 @@ The next step is to create the actual class. The bulk of its implementation lies
 # | label: new-model-def
 # | code-line-numbers: true
 # Creating the class
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, TimeArray
 from pyrenew.latent import compute_infections_from_rt_with_feedback
 from pyrenew import arrayutils as au
 from jax.typing import ArrayLike
@@ -201,12 +201,14 @@ class InfFeedback(RandomVariable):
             **kwargs,
         )
         inf_feedback_strength = au.pad_x_to_match_y(
-            x=inf_feedback_strength, y=Rt, fill_value=inf_feedback_strength[0]
+            x=inf_feedback_strength.array,
+            y=Rt,
+            fill_value=inf_feedback_strength.array[0]
         )
 
         # Sampling inf feedback and adjusting the shape
         inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
-        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
+        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf.array)
 
         # Generating the infections with feedback
         all_infections, Rt_adj = compute_infections_from_rt_with_feedback(
@@ -223,8 +225,8 @@ class InfFeedback(RandomVariable):
         # Preparing theoutput
 
         return InfFeedbackSample(
-            infections=all_infections,
-            rt=Rt_adj,
+            infections=TimeArray(all_infections),
+            rt=TimeArray(Rt_adj),
         )
 ```
 
@@ -267,8 +269,8 @@ Comparing `model0` with `model1`, these two should match:
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(ncols=2)
-ax[0].plot(model0_samp.latent_infections)
-ax[1].plot(model1_samp.latent_infections)
+ax[0].plot(model0_samp.latent_infections.array)
+ax[1].plot(model1_samp.latent_infections.array)
 ax[0].set_xlabel("Time (model 0)")
 ax[1].set_xlabel("Time (model 1)")
 ax[0].set_ylabel("Infections")

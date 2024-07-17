@@ -190,11 +190,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(sim_data.Rt)
+axs[0].plot(sim_data.Rt.array)
 axs[0].set_ylabel("Rt")
 
 # Infections plot
-axs[1].plot(sim_data.observed_infections)
+axs[1].plot(sim_data.observed_infections.array)
 axs[1].set_ylabel("Infections")
 
 fig.suptitle("Basic renewal model")
@@ -212,7 +212,7 @@ import jax
 model1.run(
     num_warmup=2000,
     num_samples=1000,
-    data_observed_infections=sim_data.observed_infections,
+    data_observed_infections=sim_data.observed_infections.array,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(
         progress_bar=False, num_chains=2, chain_method="sequential"

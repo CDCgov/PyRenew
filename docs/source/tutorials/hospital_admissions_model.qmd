@@ -223,11 +223,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(sim_data.Rt)
+axs[0].plot(sim_data.Rt.array)
 axs[0].set_ylabel("Rt")
 
 # Admissions plot
-axs[1].plot(sim_data.observed_hosp_admissions)
+axs[1].plot(sim_data.observed_hosp_admissions.array)
 axs[1].set_ylabel("Admissions")
 axs[1].set_yscale("log")
 
