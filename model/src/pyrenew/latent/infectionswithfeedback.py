@@ -19,17 +19,17 @@ class InfectionsRtFeedbackSample(NamedTuple):
 
     Attributes
     ----------
-    post_seed_infections : ArrayLike | None, optional
+    post_initialization_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
     rt : ArrayLike | None, optional
         The adjusted reproduction number. Defaults to None.
     """
 
-    post_seed_infections: ArrayLike | None = None
+    post_initialization_infections: ArrayLike | None = None
     rt: ArrayLike | None = None
 
     def __repr__(self):
-        return f"InfectionsSample(post_seed_infections={self.post_seed_infections}, rt={self.rt})"
+        return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections}, rt={self.rt})"
 
 
 class InfectionsWithFeedback(RandomVariable):
@@ -158,7 +158,7 @@ class InfectionsWithFeedback(RandomVariable):
         I0 = I0[-gen_int_rev.size :]
 
         # Sampling inf feedback strength
-        inf_feedback_strength, *_ = self.infection_feedback_strength.sample(
+        inf_feedback_strength, *_ = self.infection_feedback_strength(
             **kwargs,
         )
         inf_feedback_strength = inf_feedback_strength.array
@@ -178,12 +178,12 @@ class InfectionsWithFeedback(RandomVariable):
             )
 
         # Sampling inf feedback pmf
-        inf_feedback_pmf, *_ = self.infection_feedback_pmf.sample(**kwargs)
+        inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
 
         inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf.array)
 
         (
-            post_seed_infections,
+            post_initialization_infections,
             Rt_adj,
         ) = inf.compute_infections_from_rt_with_feedback(
             I0=I0,
@@ -198,6 +198,6 @@ class InfectionsWithFeedback(RandomVariable):
         npro.deterministic("Rt_adjusted", Rt_adj)
 
         return InfectionsRtFeedbackSample(
-            post_seed_infections=TimeArray(post_seed_infections),
+            post_initialization_infections=TimeArray(post_initialization_infections),
             rt=TimeArray(Rt_adj),
         )

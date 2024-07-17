@@ -114,7 +114,7 @@ class RtRandomWalkProcess(RandomVariable):
 
         Rt0_trans = self.Rt_transform(Rt0)
         Rt_trans_proc = SimpleRandomWalkProcess(self.Rt_rw_dist)
-        Rt_trans_ts, *_ = Rt_trans_proc.sample(
+        Rt_trans_ts, *_ = Rt_trans_proc(
             n_timepoints=n_timepoints,
             name="Rt_transformed_rw",
             init=Rt0_trans,

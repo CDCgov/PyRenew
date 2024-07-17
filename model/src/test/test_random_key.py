@@ -14,9 +14,9 @@ import pyrenew.transformation as t
 from numpy.testing import assert_array_equal, assert_raises
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
+    InfectionInitializationProcess,
     Infections,
-    InfectionSeedingProcess,
-    SeedInfectionsZeroPad,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
@@ -27,14 +27,14 @@ from pyrenew.process import RtRandomWalkProcess
 def create_test_model():  # numpydoc ignore=GL08
     pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
     gen_int = DeterministicPMF(pmf_array, name="gen_int")
-    I0 = InfectionSeedingProcess(
-        "I0_seeding",
+    I0 = InfectionInitializationProcess(
+        "I0_initialization",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
     latent_infections = Infections()
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("poisson_rv")
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
         Rt_transform=t.ExpTransform().inv,
@@ -94,6 +94,9 @@ def test_rng_keys_produce_correct_samples():
     # set up base models for testing
     models = [create_test_model() for _ in range(5)]
     n_timepoints_to_simulate = [30] * len(models)
+    n_timepoints_posterior_predictive = [
+        x + models[0].gen_int_rv.size() for x in n_timepoints_to_simulate
+    ]
     # sample only a single model and use that model's samples
     # as the observed_infections for the rest of the models
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
@@ -115,7 +118,9 @@ def test_rng_keys_produce_correct_samples():
 
     posterior_predictive_list = [
         posterior_predictive_test_model(*elt)
-        for elt in list(zip(models, n_timepoints_to_simulate, rng_keys))
+        for elt in list(
+            zip(models, n_timepoints_posterior_predictive, rng_keys)
+        )
     ]
     # using same rng_key should get same run samples
     assert_array_equal(

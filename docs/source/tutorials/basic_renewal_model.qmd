@@ -19,8 +19,8 @@ import numpyro.distributions as dist
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import (
     Infections,
-    InfectionSeedingProcess,
-    SeedInfectionsZeroPad,
+    InfectionInitializationProcess,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
@@ -99,7 +99,7 @@ To initialize these five components within the renewal modeling framework, we es
 
 (1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
-(2) an instance of the `InfectionSeedingProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `SeedInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
+(2) an instance of the `InfectionInitializationProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
 
 (3) an instance of the `RtRandomWalkProcess` class with default values
 
@@ -114,10 +114,10 @@ pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(pmf_array, name="gen_int")
 
 # (2) Initial infections (inferred with a prior)
-I0 = InfectionSeedingProcess(
-    "I0_seeding",
+I0 = InfectionInitializationProcess(
+    "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsZeroPad(pmf_array.size),
+    InitializeInfectionsZeroPad(pmf_array.size),
     t_unit=1,
 )
 
@@ -132,7 +132,7 @@ rt_proc = RtRandomWalkProcess(
 latent_infections = Infections()
 
 # (5) The observed infections process (with mean at the latent infections)
-observation_process = PoissonObservation()
+observation_process = PoissonObservation("poisson_rv")
 ```
 
 With these five pieces, we can build the basic renewal model as an instance of the  `RtInfectionsRenewalModel` class:
@@ -155,7 +155,7 @@ The following diagram summarizes how the modules interact via composition; notab
 %%| include: true
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
-    i0["(2) I0\n(InfectionSeedingProcess)"]
+    i0["(2) I0\n(InfectionInitializationProcess)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     inf["(4) latent_infections\n(Infections)"]
     obs["(5) observation_process\n(PoissonObservation)"]
@@ -214,7 +214,9 @@ model1.run(
     num_samples=1000,
     data_observed_infections=sim_data.observed_infections,
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False, num_chains=2, chain_method="sequential"),
+    mcmc_args=dict(
+        progress_bar=False, num_chains=2, chain_method="sequential"
+    ),
 )
 ```
 
@@ -265,7 +267,8 @@ az.plot_trace(
     var_names=["Rt"],
     coords={"Rt_dim_0": np.arange(10)},
     compact=False,
-);
+)
+plt.show()
 ```
 
 
@@ -302,7 +305,8 @@ axes.plot(x_data, mean_Rt[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Effective Reproduction Number", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("$R_t$", fontsize=10);
+axes.set_ylabel("$R_t$", fontsize=10)
+plt.show()
 ```
 
 and latent infections:
@@ -335,10 +339,13 @@ az.plot_hdi(
 )
 
 # Add mean of the posterior to the figure
-mean_latent_infection = np.mean(idata.posterior["all_latent_infections"], axis=1)
+mean_latent_infection = np.mean(
+    idata.posterior["all_latent_infections"], axis=1
+)
 axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Latent Infections", fontsize=10);
+axes.set_ylabel("Latent Infections", fontsize=10)
+plt.show()
 ```

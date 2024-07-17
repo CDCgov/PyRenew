@@ -54,7 +54,7 @@ def _infection_w_feedback_alt(
             I_vec[t : t + len_gen], np.flip(gen_int)
         )
 
-    return {"post_seed_infections": I_vec[I0.size :], "rt": Rt_adj}
+    return {"post_initialization_infections": I_vec[I0.size :], "rt": Rt_adj}
 
 
 def test_infectionsrtfeedback():
@@ -82,19 +82,22 @@ def test_infectionsrtfeedback():
     infections = latent.Infections()
 
     with npro.handlers.seed(rng_seed=0):
-        samp1 = InfectionsWithFeedback.sample(
+        samp1 = InfectionsWithFeedback(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
         )
 
-        samp2 = infections.sample(
+        samp2 = infections(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
         )
 
-    assert_array_equal(samp1.post_seed_infections.array, samp2.post_seed_infections.array)
+    assert_array_equal(
+        samp1.post_initialization_infections.array,
+        samp2.post_initialization_infections.array,
+    )
     assert_array_equal(samp1.rt.array, Rt)
 
     return None
@@ -123,13 +126,13 @@ def test_infectionsrtfeedback_feedback():
     infections = latent.Infections()
 
     with npro.handlers.seed(rng_seed=0):
-        samp1 = InfectionsWithFeedback.sample(
+        samp1 = InfectionsWithFeedback(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
         )
 
-        samp2 = infections.sample(
+        samp2 = infections(
             gen_int=gen_int,
             Rt=Rt,
             I0=I0,
@@ -139,15 +142,17 @@ def test_infectionsrtfeedback_feedback():
         gen_int=gen_int,
         Rt=Rt,
         I0=I0,
-        inf_feedback_strength=inf_feed_strength.sample()[0].array,
-        inf_feedback_pmf=inf_feedback_pmf.sample()[0].array,
+        inf_feedback_strength=inf_feed_strength()[0].array,
+        inf_feedback_pmf=inf_feedback_pmf()[0].array,
     )
 
     assert not jnp.array_equal(
-        samp1.post_seed_infections.array, samp2.post_seed_infections.array
+        samp1.post_initialization_infections.array,
+        samp2.post_initialization_infections.array,
     )
     assert_array_almost_equal(
-        samp1.post_seed_infections.array, res["post_seed_infections"]
+        samp1.post_initialization_infections.array,
+        res["post_initialization_infections"],
     )
     assert_array_almost_equal(samp1.rt.array, res["rt"])
 

@@ -10,7 +10,7 @@ from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype, TimeArra
 class PeriodicEffectSample(NamedTuple):
     """
     A container for holding the output from
-    `process.PeriodicEffect.sample()`.
+    `process.PeriodicEffect()`.
 
     Attributes
     ----------

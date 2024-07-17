@@ -13,18 +13,18 @@ from pyrenew.metaclass import RandomVariable, TimeArray
 
 class InfectionsSample(NamedTuple):
     """
-    A container for holding the output from `latent.Infections.sample()`.
+    A container for holding the output from `latent.Infections()`.
 
     Attributes
     ----------
-    post_seed_infections : TimeArray | None, optional
+    post_initialization_infections : TimeArray | None, optional
         The estimated latent infections. Defaults to None.
     """
 
-    post_seed_infections: TimeArray | None = None
+    post_initialization_infections: ArrayLike | None = None
 
     def __repr__(self):
-        return f"InfectionsSample(post_seed_infections={self.post_seed_infections})"
+        return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections})"
 
 
 class Infections(RandomVariable):
@@ -91,10 +91,10 @@ class Infections(RandomVariable):
         gen_int_rev = jnp.flip(gen_int)
         recent_I0 = I0[-gen_int_rev.size :]
 
-        post_seed_infections = inf.compute_infections_from_rt(
+        post_initialization_infections = inf.compute_infections_from_rt(
             I0=recent_I0,
             Rt=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        return InfectionsSample(TimeArray(post_seed_infections))
+        return InfectionsSample(TimeArray(post_initialization_infections))

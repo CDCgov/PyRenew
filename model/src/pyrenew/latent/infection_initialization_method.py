@@ -7,16 +7,16 @@ from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 
-class InfectionSeedMethod(metaclass=ABCMeta):
+class InfectionInitializationMethod(metaclass=ABCMeta):
     """Method for seeding initial infections in a renewal process."""
 
     def __init__(self, n_timepoints: int):
-        """Default constructor for the ``InfectionSeedMethod`` class.
+        """Default constructor for the ``InfectionInitializationMethod`` class.
 
         Parameters
         ----------
         n_timepoints : int
-            the number of time points to generate seed infections for
+            the number of time points to generate initial infections for
 
         Returns
         -------
@@ -27,12 +27,12 @@ class InfectionSeedMethod(metaclass=ABCMeta):
 
     @staticmethod
     def validate(n_timepoints: int) -> None:
-        """Validate inputs for the ``InfectionSeedMethod`` class constructor
+        """Validate inputs for the ``InfectionInitializationMethod`` class constructor
 
         Parameters
         ----------
         n_timepoints : int
-            the number of time points to generate seed infections for
+            the number of time points to generate initial infections for
 
         Returns
         -------
@@ -54,7 +54,7 @@ class InfectionSeedMethod(metaclass=ABCMeta):
         Parameters
         ----------
         I_pre_seed : ArrayLike
-            An array representing some number of latent infections to be used with the specified ``InfectionSeedMethod``.
+            An array representing some number of latent infections to be used with the specified ``InfectionInitializationMethod``.
 
         Returns
         -------
@@ -66,15 +66,15 @@ class InfectionSeedMethod(metaclass=ABCMeta):
         return self.seed_infections(I_pre_seed)
 
 
-class SeedInfectionsZeroPad(InfectionSeedMethod):
+class InitializeInfectionsZeroPad(InfectionInitializationMethod):
     """
-    Create a seed infection vector of specified length by
+    Create an initial infection vector of specified length by
     padding a shorter vector with an appropriate number of
     zeros at the beginning of the time series.
     """
 
     def seed_infections(self, I_pre_seed: ArrayLike):
-        """Pad the seed infections with zeros at the beginning of the time series.
+        """Pad the initial infections with zeros at the beginning of the time series.
 
         Parameters
         ----------
@@ -95,16 +95,16 @@ class SeedInfectionsZeroPad(InfectionSeedMethod):
         return jnp.pad(I_pre_seed, (self.n_timepoints - I_pre_seed.size, 0))
 
 
-class SeedInfectionsFromVec(InfectionSeedMethod):
-    """Create seed infections from a vector of infections."""
+class InitializeInfectionsFromVec(InfectionInitializationMethod):
+    """Create initial infections from a vector of infections."""
 
     def seed_infections(self, I_pre_seed: ArrayLike):
-        """Create seed infections from a vector of infections.
+        """Create initial infections from a vector of infections.
 
         Parameters
         ----------
         I_pre_seed : ArrayLike
-            An array with the same length as ``n_timepoints`` to be used as the seed infections.
+            An array with the same length as ``n_timepoints`` to be used as the initial infections.
 
         Returns
         -------
@@ -120,8 +120,8 @@ class SeedInfectionsFromVec(InfectionSeedMethod):
         return jnp.array(I_pre_seed)
 
 
-class SeedInfectionsExponentialGrowth(InfectionSeedMethod):
-    r"""Generate seed infections according to exponential growth.
+class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
+    r"""Generate initial infections according to exponential growth.
 
     Notes
     -----
@@ -142,12 +142,12 @@ class SeedInfectionsExponentialGrowth(InfectionSeedMethod):
         rate: RandomVariable,
         t_pre_seed: int | None = None,
     ):
-        """Default constructor for the ``SeedInfectionsExponentialGrowth`` class.
+        """Default constructor for the ``InitializeInfectionsExponentialGrowth`` class.
 
         Parameters
         ----------
         n_timepoints : int
-            the number of time points to generate seed infections for
+            the number of time points to generate initial infections for
         rate : RandomVariable
             A random variable representing the rate of exponential growth
         t_pre_seed : int | None, optional
@@ -160,7 +160,7 @@ class SeedInfectionsExponentialGrowth(InfectionSeedMethod):
         self.t_pre_seed = t_pre_seed
 
     def seed_infections(self, I_pre_seed: ArrayLike):
-        """Generate seed infections according to exponential growth.
+        """Generate initial infections according to exponential growth.
 
         Parameters
         ----------
@@ -176,10 +176,8 @@ class SeedInfectionsExponentialGrowth(InfectionSeedMethod):
             raise ValueError(
                 f"I_pre_seed must be an array of size 1. Got size {I_pre_seed.size}."
             )
-        
-        (rate,) = self.rate.sample()
+        (rate,) = self.rate()
         rate = rate.array
-
         if rate.size != 1:
             raise ValueError(
                 f"rate must be an array of size 1. Got size {rate.size}."

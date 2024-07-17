@@ -18,9 +18,9 @@ def test_fd_ar_can_be_sampled():
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with and without inits
         # for the rate of change
-        ans0 = ar_fd.sample(3532, init_val=jnp.array([50.0]))
-        ans1 = ar_fd.sample(
-            3532,
+        ans0 = ar_fd(duration=3532, init_val=jnp.array([50.0]))
+        ans1 = ar_fd(
+            duration=3532,
             init_val=jnp.array([50.0]),
             init_rate_of_change=jnp.array([0.25]),
         )
