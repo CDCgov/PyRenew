@@ -271,11 +271,11 @@ and use the InferenceData to compute the model-fit diagnostics. Here, we show di
 ```{python}
 # | label: diagnostics
 diagnostic_stats_summary = az.summary(
-    idata.posterior["Rt"],
+    idata.posterior["Rt"][4:],  # ignore Nan padding
     kind="diagnostics",
 )
 
-print(diagnostic_stats_summary[4:14])
+print(diagnostic_stats_summary[10])
 ```
 
 Below we use `plot_trace` to inspect the trace of the first 10 inferred $\mathcal{R}(t)$ values.
