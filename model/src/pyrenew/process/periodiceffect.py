@@ -4,7 +4,11 @@ from typing import NamedTuple
 
 import jax.numpy as jnp
 import pyrenew.arrayutils as au
-from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype, TimeArray
+from pyrenew.metaclass import (
+    RandomVariable,
+    TimeArray,
+    _assert_sample_and_rtype,
+)
 
 
 class PeriodicEffectSample(NamedTuple):
@@ -110,10 +114,12 @@ class PeriodicEffect(RandomVariable):
         """
 
         return PeriodicEffectSample(
-            value=TimeArray(self.broadcaster(
-                data=self.quantity_to_broadcast.sample(**kwargs)[0].array,
-                n_timepoints=duration,
-            ))
+            value=TimeArray(
+                self.broadcaster(
+                    data=self.quantity_to_broadcast.sample(**kwargs)[0].array,
+                    n_timepoints=duration,
+                )
+            )
         )
 
 

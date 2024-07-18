@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from jax.typing import ArrayLike
-from pyrenew.metaclass import TimeArray
 from pyrenew.deterministic.deterministic import DeterministicVariable
+from pyrenew.metaclass import TimeArray
 
 
 class NullVariable(DeterministicVariable):

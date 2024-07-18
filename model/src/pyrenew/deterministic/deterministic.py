@@ -96,7 +96,8 @@ class DeterministicVariable(RandomVariable):
             npro.deterministic(self.name, self.vars)
         return (
             TimeArray(
-            array = self.vars,
-            t_start=self.t_start,
-            t_unit=self.t_unit,
-            ),)
+                array=self.vars,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )

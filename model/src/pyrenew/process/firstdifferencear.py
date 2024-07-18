@@ -72,7 +72,9 @@ class FirstDifferenceARProcess(RandomVariable):
             inits=jnp.atleast_1d(init_rate_of_change),
             name=name + "_rate_of_change",
         )
-        return (TimeArray(init_val + jnp.cumsum(rates_of_change.array.flatten())),)
+        return (
+            TimeArray(init_val + jnp.cumsum(rates_of_change.array.flatten())),
+        )
 
     @staticmethod
     def validate():

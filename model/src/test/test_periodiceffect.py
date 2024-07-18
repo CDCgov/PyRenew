@@ -88,5 +88,6 @@ def test_weeklyeffect() -> None:
 
     return None
 
+
 test_periodiceffect()
 test_weeklyeffect()

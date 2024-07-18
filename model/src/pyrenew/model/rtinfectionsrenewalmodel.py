@@ -11,7 +11,10 @@ import pyrenew.arrayutils as au
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
 from pyrenew.metaclass import (
-    Model, RandomVariable, _assert_sample_and_rtype, TimeArray
+    Model,
+    RandomVariable,
+    TimeArray,
+    _assert_sample_and_rtype,
 )
 
 

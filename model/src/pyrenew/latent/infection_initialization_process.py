@@ -105,4 +105,4 @@ class InfectionInitializationProcess(RandomVariable):
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
-            )
+        )

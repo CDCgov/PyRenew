@@ -150,7 +150,8 @@ def test_model_basicrenewal_no_obs_model():
 
     np.testing.assert_array_equal(model0_samp.Rt.array, model1_samp.Rt.array)
     np.testing.assert_array_equal(
-        model0_samp.latent_infections.array, model1_samp.latent_infections.array
+        model0_samp.latent_infections.array,
+        model1_samp.latent_infections.array,
     )
     np.testing.assert_array_equal(
         model0_samp.observed_infections.array,

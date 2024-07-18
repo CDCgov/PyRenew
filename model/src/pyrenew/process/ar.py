@@ -91,9 +91,7 @@ class ARProcess(RandomVariable):
         )
 
         last, ts = lax.scan(_ar_scanner, inits - self.mean, noise)
-        return (
-            TimeArray(jnp.hstack([inits, self.mean + ts.flatten()])),
-            )
+        return (TimeArray(jnp.hstack([inits, self.mean + ts.flatten()])),)
 
     @staticmethod
     def validate():  # numpydoc ignore=RT01

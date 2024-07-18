@@ -192,15 +192,14 @@ class HospitalAdmissions(RandomVariable):
         latent_hospital_admissions = (
             latent_hospital_admissions
             * self.day_of_week_effect_rv(
-                n_timepoints = latent_hospital_admissions.size,
-                **kwargs
-                )[0].array
+                n_timepoints=latent_hospital_admissions.size, **kwargs
+            )[0].array
         )
 
         # Applying probability of hospitalization effect
         latent_hospital_admissions = (
-            latent_hospital_admissions *
-            self.hosp_report_prob_rv(**kwargs)[0].array
+            latent_hospital_admissions
+            * self.hosp_report_prob_rv(**kwargs)[0].array
         )
 
         npro.deterministic(
@@ -213,5 +212,5 @@ class HospitalAdmissions(RandomVariable):
                 array=latent_hospital_admissions,
                 t_start=self.infection_to_admission_interval_rv.t_start,
                 t_unit=self.infection_to_admission_interval_rv.t_unit,
-                )
+            ),
         )

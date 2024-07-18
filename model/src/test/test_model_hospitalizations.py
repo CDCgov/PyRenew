@@ -39,7 +39,11 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
 
     def sample(self, **kwargs):  # numpydoc ignore=GL08
         return (
-            TimeArray(npro.sample(name=self.name, fn=dist.Uniform(high=0.99, low=0.01))),
+            TimeArray(
+                npro.sample(
+                    name=self.name, fn=dist.Uniform(high=0.99, low=0.01)
+                )
+            ),
         )
 
 
@@ -259,15 +263,20 @@ def test_model_hosp_no_obs_model():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model0.sample(n_timepoints_to_simulate=30)
 
-    np.testing.assert_array_almost_equal(model0_samp.Rt.array, model1_samp.Rt.array)
-    np.testing.assert_array_equal(
-        model0_samp.latent_infections.array, model1_samp.latent_infections.array
+    np.testing.assert_array_almost_equal(
+        model0_samp.Rt.array, model1_samp.Rt.array
     )
     np.testing.assert_array_equal(
-        model0_samp.infection_hosp_rate.array, model1_samp.infection_hosp_rate.array
+        model0_samp.latent_infections.array,
+        model1_samp.latent_infections.array,
     )
     np.testing.assert_array_equal(
-        model0_samp.latent_hosp_admissions.array, model1_samp.latent_hosp_admissions.array
+        model0_samp.infection_hosp_rate.array,
+        model1_samp.infection_hosp_rate.array,
+    )
+    np.testing.assert_array_equal(
+        model0_samp.latent_hosp_admissions.array,
+        model1_samp.latent_hosp_admissions.array,
     )
 
     # These are supposed to be none, both
@@ -383,7 +392,6 @@ def test_model_hosp_with_obs_model():
     assert inf_mean.to_numpy().shape[0] == 500
 
 
-
 def test_model_hosp_with_obs_model_weekday_phosp_2():
     """
     Checks that the random Hospitalization model runs
@@ -483,6 +491,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     # For now the assertion is only about the expected number of rows
     # It should be about the MCMC inference.
     assert inf_mean.to_numpy().shape[0] == 500
+
 
 def test_model_hosp_with_obs_model_weekday_phosp():
     """

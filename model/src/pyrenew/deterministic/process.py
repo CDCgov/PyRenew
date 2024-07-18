@@ -1,8 +1,8 @@
 # numpydoc ignore=GL08
 
 import jax.numpy as jnp
-from pyrenew.metaclass import TimeArray
 from pyrenew.deterministic.deterministic import DeterministicVariable
+from pyrenew.metaclass import TimeArray
 
 
 class DeterministicProcess(DeterministicVariable):
@@ -40,15 +40,16 @@ class DeterministicProcess(DeterministicVariable):
         if dif > 0:
             return (
                 TimeArray(
-                    jnp.hstack([res.array, jnp.repeat(res.array[-1], dif)]), t_start=self.t_start,
+                    jnp.hstack([res.array, jnp.repeat(res.array[-1], dif)]),
+                    t_start=self.t_start,
                     t_unit=self.t_unit,
-                    ),
-                    )
+                ),
+            )
 
         return (
             TimeArray(
                 array=res.array[:duration],
                 t_start=self.t_start,
-                t_unit=self.t_unit
+                t_unit=self.t_unit,
             ),
         )

@@ -89,14 +89,13 @@ class NegativeBinomialObservation(RandomVariable):
         """
         concentration, *_ = self.concentration_rv.sample()
 
-        negative_binomial_sample = (
-            numpyro.sample(
-                name=self.name,
-                fn=dist.NegativeBinomial2(
-                    mean=mu + self.eps,
-                    concentration=concentration.array,
-                ),
-                obs=obs,
-            ))
-        
+        negative_binomial_sample = numpyro.sample(
+            name=self.name,
+            fn=dist.NegativeBinomial2(
+                mean=mu + self.eps,
+                concentration=concentration.array,
+            ),
+            obs=obs,
+        )
+
         return (TimeArray(negative_binomial_sample),)

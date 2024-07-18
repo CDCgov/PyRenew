@@ -203,7 +203,7 @@ class InfFeedback(RandomVariable):
         inf_feedback_strength = au.pad_x_to_match_y(
             x=inf_feedback_strength.array,
             y=Rt,
-            fill_value=inf_feedback_strength.array[0]
+            fill_value=inf_feedback_strength.array[0],
         )
 
         # Sampling inf feedback and adjusting the shape

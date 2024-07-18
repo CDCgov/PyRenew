@@ -97,15 +97,9 @@ class TimeArray:
     A container for a time-aware array.
     """
 
-    @staticmethod
-    def to_array(array: ArrayLike | "TimeArray") -> ArrayLike:
-        if isinstance(array, TimeArray):
-            return array.array
-        return array
-    
     def __init__(
         self,
-        array : ArrayLike | None,
+        array: ArrayLike | None,
         t_start: int | None = None,
         t_unit: int | None = None,
     ) -> None:
@@ -127,13 +121,16 @@ class TimeArray:
         """
 
         if array is not None:
-            assert isinstance(array, ArrayLike), "array should be an array-like object."
+            assert isinstance(
+                array, ArrayLike
+            ), "array should be an array-like object."
 
         self.array = array
         self.t_start = t_start
         self.t_unit = t_unit
 
         return None
+
 
 class RandomVariable(metaclass=ABCMeta):
     """
@@ -197,14 +194,13 @@ class RandomVariable(metaclass=ABCMeta):
         """
 
         # Either both values are None or both are not None
-        assert \
-            (t_unit is not None and t_start is not None) or \
-            (t_unit is None and t_start is None), \
-                "Both t_start and t_unit should be None or not None."
+        assert (t_unit is not None and t_start is not None) or (
+            t_unit is None and t_start is None
+        ), "Both t_start and t_unit should be None or not None."
 
         if t_unit is None and t_start is None:
             return None
-        
+
         # Timeseries unit should be a positive integer
         assert isinstance(
             t_unit, int
@@ -347,12 +343,15 @@ class DistributionalRV(RandomVariable):
         DistributionalRVSample
         """
         return DistributionalRVSample(
-            value=TimeArray(jnp.atleast_1d(
-                npro.sample(
-                    name=self.name,
-                    fn=self.dist,
-                    obs=obs,
-                ))),
+            value=TimeArray(
+                jnp.atleast_1d(
+                    npro.sample(
+                        name=self.name,
+                        fn=self.dist,
+                        obs=obs,
+                    )
+                )
+            ),
         )
 
 

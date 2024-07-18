@@ -42,8 +42,8 @@ class DeterministicPMF(RandomVariable):
             The start time of the process.
         t_unit : int, optional
             The unit of time relative to the model's fundamental (smallest)
-            time unit.    
-        
+            time unit.
+
         Returns
         -------
         None
@@ -58,7 +58,7 @@ class DeterministicPMF(RandomVariable):
             name=name,
             t_start=t_start,
             t_unit=t_unit,
-            )
+        )
 
         return None
 
