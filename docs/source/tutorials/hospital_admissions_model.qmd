@@ -22,33 +22,35 @@ $$
 h(t) \sim \text{HospDist}\left(H(t)\right)
 $$
 
-Where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$. The distribution $\text{HospDist}$ is discrete. For this example, we will use a negative binomial distribution:
+Where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$. The distribution $\text{HospDist}$ is discrete. For this example, we will use a negative binomial distribution with an inferred concentration.
 
 $$
 \begin{align*}
-h(t) & \sim \text{NegativeBinomial}\left(\text{concentration} = 1, \text{mean} = H(t)\right) \\
-H(t) & = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
+h(t) & \sim \mathrm{NegativeBinomial}\left(\mathrm{mean} = H(t), \mathrm{concentration} = k\right) \\
+H(t) & = p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau) \\
+\log[p_\mathrm{hosp}(t)] & \sim \mathrm{Normal}(\mu=\log(0.05), \sigma=\log(1.1) \\
+\log(k) & \sim \mathrm{Normal}(\mu=\log(1), \sigma=\log(10))
 \end{align*}
 $$
 
-Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to hospitalization rate, and $\omega(t)$ is the day-of-the-week effect at time $t$; the last section provides an example building such a `RandomVariable`.
+Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to hospitalization rate.
 
 The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to hospitalization rate. The latent infections are modeled as a renewal process:
 
 $$
 \begin{align*}
-I(t) &= R(t) \times \sum_{\tau < t} I(\tau) g(t - \tau) \\
-I(0) &\sim \text{LogNormal}(\mu = \log(80/0.05), \sigma = 1.5)
+I(t) &= \mathcal{R}(t) \times \sum_{\tau < t} I(\tau) g(t - \tau) \\
+\log[I(0)] &\sim \text{Normal}(\mu=\log(100), \sigma=\log(1.75))
 \end{align*}
 $$
 
-The reproductive number $R(t)$ is modeled as a random walk process:
+The reproduction number $\mathcal{R}(t)$ is modeled as a random walk in logarithmic space, i.e.:
 
 $$
 \begin{align*}
-R(t) & = R(t-1) + \epsilon\\
-\log{\epsilon} & \sim \text{Normal}(\mu=0, \sigma=0.1) \\
-R(0) &\sim \text{TruncatedNormal}(\text{loc}=1.2, \text{scale}=0.2, \text{min}=0)
+\log[\mathcal{R}(t)] & = \log[\mathcal{R}(t-1)] + \epsilon\\
+\epsilon & \sim \text{Normal}(\mu=0, \sigma=0.025) \\
+\mathcal{R}(0) &\sim \text{TruncatedNormal}(\text{loc}=1.2, \text{scale}=0.2, \text{min}=0)
 \end{align*}
 $$
 
@@ -141,7 +143,7 @@ inf_hosp_int = deterministic.DeterministicPMF(
 )
 
 hosp_rate = metaclass.DistributionalRV(
-    dist=dist.LogNormal(jnp.log(0.05), 0.1),
+    dist=dist.LogNormal(jnp.log(0.05), jnp.log(1.1)),
     name="IHR",
 )
 
@@ -166,11 +168,11 @@ latent_inf = latent.Infections()
 I0 = InfectionInitializationProcess(
     "I0_initialization",
     metaclass.DistributionalRV(
-        dist=dist.LogNormal(loc=jnp.log(100), scale=0.5), name="I0"
+        dist=dist.LogNormal(loc=jnp.log(100), scale=jnp.log(1.75)), name="I0"
     ),
     InitializeInfectionsExponentialGrowth(
         gen_int_array.size,
-        deterministic.DeterministicVariable(0.5, name="rate"),
+        deterministic.DeterministicVariable(0.05, name="rate"),
     ),
     t_unit=1,
 )
@@ -184,14 +186,21 @@ rtproc = process.RtRandomWalkProcess(
 )
 
 # The observation model
+
+# we place a log-Normal prior on the concentration
+# parameter of the negative binomial.
+nb_conc_rv = metaclass.DistributionalRV(
+    dist.LogNormal(
+        loc=jnp.log(1),
+        scale=jnp.log(10),
+    ),
+    "concentration",
+)
+
+# now we define the observation process
 obs = observation.NegativeBinomialObservation(
     "negbinom_rv",
-    metaclass.DistributionalRV(
-        dist.TransformedDistribution(
-            dist.HalfNormal(), transformation.PowerTransform(-2)
-        ),
-        "concentration",
-    ),
+    concentration_rv=nb_conc_rv,
 )
 ```
 
@@ -209,7 +218,7 @@ hosp_model = model.HospitalAdmissionsModel(
 )
 ```
 
-Let's simulate to check if the model is working:
+Let's simulate from the prior predictive distribution to check that the model is working:
 
 ```{python}
 # | label: simulation
@@ -217,25 +226,24 @@ import numpy as np
 
 timeframe = 120
 
-np.random.seed(223)
-with npro.handlers.seed(rng_seed=np.random.randint(1, timeframe)):
-    sim_data = hosp_model.sample(n_timepoints_to_simulate=timeframe)
+with npro.handlers.seed(rng_seed=223):
+    simulated_data = hosp_model.sample(n_timepoints_to_simulate=timeframe)
 ```
 
 ```{python}
 # | label: fig-basic
-# | fig-cap: Rt and Admissions
+# | fig-cap: Simulated Rt and Admissions
 import matplotlib.pyplot as plt
 
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(sim_data.Rt)
-axs[0].set_ylabel("Rt")
+axs[0].plot(simulated_data.Rt)
+axs[0].set_ylabel("Simulated Rt")
 
 # Admissions plot
-axs[1].plot(sim_data.observed_hosp_admissions)
-axs[1].set_ylabel("Admissions")
+axs[1].plot(simulated_data.observed_hosp_admissions)
+axs[1].set_ylabel("Simulated Admissions")
 axs[1].set_yscale("log")
 
 fig.suptitle("Basic renewal model")
@@ -246,7 +254,7 @@ plt.show()
 
 ## Fitting the model
 
-We can fit the model to the data. We will use the `run` method of the model object:
+We now fit the model, not to these simulated data, but rather to the dataset we retrieved above. We use the `run` method of the `Model` object:
 
 ```{python}
 # | label: model-fit
@@ -261,13 +269,13 @@ hosp_model.run(
 )
 ```
 
-We can use the `plot_posterior` method to visualize the results, plotting the observed values against the inferred latent values[^capture]:
+We can use the `Model` object's `plot_posterior` method to visualize the model fit. Here, we plot the observed values against the inferred latent values (i.e. the mean of the negative binomial observation process)[^capture]:
 
 [^capture]: The output is captured to avoid `quarto` from displaying the output twice.
 
 ```{python}
 # | label: fig-output-hospital-admissions
-# | fig-cap: Hospital Admissions posterior distribution
+# | fig-cap: Latent hospital admissions posterior samples (blue) and observed admissions timeseries (black).
 out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
@@ -279,84 +287,13 @@ out = hosp_model.plot_posterior(
 )
 ```
 
-Test `posterior_predictive` and `prior_predictive` methods to generate posterior and prior predictive samples for observed admissions.
+## Results exploration and MCMC diagnostics
+
+To explore further, We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by loading the module and converting the fitted model to ArviZ `InferenceData` object:
 
 ```{python}
-# | label: demonstrate-use-of-predictive-methods
 import arviz as az
 
-idata = az.from_numpyro(
-    hosp_model.mcmc,
-    posterior_predictive=hosp_model.posterior_predictive(
-        n_timepoints_to_simulate=len(daily_hosp_admits)
-    ),
-    prior=hosp_model.prior_predictive(
-        n_timepoints_to_simulate=len(daily_hosp_admits),
-        numpyro_predictive_args={"num_samples": 1000},
-    ),
-)
-```
-
-We will use `plot_lm` method from ArviZ to plot the posterior predictive distribution and observed data below:
-
-```{python}
-# | label: fig-posterior-predictive
-# | fig-cap: Hospital Admissions posterior distribution with plot_lm
-fig, ax = plt.subplots()
-az.plot_lm(
-    "negbinom_rv",
-    idata=idata,
-    kind_pp="hdi",
-    y_kwargs={"color": "black"},
-    y_hat_fill_kwargs={"color": "C0"},
-    axes=ax,
-)
-
-ax.set_title("Posterior Predictive Plot")
-ax.set_ylabel("Hospital Admissions")
-ax.set_xlabel("Days")
-plt.show()
-```
-
-The first half of the model is not looking good. The reason is that the infection to hospitalization interval PMF makes it unlikely to observe admissions from the beginning. The following section shows how to fix this.
-
-## Padding the model
-
-We can use the padding argument to solve the overestimation of hospital admissions in the first half of the model. By setting `padding > 0`, the model then assumes that the first `padding` observations are missing; thus, only observations after `padding` will count towards the likelihood of the model. In practice, the model will extend the estimated Rt and latent infections by `padding` days, given time to adjust to the observed data. The following code will add 21 days of missing data at the beginning of the model and re-estimate it with `padding = 21`:
-
-```{python}
-# | label: model-fit-padding
-pad_size = 21
-
-hosp_model.run(
-    num_samples=1000,
-    num_warmup=1000,
-    data_observed_hosp_admissions=daily_hosp_admits,
-    rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False, num_chains=2),
-    padding=pad_size,  # Padding the model
-)
-```
-
-And plotting the results:
-
-```{python}
-# | label: fig-output-admissions-with-padding
-# | fig-cap: Hospital Admissions
-out = hosp_model.plot_posterior(
-    var="latent_hospital_admissions",
-    ylab="Hospital Admissions",
-    obs_signal=np.pad(
-        daily_hosp_admits.astype(float),
-        (gen_int_array.size + pad_size, 0),
-        constant_values=np.nan,
-    ),
-)
-```
-
-We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by converting the fitted model to Arviz InferenceData object:
-
-```{python}
 # | label: convert-inferenceData
 idata = az.from_numpyro(hosp_model.mcmc)
 ```
@@ -418,7 +355,7 @@ plt.show()
 We can look at individual draws from the posterior distribution of latent infections:
 
 ```{python}
-# | label: fig-output-infections-with-padding
+# | label: fig-output-infections
 # | fig-cap: Latent infections
 out2 = hosp_model.plot_posterior(
     var="all_latent_infections", ylab="Latent Infections"
@@ -453,134 +390,68 @@ az.plot_hdi(
     fill_kwargs={"alpha": 0.6},
     ax=axes,
 )
-
-# Add mean of the posterior to the figure
-mean_latent_infection = np.mean(
-    idata.posterior["all_latent_infections"], axis=1
-)
-axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
-axes.legend()
-axes.set_title("Posterior Latent Infections", fontsize=10)
-axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Latent Infections", fontsize=10)
-plt.show()
 ```
 
-## Round 2: Incorporating day-of-the-week effects
 
-We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect distribution. To do this, we will create a new instance of `RandomVariable` to model the effect. The class will be based on a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0. The random variable will be repeated for the number of weeks in the dataset.
-Note a similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
-
-```{python}
-# | label: weekly-effect
-from pyrenew import metaclass
-import numpyro as npro
-
-
-class DayOfWeekEffect(metaclass.RandomVariable):
-    """Day of the week effect"""
-
-    def __init__(self, len: int):
-        """Initialize the day of the week effect distribution
-        Parameters
-        ----------
-        len : int
-            The number of observations
-        """
-        self.nweeks = int(jnp.ceil(len / 7))
-        self.len = len
-
-    @staticmethod
-    def validate():
-        return None
-
-    def sample(self, **kwargs):
-        ans = npro.sample(
-            name="dayofweek_effect",
-            fn=npro.distributions.TruncatedNormal(
-                loc=1.0, scale=0.5, low=0.1, high=10.0
-            ),
-            sample_shape=(7,),
-        )
-
-        return jnp.tile(ans, self.nweeks)[: self.len]
-
-
-# Initializing the RV
-dayofweek_effect = DayOfWeekEffect(dat.shape[0])
-```
-
-Notice that the instance's `nweeks` and `len` members are passed during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new effect, we can rebuild the latent hospitalization model:
+## Predictive checks and forecasting
+We can use the `Model`'s `posterior_predictive` and `prior_predictive` methods to generate posterior and prior predictive samples for observed admissions.
 
 ```{python}
-# | label: latent-hosp-weekday
-latent_hosp_wday_effect = latent.HospitalAdmissions(
-    infection_to_admission_interval_rv=inf_hosp_int,
-    infect_hosp_rate_rv=hosp_rate,
-    day_of_week_effect_rv=dayofweek_effect,
-)
+# | label: demonstrate-use-of-predictive-methods
+import arviz as az
 
-hosp_model_weekday = model.HospitalAdmissionsModel(
-    latent_infections_rv=latent_inf,
-    latent_hosp_admissions_rv=latent_hosp_wday_effect,
-    I0_rv=I0,
-    gen_int_rv=gen_int,
-    Rt_process_rv=rtproc,
-    hosp_admission_obs_process_rv=obs,
-)
-```
-
-Running the model (with the same padding as before):
-
-```{python}
-# | label: model-2-run
-hosp_model_weekday.run(
-    num_samples=2000,
-    num_warmup=2000,
-    data_observed_hosp_admissions=daily_hosp_admits,
-    rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False, num_chains=2),
-    padding=pad_size,
-)
-```
-
-And plotting the results:
-
-```{python}
-# | label: fig-output-admissions-padding-and-weekday
-# | fig-cap: Hospital Admissions posterior distribution
-out = hosp_model_weekday.plot_posterior(
-    var="latent_hospital_admissions",
-    ylab="Hospital Admissions",
-    obs_signal=np.pad(
-        daily_hosp_admits.astype(float),
-        (gen_int_array.size + pad_size, 0),
-        constant_values=np.nan,
+idata = az.from_numpyro(
+    hosp_model.mcmc,
+    posterior_predictive=hosp_model.posterior_predictive(
+        n_timepoints_to_simulate=len(daily_hosp_admits)
+    ),
+    prior=hosp_model.prior_predictive(
+        n_timepoints_to_simulate=len(daily_hosp_admits),
+        numpyro_predictive_args={"num_samples": 1000},
     ),
 )
 ```
 
-We will use ArviZ to visualize the posterior and prior predictive distributions.
+We will use `plot_lm` method from ArviZ to plot the posterior predictive distribution against the actual observed data below:
+
+```{python}
+# | label: fig-posterior-predictive
+# | fig-cap: Hospital Admissions posterior distribution with plot_lm
+fig, ax = plt.subplots()
+az.plot_lm(
+    "negbinom_rv",
+    idata=idata,
+    kind_pp="hdi",
+    y_kwargs={"color": "black"},
+    y_hat_fill_kwargs={"color": "C0"},
+    axes=ax,
+)
+
+ax.set_title("Posterior Predictive Plot")
+ax.set_ylabel("Hospital Admissions")
+ax.set_xlabel("Days")
+plt.show()
+```
+
+
 By increasing `n_timepoints_to_simulate`, we can perform forecasting using the posterior predictive distribution.
 
 ```{python}
 # | label: posterior-predictive-distribution
 n_forecast_points = 28
 idata_weekday = az.from_numpyro(
-    hosp_model_weekday.mcmc,
-    posterior_predictive=hosp_model_weekday.posterior_predictive(
+    hosp_model.mcmc,
+    posterior_predictive=hosp_model.posterior_predictive(
         n_timepoints_to_simulate=len(daily_hosp_admits) + n_forecast_points,
-        padding=pad_size,
     ),
-    prior=hosp_model_weekday.prior_predictive(
+    prior=hosp_model.prior_predictive(
         n_timepoints_to_simulate=len(daily_hosp_admits),
-        padding=pad_size,
         numpyro_predictive_args={"num_samples": 1000},
     ),
 )
 ```
 
-Below we plot the prior predictive distributions using equal tailed bayesian credible intervals:
+Below we plot the prior predictive distributions using equal tailed Bayesian credible intervals:
 
 ```{python}
 # | label: fig-output-prior-predictive
@@ -594,9 +465,7 @@ def compute_eti(dataset, eti_prob):
 
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"]
-    + pad_size
-    + gen_int.size(),
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
     hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
     color="C0",
     smooth=False,
@@ -605,9 +474,7 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"]
-    + pad_size
-    + gen_int.size(),
+    idata_weekday.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
     hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.5),
     color="C0",
     smooth=False,
@@ -616,9 +483,7 @@ az.plot_hdi(
 )
 
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"]
-    + pad_size
-    + gen_int.size(),
+    idata_weekday.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
     idata_weekday.observed_data["negbinom_rv"],
     color="black",
 )
@@ -632,13 +497,11 @@ plt.show()
 
 And now we plot the posterior predictive distributions with a `{python} n_forecast_points`-day-ahead forecast:
 ```{python}
-# | label: fig-output-posterior-predictive
-# | fig-cap: Posterior Predictive Admissions
+# | label: fig-output-posterior-predictive-forecast
+# | fig-cap: Posterior predictive admissions, including a forecast.
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
-    + pad_size
-    + gen_int.size(),
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
     hdi_data=compute_eti(
         idata_weekday.posterior_predictive["negbinom_rv"], 0.9
     ),
@@ -649,9 +512,7 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
-    + pad_size
-    + gen_int.size(),
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
     hdi_data=compute_eti(
         idata_weekday.posterior_predictive["negbinom_rv"], 0.5
     ),
@@ -667,23 +528,21 @@ mean_latent_infection = np.mean(
 )
 
 plt.plot(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"]
-    + pad_size
-    + gen_int.size(),
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
     mean_latent_infection[0],
     color="C0",
     label="Mean",
 )
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"]
-    + pad_size
-    + gen_int.size(),
+    idata_weekday.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
     idata_weekday.observed_data["negbinom_rv"],
     color="black",
 )
 axes.legend()
-axes.set_title("Posterior Predictive Admissions", fontsize=10)
+axes.set_title(
+    "Posterior Predictive Admissions, including a forecast", fontsize=10
+)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Observed Admissions", fontsize=10)
+axes.set_ylabel("Hospital Admissions", fontsize=10)
 plt.show()
 ```
