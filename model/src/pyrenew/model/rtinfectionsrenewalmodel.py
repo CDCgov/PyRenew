@@ -164,7 +164,8 @@ class RtInfectionsRenewalModel(Model):
 
         Notes
         -----
-        Either `data_observed_infections` or `n_timepoints_to_simulate` must be specified, not both.
+        Either `data_observed_infections` or `n_timepoints_to_simulate`
+        must be specified, not both.
 
         Returns
         -------
@@ -238,6 +239,7 @@ class RtInfectionsRenewalModel(Model):
             jnp.nan,
             pad_direction="start",
         )
+        npro.deterministic("Rt", Rt)
 
         return RtInfectionsRenewalSample(
             Rt=Rt,

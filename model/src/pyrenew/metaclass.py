@@ -621,7 +621,7 @@ class TransformedRandomVariable(RandomVariable):
         self.transforms = transforms
         self.validate()
 
-    def sample(self, **kwargs):
+    def sample(self, **kwargs) -> tuple:
         """
         Sample method. Call self.base_rv.sample()
         and then apply the transforms specified

@@ -8,7 +8,7 @@ with different random keys behave appropriately.
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
 from numpy.testing import assert_array_equal, assert_raises
@@ -18,10 +18,10 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV
+from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
-from pyrenew.process import RtRandomWalkProcess
+from pyrenew.process import SimpleRandomWalkProcess
 
 
 def create_test_model():  # numpydoc ignore=GL08
@@ -35,10 +35,14 @@ def create_test_model():  # numpydoc ignore=GL08
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation("poisson_rv")
-    rt = RtRandomWalkProcess(
-        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-        Rt_transform=t.ExpTransform().inv,
-        Rt_rw_dist=dist.Normal(0, 0.025),
+    rt = TransformedRandomVariable(
+        "Rt_rv",
+        base_rv=SimpleRandomWalkProcess(
+            name="log_rt",
+            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
+            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+        ),
+        transforms=t.ExpTransform(),
     )
     model = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -99,7 +103,7 @@ def test_rng_keys_produce_correct_samples():
     ]
     # sample only a single model and use that model's samples
     # as the observed_infections for the rest of the models
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model_sample = models[0].sample(
             n_timepoints_to_simulate=n_timepoints_to_simulate[0]
         )
