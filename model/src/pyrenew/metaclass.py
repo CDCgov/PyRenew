@@ -16,6 +16,7 @@ import numpyro
 import polars as pl
 from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive
+from numpyro.infer.reparam import Reparam
 from pyrenew.mcmcutils import plot_posterior, spread_draws
 from pyrenew.transformation import Transform
 
@@ -220,6 +221,7 @@ class DistributionalRV(RandomVariable):
         self,
         dist: numpyro.distributions.Distribution,
         name: str,
+        reparam: Reparam = None,
     ) -> None:
         """
         Default constructor for DistributionalRV.
@@ -231,6 +233,11 @@ class DistributionalRV(RandomVariable):
         name : str
             Name of the random variable.
 
+        reparam : numpyro.infer.reparam.Reparam
+            If not None, reparameterize sampling
+            from the distribution according to the
+            given numpyro reparameterizer
+
         Returns
         -------
         None
@@ -240,6 +247,10 @@ class DistributionalRV(RandomVariable):
 
         self.dist = dist
         self.name = name
+        if reparam is not None:
+            self.reparam_dict = {self.name: reparam}
+        else:
+            self.reparam_dict = {}
 
         return None
 
@@ -278,15 +289,13 @@ class DistributionalRV(RandomVariable):
         tuple
            Containing the sampled from the distribution.
         """
-        return (
-            jnp.atleast_1d(
-                numpyro.sample(
-                    name=self.name,
-                    fn=self.dist,
-                    obs=obs,
-                )
-            ),
-        )
+        with numpyro.handlers.reparam(config=self.reparam_dict):
+            sample = numpyro.sample(
+                name=self.name,
+                fn=self.dist,
+                obs=obs,
+            )
+        return (jnp.atleast_1d(sample),)
 
 
 class Model(metaclass=ABCMeta):

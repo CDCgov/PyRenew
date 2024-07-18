@@ -31,6 +31,7 @@ from pyrenew.metaclass import (
     TransformedRandomVariable,
 )
 import pyrenew.transformation as t
+from numpyro.infer.reparam import LocScaleReparam
 ```
 
 ## Architecture of `RtInfectionsRenewalModel`
@@ -139,14 +140,17 @@ class MyRt(RandomVariable):
             "Rt_rv",
             base_rv=SimpleRandomWalkProcess(
                 name="log_rt",
-                step_rv=DistributionalRV(dist.Normal(0, sd_rt), "rw_step_rv"),
+                step_rv=DistributionalRV(
+                    dist.Normal(0, sd_rt),
+                    "rw_step_rv",
+                    reparam=LocScaleReparam(0),
+                ),
                 init_rv=DistributionalRV(
-                    dist.Normal(jnp.log(1.5), jnp.log(1.2)), "init_log_Rt_rv"
+                    dist.Normal(jnp.log(1), jnp.log(1.2)), "init_log_Rt_rv"
                 ),
             ),
             transforms=t.ExpTransform(),
         )
-
         return rt_rv.sample(n_timepoints=n_timepoints, **kwargs)
 
 
@@ -197,8 +201,8 @@ Using `numpyro`, we can simulate data using the `sample()` member function of `R
 
 ```{python}
 # | label: simulate
-with numpyro.handlers.seed(rng_seed=353):
-    sim_data = model1.sample(n_timepoints_to_simulate=30)
+with numpyro.handlers.seed(rng_seed=53):
+    sim_data = model1.sample(n_timepoints_to_simulate=40)
 
 sim_data
 ```
@@ -271,11 +275,11 @@ and use the InferenceData to compute the model-fit diagnostics. Here, we show di
 ```{python}
 # | label: diagnostics
 diagnostic_stats_summary = az.summary(
-    idata.posterior["Rt"][4:],  # ignore Nan padding
+    idata.posterior["Rt"][::, ::, 4:],  # ignore nan padding
     kind="diagnostics",
 )
 
-print(diagnostic_stats_summary[10])
+print(diagnostic_stats_summary)
 ```
 
 Below we use `plot_trace` to inspect the trace of the first 10 inferred $\mathcal{R}(t)$ values.
@@ -288,7 +292,7 @@ plt.rcParams["figure.constrained_layout.use"] = True
 az.plot_trace(
     idata.posterior,
     var_names=["Rt"],
-    coords={"Rt_dim_0": np.arange(10)},
+    coords={"Rt_dim_0": np.arange(4, 14)},
     compact=False,
 )
 plt.show()
