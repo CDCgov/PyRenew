@@ -120,7 +120,7 @@ gen_int = DeterministicPMF(pmf_array, name="gen_int")
 # (2) Initial infections (inferred with a prior)
 I0 = InfectionInitializationProcess(
     "I0_initialization",
-    DistributionalRV(dist=dist.LogNormal(1, 1), name="I0"),
+    DistributionalRV(dist=dist.LogNormal(2.5, 1), name="I0"),
     InitializeInfectionsZeroPad(pmf_array.size),
     t_unit=1,
 )
@@ -141,7 +141,7 @@ class MyRt(RandomVariable):
                 name="log_rt",
                 step_rv=DistributionalRV(dist.Normal(0, sd_rt), "rw_step_rv"),
                 init_rv=DistributionalRV(
-                    dist.Normal(jnp.log(1.2), jnp.log(1.5)), "init_log_Rt_rv"
+                    dist.Normal(jnp.log(1.5), jnp.log(1.2)), "init_log_Rt_rv"
                 ),
             ),
             transforms=t.ExpTransform(),
