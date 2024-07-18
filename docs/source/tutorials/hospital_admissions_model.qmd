@@ -4,6 +4,14 @@ format: gfm
 engine: jupyter
 ---
 
+```{python}
+# | label: numpyro setup
+# | echo: false
+import numpyro
+
+numpyro.set_host_device_count(2)
+```
+
 This document illustrates how a hospital admissions-only model can be fitted using data from the Pyrenew package, particularly the wastewater dataset. The CFA wastewater team created this dataset, which contains simulated data.
 
 ## Model definition
@@ -229,7 +237,6 @@ Let's simulate to check if the model is working:
 
 ```{python}
 # | label: simulation
-import numpyro
 import numpy as np
 
 timeframe = 120
@@ -269,15 +276,12 @@ We can fit the model to the data. We will use the `run` method of the model obje
 # | label: model-fit
 import jax
 
-numpyro.set_host_device_count(jax.local_device_count())
 hosp_model.run(
     num_samples=1000,
     num_warmup=1000,
     data_observed_hosp_admissions=daily_hosp_admits,
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(
-        progress_bar=False, num_chains=2, chain_method="sequential"
-    ),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
 )
 ```
 
@@ -558,7 +562,7 @@ hosp_model_weekday.run(
     num_warmup=2000,
     data_observed_hosp_admissions=daily_hosp_admits,
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
     padding=pad_size,
 )
 ```
