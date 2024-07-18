@@ -275,10 +275,10 @@ diagnostic_stats_summary = az.summary(
     kind="diagnostics",
 )
 
-print(diagnostic_stats_summary[:10])
+print(diagnostic_stats_summary[4:14])
 ```
 
-Below we use `plot_trace` to inspect the trace of the first 10 $R_t$ estimates.
+Below we use `plot_trace` to inspect the trace of the first 10 inferred $\mathcal{R}(t)$ values.
 
 ```{python}
 # | label: fig-trace-Rt
