@@ -14,7 +14,7 @@ We start by loading the needed components to build a basic renewal model:
 # | warning: false
 import jax.numpy as jnp
 import numpy as np
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 from pyrenew.process import SimpleRandomWalkProcess
 from pyrenew.latent import (
@@ -25,7 +25,11 @@ from pyrenew.latent import (
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
-from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
+from pyrenew.metaclass import (
+    RandomVariable,
+    DistributionalRV,
+    TransformedRandomVariable,
+)
 import pyrenew.transformation as t
 ```
 
@@ -121,16 +125,32 @@ I0 = InfectionInitializationProcess(
     t_unit=1,
 )
 
-# (3) The random walk on log Rt
-rt_proc = TransformedRandomVariable(
-    "Rt_rv",
-    base_rv=SimpleRandomWalkProcess(
-        name="log_rt",
-        step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
-        init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
-    ),
-    transforms=t.ExpTransform(),
-)
+
+# (3) The random walk on log Rt, with an inferred s.d.
+class MyRt(RandomVariable):
+
+    def validate(self):
+        pass
+
+    def sample(self, n_timepoints: int, **kwargs) -> tuple:
+        sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
+
+        rt_rv = TransformedRandomVariable(
+            "Rt_rv",
+            base_rv=SimpleRandomWalkProcess(
+                name="log_rt",
+                step_rv=DistributionalRV(dist.Normal(0, sd_rt), "rw_step_rv"),
+                init_rv=DistributionalRV(
+                    dist.Normal(0, 0.2), "init_log_Rt_rv"
+                ),
+            ),
+            transforms=t.ExpTransform(),
+        )
+
+        return rt_rv.sample(n_timepoints=n_timepoints, **kwargs)
+
+
+rt_proc = MyRt()
 
 # (4) Latent infection process (which will use 1 and 2)
 latent_infections = Infections()
@@ -178,7 +198,7 @@ Using `numpyro`, we can simulate data using the `sample()` member function of `R
 ```{python}
 # | label: simulate
 np.random.seed(223)
-with npro.handlers.seed(rng_seed=np.random.randint(1, 60)):
+with numpyro.handlers.seed(rng_seed=np.random.randint(1, 60)):
     sim_data = model1.sample(n_timepoints_to_simulate=30)
 
 sim_data
