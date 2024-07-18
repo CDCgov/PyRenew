@@ -13,7 +13,6 @@ import jax.random as jr
 import matplotlib.pyplot as plt
 import numpy as np
 import numpyro
-import numpyro.distributions as dist
 import polars as pl
 from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive
@@ -219,9 +218,9 @@ class DistributionalRV(RandomVariable):
 
     def __init__(
         self,
-        dist: dist.Distribution,
+        dist: numpyro.distributions.Distribution,
         name: str,
-    ):
+    ) -> None:
         """
         Default constructor for DistributionalRV.
 
@@ -249,7 +248,7 @@ class DistributionalRV(RandomVariable):
         """
         Validation of the distribution to be implemented in subclasses.
         """
-        if not isinstance(dist, dist.Distribution):
+        if not isinstance(dist, numpyro.distributions.Distribution):
             raise ValueError(
                 "dist should be an instance of "
                 f"numpyro.distributions.Distribution, got {dist}"
