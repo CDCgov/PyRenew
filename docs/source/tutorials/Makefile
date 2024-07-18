@@ -4,7 +4,7 @@ help:
 	@echo "  help            : Show this help message"
 	@echo "  tutorials       : Render the tutorials"
 	@echo "  tutorials_clean : Remove the generated tutorial files"
-	@echo "  tutorials_md    : Render the tutorials to markdown" 
+	@echo "  tutorials_md    : Render the tutorials to markdown"
 	@echo "  tutorials_ipynb : Convert the Quarto files to Jupyter notebooks"
 	@echo "  tutorials_py    : Convert the Jupyter notebooks to Python scripts"
 	@echo ""
