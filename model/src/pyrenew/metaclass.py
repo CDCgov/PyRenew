@@ -5,14 +5,15 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import NamedTuple, get_type_hints
+from typing import get_type_hints
 
 import jax
 import jax.numpy as jnp
 import jax.random as jr
 import matplotlib.pyplot as plt
 import numpy as np
-import numpyro as npro
+import numpyro
+import numpyro.distributions as dist
 import polars as pl
 from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive
@@ -210,33 +211,15 @@ class RandomVariable(metaclass=ABCMeta):
         return self.sample(**kwargs)
 
 
-class DistributionalRVSample(NamedTuple):
-    """
-    Named tuple for the sample method of DistributionalRV
-
-    Attributes
-    ----------
-    value : ArrayLike
-        Sampled value from the distribution.
-    """
-
-    value: ArrayLike | None = None
-
-    def __repr__(self) -> str:
-        """
-        Representation of the DistributionalRVSample
-        """
-        return f"DistributionalRVSample(value={self.value})"
-
-
 class DistributionalRV(RandomVariable):
     """
-    Wrapper class for random variables that sample from a single `numpyro.distributions.Distribution`.
+    Wrapper class for random variables that sample
+    from a single :class:`numpyro.distributions.Distribution`.
     """
 
     def __init__(
         self,
-        dist: npro.distributions.Distribution,
+        dist: dist.Distribution,
         name: str,
     ):
         """
@@ -244,7 +227,7 @@ class DistributionalRV(RandomVariable):
 
         Parameters
         ----------
-        dist : npro.distributions.Distribution
+        dist : dist.Distribution
             Distribution of the random variable.
         name : str
             Name of the random variable.
@@ -266,7 +249,7 @@ class DistributionalRV(RandomVariable):
         """
         Validation of the distribution to be implemented in subclasses.
         """
-        if not isinstance(dist, npro.distributions.Distribution):
+        if not isinstance(dist, dist.Distribution):
             raise ValueError(
                 "dist should be an instance of "
                 f"numpyro.distributions.Distribution, got {dist}"
@@ -278,25 +261,27 @@ class DistributionalRV(RandomVariable):
         self,
         obs: ArrayLike | None = None,
         **kwargs,
-    ) -> DistributionalRVSample:
+    ) -> tuple:
         """
         Sample from the distribution.
 
         Parameters
         ----------
         obs : ArrayLike, optional
-            Observations passed as the `obs` argument to `numpyro.sample()`. Default `None`.
+            Observations passed as the `obs` argument to
+            :fun:`numpyro.sample()`. Default `None`.
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal sample calls,
-            should there be any.
+            Additional keyword arguments passed through
+            to internal sample calls, should there be any.
 
         Returns
         -------
-        DistributionalRVSample
+        tuple
+           Containing the sampled from the distribution.
         """
-        return DistributionalRVSample(
-            value=jnp.atleast_1d(
-                npro.sample(
+        return (
+            jnp.atleast_1d(
+                numpyro.sample(
                     name=self.name,
                     fn=self.dist,
                     obs=obs,
@@ -417,9 +402,13 @@ class Model(metaclass=ABCMeta):
         Parameters
         ----------
         nuts_args : dict, optional
-            Dictionary of arguments passed to the NUTS. Defaults to None.
+            Dictionary of arguments passed to the
+            :class:`numpyro.infer.NUTS` kernel.
+            Defaults to None.
         mcmc_args : dict, optional
-            Dictionary of passed to the MCMC sampler. Defaults to None.
+            Dictionary of arguments passed to the
+            :class:`numpyro.infer.MCMC` constructor.
+            Defaults to None.
 
         Returns
         -------
@@ -449,14 +438,14 @@ class Model(metaclass=ABCMeta):
         exclude_deterministic: bool = True,
     ) -> None:
         """
-        A wrapper of MCMC.print_summary
+        A wrapper of :meth:`numpyro.infer.MCMC.print_summary`
 
         Parameters
         ----------
         prob : float, optional
-            The acceptance probability of print_summary. Defaults to 0.9
+            The width of the credible interval to show. Default 0.9
         exclude_deterministic : bool, optional
-            Whether to print deterministic variables in the summary.
+            Whether to print deterministic sites in the summary.
             Defaults to True.
 
         Returns
@@ -512,16 +501,19 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> dict:
         """
-        A wrapper for numpyro.infer.Predictive to generate posterior predictive samples.
+        A wrapper for :class:`numpyro.infer.Predictive` to generate
+        posterior predictive samples.
 
         Parameters
         ----------
         rng_key : ArrayLike, optional
             Random key for the Predictive function call. Defaults to None.
         numpyro_predictive_args : dict, optional
-            Dictionary of arguments to be passed to the numpyro.inference.Predictive constructor.
+            Dictionary of arguments to be passed to the
+            :class:`numpyro.inference.Predictive` constructor.
         **kwargs
-            Additional named arguments passed to the `__call__()` method of numpyro.inference.Predictive
+            Additional named arguments passed to the
+            `__call__()` method of :class:`numpyro.infer.Predictive`
 
         Returns
         -------
