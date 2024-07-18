@@ -169,10 +169,18 @@ I0 = InfectionInitializationProcess(
 
 # Generation interval and Rt
 gen_int = deterministic.DeterministicPMF(gen_int, name="gen_int")
-rtproc = process.RtRandomWalkProcess(
-    Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-    Rt_transform=transformation.ExpTransform().inv,
-    Rt_rw_dist=dist.Normal(0, 0.025),
+rtproc = metaclass.TransformedRandomVariable(
+    "Rt_rv",
+    base_rv=process.SimpleRandomWalkProcess(
+        name="log_rt",
+        step_rv=metaclass.DistributionalRV(
+            dist.Normal(0, 0.025), "rw_step_rv"
+        ),
+        init_rv=metaclass.DistributionalRV(
+            dist.Normal(0, 0.2), "init_log_Rt_rv"
+        ),
+    ),
+    transforms=transformation.ExpTransform(),
 )
 
 # The observation model

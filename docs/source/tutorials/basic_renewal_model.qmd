@@ -16,7 +16,7 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro as npro
 import numpyro.distributions as dist
-from pyrenew.process import RtRandomWalkProcess
+from pyrenew.process import SimpleRandomWalkProcess
 from pyrenew.latent import (
     Infections,
     InfectionInitializationProcess,
@@ -25,7 +25,7 @@ from pyrenew.latent import (
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
-from pyrenew.metaclass import DistributionalRV
+from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
 import pyrenew.transformation as t
 ```
 
@@ -101,7 +101,7 @@ To initialize these five components within the renewal modeling framework, we es
 
 (2) an instance of the `InfectionInitializationProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
 
-(3) an instance of the `RtRandomWalkProcess` class with default values
+(3) A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a fixed Normal step-size distribution.
 
 (4) an instance of the `Infections` class with default values, and
 
@@ -121,11 +121,15 @@ I0 = InfectionInitializationProcess(
     t_unit=1,
 )
 
-# (3) The random process for Rt
-rt_proc = RtRandomWalkProcess(
-    Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-    Rt_transform=t.ExpTransform().inv,
-    Rt_rw_dist=dist.Normal(0, 0.025),
+# (3) The random walk on log Rt
+rt_proc = TransformedRandomVariable(
+    "Rt_rv",
+    base_rv=SimpleRandomWalkProcess(
+        name="log_rt",
+        step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
+        init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+    ),
+    transforms=t.ExpTransform(),
 )
 
 # (4) Latent infection process (which will use 1 and 2)
@@ -156,7 +160,7 @@ The following diagram summarizes how the modules interact via composition; notab
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
     i0["(2) I0\n(InfectionInitializationProcess)"]
-    rt["(3) rt_proc\n(RtRandomWalkProcess)"]
+    rt["(3) rt_proc\n(TransformedRandomVariable)"]
     inf["(4) latent_infections\n(Infections)"]
     obs["(5) observation_process\n(PoissonObservation)"]
 
