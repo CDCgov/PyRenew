@@ -476,21 +476,12 @@ import numpyro as npro
 class DayOfWeekEffect(metaclass.RandomVariable):
     """Day of the week effect"""
 
-    def __init__(self, len: int):
-        """Initialize the day of the week effect distribution
-        Parameters
-        ----------
-        len : int
-            The number of observations
-        """
-        self.nweeks = int(jnp.ceil(len / 7))
-        self.len = len
-
     @staticmethod
     def validate():
         return None
 
-    def sample(self, **kwargs):
+    def sample(self, n_timepoints: int, **kwargs):
+
         ans = npro.sample(
             name="dayofweek_effect",
             fn=npro.distributions.TruncatedNormal(
@@ -499,14 +490,16 @@ class DayOfWeekEffect(metaclass.RandomVariable):
             sample_shape=(7,),
         )
 
-        return (metaclass.TimeArray(jnp.tile(ans, self.nweeks)[: self.len]),)
+        return (metaclass.TimeArray(
+            jnp.tile(ans, 100)[: n_timepoints]),
+            )
 
 
-# Initializing the RV
-dayofweek_effect = DayOfWeekEffect(dat.shape[0])
+# Initializing the RV.
+dayofweek_effect = DayOfWeekEffect()
 ```
 
-Notice that the instance's `nweeks` and `len` members are passed during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new effect, we can rebuild the latent hospitalization model:
+Notice that the instance's `nweeks` and `len` members are defined during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new effect, we can rebuild the latent hospitalization model:
 
 ```{python}
 # | label: latent-hosp-weekday

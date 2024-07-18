@@ -191,7 +191,10 @@ class HospitalAdmissions(RandomVariable):
         # Applying the day of the week effect
         latent_hospital_admissions = (
             latent_hospital_admissions
-            * self.day_of_week_effect_rv(**kwargs)[0].array
+            * self.day_of_week_effect_rv(
+                n_timepoints = latent_hospital_admissions.size,
+                **kwargs
+                )[0].array
         )
 
         # Applying probability of hospitalization effect
