@@ -228,7 +228,7 @@ class DistributionalRV(RandomVariable):
 
         Parameters
         ----------
-        dist : dist.Distribution
+        dist : numpyro.distributions.Distribution
             Distribution of the random variable.
         name : str
             Name of the random variable.
