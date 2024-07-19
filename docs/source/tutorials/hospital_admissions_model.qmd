@@ -251,7 +251,7 @@ import numpy as np
 timeframe = 120
 
 
-with npro.handlers.seed(rng_seed=223):
+with numpyro.handlers.seed(rng_seed=223):
     simulated_data = hosp_model.sample(n_timepoints_to_simulate=timeframe)
 ```
 
