@@ -54,7 +54,7 @@ def test_glm_prediction():
 
     # sampling should work
     with numpyro.handlers.seed(rng_seed=5):
-        preds = glm_pred.sample()
+        preds = glm_pred()
 
     assert isinstance(preds, dict)
 

@@ -98,7 +98,7 @@ def pad_x_to_match_y(
 
 class PeriodicProcessSample(NamedTuple):
     """
-    A container for holding the output from `process.PeriodicProcess.sample()`.
+    A container for holding the output from `process.PeriodicProcess()`.
 
     Attributes
     ----------

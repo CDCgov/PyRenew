@@ -12,9 +12,9 @@ import pyrenew.transformation as t
 import pytest
 from pyrenew.deterministic import DeterministicPMF, NullObservation
 from pyrenew.latent import (
+    InfectionInitializationProcess,
     Infections,
-    InfectionSeedingProcess,
-    SeedInfectionsZeroPad,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
@@ -35,7 +35,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
 
     latent_infections = Infections()
 
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("poisson_rv")
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
@@ -72,7 +72,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     latent_infections = Infections()
 
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("possion_rv")
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
@@ -110,10 +110,11 @@ def test_model_basicrenewal_no_obs_model():
     with pytest.raises(ValueError):
         I0 = DistributionalRV(dist=1, name="I0")
 
-    I0 = InfectionSeedingProcess(
-        "I0_seeding",
+    I0 = InfectionInitializationProcess(
+        "I0_initialization",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
+        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -185,15 +186,16 @@ def test_model_basicrenewal_with_obs_model():
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = InfectionSeedingProcess(
-        "I0_seeding",
+    I0 = InfectionInitializationProcess(
+        "I0_initialization",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
+        t_unit=1,
     )
 
     latent_infections = Infections()
 
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("poisson_rv")
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
@@ -238,15 +240,16 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
     )
 
-    I0 = InfectionSeedingProcess(
-        "I0_seeding",
+    I0 = InfectionInitializationProcess(
+        "I0_initialization",
         DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-        SeedInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
+        t_unit=1,
     )
 
     latent_infections = Infections()
 
-    observed_infections = PoissonObservation()
+    observed_infections = PoissonObservation("poisson_rv")
 
     rt = RtRandomWalkProcess(
         Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
@@ -264,18 +267,17 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
 
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
+    pad_size = 5
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints_to_simulate=30)
-
-    new_obs = jnp.hstack(
-        [jnp.repeat(jnp.nan, 5), model1_samp.observed_infections[5:]],
-    )
+        model1_samp = model1.sample(
+            n_timepoints_to_simulate=30, padding=pad_size
+        )
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
-        data_observed_infections=new_obs,
+        data_observed_infections=model1_samp.observed_infections,
         padding=5,
     )
 

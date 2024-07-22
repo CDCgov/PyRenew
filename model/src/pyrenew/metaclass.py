@@ -25,7 +25,7 @@ def _assert_sample_and_rtype(
     """
     Return type-checking for RandomVariable's sample function
 
-    Objects passed as `RandomVariable` should (a) have a sample() method that
+    Objects passed as `RandomVariable` should (a) have a `sample()` method that
     (b) returns either a tuple or a named tuple.
 
     Parameters
@@ -95,13 +95,82 @@ def _assert_sample_and_rtype(
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
+
+    Notes
+    -----
+    RandomVariables in pyrenew can be time-aware, meaning that they can
+    have a t_start and t_unit attribute. These attributes
+    are expected to be used internally mostly for tasks including padding,
+    alignment of time series, and other time-aware operations.
+
+    Both attributes give information about the output of the `sample()` method,
+    in other words, the relative time units of the returning value.
+
+    Attributes
+    ----------
+    t_start : int
+        The start of the time series.
+    t_unit : int
+        The unit of the time series relative to the model's fundamental
+        (smallest) time unit. e.g. if the fundamental unit is days,
+        then 1 corresponds to units of days and 7 to units of weeks.
     """
+
+    t_start: int = None
+    t_unit: int = None
 
     def __init__(self, **kwargs):
         """
         Default constructor
         """
         pass
+
+    def set_timeseries(
+        self,
+        t_start: int,
+        t_unit: int,
+    ) -> None:
+        """
+        Set the time series start and unit
+
+        Parameters
+        ----------
+        t_start : int
+            The start of the time series relative to the
+            model time. It could be negative, indicating
+            that the `sample()` method returns timepoints
+            that occur prior to the model t = 0.
+
+        t_unit : int
+            The unit of the time series relative
+            to the model's fundamental (smallest)
+            time unit. e.g. if the fundamental unit
+            is days, then 1 corresponds to units of
+            days and 7 to units of weeks.
+
+        Returns
+        -------
+        None
+        """
+        # Timeseries unit should be a positive integer
+        assert isinstance(
+            t_unit, int
+        ), f"t_unit should be an integer. It is {type(t_unit)}."
+
+        # Timeseries unit should be a positive integer
+        assert (
+            t_unit > 0
+        ), f"t_unit should be a positive integer. It is {t_unit}."
+
+        # Data starts should be a positive integer
+        assert isinstance(
+            t_start, int
+        ), f"t_start should be an integer. It is {type(t_start)}."
+
+        self.t_start = t_start
+        self.t_unit = t_unit
+
+        return None
 
     @abstractmethod
     def sample(
@@ -132,6 +201,12 @@ class RandomVariable(metaclass=ABCMeta):
         Validation of kwargs to be implemented in subclasses.
         """
         pass
+
+    def __call__(self, **kwargs):
+        """
+        Alias for `sample()`.
+        """
+        return self.sample(**kwargs)
 
 
 class DistributionalRVSample(NamedTuple):
@@ -251,7 +326,7 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> tuple:
         """
-        Sample method of the model
+        Sample method of the model.
 
         The method design in the class should have at least kwargs.
 
@@ -266,6 +341,22 @@ class Model(metaclass=ABCMeta):
         tuple
         """
         pass
+
+    def model(self, **kwargs) -> tuple:
+        """
+        Alias for the sample method.
+
+        Parameters
+        ----------
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal `sample()`
+            calls, should there be any.
+
+        Returns
+        -------
+        tuple
+        """
+        return self.sample(**kwargs)
 
     def _init_model(
         self,
@@ -297,7 +388,7 @@ class Model(metaclass=ABCMeta):
             mcmc_args = dict()
 
         self.kernel = NUTS(
-            model=self.sample,
+            model=self.model,
             **nuts_args,
         )
 
@@ -334,13 +425,12 @@ class Model(metaclass=ABCMeta):
         None
         """
 
-        if self.mcmc is None:
-            self._init_model(
-                num_warmup=num_warmup,
-                num_samples=num_samples,
-                nuts_args=nuts_args,
-                mcmc_args=mcmc_args,
-            )
+        self._init_model(
+            num_warmup=num_warmup,
+            num_samples=num_samples,
+            nuts_args=nuts_args,
+            mcmc_args=mcmc_args,
+        )
         if rng_key is None:
             rand_int = np.random.randint(
                 np.iinfo(np.int64).min, np.iinfo(np.int64).max
@@ -447,7 +537,7 @@ class Model(metaclass=ABCMeta):
             rng_key = jr.key(rand_int)
 
         predictive = Predictive(
-            model=self.sample,
+            model=self.model,
             posterior_samples=self.mcmc.get_samples(),
             **numpyro_predictive_args,
         )
@@ -484,7 +574,7 @@ class Model(metaclass=ABCMeta):
             rng_key = jr.key(rand_int)
 
         predictive = Predictive(
-            model=self.sample,
+            model=self.model,
             posterior_samples=None,
             **numpyro_predictive_args,
         )

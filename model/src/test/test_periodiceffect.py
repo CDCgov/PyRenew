@@ -20,6 +20,8 @@ def test_periodiceffect() -> None:
         "offset": 0,
         "quantity_to_broadcast": rv,
         "period_size": 7,
+        "t_start": 0,
+        "t_unit": 1,
     }
 
     duration = 30
@@ -28,7 +30,7 @@ def test_periodiceffect() -> None:
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        ans = pe.sample(duration=duration).value
+        ans = pe(duration=duration).value
 
     # Checking that the shape of the sampled Rt is correct
     assert ans.shape == (duration,)
@@ -42,7 +44,7 @@ def test_periodiceffect() -> None:
     params["offset"] = 5
     pe = PeriodicEffect(**params)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        ans2 = pe.sample(duration=duration).value
+        ans2 = pe(duration=duration).value
 
     # Checking that the shape of the sampled Rt is correct
     assert ans2.shape == (duration,)
@@ -64,11 +66,14 @@ def test_weeklyeffect() -> None:
         "offset": 2,
         "quantity_to_broadcast": rv,
         "period_size": 7,
+        "t_start": 0,
+        "t_unit": 1,
     }
 
     params2 = {
         "offset": 2,
         "quantity_to_broadcast": rv,
+        "t_start": 0,
     }
 
     duration = 30
@@ -76,8 +81,8 @@ def test_weeklyeffect() -> None:
     pe = PeriodicEffect(**params)
     pe2 = DayOfWeekEffect(**params2)
 
-    ans1 = pe.sample(duration=duration).value
-    ans2 = pe2.sample(duration=duration).value
+    ans1 = pe(duration=duration).value
+    ans2 = pe2(duration=duration).value
 
     assert_array_equal(ans1, ans2)
 

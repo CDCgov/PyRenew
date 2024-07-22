@@ -148,5 +148,11 @@ class GLMPrediction(AbstractRegressionPrediction):
             coefficients=coefficients,
         )
 
+    def __call__(self, **kwargs):
+        """
+        Alias for `sample()`.
+        """
+        return self.sample(**kwargs)
+
     def __repr__(self):
         return "GLMPrediction " + str(self.name)

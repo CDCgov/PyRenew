@@ -1,43 +1,10 @@
 ---
-title: "Getting started with pyrenew"
+title: "Fitting a basic renewal model"
 format: gfm
 engine: jupyter
 ---
 
-`pyrenew` is a flexible tool for simulating and making statistical inferences from epidemiologic models, with an emphasis on renewal models. Built on `numpyro`, `pyrenew` provides core components for model building and pre-defined models for processing various observational processes. This document illustrates how `pyrenew` can be used to build a basic renewal model.
-
-## The fundamentals
-
-`pyrenew`'s core components are the metaclasses `RandomVariable` and `Model` (in Python, a _metaclass_ is a class whose instances are also classes, where a _class_ is a template for making objects). Within the `pyrenew` package, a `RandomVariable` is a quantity that models can estimate and sample from, **including deterministic quantities**. The benefit of this design is that the definition of the `sample()` function can be arbitrary, allowing the user to either sample from a distribution using `numpyro.sample()`, compute fixed quantities (like a mechanistic equation), or return a fixed value (like a pre-computed PMF.) For instance, when estimating a PMF, the `RandomVariable` sampling function may roughly be defined as:
-
-```python
-# define a new class called MyRandVar that inherits from the RandomVariable class
-class MyRandVar(RandomVariable):
-    #define a method called sample that returns an object of type ArrayLike
-    def sample(...) -> ArrayLike:
-        # calls sample function from NumPyro package
-        return numpyro.sample(...)
-```
-
-Whereas,  in some other cases, we may instead use a fixed quantity for that variable (like a pre-computed PMF), where the `RandomVariable`'s sample function could instead be defined as:
-
-```python
-# instead define MyRandVar to still inherit from the RandVariable class
-class MyRandVar(RandomVariable):
-    #define sample method that still returns an ArrayLike object
-    def sample(...) -> ArrayLike:
-        #sampling method is a pre-computed PMF, a JAX NumPy array with explicit elements
-        return jax.numpy.array([0.2, 0.7, 0.1])
-```
-
-Thus, when a `Model` samples from `MyRandVar`, it could be either adding random variables to be estimated (first case) or just retrieving some quantity needed for other calculations (second case.)
-
-The `Model` metaclass provides basic functionality for estimating and simulation. Like `RandomVariable`, the `Model` metaclass has a `sample()` method that defines the model structure. Ultimately, models can be nested (or inherited), providing a straightforward way to add layers of complexity.
-
-
-## 'Hello world' model
-
-This section will show the steps to build a simple renewal model featuring a latent infection process, a random walk Rt process, and an observation process for the reported infections.
+This document will show the steps to build a simple renewal model featuring a latent infection process, a random walk Rt process, and an observation process for the reported infections.
 
 We start by loading the needed components to build a basic renewal model:
 
@@ -52,17 +19,73 @@ import numpyro.distributions as dist
 from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import (
     Infections,
-    InfectionSeedingProcess,
-    SeedInfectionsZeroPad,
+    InfectionInitializationProcess,
+    InitializeInfectionsZeroPad,
 )
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.metaclass import DistributionalRV
 import pyrenew.transformation as t
+
+npro.set_host_device_count(2)
 ```
 
-The pyrenew package models the real-time reproductive number $R_t$, the ratio of new infections at time $t$ to previous infections at some time $t-s$, as a renewal process model. Our basic renewal process model defines five components:
+## Architecture of `RtInfectionsRenewalModel`
+
+`pyrenew` leverages `numpyro`'s flexibility to build models via composition. As a principle, most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`. From them, the following four sub-modules arise:
+
+-   The `process` sub-module,
+-   The `deterministic` sub-module,
+-   The `observation` sub-module,
+-   The `latent` sub-module, and
+-   The `models` sub-module
+
+The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`. The following diagram shows a detailed view of how metaclasses, modules, and classes interact to create the `RtInfectionsRenewalModel` instantiated in the next section:
+
+```mermaid
+%%| label: overview-of-RtInfectionsRenewalModel
+%%| include: true
+flowchart LR
+    rand((RandomVariable\nmetaclass))
+    models((Model\nmetaclass))
+
+    subgraph observations[Observations module]
+        obs["observation_process\n(PoissonObservation)"]
+    end
+
+    subgraph latent[Latent module]
+        inf["latent_infections\n(Infections)"]
+        i0["I0\n(DistributionalRV)"]
+    end
+
+    subgraph process[Process module]
+        rt["rt_proc\n(RtRandomWalkProcess)"]
+    end
+
+    subgraph deterministic[Deterministic module]
+        detpmf["gen_int\n(DeterministicPMF)"]
+    end
+
+    subgraph model[Model module]
+        model1["model1\n(RtInfectionsRenewalModel)"]
+    end
+
+    rand-->|Inherited by|observations
+    rand-->|Inherited by|process
+    rand-->|Inherited by|latent
+    rand-->|Inherited by|deterministic
+    models-->|Inherited by|model
+
+    detpmf-->|Composes|model1
+    i0-->|Composes|model1
+    rt-->|Composes|model1
+    obs-->|Composes|model1
+    inf-->|Composes|model1
+```
+
+
+The pyrenew package models the real-time reproductive number $R_t$, the average number of secondary infections caused by an infected individual, as a renewal process model. Our basic renewal process model defines five components:
 
 (1) generation interval, the times between infections
 
@@ -78,7 +101,7 @@ To initialize these five components within the renewal modeling framework, we es
 
 (1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
-(2) an instance of the `InfectionSeedingProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `SeedInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
+(2) an instance of the `InfectionInitializationProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
 
 (3) an instance of the `RtRandomWalkProcess` class with default values
 
@@ -93,10 +116,11 @@ pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(pmf_array, name="gen_int")
 
 # (2) Initial infections (inferred with a prior)
-I0 = InfectionSeedingProcess(
-    "I0_seeding",
+I0 = InfectionInitializationProcess(
+    "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsZeroPad(pmf_array.size),
+    InitializeInfectionsZeroPad(pmf_array.size),
+    t_unit=1,
 )
 
 # (3) The random process for Rt
@@ -110,7 +134,7 @@ rt_proc = RtRandomWalkProcess(
 latent_infections = Infections()
 
 # (5) The observed infections process (with mean at the latent infections)
-observation_process = PoissonObservation()
+observation_process = PoissonObservation("poisson_rv")
 ```
 
 With these five pieces, we can build the basic renewal model as an instance of the  `RtInfectionsRenewalModel` class:
@@ -133,7 +157,7 @@ The following diagram summarizes how the modules interact via composition; notab
 %%| include: true
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
-    i0["(2) I0\n(InfectionSeedingProcess)"]
+    i0["(2) I0\n(InfectionInitializationProcess)"]
     rt["(3) rt_proc\n(RtRandomWalkProcess)"]
     inf["(4) latent_infections\n(Infections)"]
     obs["(5) observation_process\n(PoissonObservation)"]
@@ -203,8 +227,14 @@ Now, let's investigate the output, particularly the posterior distribution of th
 # | fig-cap: Rt posterior distribution
 out = model1.plot_posterior(var="Rt")
 ```
+We can use the `get_samples` method to extract samples from the model
+```{python}
+# | label: get-model-fitted-samples
+Rt_samp = model1.mcmc.get_samples()["Rt"]
+latent_infection_samp = model1.mcmc.get_samples()["all_latent_infections"]
+```
 
-We can use [ArviZ](https://www.arviz.org/) package to create model diagnostics and visualizations. We start by converting the fitted model to ArviZ InferenceData object:
+We can also convert the fitted model to [ArviZ](https://www.arviz.org/) InferenceData object and use ArviZ package to extarct samples, calculate statistics, create model diagnostics and visualizations.
 
 ```{python}
 # | label: convert-inference-data
@@ -237,7 +267,8 @@ az.plot_trace(
     var_names=["Rt"],
     coords={"Rt_dim_0": np.arange(10)},
     compact=False,
-);
+)
+plt.show()
 ```
 
 
@@ -274,7 +305,8 @@ axes.plot(x_data, mean_Rt[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Effective Reproduction Number", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("$R_t$", fontsize=10);
+axes.set_ylabel("$R_t$", fontsize=10)
+plt.show()
 ```
 
 and latent infections:
@@ -314,58 +346,6 @@ axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("Latent Infections", fontsize=10);
-```
-
-## Architecture of pyrenew
-
-`pyrenew` leverages `numpyro`'s flexibility to build models via composition. As a principle, most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`. From them, the following four sub-modules arise:
-
--   The `process` sub-module,
--   The `deterministic` sub-module,
--   The `observation` sub-module,
--   The `latent` sub-module, and
--   The `models` sub-module
-
-The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`. The following diagram shows a detailed view of how metaclasses, modules, and classes interact to create the `RtInfectionsRenewalModel` instantiated in the previous section:
-
-```mermaid
-%%| label: overview-of-RtInfectionsRenewalModel
-%%| include: true
-flowchart LR
-    rand((RandomVariable\nmetaclass))
-    models((Model\nmetaclass))
-
-    subgraph observations[Observations module]
-        obs["observation_process\n(PoissonObservation)"]
-    end
-
-    subgraph latent[Latent module]
-        inf["latent_infections\n(Infections)"]
-        i0["I0\n(DistributionalRV)"]
-    end
-
-    subgraph process[Process module]
-        rt["rt_proc\n(RtRandomWalkProcess)"]
-    end
-
-    subgraph deterministic[Deterministic module]
-        detpmf["gen_int\n(DeterministicPMF)"]
-    end
-
-    subgraph model[Model module]
-        model1["model1\n(RtInfectionsRenewalModel)"]
-    end
-
-    rand-->|Inherited by|observations
-    rand-->|Inherited by|process
-    rand-->|Inherited by|latent
-    rand-->|Inherited by|deterministic
-    models-->|Inherited by|model
-
-    detpmf-->|Composes|model1
-    i0-->|Composes|model1
-    rt-->|Composes|model1
-    obs-->|Composes|model1
-    inf-->|Composes|model1
+axes.set_ylabel("Latent Infections", fontsize=10)
+plt.show()
 ```

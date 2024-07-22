@@ -29,15 +29,18 @@ import matplotlib.pyplot as plt
 import jax
 import jax.numpy as jnp
 import numpy as np
+import numpyro
 from numpyro.handlers import seed
 import numpyro.distributions as dist
+
+numpyro.set_host_device_count(2)
 ```
 
 ```{python}
 from pyrenew.process import SimpleRandomWalkProcess
 ```
 
-To understand the simple random walk process underlying the sampling within the renewal process model, we first examine a single random walk path. Using the `sample` method from an instance of the `SimpleRandomWalkProcess` class, we first create an instance of the `SimpleRandomWalkProcess` class with a normal distribution of mean = 0 and standard deviation = 0.0001 as its input. Next, the `with` statement sets the seed for the random number generator for the n_timepoints of the block that follows. Inside the `with` block, the `q_samp = q.sample(n_timepoints=100)` generates the sample instance over a n_timepoints of 100 time units. Finally, this single random walk process is visualized using `matplot.pyplot` to plot the exponential of the sample instance.
+To understand the simple random walk process underlying the sampling within the renewal process model, we first examine a single random walk path. Using the `sample` method from an instance of the `SimpleRandomWalkProcess` class, we first create an instance of the `SimpleRandomWalkProcess` class with a normal distribution of mean = 0 and standard deviation = 0.0001 as its input. Next, the `with` statement sets the seed for the random number generator for the n_timepoints of the block that follows. Inside the `with` block, the `q_samp = q(n_timepoints=100)` generates the sample instance over a n_timepoints of 100 time units. Finally, this single random walk process is visualized using `matplot.pyplot` to plot the exponential of the sample instance.
 
 ```{python}
 # | label: fig-randwalk
@@ -45,7 +48,7 @@ To understand the simple random walk process underlying the sampling within the 
 np.random.seed(3312)
 q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
 with seed(rng_seed=np.random.randint(0, 1000)):
-    q_samp = q.sample(n_timepoints=100)
+    q_samp = q(n_timepoints=100)
 
 plt.plot(np.exp(q_samp[0]))
 ```
@@ -67,7 +70,10 @@ from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.process import RtRandomWalkProcess
-from pyrenew.latent import InfectionSeedingProcess, SeedInfectionsZeroPad
+from pyrenew.latent import (
+    InfectionInitializationProcess,
+    InitializeInfectionsZeroPad,
+)
 import pyrenew.transformation as t
 ```
 
@@ -93,10 +99,11 @@ pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(pmf_array, name="gen_int")
 
 # 2) Initial infections
-I0 = InfectionSeedingProcess(
-    "I0_seeding",
+I0 = InfectionInitializationProcess(
+    "I0_initialization",
     DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
-    SeedInfectionsZeroPad(pmf_array.size),
+    InitializeInfectionsZeroPad(pmf_array.size),
+    t_unit=1,
 )
 
 # 3) The latent infections process
@@ -120,7 +127,7 @@ latent_admissions = HospitalAdmissions(
 )
 
 # 5) An observation process for the hospital admissions
-admissions_process = PoissonObservation()
+admissions_process = PoissonObservation("poisson_rv")
 
 # 6) A random walk process (it could be deterministic using
 # pyrenew.process.DeterministicProcess())
@@ -176,7 +183,7 @@ hospmodel.run(
     num_samples=1000,
     data_observed_hosp_admissions=x.observed_hosp_admissions,
     rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
 )
 ```
 

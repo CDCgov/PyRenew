@@ -25,7 +25,7 @@ def test_infections_as_deterministic():
         Rt_rw_dist=dist.Normal(0, 0.025),
     )
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt, *_ = rt.sample(n_timepoints=30)
+        sim_rt, *_ = rt(n_timepoints=30)
 
     gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
 
@@ -37,15 +37,16 @@ def test_infections_as_deterministic():
         gen_int=gen_int,
     )
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        inf_sampled1 = inf1.sample(**obs)
-        inf_sampled2 = inf1.sample(**obs)
+        inf_sampled1 = inf1(**obs)
+        inf_sampled2 = inf1(**obs)
 
     testing.assert_array_equal(
-        inf_sampled1.post_seed_infections, inf_sampled2.post_seed_infections
+        inf_sampled1.post_initialization_infections,
+        inf_sampled2.post_initialization_infections,
     )
 
     # Check that Initial infections vector must be at least as long as the generation interval.
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError):
             obs["I0"] = jnp.array([1])
-            inf1.sample(**obs)
+            inf1(**obs)

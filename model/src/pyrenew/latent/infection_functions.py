@@ -167,7 +167,7 @@ def compute_infections_from_rt_with_feedback(
     below its raw value in the absence of feedback, while
     positive :math:`\gamma` implies that recent incident infections
     _increase_ :math:`\mathcal{R}(t)` above its raw value, and
-    :math:`gamma(t)=0` implies no feedback.
+    :math:`\gamma(t)=0` implies no feedback.
 
     In general, negative :math:`\gamma` is the more common modeling
     choice, as it can be used to model susceptible depletion,

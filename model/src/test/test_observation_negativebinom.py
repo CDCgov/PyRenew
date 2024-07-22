@@ -4,6 +4,8 @@
 import numpy as np
 import numpy.testing as testing
 import numpyro as npro
+from jax.typing import ArrayLike
+from pyrenew.deterministic import DeterministicVariable
 from pyrenew.observation import NegativeBinomialObservation
 
 
@@ -12,17 +14,25 @@ def test_negativebinom_deterministic_obs():
     Check that a deterministic NegativeBinomialObservation can sample
     """
 
-    negb = NegativeBinomialObservation(concentration_prior=10)
+    negb = NegativeBinomialObservation(
+        "negbinom_rv",
+        concentration_rv=DeterministicVariable(10, name="concentration"),
+    )
 
     np.random.seed(223)
     rates = np.random.randint(1, 5, size=10)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_pois1 = negb.sample(mu=rates, obs=rates)
-        sim_pois2 = negb.sample(mu=rates, obs=rates)
+        sim_nb1 = negb(mu=rates, obs=rates)
+        sim_nb2 = negb(mu=rates, obs=rates)
+
+    assert isinstance(sim_nb1, tuple)
+    assert isinstance(sim_nb2, tuple)
+    assert isinstance(sim_nb1[0], ArrayLike)
+    assert isinstance(sim_nb2[0], ArrayLike)
 
     testing.assert_array_equal(
-        sim_pois1,
-        sim_pois2,
+        sim_nb1[0],
+        sim_nb2[0],
     )
 
 
@@ -31,16 +41,23 @@ def test_negativebinom_random_obs():
     Check that a random NegativeBinomialObservation can sample
     """
 
-    negb = NegativeBinomialObservation(concentration_prior=10)
+    negb = NegativeBinomialObservation(
+        "negbinom_rv",
+        concentration_rv=DeterministicVariable(10, "concentration"),
+    )
 
     np.random.seed(223)
     rates = np.repeat(5, 20000)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_pois1 = negb.sample(mu=rates)
-        sim_pois2 = negb.sample(mu=rates)
+        sim_nb1 = negb(mu=rates)
+        sim_nb2 = negb(mu=rates)
+    assert isinstance(sim_nb1, tuple)
+    assert isinstance(sim_nb2, tuple)
+    assert isinstance(sim_nb1[0], ArrayLike)
+    assert isinstance(sim_nb2[0], ArrayLike)
 
     testing.assert_array_almost_equal(
-        np.mean(sim_pois1),
-        np.mean(sim_pois2),
+        np.mean(sim_nb1[0]),
+        np.mean(sim_nb2[0]),
         decimal=1,
     )
