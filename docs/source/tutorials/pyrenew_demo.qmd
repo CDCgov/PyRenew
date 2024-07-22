@@ -38,17 +38,22 @@ numpyro.set_host_device_count(2)
 
 ```{python}
 from pyrenew.process import SimpleRandomWalkProcess
+from pyrenew.metaclass import DistributionalRV
 ```
 
-To understand the simple random walk process underlying the sampling within the renewal process model, we first examine a single random walk path. Using the `sample` method from an instance of the `SimpleRandomWalkProcess` class, we first create an instance of the `SimpleRandomWalkProcess` class with a normal distribution of mean = 0 and standard deviation = 0.0001 as its input. Next, the `with` statement sets the seed for the random number generator for the n_timepoints of the block that follows. Inside the `with` block, the `q_samp = q(n_timepoints=100)` generates the sample instance over a n_timepoints of 100 time units. Finally, this single random walk process is visualized using `matplot.pyplot` to plot the exponential of the sample instance.
+To understand the simple random walk process underlying the sampling within the renewal process model, we first examine a single random walk path. Using the `sample` method from an instance of the `SimpleRandomWalkProcess` class, we first create an instance of the `SimpleRandomWalkProcess` class with a normal distribution of mean = 0 and standard deviation = 0.0001 as its input. Next, the `with` statement sets the seed for the random number generator for the block that follows. Inside the `with` block, the `q_samp = q(n_steps=100)` generates the sample instance over a `n_steps` period of 100 time units. Finally, this single random walk process is visualized using `matplot.pyplot` to plot the exponential of the sample instance.
 
 ```{python}
 # | label: fig-randwalk
 # | fig-cap: Random walk example
-np.random.seed(3312)
-q = SimpleRandomWalkProcess(dist.Normal(0, 0.001))
-with seed(rng_seed=np.random.randint(0, 1000)):
-    q_samp = q(n_timepoints=100)
+q = SimpleRandomWalkProcess(
+    "example_random_walk",
+    step_rv=DistributionalRV(dist.Normal(0, 0.001), "step_rv"),
+    init_rv=DistributionalRV(dist.Normal(0, 0.001), "init_rv"),
+)
+
+with seed(rng_seed=325):
+    q_samp = q(n_steps=100)
 
 plt.plot(np.exp(q_samp[0]))
 ```
@@ -60,7 +65,6 @@ from pyrenew.latent import (
     Infections,
     HospitalAdmissions,
 )
-from pyrenew.metaclass import DistributionalRV
 ```
 
 Additionally, import several classes from Pyrenew, including a Poisson observation process, determininstic PMF and variable classes, the Pyrenew hospitalization model, and a renewal model (Rt) random walk process:
@@ -69,11 +73,11 @@ Additionally, import several classes from Pyrenew, including a Poisson observati
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import HospitalAdmissionsModel
-from pyrenew.process import RtRandomWalkProcess
 from pyrenew.latent import (
     InfectionInitializationProcess,
     InitializeInfectionsZeroPad,
 )
+from pyrenew.metaclass import TransformedRandomVariable
 import pyrenew.transformation as t
 ```
 
@@ -87,9 +91,10 @@ To initialize the model, we first define initial conditions, including:
 
 4) latent hospitalization process, modeled by first defining the time interval from infections to hospitalizations as a `DeterministicPMF` input with 18 possible outcomes and corresponding probabilities given by the values in the array. The `HospitalAdmissions` function then takes in this defined time interval, as well as defining the rate at which infections are admitted to the hospital due to infection, modeled as a log-normal distribution with mean = `jnp.log(0.05)` and standard deviation = 0.05.
 
-5) hospitalization observation process, modeled with a  Poisson distribution
+5) hospitalization observation process, modeled with a Poisson distribution
 
-6) an Rt random walk process with default settings
+6) A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a fixed Normal step-size distribution.
+
 
 ```{python}
 # Initializing model components:
@@ -129,12 +134,15 @@ latent_admissions = HospitalAdmissions(
 # 5) An observation process for the hospital admissions
 admissions_process = PoissonObservation("poisson_rv")
 
-# 6) A random walk process (it could be deterministic using
-# pyrenew.process.DeterministicProcess())
-Rt_process = RtRandomWalkProcess(
-    Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-    Rt_transform=t.ExpTransform().inv,
-    Rt_rw_dist=dist.Normal(0, 0.025),
+# 6) The random walk on log Rt
+Rt_process = TransformedRandomVariable(
+    "Rt_rv",
+    base_rv=SimpleRandomWalkProcess(
+        name="log_rt",
+        step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
+        init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+    ),
+    transforms=t.ExpTransform(),
 )
 ```
 
