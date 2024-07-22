@@ -482,6 +482,8 @@ class DayOfWeekEffect(metaclass.RandomVariable):
 
     def sample(self, n_timepoints: int, **kwargs):
 
+        nweeks = (n_timepoints // 7) + 1
+
         ans = npro.sample(
             name="dayofweek_effect",
             fn=npro.distributions.TruncatedNormal(
@@ -490,7 +492,7 @@ class DayOfWeekEffect(metaclass.RandomVariable):
             sample_shape=(7,),
         )
 
-        return (metaclass.TimeArray(jnp.tile(ans, 100)[:n_timepoints]),)
+        return (metaclass.TimeArray(jnp.tile(ans, nweeks)[:n_timepoints]),)
 
 
 # Initializing the RV.
