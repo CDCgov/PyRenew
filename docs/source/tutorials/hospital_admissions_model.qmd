@@ -343,6 +343,7 @@ Below we plot 90% and 50% highest density intervals for latent hospital admissio
 x_data = idata.posterior["latent_hospital_admissions_dim_0"]
 y_data = idata.posterior["latent_hospital_admissions"]
 
+
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     x_data,
@@ -365,10 +366,9 @@ az.plot_hdi(
 )
 
 # Add mean of the posterior to the figure
-mean_latent_hosp_admission = np.mean(
-    idata.posterior["latent_hospital_admissions"], axis=1
-)
-axes.plot(x_data, mean_latent_hosp_admission[0], color="C0", label="Mean")
+mean_latent_hosp_admission = y_data.mean(dim=["chain", "draw"])
+
+axes.plot(x_data, mean_latent_hosp_admission, color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Hospital Admissions", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
@@ -547,13 +547,11 @@ az.plot_hdi(
 )
 
 # Add mean of the posterior to the figure
-mean_latent_infection = np.mean(
-    idata_weekday.posterior_predictive["negbinom_rv"], axis=1
-)
+mean_latent_infection = y_data.mean(dim=["chain", "draw"])
 
 plt.plot(
     idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
-    mean_latent_infection[0],
+    mean_latent_infection,
     color="C0",
     label="Mean",
 )
