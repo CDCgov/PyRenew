@@ -477,13 +477,12 @@ class Model(metaclass=ABCMeta):
         None
         """
 
-        if self.mcmc is None:
-            self._init_model(
-                num_warmup=num_warmup,
-                num_samples=num_samples,
-                nuts_args=nuts_args,
-                mcmc_args=mcmc_args,
-            )
+        self._init_model(
+            num_warmup=num_warmup,
+            num_samples=num_samples,
+            nuts_args=nuts_args,
+            mcmc_args=mcmc_args,
+        )
         if rng_key is None:
             rand_int = np.random.randint(
                 np.iinfo(np.int64).min, np.iinfo(np.int64).max
