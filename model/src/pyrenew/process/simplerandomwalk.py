@@ -52,7 +52,7 @@ class SimpleRandomWalkProcess(RandomVariable):
 
     def sample(
         self,
-        n_timepoints: int,
+        n_steps: int,
         **kwargs,
     ) -> tuple:
         """
@@ -60,7 +60,7 @@ class SimpleRandomWalkProcess(RandomVariable):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_steps : int
             Length of the walk to sample.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
@@ -69,7 +69,7 @@ class SimpleRandomWalkProcess(RandomVariable):
         Returns
         -------
         tuple
-            With a single array of shape (n_timepoints,).
+            With a single array of shape (n_steps,).
         """
 
         init, *_ = self.init_rv(**kwargs)
@@ -83,7 +83,7 @@ class SimpleRandomWalkProcess(RandomVariable):
         _, x = scan(
             transition,
             init=init,
-            xs=jnp.arange(n_timepoints - 1),
+            xs=jnp.arange(n_steps - 1),
         )
 
         return (jnp.hstack([init, x.flatten()]),)

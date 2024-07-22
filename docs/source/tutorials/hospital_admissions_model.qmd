@@ -204,7 +204,7 @@ class MyRt(metaclass.RandomVariable):
             transforms=transformation.ExpTransform(),
         )
 
-        return rt_rv.sample(n_timepoints=n_timepoints, **kwargs)
+        return rt_rv.sample(n_steps=n_timepoints, **kwargs)
 
 
 rtproc = MyRt()

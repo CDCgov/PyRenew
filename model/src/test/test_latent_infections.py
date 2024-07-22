@@ -31,7 +31,7 @@ def test_infections_as_deterministic():
     )
 
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt, *_ = rt(n_timepoints=30)
+        sim_rt, *_ = rt(n_steps=30)
 
     gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
 

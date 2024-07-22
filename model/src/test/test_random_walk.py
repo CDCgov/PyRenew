@@ -30,8 +30,8 @@ def test_rw_can_be_sampled():
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with a fixed init
         # and with a random init
-        ans_rand = rw_init_rand(n_timepoints=3532)
-        ans_fixed = rw_init_fixed(n_timepoints=5023)
+        ans_rand = rw_init_rand(n_steps=3532)
+        ans_fixed = rw_init_fixed(n_steps=5023)
 
     # check that the samples are of the right shape
     assert ans_rand[0].shape == (3532,)
@@ -63,7 +63,7 @@ def test_rw_samples_correctly_distributed():
         )
 
         with numpyro.handlers.seed(rng_seed=62):
-            samples, *_ = rw_normal(n_timepoints=n_samples)
+            samples, *_ = rw_normal(n_steps=n_samples)
 
             # Checking the shape
             assert samples.shape == (n_samples,)
