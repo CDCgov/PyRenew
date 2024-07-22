@@ -305,8 +305,8 @@ We inspect the posterior distribution of $\mathcal{R}(t)$ by plotting the 90% an
 ```{python}
 # | label: fig-hdi-Rt
 # | fig-cap: High density interval for Effective Reproduction Number
-x_data = idata.posterior["Rt_dim_0"]
-y_data = idata.posterior["Rt"]
+x_data = idata.posterior["Rt_dim_0"][4:]
+y_data = idata.posterior["Rt"][::, ::, 4:]
 
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
@@ -328,8 +328,8 @@ az.plot_hdi(
 )
 
 # Add mean of the posterior to the figure
-mean_Rt = y_data.mean(dim=["chain", "draw"])
-axes.plot(x_data, mean_Rt, color="C0", label="Mean")
+median_ts = y_data.median(dim=["chain", "draw"])
+axes.plot(x_data, median_ts, color="C0", label="Median")
 axes.legend()
 axes.set_title("Posterior Effective Reproduction Number", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
@@ -366,10 +366,10 @@ az.plot_hdi(
     ax=axes,
 )
 
-# Add mean of the posterior to the figure
-mean_latent_infections = y_data.mean(dim=["chain", "draw"])
+# plot the posterior median
+median_ts = y_data.median(dim=["chain", "draw"])
+axes.plot(x_data, median_ts, color="C0", label="Median")
 
-axes.plot(x_data, mean_latent_infections, color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
