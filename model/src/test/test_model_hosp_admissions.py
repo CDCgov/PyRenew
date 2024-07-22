@@ -73,7 +73,7 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
 
 def test_model_hosp_no_timepoints_or_observations():
     """
-    Checks that the Hospitalization model does not run
+    Checks that the hospital admissions model does not run
     without either n_timepoints_to_simulate or observed_admissions
     """
 
@@ -130,8 +130,7 @@ def test_model_hosp_no_timepoints_or_observations():
         hosp_admission_obs_process_rv=observed_admissions,
     )
 
-    np.random.seed(223)
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=233):
         with pytest.raises(ValueError, match="Either"):
             model1.sample(
                 n_timepoints_to_simulate=None, data_observed_admissions=None
@@ -140,7 +139,8 @@ def test_model_hosp_no_timepoints_or_observations():
 
 def test_model_hosp_both_timepoints_and_observations():
     """
-    Checks that the Hospitalization model does not run with both n_timepoints_to_simulate and observed_admissions passed
+    Checks that the hospital admissions model does not run with
+    both n_timepoints_to_simulate and observed_admissions passed
     """
 
     gen_int = DeterministicPMF(
