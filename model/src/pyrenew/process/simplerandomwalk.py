@@ -76,7 +76,7 @@ class SimpleRandomWalkProcess(RandomVariable):
 
         def transition(x_prev, _):
             # numpydoc ignore=GL08
-            diff, *_ = self.step_rv.sample(**kwargs)
+            diff, *_ = self.step_rv(**kwargs)
             x_curr = x_prev + diff
             return x_curr, x_curr
 
