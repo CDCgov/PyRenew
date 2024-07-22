@@ -117,7 +117,7 @@ gen_int_array = gen_int["probability_mass"].to_numpy()
 gen_int = gen_int_array
 inf_hosp_int = inf_hosp_int["probability_mass"].to_numpy()
 
-# Taking a pick at the first 5 elements of each
+# Taking a peek at the first 5 elements of each
 gen_int[:5], inf_hosp_int[:5]
 
 # Visualizing both quantities side by side
