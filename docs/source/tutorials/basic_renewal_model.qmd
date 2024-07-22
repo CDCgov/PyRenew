@@ -136,7 +136,7 @@ class MyRt(RandomVariable):
     def validate(self):
         pass
 
-    def sample(self, n_timepoints: int, **kwargs) -> tuple:
+    def sample(self, n_steps: int, **kwargs) -> tuple:
         sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
 
         rt_rv = TransformedRandomVariable(
@@ -154,7 +154,7 @@ class MyRt(RandomVariable):
             ),
             transforms=t.ExpTransform(),
         )
-        return rt_rv.sample(n_steps=n_timepoints, **kwargs)
+        return rt_rv.sample(n_steps=n_steps, **kwargs)
 
 
 rt_proc = MyRt()
