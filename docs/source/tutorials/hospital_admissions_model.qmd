@@ -16,7 +16,7 @@ This document illustrates how a hospital admissions-only model can be fitted usi
 
 ## Model definition
 
-In this section, we provide the formal definition of the model. The hospitalization model is a semi-mechanistic model that describes the number of observed hospital admissions as a function of a set of latent variables. Mainly, the observed number of hospital admissions is discretely distributed with location at the number of latent hospital admissions:
+In this section, we provide the formal definition of the model. The hospital admissions model is a semi-mechanistic model that describes the number of observed hospital admissions as a function of a set of latent variables. Mainly, the observed number of hospital admissions is discretely distributed with location at the number of latent hospital admissions:
 
 $$
 h(t) \sim \text{HospDist}\left(H(t)\right)
@@ -33,9 +33,9 @@ H(t) & = p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau) \\
 \end{align*}
 $$
 
-Were $d(\tau)$ is the infection to hospitalization interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to hospitalization rate.
+Were $d(\tau)$ is the infection to hospital admission interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to admission rate.
 
-The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to hospitalization rate. The latent infections are modeled as a renewal process:
+The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to admission rate. The latent infections are modeled as a renewal process:
 
 $$
 \begin{align*}
@@ -104,11 +104,11 @@ plt.show()
 
 ## Building the model
 
-First, we will extract two datasets we will use as deterministic quantities: the generation interval and the infection to hospitalization interval.
+First, we will extract two datasets we will use as deterministic quantities: the generation interval and the infection to hospital admission interval.
 
 ```{python}
 # | label: fig-data-extract
-# | fig-cap: Generation interval and infection to hospitalization interval
+# | fig-cap: Generation interval and infection to hospital admission interval
 gen_int = datasets.load_generation_interval()
 inf_hosp_int = datasets.load_infection_admission_interval()
 
@@ -126,7 +126,7 @@ fig, axs = plt.subplots(1, 2)
 axs[0].plot(gen_int)
 axs[0].set_title("Generation interval")
 axs[1].plot(inf_hosp_int)
-axs[1].set_title("Infection to hospitalization interval")
+axs[1].set_title("Infection to hospital admission interval")
 plt.show()
 ```
 
@@ -153,7 +153,7 @@ latent_hosp = latent.HospitalAdmissions(
 )
 ```
 
-The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospitalization interval as input. The `hosp_rate` is a `DistributionalRV` object that takes a numpyro distribution to represent the infection to hospitalization rate. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospitalization rate. Now, we can define the rest of the other components:
+The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospital admission interval as input. The `hosp_rate` is a `DistributionalRV` object that takes a numpyro distribution to represent the infection to hospital admission rate. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospital admission rate. Now, we can define the rest of the other components:
 
 ```{python}
 # | label: initializing-rest-of-model
