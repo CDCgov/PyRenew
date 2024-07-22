@@ -332,7 +332,7 @@ axes.plot(x_data, mean_Rt[0], color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Effective Reproduction Number", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
-axes.set_ylabel("$\mathcal{R}(t)$", fontsize=10)
+axes.set_ylabel("$\\mathcal{R}(t)$", fontsize=10)
 plt.show()
 ```
 
