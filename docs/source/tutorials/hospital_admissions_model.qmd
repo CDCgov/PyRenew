@@ -267,9 +267,8 @@ axs[0].plot(simulated_data.Rt)
 axs[0].set_ylabel("Simulated Rt")
 
 # Admissions plot
-axs[1].plot(simulated_data.observed_hosp_admissions)
+axs[1].plot(simulated_data.observed_hosp_admissions, "-o")
 axs[1].set_ylabel("Simulated Admissions")
-axs[1].set_yscale("log")
 
 fig.suptitle("Basic renewal model")
 fig.supxlabel("Time")
