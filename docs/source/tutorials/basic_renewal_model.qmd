@@ -65,7 +65,7 @@ flowchart LR
     end
 
     subgraph process[Process module]
-        rt["rt_proc\n(RtRandomWalkProcess)"]
+        rt["SimpleRandomWalk, which we fill use to create a custom RandomVariable to represent R(t)"]
     end
 
     subgraph deterministic[Deterministic module]
@@ -96,7 +96,7 @@ The pyrenew package models the real-time reproductive number $\mathcal{R}(t)$, t
 
 (2) initial infections, occurring prior to time $t = 0$
 
-(3) $\mathcal{R}(t)$, the real-time reproductive number,
+(3) $\mathcal{R}(t)$, the time-varying reproductive number,
 
 (4) latent infections, i.e., those infections which are known to exist but are not observed (or not observable), and
 
@@ -187,7 +187,7 @@ The following diagram summarizes how the modules interact via composition; notab
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
     i0["(2) I0\n(InfectionInitializationProcess)"]
-    rt["(3) rt_proc\n(MyRt - the custom RV defined above))"]
+    rt["(3) rt_proc\n(MyRt, the custom RV defined above)"]
     inf["(4) latent_infections\n(Infections)"]
     obs["(5) observation_process\n(PoissonObservation)"]
 
