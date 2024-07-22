@@ -56,20 +56,20 @@ flowchart LR
     models((Model\nmetaclass))
 
     subgraph observations[Observations module]
-        obs["observation_process\n(PoissonObservation)"]
+        obs["infection_obs_process_rv\n(PoissonObservation)"]
     end
 
     subgraph latent[Latent module]
-        inf["latent_infections\n(Infections)"]
-        i0["I0\n(DistributionalRV)"]
+        inf["latent_infections_rv\n(Infections)"]
+        i0["I0_rv\n(DistributionalRV)"]
     end
 
     subgraph process[Process module]
-        rt["SimpleRandomWalk, which we fill use to create a custom RandomVariable to represent R(t)"]
+        rt["Rt_process_rv\n(Custom class built using SimpleRandomWalk)"]
     end
 
     subgraph deterministic[Deterministic module]
-        detpmf["gen_int\n(DeterministicPMF)"]
+        detpmf["gen_int_rv\n(DeterministicPMF)"]
     end
 
     subgraph model[Model module]
