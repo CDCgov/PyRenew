@@ -72,7 +72,7 @@ class SimpleRandomWalkProcess(RandomVariable):
             With a single array of shape (n_timepoints,).
         """
 
-        init, *_ = self.init_rv.sample(**kwargs)
+        init, *_ = self.init_rv(**kwargs)
 
         def transition(x_prev, _):
             # numpydoc ignore=GL08
