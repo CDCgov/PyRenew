@@ -328,8 +328,8 @@ az.plot_hdi(
 )
 
 # Add mean of the posterior to the figure
-mean_Rt = np.mean(idata.posterior["Rt"], axis=1)
-axes.plot(x_data, mean_Rt[0], color="C0", label="Mean")
+mean_Rt = y_data.mean(dim=["chain", "draw"])
+axes.plot(x_data, mean_Rt, color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Effective Reproduction Number", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
@@ -367,10 +367,9 @@ az.plot_hdi(
 )
 
 # Add mean of the posterior to the figure
-mean_latent_infection = np.mean(
-    idata.posterior["all_latent_infections"], axis=1
-)
-axes.plot(x_data, mean_latent_infection[0], color="C0", label="Mean")
+mean_latent_infections = y_data.mean(dim=["chain", "draw"])
+
+axes.plot(x_data, mean_latent_infections, color="C0", label="Mean")
 axes.legend()
 axes.set_title("Posterior Latent Infections", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
