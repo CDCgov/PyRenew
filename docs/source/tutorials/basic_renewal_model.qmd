@@ -108,7 +108,7 @@ To initialize these five components within the renewal modeling framework, we es
 
 (2) an instance of the `InfectionInitializationProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
 
-(3) A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a fixed Normal step-size distribution.
+(3) A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a fixed Normal step-size distribution. For this, we construct a custom `RandomVariable`, `MyRt`.
 
 (4) an instance of the `Infections` class with default values, and
 
@@ -129,7 +129,8 @@ I0 = InfectionInitializationProcess(
 )
 
 
-# (3) The random walk on log Rt, with an inferred s.d.
+# (3) The random walk on log Rt, with an inferred s.d. Here, we
+# construct a custom RandomVariable.
 class MyRt(RandomVariable):
 
     def validate(self):
@@ -186,7 +187,7 @@ The following diagram summarizes how the modules interact via composition; notab
 flowchart TB
     genint["(1) gen_int\n(DetermnisticPMF)"]
     i0["(2) I0\n(InfectionInitializationProcess)"]
-    rt["(3) rt_proc\n(TransformedRandomVariable)"]
+    rt["(3) rt_proc\n(MyRt - the custom RV defined above))"]
     inf["(4) latent_infections\n(Infections)"]
     obs["(5) observation_process\n(PoissonObservation)"]
 
