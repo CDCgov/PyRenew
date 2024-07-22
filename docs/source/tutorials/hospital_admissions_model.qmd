@@ -365,10 +365,10 @@ az.plot_hdi(
     ax=axes,
 )
 
-# Add mean of the posterior to the figure
-mean_latent_hosp_admission = y_data.mean(dim=["chain", "draw"])
+# Add the posterior median to the figure
+median_ts = y_data.median(dim=["chain", "draw"])
 
-axes.plot(x_data, mean_latent_hosp_admission, color="C0", label="Mean")
+axes.plot(x_data, median_ts, color="C0", label="Median")
 axes.legend()
 axes.set_title("Posterior Hospital Admissions", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
@@ -414,6 +414,11 @@ az.plot_hdi(
     fill_kwargs={"alpha": 0.6},
     ax=axes,
 )
+
+# Add the posterior median to the figure
+median_ts = y_data.median(dim=["chain", "draw"])
+axes.plot(x_data, median_ts, color="C0", label="Median")
+axes.legend()
 ```
 
 
@@ -523,12 +528,14 @@ And now we plot the posterior predictive distributions with a `{python} n_foreca
 ```{python}
 # | label: fig-output-posterior-predictive-forecast
 # | fig-cap: Posterior predictive admissions, including a forecast.
+x_data = (
+    idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
+)
+y_data = idata_weekday.posterior_predictive["negbinom_rv"]
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
-    hdi_data=compute_eti(
-        idata_weekday.posterior_predictive["negbinom_rv"], 0.9
-    ),
+    x_data,
+    hdi_data=compute_eti(y_data, 0.9),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.3},
@@ -536,24 +543,22 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
-    hdi_data=compute_eti(
-        idata_weekday.posterior_predictive["negbinom_rv"], 0.5
-    ),
+    x_data,
+    hdi_data=compute_eti(y_data, 0.5),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.6},
     ax=axes,
 )
 
-# Add mean of the posterior to the figure
-mean_latent_infection = y_data.mean(dim=["chain", "draw"])
+# Add median of the posterior to the figure
+median_ts = y_data.median(dim=["chain", "draw"])
 
 plt.plot(
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
-    mean_latent_infection,
+    x_data,
+    median_ts,
     color="C0",
-    label="Mean",
+    label="Median",
 )
 plt.scatter(
     idata_weekday.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
