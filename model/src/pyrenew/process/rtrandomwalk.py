@@ -120,6 +120,6 @@ class RtRandomWalkProcess(RandomVariable):
             init=Rt0_trans,
         )
 
-        Rt = npro.deterministic("Rt", self.Rt_transform.inv(Rt_trans_ts.array))
+        Rt = npro.deterministic("Rt", self.Rt_transform.inv(Rt_trans_ts.value))
 
         return (SampledValue(Rt),)

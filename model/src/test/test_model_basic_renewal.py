@@ -148,21 +148,21 @@ def test_model_basicrenewal_no_obs_model():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model0.sample(n_timepoints_to_simulate=30)
 
-    np.testing.assert_array_equal(model0_samp.Rt.array, model1_samp.Rt.array)
+    np.testing.assert_array_equal(model0_samp.Rt.value, model1_samp.Rt.value)
     np.testing.assert_array_equal(
-        model0_samp.latent_infections.array,
-        model1_samp.latent_infections.array,
+        model0_samp.latent_infections.value,
+        model1_samp.latent_infections.value,
     )
     np.testing.assert_array_equal(
-        model0_samp.observed_infections.array,
-        model1_samp.observed_infections.array,
+        model0_samp.observed_infections.value,
+        model1_samp.observed_infections.value,
     )
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_infections=model0_samp.latent_infections.array,
+        data_observed_infections=model0_samp.latent_infections.value,
     )
 
     inf = model0.spread_draws(["all_latent_infections"])
@@ -221,7 +221,7 @@ def test_model_basicrenewal_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
-        data_observed_infections=model1_samp.observed_infections.array,
+        data_observed_infections=model1_samp.observed_infections.value,
     )
 
     inf = model1.spread_draws(["all_latent_infections"])
@@ -278,7 +278,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
-        data_observed_infections=model1_samp.observed_infections.array,
+        data_observed_infections=model1_samp.observed_infections.value,
         padding=5,
     )
 

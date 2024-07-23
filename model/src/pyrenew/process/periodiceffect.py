@@ -116,7 +116,7 @@ class PeriodicEffect(RandomVariable):
         return PeriodicEffectSample(
             value=SampledValue(
                 self.broadcaster(
-                    data=self.quantity_to_broadcast.sample(**kwargs)[0].array,
+                    data=self.quantity_to_broadcast.sample(**kwargs)[0].value,
                     n_timepoints=duration,
                 )
             )

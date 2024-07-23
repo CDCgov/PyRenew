@@ -32,7 +32,7 @@ def test_infections_as_deterministic():
     inf1 = Infections()
 
     obs = dict(
-        Rt=sim_rt.array,
+        Rt=sim_rt.value,
         I0=jnp.zeros(gen_int.size),
         gen_int=gen_int,
     )
@@ -41,8 +41,8 @@ def test_infections_as_deterministic():
         inf_sampled2 = inf1(**obs)
 
     testing.assert_array_equal(
-        inf_sampled1.post_initialization_infections.array,
-        inf_sampled2.post_initialization_infections.array,
+        inf_sampled1.post_initialization_infections.value,
+        inf_sampled2.post_initialization_infections.value,
     )
 
     # Check that Initial infections vector must be at least as long as the generation interval.

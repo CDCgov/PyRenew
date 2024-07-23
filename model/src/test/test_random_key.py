@@ -103,7 +103,7 @@ def test_rng_keys_produce_correct_samples():
         model_sample = models[0].sample(
             n_timepoints_to_simulate=n_timepoints_to_simulate[0]
         )
-    obs_infections = [model_sample.observed_infections.array] * len(models)
+    obs_infections = [model_sample.observed_infections.value] * len(models)
     rng_keys = [jr.key(54), jr.key(54), None, None, jr.key(74)]
 
     # run test models with the different keys

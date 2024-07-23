@@ -66,7 +66,7 @@ def test_rtweeklydiff() -> None:
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        rt = rtwd(duration=duration).rt.array
+        rt = rtwd(duration=duration).rt.value
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (duration,)
@@ -81,7 +81,7 @@ def test_rtweeklydiff() -> None:
     params["offset"] = 5
     rtwd = RtWeeklyDiffProcess(**params)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        rt2 = rtwd(duration=duration).rt.array
+        rt2 = rtwd(duration=duration).rt.value
 
     # Checking that the shape of the sampled Rt is correct
     assert rt2.shape == (duration,)
@@ -114,7 +114,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     np.random.seed(223)
     duration = 1000
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        rt = rtwd(duration=duration).rt.array
+        rt = rtwd(duration=duration).rt.value
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (duration,)
@@ -153,12 +153,12 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
 
     _, ans0 = lax.scan(
         f=rtwd.autoreg_process,
-        init=np.hstack([params["log_rt_prior"]()[0].array, b]),
+        init=np.hstack([params["log_rt_prior"]()[0].value, b]),
         xs=noise,
     )
 
     ans1 = _manual_rt_weekly_diff(
-        log_seed=params["log_rt_prior"]()[0].array, sd=noise, b=b
+        log_seed=params["log_rt_prior"]()[0].value, sd=noise, b=b
     )
 
     assert_array_equal(ans0, ans1)
@@ -185,7 +185,7 @@ def test_rtperiodicdiff_smallsample():
 
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        rt = rtwd(duration=6).rt.array
+        rt = rtwd(duration=6).rt.value
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (6,)

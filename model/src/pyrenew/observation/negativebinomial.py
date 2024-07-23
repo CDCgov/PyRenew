@@ -93,7 +93,7 @@ class NegativeBinomialObservation(RandomVariable):
             name=self.name,
             fn=dist.NegativeBinomial2(
                 mean=mu + self.eps,
-                concentration=concentration.array,
+                concentration=concentration.value,
             ),
             obs=obs,
         )

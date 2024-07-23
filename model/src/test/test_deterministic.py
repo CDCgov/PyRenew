@@ -31,7 +31,7 @@ def test_deterministic():
     var5 = NullProcess()
 
     testing.assert_array_equal(
-        var1()[0].array,
+        var1()[0].value,
         jnp.array(
             [
                 1,
@@ -39,16 +39,16 @@ def test_deterministic():
         ),
     )
     testing.assert_array_equal(
-        var2()[0].array,
+        var2()[0].value,
         jnp.array([0.25, 0.25, 0.2, 0.3]),
     )
     testing.assert_array_equal(
-        var3(duration=5)[0].array,
+        var3(duration=5)[0].value,
         jnp.array([1, 2, 3, 4, 4]),
     )
 
     testing.assert_array_equal(
-        var3(duration=3)[0].array,
+        var3(duration=3)[0].value,
         jnp.array(
             [
                 1,
@@ -58,5 +58,5 @@ def test_deterministic():
         ),
     )
 
-    testing.assert_equal(var4()[0].array, None)
-    testing.assert_equal(var5(duration=1)[0].array, None)
+    testing.assert_equal(var4()[0].value, None)
+    testing.assert_equal(var5(duration=1)[0].value, None)

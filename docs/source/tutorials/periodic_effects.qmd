@@ -45,7 +45,7 @@ with npro.handlers.seed(rng_seed=20):
 # Plotting the Rt values
 import matplotlib.pyplot as plt
 
-plt.step(np.arange(len(sim_data.rt.array)), sim_data.rt.array, where="post")
+plt.step(np.arange(len(sim_data.rt.value)), sim_data.rt.value, where="post")
 plt.xlabel("Time")
 plt.ylabel("Rt")
 plt.title("Simulated Rt values")
@@ -90,7 +90,7 @@ with npro.handlers.seed(rng_seed=20):
 import matplotlib.pyplot as plt
 
 plt.step(
-    np.arange(len(sim_data.value.array)), sim_data.value.array, where="post"
+    np.arange(len(sim_data.value.value)), sim_data.value.value, where="post"
 )
 plt.xlabel("Time")
 plt.ylabel("Effect size")

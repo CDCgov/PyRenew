@@ -96,7 +96,7 @@ with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
-ax.plot(model0_samp.latent_infections.array)
+ax.plot(model0_samp.latent_infections.value)
 ax.set_xlabel("Time")
 ax.set_ylabel("Infections")
 plt.show()
@@ -201,14 +201,14 @@ class InfFeedback(RandomVariable):
             **kwargs,
         )
         inf_feedback_strength = au.pad_x_to_match_y(
-            x=inf_feedback_strength.array,
+            x=inf_feedback_strength.value,
             y=Rt,
-            fill_value=inf_feedback_strength.array[0],
+            fill_value=inf_feedback_strength.value[0],
         )
 
         # Sampling inf feedback and adjusting the shape
         inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
-        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf.array)
+        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf.value)
 
         # Generating the infections with feedback
         all_infections, Rt_adj = compute_infections_from_rt_with_feedback(
@@ -269,8 +269,8 @@ Comparing `model0` with `model1`, these two should match:
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(ncols=2)
-ax[0].plot(model0_samp.latent_infections.array)
-ax[1].plot(model1_samp.latent_infections.array)
+ax[0].plot(model0_samp.latent_infections.value)
+ax[1].plot(model1_samp.latent_infections.value)
 ax[0].set_xlabel("Time (model 0)")
 ax[1].set_xlabel("Time (model 1)")
 ax[0].set_ylabel("Infections")

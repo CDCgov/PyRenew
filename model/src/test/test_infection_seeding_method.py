@@ -20,8 +20,8 @@ def test_seed_infections_exponential():
     (I_pre_seed,) = I_pre_seed_RV()
     (rate,) = rate_RV()
 
-    I_pre_seed = I_pre_seed.array
-    rate = rate.array
+    I_pre_seed = I_pre_seed.value
+    rate = rate.value
     infections_default_t_pre_seed = InitializeInfectionsExponentialGrowth(
         n_timepoints, rate=rate_RV
     ).seed_infections(I_pre_seed)
@@ -51,7 +51,7 @@ def test_seed_infections_exponential():
     with pytest.raises(ValueError):
         InitializeInfectionsExponentialGrowth(
             n_timepoints, rate=rate_RV
-        ).seed_infections(I_pre_seed_2.array)
+        ).seed_infections(I_pre_seed_2.value)
 
     # test non-default t_pre_seed
     t_pre_seed = 6
@@ -76,7 +76,7 @@ def test_seed_infections_zero_pad():
     n_timepoints = 10
     I_pre_seed_RV = DeterministicVariable(10.0, name="I_pre_seed_RV")
     (I_pre_seed,) = I_pre_seed_RV()
-    I_pre_seed = I_pre_seed.array
+    I_pre_seed = I_pre_seed.value
 
     infections = InitializeInfectionsZeroPad(n_timepoints).seed_infections(
         I_pre_seed
@@ -89,7 +89,7 @@ def test_seed_infections_zero_pad():
         np.array([10.0, 10.0]), name="I_pre_seed_RV"
     )
     (I_pre_seed_2,) = I_pre_seed_RV_2()
-    I_pre_seed_2 = I_pre_seed_2.array
+    I_pre_seed_2 = I_pre_seed_2.value
 
     infections_2 = InitializeInfectionsZeroPad(n_timepoints).seed_infections(
         I_pre_seed_2

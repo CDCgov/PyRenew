@@ -35,12 +35,12 @@ class DeterministicProcess(DeterministicVariable):
 
         res, *_ = super().sample(**kwargs)
 
-        dif = duration - res.array.shape[0]
+        dif = duration - res.value.shape[0]
 
         if dif > 0:
             return (
                 SampledValue(
-                    jnp.hstack([res.array, jnp.repeat(res.array[-1], dif)]),
+                    jnp.hstack([res.value, jnp.repeat(res.value[-1], dif)]),
                     t_start=self.t_start,
                     t_unit=self.t_unit,
                 ),
@@ -48,7 +48,7 @@ class DeterministicProcess(DeterministicVariable):
 
         return (
             SampledValue(
-                array=res.array[:duration],
+                value=res.value[:duration],
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),

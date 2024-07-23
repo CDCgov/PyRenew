@@ -175,7 +175,7 @@ class HospitalAdmissions(RandomVariable):
 
         infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
 
-        infection_hosp_rate_t = infection_hosp_rate.array * latent_infections
+        infection_hosp_rate_t = infection_hosp_rate.value * latent_infections
 
         (
             infection_to_admission_interval,
@@ -184,7 +184,7 @@ class HospitalAdmissions(RandomVariable):
 
         latent_hospital_admissions = jnp.convolve(
             infection_hosp_rate_t,
-            infection_to_admission_interval.array,
+            infection_to_admission_interval.value,
             mode="full",
         )[: infection_hosp_rate_t.shape[0]]
 
@@ -193,13 +193,13 @@ class HospitalAdmissions(RandomVariable):
             latent_hospital_admissions
             * self.day_of_week_effect_rv(
                 n_timepoints=latent_hospital_admissions.size, **kwargs
-            )[0].array
+            )[0].value
         )
 
         # Applying probability of hospitalization effect
         latent_hospital_admissions = (
             latent_hospital_admissions
-            * self.hosp_report_prob_rv(**kwargs)[0].array
+            * self.hosp_report_prob_rv(**kwargs)[0].value
         )
 
         npro.deterministic(
@@ -209,7 +209,7 @@ class HospitalAdmissions(RandomVariable):
         return HospitalAdmissionsSample(
             infection_hosp_rate=infection_hosp_rate,
             latent_hospital_admissions=SampledValue(
-                array=latent_hospital_admissions,
+                value=latent_hospital_admissions,
                 t_start=self.infection_to_admission_interval_rv.t_start,
                 t_unit=self.infection_to_admission_interval_rv.t_unit,
             ),

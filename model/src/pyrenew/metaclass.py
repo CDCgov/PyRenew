@@ -94,12 +94,12 @@ def _assert_sample_and_rtype(
 
 class SampledValue:
     """
-    A container for a time-aware array.
+    A container for a sampled value from a RandomVariable.
     """
 
     def __init__(
         self,
-        array: ArrayLike | None,
+        value: ArrayLike | None,
         t_start: int | None = None,
         t_unit: int | None = None,
     ) -> None:
@@ -108,8 +108,8 @@ class SampledValue:
 
         Parameters
         ----------
-        array : ArrayLike
-            The data array.
+        value : ArrayLike
+            The sampled value.
         t_start : int, optional
             The start time of the data.
         t_unit : int, optional
@@ -120,12 +120,12 @@ class SampledValue:
         None
         """
 
-        if array is not None:
+        if value is not None:
             assert isinstance(
-                array, ArrayLike
-            ), "array should be an array-like object."
+                value, ArrayLike
+            ), "value should be an array-like object."
 
-        self.array = array
+        self.value = value
         self.t_start = t_start
         self.t_unit = t_unit
 

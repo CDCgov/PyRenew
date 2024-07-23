@@ -264,30 +264,30 @@ def test_model_hosp_no_obs_model():
         model1_samp = model0.sample(n_timepoints_to_simulate=30)
 
     np.testing.assert_array_almost_equal(
-        model0_samp.Rt.array, model1_samp.Rt.array
+        model0_samp.Rt.value, model1_samp.Rt.value
     )
     np.testing.assert_array_equal(
-        model0_samp.latent_infections.array,
-        model1_samp.latent_infections.array,
+        model0_samp.latent_infections.value,
+        model1_samp.latent_infections.value,
     )
     np.testing.assert_array_equal(
-        model0_samp.infection_hosp_rate.array,
-        model1_samp.infection_hosp_rate.array,
+        model0_samp.infection_hosp_rate.value,
+        model1_samp.infection_hosp_rate.value,
     )
     np.testing.assert_array_equal(
-        model0_samp.latent_hosp_admissions.array,
-        model1_samp.latent_hosp_admissions.array,
+        model0_samp.latent_hosp_admissions.value,
+        model1_samp.latent_hosp_admissions.value,
     )
 
     # These are supposed to be none, both
-    assert model0_samp.observed_hosp_admissions.array is None
-    assert model1_samp.observed_hosp_admissions.array is None
+    assert model0_samp.observed_hosp_admissions.value is None
+    assert model1_samp.observed_hosp_admissions.value is None
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model0_samp.latent_hosp_admissions.array,
+        data_observed_hosp_admissions=model0_samp.latent_hosp_admissions.value,
     )
 
     inf = model0.spread_draws(["latent_hospital_admissions"])
@@ -377,7 +377,7 @@ def test_model_hosp_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.array,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.value,
     )
 
     inf = model1.spread_draws(["latent_hospital_admissions"])
@@ -478,7 +478,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.array,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.value,
     )
 
     inf = model1.spread_draws(["latent_hospital_admissions"])
@@ -594,7 +594,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     # obs = jnp.hstack(
     #     [
     #         jnp.repeat(jnp.nan, pad_size),
-    #         model1_samp.observed_hosp_admissions.array[pad_size:],
+    #         model1_samp.observed_hosp_admissions.value[pad_size:],
     #     ]
     # )
     # Running with padding
@@ -602,7 +602,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.array,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.value,
         padding=pad_size,
     )
 

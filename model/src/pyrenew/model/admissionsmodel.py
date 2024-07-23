@@ -198,7 +198,7 @@ class HospitalAdmissionsModel(Model):
             latent_hosp_admissions,
             *_,
         ) = self.latent_hosp_admissions_rv(
-            latent_infections=basic_model.latent_infections.array,
+            latent_infections=basic_model.latent_infections.value,
             **kwargs,
         )
 
@@ -206,7 +206,7 @@ class HospitalAdmissionsModel(Model):
             observed_hosp_admissions,
             *_,
         ) = self.hosp_admission_obs_process_rv(
-            mu=latent_hosp_admissions.array[-n_datapoints:],
+            mu=latent_hosp_admissions.value[-n_datapoints:],
             obs=data_observed_hosp_admissions,
             **kwargs,
         )

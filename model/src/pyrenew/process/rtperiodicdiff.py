@@ -176,9 +176,9 @@ class RtPeriodicDiffProcess(RandomVariable):
         """
 
         # Initial sample
-        log_rt_prior = self.log_rt_prior.sample(**kwargs)[0].array
-        b = self.autoreg.sample(**kwargs)[0].array
-        s_r = self.periodic_diff_sd.sample(**kwargs)[0].array
+        log_rt_prior = self.log_rt_prior.sample(**kwargs)[0].value
+        b = self.autoreg.sample(**kwargs)[0].value
+        s_r = self.periodic_diff_sd.sample(**kwargs)[0].value
 
         # How many periods to sample?
         n_periods = int(jnp.ceil(duration / self.period_size))
@@ -193,7 +193,7 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         return RtPeriodicDiffProcessSample(
             rt=SampledValue(
-                self.broadcaster(jnp.exp(log_rt.array.flatten()), duration)
+                self.broadcaster(jnp.exp(log_rt.value.flatten()), duration)
             ),
         )
 

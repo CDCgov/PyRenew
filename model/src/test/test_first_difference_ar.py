@@ -26,5 +26,5 @@ def test_fd_ar_can_be_sampled():
         )
 
         # Checking proper shape
-        assert ans0[0].array.shape == (3532,)
-        assert ans1[0].array.shape == (3532,)
+        assert ans0[0].value.shape == (3532,)
+        assert ans1[0].value.shape == (3532,)

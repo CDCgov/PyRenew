@@ -212,33 +212,33 @@ class RtInfectionsRenewalModel(Model):
             post_initialization_latent_infections,
             *_,
         ) = self.latent_infections_rv(
-            Rt=Rt.array,
-            gen_int=gen_int.array,
-            I0=I0.array,
+            Rt=Rt.value,
+            gen_int=gen_int.value,
+            I0=I0.value,
             **kwargs,
         )
 
         observed_infections, *_ = self.infection_obs_process_rv(
-            mu=post_initialization_latent_infections.array[padding:],
+            mu=post_initialization_latent_infections.value[padding:],
             obs=data_observed_infections,
             **kwargs,
         )
 
         all_latent_infections = jnp.hstack(
-            [I0.array, post_initialization_latent_infections.array]
+            [I0.value, post_initialization_latent_infections.value]
         )
         npro.deterministic("all_latent_infections", all_latent_infections)
 
         if observed_infections is not None:
             observed_infections = au.pad_x_to_match_y(
-                observed_infections.array,
+                observed_infections.value,
                 all_latent_infections,
                 jnp.nan,
                 pad_direction="start",
             )
 
         Rt = au.pad_x_to_match_y(
-            Rt.array,
+            Rt.value,
             all_latent_infections,
             jnp.nan,
             pad_direction="start",

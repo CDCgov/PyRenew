@@ -96,7 +96,7 @@ class DeterministicVariable(RandomVariable):
             npro.deterministic(self.name, self.vars)
         return (
             SampledValue(
-                array=self.vars,
+                value=self.vars,
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
