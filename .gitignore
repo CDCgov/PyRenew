@@ -344,3 +344,5 @@ replay_pid*
 
 /.quarto/
 *_files
+
+*.json
