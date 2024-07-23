@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpyro as npro
 from jax.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.metaclass import RandomVariable, TimeArray
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class HospitalAdmissionsSample(NamedTuple):
@@ -20,12 +20,12 @@ class HospitalAdmissionsSample(NamedTuple):
     ----------
     infection_hosp_rate : float, optional
         The infection-to-hospitalization rate. Defaults to None.
-    latent_hospital_admissions : TimeArray or None
+    latent_hospital_admissions : SampledValue or None
         The computed number of hospital admissions. Defaults to None.
     """
 
     infection_hosp_rate: float | None = None
-    latent_hospital_admissions: TimeArray | None = None
+    latent_hospital_admissions: SampledValue | None = None
 
     def __repr__(self):
         return f"HospitalAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, latent_hospital_admissions={self.latent_hospital_admissions})"
@@ -162,7 +162,7 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        latent : ArrayLike or TimeArray
+        latent : ArrayLike or SampledValue
             Latent infections.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
@@ -208,7 +208,7 @@ class HospitalAdmissions(RandomVariable):
 
         return HospitalAdmissionsSample(
             infection_hosp_rate=infection_hosp_rate,
-            latent_hospital_admissions=TimeArray(
+            latent_hospital_admissions=SampledValue(
                 array=latent_hospital_admissions,
                 t_start=self.infection_to_admission_interval_rv.t_start,
                 t_unit=self.infection_to_admission_interval_rv.t_unit,

@@ -5,7 +5,7 @@ import jax.numpy as jnp
 import numpyro as npro
 import numpyro.distributions as dist
 from numpyro.contrib.control_flow import scan
-from pyrenew.metaclass import RandomVariable, TimeArray
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class SimpleRandomWalkProcess(RandomVariable):
@@ -76,7 +76,7 @@ class SimpleRandomWalkProcess(RandomVariable):
             xs=jnp.arange(n_timepoints - 1),
         )
 
-        return (TimeArray(jnp.hstack([init, x])),)
+        return (SampledValue(jnp.hstack([init, x])),)
 
     @staticmethod
     def validate():

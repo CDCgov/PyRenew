@@ -6,7 +6,7 @@ from __future__ import annotations
 import jax.numpy as jnp
 import numpyro as npro
 from jax.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable, TimeArray
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class DeterministicVariable(RandomVariable):
@@ -90,12 +90,12 @@ class DeterministicVariable(RandomVariable):
         Returns
         -------
         tuple
-            Containing the stored values during construction wrapped in a TimeArray.
+            Containing the stored values during construction wrapped in a SampledValue.
         """
         if record:
             npro.deterministic(self.name, self.vars)
         return (
-            TimeArray(
+            SampledValue(
                 array=self.vars,
                 t_start=self.t_start,
                 t_unit=self.t_unit,

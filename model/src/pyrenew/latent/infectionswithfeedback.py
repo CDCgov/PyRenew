@@ -10,7 +10,7 @@ import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
 from pyrenew.metaclass import (
     RandomVariable,
-    TimeArray,
+    SampledValue,
     _assert_sample_and_rtype,
 )
 
@@ -200,8 +200,8 @@ class InfectionsWithFeedback(RandomVariable):
         npro.deterministic("Rt_adjusted", Rt_adj)
 
         return InfectionsRtFeedbackSample(
-            post_initialization_infections=TimeArray(
+            post_initialization_infections=SampledValue(
                 post_initialization_infections
             ),
-            rt=TimeArray(Rt_adj),
+            rt=SampledValue(Rt_adj),
         )

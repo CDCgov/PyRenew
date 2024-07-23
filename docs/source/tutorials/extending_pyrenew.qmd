@@ -153,7 +153,7 @@ The next step is to create the actual class. The bulk of its implementation lies
 # | label: new-model-def
 # | code-line-numbers: true
 # Creating the class
-from pyrenew.metaclass import RandomVariable, TimeArray
+from pyrenew.metaclass import RandomVariable, SampledValue
 from pyrenew.latent import compute_infections_from_rt_with_feedback
 from pyrenew import arrayutils as au
 from jax.typing import ArrayLike
@@ -225,8 +225,8 @@ class InfFeedback(RandomVariable):
         # Preparing theoutput
 
         return InfFeedbackSample(
-            infections=TimeArray(all_infections),
-            rt=TimeArray(Rt_adj),
+            infections=SampledValue(all_infections),
+            rt=SampledValue(Rt_adj),
         )
 ```
 

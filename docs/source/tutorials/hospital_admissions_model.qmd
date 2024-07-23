@@ -496,7 +496,7 @@ class DayOfWeekEffect(metaclass.RandomVariable):
             sample_shape=(7,),
         )
 
-        return (metaclass.TimeArray(jnp.tile(ans, nweeks)[:n_timepoints]),)
+        return (metaclass.SampledValue(jnp.tile(ans, nweeks)[:n_timepoints]),)
 
 
 # Initializing the RV.

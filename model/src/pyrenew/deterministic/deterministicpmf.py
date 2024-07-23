@@ -94,7 +94,7 @@ class DeterministicPMF(RandomVariable):
         Returns
         -------
         tuple
-            Containing the stored values during construction wrapped in a TimeArray.
+            Containing the stored values during construction wrapped in a SampledValue.
         """
 
         return self.basevar.sample(**kwargs)

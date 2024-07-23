@@ -21,7 +21,7 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV, RandomVariable, TimeArray
+from pyrenew.metaclass import DistributionalRV, RandomVariable, SampledValue
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
 from pyrenew.process import RtRandomWalkProcess
@@ -39,7 +39,7 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
 
     def sample(self, **kwargs):  # numpydoc ignore=GL08
         return (
-            TimeArray(
+            SampledValue(
                 npro.sample(
                     name=self.name, fn=dist.Uniform(high=0.99, low=0.01)
                 )

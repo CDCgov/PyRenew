@@ -92,7 +92,7 @@ def _assert_sample_and_rtype(
     return None
 
 
-class TimeArray:
+class SampledValue:
     """
     A container for a time-aware array.
     """
@@ -104,7 +104,7 @@ class TimeArray:
         t_unit: int | None = None,
     ) -> None:
         """
-        Default constructor for TimeArray
+        Default constructor for SampledValue
 
         Parameters
         ----------
@@ -265,11 +265,11 @@ class DistributionalRVSample(NamedTuple):
 
     Attributes
     ----------
-    value : TimeArray
+    value : SampledValue
         Sampled value from the distribution.
     """
 
-    value: TimeArray | None = None
+    value: SampledValue | None = None
 
     def __repr__(self) -> str:
         """
@@ -344,7 +344,7 @@ class DistributionalRV(RandomVariable):
         DistributionalRVSample
         """
         return DistributionalRVSample(
-            value=TimeArray(
+            value=SampledValue(
                 jnp.atleast_1d(
                     npro.sample(
                         name=self.name,

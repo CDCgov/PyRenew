@@ -13,7 +13,7 @@ from pyrenew.deterministic import NullObservation
 from pyrenew.metaclass import (
     Model,
     RandomVariable,
-    TimeArray,
+    SampledValue,
     _assert_sample_and_rtype,
 )
 
@@ -245,7 +245,7 @@ class RtInfectionsRenewalModel(Model):
         )
 
         return RtInfectionsRenewalSample(
-            Rt=TimeArray(Rt),
-            latent_infections=TimeArray(all_latent_infections),
-            observed_infections=TimeArray(observed_infections),
+            Rt=SampledValue(Rt),
+            latent_infections=SampledValue(all_latent_infections),
+            observed_infections=SampledValue(observed_infections),
         )

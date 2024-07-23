@@ -2,7 +2,7 @@
 
 import jax.numpy as jnp
 from pyrenew.deterministic.deterministic import DeterministicVariable
-from pyrenew.metaclass import TimeArray
+from pyrenew.metaclass import SampledValue
 
 
 class DeterministicProcess(DeterministicVariable):
@@ -30,7 +30,7 @@ class DeterministicProcess(DeterministicVariable):
         Returns
         -------
         tuple
-            Containing the stored values during construction wrapped in a TimeArray.
+            Containing the stored values during construction wrapped in a SampledValue.
         """
 
         res, *_ = super().sample(**kwargs)
@@ -39,7 +39,7 @@ class DeterministicProcess(DeterministicVariable):
 
         if dif > 0:
             return (
-                TimeArray(
+                SampledValue(
                     jnp.hstack([res.array, jnp.repeat(res.array[-1], dif)]),
                     t_start=self.t_start,
                     t_unit=self.t_unit,
@@ -47,7 +47,7 @@ class DeterministicProcess(DeterministicVariable):
             )
 
         return (
-            TimeArray(
+            SampledValue(
                 array=res.array[:duration],
                 t_start=self.t_start,
                 t_unit=self.t_unit,

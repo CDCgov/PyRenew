@@ -4,7 +4,7 @@ import numpyro as npro
 from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
 )
-from pyrenew.metaclass import RandomVariable, TimeArray
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class InfectionInitializationProcess(RandomVariable):
@@ -100,7 +100,7 @@ class InfectionInitializationProcess(RandomVariable):
         npro.deterministic(self.name, infection_seeding)
 
         return (
-            TimeArray(
+            SampledValue(
                 array=infection_seeding,
                 t_start=self.t_start,
                 t_unit=self.t_unit,

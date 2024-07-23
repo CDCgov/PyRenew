@@ -6,7 +6,7 @@ from jax.typing import ArrayLike
 from pyrenew.arrayutils import PeriodicBroadcaster
 from pyrenew.metaclass import (
     RandomVariable,
-    TimeArray,
+    SampledValue,
     _assert_sample_and_rtype,
 )
 from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
@@ -192,7 +192,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         )[0]
 
         return RtPeriodicDiffProcessSample(
-            rt=TimeArray(
+            rt=SampledValue(
                 self.broadcaster(jnp.exp(log_rt.array.flatten()), duration)
             ),
         )
