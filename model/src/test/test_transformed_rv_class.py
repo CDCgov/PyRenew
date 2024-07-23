@@ -12,8 +12,8 @@ from numpy.testing import assert_almost_equal
 from pyrenew.metaclass import (
     DistributionalRV,
     RandomVariable,
-    TransformedRandomVariable,
     SampledValue,
+    TransformedRandomVariable,
 )
 
 
@@ -134,6 +134,9 @@ def test_transforms_applied_at_sampling():
             tr(norm_base_sample[0].value), norm_transformed_sample[0].value
         )
         assert_almost_equal(
-            (tr(l2_base_sample[0].value), t.ExpTransform()(l2_base_sample[1].value)),
+            (
+                tr(l2_base_sample[0].value),
+                t.ExpTransform()(l2_base_sample[1].value),
+            ),
             (l2_transformed_sample[0].value, l2_transformed_sample[1].value),
         )

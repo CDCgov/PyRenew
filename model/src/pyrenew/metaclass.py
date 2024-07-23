@@ -198,8 +198,10 @@ class RandomVariable(metaclass=ABCMeta):
         # Either both values are None or both are not None
         assert (t_unit is not None and t_start is not None) or (
             t_unit is None and t_start is None
-        ), "Both t_start and t_unit should be None or not None. " \
+        ), (
+            "Both t_start and t_unit should be None or not None. "
             "Currently, t_start is {t_start} and t_unit is {t_unit}."
+        )
 
         if t_unit is None and t_start is None:
             return None
@@ -699,9 +701,9 @@ class TransformedRandomVariable(RandomVariable):
         untransformed_values = self.base_rv.sample(**kwargs)
 
         return tuple(
-            SampledValue(t(uv.value)) for t, uv in zip(self.transforms, untransformed_values)
-            )
-        
+            SampledValue(t(uv.value))
+            for t, uv in zip(self.transforms, untransformed_values)
+        )
 
     def sample_length(self):
         """

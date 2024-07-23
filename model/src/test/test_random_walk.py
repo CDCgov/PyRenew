@@ -41,6 +41,7 @@ def test_rw_can_be_sampled():
     assert_almost_equal(ans_fixed[0].value[0], init_rv_fixed.vars)
     assert ans_rand[0].value[0] != init_rv_fixed.vars
 
+
 def test_rw_samples_correctly_distributed():
     """
     Check that a simple random walk has steps

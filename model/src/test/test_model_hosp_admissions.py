@@ -24,8 +24,8 @@ from pyrenew.latent import (
 from pyrenew.metaclass import (
     DistributionalRV,
     RandomVariable,
-    TransformedRandomVariable,
     SampledValue,
+    TransformedRandomVariable,
 )
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
