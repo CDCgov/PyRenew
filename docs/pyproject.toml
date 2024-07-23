@@ -2,7 +2,7 @@
 name = "docs"
 version = "0.1.0"
 description = "This package contains the documentation for the CFA Multisignal Renewal project. This documentation leverages Sphinx."
-authors = ["R543hfer099JJfd <127630341+AFg6K7h4fhy2@users.noreply.github.com>"]
+authors = ["CFA"]
 license = "Apache 2.0"
 package-mode = false
 
