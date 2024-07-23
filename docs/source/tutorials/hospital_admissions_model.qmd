@@ -213,12 +213,12 @@ rtproc = MyRt()
 
 # we place a log-Normal prior on the concentration
 # parameter of the negative binomial.
-nb_conc_rv = metaclass.DistributionalRV(
-    dist.LogNormal(
-        loc=jnp.log(1),
-        scale=jnp.log(10),
-    ),
+nb_conc_rv = metaclass.TransformedRandomVariable(
     "concentration",
+    metaclass.DistributionalRV(
+        dist.TruncatedNormal(low=0.01), "concentration_raw"
+    ),
+    transformation.PowerTransform(-2),
 )
 
 # now we define the observation process
