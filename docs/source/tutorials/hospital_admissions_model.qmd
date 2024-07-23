@@ -90,13 +90,16 @@ Let's take a look at the daily prevalence of hospital admissions.
 # | label: fig-plot-hospital-admissions
 # | fig-cap: Daily hospital admissions from the simulated data
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 daily_hosp_admits = dat["daily_hosp_admits"].to_numpy()
-# Rotating the x-axis labels, and only showing ~10 labels
+dates = dat["date"].to_numpy()
 ax = plt.gca()
-ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
-ax.xaxis.set_tick_params(rotation=45)
-plt.plot(dat["date"].to_numpy(), daily_hosp_admits)
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+ax.xaxis.set_major_locator(mdates.DayLocator(interval=7))
+ax.set_xlim(dates[0], dates[-1])
+ax.xaxis.set_tick_params(rotation=90)
+plt.plot(dates, daily_hosp_admits)
 plt.xlabel("Date")
 plt.ylabel("Admissions")
 plt.show()
@@ -316,9 +319,9 @@ out = hosp_model.plot_posterior(
 To explore further, We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by loading the module and converting the fitted model to ArviZ `InferenceData` object:
 
 ```{python}
+# | label: convert-inferenceData
 import arviz as az
 
-# | label: convert-inferenceData
 idata = az.from_numpyro(hosp_model.mcmc)
 ```
 
