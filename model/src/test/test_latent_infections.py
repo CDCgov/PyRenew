@@ -9,7 +9,8 @@ import numpyro.distributions as dist
 import pyrenew.transformation as t
 import pytest
 from pyrenew.latent import Infections
-from pyrenew.process import RtRandomWalkProcess
+from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
+from pyrenew.process import SimpleRandomWalkProcess
 
 
 def test_infections_as_deterministic():
@@ -19,13 +20,18 @@ def test_infections_as_deterministic():
     """
 
     np.random.seed(223)
-    rt = RtRandomWalkProcess(
-        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-        Rt_transform=t.ExpTransform().inv,
-        Rt_rw_dist=dist.Normal(0, 0.025),
+    rt = TransformedRandomVariable(
+        "Rt_rv",
+        base_rv=SimpleRandomWalkProcess(
+            name="log_rt",
+            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
+            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+        ),
+        transforms=t.ExpTransform(),
     )
+
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt, *_ = rt(n_timepoints=30)
+        sim_rt, *_ = rt(n_steps=30)
 
     gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
 
