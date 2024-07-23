@@ -5,7 +5,9 @@ description = "CFA Multisignal Renewal project develops Pyrenew, a Python packag
 authors = ["CFA"]
 license = "Apache 2.0"
 readme = "README.md"
-packages = [{include = "multisignal_epi_inference"}]
+packages = [
+    {include = "model/src/pyrenew"}
+]
 include = [{path = "datasets/*.tsv"}]
 exclude = [{path = "datasets/*.rds"}]
 
