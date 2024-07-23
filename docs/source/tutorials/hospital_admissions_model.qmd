@@ -468,7 +468,7 @@ By increasing `n_timepoints_to_simulate`, we can perform forecasting using the p
 ```{python}
 # | label: posterior-predictive-distribution
 n_forecast_points = 28
-idata_weekday = az.from_numpyro(
+idata = az.from_numpyro(
     hosp_model.mcmc,
     posterior_predictive=hosp_model.posterior_predictive(
         n_timepoints_to_simulate=len(daily_hosp_admits) + n_forecast_points,
@@ -494,8 +494,8 @@ def compute_eti(dataset, eti_prob):
 
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
-    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
+    idata.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
+    hdi_data=compute_eti(idata.prior_predictive["negbinom_rv"], 0.9),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.3},
@@ -503,8 +503,8 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
-    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.5),
+    idata.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
+    hdi_data=compute_eti(idata.prior_predictive["negbinom_rv"], 0.5),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.6},
@@ -512,8 +512,8 @@ az.plot_hdi(
 )
 
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
-    idata_weekday.observed_data["negbinom_rv"],
+    idata.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
+    idata.observed_data["negbinom_rv"],
     color="black",
 )
 
@@ -528,10 +528,8 @@ And now we plot the posterior predictive distributions with a `{python} n_foreca
 ```{python}
 # | label: fig-output-posterior-predictive-forecast
 # | fig-cap: Posterior predictive admissions, including a forecast.
-x_data = (
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
-)
-y_data = idata_weekday.posterior_predictive["negbinom_rv"]
+x_data = idata.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
+y_data = idata.posterior_predictive["negbinom_rv"]
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     x_data,
@@ -561,8 +559,8 @@ plt.plot(
     label="Median",
 )
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
-    idata_weekday.observed_data["negbinom_rv"],
+    idata.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
+    idata.observed_data["negbinom_rv"],
     color="black",
 )
 axes.legend()
