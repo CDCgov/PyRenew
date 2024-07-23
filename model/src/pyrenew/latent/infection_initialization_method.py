@@ -8,7 +8,7 @@ from pyrenew.metaclass import RandomVariable
 
 
 class InfectionInitializationMethod(metaclass=ABCMeta):
-    """Method for seeding initial infections in a renewal process."""
+    """Method for initializing infections in a renewal process."""
 
     def __init__(self, n_timepoints: int):
         """Default constructor for the ``InfectionInitializationMethod`` class.
@@ -49,7 +49,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
     @abstractmethod
     def initialize_infections(self, I_pre_init: ArrayLike):
-        """Generate the number of seeded infections at each time point.
+        """Generate the number of initialized infections at each time point.
 
         Parameters
         ----------
@@ -59,7 +59,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of seeded infections at each time point.
+            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
 
     def __call__(self, I_pre_init: ArrayLike):
@@ -79,12 +79,12 @@ class InitializeInfectionsZeroPad(InfectionInitializationMethod):
         Parameters
         ----------
         I_pre_init : ArrayLike
-            An array with seeded infections to be padded with zeros.
+            An array with initialized infections to be padded with zeros.
 
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of seeded infections at each time point.
+            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
         if self.n_timepoints < I_pre_init.size:
             raise ValueError(
@@ -109,7 +109,7 @@ class InitializeInfectionsFromVec(InfectionInitializationMethod):
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of seeded infections at each time point.
+            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
         if I_pre_init.size != self.n_timepoints:
             raise ValueError(
@@ -170,7 +170,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of seeded infections at each time point.
+            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
         if I_pre_init.size != 1:
             raise ValueError(
