@@ -197,7 +197,7 @@ class MyRt(metaclass.RandomVariable):
             base_rv=process.SimpleRandomWalkProcess(
                 name="log_rt",
                 step_rv=metaclass.DistributionalRV(
-                    dist.Normal(0, sd_rt), "rw_step_rv"
+                    dist.Normal(0, sd_rt.value), "rw_step_rv"
                 ),
                 init_rv=metaclass.DistributionalRV(
                     dist.Normal(0, 0.2), "init_log_Rt_rv"
