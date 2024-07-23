@@ -96,7 +96,7 @@ class InfectionInitializationProcess(RandomVariable):
             a tuple where the only element is an array with the number of seeded infections at each time point.
         """
         (I_pre_init,) = self.I_pre_init_rv()
-        infection_seeding = self.infection_init_method(I_pre_init)
-        npro.deterministic(self.name, infection_seeding)
+        infection_initialization = self.infection_init_method(I_pre_init)
+        npro.deterministic(self.name, infection_initialization)
 
-        return (infection_seeding,)
+        return (infection_initialization,)
