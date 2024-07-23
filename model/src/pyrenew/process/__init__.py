@@ -9,13 +9,11 @@ from pyrenew.process.rtperiodicdiff import (
     RtPeriodicDiffProcess,
     RtWeeklyDiffProcess,
 )
-from pyrenew.process.rtrandomwalk import RtRandomWalkProcess
 from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
 
 __all__ = [
     "ARProcess",
     "FirstDifferenceARProcess",
-    "RtRandomWalkProcess",
     "SimpleRandomWalkProcess",
     "RtPeriodicDiffProcess",
     "RtWeeklyDiffProcess",

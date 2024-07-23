@@ -14,12 +14,12 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV
+from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
-from pyrenew.process import RtRandomWalkProcess
+from pyrenew.process import SimpleRandomWalkProcess
 
-pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
+pmf_array = jnp.array([0.25, 0.1, 0.2, 0.45])
 gen_int = DeterministicPMF(pmf_array, name="gen_int")
 I0 = InfectionInitializationProcess(
     "I0_initialization",
@@ -29,11 +29,16 @@ I0 = InfectionInitializationProcess(
 )
 latent_infections = Infections()
 observed_infections = PoissonObservation("poisson_rv")
-rt = RtRandomWalkProcess(
-    Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-    Rt_transform=t.ExpTransform().inv,
-    Rt_rw_dist=dist.Normal(0, 0.025),
+rt = TransformedRandomVariable(
+    "Rt_rv",
+    base_rv=SimpleRandomWalkProcess(
+        name="log_rt",
+        step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
+        init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+    ),
+    transforms=t.ExpTransform(),
 )
+
 model = RtInfectionsRenewalModel(
     I0_rv=I0,
     gen_int_rv=gen_int,

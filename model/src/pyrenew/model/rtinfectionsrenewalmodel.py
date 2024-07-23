@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 import pyrenew.arrayutils as au
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
@@ -169,7 +169,8 @@ class RtInfectionsRenewalModel(Model):
 
         Notes
         -----
-        Either `data_observed_infections` or `n_timepoints_to_simulate` must be specified, not both.
+        Either `data_observed_infections` or `n_timepoints_to_simulate`
+        must be specified, not both.
 
         Returns
         -------
@@ -198,7 +199,7 @@ class RtInfectionsRenewalModel(Model):
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.Rt_process_rv(
-            n_timepoints=n_timepoints,
+            n_steps=n_timepoints,
             **kwargs,
         )
 
@@ -227,7 +228,7 @@ class RtInfectionsRenewalModel(Model):
         all_latent_infections = jnp.hstack(
             [I0.value, post_initialization_latent_infections.value]
         )
-        npro.deterministic("all_latent_infections", all_latent_infections)
+        numpyro.deterministic("all_latent_infections", all_latent_infections)
 
         if observed_infections is not None:
             observed_infections = au.pad_x_to_match_y(
@@ -243,6 +244,7 @@ class RtInfectionsRenewalModel(Model):
             jnp.nan,
             pad_direction="start",
         )
+        numpyro.deterministic("Rt", Rt)
 
         return RtInfectionsRenewalSample(
             Rt=SampledValue(Rt),

@@ -16,15 +16,39 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV
+from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
-from pyrenew.process import RtRandomWalkProcess
+from pyrenew.process import SimpleRandomWalkProcess
+
+
+def get_default_rt():
+    """
+    Helper function to create a default Rt
+    RandomVariable for this testing session.
+
+    Returns
+    -------
+    TransformedRandomVariable :
+       A log-scale random walk with fixed
+       init value and step size priors
+    """
+    return TransformedRandomVariable(
+        "Rt_rv",
+        base_rv=SimpleRandomWalkProcess(
+            name="log_rt",
+            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
+            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+        ),
+        transforms=t.ExpTransform(),
+    )
 
 
 def test_model_basicrenewal_no_timepoints_or_observations():
     """
-    Test that the basic renewal model does not run without either n_timepoints_to_simulate or observed_admissions
+    Test that the basic renewal model does not run
+    without either n_timepoints_to_simulate or
+    observed_admissions
     """
 
     gen_int = DeterministicPMF(
@@ -37,11 +61,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
 
     observed_infections = PoissonObservation("poisson_rv")
 
-    rt = RtRandomWalkProcess(
-        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-        Rt_transform=t.ExpTransform().inv,
-        Rt_rw_dist=dist.Normal(0, 0.025),
-    )
+    rt = get_default_rt()
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -74,11 +94,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     observed_infections = PoissonObservation("possion_rv")
 
-    rt = RtRandomWalkProcess(
-        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-        Rt_transform=t.ExpTransform().inv,
-        Rt_rw_dist=dist.Normal(0, 0.025),
-    )
+    rt = get_default_rt()
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -119,11 +135,7 @@ def test_model_basicrenewal_no_obs_model():
 
     latent_infections = Infections()
 
-    rt = RtRandomWalkProcess(
-        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-        Rt_transform=t.ExpTransform().inv,
-        Rt_rw_dist=dist.Normal(0, 0.025),
-    )
+    rt = get_default_rt()
 
     model0 = RtInfectionsRenewalModel(
         gen_int_rv=gen_int,
@@ -198,11 +210,7 @@ def test_model_basicrenewal_with_obs_model():
 
     observed_infections = PoissonObservation("poisson_rv")
 
-    rt = RtRandomWalkProcess(
-        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-        Rt_transform=t.ExpTransform().inv,
-        Rt_rw_dist=dist.Normal(0, 0.025),
-    )
+    rt = get_default_rt()
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -252,11 +260,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
 
     observed_infections = PoissonObservation("poisson_rv")
 
-    rt = RtRandomWalkProcess(
-        Rt0_dist=dist.TruncatedNormal(loc=1.2, scale=0.2, low=0),
-        Rt_transform=t.ExpTransform().inv,
-        Rt_rw_dist=dist.Normal(0, 0.025),
-    )
+    rt = get_default_rt()
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
