@@ -216,7 +216,7 @@ rtproc = MyRt()
 nb_conc_rv = metaclass.TransformedRandomVariable(
     "concentration",
     metaclass.DistributionalRV(
-        dist.TruncatedNormal(low=0.01), "concentration_raw"
+        dist.TruncatedNormal(loc=0, scale=1, low=0.01), "concentration_raw"
     ),
     transformation.PowerTransform(-2),
 )
