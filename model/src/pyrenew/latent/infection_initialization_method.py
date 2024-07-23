@@ -8,7 +8,7 @@ from pyrenew.metaclass import RandomVariable
 
 
 class InfectionInitializationMethod(metaclass=ABCMeta):
-    """Method for seeding initial infections in a renewal process."""
+    """Method for initializing infections in a renewal process."""
 
     def __init__(self, n_timepoints: int):
         """Default constructor for the ``InfectionInitializationMethod`` class.
@@ -48,22 +48,22 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
             )
 
     @abstractmethod
-    def seed_infections(self, I_pre_seed: ArrayLike):
-        """Generate the number of seeded infections at each time point.
+    def initialize_infections(self, I_pre_init: ArrayLike):
+        """Generate the number of initialized infections at each time point.
 
         Parameters
         ----------
-        I_pre_seed : ArrayLike
+        I_pre_init : ArrayLike
             An array representing some number of latent infections to be used with the specified ``InfectionInitializationMethod``.
 
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of seeded infections at each time point.
+            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
 
-    def __call__(self, I_pre_seed: ArrayLike):
-        return self.seed_infections(I_pre_seed)
+    def __call__(self, I_pre_init: ArrayLike):
+        return self.initialize_infections(I_pre_init)
 
 
 class InitializeInfectionsZeroPad(InfectionInitializationMethod):
@@ -73,51 +73,51 @@ class InitializeInfectionsZeroPad(InfectionInitializationMethod):
     zeros at the beginning of the time series.
     """
 
-    def seed_infections(self, I_pre_seed: ArrayLike):
+    def initialize_infections(self, I_pre_init: ArrayLike):
         """Pad the initial infections with zeros at the beginning of the time series.
 
         Parameters
         ----------
-        I_pre_seed : ArrayLike
-            An array with seeded infections to be padded with zeros.
+        I_pre_init : ArrayLike
+            An array with initialized infections to be padded with zeros.
 
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of seeded infections at each time point.
+            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
-        if self.n_timepoints < I_pre_seed.size:
+        if self.n_timepoints < I_pre_init.size:
             raise ValueError(
-                "I_pre_seed must be no longer than n_timepoints. "
-                f"Got I_pre_seed of size {I_pre_seed.size} and "
+                "I_pre_init must be no longer than n_timepoints. "
+                f"Got I_pre_init of size {I_pre_init.size} and "
                 f" n_timepoints of size {self.n_timepoints}."
             )
-        return jnp.pad(I_pre_seed, (self.n_timepoints - I_pre_seed.size, 0))
+        return jnp.pad(I_pre_init, (self.n_timepoints - I_pre_init.size, 0))
 
 
 class InitializeInfectionsFromVec(InfectionInitializationMethod):
     """Create initial infections from a vector of infections."""
 
-    def seed_infections(self, I_pre_seed: ArrayLike):
+    def initialize_infections(self, I_pre_init: ArrayLike):
         """Create initial infections from a vector of infections.
 
         Parameters
         ----------
-        I_pre_seed : ArrayLike
+        I_pre_init : ArrayLike
             An array with the same length as ``n_timepoints`` to be used as the initial infections.
 
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of seeded infections at each time point.
+            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
-        if I_pre_seed.size != self.n_timepoints:
+        if I_pre_init.size != self.n_timepoints:
             raise ValueError(
-                "I_pre_seed must have the same size as n_timepoints. "
-                f"Got I_pre_seed of size {I_pre_seed.size} "
+                "I_pre_init must have the same size as n_timepoints. "
+                f"Got I_pre_init of size {I_pre_init.size} "
                 f"and n_timepoints of size {self.n_timepoints}."
             )
-        return jnp.array(I_pre_seed)
+        return jnp.array(I_pre_init)
 
 
 class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
@@ -129,10 +129,10 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
 
     .. math:: I(t) = I_p \exp \left( r (t - t_p) \right)
 
-    Where :math:`I_p` is ``I_pre_seed``, :math:`r` is ``rate``, and :math:`t_p` is ``t_pre_seed``.
+    Where :math:`I_p` is ``I_pre_init``, :math:`r` is ``rate``, and :math:`t_p` is ``t_pre_init``.
     This ensures that :math:`I(t_p) = I_p`.
-    We default to ``t_pre_seed = n_timepoints - 1``, so that
-    ``I_pre_seed`` represents the number of incident infections immediately
+    We default to ``t_pre_init = n_timepoints - 1``, so that
+    ``I_pre_init`` represents the number of incident infections immediately
     before the renewal process begins.
     """
 
@@ -140,7 +140,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         self,
         n_timepoints: int,
         rate: RandomVariable,
-        t_pre_seed: int | None = None,
+        t_pre_init: int | None = None,
     ):
         """Default constructor for the ``InitializeInfectionsExponentialGrowth`` class.
 
@@ -150,37 +150,37 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
             the number of time points to generate initial infections for
         rate : RandomVariable
             A random variable representing the rate of exponential growth
-        t_pre_seed : int | None, optional
-             The time point whose number of infections is described by ``I_pre_seed``. Defaults to ``n_timepoints - 1``.
+        t_pre_init : int | None, optional
+             The time point whose number of infections is described by ``I_pre_init``. Defaults to ``n_timepoints - 1``.
         """
         super().__init__(n_timepoints)
         self.rate = rate
-        if t_pre_seed is None:
-            t_pre_seed = n_timepoints - 1
-        self.t_pre_seed = t_pre_seed
+        if t_pre_init is None:
+            t_pre_init = n_timepoints - 1
+        self.t_pre_init = t_pre_init
 
-    def seed_infections(self, I_pre_seed: ArrayLike):
+    def initialize_infections(self, I_pre_init: ArrayLike):
         """Generate initial infections according to exponential growth.
 
         Parameters
         ----------
-        I_pre_seed : ArrayLike
-            An array of size 1 representing the number of infections at time ``t_pre_seed``.
+        I_pre_init : ArrayLike
+            An array of size 1 representing the number of infections at time ``t_pre_init``.
 
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of seeded infections at each time point.
+            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
-        if I_pre_seed.size != 1:
+        if I_pre_init.size != 1:
             raise ValueError(
-                f"I_pre_seed must be an array of size 1. Got size {I_pre_seed.size}."
+                f"I_pre_init must be an array of size 1. Got size {I_pre_init.size}."
             )
         (rate,) = self.rate()
         if rate.size != 1:
             raise ValueError(
                 f"rate must be an array of size 1. Got size {rate.size}."
             )
-        return I_pre_seed * jnp.exp(
-            rate * (jnp.arange(self.n_timepoints) - self.t_pre_seed)
+        return I_pre_init * jnp.exp(
+            rate * (jnp.arange(self.n_timepoints) - self.t_pre_init)
         )
