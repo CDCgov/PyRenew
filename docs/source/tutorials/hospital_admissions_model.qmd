@@ -90,13 +90,16 @@ Let's take a look at the daily prevalence of hospital admissions.
 # | label: fig-plot-hospital-admissions
 # | fig-cap: Daily hospital admissions from the simulated data
 import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 daily_hosp_admits = dat["daily_hosp_admits"].to_numpy()
-# Rotating the x-axis labels, and only showing ~10 labels
+dates = dat["date"].to_numpy()
 ax = plt.gca()
-ax.xaxis.set_major_locator(plt.MaxNLocator(nbins=10))
-ax.xaxis.set_tick_params(rotation=45)
-plt.plot(dat["date"].to_numpy(), daily_hosp_admits)
+ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
+ax.xaxis.set_major_locator(mdates.DayLocator(interval=7))
+ax.set_xlim(dates[0], dates[-1])
+plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+plt.plot(dates, daily_hosp_admits, "-o")
 plt.xlabel("Date")
 plt.ylabel("Admissions")
 plt.show()
@@ -183,12 +186,14 @@ gen_int = deterministic.DeterministicPMF(gen_int, name="gen_int")
 
 
 class MyRt(metaclass.RandomVariable):
+    def __init__(self, sd_rv):
+        self.sd_rv = sd_rv
 
     def validate(self):
         pass
 
     def sample(self, n_steps: int, **kwargs) -> tuple:
-        sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
+        sd_rt, *_ = self.sd_rv()
 
         rt_rv = metaclass.TransformedRandomVariable(
             "Rt_rv",
@@ -207,18 +212,20 @@ class MyRt(metaclass.RandomVariable):
         return rt_rv.sample(n_steps=n_steps, **kwargs)
 
 
-rtproc = MyRt()
+rtproc = MyRt(
+    metaclass.DistributionalRV(dist.HalfNormal(0.025), "Rt_random_walk_sd")
+)
 
 # The observation model
 
 # we place a log-Normal prior on the concentration
 # parameter of the negative binomial.
-nb_conc_rv = metaclass.DistributionalRV(
-    dist.LogNormal(
-        loc=jnp.log(1),
-        scale=jnp.log(10),
-    ),
+nb_conc_rv = metaclass.TransformedRandomVariable(
     "concentration",
+    metaclass.DistributionalRV(
+        dist.TruncatedNormal(loc=0, scale=1, low=0.01), "concentration_raw"
+    ),
+    transformation.PowerTransform(-2),
 )
 
 # now we define the observation process
@@ -316,9 +323,9 @@ out = hosp_model.plot_posterior(
 To explore further, We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by loading the module and converting the fitted model to ArviZ `InferenceData` object:
 
 ```{python}
+# | label: convert-inferenceData
 import arviz as az
 
-# | label: convert-inferenceData
 idata = az.from_numpyro(hosp_model.mcmc)
 ```
 
@@ -468,7 +475,7 @@ By increasing `n_timepoints_to_simulate`, we can perform forecasting using the p
 ```{python}
 # | label: posterior-predictive-distribution
 n_forecast_points = 28
-idata_weekday = az.from_numpyro(
+idata = az.from_numpyro(
     hosp_model.mcmc,
     posterior_predictive=hosp_model.posterior_predictive(
         n_timepoints_to_simulate=len(daily_hosp_admits) + n_forecast_points,
@@ -494,8 +501,8 @@ def compute_eti(dataset, eti_prob):
 
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
-    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.9),
+    idata.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
+    hdi_data=compute_eti(idata.prior_predictive["negbinom_rv"], 0.9),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.3},
@@ -503,8 +510,8 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata_weekday.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
-    hdi_data=compute_eti(idata_weekday.prior_predictive["negbinom_rv"], 0.5),
+    idata.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
+    hdi_data=compute_eti(idata.prior_predictive["negbinom_rv"], 0.5),
     color="C0",
     smooth=False,
     fill_kwargs={"alpha": 0.6},
@@ -512,8 +519,8 @@ az.plot_hdi(
 )
 
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
-    idata_weekday.observed_data["negbinom_rv"],
+    idata.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
+    idata.observed_data["negbinom_rv"],
     color="black",
 )
 
@@ -528,10 +535,8 @@ And now we plot the posterior predictive distributions with a `{python} n_foreca
 ```{python}
 # | label: fig-output-posterior-predictive-forecast
 # | fig-cap: Posterior predictive admissions, including a forecast.
-x_data = (
-    idata_weekday.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
-)
-y_data = idata_weekday.posterior_predictive["negbinom_rv"]
+x_data = idata.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
+y_data = idata.posterior_predictive["negbinom_rv"]
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
     x_data,
@@ -561,8 +566,8 @@ plt.plot(
     label="Median",
 )
 plt.scatter(
-    idata_weekday.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
-    idata_weekday.observed_data["negbinom_rv"],
+    idata.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
+    idata.observed_data["negbinom_rv"],
     color="black",
 )
 axes.legend()
