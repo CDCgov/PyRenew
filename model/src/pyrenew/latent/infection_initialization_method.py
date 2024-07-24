@@ -176,8 +176,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
             raise ValueError(
                 f"I_pre_init must be an array of size 1. Got size {I_pre_init.size}."
             )
-        (rate,) = self.rate()
-        rate = rate.value
+        rate = self.rate()[0].value
         if rate.size != 1:
             raise ValueError(
                 f"rate must be an array of size 1. Got size {rate.size}."

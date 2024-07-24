@@ -162,7 +162,7 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        latent : ArrayLike or SampledValue
+        latent_infections : ArrayLike
             Latent infections.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
@@ -210,7 +210,7 @@ class HospitalAdmissions(RandomVariable):
             infection_hosp_rate=infection_hosp_rate,
             latent_hospital_admissions=SampledValue(
                 value=latent_hospital_admissions,
-                t_start=self.infection_to_admission_interval_rv.t_start,
-                t_unit=self.infection_to_admission_interval_rv.t_unit,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
             ),
         )

@@ -89,8 +89,9 @@ class DeterministicVariable(RandomVariable):
 
         Returns
         -------
-        tuple
-            Containing the stored values during construction wrapped in a SampledValue.
+        tuple[SampledValue]
+            A length-one tuple whose single entry is a :class:`SampledValue` 
+            instance with `value=self.vars`, `t_start=self.t_start`, and `t_unit=self.t_unit`.
         """
         if record:
             npro.deterministic(self.name, self.vars)
