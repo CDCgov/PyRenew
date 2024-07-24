@@ -25,6 +25,7 @@ from pyrenew import process, deterministic
 ```{python}
 # The random process for Rt
 rt_proc = process.RtWeeklyDiffProcess(
+    name="rt_weekly_diff",
     offset=0,
     log_rt_prior=deterministic.DeterministicVariable(
         jnp.array([0.1, 0.2]), name="log_rt_prior"
