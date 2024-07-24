@@ -131,7 +131,6 @@ class NullObservation(NullVariable):
         self,
         mu: ArrayLike,
         obs: ArrayLike | None = None,
-        name: str | None = None,
         **kwargs,
     ) -> tuple:
         """
@@ -143,8 +142,6 @@ class NullObservation(NullVariable):
             Unused parameter, represents mean of non-null distributions
         obs : ArrayLike, optional
             Observed data. Defaults to None.
-        name : str, optional
-            Name of the random variable. Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample calls, should there be any.
 
