@@ -74,7 +74,7 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
 def test_model_hosp_no_timepoints_or_observations():
     """
     Checks that the hospital admissions model does not run
-    without either n_timepoints_to_simulate or observed_admissions
+    without either n_datapoints or observed_admissions
     """
 
     gen_int = DeterministicPMF(
@@ -132,15 +132,13 @@ def test_model_hosp_no_timepoints_or_observations():
 
     with numpyro.handlers.seed(rng_seed=233):
         with pytest.raises(ValueError, match="Either"):
-            model1.sample(
-                n_timepoints_to_simulate=None, data_observed_admissions=None
-            )
+            model1.sample(n_datapoints=None, data_observed_admissions=None)
 
 
 def test_model_hosp_both_timepoints_and_observations():
     """
     Checks that the hospital admissions model does not run with
-    both n_timepoints_to_simulate and observed_admissions passed
+    both n_datapoints and observed_admissions passed
     """
 
     gen_int = DeterministicPMF(
@@ -200,7 +198,7 @@ def test_model_hosp_both_timepoints_and_observations():
     with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError, match="Cannot pass both"):
             model1.sample(
-                n_timepoints_to_simulate=30,
+                n_datapoints=30,
                 data_observed_hosp_admissions=jnp.repeat(jnp.nan, 30),
             )
 
@@ -271,13 +269,13 @@ def test_model_hosp_no_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model0_samp = model0.sample(n_timepoints_to_simulate=30)
+        model0_samp = model0.sample(n_datapoints=30)
 
     model0.hosp_admission_obs_process_rv = NullObservation()
 
     np.random.seed(223)
     with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model0.sample(n_timepoints_to_simulate=30)
+        model1_samp = model0.sample(n_datapoints=30)
 
     np.testing.assert_array_almost_equal(model0_samp.Rt, model1_samp.Rt)
     np.testing.assert_array_equal(
@@ -378,7 +376,7 @@ def test_model_hosp_with_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints_to_simulate=30)
+        model1_samp = model1.sample(n_datapoints=30)
 
     model1.run(
         num_warmup=500,
@@ -475,7 +473,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints_to_simulate=30)
+        model1_samp = model1.sample(n_datapoints=30)
 
     model1.run(
         num_warmup=500,
@@ -586,7 +584,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     np.random.seed(223)
     with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model1.sample(
-            n_timepoints_to_simulate=n_obs_to_generate, padding=pad_size
+            n_datapoints=n_obs_to_generate, padding=pad_size
         )
 
     # Running with padding

@@ -141,7 +141,7 @@ class RtInfectionsRenewalModel(Model):
 
     def sample(
         self,
-        n_timepoints_to_simulate: int | None = None,
+        n_datapoints: int | None = None,
         data_observed_infections: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
@@ -151,7 +151,7 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        n_timepoints_to_simulate : int, optional
+        n_datapoints : int, optional
             Number of timepoints to sample.
         data_observed_infections : ArrayLike | None, optional
             Observed infections. Defaults to None.
@@ -164,7 +164,7 @@ class RtInfectionsRenewalModel(Model):
 
         Notes
         -----
-        Either `data_observed_infections` or `n_timepoints_to_simulate`
+        Either `data_observed_infections` or `n_datapoints`
         must be specified, not both.
 
         Returns
@@ -172,25 +172,19 @@ class RtInfectionsRenewalModel(Model):
         RtInfectionsRenewalSample
         """
 
-        if (
-            n_timepoints_to_simulate is None
-            and data_observed_infections is None
-        ):
+        if n_datapoints is None and data_observed_infections is None:
             raise ValueError(
-                "Either n_timepoints_to_simulate or data_observed_infections "
+                "Either n_datapoints or data_observed_infections "
                 "must be passed."
             )
-        elif (
-            n_timepoints_to_simulate is not None
-            and data_observed_infections is not None
-        ):
+        elif n_datapoints is not None and data_observed_infections is not None:
             raise ValueError(
-                "Cannot pass both n_timepoints_to_simulate and data_observed_infections."
+                "Cannot pass both n_datapoints and data_observed_infections."
             )
-        elif n_timepoints_to_simulate is None:
+        elif n_datapoints is None:
             n_timepoints = len(data_observed_infections) + padding
         else:
-            n_timepoints = n_timepoints_to_simulate + padding
+            n_timepoints = n_datapoints + padding
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
         Rt, *_ = self.Rt_process_rv(
