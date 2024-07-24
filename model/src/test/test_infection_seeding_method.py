@@ -20,7 +20,7 @@ def test_initialize_infections_exponential():
     (I_pre_init,) = I_pre_init_RV()
     (rate,) = rate_RV()
 
-    I_pre_seed = I_pre_seed.value
+    I_pre_init = I_pre_init.value
     rate = rate.value
     infections_default_t_pre_init = InitializeInfectionsExponentialGrowth(
         n_timepoints, rate=rate_RV
@@ -51,7 +51,7 @@ def test_initialize_infections_exponential():
     with pytest.raises(ValueError):
         InitializeInfectionsExponentialGrowth(
             n_timepoints, rate=rate_RV
-        ).initialize_infections(I_pre_init_2)
+        ).initialize_infections(I_pre_init_2.value)
 
     # test non-default t_pre_init
     t_pre_init = 6
@@ -76,7 +76,7 @@ def test_initialize_infections_zero_pad():
     n_timepoints = 10
     I_pre_init_RV = DeterministicVariable(10.0, name="I_pre_init_RV")
     (I_pre_init,) = I_pre_init_RV()
-    I_pre_seed = I_pre_seed.value
+    I_pre_init = I_pre_init.value
 
     infections = InitializeInfectionsZeroPad(
         n_timepoints
@@ -90,7 +90,7 @@ def test_initialize_infections_zero_pad():
     )
 
     (I_pre_init_2,) = I_pre_init_RV_2()
-     I_pre_seed_2 = I_pre_seed_2.value
+    I_pre_init_2 = I_pre_init_2.value
 
     infections_2 = InitializeInfectionsZeroPad(
         n_timepoints

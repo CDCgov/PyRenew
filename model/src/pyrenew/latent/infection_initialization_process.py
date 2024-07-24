@@ -97,8 +97,15 @@ class InfectionInitializationProcess(RandomVariable):
         """
 
         (I_pre_init,) = self.I_pre_init_rv()
-        infection_initialization = self.infection_init_method(I_pre_init)
+        infection_initialization = self.infection_init_method(
+            I_pre_init.value,
+        )
         npro.deterministic(self.name, infection_initialization)
 
-        return (SampledValue(infection_initialization, t_start=self.t_start, t_unit=self.t_unit),)
-
+        return (
+            SampledValue(
+                infection_initialization,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )
