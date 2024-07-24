@@ -6,7 +6,7 @@ authors = ["CFA"]
 license = "Apache 2.0"
 readme = "README.md"
 packages = [
-    {include = "model/src/pyrenew"}
+    {include = "pyrenew", from = "model/src"},
 ]
 include = [{path = "datasets/*.tsv"}]
 exclude = [{path = "datasets/*.rds"}]
