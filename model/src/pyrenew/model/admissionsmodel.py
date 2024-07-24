@@ -7,7 +7,12 @@ from typing import NamedTuple
 
 from jax.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
-from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype, SampledValue
+from pyrenew.metaclass import (
+    Model,
+    RandomVariable,
+    SampledValue,
+    _assert_sample_and_rtype,
+)
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
 

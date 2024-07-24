@@ -2,7 +2,6 @@
 
 from typing import NamedTuple
 
-import jax.numpy as jnp
 import pyrenew.arrayutils as au
 from pyrenew.metaclass import (
     RandomVariable,
