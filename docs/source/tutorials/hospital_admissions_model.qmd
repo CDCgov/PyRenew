@@ -259,7 +259,7 @@ timeframe = 120
 
 
 with numpyro.handlers.seed(rng_seed=223):
-    simulated_data = hosp_model.sample(n_timepoints_to_simulate=timeframe)
+    simulated_data = hosp_model.sample(n_datapoints=timeframe)
 ```
 
 ```{python}
@@ -439,10 +439,10 @@ import arviz as az
 idata = az.from_numpyro(
     hosp_model.mcmc,
     posterior_predictive=hosp_model.posterior_predictive(
-        n_timepoints_to_simulate=len(daily_hosp_admits)
+        n_datapoints=len(daily_hosp_admits)
     ),
     prior=hosp_model.prior_predictive(
-        n_timepoints_to_simulate=len(daily_hosp_admits),
+        n_datapoints=len(daily_hosp_admits),
         numpyro_predictive_args={"num_samples": 1000},
     ),
 )
@@ -470,7 +470,7 @@ plt.show()
 ```
 
 
-By increasing `n_timepoints_to_simulate`, we can perform forecasting using the posterior predictive distribution.
+By increasing `n_datapoints`, we can perform forecasting using the posterior predictive distribution.
 
 ```{python}
 # | label: posterior-predictive-distribution
@@ -478,10 +478,10 @@ n_forecast_points = 28
 idata = az.from_numpyro(
     hosp_model.mcmc,
     posterior_predictive=hosp_model.posterior_predictive(
-        n_timepoints_to_simulate=len(daily_hosp_admits) + n_forecast_points,
+        n_datapoints=len(daily_hosp_admits) + n_forecast_points,
     ),
     prior=hosp_model.prior_predictive(
-        n_timepoints_to_simulate=len(daily_hosp_admits),
+        n_datapoints=len(daily_hosp_admits),
         numpyro_predictive_args={"num_samples": 1000},
     ),
 )

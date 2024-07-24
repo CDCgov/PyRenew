@@ -205,7 +205,7 @@ Using `numpyro`, we can simulate data using the `sample()` member function of `R
 ```{python}
 # | label: simulate
 with numpyro.handlers.seed(rng_seed=53):
-    sim_data = model1.sample(n_timepoints_to_simulate=40)
+    sim_data = model1.sample(n_datapoints=40)
 
 sim_data
 ```
