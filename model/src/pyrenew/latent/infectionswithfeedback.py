@@ -21,14 +21,14 @@ class InfectionsRtFeedbackSample(NamedTuple):
 
     Attributes
     ----------
-    post_initialization_infections : ArrayLike | None, optional
+    post_initialization_infections : SampledValue | None, optional
         The estimated latent infections. Defaults to None.
-    rt : ArrayLike | None, optional
+    rt : SampledValue | None, optional
         The adjusted reproduction number. Defaults to None.
     """
 
-    post_initialization_infections: ArrayLike | None = None
-    rt: ArrayLike | None = None
+    post_initialization_infections: SampledValue | None = None
+    rt: SampledValue | None = None
 
     def __repr__(self):
         return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections}, rt={self.rt})"

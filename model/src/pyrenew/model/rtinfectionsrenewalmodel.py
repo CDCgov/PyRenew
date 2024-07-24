@@ -25,17 +25,17 @@ class RtInfectionsRenewalSample(NamedTuple):
 
     Attributes
     ----------
-    Rt : ArrayLike | None, optional
+    Rt : SampledValue | None, optional
         The reproduction number over time. Defaults to None.
-    latent_infections : ArrayLike | None, optional
+    latent_infections : SampledValue | None, optional
         The estimated latent infections. Defaults to None.
-    observed_infections : ArrayLike | None, optional
+    observed_infections : SampledValue | None, optional
         The sampled infections. Defaults to None.
     """
 
-    Rt: ArrayLike | None = None
-    latent_infections: ArrayLike | None = None
-    observed_infections: ArrayLike | None = None
+    Rt: SampledValue | None = None
+    latent_infections: SampledValue | None = None
+    observed_infections: SampledValue | None = None
 
     def __repr__(self):
         return (

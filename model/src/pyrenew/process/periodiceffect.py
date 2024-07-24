@@ -22,7 +22,7 @@ class PeriodicEffectSample(NamedTuple):
         The sampled value.
     """
 
-    value: jnp.ndarray
+    value: SampledValue
 
     def __repr__(self):
         return f"PeriodicEffectSample(value={self.value})"

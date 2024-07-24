@@ -113,7 +113,7 @@ class SampledValue:
         value : ArrayLike
             The sampled value.
         t_start : int, optional
-            The start time of the data.
+            The start time of the value.
         t_unit : int, optional
             The unit of time relative to the model's fundamental (smallest) time unit.
 

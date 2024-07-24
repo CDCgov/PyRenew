@@ -7,7 +7,7 @@ from typing import NamedTuple
 
 from jax.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
-from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype, SampledValue
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
 
@@ -17,23 +17,23 @@ class HospModelSample(NamedTuple):
 
     Attributes
     ----------
-    Rt : float | None, optional
+    Rt : SampledValue | None, optional
         The reproduction number over time. Defaults to None.
-    latent_infections : ArrayLike | None, optional
+    latent_infections : SampledValue | None, optional
         The estimated number of new infections over time. Defaults to None.
-    infection_hosp_rate : float | None, optional
+    infection_hosp_rate : SampledValue | None, optional
         The infected hospitalization rate. Defaults to None.
-    latent_hosp_admissions : ArrayLike | None, optional
+    latent_hosp_admissions : SampledValue | None, optional
         The estimated latent hospitalizations. Defaults to None.
-    observed_hosp_admissions : ArrayLike | None, optional
+    observed_hosp_admissions : SampledValue | None, optional
         The sampled or observed hospital admissions. Defaults to None.
     """
 
-    Rt: float | None = None
-    latent_infections: ArrayLike | None = None
-    infection_hosp_rate: float | None = None
-    latent_hosp_admissions: ArrayLike | None = None
-    observed_hosp_admissions: ArrayLike | None = None
+    Rt: SampledValue | None = None
+    latent_infections: SampledValue | None = None
+    infection_hosp_rate: SampledValue | None = None
+    latent_hosp_admissions: SampledValue | None = None
+    observed_hosp_admissions: SampledValue | None = None
 
     def __repr__(self):
         return (

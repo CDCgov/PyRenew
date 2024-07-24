@@ -18,11 +18,11 @@ class RtPeriodicDiffProcessSample(NamedTuple):
 
     Attributes
     ----------
-    rt : ArrayLike
+    rt : SampledValue, optional
         The sampled Rt.
     """
 
-    rt: ArrayLike | None = None
+    rt: SampledValue | None = None
 
     def __repr__(self):
         return f"RtPeriodicDiffProcessSample(rt={self.rt})"
