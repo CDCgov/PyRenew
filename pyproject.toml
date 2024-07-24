@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "multisignal-epi-inference"
 version = "0.1.0"
-description = "CFA Multisignal Renewal project develops Pyrenew, a Python package for multi-signal Bayesian renewal modeling with JAX and Numpyro."
+description = "The CFA Multisignal Renewal project contains Pyrenew, a Python package for multi-signal Bayesian renewal modeling with JAX and Numpyro."
 authors = ["CFA"]
 license = "Apache 2.0"
 readme = "README.md"
