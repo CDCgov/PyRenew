@@ -50,6 +50,7 @@ def test_rtweeklydiff() -> None:
     """Checks basic functionality of the process"""
 
     params = {
+        "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.1, 0.2]), name="log_rt_prior"
@@ -58,7 +59,6 @@ def test_rtweeklydiff() -> None:
         "periodic_diff_sd": DeterministicVariable(
             jnp.array([0.1]), name="periodic_diff_sd"
         ),
-        "site_name": "test",
     }
     duration = 30
 
@@ -97,6 +97,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     """Checks step size averages close to 0"""
 
     params = {
+        "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.0, 0.0]), name="log_rt_prior"
@@ -106,7 +107,6 @@ def test_rtweeklydiff_no_autoregressive() -> None:
         "periodic_diff_sd": DeterministicVariable(
             jnp.array([0.1]), name="periodic_diff_sd"
         ),
-        "site_name": "test",
     }
 
     rtwd = RtWeeklyDiffProcess(**params)
@@ -135,6 +135,7 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
     """Checks that the 'manual' reconstruction is correct"""
 
     params = {
+        "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.1, 0.2]), name="log_rt_prior"
@@ -143,7 +144,6 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
         "periodic_diff_sd": DeterministicVariable(
             jnp.array([0.1]), name="periodic_diff_sd"
         ),
-        "site_name": "test",
     }
 
     rtwd = RtWeeklyDiffProcess(**params)
@@ -170,6 +170,7 @@ def test_rtperiodicdiff_smallsample():
     """Checks basic functionality of the process with a small sample size."""
 
     params = {
+        "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.1, 0.2]), name="log_rt_prior"
@@ -178,7 +179,6 @@ def test_rtperiodicdiff_smallsample():
         "periodic_diff_sd": DeterministicVariable(
             jnp.array([0.1]), name="periodic_diff_sd"
         ),
-        "site_name": "test",
     }
 
     rtwd = RtWeeklyDiffProcess(**params)

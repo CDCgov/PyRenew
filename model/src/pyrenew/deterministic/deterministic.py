@@ -26,7 +26,7 @@ class DeterministicVariable(RandomVariable):
         ----------
         vars : ArrayLike
             A tuple with arraylike objects.
-        name : str, optional
+        name : str
             A name to assign to the process.
 
         Returns
