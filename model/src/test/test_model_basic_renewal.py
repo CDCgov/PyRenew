@@ -47,7 +47,7 @@ def get_default_rt():
 def test_model_basicrenewal_no_timepoints_or_observations():
     """
     Test that the basic renewal model does not run
-    without either n_timepoints_to_simulate or
+    without either n_datapoints or
     observed_admissions
     """
 
@@ -74,14 +74,12 @@ def test_model_basicrenewal_no_timepoints_or_observations():
     np.random.seed(2203)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError, match="Either"):
-            model1.sample(
-                n_timepoints_to_simulate=None, data_observed_infections=None
-            )
+            model1.sample(n_datapoints=None, data_observed_infections=None)
 
 
 def test_model_basicrenewal_both_timepoints_and_observations():
     """
-    Test that the basic renewal model does not run with both n_timepoints_to_simulate and observed_admissions passed
+    Test that the basic renewal model does not run with both n_datapoints and observed_admissions passed
     """
 
     gen_int = DeterministicPMF(
@@ -108,7 +106,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError, match="Cannot pass both"):
             model1.sample(
-                n_timepoints_to_simulate=30,
+                n_datapoints=30,
                 data_observed_infections=jnp.repeat(jnp.nan, 30),
             )
 
@@ -149,7 +147,7 @@ def test_model_basicrenewal_no_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model0_samp = model0.sample(n_timepoints_to_simulate=30)
+        model0_samp = model0.sample(n_datapoints=30)
     model0_samp.Rt
     model0_samp.latent_infections
     model0_samp.observed_infections
@@ -158,7 +156,7 @@ def test_model_basicrenewal_no_obs_model():
     model0.infection_obs_process_rv = NullObservation()
     np.random.seed(223)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model0.sample(n_timepoints_to_simulate=30)
+        model1_samp = model0.sample(n_datapoints=30)
 
     np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
     np.testing.assert_array_equal(
@@ -222,7 +220,7 @@ def test_model_basicrenewal_with_obs_model():
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(n_timepoints_to_simulate=30)
+        model1_samp = model1.sample(n_datapoints=30)
 
     model1.run(
         num_warmup=500,
@@ -273,9 +271,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     np.random.seed(2203)
     pad_size = 5
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model1_samp = model1.sample(
-            n_timepoints_to_simulate=30, padding=pad_size
-        )
+        model1_samp = model1.sample(n_datapoints=30, padding=pad_size)
 
     model1.run(
         num_warmup=500,

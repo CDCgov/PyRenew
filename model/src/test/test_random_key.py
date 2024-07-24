@@ -67,21 +67,21 @@ def run_test_model(
 
 
 def prior_predictive_test_model(
-    test_model, n_timepoints_to_simulate, rng_key
+    test_model, n_datapoints, rng_key
 ):  # numpydoc ignore=GL08
     prior_predictive_samples = test_model.prior_predictive(
         rng_key=rng_key,
         numpyro_predictive_args={"num_samples": 20},
-        n_timepoints_to_simulate=n_timepoints_to_simulate,
+        n_datapoints=n_datapoints,
     )
     return prior_predictive_samples
 
 
 def posterior_predictive_test_model(
-    test_model, n_timepoints_to_simulate, rng_key
+    test_model, n_datapoints, rng_key
 ):  # numpydoc ignore=GL08
     posterior_predictive_samples = test_model.posterior_predictive(
-        rng_key=rng_key, n_timepoints_to_simulate=n_timepoints_to_simulate
+        rng_key=rng_key, n_datapoints=n_datapoints
     )
     return posterior_predictive_samples
 
@@ -97,16 +97,14 @@ def test_rng_keys_produce_correct_samples():
 
     # set up base models for testing
     models = [create_test_model() for _ in range(5)]
-    n_timepoints_to_simulate = [30] * len(models)
+    n_datapoints = [30] * len(models)
     n_timepoints_posterior_predictive = [
-        x + models[0].gen_int_rv.size() for x in n_timepoints_to_simulate
+        x + models[0].gen_int_rv.size() for x in n_datapoints
     ]
     # sample only a single model and use that model's samples
     # as the observed_infections for the rest of the models
     with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model_sample = models[0].sample(
-            n_timepoints_to_simulate=n_timepoints_to_simulate[0]
-        )
+        model_sample = models[0].sample(n_datapoints=n_datapoints[0])
     obs_infections = [model_sample.observed_infections] * len(models)
     rng_keys = [jr.key(54), jr.key(54), None, None, jr.key(74)]
 
@@ -117,7 +115,7 @@ def test_rng_keys_produce_correct_samples():
 
     prior_predictive_list = [
         prior_predictive_test_model(*elt)
-        for elt in list(zip(models, n_timepoints_to_simulate, rng_keys))
+        for elt in list(zip(models, n_datapoints, rng_keys))
     ]
 
     posterior_predictive_list = [

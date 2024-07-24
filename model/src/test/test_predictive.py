@@ -54,4 +54,4 @@ def test_posterior_predictive_no_posterior():
     no posterior samples are available.
     """
     with pytest.raises(ValueError, match="No posterior"):
-        model.posterior_predictive(n_timepoints_to_simulate=10)
+        model.posterior_predictive(n_datapoints=10)

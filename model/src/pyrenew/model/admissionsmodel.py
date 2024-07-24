@@ -133,7 +133,7 @@ class HospitalAdmissionsModel(Model):
 
     def sample(
         self,
-        n_timepoints_to_simulate: int | None = None,
+        n_datapoints: int | None = None,
         data_observed_hosp_admissions: ArrayLike | None = None,
         padding: int = 0,
         **kwargs,
@@ -143,7 +143,7 @@ class HospitalAdmissionsModel(Model):
 
         Parameters
         ----------
-        n_timepoints_to_simulate : int, optional
+        n_datapoints : int, optional
             Number of timepoints to sample (passed to the basic renewal model).
         data_observed_hosp_admissions : ArrayLike, optional
             The observed hospitalization data (passed to the basic renewal
@@ -164,29 +164,26 @@ class HospitalAdmissionsModel(Model):
         basic_renewal.sample : For sampling the basic renewal model
         sample_observed_admissions : For sampling observed hospital admissions
         """
-        if (
-            n_timepoints_to_simulate is None
-            and data_observed_hosp_admissions is None
-        ):
+        if n_datapoints is None and data_observed_hosp_admissions is None:
             raise ValueError(
-                "Either n_timepoints_to_simulate or data_observed_hosp_admissions "
+                "Either n_datapoints or data_observed_hosp_admissions "
                 "must be passed."
             )
         elif (
-            n_timepoints_to_simulate is not None
+            n_datapoints is not None
             and data_observed_hosp_admissions is not None
         ):
             raise ValueError(
-                "Cannot pass both n_timepoints_to_simulate and data_observed_hosp_admissions."
+                "Cannot pass both n_datapoints and data_observed_hosp_admissions."
             )
-        elif n_timepoints_to_simulate is None:
+        elif n_datapoints is None:
             n_datapoints = len(data_observed_hosp_admissions)
         else:
-            n_datapoints = n_timepoints_to_simulate
+            n_datapoints = n_datapoints
 
         # Getting the initial quantities from the basic model
         basic_model = self.basic_renewal.sample(
-            n_timepoints_to_simulate=n_datapoints,
+            n_datapoints=n_datapoints,
             data_observed_infections=None,
             padding=padding,
             **kwargs,
