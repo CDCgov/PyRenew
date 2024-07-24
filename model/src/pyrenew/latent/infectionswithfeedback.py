@@ -160,7 +160,7 @@ class InfectionsWithFeedback(RandomVariable):
         I0 = I0[-gen_int_rev.size :]
 
         # Sampling inf feedback strength
-        inf_feedback_strength, *_ = self.infection_feedback_strength(
+        inf_feedback_strength = self.infection_feedback_strength(
             **kwargs,
         )[0].value
 
