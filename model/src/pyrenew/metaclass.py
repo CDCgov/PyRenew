@@ -5,7 +5,7 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import get_type_hints
+from typing import NamedTuple, get_type_hints
 
 import jax
 import jax.numpy as jnp
@@ -94,44 +94,26 @@ def _assert_sample_and_rtype(
     return None
 
 
-class SampledValue:
+class SampledValue(NamedTuple):
     """
     A container for a sampled value from a RandomVariable.
+
+    Attributes
+    ----------
+    value : ArrayLike, optional
+        The sampled value.
+    t_start : int, optional
+        The start time of the value.
+    t_unit : int, optional
+        The unit of time relative to the model's fundamental (smallest) time unit.
     """
 
-    def __init__(
-        self,
-        value: ArrayLike | None,
-        t_start: int | None = None,
-        t_unit: int | None = None,
-    ) -> None:
-        """
-        Default constructor for SampledValue
+    value: ArrayLike | None = None
+    t_start: int | None = None
+    t_unit: int | None = None
 
-        Parameters
-        ----------
-        value : ArrayLike
-            The sampled value.
-        t_start : int, optional
-            The start time of the value.
-        t_unit : int, optional
-            The unit of time relative to the model's fundamental (smallest) time unit.
-
-        Returns
-        -------
-        None
-        """
-
-        if value is not None:
-            assert isinstance(
-                value, ArrayLike
-            ), "value should be an array-like object."
-
-        self.value = value
-        self.t_start = t_start
-        self.t_unit = t_unit
-
-        return None
+    def __repr__(self):
+        return f"SampledValue(value={self.value}, t_start={self.t_start}, t_unit={self.t_unit})"
 
 
 class RandomVariable(metaclass=ABCMeta):
