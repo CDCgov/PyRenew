@@ -162,8 +162,7 @@ class InfectionsWithFeedback(RandomVariable):
         # Sampling inf feedback strength
         inf_feedback_strength, *_ = self.infection_feedback_strength(
             **kwargs,
-        )
-        inf_feedback_strength = inf_feedback_strength.value
+        )[0].value
 
         # Making sure inf_feedback_strength spans the Rt length
         if inf_feedback_strength.size == 1:
