@@ -30,7 +30,7 @@ class DeterministicPMF(RandomVariable):
         Parameters
         ----------
         name : str
-            A name to assign to the process.
+            A name to assign to the variable.
         vars : tuple
             A tuple with arraylike objects.
         tol : float, optional
