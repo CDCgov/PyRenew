@@ -24,7 +24,7 @@ class PoissonObservation(RandomVariable):
 
         Parameters
         ----------
-        name : str, optional
+        name : str
             Passed to numpyro.sample.
         eps : float, optional
             Small value added to the rate parameter to avoid zero values.

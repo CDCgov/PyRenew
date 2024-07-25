@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
-import numpyro as npro
+import numpyro
 from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
 )
@@ -93,14 +93,16 @@ class InfectionInitializationProcess(RandomVariable):
         Returns
         -------
         tuple
-            a tuple where the only element is an array with the number of initialized infections at each time point.
+            a tuple where the only element is an array with
+            the number of initialized infections at each time point.
         """
 
         (I_pre_init,) = self.I_pre_init_rv()
+
         infection_initialization = self.infection_init_method(
             I_pre_init.value,
         )
-        npro.deterministic(self.name, infection_initialization)
+        numpyro.deterministic(self.name, infection_initialization)
 
         return (
             SampledValue(

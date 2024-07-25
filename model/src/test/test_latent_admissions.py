@@ -4,7 +4,7 @@
 import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 from pyrenew import transformation as t
 from pyrenew.deterministic import DeterministicPMF
@@ -32,16 +32,16 @@ def test_admissions_sample():
         transforms=t.ExpTransform(),
     )
 
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        sim_rt, *_ = rt(n_steps=30)
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        sim_rt = rt(n_steps=30)[0].value
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
     i0 = 10 * jnp.ones_like(gen_int)
 
     inf1 = Infections()
 
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        inf_sampled1 = inf1(Rt=sim_rt.value, gen_int=gen_int, I0=i0)
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        inf_sampled1 = inf1(Rt=sim_rt, gen_int=gen_int, I0=i0)
 
     # Testing the hospital admissions
     inf_hosp = DeterministicPMF(
@@ -77,10 +77,12 @@ def test_admissions_sample():
         ),
     )
 
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         sim_hosp_1 = hosp1(latent_infections=inf_sampled1[0].value)
 
     testing.assert_array_less(
         sim_hosp_1.latent_hospital_admissions.value,
         inf_sampled1[0].value,
     )
+
+test_admissions_sample()
