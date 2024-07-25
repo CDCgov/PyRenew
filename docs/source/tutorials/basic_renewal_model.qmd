@@ -33,7 +33,7 @@ from pyrenew.metaclass import (
 import pyrenew.transformation as t
 from numpyro.infer.reparam import LocScaleReparam
 ```
-By default, XLA (which is used by JAX for compilation) considers all CPU cores as one device. Depending on your system's configuration, we recommend using numpyro's [set_host_device_count](https://num.pyro.ai/en/stable/utilities.html#set-host-device-count) function to set the number of device available for parallel computing. Here, we set the device count to be 2.
+By default, XLA (which is used by JAX for compilation) considers all CPU cores as one device. Depending on your system's configuration, we recommend using numpyro's [`set_host_device_count()`](https://num.pyro.ai/en/stable/utilities.html#set-host-device-count) function to set the number of devices available for parallel computing. Here, we set the device count to be 2.
 ```{python}
 # | label: set-device-count
 numpyro.set_host_device_count(2)
