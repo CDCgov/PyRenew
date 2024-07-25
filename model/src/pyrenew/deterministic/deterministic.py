@@ -43,7 +43,7 @@ class DeterministicVariable(RandomVariable):
     @staticmethod
     def validate(vars: ArrayLike) -> None:
         """
-        Validates inputted to DeterministicPMF
+        Validates input to DeterministicPMF
 
         Parameters
         ----------
@@ -57,7 +57,7 @@ class DeterministicVariable(RandomVariable):
         Raises
         ------
         Exception
-            If the inputted vars object is not a ArrayLike.
+            If the input vars object is not a ArrayLike.
         """
         if not isinstance(vars, ArrayLike):
             raise Exception("vars is not a ArrayLike")
