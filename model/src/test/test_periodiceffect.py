@@ -4,7 +4,7 @@ Test the periodiceffect module
 
 import jax.numpy as jnp
 import numpy as np
-import numpyro
+import numpyro as npro
 from numpy.testing import assert_array_equal
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.process import DayOfWeekEffect, PeriodicEffect
@@ -29,7 +29,7 @@ def test_periodiceffect() -> None:
     pe = PeriodicEffect(**params)
 
     np.random.seed(223)
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         ans = pe(duration=duration).value
 
     # Checking that the shape of the sampled Rt is correct
@@ -43,7 +43,7 @@ def test_periodiceffect() -> None:
     np.random.seed(223)
     params["offset"] = 5
     pe = PeriodicEffect(**params)
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         ans2 = pe(duration=duration).value
 
     # Checking that the shape of the sampled Rt is correct

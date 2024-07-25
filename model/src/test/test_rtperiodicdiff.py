@@ -4,7 +4,7 @@ Test the rtweeklydiff module
 
 import jax.numpy as jnp
 import numpy as np
-import numpyro
+import numpyro as npro
 from jax import lax
 from jax.typing import ArrayLike
 from numpy.testing import assert_array_equal
@@ -65,7 +65,7 @@ def test_rtweeklydiff() -> None:
     rtwd = RtWeeklyDiffProcess(**params)
 
     np.random.seed(223)
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -80,7 +80,7 @@ def test_rtweeklydiff() -> None:
     np.random.seed(223)
     params["offset"] = 5
     rtwd = RtWeeklyDiffProcess(**params)
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         rt2 = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -113,7 +113,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
 
     np.random.seed(223)
     duration = 1000
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -184,7 +184,7 @@ def test_rtperiodicdiff_smallsample():
     rtwd = RtWeeklyDiffProcess(**params)
 
     np.random.seed(223)
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         rt = rtwd(duration=6).rt
 
     # Checking that the shape of the sampled Rt is correct

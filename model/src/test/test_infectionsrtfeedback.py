@@ -4,7 +4,7 @@ Test the InfectionsWithFeedback class
 
 import jax.numpy as jnp
 import numpy as np
-import numpyro
+import numpyro as npro
 import pyrenew.latent as latent
 from jax.typing import ArrayLike
 from numpy.testing import assert_array_almost_equal, assert_array_equal
@@ -81,7 +81,7 @@ def test_infectionsrtfeedback():
 
     infections = latent.Infections()
 
-    with numpyro.handlers.seed(rng_seed=0):
+    with npro.handlers.seed(rng_seed=0):
         samp1 = InfectionsWithFeedback(
             gen_int=gen_int,
             Rt=Rt,
@@ -125,7 +125,7 @@ def test_infectionsrtfeedback_feedback():
 
     infections = latent.Infections()
 
-    with numpyro.handlers.seed(rng_seed=0):
+    with npro.handlers.seed(rng_seed=0):
         samp1 = InfectionsWithFeedback(
             gen_int=gen_int,
             Rt=Rt,
