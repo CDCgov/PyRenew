@@ -46,7 +46,7 @@ class DeterministicPMF(RandomVariable):
             tol=tol,
         )
 
-        self.basevar = DeterministicVariable(name, vars)
+        self.basevar = DeterministicVariable(name=name, vars=vars)
 
         return None
 
