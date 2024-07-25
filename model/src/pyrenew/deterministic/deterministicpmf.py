@@ -32,7 +32,7 @@ class DeterministicPMF(RandomVariable):
         name : str
             A name to assign to the variable.
         vars : tuple
-            A tuple with arraylike objects.
+            An ArrayLike object.
         tol : float, optional
             Passed to pyrenew.distutil.validate_discrete_dist_vector. Defaults
             to 1e-5.
