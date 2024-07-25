@@ -48,7 +48,7 @@ def test_admissions_sample():
     # Testing the hospital admissions
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
-        vars=jnp.array(
+        value=jnp.array(
             [
                 0,
                 0,

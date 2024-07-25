@@ -28,13 +28,13 @@ rt_proc = process.RtWeeklyDiffProcess(
     name="rt_weekly_diff",
     offset=0,
     log_rt_prior=deterministic.DeterministicVariable(
-        name="log_rt_prior", vars=jnp.array([0.1, 0.2])
+        name="log_rt_prior", value=jnp.array([0.1, 0.2])
     ),
     autoreg=deterministic.DeterministicVariable(
-        name="autoreg", vars=jnp.array([0.7])
+        name="autoreg", value=jnp.array([0.7])
     ),
     periodic_diff_sd=deterministic.DeterministicVariable(
-        name="periodic_diff_sd", vars=jnp.array([0.1])
+        name="periodic_diff_sd", value=jnp.array([0.1])
     ),
 )
 ```

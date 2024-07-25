@@ -82,7 +82,7 @@ def test_model_hosp_no_timepoints_or_observations():
     """
 
     gen_int = DeterministicPMF(
-        name="gen_int", vars=jnp.array([0.25, 0.25, 0.25, 0.25])
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
     I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
@@ -94,7 +94,7 @@ def test_model_hosp_no_timepoints_or_observations():
 
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
-        vars=jnp.array(
+        value=jnp.array(
             [
                 0,
                 0,
@@ -147,7 +147,7 @@ def test_model_hosp_both_timepoints_and_observations():
 
     gen_int = DeterministicPMF(
         name="gen_int",
-        vars=jnp.array([0.25, 0.25, 0.25, 0.25]),
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
     I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
@@ -159,7 +159,7 @@ def test_model_hosp_both_timepoints_and_observations():
 
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
-        vars=jnp.array(
+        value=jnp.array(
             [
                 0,
                 0,
@@ -215,7 +215,7 @@ def test_model_hosp_no_obs_model():
 
     gen_int = DeterministicPMF(
         name="gen_int",
-        vars=jnp.array([0.25, 0.25, 0.25, 0.25]),
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
     I0 = InfectionInitializationProcess(
@@ -230,7 +230,7 @@ def test_model_hosp_no_obs_model():
 
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
-        vars=jnp.array(
+        value=jnp.array(
             [
                 0,
                 0,
@@ -320,7 +320,7 @@ def test_model_hosp_with_obs_model():
     """
 
     gen_int = DeterministicPMF(
-        name="gen_int", vars=jnp.array([0.25, 0.25, 0.25, 0.25])
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
     I0 = InfectionInitializationProcess(
@@ -336,7 +336,7 @@ def test_model_hosp_with_obs_model():
 
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
-        vars=jnp.array(
+        value=jnp.array(
             [
                 0,
                 0,
@@ -407,7 +407,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     gen_int = DeterministicPMF(
         name="gen_int",
-        vars=jnp.array([0.25, 0.25, 0.25, 0.25]),
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
     I0 = InfectionInitializationProcess(
@@ -423,7 +423,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
-        vars=jnp.array(
+        value=jnp.array(
             [
                 0,
                 0,
@@ -504,7 +504,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     gen_int = DeterministicPMF(
         name="gen_int",
-        vars=jnp.array([0.25, 0.25, 0.25, 0.25]),
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
     n_obs_to_generate = 30
     pad_size = 5
@@ -523,7 +523,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
-        vars=jnp.array(
+        value=jnp.array(
             [
                 0,
                 0,
@@ -554,7 +554,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = jnp.tile(weekday, 10)
     weekday = weekday[:total_length]
 
-    weekday = DeterministicVariable(name="weekday", vars=weekday)
+    weekday = DeterministicVariable(name="weekday", value=weekday)
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
@@ -563,7 +563,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     hosp_report_prob_dist = DeterministicVariable(
         name="hosp_report_prob_dist",
-        vars=hosp_report_prob_dist,
+        value=hosp_report_prob_dist,
     )
 
     latent_admissions = HospitalAdmissions(

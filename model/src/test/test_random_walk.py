@@ -18,7 +18,7 @@ def test_rw_can_be_sampled():
         name="init_rv_rand",
         dist=dist.Normal(1, 0.5),
     )
-    init_rv_fixed = DeterministicVariable(name="init_rv_fixed", vars=50.0)
+    init_rv_fixed = DeterministicVariable(name="init_rv_fixed", value=50.0)
 
     step_rv = DistributionalRV(
         name="rw_step",
@@ -44,8 +44,8 @@ def test_rw_can_be_sampled():
     assert ans_fixed[0].shape == (5023,)
 
     # check that fixing inits works
-    assert_almost_equal(ans_fixed[0][0], init_rv_fixed.vars)
-    assert ans_rand[0][0] != init_rv_fixed.vars
+    assert_almost_equal(ans_fixed[0][0], init_rv_fixed.value)
+    assert ans_rand[0][0] != init_rv_fixed.value
 
 
 def test_rw_samples_correctly_distributed():
@@ -66,7 +66,7 @@ def test_rw_samples_correctly_distributed():
                 dist=dist.Normal(loc=step_mean, scale=step_sd),
             ),
             init_rv=DeterministicVariable(
-                name="init_rv_fixed", vars=rw_init_val
+                name="init_rv_fixed", value=rw_init_val
             ),
         )
 

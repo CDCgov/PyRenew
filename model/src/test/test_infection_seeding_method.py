@@ -13,8 +13,8 @@ from pyrenew.latent import (
 def test_initialize_infections_exponential():
     """Check that the InitializeInfectionsExponentialGrowth class generates the correct number of infections at each time point."""
     n_timepoints = 10
-    rate_RV = DeterministicVariable(name="rate_RV", vars=0.5)
-    I_pre_init_RV = DeterministicVariable(name="I_pre_init_RV", vars=10.0)
+    rate_RV = DeterministicVariable(name="rate_RV", value=0.5)
+    I_pre_init_RV = DeterministicVariable(name="I_pre_init_RV", value=10.0)
     default_t_pre_init = n_timepoints - 1
 
     (I_pre_init,) = I_pre_init_RV()
@@ -36,7 +36,7 @@ def test_initialize_infections_exponential():
 
     # test for failure with non-scalar rate or I_pre_init
     rate_RV_2 = DeterministicVariable(
-        name="rate_RV", vars=np.array([0.5, 0.5])
+        name="rate_RV", value=np.array([0.5, 0.5])
     )
     with pytest.raises(ValueError):
         InitializeInfectionsExponentialGrowth(
@@ -45,7 +45,7 @@ def test_initialize_infections_exponential():
 
     I_pre_init_RV_2 = DeterministicVariable(
         name="I_pre_init_RV",
-        vars=np.array([10.0, 10.0]),
+        value=np.array([10.0, 10.0]),
     )
     (I_pre_init_2,) = I_pre_init_RV_2()
 
@@ -75,7 +75,7 @@ def test_initialize_infections_zero_pad():
     """Check that the InitializeInfectionsZeroPad class generates the correct number of infections at each time point."""
 
     n_timepoints = 10
-    I_pre_init_RV = DeterministicVariable(name="I_pre_init_RV", vars=10.0)
+    I_pre_init_RV = DeterministicVariable(name="I_pre_init_RV", value=10.0)
     (I_pre_init,) = I_pre_init_RV()
 
     infections = InitializeInfectionsZeroPad(
@@ -86,7 +86,7 @@ def test_initialize_infections_zero_pad():
     )
 
     I_pre_init_RV_2 = DeterministicVariable(
-        name="I_pre_init_RV", vars=np.array([10.0, 10.0])
+        name="I_pre_init_RV", value=np.array([10.0, 10.0])
     )
     (I_pre_init_2,) = I_pre_init_RV_2()
 

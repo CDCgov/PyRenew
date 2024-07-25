@@ -16,7 +16,7 @@ def test_negativebinom_deterministic_obs():
 
     negb = NegativeBinomialObservation(
         "negbinom_rv",
-        concentration_rv=DeterministicVariable(name="concentration", vars=10),
+        concentration_rv=DeterministicVariable(name="concentration", value=10),
     )
 
     rates = np.random.randint(1, 5, size=10)
@@ -42,7 +42,7 @@ def test_negativebinom_random_obs():
 
     negb = NegativeBinomialObservation(
         "negbinom_rv",
-        concentration_rv=DeterministicVariable(name="concentration", vars=10),
+        concentration_rv=DeterministicVariable(name="concentration", value=10),
     )
 
     rates = np.repeat(5, 20000)

@@ -18,7 +18,7 @@ class DeterministicVariable(RandomVariable):
     def __init__(
         self,
         name: str,
-        vars: ArrayLike,
+        value: ArrayLike,
     ) -> None:
         """Default constructor
 
@@ -26,7 +26,7 @@ class DeterministicVariable(RandomVariable):
         ----------
         name : str
             A name to assign to the process.
-        vars : ArrayLike
+        value : ArrayLike
             An ArrayLike object.
 
         Returns
@@ -35,19 +35,19 @@ class DeterministicVariable(RandomVariable):
         """
 
         self.name = name
-        self.vars = jnp.atleast_1d(vars)
-        self.validate(vars)
+        self.value = jnp.atleast_1d(value)
+        self.validate(value)
 
         return None
 
     @staticmethod
-    def validate(vars: ArrayLike) -> None:
+    def validate(value: ArrayLike) -> None:
         """
         Validates input to DeterministicPMF
 
         Parameters
         ----------
-        vars : ArrayLike
+        value : ArrayLike
             An ArrayLike object.
 
         Returns
@@ -57,10 +57,10 @@ class DeterministicVariable(RandomVariable):
         Raises
         ------
         Exception
-            If the input vars object is not a ArrayLike.
+            If the input value object is not a ArrayLike.
         """
-        if not isinstance(vars, ArrayLike):
-            raise Exception("vars is not a ArrayLike")
+        if not isinstance(value, ArrayLike):
+            raise Exception("value is not a ArrayLike")
 
         return None
 
@@ -86,5 +86,5 @@ class DeterministicVariable(RandomVariable):
             Containing the stored values during construction.
         """
         if record:
-            numpyro.deterministic(self.name, self.vars)
-        return (self.vars,)
+            numpyro.deterministic(self.name, self.value)
+        return (self.value,)
