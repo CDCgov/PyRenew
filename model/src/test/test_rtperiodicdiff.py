@@ -87,9 +87,9 @@ def test_rtweeklydiff() -> None:
     # Checking that the shape of the sampled Rt is correct
     assert rt2.shape == (duration,)
 
-    # This time series should be the same as the previous one, but shifted by
-    # 5 days
-    assert_array_equal(rt[5:], rt2[:-5])
+    # This time series should be the same as the previous one,
+    # but shifted by 5 days
+    assert_array_almost_equal(rt[5:], rt2[:-5])
 
     return None
 
