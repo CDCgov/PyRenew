@@ -89,8 +89,7 @@ And simulate from it:
 ```{python}
 # | label: simulate1
 # Sampling and fitting model 0 (with no obs for infections)
-np.random.seed(223)
-with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+with numpyro.handlers.seed(rng_seed=223):
     model0_samp = model0.sample(n_datapoints=30)
 ```
 
@@ -258,8 +257,7 @@ model1 = RtInfectionsRenewalModel(
 )
 
 # Sampling and fitting model 0 (with no obs for infections)
-np.random.seed(223)
-with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+with numpyro.handlers.seed(rng_seed=223):
     model1_samp = model1.sample(n_datapoints=30)
 ```
 
