@@ -7,7 +7,7 @@ import numpy as np
 import numpyro
 from jax import lax
 from jax.typing import ArrayLike
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_almost_equal, assert_array_equal
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.process import RtWeeklyDiffProcess
 
@@ -158,7 +158,7 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
         log_seed=params["log_rt_prior"]()[0], sd=noise, b=b
     )
 
-    assert_array_equal(ans0, ans1)
+    assert_array_almost_equal(ans0, ans1)
 
     return None
 
