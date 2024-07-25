@@ -52,7 +52,7 @@ I0 = InfectionInitializationProcess(
     DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
     InitializeInfectionsExponentialGrowth(
         gen_int_array.size,
-        DeterministicVariable(name="rate", value=0.05, name="rate"),
+        DeterministicVariable(name="rate", value=0.05),
     ),
     t_unit=1,
 )
