@@ -3,7 +3,7 @@
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
 from numpy.testing import assert_array_equal
@@ -51,7 +51,7 @@ def test_forecast():
 
     n_datapoints = 30
     n_forecast_points = 10
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model_sample = model.sample(n_datapoints=n_datapoints)
 
     model.run(

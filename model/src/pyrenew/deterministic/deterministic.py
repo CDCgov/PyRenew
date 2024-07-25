@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable, SampledValue
 
@@ -28,7 +28,7 @@ class DeterministicVariable(RandomVariable):
         ----------
         vars : ArrayLike
             A tuple with arraylike objects.
-        name : str, optional
+        name : str
             A name to assign to the process.
         t_start : int, optional
             The start time of the process.

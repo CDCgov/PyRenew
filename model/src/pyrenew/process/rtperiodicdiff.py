@@ -49,18 +49,20 @@ class RtPeriodicDiffProcess(RandomVariable):
 
     def __init__(
         self,
+        name: str,
         offset: int,
         period_size: int,
         log_rt_prior: RandomVariable,
         autoreg: RandomVariable,
         periodic_diff_sd: RandomVariable,
-        site_name: str = "rt_periodic_diff",
     ) -> None:
         """
         Default constructor for RtPeriodicDiffProcess class.
 
         Parameters
         ----------
+        name : str
+            Name of the site.
         offset : int
             Relative point at which data starts, must be between 0 and
             period_size - 1.
@@ -70,14 +72,12 @@ class RtPeriodicDiffProcess(RandomVariable):
             Autoregressive parameter.
         periodic_diff_sd : RandomVariable
             Standard deviation of the noise.
-        site_name : str, optional
-            Name of the site. Defaults to "rt_periodic_diff".
 
         Returns
         -------
         None
         """
-
+        self.name = name
         self.broadcaster = PeriodicBroadcaster(
             offset=offset,
             period_size=period_size,
@@ -95,7 +95,6 @@ class RtPeriodicDiffProcess(RandomVariable):
         self.log_rt_prior = log_rt_prior
         self.autoreg = autoreg
         self.periodic_diff_sd = periodic_diff_sd
-        self.site_name = site_name
 
         return None
 
@@ -184,7 +183,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         n_periods = int(jnp.ceil(duration / self.period_size))
 
         # Running the process
-        ar_diff = FirstDifferenceARProcess(autoreg=b, noise_sd=s_r)
+        ar_diff = FirstDifferenceARProcess("trend_rw", autoreg=b, noise_sd=s_r)
         log_rt = ar_diff.sample(
             duration=n_periods,
             init_val=log_rt_prior[1],
@@ -205,17 +204,19 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
 
     def __init__(
         self,
+        name: str,
         offset: int,
         log_rt_prior: RandomVariable,
         autoreg: RandomVariable,
         periodic_diff_sd: RandomVariable,
-        site_name: str = "rt_weekly_diff",
     ) -> None:
         """
         Default constructor for RtWeeklyDiffProcess class.
 
         Parameters
         ----------
+        name : str
+            Name of the site.
         offset : int
             Relative point at which data starts, must be between 0 and 6.
         log_rt_prior : RandomVariable
@@ -224,8 +225,6 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
             Autoregressive parameter.
         periodic_diff_sd : RandomVariable
             Standard deviation of the noise.
-        site_name : str, optional
-            Name of the site. Defaults to "rt_weekly_diff".
 
         Returns
         -------
@@ -233,12 +232,12 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
         """
 
         super().__init__(
+            name=name,
             offset=offset,
             period_size=7,
             log_rt_prior=log_rt_prior,
             autoreg=autoreg,
             periodic_diff_sd=periodic_diff_sd,
-            site_name=site_name,
         )
 
         return None

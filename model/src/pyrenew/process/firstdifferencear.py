@@ -18,6 +18,7 @@ class FirstDifferenceARProcess(RandomVariable):
 
     def __init__(
         self,
+        name: str,
         autoreg: ArrayLike,
         noise_sd: float,
     ) -> None:
@@ -26,6 +27,8 @@ class FirstDifferenceARProcess(RandomVariable):
 
         Parameters
         ----------
+        name : str
+            Passed to ARProcess()
         autoreg : ArrayLike
             Process parameters pyrenew.processesARprocess.
         noise_sd : float
@@ -35,14 +38,16 @@ class FirstDifferenceARProcess(RandomVariable):
         -------
         None
         """
-        self.rate_of_change_proc = ARProcess(0, jnp.array([autoreg]), noise_sd)
+        self.rate_of_change_proc = ARProcess(
+            "arprocess", 0, jnp.array([autoreg]), noise_sd
+        )
+        self.name = name
 
     def sample(
         self,
         duration: int,
         init_val: ArrayLike = None,
         init_rate_of_change: ArrayLike = None,
-        name: str = "trend_rw",
         **kwargs,
     ) -> tuple:
         """
@@ -56,8 +61,6 @@ class FirstDifferenceARProcess(RandomVariable):
             Starting point of the AR process, by default None.
         init_rate_of_change : ArrayLike, optional
             Passed to ARProcess.sample, by default None.
-        name : str, optional
-            Passed to ARProcess(), by default "trend_rw"
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
             calls, should there be any.
@@ -70,7 +73,7 @@ class FirstDifferenceARProcess(RandomVariable):
         rates_of_change, *_ = self.rate_of_change_proc.sample(
             duration=duration,
             inits=jnp.atleast_1d(init_rate_of_change),
-            name=name + "_rate_of_change",
+            name=self.name + "_rate_of_change",
         )
         return (
             SampledValue(

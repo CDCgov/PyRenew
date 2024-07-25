@@ -24,11 +24,11 @@ jobs:
         run: pip install poetry
 
       - name: install package
-        run: poetry install --with dev -C model
+        run: poetry install --with dev
 
       - name: run tests
         run: |
-          poetry run -C model pytest \
+          poetry run pytest \
             --mpl --mpl-default-tolerance=10 \
             --cov=pyrenew --cov-report term --cov-report xml model
 

@@ -20,6 +20,7 @@ class ARProcess(RandomVariable):
 
     def __init__(
         self,
+        name: str,
         mean: float,
         autoreg: ArrayLike,
         noise_sd: float,
@@ -29,6 +30,8 @@ class ARProcess(RandomVariable):
 
         Parameters
         ----------
+        name : str
+            Name of the parameter passed to numpyro.sample.
         mean: float
             Mean parameter.
         autoreg : ArrayLike
@@ -40,6 +43,7 @@ class ARProcess(RandomVariable):
         -------
         None
         """
+        self.name = name
         self.mean = mean
         self.autoreg = autoreg
         self.noise_sd = noise_sd
@@ -48,7 +52,6 @@ class ARProcess(RandomVariable):
         self,
         duration: int,
         inits: ArrayLike = None,
-        name: str = "arprocess",
         **kwargs,
     ) -> tuple:
         """
@@ -61,9 +64,6 @@ class ARProcess(RandomVariable):
         inits : ArrayLike, optional
             Initial points, if None, then these are sampled.
             Defaults to None.
-        name : str, optional
-            Name of the parameter passed to numpyro.sample.
-            Defaults to "arprocess".
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal sample()
             calls, should there be any.
@@ -76,7 +76,7 @@ class ARProcess(RandomVariable):
         order = self.autoreg.shape[0]
         if inits is None:
             inits = numpyro.sample(
-                name + "_sampled_inits",
+                self.name + "_sampled_inits",
                 dist.Normal(0, self.noise_sd).expand((order,)),
             )
 
@@ -86,7 +86,7 @@ class ARProcess(RandomVariable):
             return new_carry, new_term
 
         noise = numpyro.sample(
-            name + "_noise",
+            self.name + "_noise",
             dist.Normal(0, self.noise_sd).expand((duration - inits.size,)),
         )
 

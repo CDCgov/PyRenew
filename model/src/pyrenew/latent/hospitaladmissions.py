@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, NamedTuple
 
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 from jax.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable, SampledValue
@@ -65,7 +65,6 @@ class HospitalAdmissions(RandomVariable):
         self,
         infection_to_admission_interval_rv: RandomVariable,
         infect_hosp_rate_rv: RandomVariable,
-        latent_hospital_admissions_varname: str = "latent_hospital_admissions",
         day_of_week_effect_rv: RandomVariable | None = None,
         hosp_report_prob_rv: RandomVariable | None = None,
     ) -> None:
@@ -79,9 +78,6 @@ class HospitalAdmissions(RandomVariable):
             pyrenew.observations.Deterministic).
         infect_hosp_rate_rv : RandomVariable
             Infection to hospitalization rate random variable.
-        latent_hospital_admissions_varname : str
-            Name to assign to the deterministic component in numpyro of
-            observed hospital admissions.
         day_of_week_effect_rv : RandomVariable, optional
             Day of the week effect.
         hosp_report_prob_rv  : RandomVariable, optional
@@ -102,10 +98,6 @@ class HospitalAdmissions(RandomVariable):
             infect_hosp_rate_rv,
             day_of_week_effect_rv,
             hosp_report_prob_rv,
-        )
-
-        self.latent_hospital_admissions_varname = (
-            latent_hospital_admissions_varname
         )
 
         self.infect_hosp_rate_rv = infect_hosp_rate_rv
@@ -202,8 +194,8 @@ class HospitalAdmissions(RandomVariable):
             * self.hosp_report_prob_rv(**kwargs)[0].value
         )
 
-        npro.deterministic(
-            self.latent_hospital_admissions_varname, latent_hospital_admissions
+        numpyro.deterministic(
+            "latent_hospital_admissions", latent_hospital_admissions
         )
 
         return HospitalAdmissionsSample(

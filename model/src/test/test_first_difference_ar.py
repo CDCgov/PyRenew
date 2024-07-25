@@ -13,7 +13,7 @@ def test_fd_ar_can_be_sampled():
     can be initialized and sampled
     from
     """
-    ar_fd = FirstDifferenceARProcess(0.5, 0.5)
+    ar_fd = FirstDifferenceARProcess("trend_rw", 0.5, 0.5)
 
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with and without inits
