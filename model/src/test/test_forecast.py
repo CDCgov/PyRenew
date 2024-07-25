@@ -2,7 +2,6 @@
 
 import jax.numpy as jnp
 import jax.random as jr
-import numpy as np
 import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
@@ -51,7 +50,7 @@ def test_forecast():
 
     n_datapoints = 30
     n_forecast_points = 10
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=223):
         model_sample = model.sample(n_datapoints=n_datapoints)
 
     model.run(
