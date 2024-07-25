@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
@@ -17,7 +18,7 @@ class PoissonObservation(RandomVariable):
     def __init__(
         self,
         name: str,
-        eps: float = 1e-8,
+        eps: float = jnp.finfo(float).eps,
     ) -> None:
         """
         Default Constructor
@@ -28,7 +29,7 @@ class PoissonObservation(RandomVariable):
             Passed to numpyro.sample.
         eps : float, optional
             Small value added to the rate parameter to avoid zero values.
-            Defaults to 1e-8.
+            Defaults to `jnp.finfo(float).eps` (previously 1e-8).
 
         Returns
         -------

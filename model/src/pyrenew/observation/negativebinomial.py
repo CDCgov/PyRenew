@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
@@ -16,7 +17,7 @@ class NegativeBinomialObservation(RandomVariable):
         self,
         name: str,
         concentration_rv: RandomVariable,
-        eps: float = 1e-10,
+        eps: float = jnp.finfo(float).eps,
     ) -> None:
         """
         Default constructor
@@ -34,7 +35,7 @@ class NegativeBinomialObservation(RandomVariable):
             of dispersion.
         eps : float, optional
             Small value to add to the predicted mean to prevent numerical
-            instability. Defaults to 1e-10.
+            instability. Defaults to `jnp.finfo(float).eps` (previously 1e-10).
 
         Returns
         -------
