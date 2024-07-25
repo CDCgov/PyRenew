@@ -5,7 +5,7 @@
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 import polars as pl
 import pyrenew.transformation as t
@@ -72,7 +72,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
     )
 
     np.random.seed(2203)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError, match="Either"):
             model1.sample(n_datapoints=None, data_observed_infections=None)
 
@@ -103,7 +103,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
     )
 
     np.random.seed(2203)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError, match="Cannot pass both"):
             model1.sample(
                 n_datapoints=30,
@@ -146,7 +146,7 @@ def test_model_basicrenewal_no_obs_model():
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model0_samp = model0.sample(n_datapoints=30)
     model0_samp.Rt
     model0_samp.latent_infections
@@ -155,7 +155,7 @@ def test_model_basicrenewal_no_obs_model():
     # Generating
     model0.infection_obs_process_rv = NullObservation()
     np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model0.sample(n_datapoints=30)
 
     np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
@@ -219,7 +219,7 @@ def test_model_basicrenewal_with_obs_model():
 
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model1.sample(n_datapoints=30)
 
     model1.run(
@@ -270,7 +270,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     # Sampling and fitting model 1 (with obs infections)
     np.random.seed(2203)
     pad_size = 5
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model1.sample(n_datapoints=30, padding=pad_size)
 
     model1.run(

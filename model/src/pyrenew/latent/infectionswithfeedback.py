@@ -4,7 +4,7 @@
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 import pyrenew.arrayutils as au
 import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
@@ -192,7 +192,7 @@ class InfectionsWithFeedback(RandomVariable):
 
         # Appending initial infections to the infections
 
-        npro.deterministic("Rt_adjusted", Rt_adj)
+        numpyro.deterministic("Rt_adjusted", Rt_adj)
 
         return InfectionsRtFeedbackSample(
             post_initialization_infections=post_initialization_infections,

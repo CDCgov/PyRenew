@@ -18,7 +18,7 @@ The `RtPeriodicDiff` and `RtWeeklyDiff` classes use `PeriodicBroadcaster` to rep
 # | warning: false
 import jax.numpy as jnp
 import numpy as np
-import numpyro as npro
+import numpyro
 from pyrenew import process, deterministic
 ```
 
@@ -40,7 +40,7 @@ rt_proc = process.RtWeeklyDiffProcess(
 ```
 
 ```{python}
-with npro.handlers.seed(rng_seed=20):
+with numpyro.handlers.seed(rng_seed=20):
     sim_data = rt_proc(duration=30)
 
 # Plotting the Rt values
@@ -84,7 +84,7 @@ dayofweek = process.DayOfWeekEffect(
 Like before, we can use the `sample` method to generate samples from the day of week effect:
 
 ```{python}
-with npro.handlers.seed(rng_seed=20):
+with numpyro.handlers.seed(rng_seed=20):
     sim_data = dayofweek(duration=30)
 
 # Plotting the effect values

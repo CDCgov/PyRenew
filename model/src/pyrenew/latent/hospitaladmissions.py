@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import Any, NamedTuple
 
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 from jax.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
@@ -191,7 +191,7 @@ class HospitalAdmissions(RandomVariable):
             latent_hospital_admissions * self.hosp_report_prob_rv(**kwargs)[0]
         )
 
-        npro.deterministic(
+        numpyro.deterministic(
             "latent_hospital_admissions", latent_hospital_admissions
         )
 
