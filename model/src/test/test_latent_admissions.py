@@ -21,11 +21,15 @@ def test_admissions_sample():
     # Generating Rt and Infections to compute the hospital admissions
 
     rt = TransformedRandomVariable(
-        "Rt_rv",
+        name="Rt_rv",
         base_rv=SimpleRandomWalkProcess(
             name="log_rt",
-            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
-            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+            step_rv=DistributionalRV(
+                name="rw_step_rv", dist=dist.Normal(0, 0.025)
+            ),
+            init_rv=DistributionalRV(
+                name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
+            ),
         ),
         transforms=t.ExpTransform(),
     )
@@ -43,7 +47,8 @@ def test_admissions_sample():
 
     # Testing the hospital admissions
     inf_hosp = DeterministicPMF(
-        jnp.array(
+        name="inf_hosp",
+        vars=jnp.array(
             [
                 0,
                 0,
@@ -65,13 +70,12 @@ def test_admissions_sample():
                 0.05,
             ]
         ),
-        name="inf_hosp",
     )
 
     hosp1 = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         infect_hosp_rate_rv=DistributionalRV(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+            name="IHR", dist=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
 

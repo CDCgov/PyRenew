@@ -15,8 +15,8 @@ class DeterministicPMF(RandomVariable):
 
     def __init__(
         self,
-        vars: ArrayLike,
         name: str,
+        vars: ArrayLike,
         tol: float = 1e-5,
     ) -> None:
         """
@@ -29,10 +29,10 @@ class DeterministicPMF(RandomVariable):
 
         Parameters
         ----------
-        vars : tuple
-            A tuple with arraylike objects.
         name : str
-            A name to assign to the process.
+            A name to assign to the variable.
+        vars : tuple
+            An ArrayLike object.
         tol : float, optional
             Passed to pyrenew.distutil.validate_discrete_dist_vector. Defaults
             to 1e-5.
@@ -46,7 +46,7 @@ class DeterministicPMF(RandomVariable):
             tol=tol,
         )
 
-        self.basevar = DeterministicVariable(vars, name)
+        self.basevar = DeterministicVariable(name=name, vars=vars)
 
         return None
 
