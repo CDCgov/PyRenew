@@ -82,7 +82,8 @@ class DeterministicVariable(RandomVariable):
         Parameters
         ----------
         record : bool, optional
-            Whether to record the value of the deterministic RandomVariable. Defaults to True.
+            Whether to record the value of the deterministic
+            RandomVariable. Defaults to True.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
@@ -90,11 +91,14 @@ class DeterministicVariable(RandomVariable):
         Returns
         -------
         tuple[SampledValue]
-            A length-one tuple whose single entry is a :class:`SampledValue`
-            instance with `value=self.vars`, `t_start=self.t_start`, and `t_unit=self.t_unit`.
+            A length-one tuple whose single entry is a
+            :class:`SampledValue`
+            instance with `value=self.vars`,
+            `t_start=self.t_start`, and
+            `t_unit=self.t_unit`.
         """
         if record:
-            npro.deterministic(self.name, self.vars)
+            numpyro.deterministic(self.name, self.vars)
         return (
             SampledValue(
                 value=self.vars,

@@ -40,7 +40,6 @@ def test_admissions_sample():
 
     inf1 = Infections()
 
-
     with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         inf_sampled1 = inf1(Rt=sim_rt, gen_int=gen_int, I0=i0)
 
