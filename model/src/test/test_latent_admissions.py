@@ -84,5 +84,3 @@ def test_admissions_sample():
         sim_hosp_1.latent_hospital_admissions.value,
         inf_sampled1[0].value,
     )
-
-test_admissions_sample()
