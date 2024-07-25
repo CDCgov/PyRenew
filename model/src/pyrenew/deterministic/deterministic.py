@@ -97,7 +97,7 @@ class DeterministicVariable(RandomVariable):
             `t_unit=self.t_unit`.
         """
         if record:
-            numpyro.deterministic(self.name, self.vallue)
+            numpyro.deterministic(self.name, self.value)
         return (
             SampledValue(
                 value=self.value,
@@ -105,4 +105,3 @@ class DeterministicVariable(RandomVariable):
                 t_unit=self.t_unit,
             ),
         )
- 

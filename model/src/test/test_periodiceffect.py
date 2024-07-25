@@ -44,7 +44,6 @@ def test_periodiceffect() -> None:
     with numpyro.handlers.seed(rng_seed=223):
         ans2 = pe(duration=duration)[0].value
 
-
         ans2 = pe(duration=duration)[0].value
     assert ans2.shape == (duration,)
 
