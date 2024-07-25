@@ -98,4 +98,10 @@ class NegativeBinomialObservation(RandomVariable):
             obs=obs,
         )
 
-        return (SampledValue(negative_binomial_sample),)
+        return (
+            SampledValue(
+                negative_binomial_sample,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )

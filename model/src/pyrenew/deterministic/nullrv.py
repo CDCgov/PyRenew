@@ -50,7 +50,7 @@ class NullVariable(DeterministicVariable):
             Containing a SampledValue with None.
         """
 
-        return (SampledValue(None),)
+        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
 
 
 class NullProcess(NullVariable):
@@ -99,7 +99,7 @@ class NullProcess(NullVariable):
             Containing a SampledValue with None.
         """
 
-        return (SampledValue(None),)
+        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
 
 
 class NullObservation(NullVariable):
@@ -155,4 +155,4 @@ class NullObservation(NullVariable):
             Containing a SampledValue with None.
         """
 
-        return (SampledValue(None),)
+        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)

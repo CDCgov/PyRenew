@@ -193,7 +193,9 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         return RtPeriodicDiffProcessSample(
             rt=SampledValue(
-                self.broadcaster(jnp.exp(log_rt.value.flatten()), duration)
+                self.broadcaster(jnp.exp(log_rt.value.flatten()), duration),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
             ),
         )
 

@@ -44,9 +44,9 @@ def test_periodiceffect() -> None:
     params["offset"] = 5
     pe = PeriodicEffect(**params)
     with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        ans2 = pe(duration=duration).value.value
+        ans2 = pe(duration=duration)[0].value
 
-    # Checking that the shape of the sampled Rt is correct
+        ans2 = pe(duration=duration)[0].value
     assert ans2.shape == (duration,)
 
     # This time series should be the same as the previous one, but shifted by
@@ -81,13 +81,9 @@ def test_weeklyeffect() -> None:
     pe = PeriodicEffect(**params)
     pe2 = DayOfWeekEffect(**params2)
 
-    ans1 = pe(duration=duration).value.value
-    ans2 = pe2(duration=duration).value.value
+    ans1 = pe(duration=duration)[0].value
+    ans2 = pe2(duration=duration)[0].value
 
     assert_array_equal(ans1, ans2)
 
     return None
-
-
-test_periodiceffect()
-test_weeklyeffect()

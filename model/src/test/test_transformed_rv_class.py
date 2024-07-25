@@ -32,9 +32,12 @@ class LengthTwoRV(RandomVariable):
         Returns
         -------
         tuple
-           (SampledValue(1), SampledValue(5))
+           (SampledValue(1, t_start=self.t_start, t_unit=self.t_unit), SampledValue(5, t_start=self.t_start, t_unit=self.t_unit))
         """
-        return (SampledValue(1), SampledValue(5))
+        return (
+            SampledValue(1, t_start=self.t_start, t_unit=self.t_unit),
+            SampledValue(5, t_start=self.t_start, t_unit=self.t_unit),
+        )
 
     def sample_length(self):
         """

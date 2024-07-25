@@ -86,7 +86,13 @@ class SimpleRandomWalkProcess(RandomVariable):
             xs=jnp.arange(n_steps - 1),
         )
 
-        return (SampledValue(jnp.hstack([init.value, x.flatten()])),)
+        return (
+            SampledValue(
+                jnp.hstack([init.value, x.flatten()]),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )
 
     @staticmethod
     def validate():

@@ -196,7 +196,7 @@ class HospitalAdmissions(RandomVariable):
             )[0].value
         )
 
-        # Applying probability of hospitalization effect
+        # Applying reporting probability
         latent_hospital_admissions = (
             latent_hospital_admissions
             * self.hosp_report_prob_rv(**kwargs)[0].value

@@ -329,7 +329,13 @@ class DistributionalRV(RandomVariable):
                 fn=self.dist,
                 obs=obs,
             )
-        return (SampledValue(jnp.atleast_1d(sample)),)
+        return (
+            SampledValue(
+                jnp.atleast_1d(sample),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )
 
 
 class Model(metaclass=ABCMeta):
@@ -683,7 +689,11 @@ class TransformedRandomVariable(RandomVariable):
         untransformed_values = self.base_rv.sample(**kwargs)
 
         return tuple(
-            SampledValue(t(uv.value))
+            SampledValue(
+                t(uv.value),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            )
             for t, uv in zip(self.transforms, untransformed_values)
         )
 

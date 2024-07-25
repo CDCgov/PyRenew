@@ -74,7 +74,9 @@ class FirstDifferenceARProcess(RandomVariable):
         )
         return (
             SampledValue(
-                init_val + jnp.cumsum(rates_of_change.value.flatten())
+                init_val + jnp.cumsum(rates_of_change.value.flatten()),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
             ),
         )
 

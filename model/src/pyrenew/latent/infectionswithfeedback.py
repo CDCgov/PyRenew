@@ -202,5 +202,5 @@ class InfectionsWithFeedback(RandomVariable):
             post_initialization_infections=SampledValue(
                 post_initialization_infections
             ),
-            rt=SampledValue(Rt_adj),
+            rt=SampledValue(Rt_adj, t_start=self.t_start, t_unit=self.t_unit),
         )

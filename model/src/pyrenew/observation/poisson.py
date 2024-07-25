@@ -72,4 +72,10 @@ class PoissonObservation(RandomVariable):
             fn=dist.Poisson(rate=mu + self.eps),
             obs=obs,
         )
-        return (SampledValue(poisson_sample),)
+        return (
+            SampledValue(
+                poisson_sample,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )

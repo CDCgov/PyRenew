@@ -97,4 +97,10 @@ class Infections(RandomVariable):
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        return InfectionsSample(SampledValue(post_initialization_infections))
+        return InfectionsSample(
+            SampledValue(
+                post_initialization_infections,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            )
+        )
