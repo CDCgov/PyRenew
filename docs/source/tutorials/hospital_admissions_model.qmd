@@ -142,7 +142,7 @@ import jax.numpy as jnp
 import numpyro.distributions as dist
 
 inf_hosp_int = deterministic.DeterministicPMF(
-    name="inf_hosp_int", vars=inf_hosp_int
+    name="inf_hosp_int", value=inf_hosp_int
 )
 
 hosp_rate = metaclass.DistributionalRV(
@@ -175,13 +175,13 @@ I0 = InfectionInitializationProcess(
     ),
     InitializeInfectionsExponentialGrowth(
         gen_int_array.size,
-        deterministic.DeterministicVariable(name="rate", vars=0.05),
+        deterministic.DeterministicVariable(name="rate", value=0.05),
     ),
     t_unit=1,
 )
 
 # Generation interval and Rt
-gen_int = deterministic.DeterministicPMF(name="gen_int", vars=gen_int)
+gen_int = deterministic.DeterministicPMF(name="gen_int", value=gen_int)
 
 
 class MyRt(metaclass.RandomVariable):

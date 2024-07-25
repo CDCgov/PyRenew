@@ -28,14 +28,14 @@ def test_infection_initialization_process():
         "exp_model",
         DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsExponentialGrowth(
-            n_timepoints, DeterministicVariable(name="rate", vars=0.5)
+            n_timepoints, DeterministicVariable(name="rate", value=0.5)
         ),
         t_unit=1,
     )
 
     vec_model = InfectionInitializationProcess(
         "vec_model",
-        DeterministicVariable(name="I0", vars=jnp.arange(n_timepoints)),
+        DeterministicVariable(name="I0", value=jnp.arange(n_timepoints)),
         InitializeInfectionsFromVec(n_timepoints),
         t_unit=1,
     )
@@ -56,7 +56,7 @@ def test_infection_initialization_process():
     with pytest.raises(TypeError):
         InfectionInitializationProcess(
             "vec_model",
-            DeterministicVariable(name="I0", vars=jnp.arange(n_timepoints)),
+            DeterministicVariable(name="I0", value=jnp.arange(n_timepoints)),
             3,
             t_unit=1,
         )

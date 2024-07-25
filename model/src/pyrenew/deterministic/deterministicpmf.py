@@ -16,13 +16,13 @@ class DeterministicPMF(RandomVariable):
     def __init__(
         self,
         name: str,
-        vars: ArrayLike,
+        value: ArrayLike,
         tol: float = 1e-5,
     ) -> None:
         """
         Default constructor
 
-        Automatically checks that the elements in `vars` can be indeed
+        Automatically checks that the elements in `value` can be indeed
         considered to be a PMF by calling
         pyrenew.distutil.validate_discrete_dist_vector on each one of its
         entries.
@@ -31,7 +31,7 @@ class DeterministicPMF(RandomVariable):
         ----------
         name : str
             A name to assign to the variable.
-        vars : tuple
+        value : tuple
             An ArrayLike object.
         tol : float, optional
             Passed to pyrenew.distutil.validate_discrete_dist_vector. Defaults
@@ -41,23 +41,23 @@ class DeterministicPMF(RandomVariable):
         -------
         None
         """
-        vars = validate_discrete_dist_vector(
-            discrete_dist=vars,
+        value = validate_discrete_dist_vector(
+            discrete_dist=value,
             tol=tol,
         )
 
-        self.basevar = DeterministicVariable(name=name, vars=vars)
+        self.basevar = DeterministicVariable(name=name, value=value)
 
         return None
 
     @staticmethod
-    def validate(vars: ArrayLike) -> None:
+    def validate(value: ArrayLike) -> None:
         """
         Validates input to DeterministicPMF
 
         Parameters
         ----------
-        vars : ArrayLike
+        value : ArrayLike
             An ArrayLike object.
 
         Returns
@@ -97,4 +97,4 @@ class DeterministicPMF(RandomVariable):
             The size of the PMF
         """
 
-        return self.basevar.vars.size
+        return self.basevar.value.size

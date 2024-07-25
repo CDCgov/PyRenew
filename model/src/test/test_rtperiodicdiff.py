@@ -53,13 +53,13 @@ def test_rtweeklydiff() -> None:
         "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
-            name="log_rt_prior", vars=jnp.array([0.1, 0.2])
+            name="log_rt_prior", value=jnp.array([0.1, 0.2])
         ),
         "autoreg": DeterministicVariable(
-            name="autoreg", vars=jnp.array([0.7])
+            name="autoreg", value=jnp.array([0.7])
         ),
         "periodic_diff_sd": DeterministicVariable(
-            name="periodic_diff_sd", vars=jnp.array([0.1])
+            name="periodic_diff_sd", value=jnp.array([0.1])
         ),
     }
     duration = 30
@@ -100,15 +100,15 @@ def test_rtweeklydiff_no_autoregressive() -> None:
         "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
-            name="log_rt_prior", vars=jnp.array([0.0, 0.0])
+            name="log_rt_prior", value=jnp.array([0.0, 0.0])
         ),
         # No autoregression!
         "autoreg": DeterministicVariable(
-            name="autoreg", vars=jnp.array([0.0])
+            name="autoreg", value=jnp.array([0.0])
         ),
         "periodic_diff_sd": DeterministicVariable(
             name="periodic_diff_sd",
-            vars=jnp.array([0.1]),
+            value=jnp.array([0.1]),
         ),
     }
 
@@ -141,14 +141,14 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             name="log_rt_prior",
-            vars=jnp.array([0.1, 0.2]),
+            value=jnp.array([0.1, 0.2]),
         ),
         "autoreg": DeterministicVariable(
-            name="autoreg", vars=jnp.array([0.7])
+            name="autoreg", value=jnp.array([0.7])
         ),
         "periodic_diff_sd": DeterministicVariable(
             name="periodic_diff_sd",
-            vars=jnp.array([0.1]),
+            value=jnp.array([0.1]),
         ),
     }
 
@@ -180,14 +180,14 @@ def test_rtperiodicdiff_smallsample():
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             name="log_rt_prior",
-            vars=jnp.array([0.1, 0.2]),
+            value=jnp.array([0.1, 0.2]),
         ),
         "autoreg": DeterministicVariable(
-            name="autoreg", vars=jnp.array([0.7])
+            name="autoreg", value=jnp.array([0.7])
         ),
         "periodic_diff_sd": DeterministicVariable(
             name="periodic_diff_sd",
-            vars=jnp.array([0.1]),
+            value=jnp.array([0.1]),
         ),
     }
 

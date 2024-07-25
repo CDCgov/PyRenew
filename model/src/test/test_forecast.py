@@ -21,7 +21,7 @@ from pyrenew.process import SimpleRandomWalkProcess
 def test_forecast():
     """Check that forecasts are the right length and match the posterior up until forecast begins."""
     pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
-    gen_int = DeterministicPMF(name="gen_int", vars=pmf_array)
+    gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
     I0 = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),

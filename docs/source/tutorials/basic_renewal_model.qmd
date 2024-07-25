@@ -121,7 +121,7 @@ To initialize these five components within the renewal modeling framework, we es
 # | label: creating-elements
 # (1) The generation interval (deterministic)
 pmf_array = jnp.array([0.4, 0.3, 0.2, 0.1])
-gen_int = DeterministicPMF(name="gen_int", vars=pmf_array)
+gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
 
 # (2) Initial infections (inferred with a prior)
 I0 = InfectionInitializationProcess(

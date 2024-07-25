@@ -56,7 +56,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
     """
 
     gen_int = DeterministicPMF(
-        name="gen_int", vars=jnp.array([0.25, 0.25, 0.25, 0.25])
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
     I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
@@ -87,7 +87,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     gen_int = DeterministicPMF(
         name="gen_int",
-        vars=jnp.array([0.25, 0.25, 0.25, 0.25]),
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
     I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
@@ -122,7 +122,7 @@ def test_model_basicrenewal_no_obs_model():
 
     gen_int = DeterministicPMF(
         name="gen_int",
-        vars=jnp.array([0.25, 0.25, 0.25, 0.25]),
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
     with pytest.raises(ValueError):
@@ -195,7 +195,7 @@ def test_model_basicrenewal_with_obs_model():
     """
 
     gen_int = DeterministicPMF(
-        name="gen_int", vars=jnp.array([0.25, 0.25, 0.25, 0.25])
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
     I0 = InfectionInitializationProcess(
@@ -244,7 +244,7 @@ def test_model_basicrenewal_with_obs_model():
 
 def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(
-        name="gen_int", vars=jnp.array([0.25, 0.25, 0.25, 0.25])
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
     I0 = InfectionInitializationProcess(
