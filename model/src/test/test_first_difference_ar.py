@@ -2,7 +2,7 @@
 # numpydoc ignore=GL08
 
 import jax.numpy as jnp
-import numpyro
+import numpyro as npro
 from pyrenew.process import FirstDifferenceARProcess
 
 
@@ -15,7 +15,7 @@ def test_fd_ar_can_be_sampled():
     """
     ar_fd = FirstDifferenceARProcess("trend_rw", 0.5, 0.5)
 
-    with numpyro.handlers.seed(rng_seed=62):
+    with npro.handlers.seed(rng_seed=62):
         # can sample with and without inits
         # for the rate of change
         ans0 = ar_fd(duration=3532, init_val=jnp.array([50.0]))

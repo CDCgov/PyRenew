@@ -8,7 +8,7 @@ with different random keys behave appropriately.
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
-import numpyro
+import numpyro as npro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
 from numpy.testing import assert_array_equal, assert_raises
@@ -103,7 +103,7 @@ def test_rng_keys_produce_correct_samples():
     ]
     # sample only a single model and use that model's samples
     # as the observed_infections for the rest of the models
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model_sample = models[0].sample(n_datapoints=n_datapoints[0])
     obs_infections = [model_sample.observed_infections] * len(models)
     rng_keys = [jr.key(54), jr.key(54), None, None, jr.key(74)]

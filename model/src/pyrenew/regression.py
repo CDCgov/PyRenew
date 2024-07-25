@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
 
-import numpyro
+import numpyro as npro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
 from jax.typing import ArrayLike
@@ -56,7 +56,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         name : str
             The name of the observation process,
             which will be used to name the constituent
-            sampled parameters in calls to `numpyro.sample`
+            sampled parameters in calls to `npro.sample`
 
         fixed_predictor_values : ArrayLike (n_predictors, n_observations)
             Matrix of fixed values of the predictor variables
@@ -70,7 +70,7 @@ class GLMPrediction(AbstractRegressionPrediction):
             Prior distribution for the regression intercept
             value
 
-        coefficient_priors : numpyro.distributions.Distribution
+        coefficient_priors : npro.distributions.Distribution
             Vectorized prior distribution for the regression
             coefficient values
 
@@ -82,11 +82,11 @@ class GLMPrediction(AbstractRegressionPrediction):
 
         intercept_suffix : str, optional
             Suffix for naming the intercept random variable in
-            class to numpyro.sample(). Default `"_intercept"`.
+            class to npro.sample(). Default `"_intercept"`.
 
         coefficient_suffix : str, optional
             Suffix for naming the regression coefficient
-            random variables in calls to numpyro.sample().
+            random variables in calls to npro.sample().
             Default `"_coefficients"`.
         """
         if transform is None:
@@ -135,10 +135,10 @@ class GLMPrediction(AbstractRegressionPrediction):
             A dictionary containing transformed predictions, and
             the intercept and coefficients sample distributions.
         """
-        intercept = numpyro.sample(
+        intercept = npro.sample(
             self.name + self.intercept_suffix, self.intercept_prior
         )
-        coefficients = numpyro.sample(
+        coefficients = npro.sample(
             self.name + self.coefficient_suffix, self.coefficient_priors
         )
         prediction = self.predict(intercept, coefficients)

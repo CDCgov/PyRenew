@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import jax.numpy as jnp
-import numpyro
+import numpyro as npro
 import numpyro.distributions as dist
 from jax import lax
 from jax.typing import ArrayLike
@@ -31,7 +31,7 @@ class ARProcess(RandomVariable):
         Parameters
         ----------
         name : str
-            Name of the parameter passed to numpyro.sample.
+            Name of the parameter passed to npro.sample.
         mean: float
             Mean parameter.
         autoreg : ArrayLike
@@ -75,7 +75,7 @@ class ARProcess(RandomVariable):
         """
         order = self.autoreg.shape[0]
         if inits is None:
-            inits = numpyro.sample(
+            inits = npro.sample(
                 self.name + "_sampled_inits",
                 dist.Normal(0, self.noise_sd).expand((order,)),
             )
@@ -85,7 +85,7 @@ class ARProcess(RandomVariable):
             new_carry = jnp.hstack([new_term, carry[: (order - 1)]])
             return new_carry, new_term
 
-        noise = numpyro.sample(
+        noise = npro.sample(
             self.name + "_noise",
             dist.Normal(0, self.noise_sd).expand((duration - inits.size,)),
         )

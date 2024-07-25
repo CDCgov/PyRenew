@@ -14,7 +14,7 @@ We start by loading the needed components to build a basic renewal model:
 # | warning: false
 import jax.numpy as jnp
 import numpy as np
-import numpyro
+import numpyro as npro
 import numpyro.distributions as dist
 from pyrenew.process import SimpleRandomWalkProcess
 from pyrenew.latent import (
@@ -33,7 +33,7 @@ from pyrenew.metaclass import (
 import pyrenew.transformation as t
 from numpyro.infer.reparam import LocScaleReparam
 
-numpyro.set_host_device_count(2)
+npro.set_host_device_count(2)
 ```
 
 ## Architecture of `RtInfectionsRenewalModel`
@@ -137,7 +137,7 @@ class MyRt(RandomVariable):
         pass
 
     def sample(self, n_steps: int, **kwargs) -> tuple:
-        sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
+        sd_rt = npro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
 
         rt_rv = TransformedRandomVariable(
             "Rt_rv",
@@ -204,7 +204,7 @@ Using `numpyro`, we can simulate data using the `sample()` member function of `R
 
 ```{python}
 # | label: simulate
-with numpyro.handlers.seed(rng_seed=53):
+with npro.handlers.seed(rng_seed=53):
     sim_data = model1.sample(n_datapoints=40)
 
 sim_data

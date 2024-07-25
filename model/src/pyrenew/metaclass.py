@@ -12,7 +12,7 @@ import jax.numpy as jnp
 import jax.random as jr
 import matplotlib.pyplot as plt
 import numpy as np
-import numpyro
+import numpyro as npro
 import polars as pl
 from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive
@@ -214,12 +214,12 @@ class RandomVariable(metaclass=ABCMeta):
 class DistributionalRV(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single :class:`numpyro.distributions.Distribution`.
+    from a single :class:`npro.distributions.Distribution`.
     """
 
     def __init__(
         self,
-        dist: numpyro.distributions.Distribution,
+        dist: npro.distributions.Distribution,
         name: str,
         reparam: Reparam = None,
     ) -> None:
@@ -228,12 +228,12 @@ class DistributionalRV(RandomVariable):
 
         Parameters
         ----------
-        dist : numpyro.distributions.Distribution
+        dist : npro.distributions.Distribution
             Distribution of the random variable.
         name : str
             Name of the random variable.
 
-        reparam : numpyro.infer.reparam.Reparam
+        reparam : npro.infer.reparam.Reparam
             If not None, reparameterize sampling
             from the distribution according to the
             given numpyro reparameterizer
@@ -259,10 +259,10 @@ class DistributionalRV(RandomVariable):
         """
         Validation of the distribution to be implemented in subclasses.
         """
-        if not isinstance(dist, numpyro.distributions.Distribution):
+        if not isinstance(dist, npro.distributions.Distribution):
             raise ValueError(
                 "dist should be an instance of "
-                f"numpyro.distributions.Distribution, got {dist}"
+                f"npro.distributions.Distribution, got {dist}"
             )
 
         return None
@@ -279,7 +279,7 @@ class DistributionalRV(RandomVariable):
         ----------
         obs : ArrayLike, optional
             Observations passed as the `obs` argument to
-            :fun:`numpyro.sample()`. Default `None`.
+            :fun:`npro.sample()`. Default `None`.
         **kwargs : dict, optional
             Additional keyword arguments passed through
             to internal sample calls, should there be any.
@@ -289,8 +289,8 @@ class DistributionalRV(RandomVariable):
         tuple
            Containing the sampled from the distribution.
         """
-        with numpyro.handlers.reparam(config=self.reparam_dict):
-            sample = numpyro.sample(
+        with npro.handlers.reparam(config=self.reparam_dict):
+            sample = npro.sample(
                 name=self.name,
                 fn=self.dist,
                 obs=obs,
@@ -411,11 +411,11 @@ class Model(metaclass=ABCMeta):
         ----------
         nuts_args : dict, optional
             Dictionary of arguments passed to the
-            :class:`numpyro.infer.NUTS` kernel.
+            :class:`npro.infer.NUTS` kernel.
             Defaults to None.
         mcmc_args : dict, optional
             Dictionary of arguments passed to the
-            :class:`numpyro.infer.MCMC` constructor.
+            :class:`npro.infer.MCMC` constructor.
             Defaults to None.
 
         Returns
@@ -445,7 +445,7 @@ class Model(metaclass=ABCMeta):
         exclude_deterministic: bool = True,
     ) -> None:
         """
-        A wrapper of :meth:`numpyro.infer.MCMC.print_summary`
+        A wrapper of :meth:`npro.infer.MCMC.print_summary`
 
         Parameters
         ----------
@@ -508,7 +508,7 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> dict:
         """
-        A wrapper for :class:`numpyro.infer.Predictive` to generate
+        A wrapper for :class:`npro.infer.Predictive` to generate
         posterior predictive samples.
 
         Parameters
@@ -517,10 +517,10 @@ class Model(metaclass=ABCMeta):
             Random key for the Predictive function call. Defaults to None.
         numpyro_predictive_args : dict, optional
             Dictionary of arguments to be passed to the
-            :class:`numpyro.inference.Predictive` constructor.
+            :class:`npro.infer.Predictive` constructor.
         **kwargs
             Additional named arguments passed to the
-            `__call__()` method of :class:`numpyro.infer.Predictive`
+            `__call__()` method of :class:`npro.infer.Predictive`
 
         Returns
         -------
@@ -559,9 +559,9 @@ class Model(metaclass=ABCMeta):
         rng_key : ArrayLike, optional
             Random key for the Predictive function call. Defaults to None.
         numpyro_predictive_args : dict, optional
-            Dictionary of arguments to be passed to the numpyro.inference.Predictive constructor.
+            Dictionary of arguments to be passed to the numpyro.infer.Predictive constructor.
         **kwargs
-            Additional named arguments passed to the `__call__()` method of numpyro.inference.Predictive
+            Additional named arguments passed to the `__call__()` method of numpyro.infer.Predictive
 
         Returns
         -------
