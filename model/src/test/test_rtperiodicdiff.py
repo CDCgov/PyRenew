@@ -64,7 +64,7 @@ def test_rtweeklydiff() -> None:
 
     rtwd = RtWeeklyDiffProcess(**params)
 
-    with numpyro.handlers.seed(rng_seed=223):
+    with numpyro.handlers.seed(rng_seed=121):
         rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -78,7 +78,7 @@ def test_rtweeklydiff() -> None:
     # Checking start off a different day of the week
     params["offset"] = 5
     rtwd = RtWeeklyDiffProcess(**params)
-    with numpyro.handlers.seed(rng_seed=223):
+    with numpyro.handlers.seed(rng_seed=121):
         rt2 = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -110,7 +110,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     rtwd = RtWeeklyDiffProcess(**params)
 
     duration = 1000
-    with numpyro.handlers.seed(rng_seed=223):
+    with numpyro.handlers.seed(rng_seed=323):
         rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
