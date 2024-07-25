@@ -4,7 +4,7 @@ Test the rtweeklydiff module
 
 import jax.numpy as jnp
 import numpy as np
-import numpyro as npro
+import numpyro
 from jax import lax
 from jax.typing import ArrayLike
 from numpy.testing import assert_array_equal
@@ -50,6 +50,7 @@ def test_rtweeklydiff() -> None:
     """Checks basic functionality of the process"""
 
     params = {
+        "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.1, 0.2]), name="log_rt_prior"
@@ -58,14 +59,12 @@ def test_rtweeklydiff() -> None:
         "periodic_diff_sd": DeterministicVariable(
             jnp.array([0.1]), name="periodic_diff_sd"
         ),
-        "site_name": "test",
     }
     duration = 30
 
     rtwd = RtWeeklyDiffProcess(**params)
 
-    np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=121):
         rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -77,10 +76,9 @@ def test_rtweeklydiff() -> None:
     assert_array_equal(rt[28:duration], jnp.repeat(rt[28], 2))
 
     # Checking start off a different day of the week
-    np.random.seed(223)
     params["offset"] = 5
     rtwd = RtWeeklyDiffProcess(**params)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=121):
         rt2 = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -97,6 +95,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     """Checks step size averages close to 0"""
 
     params = {
+        "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.0, 0.0]), name="log_rt_prior"
@@ -106,14 +105,12 @@ def test_rtweeklydiff_no_autoregressive() -> None:
         "periodic_diff_sd": DeterministicVariable(
             jnp.array([0.1]), name="periodic_diff_sd"
         ),
-        "site_name": "test",
     }
 
     rtwd = RtWeeklyDiffProcess(**params)
 
-    np.random.seed(223)
     duration = 1000
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=323):
         rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -135,6 +132,7 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
     """Checks that the 'manual' reconstruction is correct"""
 
     params = {
+        "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.1, 0.2]), name="log_rt_prior"
@@ -143,7 +141,6 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
         "periodic_diff_sd": DeterministicVariable(
             jnp.array([0.1]), name="periodic_diff_sd"
         ),
-        "site_name": "test",
     }
 
     rtwd = RtWeeklyDiffProcess(**params)
@@ -170,6 +167,7 @@ def test_rtperiodicdiff_smallsample():
     """Checks basic functionality of the process with a small sample size."""
 
     params = {
+        "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
             jnp.array([0.1, 0.2]), name="log_rt_prior"
@@ -178,13 +176,11 @@ def test_rtperiodicdiff_smallsample():
         "periodic_diff_sd": DeterministicVariable(
             jnp.array([0.1]), name="periodic_diff_sd"
         ),
-        "site_name": "test",
     }
 
     rtwd = RtWeeklyDiffProcess(**params)
 
-    np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=223):
         rt = rtwd(duration=6).rt
 
     # Checking that the shape of the sampled Rt is correct

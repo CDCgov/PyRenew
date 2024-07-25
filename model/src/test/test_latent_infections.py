@@ -2,9 +2,8 @@
 # numpydoc ignore=GL08
 
 import jax.numpy as jnp
-import numpy as np
 import numpy.testing as testing
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
 import pytest
@@ -19,7 +18,6 @@ def test_infections_as_deterministic():
     the same seed is used.
     """
 
-    np.random.seed(223)
     rt = TransformedRandomVariable(
         "Rt_rv",
         base_rv=SimpleRandomWalkProcess(
@@ -30,7 +28,7 @@ def test_infections_as_deterministic():
         transforms=t.ExpTransform(),
     )
 
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=223):
         sim_rt, *_ = rt(n_steps=30)
 
     gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
@@ -42,7 +40,7 @@ def test_infections_as_deterministic():
         I0=jnp.zeros(gen_int.size),
         gen_int=gen_int,
     )
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=223):
         inf_sampled1 = inf1(**obs)
         inf_sampled2 = inf1(**obs)
 
@@ -52,7 +50,7 @@ def test_infections_as_deterministic():
     )
 
     # Check that Initial infections vector must be at least as long as the generation interval.
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=223):
         with pytest.raises(ValueError):
             obs["I0"] = jnp.array([1])
             inf1(**obs)
