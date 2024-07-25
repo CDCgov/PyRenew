@@ -71,9 +71,9 @@ class FirstDifferenceARProcess(RandomVariable):
             With a single array of shape (duration,).
         """
         rates_of_change, *_ = self.rate_of_change_proc.sample(
+            name=self.name + "_rate_of_change",
             duration=duration,
             inits=jnp.atleast_1d(init_rate_of_change),
-            name=self.name + "_rate_of_change",
         )
         return (
             SampledValue(
@@ -86,6 +86,6 @@ class FirstDifferenceARProcess(RandomVariable):
     @staticmethod
     def validate():
         """
-        Validates inputted parameters, implementation pending.
+        Validates input parameters, implementation pending.
         """
         return None

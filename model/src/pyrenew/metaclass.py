@@ -164,7 +164,6 @@ class RandomVariable(metaclass=ABCMeta):
             model time. It could be negative, indicating
             that the `sample()` method returns timepoints
             that occur prior to the model t = 0.
-
         t_unit : int
             The unit of the time series relative
             to the model's fundamental (smallest)
@@ -253,8 +252,8 @@ class DistributionalRV(RandomVariable):
 
     def __init__(
         self,
-        dist: numpyro.distributions.Distribution,
         name: str,
+        dist: numpyro.distributions.Distribution,
         reparam: Reparam = None,
     ) -> None:
         """
@@ -262,11 +261,10 @@ class DistributionalRV(RandomVariable):
 
         Parameters
         ----------
-        dist : numpyro.distributions.Distribution
-            Distribution of the random variable.
         name : str
             Name of the random variable.
-
+        dist : numpyro.distributions.Distribution
+            Distribution of the random variable.
         reparam : numpyro.infer.reparam.Reparam
             If not None, reparameterize sampling
             from the distribution according to the
@@ -277,10 +275,9 @@ class DistributionalRV(RandomVariable):
         None
         """
 
-        self.validate(dist)
-
-        self.dist = dist
         self.name = name
+        self.validate(dist)
+        self.dist = dist
         if reparam is not None:
             self.reparam_dict = {self.name: reparam}
         else:
@@ -643,19 +640,16 @@ class TransformedRandomVariable(RandomVariable):
 
         Parameters
         ----------
-
         name : str
-            A name for the random variable instance
-
+            A name for the random variable instance.
         base_rv : RandomVariable
-            The underlying (untransformed) RandomVariable
-
+            The underlying (untransformed) RandomVariable.
         transforms : Transform
             Transformation or tuple of transformations
             to apply to the output of
             `base_rv.sample()`; single values will be coerced to
             a length-one tuple. If a tuple, should be the same
-            length as the tuple returned by `base_rv.sample()`
+            length as the tuple returned by `base_rv.sample()`.
 
         Returns
         -------

@@ -19,23 +19,23 @@ def test_infection_initialization_process():
 
     zero_pad_model = InfectionInitializationProcess(
         "zero_pad_model",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints),
         t_unit=1,
     )
 
     exp_model = InfectionInitializationProcess(
         "exp_model",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsExponentialGrowth(
-            n_timepoints, DeterministicVariable(0.5, name="rate")
+            n_timepoints, DeterministicVariable(name="rate", value=0.5)
         ),
         t_unit=1,
     )
 
     vec_model = InfectionInitializationProcess(
         "vec_model",
-        DeterministicVariable(jnp.arange(n_timepoints), name="I0"),
+        DeterministicVariable(name="I0", value=jnp.arange(n_timepoints)),
         InitializeInfectionsFromVec(n_timepoints),
         t_unit=1,
     )
@@ -56,7 +56,7 @@ def test_infection_initialization_process():
     with pytest.raises(TypeError):
         InfectionInitializationProcess(
             "vec_model",
-            DeterministicVariable(jnp.arange(n_timepoints), name="I0"),
+            DeterministicVariable(name="I0", value=jnp.arange(n_timepoints)),
             3,
             t_unit=1,
         )

@@ -17,8 +17,8 @@ class DeterministicVariable(RandomVariable):
 
     def __init__(
         self,
-        vars: ArrayLike,
         name: str,
+        value: ArrayLike,
         t_start: int | None = None,
         t_unit: int | None = None,
     ) -> None:
@@ -26,35 +26,34 @@ class DeterministicVariable(RandomVariable):
 
         Parameters
         ----------
-        vars : ArrayLike
-            A tuple with arraylike objects.
         name : str
-            A name to assign to the process.
+            A name to assign to the variable.
+        value : ArrayLike
+            An ArrayLike object.
         t_start : int, optional
-            The start time of the process.
+            The start time of the variable, if any.
         t_unit : int, optional
-            The unit of time relative to the model's fundamental (smallest) time unit.
+            The unit of time relative to the model's fundamental (smallest) time unit, if any
 
         Returns
         -------
         None
         """
-
-        self.validate(vars)
-        self.set_timeseries(t_start, t_unit)
-        self.vars = jnp.atleast_1d(vars)
         self.name = name
+        self.value = jnp.atleast_1d(value)
+        self.validate(value)
+        self.set_timeseries(t_start, t_unit)
 
         return None
 
     @staticmethod
-    def validate(vars: ArrayLike) -> None:
+    def validate(value: ArrayLike) -> None:
         """
-        Validates inputted to DeterministicPMF
+        Validates input to DeterministicPMF
 
         Parameters
         ----------
-        vars : ArrayLike
+        value : ArrayLike
             An ArrayLike object.
 
         Returns
@@ -64,10 +63,10 @@ class DeterministicVariable(RandomVariable):
         Raises
         ------
         Exception
-            If the inputted vars object is not a ArrayLike.
+            If the input value object is not a ArrayLike.
         """
-        if not isinstance(vars, ArrayLike):
-            raise Exception("vars is not a ArrayLike")
+        if not isinstance(value, ArrayLike):
+            raise Exception("value is not a ArrayLike")
 
         return None
 
@@ -98,11 +97,12 @@ class DeterministicVariable(RandomVariable):
             `t_unit=self.t_unit`.
         """
         if record:
-            numpyro.deterministic(self.name, self.vars)
+            numpyro.deterministic(self.name, self.vallue)
         return (
             SampledValue(
-                value=self.vars,
+                value=self.value,
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
         )
+ 

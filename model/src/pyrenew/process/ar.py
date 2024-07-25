@@ -102,6 +102,6 @@ class ARProcess(RandomVariable):
     @staticmethod
     def validate():  # numpydoc ignore=RT01
         """
-        Validates inputted parameters, implementation pending.
+        Validates input parameters, implementation pending.
         """
         return None
