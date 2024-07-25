@@ -5,7 +5,7 @@ Tests for regression functionality
 """
 
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 import pyrenew.regression as r
 import pyrenew.transformation as t
@@ -53,7 +53,7 @@ def test_glm_prediction():
     )
 
     # sampling should work
-    with npro.handlers.seed(rng_seed=5):
+    with numpyro.handlers.seed(rng_seed=5):
         preds = glm_pred()
 
     assert isinstance(preds, dict)

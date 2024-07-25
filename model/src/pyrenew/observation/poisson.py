@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
@@ -25,7 +25,7 @@ class PoissonObservation(RandomVariable):
         Parameters
         ----------
         name : str
-            Passed to npro.sample.
+            Passed to numpyro.sample.
         eps : float, optional
             Small value added to the rate parameter to avoid zero values.
             Defaults to 1e-8.
@@ -67,7 +67,7 @@ class PoissonObservation(RandomVariable):
         tuple
         """
 
-        poisson_sample = npro.sample(
+        poisson_sample = numpyro.sample(
             name=self.name,
             fn=dist.Poisson(rate=mu + self.eps),
             obs=obs,

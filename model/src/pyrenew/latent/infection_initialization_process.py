@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
-import numpyro as npro
+import numpyro
 from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
 )
@@ -97,6 +97,6 @@ class InfectionInitializationProcess(RandomVariable):
         """
         (I_pre_init,) = self.I_pre_init_rv()
         infection_initialization = self.infection_init_method(I_pre_init)
-        npro.deterministic(self.name, infection_initialization)
+        numpyro.deterministic(self.name, infection_initialization)
 
         return (infection_initialization,)

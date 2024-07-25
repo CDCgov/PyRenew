@@ -5,7 +5,7 @@
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 import polars as pl
 import pytest
@@ -65,7 +65,9 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
 
     def sample(self, **kwargs):  # numpydoc ignore=GL08
         return (
-            npro.sample(name=self.name, fn=dist.Uniform(high=0.99, low=0.01)),
+            numpyro.sample(
+                name=self.name, fn=dist.Uniform(high=0.99, low=0.01)
+            ),
         )
 
 
@@ -128,7 +130,7 @@ def test_model_hosp_no_timepoints_or_observations():
         hosp_admission_obs_process_rv=observed_admissions,
     )
 
-    with npro.handlers.seed(rng_seed=233):
+    with numpyro.handlers.seed(rng_seed=233):
         with pytest.raises(ValueError, match="Either"):
             model1.sample(n_datapoints=None, data_observed_admissions=None)
 
@@ -193,7 +195,7 @@ def test_model_hosp_both_timepoints_and_observations():
     )
 
     np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         with pytest.raises(ValueError, match="Cannot pass both"):
             model1.sample(
                 n_datapoints=30,
@@ -265,13 +267,13 @@ def test_model_hosp_no_obs_model():
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model0_samp = model0.sample(n_datapoints=30)
 
     model0.hosp_admission_obs_process_rv = NullObservation()
 
     np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model0.sample(n_datapoints=30)
 
     np.testing.assert_array_almost_equal(model0_samp.Rt, model1_samp.Rt)
@@ -372,7 +374,7 @@ def test_model_hosp_with_obs_model():
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model1.sample(n_datapoints=30)
 
     model1.run(
@@ -469,7 +471,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
 
     # Sampling and fitting model 0 (with no obs for infections)
     np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model1.sample(n_datapoints=30)
 
     model1.run(
@@ -579,7 +581,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     # Sampling and fitting model 0 (with no obs for infections)
 
     np.random.seed(223)
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
         model1_samp = model1.sample(
             n_datapoints=n_obs_to_generate, padding=pad_size
         )

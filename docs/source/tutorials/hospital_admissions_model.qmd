@@ -7,9 +7,9 @@ engine: jupyter
 ```{python}
 # | label: numpyro setup
 # | echo: false
-import numpyro as npro
+import numpyro
 
-npro.set_host_device_count(2)
+numpyro.set_host_device_count(2)
 ```
 
 This document illustrates how a hospital admissions-only model can be fitted using data from the Pyrenew package, particularly the wastewater dataset. The CFA wastewater team created this dataset, which contains simulated data.
@@ -258,7 +258,7 @@ import numpy as np
 timeframe = 120
 
 
-with npro.handlers.seed(rng_seed=223):
+with numpyro.handlers.seed(rng_seed=223):
     simulated_data = hosp_model.sample(n_datapoints=timeframe)
 ```
 

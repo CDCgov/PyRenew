@@ -4,7 +4,7 @@
 Tests for TransformedRandomVariable class
 """
 
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
 import pytest
@@ -122,10 +122,10 @@ def test_transforms_applied_at_sampling():
             "transformed_length_2", l2_rv, (tr, t.ExpTransform())
         )
 
-        with npro.handlers.seed(rng_seed=5):
+        with numpyro.handlers.seed(rng_seed=5):
             norm_base_sample = norm_rv.sample()
             l2_base_sample = l2_rv.sample()
-        with npro.handlers.seed(rng_seed=5):
+        with numpyro.handlers.seed(rng_seed=5):
             norm_transformed_sample = tr_norm.sample()
             l2_transformed_sample = tr_l2.sample()
 

@@ -28,7 +28,7 @@ class SimpleRandomWalkProcess(RandomVariable):
         ----------
         name : str
             A name for the random variable, used to
-            name sites within it in :fun :`npro.sample()`
+            name sites within it in :fun :`numpyro.sample()`
             calls.
         step_rv : RandomVariable
             RandomVariable representing the step distribution.

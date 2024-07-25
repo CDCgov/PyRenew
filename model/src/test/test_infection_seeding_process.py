@@ -1,6 +1,6 @@
 # numpydoc ignore=GL08
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 import pytest
 from pyrenew.deterministic import DeterministicVariable
@@ -41,7 +41,7 @@ def test_infection_initialization_process():
     )
 
     for model in [zero_pad_model, exp_model, vec_model]:
-        with npro.handlers.seed(rng_seed=1):
+        with numpyro.handlers.seed(rng_seed=1):
             model()
 
     # Check that the InfectionInitializationProcess class raises an error when the wrong type of I0 is passed

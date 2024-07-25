@@ -1,7 +1,7 @@
 # numpydoc ignore=GL08
 
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 from numpy.testing import assert_almost_equal
 from pyrenew.deterministic import DeterministicVariable
@@ -27,7 +27,7 @@ def test_rw_can_be_sampled():
         "rw_fixed_init", step_rv=step_rv, init_rv=init_rv_fixed
     )
 
-    with npro.handlers.seed(rng_seed=62):
+    with numpyro.handlers.seed(rng_seed=62):
         # can sample with a fixed init
         # and with a random init
         ans_rand = rw_init_rand(n_steps=3532)
@@ -62,7 +62,7 @@ def test_rw_samples_correctly_distributed():
             init_rv=DeterministicVariable(rw_init_val, "init_rv_fixed"),
         )
 
-        with npro.handlers.seed(rng_seed=62):
+        with numpyro.handlers.seed(rng_seed=62):
             samples, *_ = rw_normal(n_steps=n_samples)
 
             # Checking the shape

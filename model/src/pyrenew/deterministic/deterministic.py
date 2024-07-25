@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
@@ -86,5 +86,5 @@ class DeterministicVariable(RandomVariable):
             Containing the stored values during construction.
         """
         if record:
-            npro.deterministic(self.name, self.vars)
+            numpyro.deterministic(self.name, self.vars)
         return (self.vars,)

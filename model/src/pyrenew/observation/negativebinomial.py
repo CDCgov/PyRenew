@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
@@ -89,7 +89,7 @@ class NegativeBinomialObservation(RandomVariable):
         """
         concentration, *_ = self.concentration_rv.sample()
 
-        negative_binomial_sample = npro.sample(
+        negative_binomial_sample = numpyro.sample(
             name=self.name,
             fn=dist.NegativeBinomial2(
                 mean=mu + self.eps,

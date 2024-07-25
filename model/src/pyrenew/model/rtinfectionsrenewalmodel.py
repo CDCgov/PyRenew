@@ -6,7 +6,7 @@ from __future__ import annotations
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import numpyro as npro
+import numpyro
 import pyrenew.arrayutils as au
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
@@ -217,7 +217,7 @@ class RtInfectionsRenewalModel(Model):
         all_latent_infections = jnp.hstack(
             [I0, post_initialization_latent_infections]
         )
-        npro.deterministic("all_latent_infections", all_latent_infections)
+        numpyro.deterministic("all_latent_infections", all_latent_infections)
 
         if observed_infections is not None:
             observed_infections = au.pad_x_to_match_y(
@@ -233,7 +233,7 @@ class RtInfectionsRenewalModel(Model):
             jnp.nan,
             pad_direction="start",
         )
-        npro.deterministic("Rt", Rt)
+        numpyro.deterministic("Rt", Rt)
 
         return RtInfectionsRenewalSample(
             Rt=Rt,
