@@ -2,7 +2,6 @@
 # numpydoc ignore=GL08
 
 import jax.numpy as jnp
-import numpy as np
 import numpy.testing as testing
 import numpyro
 import numpyro.distributions as dist
@@ -20,7 +19,6 @@ def test_admissions_sample():
     """
 
     # Generating Rt and Infections to compute the hospital admissions
-    np.random.seed(223)
 
     rt = TransformedRandomVariable(
         "Rt_rv",
@@ -32,7 +30,7 @@ def test_admissions_sample():
         transforms=t.ExpTransform(),
     )
 
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=223):
         sim_rt = rt(n_steps=30)[0].value
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
@@ -40,7 +38,7 @@ def test_admissions_sample():
 
     inf1 = Infections()
 
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=223):
         inf_sampled1 = inf1(Rt=sim_rt, gen_int=gen_int, I0=i0)
 
     # Testing the hospital admissions
@@ -77,7 +75,7 @@ def test_admissions_sample():
         ),
     )
 
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=223):
         sim_hosp_1 = hosp1(latent_infections=inf_sampled1[0].value)
 
     testing.assert_array_less(

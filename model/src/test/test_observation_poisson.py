@@ -15,9 +15,8 @@ def test_poisson_obs():
 
     pois = PoissonObservation("rv")
 
-    np.random.seed(223)
     rates = np.random.randint(1, 5, size=10)
-    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+    with numpyro.handlers.seed(rng_seed=223):
         sim_pois, *_ = pois(mu=rates)
 
     testing.assert_array_equal(sim_pois.value, jnp.ceil(sim_pois.value))
