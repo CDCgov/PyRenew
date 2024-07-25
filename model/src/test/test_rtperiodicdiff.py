@@ -81,7 +81,7 @@ def test_rtweeklydiff() -> None:
     params["offset"] = 5
     rtwd = RtWeeklyDiffProcess(**params)
 
-    with numpyro.handlers.seed(rng_seed=121):
+    with numpyro.handlers.seed(rng_seed=223):
         rt2 = rtwd(duration=duration).rt.value
 
     # Checking that the shape of the sampled Rt is correct
@@ -89,7 +89,7 @@ def test_rtweeklydiff() -> None:
 
     # This time series should be the same as the previous one,
     # but shifted by 5 days
-    assert_array_almost_equal(rt[5:], rt2[:-5])
+    assert_array_equal(rt[5:], rt2[:-5])
 
     return None
 
