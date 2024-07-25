@@ -212,7 +212,9 @@ class MyRt(metaclass.RandomVariable):
 
 
 rtproc = MyRt(
-    metaclass.DistributionalRV(dist.HalfNormal(0.025), "Rt_random_walk_sd")
+    metaclass.DistributionalRV(
+        name="Rt_random_walk_sd", dist=dist.HalfNormal(0.025)
+    )
 )
 
 # The observation model
@@ -222,7 +224,8 @@ rtproc = MyRt(
 nb_conc_rv = metaclass.TransformedRandomVariable(
     "concentration",
     metaclass.DistributionalRV(
-        dist.TruncatedNormal(loc=0, scale=1, low=0.01), "concentration_raw"
+        name="concentration_raw",
+        dist=dist.TruncatedNormal(loc=0, scale=1, low=0.01),
     ),
     transformation.PowerTransform(-2),
 )

@@ -144,12 +144,13 @@ class MyRt(RandomVariable):
             base_rv=SimpleRandomWalkProcess(
                 name="log_rt",
                 step_rv=DistributionalRV(
-                    dist.Normal(0, sd_rt),
-                    "rw_step_rv",
+                    name="rw_step_rv",
+                    dist=dist.Normal(0, sd_rt),
                     reparam=LocScaleReparam(0),
                 ),
                 init_rv=DistributionalRV(
-                    dist.Normal(jnp.log(1), jnp.log(1.2)), "init_log_Rt_rv"
+                    name="init_log_Rt_rv",
+                    dist=dist.Normal(jnp.log(1), jnp.log(1.2)),
                 ),
             ),
             transforms=t.ExpTransform(),
