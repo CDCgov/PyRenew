@@ -4,16 +4,16 @@ format: gfm
 engine: jupyter
 ---
 
+This document illustrates how a hospital admissions-only model can be fitted using data from the Pyrenew package, particularly the wastewater dataset. The CFA wastewater team created this dataset, which contains simulated data. 
+
+We begin by loading `numpyro` and configuring the device count to 2 to enable running MCMC chains in parallel. By default, XLA (which is used by JAX for compilation) considers all CPU cores as one device. We use numpyro's [set_host_device_count](https://num.pyro.ai/en/stable/utilities.html#set-host-device-count) function to specify the number of device available. 
+
 ```{python}
 # | label: numpyro setup
-# | echo: false
 import numpyro
 
 numpyro.set_host_device_count(2)
 ```
-
-This document illustrates how a hospital admissions-only model can be fitted using data from the Pyrenew package, particularly the wastewater dataset. The CFA wastewater team created this dataset, which contains simulated data.
-
 ## Model definition
 
 In this section, we provide the formal definition of the model. The hospital admissions model is a semi-mechanistic model that describes the number of observed hospital admissions as a function of a set of latent variables. Mainly, the observed number of hospital admissions is discretely distributed with location at the number of latent hospital admissions:
