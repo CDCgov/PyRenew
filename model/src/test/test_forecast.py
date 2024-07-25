@@ -3,7 +3,7 @@
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
-import numpyro as npro
+import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
 from numpy.testing import assert_array_equal
@@ -49,12 +49,10 @@ def test_forecast():
         Rt_process_rv=rt,
     )
 
-    n_timepoints_to_simulate = 30
+    n_datapoints = 30
     n_forecast_points = 10
-    with npro.handlers.seed(rng_seed=np.random.randint(1, 600)):
-        model_sample = model.sample(
-            n_timepoints_to_simulate=n_timepoints_to_simulate
-        )
+    with numpyro.handlers.seed(rng_seed=np.random.randint(1, 600)):
+        model_sample = model.sample(n_datapoints=n_datapoints)
 
     model.run(
         num_warmup=5,
@@ -64,13 +62,13 @@ def test_forecast():
     )
 
     posterior_predictive_samples = model.posterior_predictive(
-        n_timepoints_to_simulate=n_timepoints_to_simulate + n_forecast_points,
+        n_datapoints=n_datapoints + n_forecast_points,
     )
 
     # Check the length of the predictive distribution
     assert (
         len(posterior_predictive_samples["poisson_rv"][0])
-        == n_timepoints_to_simulate + n_forecast_points
+        == n_datapoints + n_forecast_points
     )
 
     # Check the first elements of the posterior predictive Rt are the same as the

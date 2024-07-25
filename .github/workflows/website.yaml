@@ -36,7 +36,7 @@ jobs:
         run: pip install poetry
 
       - name: install package
-        run: poetry install --with dev -C model
+        run: poetry install --with dev
 
       # This section renders the quarto documents (and the README file)
       # and moves them to the docs/source/_compiled_qmd directory
@@ -92,11 +92,11 @@ jobs:
       run: pip install poetry
 
     - name: Install dependencies with Poetry
-      run: poetry install -C docs
+      run: poetry install --with dev
 
     # Building
     - name: Build HTML using Poetry
-      run: poetry run -C docs sphinx-build -M html docs/source/ docs/build/
+      run: poetry run sphinx-build -M html docs/source/ docs/build/
 
     # Upload
     - name: Upload artifacts
