@@ -22,8 +22,12 @@ def test_infections_as_deterministic():
         "Rt_rv",
         base_rv=SimpleRandomWalkProcess(
             name="log_rt",
-            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
-            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+            step_rv=DistributionalRV(
+                name="rw_step_rv", dist=dist.Normal(0, 0.025)
+            ),
+            init_rv=DistributionalRV(
+                name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
+            ),
         ),
         transforms=t.ExpTransform(),
     )

@@ -17,26 +17,26 @@ class DeterministicVariable(RandomVariable):
 
     def __init__(
         self,
-        vars: ArrayLike,
         name: str,
+        vars: ArrayLike,
     ) -> None:
         """Default constructor
 
         Parameters
         ----------
-        vars : ArrayLike
-            A tuple with arraylike objects.
         name : str
             A name to assign to the process.
+        vars : ArrayLike
+            A tuple with arraylike objects.
 
         Returns
         -------
         None
         """
 
-        self.validate(vars)
-        self.vars = jnp.atleast_1d(vars)
         self.name = name
+        self.vars = jnp.atleast_1d(vars)
+        self.validate(vars)
 
         return None
 

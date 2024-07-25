@@ -53,18 +53,20 @@ def test_rtweeklydiff() -> None:
         "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
-            jnp.array([0.1, 0.2]), name="log_rt_prior"
+            name="log_rt_prior", vars=jnp.array([0.1, 0.2])
         ),
-        "autoreg": DeterministicVariable(jnp.array([0.7]), name="autoreg"),
+        "autoreg": DeterministicVariable(
+            name="autoreg", vars=jnp.array([0.7])
+        ),
         "periodic_diff_sd": DeterministicVariable(
-            jnp.array([0.1]), name="periodic_diff_sd"
+            name="periodic_diff_sd", vars=jnp.array([0.1])
         ),
     }
     duration = 30
 
     rtwd = RtWeeklyDiffProcess(**params)
 
-    with numpyro.handlers.seed(rng_seed=121):
+    with numpyro.handlers.seed(rng_seed=16):
         rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -78,7 +80,7 @@ def test_rtweeklydiff() -> None:
     # Checking start off a different day of the week
     params["offset"] = 5
     rtwd = RtWeeklyDiffProcess(**params)
-    with numpyro.handlers.seed(rng_seed=121):
+    with numpyro.handlers.seed(rng_seed=16):
         rt2 = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -98,19 +100,22 @@ def test_rtweeklydiff_no_autoregressive() -> None:
         "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
-            jnp.array([0.0, 0.0]), name="log_rt_prior"
+            name="log_rt_prior", vars=jnp.array([0.0, 0.0])
         ),
         # No autoregression!
-        "autoreg": DeterministicVariable(jnp.array([0.0]), name="autoreg"),
+        "autoreg": DeterministicVariable(
+            name="autoreg", vars=jnp.array([0.0])
+        ),
         "periodic_diff_sd": DeterministicVariable(
-            jnp.array([0.1]), name="periodic_diff_sd"
+            name="periodic_diff_sd",
+            vars=jnp.array([0.1]),
         ),
     }
 
     rtwd = RtWeeklyDiffProcess(**params)
 
     duration = 1000
-    with numpyro.handlers.seed(rng_seed=323):
+    with numpyro.handlers.seed(rng_seed=321):
         rt = rtwd(duration=duration).rt
 
     # Checking that the shape of the sampled Rt is correct
@@ -135,11 +140,15 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
         "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
-            jnp.array([0.1, 0.2]), name="log_rt_prior"
+            name="log_rt_prior",
+            vars=jnp.array([0.1, 0.2]),
         ),
-        "autoreg": DeterministicVariable(jnp.array([0.7]), name="autoreg"),
+        "autoreg": DeterministicVariable(
+            name="autoreg", vars=jnp.array([0.7])
+        ),
         "periodic_diff_sd": DeterministicVariable(
-            jnp.array([0.1]), name="periodic_diff_sd"
+            name="periodic_diff_sd",
+            vars=jnp.array([0.1]),
         ),
     }
 
@@ -170,17 +179,21 @@ def test_rtperiodicdiff_smallsample():
         "name": "test",
         "offset": 0,
         "log_rt_prior": DeterministicVariable(
-            jnp.array([0.1, 0.2]), name="log_rt_prior"
+            name="log_rt_prior",
+            vars=jnp.array([0.1, 0.2]),
         ),
-        "autoreg": DeterministicVariable(jnp.array([0.7]), name="autoreg"),
+        "autoreg": DeterministicVariable(
+            name="autoreg", vars=jnp.array([0.7])
+        ),
         "periodic_diff_sd": DeterministicVariable(
-            jnp.array([0.1]), name="periodic_diff_sd"
+            name="periodic_diff_sd",
+            vars=jnp.array([0.1]),
         ),
     }
 
     rtwd = RtWeeklyDiffProcess(**params)
 
-    with numpyro.handlers.seed(rng_seed=223):
+    with numpyro.handlers.seed(rng_seed=211):
         rt = rtwd(duration=6).rt
 
     # Checking that the shape of the sampled Rt is correct

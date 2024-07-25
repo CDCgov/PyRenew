@@ -25,10 +25,10 @@ from pyrenew.process import SimpleRandomWalkProcess
 
 def create_test_model():  # numpydoc ignore=GL08
     pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
-    gen_int = DeterministicPMF(pmf_array, name="gen_int")
+    gen_int = DeterministicPMF(name="gen_int", vars=pmf_array)
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -38,8 +38,12 @@ def create_test_model():  # numpydoc ignore=GL08
         "Rt_rv",
         base_rv=SimpleRandomWalkProcess(
             name="log_rt",
-            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
-            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+            step_rv=DistributionalRV(
+                name="rw_step_rv", dist=dist.Normal(0, 0.025)
+            ),
+            init_rv=DistributionalRV(
+                name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
+            ),
         ),
         transforms=t.ExpTransform(),
     )

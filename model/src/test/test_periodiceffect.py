@@ -13,7 +13,7 @@ def test_periodiceffect() -> None:
     """Checks basic functionality of the process"""
 
     x = jnp.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
-    rv = DeterministicVariable(x, name="weekly-sample")
+    rv = DeterministicVariable(name="weekly-sample", vars=x)
 
     params = {
         "offset": 0,
@@ -58,7 +58,7 @@ def test_weeklyeffect() -> None:
     """Checks basic functionality of the process"""
 
     x = jnp.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0])
-    rv = DeterministicVariable(x, name="weekly-sample")
+    rv = DeterministicVariable(name="weekly-sample", vars=x)
 
     params = {
         "offset": 2,

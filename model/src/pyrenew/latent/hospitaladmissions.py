@@ -90,9 +90,13 @@ class HospitalAdmissions(RandomVariable):
         """
 
         if day_of_week_effect_rv is None:
-            day_of_week_effect_rv = DeterministicVariable(1, "weekday_effect")
+            day_of_week_effect_rv = DeterministicVariable(
+                name="weekday_effect", vars=1
+            )
         if hosp_report_prob_rv is None:
-            hosp_report_prob_rv = DeterministicVariable(1, "hosp_report_prob")
+            hosp_report_prob_rv = DeterministicVariable(
+                name="hosp_report_prob", vars=1
+            )
 
         HospitalAdmissions.validate(
             infect_hosp_rate_rv,

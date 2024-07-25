@@ -14,10 +14,16 @@ def test_rw_can_be_sampled():
     Check that a simple random walk
     can be initialized and sampled from
     """
-    init_rv_rand = DistributionalRV(dist.Normal(1, 0.5), "init_rv_rand")
-    init_rv_fixed = DeterministicVariable(50.0, "init_rv_fixed")
+    init_rv_rand = DistributionalRV(
+        name="init_rv_rand",
+        dist=dist.Normal(1, 0.5),
+    )
+    init_rv_fixed = DeterministicVariable(name="init_rv_fixed", vars=50.0)
 
-    step_rv = DistributionalRV(dist.Normal(0, 1), "rw_step")
+    step_rv = DistributionalRV(
+        name="rw_step",
+        dist=dist.Normal(0, 1),
+    )
 
     rw_init_rand = SimpleRandomWalkProcess(
         "rw_rand_init", step_rv=step_rv, init_rv=init_rv_rand
@@ -56,10 +62,12 @@ def test_rw_samples_correctly_distributed():
         rw_normal = SimpleRandomWalkProcess(
             name="rw_normal_test",
             step_rv=DistributionalRV(
-                dist=dist.Normal(loc=step_mean, scale=step_sd),
                 name="rw_normal_dist",
+                dist=dist.Normal(loc=step_mean, scale=step_sd),
             ),
-            init_rv=DeterministicVariable(rw_init_val, "init_rv_fixed"),
+            init_rv=DeterministicVariable(
+                name="init_rv_fixed", vars=rw_init_val
+            ),
         )
 
         with numpyro.handlers.seed(rng_seed=62):
