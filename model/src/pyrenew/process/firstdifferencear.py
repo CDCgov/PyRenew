@@ -80,6 +80,6 @@ class FirstDifferenceARProcess(RandomVariable):
     @staticmethod
     def validate():
         """
-        Validates inputted parameters, implementation pending.
+        Validates input parameters, implementation pending.
         """
         return None
