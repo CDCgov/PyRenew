@@ -29,8 +29,9 @@ class DeterministicProcess(DeterministicVariable):
 
         Returns
         -------
-        tuple
-            Containing the stored values during construction wrapped in a SampledValue.
+        tuple[SampledValue]
+            containing the deterministic value(s) provided
+            at construction as a series of length `duration`.
         """
 
         res, *_ = super().sample(**kwargs)
