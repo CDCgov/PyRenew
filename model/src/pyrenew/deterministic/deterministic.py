@@ -49,7 +49,7 @@ class DeterministicVariable(RandomVariable):
     @staticmethod
     def validate(value: ArrayLike) -> None:
         """
-        Validates input to DeterministicPMF
+        Validates input to DeterministicVariable
 
         Parameters
         ----------
