@@ -35,7 +35,7 @@ def test_admissions_sample():
     )
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt, *_ = rt(n_steps=30)
+        sim_rt = rt(n_steps=30)[0].value
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
     i0 = 10 * jnp.ones_like(gen_int)
@@ -80,9 +80,9 @@ def test_admissions_sample():
     )
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_1 = hosp1(latent_infections=inf_sampled1[0])
+        sim_hosp_1 = hosp1(latent_infections=inf_sampled1[0].value)
 
     testing.assert_array_less(
-        sim_hosp_1.latent_hospital_admissions,
-        inf_sampled1[0],
+        sim_hosp_1.latent_hospital_admissions.value,
+        inf_sampled1[0].value,
     )

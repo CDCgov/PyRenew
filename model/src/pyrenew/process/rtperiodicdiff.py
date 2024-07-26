@@ -4,7 +4,11 @@ from typing import NamedTuple
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from pyrenew.arrayutils import PeriodicBroadcaster
-from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import (
+    RandomVariable,
+    SampledValue,
+    _assert_sample_and_rtype,
+)
 from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
 
 
@@ -14,11 +18,11 @@ class RtPeriodicDiffProcessSample(NamedTuple):
 
     Attributes
     ----------
-    rt : ArrayLike
+    rt : SampledValue, optional
         The sampled Rt.
     """
 
-    rt: ArrayLike | None = None
+    rt: SampledValue | None = None
 
     def __repr__(self):
         return f"RtPeriodicDiffProcessSample(rt={self.rt})"
@@ -171,9 +175,9 @@ class RtPeriodicDiffProcess(RandomVariable):
         """
 
         # Initial sample
-        log_rt_prior = self.log_rt_prior.sample(**kwargs)[0]
-        b = self.autoreg.sample(**kwargs)[0]
-        s_r = self.periodic_diff_sd.sample(**kwargs)[0]
+        log_rt_prior = self.log_rt_prior.sample(**kwargs)[0].value
+        b = self.autoreg.sample(**kwargs)[0].value
+        s_r = self.periodic_diff_sd.sample(**kwargs)[0].value
 
         # How many periods to sample?
         n_periods = int(jnp.ceil(duration / self.period_size))
@@ -187,7 +191,11 @@ class RtPeriodicDiffProcess(RandomVariable):
         )[0]
 
         return RtPeriodicDiffProcessSample(
-            rt=self.broadcaster(jnp.exp(log_rt.flatten()), duration),
+            rt=SampledValue(
+                self.broadcaster(jnp.exp(log_rt.value.flatten()), duration),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
         )
 
 

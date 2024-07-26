@@ -4,7 +4,7 @@ import numpyro
 from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
 )
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class InfectionInitializationProcess(RandomVariable):
@@ -93,10 +93,21 @@ class InfectionInitializationProcess(RandomVariable):
         Returns
         -------
         tuple
-            a tuple where the only element is an array with the number of initialized infections at each time point.
+            a tuple where the only element is an array with
+            the number of initialized infections at each time point.
         """
+
         (I_pre_init,) = self.I_pre_init_rv()
-        infection_initialization = self.infection_init_method(I_pre_init)
+
+        infection_initialization = self.infection_init_method(
+            I_pre_init.value,
+        )
         numpyro.deterministic(self.name, infection_initialization)
 
-        return (infection_initialization,)
+        return (
+            SampledValue(
+                infection_initialization,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )

@@ -6,7 +6,7 @@ from __future__ import annotations
 import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class DeterministicVariable(RandomVariable):
@@ -19,24 +19,30 @@ class DeterministicVariable(RandomVariable):
         self,
         name: str,
         value: ArrayLike,
+        t_start: int | None = None,
+        t_unit: int | None = None,
     ) -> None:
         """Default constructor
 
         Parameters
         ----------
         name : str
-            A name to assign to the process.
+            A name to assign to the variable.
         value : ArrayLike
             An ArrayLike object.
+        t_start : int, optional
+            The start time of the variable, if any.
+        t_unit : int, optional
+            The unit of time relative to the model's fundamental (smallest) time unit, if any
 
         Returns
         -------
         None
         """
-
         self.name = name
         self.value = jnp.atleast_1d(value)
         self.validate(value)
+        self.set_timeseries(t_start, t_unit)
 
         return None
 
@@ -75,16 +81,27 @@ class DeterministicVariable(RandomVariable):
         Parameters
         ----------
         record : bool, optional
-            Whether to record the value of the deterministic RandomVariable. Defaults to True.
+            Whether to record the value of the deterministic
+            RandomVariable. Defaults to True.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
 
         Returns
         -------
-        tuple
-            Containing the stored values during construction.
+        tuple[SampledValue]
+            A length-one tuple whose single entry is a
+            :class:`SampledValue`
+            instance with `value=self.value`,
+            `t_start=self.t_start`, and
+            `t_unit=self.t_unit`.
         """
         if record:
             numpyro.deterministic(self.name, self.value)
-        return (self.value,)
+        return (
+            SampledValue(
+                value=self.value,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )

@@ -12,6 +12,7 @@ from numpy.testing import assert_almost_equal
 from pyrenew.metaclass import (
     DistributionalRV,
     RandomVariable,
+    SampledValue,
     TransformedRandomVariable,
 )
 
@@ -31,9 +32,12 @@ class LengthTwoRV(RandomVariable):
         Returns
         -------
         tuple
-           (1, 5)
+           (SampledValue(1, t_start=self.t_start, t_unit=self.t_unit), SampledValue(5, t_start=self.t_start, t_unit=self.t_unit))
         """
-        return (1, 5)
+        return (
+            SampledValue(1, t_start=self.t_start, t_unit=self.t_unit),
+            SampledValue(5, t_start=self.t_start, t_unit=self.t_unit),
+        )
 
     def sample_length(self):
         """
@@ -130,9 +134,12 @@ def test_transforms_applied_at_sampling():
             l2_transformed_sample = tr_l2.sample()
 
         assert_almost_equal(
-            (tr(norm_base_sample[0]),), norm_transformed_sample
+            tr(norm_base_sample[0].value), norm_transformed_sample[0].value
         )
         assert_almost_equal(
-            (tr(l2_base_sample[0]), t.ExpTransform()(l2_base_sample[1])),
-            l2_transformed_sample,
+            (
+                tr(l2_base_sample[0].value),
+                t.ExpTransform()(l2_base_sample[1].value),
+            ),
+            (l2_transformed_sample[0].value, l2_transformed_sample[1].value),
         )

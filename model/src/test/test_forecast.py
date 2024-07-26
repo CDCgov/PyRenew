@@ -60,7 +60,7 @@ def test_forecast():
     model.run(
         num_warmup=5,
         num_samples=5,
-        data_observed_infections=model_sample.observed_infections,
+        data_observed_infections=model_sample.observed_infections.value,
         rng_key=jr.key(54),
     )
 

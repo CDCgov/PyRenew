@@ -108,7 +108,7 @@ def test_rng_keys_produce_correct_samples():
     # as the observed_infections for the rest of the models
     with numpyro.handlers.seed(rng_seed=223):
         model_sample = models[0].sample(n_datapoints=n_datapoints[0])
-    obs_infections = [model_sample.observed_infections] * len(models)
+    obs_infections = [model_sample.observed_infections.value] * len(models)
     rng_keys = [jr.key(54), jr.key(54), None, None, jr.key(74)]
 
     # run test models with the different keys

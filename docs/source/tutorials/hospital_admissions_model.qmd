@@ -199,7 +199,7 @@ class MyRt(metaclass.RandomVariable):
             base_rv=process.SimpleRandomWalkProcess(
                 name="log_rt",
                 step_rv=metaclass.DistributionalRV(
-                    name="rw_step_rv", dist=dist.Normal(0, sd_rt)
+                    name="rw_step_rv", dist=dist.Normal(0, sd_rt.value)
                 ),
                 init_rv=metaclass.DistributionalRV(
                     name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
@@ -272,11 +272,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(simulated_data.Rt)
+axs[0].plot(simulated_data.Rt.value)
 axs[0].set_ylabel("Simulated Rt")
 
 # Admissions plot
-axs[1].plot(simulated_data.observed_hosp_admissions, "-o")
+axs[1].plot(simulated_data.observed_hosp_admissions.value, "-o")
 axs[1].set_ylabel("Simulated Admissions")
 
 fig.suptitle("Basic renewal model")

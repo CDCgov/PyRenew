@@ -9,7 +9,7 @@ import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class HospitalAdmissionsSample(NamedTuple):
@@ -18,14 +18,14 @@ class HospitalAdmissionsSample(NamedTuple):
 
     Attributes
     ----------
-    infection_hosp_rate : float, optional
+    infection_hosp_rate : SampledValue, optional
         The infection-to-hospitalization rate. Defaults to None.
-    latent_hospital_admissions : ArrayLike or None
+    latent_hospital_admissions : SampledValue or None
         The computed number of hospital admissions. Defaults to None.
     """
 
-    infection_hosp_rate: float | None = None
-    latent_hospital_admissions: ArrayLike | None = None
+    infection_hosp_rate: SampledValue | None = None
+    latent_hospital_admissions: SampledValue | None = None
 
     def __repr__(self):
         return f"HospitalAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, latent_hospital_admissions={self.latent_hospital_admissions})"
@@ -158,7 +158,7 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        latent : ArrayLike
+        latent_infections : ArrayLike
             Latent infections.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
@@ -171,7 +171,7 @@ class HospitalAdmissions(RandomVariable):
 
         infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
 
-        infection_hosp_rate_t = infection_hosp_rate * latent_infections
+        infection_hosp_rate_t = infection_hosp_rate.value * latent_infections
 
         (
             infection_to_admission_interval,
@@ -180,19 +180,22 @@ class HospitalAdmissions(RandomVariable):
 
         latent_hospital_admissions = jnp.convolve(
             infection_hosp_rate_t,
-            infection_to_admission_interval,
+            infection_to_admission_interval.value,
             mode="full",
         )[: infection_hosp_rate_t.shape[0]]
 
         # Applying the day of the week effect
         latent_hospital_admissions = (
             latent_hospital_admissions
-            * self.day_of_week_effect_rv(**kwargs)[0]
+            * self.day_of_week_effect_rv(
+                n_timepoints=latent_hospital_admissions.size, **kwargs
+            )[0].value
         )
 
-        # Applying probability of hospitalization effect
+        # Applying reporting probability
         latent_hospital_admissions = (
-            latent_hospital_admissions * self.hosp_report_prob_rv(**kwargs)[0]
+            latent_hospital_admissions
+            * self.hosp_report_prob_rv(**kwargs)[0].value
         )
 
         numpyro.deterministic(
@@ -200,5 +203,10 @@ class HospitalAdmissions(RandomVariable):
         )
 
         return HospitalAdmissionsSample(
-            infection_hosp_rate, latent_hospital_admissions
+            infection_hosp_rate=infection_hosp_rate,
+            latent_hospital_admissions=SampledValue(
+                value=latent_hospital_admissions,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
         )

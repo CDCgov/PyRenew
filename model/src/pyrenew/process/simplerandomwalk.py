@@ -3,7 +3,7 @@
 
 import jax.numpy as jnp
 from numpyro.contrib.control_flow import scan
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class SimpleRandomWalkProcess(RandomVariable):
@@ -77,16 +77,22 @@ class SimpleRandomWalkProcess(RandomVariable):
         def transition(x_prev, _):
             # numpydoc ignore=GL08
             diff, *_ = self.step_rv(**kwargs)
-            x_curr = x_prev + diff
+            x_curr = x_prev + diff.value
             return x_curr, x_curr
 
         _, x = scan(
             transition,
-            init=init,
+            init=init.value,
             xs=jnp.arange(n_steps - 1),
         )
 
-        return (jnp.hstack([init, x.flatten()]),)
+        return (
+            SampledValue(
+                jnp.hstack([init.value, x.flatten()]),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )
 
     @staticmethod
     def validate():

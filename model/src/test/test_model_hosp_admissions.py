@@ -24,6 +24,7 @@ from pyrenew.latent import (
 from pyrenew.metaclass import (
     DistributionalRV,
     RandomVariable,
+    SampledValue,
     TransformedRandomVariable,
 )
 from pyrenew.model import HospitalAdmissionsModel
@@ -69,8 +70,10 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
 
     def sample(self, **kwargs):  # numpydoc ignore=GL08
         return (
-            numpyro.sample(
-                name=self.name, fn=dist.Uniform(high=0.99, low=0.01)
+            SampledValue(
+                numpyro.sample(
+                    name=self.name, fn=dist.Uniform(high=0.99, low=0.01)
+                )
             ),
         )
 
@@ -280,26 +283,31 @@ def test_model_hosp_no_obs_model():
     with numpyro.handlers.seed(rng_seed=223):
         model1_samp = model0.sample(n_datapoints=30)
 
-    np.testing.assert_array_almost_equal(model0_samp.Rt, model1_samp.Rt)
-    np.testing.assert_array_equal(
-        model0_samp.latent_infections, model1_samp.latent_infections
+    np.testing.assert_array_almost_equal(
+        model0_samp.Rt.value, model1_samp.Rt.value
     )
     np.testing.assert_array_equal(
-        model0_samp.infection_hosp_rate, model1_samp.infection_hosp_rate
+        model0_samp.latent_infections.value,
+        model1_samp.latent_infections.value,
     )
     np.testing.assert_array_equal(
-        model0_samp.latent_hosp_admissions, model1_samp.latent_hosp_admissions
+        model0_samp.infection_hosp_rate.value,
+        model1_samp.infection_hosp_rate.value,
     )
     np.testing.assert_array_equal(
-        model0_samp.observed_hosp_admissions,
-        model1_samp.observed_hosp_admissions,
+        model0_samp.latent_hosp_admissions.value,
+        model1_samp.latent_hosp_admissions.value,
     )
+
+    # These are supposed to be none, both
+    assert model0_samp.observed_hosp_admissions.value is None
+    assert model1_samp.observed_hosp_admissions.value is None
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model0_samp.latent_hosp_admissions,
+        data_observed_hosp_admissions=model0_samp.latent_hosp_admissions.value,
     )
 
     inf = model0.spread_draws(["latent_hospital_admissions"])
@@ -385,7 +393,7 @@ def test_model_hosp_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.value,
     )
 
     inf = model1.spread_draws(["latent_hospital_admissions"])
@@ -482,7 +490,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.value,
     )
 
     inf = model1.spread_draws(["latent_hospital_admissions"])
@@ -591,12 +599,20 @@ def test_model_hosp_with_obs_model_weekday_phosp():
             n_datapoints=n_obs_to_generate, padding=pad_size
         )
 
+    # Showed during merge conflict, but unsure if it will be needed
+    #  pad_size = 5
+    # obs = jnp.hstack(
+    #     [
+    #         jnp.repeat(jnp.nan, pad_size),
+    #         model1_samp.observed_hosp_admissions.value[pad_size:],
+    #     ]
+    # )
     # Running with padding
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.value,
         padding=pad_size,
     )
 
