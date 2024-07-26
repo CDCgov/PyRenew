@@ -18,13 +18,13 @@ class HospitalAdmissionsSample(NamedTuple):
 
     Attributes
     ----------
-    infection_hosp_rate : float, optional
+    infection_hosp_rate : SampledValue, optional
         The infection-to-hospitalization rate. Defaults to None.
     latent_hospital_admissions : SampledValue or None
         The computed number of hospital admissions. Defaults to None.
     """
 
-    infection_hosp_rate: float | None = None
+    infection_hosp_rate: SampledValue | None = None
     latent_hospital_admissions: SampledValue | None = None
 
     def __repr__(self):
