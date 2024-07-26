@@ -38,20 +38,14 @@ class DeterministicProcess(DeterministicVariable):
         dif = duration - res.value.shape[0]
 
         if dif > 0:
-            res = (
-                SampledValue(
-                    jnp.hstack([res.value, jnp.repeat(res.value[-1], dif)]),
-                    t_start=self.t_start,
-                    t_unit=self.t_unit,
-                ),
-            )
+            value = jnp.hstack([res.value, jnp.repeat(res.value[-1], dif)])
         else:
-            res = (
-                SampledValue(
-                    value=res.value[:duration],
-                    t_start=self.t_start,
-                    t_unit=self.t_unit,
-                ),
-            )
+            value = res.value[:duration]
 
-        return res
+        res = SampledValue(
+            value,
+            t_start=self.t_start,
+            t_unit=self.t_unit,
+        )
+
+        return (res,)
