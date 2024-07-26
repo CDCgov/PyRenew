@@ -4,7 +4,11 @@ from pyrenew.latent import (
     InfectionInitializationProcess,
     InitializeInfectionsExponentialGrowth,
 )
-from pyrenew.metaclass import Model, TransformedRandomVariable
+from pyrenew.metaclass import (
+    DistributionalRV,
+    Model,
+    TransformedRandomVariable,
+)
 
 
 class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
@@ -38,4 +42,8 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
 
     def sample(self):  # numpydoc ignore=GL08
         i0 = self.infection_initialization_process()
+        log_r_mu_intercept_rv = DistributionalRV()
+        log_r_mu_intercept_rv()
+        # log_r_mu_intercept ~ normal(r_logmean, r_logsd)
+
         return i0
