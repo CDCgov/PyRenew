@@ -92,7 +92,7 @@ class DeterministicVariable(RandomVariable):
         tuple[SampledValue]
             A length-one tuple whose single entry is a
             :class:`SampledValue`
-            instance with `value=self.vars`,
+            instance with `value=self.value`,
             `t_start=self.t_start`, and
             `t_unit=self.t_unit`.
         """
