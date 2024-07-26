@@ -40,8 +40,8 @@ class DeterministicVariable(RandomVariable):
         None
         """
         self.name = name
-        self.value = jnp.atleast_1d(value)
         self.validate(value)
+        self.value = jnp.atleast_1d(value)
         self.set_timeseries(t_start, t_unit)
 
         return None
@@ -66,7 +66,7 @@ class DeterministicVariable(RandomVariable):
             If the input value object is not an ArrayLike object.
         """
         if not isinstance(value, ArrayLike):
-            raise Exception("value is not an ArrayLike object")
+            raise ValueError("value is not an ArrayLike object")
 
         return None
 
