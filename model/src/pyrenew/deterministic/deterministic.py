@@ -63,10 +63,10 @@ class DeterministicVariable(RandomVariable):
         Raises
         ------
         Exception
-            If the input value object is not a ArrayLike.
+            If the input value object is not an ArrayLike object.
         """
         if not isinstance(value, ArrayLike):
-            raise Exception("value is not a ArrayLike")
+            raise Exception("value is not an ArrayLike object")
 
         return None
 
