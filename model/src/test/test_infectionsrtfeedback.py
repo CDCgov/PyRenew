@@ -69,9 +69,9 @@ def test_infectionsrtfeedback():
     # By doing the infection feedback strength 0, Rt = Rt_adjusted
     # So infection should be equal in both
     inf_feed_strength = DeterministicVariable(
-        jnp.zeros_like(Rt), name="inf_feed_strength"
+        name="inf_feed_strength", value=jnp.zeros_like(Rt)
     )
-    inf_feedback_pmf = DeterministicPMF(gen_int, name="inf_feedback_pmf")
+    inf_feedback_pmf = DeterministicPMF(name="inf_feedback_pmf", value=gen_int)
 
     # Test the InfectionsWithFeedback class
     InfectionsWithFeedback = latent.InfectionsWithFeedback(
@@ -95,10 +95,10 @@ def test_infectionsrtfeedback():
         )
 
     assert_array_equal(
-        samp1.post_initialization_infections,
-        samp2.post_initialization_infections,
+        samp1.post_initialization_infections.value,
+        samp2.post_initialization_infections.value,
     )
-    assert_array_equal(samp1.rt, Rt)
+    assert_array_equal(samp1.rt.value, Rt)
 
     return None
 
@@ -113,9 +113,9 @@ def test_infectionsrtfeedback_feedback():
     gen_int = jnp.array([0.4, 0.25, 0.25, 0.1, 0.0, 0.0, 0.0])
 
     inf_feed_strength = DeterministicVariable(
-        jnp.repeat(0.5, len(Rt)), name="inf_feed_strength"
+        name="inf_feed_strength", value=jnp.repeat(0.5, len(Rt))
     )
-    inf_feedback_pmf = DeterministicPMF(gen_int, name="inf_feedback_pmf")
+    inf_feedback_pmf = DeterministicPMF(name="inf_feedback_pmf", value=gen_int)
 
     # Test the InfectionsWithFeedback class
     InfectionsWithFeedback = latent.InfectionsWithFeedback(
@@ -142,18 +142,18 @@ def test_infectionsrtfeedback_feedback():
         gen_int=gen_int,
         Rt=Rt,
         I0=I0,
-        inf_feedback_strength=inf_feed_strength()[0],
-        inf_feedback_pmf=inf_feedback_pmf()[0],
+        inf_feedback_strength=inf_feed_strength()[0].value,
+        inf_feedback_pmf=inf_feedback_pmf()[0].value,
     )
 
     assert not jnp.array_equal(
-        samp1.post_initialization_infections,
-        samp2.post_initialization_infections,
+        samp1.post_initialization_infections.value,
+        samp2.post_initialization_infections.value,
     )
     assert_array_almost_equal(
-        samp1.post_initialization_infections,
+        samp1.post_initialization_infections.value,
         res["post_initialization_infections"],
     )
-    assert_array_almost_equal(samp1.rt, res["rt"])
+    assert_array_almost_equal(samp1.rt.value, res["rt"])
 
     return None

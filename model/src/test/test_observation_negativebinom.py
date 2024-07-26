@@ -16,7 +16,7 @@ def test_negativebinom_deterministic_obs():
 
     negb = NegativeBinomialObservation(
         "negbinom_rv",
-        concentration_rv=DeterministicVariable(10, name="concentration"),
+        concentration_rv=DeterministicVariable(name="concentration", value=10),
     )
 
     rates = np.random.randint(1, 5, size=10)
@@ -26,12 +26,12 @@ def test_negativebinom_deterministic_obs():
 
     assert isinstance(sim_nb1, tuple)
     assert isinstance(sim_nb2, tuple)
-    assert isinstance(sim_nb1[0], ArrayLike)
-    assert isinstance(sim_nb2[0], ArrayLike)
+    assert isinstance(sim_nb1[0].value, ArrayLike)
+    assert isinstance(sim_nb2[0].value, ArrayLike)
 
     testing.assert_array_equal(
-        sim_nb1[0],
-        sim_nb2[0],
+        sim_nb1[0].value,
+        sim_nb2[0].value,
     )
 
 
@@ -42,7 +42,7 @@ def test_negativebinom_random_obs():
 
     negb = NegativeBinomialObservation(
         "negbinom_rv",
-        concentration_rv=DeterministicVariable(10, "concentration"),
+        concentration_rv=DeterministicVariable(name="concentration", value=10),
     )
 
     rates = np.repeat(5, 20000)
@@ -51,11 +51,11 @@ def test_negativebinom_random_obs():
         sim_nb2 = negb(mu=rates)
     assert isinstance(sim_nb1, tuple)
     assert isinstance(sim_nb2, tuple)
-    assert isinstance(sim_nb1[0], ArrayLike)
-    assert isinstance(sim_nb2[0], ArrayLike)
+    assert isinstance(sim_nb1[0].value, ArrayLike)
+    assert isinstance(sim_nb2[0].value, ArrayLike)
 
     testing.assert_array_almost_equal(
-        np.mean(sim_nb1[0]),
-        np.mean(sim_nb2[0]),
+        np.mean(sim_nb1[0].value),
+        np.mean(sim_nb2[0].value),
         decimal=1,
     )

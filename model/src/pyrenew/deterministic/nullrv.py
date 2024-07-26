@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from jax.typing import ArrayLike
 from pyrenew.deterministic.deterministic import DeterministicVariable
+from pyrenew.metaclass import SampledValue
 
 
 class NullVariable(DeterministicVariable):
@@ -46,10 +47,10 @@ class NullVariable(DeterministicVariable):
         Returns
         -------
         tuple
-            Containing None.
+            Containing a SampledValue with None.
         """
 
-        return (None,)
+        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
 
 
 class NullProcess(NullVariable):
@@ -95,10 +96,10 @@ class NullProcess(NullVariable):
         Returns
         -------
         tuple
-            Containing None.
+            Containing a SampledValue with None.
         """
 
-        return (None,)
+        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
 
 
 class NullObservation(NullVariable):
@@ -148,7 +149,7 @@ class NullObservation(NullVariable):
         Returns
         -------
         tuple
-            Containing None.
+            Containing a SampledValue with None.
         """
 
-        return (None,)
+        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)

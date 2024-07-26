@@ -13,13 +13,15 @@ from pyrenew.latent import (
 def test_initialize_infections_exponential():
     """Check that the InitializeInfectionsExponentialGrowth class generates the correct number of infections at each time point."""
     n_timepoints = 10
-    rate_RV = DeterministicVariable(0.5, name="rate_RV")
-    I_pre_init_RV = DeterministicVariable(10.0, name="I_pre_init_RV")
+    rate_RV = DeterministicVariable(name="rate_RV", value=0.5)
+    I_pre_init_RV = DeterministicVariable(name="I_pre_init_RV", value=10.0)
     default_t_pre_init = n_timepoints - 1
 
     (I_pre_init,) = I_pre_init_RV()
     (rate,) = rate_RV()
 
+    I_pre_init = I_pre_init.value
+    rate = rate.value
     infections_default_t_pre_init = InitializeInfectionsExponentialGrowth(
         n_timepoints, rate=rate_RV
     ).initialize_infections(I_pre_init)
@@ -35,21 +37,24 @@ def test_initialize_infections_exponential():
     assert infections_default_t_pre_init[default_t_pre_init] == I_pre_init
 
     # test for failure with non-scalar rate or I_pre_init
-    rate_RV_2 = DeterministicVariable(np.array([0.5, 0.5]), name="rate_RV")
+    rate_RV_2 = DeterministicVariable(
+        name="rate_RV", value=np.array([0.5, 0.5])
+    )
     with pytest.raises(ValueError):
         InitializeInfectionsExponentialGrowth(
             n_timepoints, rate=rate_RV_2
         ).initialize_infections(I_pre_init)
 
     I_pre_init_RV_2 = DeterministicVariable(
-        np.array([10.0, 10.0]), name="I_pre_init_RV"
+        name="I_pre_init_RV",
+        value=np.array([10.0, 10.0]),
     )
     (I_pre_init_2,) = I_pre_init_RV_2()
 
     with pytest.raises(ValueError):
         InitializeInfectionsExponentialGrowth(
             n_timepoints, rate=rate_RV
-        ).initialize_infections(I_pre_init_2)
+        ).initialize_infections(I_pre_init_2.value)
 
     # test non-default t_pre_init
     t_pre_init = 6
@@ -72,8 +77,9 @@ def test_initialize_infections_zero_pad():
     """Check that the InitializeInfectionsZeroPad class generates the correct number of infections at each time point."""
 
     n_timepoints = 10
-    I_pre_init_RV = DeterministicVariable(10.0, name="I_pre_init_RV")
+    I_pre_init_RV = DeterministicVariable(name="I_pre_init_RV", value=10.0)
     (I_pre_init,) = I_pre_init_RV()
+    I_pre_init = I_pre_init.value
 
     infections = InitializeInfectionsZeroPad(
         n_timepoints
@@ -83,9 +89,11 @@ def test_initialize_infections_zero_pad():
     )
 
     I_pre_init_RV_2 = DeterministicVariable(
-        np.array([10.0, 10.0]), name="I_pre_init_RV"
+        name="I_pre_init_RV", value=np.array([10.0, 10.0])
     )
+
     (I_pre_init_2,) = I_pre_init_RV_2()
+    I_pre_init_2 = I_pre_init_2.value
 
     infections_2 = InitializeInfectionsZeroPad(
         n_timepoints

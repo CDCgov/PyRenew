@@ -32,7 +32,10 @@ from pyrenew.metaclass import (
 )
 import pyrenew.transformation as t
 from numpyro.infer.reparam import LocScaleReparam
-
+```
+By default, XLA (which is used by JAX for compilation) considers all CPU cores as one device. Depending on your system's configuration, we recommend using numpyro's [set_host_device_count()](https://num.pyro.ai/en/stable/utilities.html#set-host-device-count) function to set the number of devices available for parallel computing. Here, we set the device count to be 2.
+```{python}
+# | label: set-device-count
 numpyro.set_host_device_count(2)
 ```
 
@@ -118,12 +121,12 @@ To initialize these five components within the renewal modeling framework, we es
 # | label: creating-elements
 # (1) The generation interval (deterministic)
 pmf_array = jnp.array([0.4, 0.3, 0.2, 0.1])
-gen_int = DeterministicPMF(pmf_array, name="gen_int")
+gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
 
 # (2) Initial infections (inferred with a prior)
 I0 = InfectionInitializationProcess(
     "I0_initialization",
-    DistributionalRV(dist=dist.LogNormal(2.5, 1), name="I0"),
+    DistributionalRV(name="I0", dist=dist.LogNormal(2.5, 1)),
     InitializeInfectionsZeroPad(pmf_array.size),
     t_unit=1,
 )
@@ -144,12 +147,13 @@ class MyRt(RandomVariable):
             base_rv=SimpleRandomWalkProcess(
                 name="log_rt",
                 step_rv=DistributionalRV(
-                    dist.Normal(0, sd_rt),
-                    "rw_step_rv",
+                    name="rw_step_rv",
+                    dist=dist.Normal(0, sd_rt),
                     reparam=LocScaleReparam(0),
                 ),
                 init_rv=DistributionalRV(
-                    dist.Normal(jnp.log(1), jnp.log(1.2)), "init_log_Rt_rv"
+                    name="init_log_Rt_rv",
+                    dist=dist.Normal(jnp.log(1), jnp.log(1.2)),
                 ),
             ),
             transforms=t.ExpTransform(),
@@ -220,11 +224,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(sim_data.Rt)
+axs[0].plot(sim_data.Rt.value)
 axs[0].set_ylabel("Rt")
 
 # Infections plot
-axs[1].plot(sim_data.observed_infections)
+axs[1].plot(sim_data.observed_infections.value)
 axs[1].set_ylabel("Infections")
 
 fig.suptitle("Basic renewal model")
@@ -242,7 +246,7 @@ import jax
 model1.run(
     num_warmup=2000,
     num_samples=1000,
-    data_observed_infections=sim_data.observed_infections,
+    data_observed_infections=sim_data.observed_infections.value,
     rng_key=jax.random.PRNGKey(54),
     mcmc_args=dict(progress_bar=False, num_chains=2),
 )

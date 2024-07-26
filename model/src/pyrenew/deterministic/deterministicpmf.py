@@ -15,49 +15,61 @@ class DeterministicPMF(RandomVariable):
 
     def __init__(
         self,
-        vars: ArrayLike,
         name: str,
+        value: ArrayLike,
         tol: float = 1e-5,
+        t_start: int | None = None,
+        t_unit: int | None = None,
     ) -> None:
         """
         Default constructor
 
-        Automatically checks that the elements in `vars` can be indeed
+        Automatically checks that the elements in `value` can be indeed
         considered to be a PMF by calling
         pyrenew.distutil.validate_discrete_dist_vector on each one of its
         entries.
 
         Parameters
         ----------
-        vars : tuple
-            A tuple with arraylike objects.
         name : str
-            A name to assign to the process.
+            A name to assign to the variable.
+        value : tuple
+            An ArrayLike object.
         tol : float, optional
             Passed to pyrenew.distutil.validate_discrete_dist_vector. Defaults
             to 1e-5.
+        t_start : int, optional
+            The start time of the process.
+        t_unit : int, optional
+            The unit of time relative to the model's fundamental (smallest)
+            time unit.
 
         Returns
         -------
         None
         """
-        vars = validate_discrete_dist_vector(
-            discrete_dist=vars,
+        value = validate_discrete_dist_vector(
+            discrete_dist=value,
             tol=tol,
         )
 
-        self.basevar = DeterministicVariable(vars, name)
+        self.basevar = DeterministicVariable(
+            name=name,
+            value=value,
+            t_start=t_start,
+            t_unit=t_unit,
+        )
 
         return None
 
     @staticmethod
-    def validate(vars: ArrayLike) -> None:
+    def validate(value: ArrayLike) -> None:
         """
         Validates input to DeterministicPMF
 
         Parameters
         ----------
-        vars : ArrayLike
+        value : ArrayLike
             An ArrayLike object.
 
         Returns
@@ -82,7 +94,7 @@ class DeterministicPMF(RandomVariable):
         Returns
         -------
         tuple
-            Containing the stored values during construction.
+            Containing the stored values during construction wrapped in a SampledValue.
         """
 
         return self.basevar.sample(**kwargs)
@@ -97,4 +109,4 @@ class DeterministicPMF(RandomVariable):
             The size of the PMF
         """
 
-        return self.basevar.vars.size
+        return self.basevar.value.size

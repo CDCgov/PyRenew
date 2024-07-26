@@ -39,5 +39,5 @@ def test_ar_samples_correctly_distributed():
         # check it regresses to mean
         # when started away from it
         long_ts, *_ = ar1(duration=10000, inits=ar_inits)
-        assert_almost_equal(long_ts[0], ar_inits)
-        assert jnp.abs(long_ts[-1] - ar_mean) < 4 * noise_sd
+        assert_almost_equal(long_ts.value[0], ar_inits)
+        assert jnp.abs(long_ts.value[-1] - ar_mean) < 4 * noise_sd
