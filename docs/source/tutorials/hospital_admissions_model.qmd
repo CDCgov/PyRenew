@@ -197,12 +197,12 @@ class MyRt(metaclass.RandomVariable):
         rt_rv = metaclass.TransformedRandomVariable(
             "Rt_rv",
             base_rv=process.SimpleRandomWalkProcess(
-                name="log_rt_rv",
+                name="log_rt",
                 step_rv=metaclass.DistributionalRV(
                     name="rw_step_rv", dist=dist.Normal(0, sd_rt.value)
                 ),
                 init_rv=metaclass.DistributionalRV(
-                    name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
+                    name="init_log_rt", dist=dist.Normal(0, 0.2)
                 ),
             ),
             transforms=transformation.ExpTransform(),
