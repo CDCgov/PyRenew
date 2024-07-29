@@ -28,13 +28,13 @@ rt_proc = process.RtWeeklyDiffProcess(
     name="rt_weekly_diff",
     offset=0,
     log_rt_prior=deterministic.DeterministicVariable(
-        jnp.array([0.1, 0.2]), name="log_rt_prior"
+        name="log_rt_prior", value=jnp.array([0.1, 0.2])
     ),
     autoreg=deterministic.DeterministicVariable(
-        jnp.array([0.7]), name="autoreg"
+        name="autoreg", value=jnp.array([0.7])
     ),
     periodic_diff_sd=deterministic.DeterministicVariable(
-        jnp.array([0.1]), name="periodic_diff_sd"
+        name="periodic_diff_sd", value=jnp.array([0.1])
     ),
 )
 ```
@@ -46,7 +46,7 @@ with numpyro.handlers.seed(rng_seed=20):
 # Plotting the Rt values
 import matplotlib.pyplot as plt
 
-plt.step(np.arange(len(sim_data.rt)), sim_data.rt, where="post")
+plt.step(np.arange(len(sim_data.rt.value)), sim_data.rt.value, where="post")
 plt.xlabel("Time")
 plt.ylabel("Rt")
 plt.title("Simulated Rt values")
@@ -76,7 +76,9 @@ mysimplex = dist.TransformedDistribution(
 # Constructing the day of week effect
 dayofweek = process.DayOfWeekEffect(
     offset=0,
-    quantity_to_broadcast=metaclass.DistributionalRV(mysimplex, "simp"),
+    quantity_to_broadcast=metaclass.DistributionalRV(
+        name="simp", dist=mysimplex
+    ),
     t_start=0,
 )
 ```
@@ -90,7 +92,9 @@ with numpyro.handlers.seed(rng_seed=20):
 # Plotting the effect values
 import matplotlib.pyplot as plt
 
-plt.step(np.arange(len(sim_data.value)), sim_data.value, where="post")
+plt.step(
+    np.arange(len(sim_data.value.value)), sim_data.value.value, where="post"
+)
 plt.xlabel("Time")
 plt.ylabel("Effect size")
 plt.title("Simulated Day of Week Effect values")

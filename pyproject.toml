@@ -18,13 +18,13 @@ jax = ">=0.4.30"
 jaxlib = ">=0.4.30"
 numpy = "^1.26.4"
 polars = "^1.2.1"
+matplotlib = "^3.8.3"
 
 [tool.poetry.group.dev]
 optional = true
 
 [tool.poetry.group.dev.dependencies]
 pyyaml = "^6.0.0"
-matplotlib = "^3.8.3"
 ipykernel = "^6.29.3"
 nbclient = "^0.10.0"
 nbformat = "^5.10.0"

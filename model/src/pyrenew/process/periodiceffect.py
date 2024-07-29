@@ -2,9 +2,12 @@
 
 from typing import NamedTuple
 
-import jax.numpy as jnp
 import pyrenew.arrayutils as au
-from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import (
+    RandomVariable,
+    SampledValue,
+    _assert_sample_and_rtype,
+)
 
 
 class PeriodicEffectSample(NamedTuple):
@@ -14,11 +17,11 @@ class PeriodicEffectSample(NamedTuple):
 
     Attributes
     ----------
-    value: jnp.ndarray
+    value: SampledValue
         The sampled value.
     """
 
-    value: jnp.ndarray
+    value: SampledValue
 
     def __repr__(self):
         return f"PeriodicEffectSample(value={self.value})"
@@ -110,9 +113,13 @@ class PeriodicEffect(RandomVariable):
         """
 
         return PeriodicEffectSample(
-            value=self.broadcaster(
-                data=self.quantity_to_broadcast.sample(**kwargs)[0],
-                n_timepoints=duration,
+            value=SampledValue(
+                self.broadcaster(
+                    data=self.quantity_to_broadcast.sample(**kwargs)[0].value,
+                    n_timepoints=duration,
+                ),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
             )
         )
 

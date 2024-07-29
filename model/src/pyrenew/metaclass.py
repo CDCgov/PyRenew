@@ -5,7 +5,7 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import get_type_hints
+from typing import NamedTuple, get_type_hints
 
 import jax
 import jax.numpy as jnp
@@ -94,6 +94,28 @@ def _assert_sample_and_rtype(
     return None
 
 
+class SampledValue(NamedTuple):
+    """
+    A container for a sampled value from a RandomVariable.
+
+    Attributes
+    ----------
+    value : ArrayLike, optional
+        The sampled value.
+    t_start : int, optional
+        The start time of the value.
+    t_unit : int, optional
+        The unit of time relative to the model's fundamental (smallest) time unit.
+    """
+
+    value: ArrayLike | None = None
+    t_start: int | None = None
+    t_unit: int | None = None
+
+    def __repr__(self):
+        return f"SampledValue(value={self.value}, t_start={self.t_start}, t_unit={self.t_unit})"
+
+
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
@@ -142,7 +164,6 @@ class RandomVariable(metaclass=ABCMeta):
             model time. It could be negative, indicating
             that the `sample()` method returns timepoints
             that occur prior to the model t = 0.
-
         t_unit : int
             The unit of the time series relative
             to the model's fundamental (smallest)
@@ -154,6 +175,18 @@ class RandomVariable(metaclass=ABCMeta):
         -------
         None
         """
+
+        # Either both values are None or both are not None
+        assert (t_unit is not None and t_start is not None) or (
+            t_unit is None and t_start is None
+        ), (
+            "Both t_start and t_unit should be None or not None. "
+            "Currently, t_start is {t_start} and t_unit is {t_unit}."
+        )
+
+        if t_unit is None and t_start is None:
+            return None
+
         # Timeseries unit should be a positive integer
         assert isinstance(
             t_unit, int
@@ -219,8 +252,8 @@ class DistributionalRV(RandomVariable):
 
     def __init__(
         self,
-        dist: numpyro.distributions.Distribution,
         name: str,
+        dist: numpyro.distributions.Distribution,
         reparam: Reparam = None,
     ) -> None:
         """
@@ -228,11 +261,10 @@ class DistributionalRV(RandomVariable):
 
         Parameters
         ----------
-        dist : numpyro.distributions.Distribution
-            Distribution of the random variable.
         name : str
             Name of the random variable.
-
+        dist : numpyro.distributions.Distribution
+            Distribution of the random variable.
         reparam : numpyro.infer.reparam.Reparam
             If not None, reparameterize sampling
             from the distribution according to the
@@ -243,10 +275,9 @@ class DistributionalRV(RandomVariable):
         None
         """
 
-        self.validate(dist)
-
-        self.dist = dist
         self.name = name
+        self.validate(dist)
+        self.dist = dist
         if reparam is not None:
             self.reparam_dict = {self.name: reparam}
         else:
@@ -295,7 +326,13 @@ class DistributionalRV(RandomVariable):
                 fn=self.dist,
                 obs=obs,
             )
-        return (jnp.atleast_1d(sample),)
+        return (
+            SampledValue(
+                jnp.atleast_1d(sample),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )
 
 
 class Model(metaclass=ABCMeta):
@@ -603,19 +640,16 @@ class TransformedRandomVariable(RandomVariable):
 
         Parameters
         ----------
-
         name : str
-            A name for the random variable instance
-
+            A name for the random variable instance.
         base_rv : RandomVariable
-            The underlying (untransformed) RandomVariable
-
+            The underlying (untransformed) RandomVariable.
         transforms : Transform
             Transformation or tuple of transformations
             to apply to the output of
             `base_rv.sample()`; single values will be coerced to
             a length-one tuple. If a tuple, should be the same
-            length as the tuple returned by `base_rv.sample()`
+            length as the tuple returned by `base_rv.sample()`.
 
         Returns
         -------
@@ -649,7 +683,12 @@ class TransformedRandomVariable(RandomVariable):
         untransformed_values = self.base_rv.sample(**kwargs)
 
         return tuple(
-            t(uv) for t, uv in zip(self.transforms, untransformed_values)
+            SampledValue(
+                t(uv.value),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            )
+            for t, uv in zip(self.transforms, untransformed_values)
         )
 
     def sample_length(self):

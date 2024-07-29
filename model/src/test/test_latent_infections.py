@@ -22,8 +22,12 @@ def test_infections_as_deterministic():
         "Rt_rv",
         base_rv=SimpleRandomWalkProcess(
             name="log_rt",
-            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
-            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+            step_rv=DistributionalRV(
+                name="rw_step_rv", dist=dist.Normal(0, 0.025)
+            ),
+            init_rv=DistributionalRV(
+                name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
+            ),
         ),
         transforms=t.ExpTransform(),
     )
@@ -36,7 +40,7 @@ def test_infections_as_deterministic():
     inf1 = Infections()
 
     obs = dict(
-        Rt=sim_rt,
+        Rt=sim_rt.value,
         I0=jnp.zeros(gen_int.size),
         gen_int=gen_int,
     )
@@ -45,8 +49,8 @@ def test_infections_as_deterministic():
         inf_sampled2 = inf1(**obs)
 
     testing.assert_array_equal(
-        inf_sampled1.post_initialization_infections,
-        inf_sampled2.post_initialization_infections,
+        inf_sampled1.post_initialization_infections.value,
+        inf_sampled2.post_initialization_infections.value,
     )
 
     # Check that Initial infections vector must be at least as long as the generation interval.

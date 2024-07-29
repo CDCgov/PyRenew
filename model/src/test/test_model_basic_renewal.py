@@ -37,8 +37,12 @@ def get_default_rt():
         "Rt_rv",
         base_rv=SimpleRandomWalkProcess(
             name="log_rt",
-            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
-            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
+            step_rv=DistributionalRV(
+                name="rw_step_rv", dist=dist.Normal(0, 0.025)
+            ),
+            init_rv=DistributionalRV(
+                name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
+            ),
         ),
         transforms=t.ExpTransform(),
     )
@@ -52,10 +56,10 @@ def test_model_basicrenewal_no_timepoints_or_observations():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 
@@ -82,10 +86,11 @@ def test_model_basicrenewal_both_timepoints_and_observations():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int",
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 
@@ -116,15 +121,16 @@ def test_model_basicrenewal_no_obs_model():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int",
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
     with pytest.raises(ValueError):
-        I0 = DistributionalRV(dist=1, name="I0")
+        I0 = DistributionalRV(name="I0", dist=1)
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -154,20 +160,21 @@ def test_model_basicrenewal_no_obs_model():
     with numpyro.handlers.seed(rng_seed=223):
         model1_samp = model0.sample(n_datapoints=30)
 
-    np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
+    np.testing.assert_array_equal(model0_samp.Rt.value, model1_samp.Rt.value)
     np.testing.assert_array_equal(
-        model0_samp.latent_infections, model1_samp.latent_infections
+        model0_samp.latent_infections.value,
+        model1_samp.latent_infections.value,
     )
     np.testing.assert_array_equal(
-        model0_samp.observed_infections,
-        model1_samp.observed_infections,
+        model0_samp.observed_infections.value,
+        model1_samp.observed_infections.value,
     )
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_infections=model0_samp.latent_infections,
+        data_observed_infections=model0_samp.latent_infections.value,
     )
 
     inf = model0.spread_draws(["all_latent_infections"])
@@ -189,12 +196,12 @@ def test_model_basicrenewal_with_obs_model():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -221,7 +228,7 @@ def test_model_basicrenewal_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
-        data_observed_infections=model1_samp.observed_infections,
+        data_observed_infections=model1_samp.observed_infections.value,
     )
 
     inf = model1.spread_draws(["all_latent_infections"])
@@ -238,12 +245,12 @@ def test_model_basicrenewal_with_obs_model():
 
 def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -271,7 +278,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
-        data_observed_infections=model1_samp.observed_infections,
+        data_observed_infections=model1_samp.observed_infections.value,
         padding=5,
     )
 

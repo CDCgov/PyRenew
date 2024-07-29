@@ -6,7 +6,7 @@ from __future__ import annotations
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class NegativeBinomialObservation(RandomVariable):
@@ -93,8 +93,15 @@ class NegativeBinomialObservation(RandomVariable):
             name=self.name,
             fn=dist.NegativeBinomial2(
                 mean=mu + self.eps,
-                concentration=concentration,
+                concentration=concentration.value,
             ),
             obs=obs,
         )
-        return (negative_binomial_sample,)
+
+        return (
+            SampledValue(
+                negative_binomial_sample,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )

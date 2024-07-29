@@ -8,7 +8,7 @@ from typing import NamedTuple
 import jax.numpy as jnp
 import pyrenew.latent.infection_functions as inf
 from jax.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class InfectionsSample(NamedTuple):
@@ -17,7 +17,7 @@ class InfectionsSample(NamedTuple):
 
     Attributes
     ----------
-    post_initialization_infections : ArrayLike | None, optional
+    post_initialization_infections : SampledValue | None, optional
         The estimated latent infections. Defaults to None.
     """
 
@@ -97,4 +97,10 @@ class Infections(RandomVariable):
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        return InfectionsSample(post_initialization_infections)
+        return InfectionsSample(
+            SampledValue(
+                post_initialization_infections,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            )
+        )

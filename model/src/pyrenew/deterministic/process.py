@@ -2,6 +2,7 @@
 
 import jax.numpy as jnp
 from pyrenew.deterministic.deterministic import DeterministicVariable
+from pyrenew.metaclass import SampledValue
 
 
 class DeterministicProcess(DeterministicVariable):
@@ -28,15 +29,24 @@ class DeterministicProcess(DeterministicVariable):
 
         Returns
         -------
-        tuple
-            Containing the stored values during construction.
+        tuple[SampledValue]
+            containing the deterministic value(s) provided
+            at construction as a series of length `duration`.
         """
 
         res, *_ = super().sample(**kwargs)
 
-        dif = duration - res.shape[0]
+        dif = duration - res.value.shape[0]
 
         if dif > 0:
-            return (jnp.hstack([res, jnp.repeat(res[-1], dif)]),)
+            value = jnp.hstack([res.value, jnp.repeat(res.value[-1], dif)])
+        else:
+            value = res.value[:duration]
 
-        return (res[:duration],)
+        res = SampledValue(
+            value,
+            t_start=self.t_start,
+            t_unit=self.t_unit,
+        )
+
+        return (res,)
