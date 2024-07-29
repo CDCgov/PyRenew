@@ -1,10 +1,13 @@
 # numpydoc ignore=GL08
 import json
 
+import jax.numpy as jnp
 import numpy as np
 import numpyro
 import numpyro.distributions as dist
-from pyrenew.metaclass import DistributionalRV
+import numpyro.distributions.transforms as transforms
+from pyrenew.deterministic import DeterministicVariable
+from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
 from pyrenew.model import hosp_only_ww_model
 
 
@@ -64,6 +67,27 @@ autoreg_rt_rv = DistributionalRV(
 )
 
 
+generation_interval_pmf_rv = DeterministicVariable(
+    "generation_interval_pmf", jnp.array(stan_data["generation_interval"])
+)
+# THIS MIGHT HAVE TO BE REVERSED
+infection_feedback_pmf_rv = DeterministicVariable(
+    "infection_feedback_pmf", jnp.array(stan_data["infection_feedback_pmf"])
+)
+
+# infection_feedback ~ lognormal(inf_feedback_prior_logmean, inf_feedback_prior_logsd);
+inf_feedback_prior_logmean = stan_data["inf_feedback_prior_logmean"][0]
+inf_feedback_prior_logsd = stan_data["inf_feedback_prior_logsd"][0]
+inf_feedback_strength_rv = TransformedRandomVariable(
+    "inf_feedback",
+    DistributionalRV(
+        "inf_feedback_raw",
+        dist.LogNormal(inf_feedback_prior_logmean, inf_feedback_prior_logsd),
+    ),
+    transforms=transforms.AffineTransform(loc=0, scale=-1),
+)
+
+
 uot = stan_data["uot"][0]
 state_pop = stan_data["state_pop"][0]
 
@@ -73,7 +97,10 @@ my_model = hosp_only_ww_model(
     initialization_rate_rv=initialization_rate_rv,
     log_r_mu_intercept_rv=log_r_mu_intercept_rv,
     autoreg_rt_rv=autoreg_rt_rv,  # ar process
-    eta_sd_rv=eta_sd_rv,  # sd of random walk for ar process
+    eta_sd_rv=eta_sd_rv,  # sd of random walk for ar process,
+    generation_interval_pmf_rv=generation_interval_pmf_rv,
+    infection_feedback_pmf_rv=infection_feedback_pmf_rv,
+    infection_feedback_strength_rv=inf_feedback_strength_rv,
     n_initialization_points=uot,
     n_timepoints=50,
 )

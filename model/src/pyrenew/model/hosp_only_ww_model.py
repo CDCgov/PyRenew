@@ -5,6 +5,7 @@ import pyrenew.transformation as transformation
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     InfectionInitializationProcess,
+    InfectionsWithFeedback,
     InitializeInfectionsExponentialGrowth,
 )
 from pyrenew.metaclass import (
@@ -24,6 +25,9 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         log_r_mu_intercept_rv,
         autoreg_rt_rv,  # ar process
         eta_sd_rv,  # sd of random walk for ar process
+        generation_interval_pmf_rv,
+        infection_feedback_strength_rv,
+        infection_feedback_pmf_rv,
         n_initialization_points,
         n_timepoints,
     ):  # numpydoc ignore=GL08
@@ -44,9 +48,16 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             t_unit=1,
         )
 
+        self.inf_with_feedback_proc = InfectionsWithFeedback(
+            infection_feedback_strength=infection_feedback_strength_rv,
+            infection_feedback_pmf=infection_feedback_pmf_rv,
+        )
+
         self.autoreg_rt_rv = autoreg_rt_rv
         self.eta_sd_rv = eta_sd_rv
         self.log_r_mu_intercept_rv = log_r_mu_intercept_rv
+        self.generation_interval_pmf_rv = generation_interval_pmf_rv
+        self.infection_feedback_pmf_rv = infection_feedback_pmf_rv
         self.n_timepoints = n_timepoints
         return None
 
@@ -66,7 +77,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         log_r_mu_intercept = self.log_r_mu_intercept_rv()[0].value
 
         rt_proc = RtWeeklyDiffProcess(
-            name="rt_weekly_diff",
+            name="rtu_weekly_diff",
             offset=0,
             log_rt_prior=DeterministicVariable(
                 name="log_rt",
@@ -83,6 +94,13 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             ),
         )
 
-        rt_sample = rt_proc.sample(duration=self.n_timepoints)
+        rtu = rt_proc.sample(duration=self.n_timepoints)
+        generation_interval_pmf = self.generation_interval_pmf_rv()
 
-        return (i0, rt_sample)
+        inf_with_feedback_proc_sample = self.inf_with_feedback_proc.sample(
+            Rt=rtu[0].value,
+            I0=i0[0].value,
+            gen_int=generation_interval_pmf[0].value,
+        )
+
+        return (i0, rtu, inf_with_feedback_proc_sample)
