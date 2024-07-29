@@ -2,10 +2,13 @@
 Tests for _assert_sample_and_rtype method
 """
 
-import numpyro
 import pytest
 from numpy.testing import assert_equal
-from pyrenew.metaclass import RandomVariable, SampledValue, _assert_sample_and_rtype
+from pyrenew.metaclass import (
+    RandomVariable,
+    SampledValue,
+    _assert_sample_and_rtype,
+)
 
 
 class RVreturnsTuple(RandomVariable):
@@ -25,7 +28,9 @@ class RVreturnsTuple(RandomVariable):
         )
         """
 
-        return (SampledValue(value=1, t_start=self.t_start, t_unit=self.t_unit),)
+        return (
+            SampledValue(value=1, t_start=self.t_start, t_unit=self.t_unit),
+        )
 
     def validate(self):
         """
@@ -55,7 +60,9 @@ class RVnoAnnotation(RandomVariable):
         )
         """
 
-        return (SampledValue(value=1, t_start=self.t_start, t_unit=self.t_unit),)
+        return (
+            SampledValue(value=1, t_start=self.t_start, t_unit=self.t_unit),
+        )
 
     def validate(self):
         """
@@ -68,14 +75,16 @@ class RVnoAnnotation(RandomVariable):
         return None
 
 
-def test_none_rv():
+def test_none_rv():  # numpydoc ignore=GL08
     assert_equal(_assert_sample_and_rtype(None), None)
 
-    with pytest.raises(Exception, match="None is not an instance of RandomVariable"):
+    with pytest.raises(
+        Exception, match="None is not an instance of RandomVariable"
+    ):
         _assert_sample_and_rtype(None, skip_if_none=False)
 
 
-def test_sample_return():
+def test_sample_return():  # numpydoc ignore=GL08
     """
     Test that RandomVariable has a sample method with return type tuple
     """
@@ -84,5 +93,7 @@ def test_sample_return():
     _assert_sample_and_rtype(rv1)
 
     rv2 = RVnoAnnotation()
-    with pytest.raises(Exception, match="does not have return type annotation"):
+    with pytest.raises(
+        Exception, match="does not have return type annotation"
+    ):
         _assert_sample_and_rtype(rv2)
