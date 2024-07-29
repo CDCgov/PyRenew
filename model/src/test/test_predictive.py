@@ -32,7 +32,7 @@ observed_infections = PoissonObservation("poisson_rv")
 rt = TransformedRandomVariable(
     "Rt_rv",
     base_rv=SimpleRandomWalkProcess(
-        name="log_rt",
+        name="log_rt_rv",
         step_rv=DistributionalRV(
             name="rw_step_rv", dist=dist.Normal(0, 0.025)
         ),
