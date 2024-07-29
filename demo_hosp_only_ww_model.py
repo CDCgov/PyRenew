@@ -53,7 +53,9 @@ log_r_mu_intercept_rv = DistributionalRV(
 
 
 eta_sd_sd = stan_data["eta_sd_sd"][0]
-eta_sd_rv = DistributionalRV("eta_sd", dist.Normal(0, eta_sd_sd))
+eta_sd_rv = DistributionalRV(
+    "eta_sd", dist.TruncatedNormal(0, eta_sd_sd, low=0)
+)
 
 autoreg_rt_a = stan_data["autoreg_rt_a"][0]
 autoreg_rt_b = stan_data["autoreg_rt_b"][0]
