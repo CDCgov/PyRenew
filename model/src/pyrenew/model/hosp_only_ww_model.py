@@ -103,4 +103,8 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             gen_int=generation_interval_pmf[0].value,
         )
 
-        return (i0, rtu, inf_with_feedback_proc_sample)
+        return (
+            i0,
+            rtu,
+            inf_with_feedback_proc_sample,
+        )

@@ -86,7 +86,10 @@ inf_feedback_strength_rv = TransformedRandomVariable(
     ),
     transforms=transforms.AffineTransform(loc=0, scale=-1),
 )
-
+# Replace it with 0 to see if it makes more sense
+inf_feedback_strength_rv = DeterministicVariable(
+    "inf_feedback", jnp.array([0])
+)
 
 uot = stan_data["uot"][0]
 state_pop = stan_data["state_pop"][0]
