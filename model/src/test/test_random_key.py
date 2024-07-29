@@ -37,12 +37,12 @@ def create_test_model():  # numpydoc ignore=GL08
     rt = TransformedRandomVariable(
         "Rt_rv",
         base_rv=SimpleRandomWalkProcess(
-            name="log_rt_rv",
+            name="log_rt",
             step_rv=DistributionalRV(
                 name="rw_step_rv", dist=dist.Normal(0, 0.025)
             ),
             init_rv=DistributionalRV(
-                name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
+                name="init_log_rt", dist=dist.Normal(0, 0.2)
             ),
         ),
         transforms=t.ExpTransform(),
