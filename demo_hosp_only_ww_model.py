@@ -79,10 +79,4 @@ my_model = hosp_only_ww_model(
 with numpyro.handlers.seed(rng_seed=200):
     my_model_samp = my_model.sample()
 
-
 my_model_samp
-
-
-with numpyro.handlers.seed(rng_seed=200):
-    x, *_ = autoreg_rt_rv()
-    print(x.value)

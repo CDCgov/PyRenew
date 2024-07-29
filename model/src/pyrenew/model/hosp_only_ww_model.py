@@ -1,6 +1,8 @@
 # numpydoc ignore=GL08
+import jax.numpy as jnp
 import numpyro.distributions as dist
 import pyrenew.transformation as transformation
+from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     InfectionInitializationProcess,
     InitializeInfectionsExponentialGrowth,
@@ -10,7 +12,7 @@ from pyrenew.metaclass import (
     Model,
     TransformedRandomVariable,
 )
-from pyrenew.process import FirstDifferenceARProcess
+from pyrenew.process import RtWeeklyDiffProcess
 
 
 class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
@@ -54,23 +56,33 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
     def sample(self):  # numpydoc ignore=GL08
         i0 = self.infection_initialization_process()
 
-        autoreg_rt = self.autoreg_rt_rv()[0].value
-        print(autoreg_rt)
         eta_sd = self.eta_sd_rv()[0].value
-        my_fd_ar = FirstDifferenceARProcess(
-            "first_diff_ar", autoreg_rt, eta_sd
-        )
+
         init_rate_of_change_rv = DistributionalRV(
             "init_rate_of_change", dist.Normal(0, eta_sd)
         )
-        init_rate_of_change = init_rate_of_change_rv()
-        log_r_mu_intercept = self.log_r_mu_intercept_rv()
-        fd_sample = my_fd_ar.sample(
-            self.n_timepoints, log_r_mu_intercept, init_rate_of_change
-        )
-        # not sure about the length
-        # gotta exponentiate somewhere, maybe with transformed random variable?
-        # log_r_mu_intercept_rv()
-        # log_r_mu_intercept ~ normal(r_logmean, r_logsd)
 
-        return (i0, fd_sample)
+        init_rate_of_change = init_rate_of_change_rv()[0].value
+        log_r_mu_intercept = self.log_r_mu_intercept_rv()[0].value
+
+        rt_proc = RtWeeklyDiffProcess(
+            name="rt_weekly_diff",
+            offset=0,
+            log_rt_prior=DeterministicVariable(
+                name="log_rt",
+                value=jnp.array(
+                    [
+                        log_r_mu_intercept,
+                        log_r_mu_intercept + init_rate_of_change,
+                    ]
+                ),
+            ),
+            autoreg=self.autoreg_rt_rv,
+            periodic_diff_sd=DeterministicVariable(
+                name="periodic_diff_sd", value=jnp.array(eta_sd)
+            ),
+        )
+
+        rt_sample = rt_proc.sample(duration=self.n_timepoints)
+
+        return (i0, rt_sample)
