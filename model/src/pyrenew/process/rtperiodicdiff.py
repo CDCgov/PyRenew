@@ -54,7 +54,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         period_size: int,
         log_rt_rv: RandomVariable,
         autoreg_rv: RandomVariable,
-        periodic_diff_sd: RandomVariable,
+        periodic_diff_sd_rv: RandomVariable,
     ) -> None:
         """
         Default constructor for RtPeriodicDiffProcess class.
@@ -70,7 +70,7 @@ class RtPeriodicDiffProcess(RandomVariable):
             Log Rt prior for the first two observations.
         autoreg_rv : RandomVariable
             Autoregressive parameter.
-        periodic_diff_sd : RandomVariable
+        periodic_diff_sd_rv : RandomVariable
             Standard deviation of the noise.
 
         Returns
@@ -87,14 +87,14 @@ class RtPeriodicDiffProcess(RandomVariable):
         self.validate(
             log_rt_rv=log_rt_rv,
             autoreg_rv=autoreg_rv,
-            periodic_diff_sd=periodic_diff_sd,
+            periodic_diff_sd_rv=periodic_diff_sd_rv,
         )
 
         self.period_size = period_size
         self.offset = offset
         self.log_rt_rv = log_rt_rv
         self.autoreg_rv = autoreg_rv
-        self.periodic_diff_sd = periodic_diff_sd
+        self.periodic_diff_sd_rv = periodic_diff_sd_rv
 
         return None
 
@@ -102,7 +102,7 @@ class RtPeriodicDiffProcess(RandomVariable):
     def validate(
         log_rt_rv: any,
         autoreg_rv: any,
-        periodic_diff_sd: any,
+        periodic_diff_sd_rv: any,
     ) -> None:
         """
         Validate the input parameters.
@@ -113,7 +113,7 @@ class RtPeriodicDiffProcess(RandomVariable):
             Log Rt prior for the first two observations.
         autoreg_rv : any
             Autoregressive parameter.
-        periodic_diff_sd : any
+        periodic_diff_sd_rv : any
             Standard deviation of the noise.
 
         Returns
@@ -123,7 +123,7 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         _assert_sample_and_rtype(log_rt_rv)
         _assert_sample_and_rtype(autoreg_rv)
-        _assert_sample_and_rtype(periodic_diff_sd)
+        _assert_sample_and_rtype(periodic_diff_sd_rv)
 
         return None
 
@@ -177,7 +177,7 @@ class RtPeriodicDiffProcess(RandomVariable):
         # Initial sample
         log_rt_rv = self.log_rt_rv.sample(**kwargs)[0].value
         b = self.autoreg_rv.sample(**kwargs)[0].value
-        s_r = self.periodic_diff_sd.sample(**kwargs)[0].value
+        s_r = self.periodic_diff_sd_rv.sample(**kwargs)[0].value
 
         # How many periods to sample?
         n_periods = int(jnp.ceil(duration / self.period_size))
@@ -210,7 +210,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
         offset: int,
         log_rt_rv: RandomVariable,
         autoreg_rv: RandomVariable,
-        periodic_diff_sd: RandomVariable,
+        periodic_diff_sd_rv: RandomVariable,
     ) -> None:
         """
         Default constructor for RtWeeklyDiffProcess class.
@@ -225,7 +225,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
             Log Rt prior for the first two observations.
         autoreg_rv : RandomVariable
             Autoregressive parameter.
-        periodic_diff_sd : RandomVariable
+        periodic_diff_sd_rv : RandomVariable
             Standard deviation of the noise.
 
         Returns
@@ -239,7 +239,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
             period_size=7,
             log_rt_rv=log_rt_rv,
             autoreg_rv=autoreg_rv,
-            periodic_diff_sd=periodic_diff_sd,
+            periodic_diff_sd_rv=periodic_diff_sd_rv,
         )
 
         return None

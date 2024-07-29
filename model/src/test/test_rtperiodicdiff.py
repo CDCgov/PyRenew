@@ -58,8 +58,8 @@ def test_rtweeklydiff() -> None:
         "autoreg_rv": DeterministicVariable(
             name="autoreg_rv", value=jnp.array([0.7])
         ),
-        "periodic_diff_sd": DeterministicVariable(
-            name="periodic_diff_sd", value=jnp.array([0.1])
+        "periodic_diff_sd_rv": DeterministicVariable(
+            name="periodic_diff_sd_rv", value=jnp.array([0.1])
         ),
     }
     duration = 30
@@ -107,8 +107,8 @@ def test_rtweeklydiff_no_autoregressive() -> None:
         "autoreg_rv": DeterministicVariable(
             name="autoreg_rv", value=jnp.array([0.0])
         ),
-        "periodic_diff_sd": DeterministicVariable(
-            name="periodic_diff_sd",
+        "periodic_diff_sd_rv": DeterministicVariable(
+            name="periodic_diff_sd_rv",
             value=jnp.array([0.1]),
         ),
     }
@@ -148,8 +148,8 @@ def test_rtweeklydiff_manual_reconstruction() -> None:
         "autoreg_rv": DeterministicVariable(
             name="autoreg_rv", value=jnp.array([0.7])
         ),
-        "periodic_diff_sd": DeterministicVariable(
-            name="periodic_diff_sd",
+        "periodic_diff_sd_rv": DeterministicVariable(
+            name="periodic_diff_sd_rv",
             value=jnp.array([0.1]),
         ),
     }
@@ -187,8 +187,8 @@ def test_rtperiodicdiff_smallsample():
         "autoreg_rv": DeterministicVariable(
             name="autoreg_rv", value=jnp.array([0.7])
         ),
-        "periodic_diff_sd": DeterministicVariable(
-            name="periodic_diff_sd",
+        "periodic_diff_sd_rv": DeterministicVariable(
+            name="periodic_diff_sd_rv",
             value=jnp.array([0.1]),
         ),
     }
