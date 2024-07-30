@@ -28,9 +28,7 @@ class RVreturnsTuple(RandomVariable):
         )
         """
 
-        return (
-            SampledValue(value=1, t_start=self.t_start, t_unit=self.t_unit),
-        )
+        return (SampledValue(value=1, t_start=self.t_start, t_unit=self.t_unit),)
 
     def validate(self):
         """
@@ -60,9 +58,7 @@ class RVnoAnnotation(RandomVariable):
         )
         """
 
-        return (
-            SampledValue(value=1, t_start=self.t_start, t_unit=self.t_unit),
-        )
+        return (SampledValue(value=1, t_start=self.t_start, t_unit=self.t_unit),)
 
     def validate(self):
         """
@@ -78,10 +74,13 @@ class RVnoAnnotation(RandomVariable):
 def test_none_rv():  # numpydoc ignore=GL08
     assert_equal(_assert_sample_and_rtype(None), None)
 
-    with pytest.raises(
-        Exception, match="None is not an instance of RandomVariable"
-    ):
+    with pytest.raises(Exception, match="None is not an instance of RandomVariable"):
         _assert_sample_and_rtype(None, skip_if_none=False)
+
+
+def test_not_a_rv():  # numpydoc ignore=GL08
+    with pytest.raises(Exception, match="is not an instance of RandomVariable"):
+        _assert_sample_and_rtype(1)
 
 
 def test_sample_return():  # numpydoc ignore=GL08
@@ -93,7 +92,5 @@ def test_sample_return():  # numpydoc ignore=GL08
     _assert_sample_and_rtype(rv1)
 
     rv2 = RVnoAnnotation()
-    with pytest.raises(
-        Exception, match="does not have return type annotation"
-    ):
+    with pytest.raises(Exception, match="does not have return type annotation"):
         _assert_sample_and_rtype(rv2)
