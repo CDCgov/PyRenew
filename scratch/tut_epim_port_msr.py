@@ -24,8 +24,8 @@ from matplotlib import font_manager as fm
 from numpyro.infer.reparam import LocScaleReparam
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
+    InfectionInitializationMethod,
     InfectionInitializationProcess,
-    InitializeInfectionsExponentialGrowth,
     compute_infections_from_rt,
     logistic_susceptibility_adjustment,
 )
@@ -121,10 +121,10 @@ def plot_utils(
     if display:
         plt.tight_layout()
         plt.show()
-    if not os.path.exists(f"../figures/{filename}.png"):
+    if not os.path.exists(f"./figures/{filename}.png"):
         plt.tight_layout()
         if save_as_img:
-            figure.savefig(f"../figures/{filename}")
+            figure.savefig(f"./figures/{filename}")
         if save_to_pdf:
             return figure
     return None
@@ -313,13 +313,118 @@ class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
         return all_I_t, all_S_t
 
 
+class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
+    def __init__(
+        self,
+        predictors,
+        alpha_intercept_prior_mode,
+        alpha_intercept_prior_scale,
+        day_of_week_effect_prior_modes,
+        day_of_week_effect_prior_scales,
+        holiday_eff_prior_mode,
+        holiday_eff_prior_scale,
+        post_holiday_eff_prior_mode,
+        post_holiday_eff_prior_scale,
+        non_obs_effect_prior_mode,
+        non_obs_effect_prior_scale,
+        max_rt,
+        nb_concentration_prior,
+    ):  # numpydoc ignore=GL08
+        self.predictors = predictors
+        self.alpha_intercept_prior_mode = alpha_intercept_prior_mode
+        self.alpha_intercept_prior_scale = alpha_intercept_prior_scale
+        self.day_of_week_effect_prior_modes = day_of_week_effect_prior_modes
+        self.day_of_week_effect_prior_scales = day_of_week_effect_prior_scales
+        self.holiday_eff_prior_mode = holiday_eff_prior_mode
+        self.holiday_eff_prior_scale = holiday_eff_prior_scale
+        self.post_holiday_eff_prior_mode = post_holiday_eff_prior_mode
+        self.post_holiday_eff_prior_scale = post_holiday_eff_prior_scale
+        self.non_obs_effect_prior_mode = non_obs_effect_prior_mode
+        self.non_obs_effect_prior_scale = non_obs_effect_prior_scale
+        self.max_rt = max_rt
+        self.nb_concentration_prior = nb_concentration_prior
+
+        self._init_alpha_t()
+        self._init_negative_binomial()
+
+    def _init_alpha_t(self):  # numpydoc ignore=GL08
+        predictor_values = self.predictors
+        alpha_intercept_prior = dist.Normal(
+            self.alpha_intercept_prior_mode, self.alpha_intercept_prior_scale
+        )
+        day_of_week_priors = dist.Normal(
+            jnp.array(self.day_of_week_effect_prior_modes),
+            jnp.array(self.day_of_week_effect_prior_scales),
+        ).expand([len(self.day_of_week_effect_prior_modes)])
+        holiday_prior = dist.Normal(
+            self.holiday_eff_prior_mode, self.holiday_eff_prior_scale
+        ).expand([1])
+        post_holiday_prior = dist.Normal(
+            self.post_holiday_eff_prior_mode, self.post_holiday_eff_prior_scale
+        ).expand([1])
+        pre_observation_prior = dist.Normal(
+            self.non_obs_effect_prior_mode, self.non_obs_effect_prior_scale
+        ).expand([1])
+        all_coefficient_priors = jnp.concatenate(
+            [
+                day_of_week_priors,
+                holiday_prior,
+                post_holiday_prior,
+                pre_observation_prior,
+            ]
+        )
+        self.alpha_process = GLMPrediction(
+            name="alpha_t",
+            fixed_predictor_values=predictor_values,
+            intercept_prior=alpha_intercept_prior,
+            coefficient_priors=all_coefficient_priors,
+            transform=t.ScaledLogitTransform(x_max=self.max_rt),
+        )
+
+    def _init_negative_binomial(self):  # numpydoc ignore=GL08
+        nb_concentration_rv = TransformedRandomVariable(
+            "concentration",
+            base_rv=DistributionalRV(
+                name="concentration_raw",
+                dist=self.nb_concentration_prior,
+            ),
+            transforms=t.IdentityTransform(),
+        )
+        self.nb_observation = NegativeBinomialObservation(
+            name="negbinom_rv",
+            concentration_rv=nb_concentration_rv,
+        )
+
+    @staticmethod
+    def validate() -> None:  # numpydoc ignore=GL08
+        pass
+
+    def sample(
+        self,
+        infections: ArrayLike,
+        delay_distribution: ArrayLike,
+        **kwargs,
+    ) -> tuple:  # numpydoc ignore=GL08
+        alpha_samples = self.alpha_process.sample()["prediction"]
+        expected_hosp = (
+            alpha_samples
+            * jnp.convolve(infections, delay_distribution, mode="full")[
+                : infections.shape[0]
+            ]
+        )
+        nb_samples = self.nb_observation.sample(mu=expected_hosp, **kwargs)
+        return nb_samples
+
+
 class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
     def __init__(
-        self, intercept_RW_prior, max_rt, gamma_RW_prior, gamma_RW_prior_scale
+        self,
+        intercept_RW_prior: numpyro.distribution,
+        max_rt: float,
+        gamma_RW_prior_scale: float,
     ):  # numpydoc ignore=GL08
         self.intercept_RW_prior = intercept_RW_prior
         self.max_rt = max_rt
-        self.gamma_RW_prior = gamma_RW_prior
         self.gamma_RW_prior_scale = gamma_RW_prior_scale
 
     @staticmethod
@@ -327,44 +432,83 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
         pass
 
     def sample(self, n_steps: int, **kwargs) -> tuple:  # numpydoc ignore=GL08
-        glm = GLMPrediction(
-            name="CFAEPIM_Rt_GLM",
-            fixed_predictor_values=jnp.ones((n_steps, 1)),  # intercept & RW
-            intercept_prior=self.intercept_RW_prior,
-            coefficient_priors=self.gamma_RW_prior,
-            transform=t.ScaledLogitTransform(x_max=self.max_rt),
+        sd_wt = numpyro.sample(
+            "Wt_rw_sd", dist.HalfNormal(self.gamma_RW_prior_scale)
         )
-        # update: Epidemia does this all as GLM under the hood,
-        # but epimlight model just has Rt intercept & random walk
-        # update: intercept can just be part of RtWalk, simple random
-        # walk can be transformed using scaled logit, init_rv = intercept
-        # prior, sd_wt (as you've done). These needs to be broadcast from
-        # weekly to daily.
-        eta_samples = glm.sample()
-        sd_wt = numpyro.sample("Wt_rw_sd", dist.gamma_RW_prior_scale)
         wt_rv = SimpleRandomWalkProcess(
             name="Wt",
             step_rv=DistributionalRV(
                 name="rw_step_rv",
-                dist=dist.Normal(0, sd_wt),  # confirm: should I reuse
-                reparam=LocScaleReparam(0),  # confirm: thoughts on this?
+                dist=dist.Normal(0, sd_wt),
+                reparam=LocScaleReparam(0),
             ),
             init_rv=DistributionalRV(
                 name="init_Wt_rv",
-                dist=dist.Normal(
-                    0, 1
-                ),  # confirm: not sure what else to put here
+                dist=self.intercept_RW_prior,
             ),
         )
-        wt_samples = wt_rv.sample(n_steps=n_steps, **kwargs)
-        rt_samples = eta_samples["prediction"] + wt_samples[0].value
-        # update: don't want scaled logit twice, remove GLM section;
-        transformed_rt_samples = t.ScaledLogitTransform(x_max=self.max_rt)(
-            rt_samples
-        )
+        # wt_samples = wt_rv.sample(n_steps=n_steps, **kwargs)
+        transformed_rt_samples = TransformedRandomVariable(
+            name="transformed_rt_rw",
+            base_rv=wt_rv,  # wt_samples[0].value # confirm: fix here,
+            transforms=t.ScaledLogitTransform(x_max=self.max_rt),
+        ).sample(n_steps=n_steps, **kwargs)
         return transformed_rt_samples
 
-    # update: broadcast weekly to daily
+
+class InitializeInfectionsExponential(InfectionInitializationMethod):
+    """
+    Generate initial infections (infections seeding) vector drawn
+    from an exponential distribution.
+    """
+
+    def __init__(self, n_timepoints: int, rate: RandomVariable):
+        """
+        Default constructor for the
+        `InitializeInfectionsExponential` class.
+
+        Parameters
+        ----------
+        n_timepoints : int
+            The number of time points to generate
+            initial infections.
+        rate : RandomVariable
+            A random variable representing the
+            rate of exponential distribution.
+        """
+        super().__init__(n_timepoints)
+        self.rate = rate
+
+    def initialize_infections(self, I_pre_init: ArrayLike):
+        """
+        Generate exponential distributed infections vector.
+
+        Parameters
+        ----------
+        I_pre_init : ArrayLike
+            An array of size 1 representing the rate
+            parameter of the exponential distribution.
+
+        Returns
+        -------
+        ArrayLike
+            An array of length `n_timepoints` with
+            the number of initialized infections
+            at each time point.
+        """
+        if I_pre_init.size != 1:
+            raise ValueError(
+                f"I_pre_init must be an array of size 1. Got size {I_pre_init.size}."
+            )
+        rate = I_pre_init[0]
+        if rate.size != 1:
+            raise ValueError(
+                f"rate must be an array of size 1. Got size {rate.size}."
+            )
+        return numpyro.sample(
+            "initial_infections",
+            dist.Exponential(self.rate).expand([self.n_timepoints]),
+        )
 
 
 class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
@@ -399,13 +543,6 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         for key, value in config.items():
             setattr(self, key, value)
 
-        # reported admissions in proper format
-        self.data_observed_hosp_admissions = np.array(
-            self.dataset.filter(pl.col("location") == state).select(
-                ["date", "hosp"]
-            )["hosp"]
-        )
-
         # predictors
         day_of_week_covariate = self.dataset.select(
             pl.col("day_of_week")
@@ -433,9 +570,7 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         ).sample(jax.random.PRNGKey(self.seed))
         self.gamma_RW_prior = dist.Normal(0, self.gamma_RW_prior_scale)
 
-        # transmission: Rt process, involving scaled-logit
-        # link function g transforming a linear predictor for the
-        # random walk
+        # transmission: Rt process
         self.Rt_process = CFAEPIM_Rt(
             intercept_RW_prior=self.intercept_RW_prior,
             max_rt=self.max_rt,
@@ -444,16 +579,34 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         )
 
         # infections:  initialized infections
+        # rate_RV = DeterministicVariable(name="rate_RV", value=0.5)
+        # I_pre_init_RV = DeterministicVariable(name="I_pre_init_RV", value=10.0)
+        # default_t_pre_init = n_timepoints - 1
+
+        # (I_pre_init,) = I_pre_init_RV()
+        # (rate,) = rate_RV()
+
+        # I_pre_init = I_pre_init.value
+        # rate = rate.value
+        # infections_default_t_pre_init = InitializeInfectionsExponentialGrowth(
+        #     n_timepoints, rate=rate_RV
+        # ).initialize_infections(I_pre_init)
+
+        self.lambda_I0 = 0.1
         self.I0 = InfectionInitializationProcess(
-            "I0_initialization",
-            DistributionalRV(
+            name="I0_initialization",
+            I_pre_init_rv=DistributionalRV(
                 name="I0",
-                dist=dist.LogNormal(loc=jnp.log(100), scale=jnp.log(1.75)),
-            ),  # confirm: need to change from tutoral values
-            InitializeInfectionsExponentialGrowth(
+                dist=DeterministicVariable(
+                    name="I_pre_init_RV", value=self.lambda_I0
+                ),
+            ),
+            infection_init_method=InitializeInfectionsExponential(
                 n_timepoints=self.n_pre_observation_days,
-                rate=DeterministicVariable(name="rate", value=0.05),
-            ),  # update: initialize infection vector w/ exp DISTRIBUTED vector
+                rate=DistributionalRV(
+                    name="rate", dist=dist.Exponential(self.lambda_I0)
+                ),
+            ),
             t_unit=1,
         )
 
@@ -464,101 +617,50 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         # infections component
         self.infections = CFAEPIM_Infections(self.I0)
 
+        # observations component
+        self.nb_concentration_prior = dist.Normal(
+            self.reciprocal_dispersion_prior_mode,
+            self.reciprocal_dispersion_prior_scale,
+        )
+        self.observation = CFAEPIM_Observation(
+            self.predictors,
+            self.alpha_intercept_prior_mode,
+            self.alpha_intercept_prior_scale,
+            self.day_of_week_effect_prior_modes,
+            self.day_of_week_effect_prior_scales,
+            self.holiday_eff_prior_mode,
+            self.holiday_eff_prior_scale,
+            self.post_holiday_eff_prior_mode,
+            self.post_holiday_eff_prior_scale,
+            self.non_obs_effect_prior_mode,
+            self.non_obs_effect_prior_scale,
+            self.max_rt,
+            self.nb_concentration_prior,
+        )
+
     @staticmethod
     def validate() -> None:  # numpydoc ignore=GL08
         pass
 
-    def _init_alpha_t(self):  # numpydoc ignore=GL08
-        predictor_values = self.predictors
-        alpha_intercept_prior = dist.Normal(
-            self.ihr_intercept_prior_mode, self.ihr_intercept_prior_scale
-        )
-        day_of_week_priors = dist.Normal(0, 0.25).expand([6])
-        holiday_prior = dist.Normal(
-            self.holiday_eff_prior_mode, self.holiday_eff_prior_scale
-        ).expand([1])
-        post_holiday_prior = dist.Normal(
-            self.post_holiday_eff_prior_mode, self.post_holiday_eff_prior_scale
-        ).expand([1])
-        pre_observation_prior = dist.Normal(
-            self.non_obs_effect_prior_mode, self.non_obs_effect_prior_mode
-        ).expand([1])
-        all_coefficient_priors = jnp.concatenate(
-            [
-                day_of_week_priors,
-                holiday_prior,
-                post_holiday_prior,
-                pre_observation_prior,
-            ]
-        )
-        self.alpha_process = GLMPrediction(
-            name="alpha_t",
-            fixed_predictor_values=predictor_values,
-            intercept_prior=alpha_intercept_prior,
-            coefficient_priors=all_coefficient_priors,
-            transform=t.ScaledLogitTransform(x_max=self.max_rt),
-        )  # update: make this into its own class
-
-    def _init_observation_component(self):  # numpydoc ignore=GL08
-        # update: connect w/ alpha
-        # update: combine w/ alpha as a class
-        # update this; remove extraneous; rename; add reciprocal dispersion
-        nb_conc_rv = TransformedRandomVariable(
-            "concentration",
-            base_rv=DistributionalRV(
-                name="concentration_raw", dist=dist.Normal(0, 1)
-            ),
-            transforms=t.ScaledLogitTransform(x_max=self.max_rt),
-        )
-        self.admissions = NegativeBinomialObservation(
-            name="hospital_admissions", concentration_rv=nb_conc_rv
-        )
-
-    def sample(self, **kwargs) -> tuple:  # numpydoc ignore=GL08
-        pass
-
-        # update: this needs to be update to reflection the
+    def sample(
+        self,
+        n_steps: int,
+        **kwargs,
+    ) -> tuple:  # numpydoc ignore=GL08
         # updated state of the components as classes
+        # update: unfinished!
+        # update: n_steps
 
-        # update: should never have...
-
-        # n_steps = kwargs.get("n_steps", 100)
-        # P = self.population
-        # rt_samples = self.rt_process.sample(n_steps=n_steps)
-        # alpha_samples = self.alpha_process.sample()
-        # I0_samples = self.I0_rv.sample()
-        # all_I_t, all_S_t = self.infections.sample(
-        #     Rt=rt_samples,
-        #     I0=I0_samples,
-        #     gen_int=self.pmf_array,
-        #     P=P
-
-        # get rt_samples, ,
-
-    def run(self, **kwargs):  # numpydoc ignore=GL08
-        kernel = numpyro.infer.NUTS(
-            model=self.model,
-            step_size=self.adapt_delta,
-            max_tree_depth=self.max_treedepth,
+        rt_samples = self.Rt_process.sample(n_steps=n_steps, **kwargs)["value"]
+        all_I_t, all_S_t = self.infections.sample(
+            Rt=rt_samples, gen_int=self.gen_int, P=self.population, **kwargs
         )
-        mcmc = numpyro.infer.MCMC(
-            sampler=kernel,
-            num_warmup=self.n_warmup,
-            num_samples=self.n_iter,
-            num_chains=self.n_chains,
+        nb_samples = self.observation.sample(
+            infections=all_I_t,
+            delay_distribution=self.inf_to_hosp_dist,
+            **kwargs,
         )
-        mcmc.run(
-            rng_key=jax.random.PRNGKey(self.seed),
-            data_observed_hosp_admissions=self.data_observed_hosp_admissions,
-        )
-        mcmc.print_summary()
-        self.mcmc = mcmc
-        # update: defer to metaclass for model + run
-        # update: represent data_observed_hosp_admissions as an attribute,
-        # but not as an instance attributes; pass this to the.
-        # "a model should have as few numbers as it in possible"
-        # "any numbers that the model sees should be passed in at run time"
-        # "config should be seen at run time"
+        return rt_samples, all_I_t, all_S_t, nb_samples
 
     def predict(self, rng_key, **kwargs):  # numpydoc ignore=GL08
         posterior_pred_dist = numpyro.infer.Predictive(
@@ -605,7 +707,7 @@ def main():  # numpydoc ignore=GL08
     pprint(config)
 
     # load NHSN data w/ population counts (2024-01-20)
-    data_path_01 = "../data/2024-01-20/2024-01-20_clean_data.tsv"
+    data_path_01 = "./data/2024-01-20/2024-01-20_clean_data.tsv"
     influenza_hosp_data = load_influenza_hosp_data(
         data_path=data_path_01, print_first_n_rows=True, n_row_count=15
     )
@@ -623,20 +725,36 @@ def main():  # numpydoc ignore=GL08
         display=False,
     )
 
-    # update: move this content to the MSR repository,
-    # merge or not merge, won't pollute repo. unless
-    # someone permits it to
+    # confirm: add parallelization over states
+    placeholder_state = "NY"
+    data_observed_hosp_admissions = np.array(
+        influenza_hosp_data.filter(
+            pl.col("location") == placeholder_state
+        ).select(["date", "hosp"])["hosp"]
+    )
+    # verification: data_observed_hosp_admissions
+    print(data_observed_hosp_admissions)
 
     # instantiate cfaepim-MSR
     cfaepim_MSR = CFAEPIM_Model(
-        state="NY", dataset=influenza_hosp_data, config=config
+        state=placeholder_state, dataset=influenza_hosp_data, config=config
     )
 
     # verify and visualize aspects of the model
     verify_cfaepim_MSR(cfaepim_MSR)
 
-    # cfaepim_MSR.run(
-    #     mcmc_args=dict(progress_bar=False, num_chains=2)
+    # confirm: the model is given... a config (w/ the necessary params and
+    # possible ranges), a dataset of daily hospitalizations (if weekly data, then
+    # turn off some covariates, or broadcast weekly to daily).
+
+    # model_instance.run(
+    #     num_warmup=model_instance.config["n_warmup"],
+    #     num_samples=model_instance.config["n_iter"],
+    #     rng_key=jax.random.PRNGKey(model_instance.config["seed"]),
+    #     data_observed_hosp_admissions=data_observed_hosp_admissions,
+    #     nuts_args={
+    #         "max_tree_depth": model_instance.config["max_tree_depth"],
+    #         "step_size": model_instance.config["adapt_delta"]}
     # )
 
     # instantiate MSR-cfaepim model
