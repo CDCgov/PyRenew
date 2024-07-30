@@ -382,17 +382,12 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
         )
 
     def _init_negative_binomial(self):  # numpydoc ignore=GL08
-        nb_concentration_rv = TransformedRandomVariable(
-            "concentration",
-            base_rv=DistributionalRV(
-                name="concentration_raw",
-                dist=self.nb_concentration_prior,
-            ),
-            transforms=t.IdentityTransform(),
-        )
         self.nb_observation = NegativeBinomialObservation(
             name="negbinom_rv",
-            concentration_rv=nb_concentration_rv,
+            concentration_rv=DistributionalRV(
+                name="nb_concentration",
+                dist=self.nb_concentration_prior,
+            ),
         )
 
     @staticmethod
@@ -414,6 +409,9 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
         )
         nb_samples = self.nb_observation.sample(mu=expected_hosp, **kwargs)
         return nb_samples
+
+    # update: ensure alpha_samples is the correct shape
+    # update: this is starting to look good, verify though
 
 
 class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
@@ -454,6 +452,9 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
             transforms=t.ScaledLogitTransform(x_max=self.max_rt),
         ).sample(n_steps=n_steps, **kwargs)
         return transformed_rt_samples
+
+    # update: eventually want canonical ways to do this
+    # update: to sampled value or in the sample call
 
 
 class InitializeInfectionsExponential(InfectionInitializationMethod):
@@ -507,7 +508,7 @@ class InitializeInfectionsExponential(InfectionInitializationMethod):
             )
         return numpyro.sample(
             "initial_infections",
-            dist.Exponential(self.rate).expand([self.n_timepoints]),
+            dist.Exponential(self.lambda_I0).expand([self.n_timepoints]),
         )
 
 
@@ -592,6 +593,10 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         #     n_timepoints, rate=rate_RV
         # ).initialize_infections(I_pre_init)
 
+        # update: compute from data, to match `cfaepim`
+        # update: then replace with thing that is better
+        # FromVec, drawn as IID exp. len N
+        # update: update, inf_model_seed_days = 8
         self.lambda_I0 = 0.1
         self.I0 = InfectionInitializationProcess(
             name="I0_initialization",
@@ -602,13 +607,19 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
                 ),
             ),
             infection_init_method=InitializeInfectionsExponential(
-                n_timepoints=self.n_pre_observation_days,
+                n_timepoints=self.inf_model_seed_days,
                 rate=DistributionalRV(
                     name="rate", dist=dist.Exponential(self.lambda_I0)
                 ),
             ),
             t_unit=1,
         )
+        #
+        # update: seeding, pre_obs, obs
+        # update: init_period (8), post_init_pre_obs (14) renewal process with no observation (no random walk on Rt, fixed), obs_period
+        # update: make issue on InitializationProcess & ...Method classes
+        # and their use; write up some suggestions.
+        # 22 days before observation
 
         # initialize alpha_t and observation components
         self._init_alpha_t()

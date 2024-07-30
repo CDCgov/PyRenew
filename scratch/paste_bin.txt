@@ -1,3 +1,13 @@
+ seeding ("initialization" in MSR lingo):
+
+ no renewal process, no need for a defined R(t)
+
+pre-observation: renewal process in progress but we set observed hosps to zero and set alpha ~= 0 to allow the process to "warm up"
+
+
+observation: renewal process in progress, alpha ≠ 0, and observed hosps have values, so they are used for inference
+
+
 
 
 REMOVE I0 initialization, co-code (1)
