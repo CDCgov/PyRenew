@@ -1,5 +1,7 @@
 # numpydoc ignore=GL08
 
+import re
+
 import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
@@ -87,17 +89,20 @@ def test_deterministic_validation():
     ]
 
     for non_arraylike_val in some_non_array_likes:
-        with pytest.raises(
-            ValueError, match="value is not an ArrayLike object"
-        ):
+        matchval = re.escape(
+            f"value {non_arraylike_val} passed to a "
+            "DeterministicVariable is of type "
+            f"{type(non_arraylike_val).__name__}, expected "
+            "an ArrayLike object"
+        )
+
+        with pytest.raises(ValueError, match=matchval):
             # the class's validation function itself
             # should raise an error when passed a
             # non arraylike value
             DeterministicVariable.validate(non_arraylike_val)
 
-        with pytest.raises(
-            ValueError, match="value is not an ArrayLike object"
-        ):
+        with pytest.raises(ValueError, match=matchval):
             # validation should fail on constructor call
             DeterministicVariable(
                 value=non_arraylike_val, name="invalid_variable"

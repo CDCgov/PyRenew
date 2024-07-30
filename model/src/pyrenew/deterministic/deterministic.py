@@ -66,7 +66,11 @@ class DeterministicVariable(RandomVariable):
             If the input value object is not an ArrayLike object.
         """
         if not isinstance(value, ArrayLike):
-            raise ValueError("value is not an ArrayLike object")
+            raise ValueError(
+                f"value {value} passed to a DeterministicVariable "
+                f"is of type {type(value).__name__}, expected "
+                "an ArrayLike object"
+            )
 
         return None
 
