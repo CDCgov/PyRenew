@@ -152,7 +152,7 @@ class MyRt(RandomVariable):
                     reparam=LocScaleReparam(0),
                 ),
                 init_rv=DistributionalRV(
-                    name="init_log_Rt_rv",
+                    name="init_log_rt",
                     dist=dist.Normal(jnp.log(1), jnp.log(1.2)),
                 ),
             ),

@@ -202,7 +202,7 @@ class MyRt(metaclass.RandomVariable):
                     name="rw_step_rv", dist=dist.Normal(0, sd_rt.value)
                 ),
                 init_rv=metaclass.DistributionalRV(
-                    name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
+                    name="init_log_rt", dist=dist.Normal(0, 0.2)
                 ),
             ),
             transforms=transformation.ExpTransform(),
