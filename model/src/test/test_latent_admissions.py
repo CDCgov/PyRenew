@@ -28,7 +28,7 @@ def test_admissions_sample():
                 name="rw_step_rv", dist=dist.Normal(0, 0.025)
             ),
             init_rv=DistributionalRV(
-                name="init_log_Rt_rv", dist=dist.Normal(0, 0.2)
+                name="init_log_rt", dist=dist.Normal(0, 0.2)
             ),
         ),
         transforms=t.ExpTransform(),
