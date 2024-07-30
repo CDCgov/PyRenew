@@ -1,17 +1,17 @@
 # numpydoc ignore=GL08
 import jax.numpy as jnp
 import numpyro.distributions as dist
-import pyrenew.transformation as transformation
+
+# import pyrenew.transformation as transformation
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     InfectionInitializationProcess,
     InfectionsWithFeedback,
     InitializeInfectionsExponentialGrowth,
 )
-from pyrenew.metaclass import (
+from pyrenew.metaclass import (  # TransformedRandomVariable,
     DistributionalRV,
     Model,
-    TransformedRandomVariable,
 )
 from pyrenew.process import RtWeeklyDiffProcess
 
@@ -33,13 +33,14 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
     ):  # numpydoc ignore=GL08
         self.infection_initialization_process = InfectionInitializationProcess(
             "I0_initialization",
-            TransformedRandomVariable(
-                "i0",
-                i0_over_n_rv,
-                transforms=transformation.AffineTransform(
-                    loc=0, scale=state_pop
-                ),
-            ),
+            # TransformedRandomVariable(
+            #     "i0",
+            #     i0_over_n_rv,
+            #     transforms=transformation.AffineTransform(
+            #         loc=0, scale=state_pop
+            #     ),
+            # ),
+            i0_over_n_rv,
             InitializeInfectionsExponentialGrowth(
                 n_initialization_points,
                 initialization_rate_rv,

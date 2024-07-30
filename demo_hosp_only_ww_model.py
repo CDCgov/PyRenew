@@ -44,8 +44,15 @@ i0_over_n_rv = DistributionalRV(
 initial_growth_prior_mean = stan_data["initial_growth_prior_mean"][0]
 initial_growth_prior_sd = stan_data["initial_growth_prior_sd"][0]
 initialization_rate_rv = DistributionalRV(
-    "rate", dist.Normal(initial_growth_prior_mean, initial_growth_prior_sd)
+    "rate",
+    dist.TruncatedNormal(
+        loc=initial_growth_prior_mean,
+        scale=initial_growth_prior_sd,
+        low=-1,
+        high=1,
+    ),
 )
+# Can reasonably switch to non-Truncated
 
 r_prior_mean = stan_data["r_prior_mean"][0]
 r_prior_sd = stan_data["r_prior_sd"][0]
@@ -86,10 +93,7 @@ inf_feedback_strength_rv = TransformedRandomVariable(
     ),
     transforms=transforms.AffineTransform(loc=0, scale=-1),
 )
-# Replace it with 0 to see if it makes more sense
-inf_feedback_strength_rv = DeterministicVariable(
-    "inf_feedback", jnp.array([0])
-)
+# Could be reparameterized?
 
 uot = stan_data["uot"][0]
 state_pop = stan_data["state_pop"][0]
@@ -108,7 +112,7 @@ my_model = hosp_only_ww_model(
     n_timepoints=50,
 )
 
-with numpyro.handlers.seed(rng_seed=200):
+with numpyro.handlers.seed(rng_seed=202):
     my_model_samp = my_model.sample()
 
 my_model_samp
