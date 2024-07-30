@@ -15,7 +15,6 @@ exclude = [{path = "datasets/*.rds"}]
 python = "^3.12"
 numpyro = ">=0.15.1"
 jax = ">=0.4.30"
-jaxlib = ">=0.4.30"
 numpy = "^1.26.4"
 polars = "^1.2.1"
 matplotlib = "^3.8.3"
@@ -39,6 +38,7 @@ sphinx-book-theme = "^1.1.2"
 pillow = "^10.3.0"
 nbconvert = "^7.16.4"
 ipywidgets = "^8.1.3"
+deptry = "^0.17.0"
 
 [tool.numpydoc_validation]
 checks = [
