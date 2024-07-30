@@ -1,0 +1,81 @@
+day_of_week_effect_prior_modes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+day_of_week_effect_prior_scales = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+holiday_eff_prior_mode = -0.2
+holiday_eff_prior_scale = 0.2
+post_holiday_eff_prior_mode = 0.0
+post_holiday_eff_prior_scale = 0.2
+recency_eff_prior_mode = 0.0
+recency_eff_prior_scale = 0.1
+recency_effect_length = 0
+
+generation_time_dist = [0.233, 0.359, 0.198, 0.103, 0.053, 0.027, 0.014, 0.007, 0.003, 0.002, 0.001]
+ihr_intercept_prior_mode = -6.5
+ihr_intercept_prior_scale = 0.5
+inf_model_prior_infections_per_capita = 0.0001
+inf_model_seeds = 8
+inf_to_hosp_dist = [0.05, 0.1, 0.175, 0.225, 0.175, 0.125, 0.075, 0.05, 0.025]
+max_rt = 3.0
+n_pre_observation_days = 14
+non_obs_effect_prior_mode = -50
+non_obs_effect_prior_scale = 0.01
+reciprocal_dispersion_prior_mode = 10
+reciprocal_dispersion_prior_scale = 5
+reference_day_of_week = 4
+rt_intercept_prior_mode = -0.4054651
+rt_intercept_prior_scale = 0.3
+seed = 54321
+susceptible_fraction_prior_mode = 0.9
+susceptible_fraction_prior_scale = 0.1
+weekly_rw_prior_scale = 0.25
+first_fitting_date = "2023-09-15"
+
+[location_specific_start_dates]
+
+[location_specific_cutoff_dates]
+
+[location_specific_excluded_dates]
+KS = ["2024-01-30", "2024-01-31",
+      "2024-02-01", "2024-02-02",
+      "2024-02-03", "2024-02-04",
+      "2024-02-05", "2024-02-06",
+      "2024-02-07", "2024-02-08",
+      "2024-02-09", "2024-02-10",
+      "2024-02-11", "2024-02-12",
+      "2024-02-13", "2024-02-14",
+      "2024-02-15", "2024-02-16",
+      "2024-02-17"]
+AZ = ["2024-03-04", "2024-03-09",
+      "2024-03-11", "2024-03-16"]
+GA = ["2024-03-11", "2024-03-12",
+      "2024-03-22", "2024-03-23"]
+HI = ["2024-01-30", "2024-01-31",
+      "2024-02-01"]
+IL = ["2024-03-17", "2024-03-18"]
+IA = ["2024-03-23"]
+KY = ["2024-03-01", "2024-03-14"]
+MO = ["2024-03-10"]
+NV = ["2024-02-23", "2024-02-26"]
+NH = ["2024-03-21", "2024-03-22",
+      "2024-03-23"]
+NY = ["2024-03-20"]
+NC = ["2024-03-14", "2024-03-15"]
+OK = ["2024-03-19"]
+RI = ["2024-02-18", "2024-02-19",
+      "2024-02-20", "2024-02-21",
+      "2024-02-26"]
+SD = ["2024-03-21"]
+TN = ["2024-03-16"]
+TX = ["2024-03-21"]
+WA = ["2024-03-08", "2024-03-12"]
+WI = ["2024-02-05"]
+WV = ["2024-03-03"]
+
+[mcmc]
+adapt_delta = 0.9
+max_treedepth = 12
+n_chains = 1
+n_warmup = 1000
+n_iter = 2000
+
+[postprocess]
+exclude = ["HI"]
