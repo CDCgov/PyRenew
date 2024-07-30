@@ -110,7 +110,7 @@ p_hosp_w_sd_rv = DistributionalRV(
 
 autoreg_p_hosp_a = stan_data["autoreg_p_hosp_a"][0]
 autoreg_p_hosp_b = stan_data["autoreg_p_hosp_b"][0]
-autoreg_p_hosp_rv = DeterministicVariable(
+autoreg_p_hosp_rv = DistributionalRV(
     "autoreg_p_hosp", dist.Beta(autoreg_p_hosp_a, autoreg_p_hosp_b)
 )
 

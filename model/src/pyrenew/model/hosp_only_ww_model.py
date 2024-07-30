@@ -77,17 +77,22 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
 
         eta_sd = self.eta_sd_rv()[0].value
 
+        autoreg_rt = self.autoreg_rt_rv()[0].value
+        autoreg_rt_det_rv = DeterministicVariable("autoreg_rt_det", autoreg_rt)
+
+        log_r_mu_intercept = self.log_r_mu_intercept_rv()[0].value
+
         init_rate_of_change_rv = DistributionalRV(
-            "init_rate_of_change", dist.Normal(0, eta_sd)
+            "init_rate_of_change",
+            dist.Normal(0, eta_sd / jnp.sqrt(1 - jnp.pow(autoreg_rt, 2))),
         )
 
         init_rate_of_change = init_rate_of_change_rv()[0].value
-        log_r_mu_intercept = self.log_r_mu_intercept_rv()[0].value
 
         rt_proc = RtWeeklyDiffProcess(
             name="rtu_weekly_diff",
             offset=0,
-            log_rt_prior=DeterministicVariable(
+            log_rt_rv=DeterministicVariable(
                 name="log_rt",
                 value=jnp.array(
                     [
@@ -96,8 +101,8 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
                     ]
                 ),
             ),
-            autoreg=self.autoreg_rt_rv,
-            periodic_diff_sd=DeterministicVariable(
+            autoreg_rv=autoreg_rt_det_rv,
+            periodic_diff_sd_rv=DeterministicVariable(
                 name="periodic_diff_sd", value=jnp.array(eta_sd)
             ),
         )
@@ -110,6 +115,10 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             I0=i0[0].value,
             gen_int=generation_interval_pmf[0].value,
         )
+
+        # p_hosp_ar = ARProcess("p_hosp", mean=x, autoreg=[x, y], noise_sd=z)
+
+        # Now expand it to daily?
 
         # infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
 
