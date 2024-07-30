@@ -28,6 +28,9 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         generation_interval_pmf_rv,
         infection_feedback_strength_rv,
         infection_feedback_pmf_rv,
+        p_hosp_mean_rv,
+        p_hosp_w_sd_rv,
+        autoreg_p_hosp_rv,
         n_initialization_points,
         n_timepoints,
     ):  # numpydoc ignore=GL08
@@ -59,6 +62,10 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         self.log_r_mu_intercept_rv = log_r_mu_intercept_rv
         self.generation_interval_pmf_rv = generation_interval_pmf_rv
         self.infection_feedback_pmf_rv = infection_feedback_pmf_rv
+        self.p_hosp_mean_rv = p_hosp_mean_rv
+        self.p_hosp_w_sd_rv = p_hosp_w_sd_rv
+        self.autoreg_p_hosp_rv = autoreg_p_hosp_rv
+        self.state_pop = state_pop
         self.n_timepoints = n_timepoints
         return None
 
@@ -103,6 +110,39 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             I0=i0[0].value,
             gen_int=generation_interval_pmf[0].value,
         )
+
+        # infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
+
+        # infection_hosp_rate_t = infection_hosp_rate.value * latent_infections
+
+        # (
+        #     infection_to_admission_interval,
+        #     *_,
+        # ) = self.infection_to_admission_interval_rv(**kwargs)
+
+        # latent_hospital_admissions = jnp.convolve(
+        #     infection_hosp_rate_t,
+        #     infection_to_admission_interval.value,
+        #     mode="full",
+        # )[: infection_hosp_rate_t.shape[0]]
+
+        # # Applying the day of the week effect
+        # latent_hospital_admissions = (
+        #     latent_hospital_admissions
+        #     * self.day_of_week_effect_rv(
+        #         n_timepoints=latent_hospital_admissions.size, **kwargs
+        #     )[0].value
+        # )
+
+        # # Applying reporting probability
+        # latent_hospital_admissions = (
+        #     latent_hospital_admissions
+        #     * self.hosp_report_prob_rv(**kwargs)[0].value
+        # )
+
+        # numpyro.deterministic(
+        #     "latent_hospital_admissions", latent_hospital_admissions
+        # )
 
         return (
             i0,

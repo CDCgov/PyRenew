@@ -95,6 +95,28 @@ inf_feedback_strength_rv = TransformedRandomVariable(
 )
 # Could be reparameterized?
 
+p_hosp_prior_mean = stan_data["p_hosp_prior_mean"][0]
+p_hosp_sd_logit = stan_data["p_hosp_sd_logit"][0]
+
+p_hosp_mean_rv = DistributionalRV(
+    "p_hosp_mean",
+    dist.Normal(transforms.logit(p_hosp_prior_mean), p_hosp_sd_logit),
+)  # logit scale
+
+p_hosp_w_sd_sd = stan_data["p_hosp_w_sd_sd"][0]
+p_hosp_w_sd_rv = DistributionalRV(
+    "p_hosp_w_sd_sd", dist.TruncatedNormal(0, p_hosp_w_sd_sd, low=0)
+)
+
+autoreg_p_hosp_a = stan_data["autoreg_p_hosp_a"][0]
+autoreg_p_hosp_b = stan_data["autoreg_p_hosp_b"][0]
+autoreg_p_hosp_rv = DeterministicVariable(
+    "autoreg_p_hosp", dist.Beta(autoreg_p_hosp_a, autoreg_p_hosp_b)
+)
+
+# p_hosp_w ~ std_normal();
+
+
 uot = stan_data["uot"][0]
 state_pop = stan_data["state_pop"][0]
 
@@ -108,6 +130,9 @@ my_model = hosp_only_ww_model(
     generation_interval_pmf_rv=generation_interval_pmf_rv,
     infection_feedback_pmf_rv=infection_feedback_pmf_rv,
     infection_feedback_strength_rv=inf_feedback_strength_rv,
+    p_hosp_mean_rv=p_hosp_mean_rv,
+    p_hosp_w_sd_rv=p_hosp_w_sd_rv,
+    autoreg_p_hosp_rv=autoreg_p_hosp_rv,
     n_initialization_points=uot,
     n_timepoints=50,
 )
