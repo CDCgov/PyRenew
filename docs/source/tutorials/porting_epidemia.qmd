@@ -1,134 +1,242 @@
+---
+title: "Porting Over `cfaepim` To MSR"
+description: "_MSR is designed to be able to re-implemented existing infectious disease models. In this tutorial, we instantiate, in MSR, an influenza forecasting model originally created using_ Epidemia."
+title-block-banner: "black"
+image: "porting-cfaepim-to-msr.png"
+date: "2024-06-15"
+date-modified: "2024-07-23"
+bibliography: references.bib
+link-citations: true
+csl: "./assets/csls/vodohospodarske-technicko-ekonomicke-informace-en_MODIFIED.csl"
+categories: ["epidemiology", "modelling", "python", "R", "tutorial"]
+margin-header: |
+  ![](porting-cfaepim-to-msr.png)
+downloads: [pdf]
+format:
+  html:
+    fig-width: 8
+    fig-height: 6
+---
 
-\newpage
 
-# Introduction
+<!-- pdf:
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    colorlinks: true
+    fontsize: 12pt
+    papersize: letter
+    mainfont: TeX Gyre Schola
+    geometry:
+      - lmargin=1.5in
+      - rmargin=1.5in
+      - tmargin=1.0in
+      - bmargin=1.0in
+    cite-method: citeproc
+    include-in-header:
+      - text: |
+          \usepackage{xcolor}
+          \usepackage{fontspec}
+          \usepackage{amssymb}
+          \usepackage{amsmath}
+          \usepackage{sectsty}
+          \allsectionsfont{\scshape}
+          \usepackage{fancyvrb}
+          \fvset{fontsize=\small, frame=single,framesep=2mm,rulecolor=\color{black}, framerule=0.4mm}
+          \usepackage{float}
+          \let\origfigure\figure
+          \let\endorigfigure\endfigure
+          \renewenvironment{figure}[1][H]{\origfigure[H]}{\endorigfigure}
+          \usepackage{mathrsfs}
+          \usepackage{fvextra} -->
 
-\lettrine[lines=5, depth=0]{O}{ne} aim of the Multisignal Signal Renewal (hereafter MSR[^msr_v_pyrenew]) project is to make [statistical inference](https://en.wikipedia.org/wiki/Statistical_inference) and [simulation](https://en.wikipedia.org/wiki/Simulation) within the context of infectious disease modeling more flexible, relative to existing frameworks. Nonetheless, MSR users might want to re-implement existing, external (as in not pre-packaged) infectious disease models. Such capabilities are possible with MSR.
+# [Introduction](#introduction)
 
-[^msr_v_pyrenew]: The author of this tutorial prefers the use of _MSR_ to `pyrenew`, which the reader may have seen used in other MSR tutorials and which is the name of the MSR project's downloadable package.
+Let's[^we] remind ourselves of the Multisignal Renewal (hereafter MSR[^msr_v_pyrenew]) project's core utilities:
 
-In this tutorial, the author demonstrates how to implement an influenza forecasting model (hereafter `cfaepim`[^cfaepim]) that was created using the [Epidemia](https://github.com/CDCgov/multisignal-epi-inference) framework. The author later compares the two models (`cfaepim` and the re-implementation in MSR) using daily resolution [NHSN](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh)[^flusight] influenza hospitalization data. From this comparison, several enhancements to the MSR code base are identified and later made to reconcile performance differences.
+[^we]: This tutorial switches between first person plural narrative tense and third person narrative tense. When explaining mathematical details or when manipulating or building code, the author prefers the former tense, imagining himself alongside the reader on a path of discovery. All other presentation adopts the more dispassionate latter tense out of formality.
 
-[^flusight]: To see forecasts from influenza models using this data, see [here](https://github.com/cdcepi/FluSight-forecasts). For more information regarding how this data has been used for influenza forecasting, see [here](https://github.com/cdcepi/FluSight-forecast-hub/tree/main/target-data).
+[^msr_v_pyrenew]: The author of this tutorial prefers the use of _MSR_ to `pyrenew`, despite `pyrenew` being the name of the package associated with the MSR project, since the author believes "Multisignal Renewal" conveys relatively more information about the purpose of the project. Also note that the described utilities are current as of 2024-07-28 and come from MSR's [website home page](https://cdcgov.github.io/multisignal-epi-inference/).
 
-[^cfaepim]: The `cfaepim` model is contained within a private [CDC Enterprise](https://github.com/cdcent) repository. However, the author of this tutorial has received permission from [the author](https://github.com/dylanhmorris) of the repository to reproduce the parts of the model code.
+> * ...a Python library that provides a flexible renewal modeling framework
+> * ...a pipeline that leverages this framework to estimate epidemiological parameters from multiple data sources and produce forecasts.
 
-__Overview__: The author first outlines some _know-requisites_[^itali], i.e. activities and terms that should be completed and understood, respectively, prior to the completion of this tutorial. Next, the author showcases an example `cfaepim` forecast, along with some historical influenza hospitalization data. After this, the author briefly describes Epidemia and the class of problems it is aimed at handling. Then, one at a time, the author mathematically details components of `cfaepim`, providing motivating examples in Python and translations into MSR terms. Finally, the author compares the influenza hospitalization forecast output produced by the `cfaepim` instantiation in MSR with the output of the `cfaepim` for the same target weeks.
+With these goals—particularly that of _flexibility_ in renewal modeling—fresh in the reader's mind, one action the reader (as an MSR user) might want to take is to re-implement external (as in not pre-packaged) infectious disease models via MSR.
 
-[^itali]: Block quotes or lengthy italicized sections in this tutorial are very unlikely to be the author's own writing; instead, if no attribution is provided, it is safe to assume the content originated from `cfaepim` code or from descriptions that can be found on Epidemia's website.
+Such an action might help the reader to better understand how [statistical inference](https://en.wikipedia.org/wiki/Statistical_inference) and [simulation](https://en.wikipedia.org/wiki/Simulation) work in MSR and to validate (using the MSR-implemented external model) that the MSR codebase works as intended.
 
-# Know-Requisites
+This tutorial constitutes the first re-implementation of an external renewal model. In particular, the author demonstrates in this tutorial how to implement, via MSR, an influenza forecasting model (hereafter `cfaepim`[^cfaepim]) that was created using the [Epidemia](https://imperialcollegelondon.github.io/epidemia/index.html) framework.
 
-First, if you have not already installed the `pyrenew` package within MSR, please do the following: `pip3 install` followed by a space and then
+[^cfaepim]: The `cfaepim` model is in a private [CDC Enterprise](https://github.com/cdcent) repository, so the full `cfaepim` code is not available to the public. However, the author of this tutorial has received permission from [the author](https://github.com/dylanhmorris) of `cfaepim` to reproduce the parts of the model code (in particular, `model.R`, `forecast.R`, and `fit.R`).
 
-```
-git+https://github.com/CDCgov/
-multisignal-epi-inference@main#subdirectory=model
-```
-The author believes it is reasonable for the reader to proceed through _at least_ one of the following tutorials before continuing. Find below some MSR tutorials, ranging from low to high, starting from the first entry, of background knowledge required:
+__Tutorial Overview__:
 
-* [Pyrenew Demo](https://cdcgov.github.io/multisignal-epi-inference/tutorials/pyrenew_demo.html)
-* [Getting Started](https://cdcgov.github.io/multisignal-epi-inference/tutorials/getting-started.html)
-* [Extending Pyrenew](https://cdcgov.github.io/multisignal-epi-inference/tutorials/extending_pyrenew.html)
-* [Fitting A Hospital Admissions-Only Model](https://cdcgov.github.io/multisignal-epi-inference/tutorials/example-with-datasets.html)
+1. The author begins by outlining some background information that is either helpful or required for the completion of this tutorial.
+2. Next, the author showcases some historical influenza hospitalization data for the United States and a `cfaepim` forecast made using this data.
+3. Next, the author demonstrates how to implement `cfaepim` via MSR.
+4. Finally, the author compares forecasts made between `cfaepim` and MSR-`cfaepim`. This comparison coincides with the author's reflections on future MSR work needed, in both a general manner and also one pertaining to MSR-`cfaepim` in particular.
 
-See the Appendix for Terms (e.g., _basic reproduction number_) relevant to this tutorial.
+<!-- This demonstration coincides with a mathematical outline of `cfaepim`. -->
 
-# Short Tour Of The Data
+# [Background](#background)
 
-The `cfaepim` repository was employed during the 2023-24 respiratory season to forecast weekly influenza hospitalizations in US territories. For certain weeks during the respiratory season, some territories (e.g., Kansas) experienced major reporting delays and errors. `cfaepim` was built to handle reporting anomalies—the user is able to select start and cutoff intervals, in addition to exclusion intervals, for particular territories and epiweeks.
+## [MSR](#msr)
 
-As an example, take the `2024-03-30` target reporting date, where data from the following epiweeks were excluded from fitting for Arizona, due reporting inadequacies:
+_How to install MSR and what to know before installing._
 
-```yaml
-[location_specific_excluded_dates]
-AZ = ["2024-03-04", "2024-03-09",
-      "2024-03-11", "2024-03-16"]
-```
+For the reader's edification, the author recommends proceeding through the following tutorials before this tutorial (the arrows indicate the recommended order of tutorials, but this order does not _need_ to be followed): [Getting started with `pyrenew`](https://cdcgov.github.io/multisignal-epi-inference/tutorials/getting_started.html) &rarr; [Fitting a basic renewal model](https://cdcgov.github.io/multisignal-epi-inference/tutorials/basic_renewal_model.html) &rarr; [Fitting a hospital admissions-only model](https://cdcgov.github.io/multisignal-epi-inference/tutorials/hospital_admissions_model.html).
 
-Below find some `cfaepim` forecasts:
+The following prerequisites and installation help come from the following [tutorial](https://cdcgov.github.io/multisignal-epi-inference/tutorials/getting_started.html) but are worth reproducing here:
 
-![The 4 week projected influenza hospitalizations (quantilized) for target epiweek 2024-03-30. The `cfaepim` forecast was made excluding the epiweek ending on 2024-03-20; this exclusion was reported in the epiweek's `output` folder.](./source/figures/NY_cfaepim_2024-03-30_snapshot.png){ width=75% }
+> ### Prerequisites
+>
+> This tutorial assumes some pre-existing knowledge of infectious disease dynamics and Python programming. Before you dive in, we recommend:
+>
+> -   Installing Python3 (use tools like [pyenv](https://realpython.com/intro-to-pyenv/) or [compile and install](https://ubuntuhandbook.org/index.php/2023/05/install-python-3-12-ubuntu/) from the [release page](https://www.python.org/downloads/))
+-   Familiarity with installing and loading modules in python, and with virtual environment management (we recommend [poetry](https://python-poetry.org/docs/))
+-   Familiarity with the concept of a [class](https://realpython.com/python-classes/) and [metaclass](https://realpython.com/courses/python-metaclasses/) in python
+-   Familiarity with Bayesian inference, and a working understanding of MCMC methods used to fit Bayesian models to data (some resources are available [here](https://mc-stan.org/docs/2_18/reference-manual/effective-sample-size-section.html), and [here](https://xcelab.net/rm/))
+>
+> ### Installing pyrenew
+>
+> You’ll need to install pyrenew using either poetry or pip. To install pyrenew using poetry, run the following command from within the directory containing the pyrenew project:
+>
+> ```poetry install```
+>
+> To install pyrenew using pip, run the following command:
+>
+>
+```pip3 install git+https://github.com/CDCgov/multisignal-epi-inference@main#subdirectory=model```
 
-![Historical influenza hospitalizations for NY preceding the target epiweek 2024-03-30, along with a quantilized `cfaepim` forecast.](./source/figures/NY_cfaepim_2024-03-30_historical.png){ width=75% }
+## [Renewal Modeling](#renewal-modeling)
 
-# Short Tour Of Epidemia
+_A brief historical and epidemiological coverage of the renewal equation._
 
-As described in Epidemia's Introduction page:
+A comprehensive introduction to renewal modeling has little place in this tutorial, for the sake of time (of both the reader and the author) and as there are already such introductions elsewhere; however, the following references might well stoke readers' remembrance of the renewal equation and its use in infectious disease modeling.
 
-> The open-source R (R Core Team [2020](https://imperialcollegelondon.github.io/epidemia/articles/model-introduction.html#ref-rcore_2011)) package **epidemia** provides a framework for Bayesian, regression-oriented modeling of the temporal dynamics of infectious diseases. Typically, but not exclusively, these models are fit to areal time-series; i.e. aggregated event counts for a given population and period. Disease dynamics are described explicitly; observed data are linked to latent infections, which are in turn modeled as a self-exciting process tempered by time-varying reproduction numbers. Regression models are specified for several objects in the model. For example, reproduction numbers are expressed as a transformed predictor, which may include both covariates and autoregressive terms. A range of prior distributions can be specified for unknown parameters by leveraging the functionality of **rstanarm** (Goodrich et al. [2020](https://imperialcollegelondon.github.io/epidemia/articles/model-introduction.html#ref-goodrich_2020)). Multilevel models are supported by partially pooling covariate effects appearing in the predictor for reproduction numbers between multiple populations.
+Also, regarding background familiarities, if the terms _generation interval_ or _basic reproduction number_ or _effective reproduction number_ are fuzzy concepts to the reader, then the author suggests taking a step back from this tutorial and referencing some of the resources found in the [Appendix](#appendix).
 
-Further, the following pages on Epidemia might aid the reader in their understanding:
+__Renewal Equation__ (Historical) [@champredon2018equivalence, pp.3258-3267]
 
-* [Epidemia's Website](https://imperialcollegelondon.github.io/epidemia/index.html)
+> The renewal equation was introduced by Euler in 1767 [@euler1767recherches] in his work on population dynamics and was reframed in a modern continuous formulation by Lotka in 1907 [@lotka1907relation]. Lotka's formulation is usually expressed as $$B(t) = \int^{\infty}_0 B(t-a) p(a) \nu(a) da$$ where $B(t)$ is the number of births at time $t$, $p(a)$ is the probability of survival to age $a$, and $\nu(a)$ is the fertility at age $a$. This equation was derived for demographic studies and has been adapted to epidemics using an "age of infection" model that was described in the seminal work of Kermack and McKendrick in 1927 [@kermack1927contribution]. This epidemic model changes the interpretation of the variables: $B(t)$ represents the number of new infectious individuals at time $t$, $p(a)$ the probability to be infectious a time units after acquiring the disease, and $\nu(a)$ the "transmission potential" that is, the average number of secondary infections at "infection age" $a$.
+
+<!--
+TODO:
+
+Explore the equations under discretization with different values for the parameters
+
+Let us take a moment to explore the above equation from Lotka's but not Kermack and McKendrick's perspective. We can imagine several scenarios, -->
+
+__Renewal Equation__ (Epidemiology) [@pakkanen2023unifying, pp.35]
+
+> The form of this renewal equation when only considering $\mathscr{R}_0$ is exactly what is commonly used in epidemic modelling where the incidence of infections $I(t)$ follows a renewal equation given by $$I(t) = \mathscr{R}_0 \int_0^{\infty} I(t-u)g(u)du$$ where $g(\cdot)$ is the probability density function (PDF) of the generation interval. Introducing a time-varying reproduction number $\mathscr{R}(t)$ within the Bellman–Harris process in general does not simply entail replacing $\mathscr{R}_0$ with $\mathscr{R}(t)$ in the renewal equation.
+
+## [Epidemia](#epidemia)
+
+_A brief introduction to Epidemia._
+
+These resources constitute the bulk of the [Epidemia](https://imperialcollegelondon.github.io/epidemia/index.html) content relevant to this tutorial:
+
 * [Epidemia Model Description Page](https://imperialcollegelondon.github.io/epidemia/articles/model-description.html)
 * [Epidemia Model Schematic Page](https://imperialcollegelondon.github.io/epidemia/articles/model-schematic.html)
 * [Epidemia Model Implementation Page](https://imperialcollegelondon.github.io/epidemia/articles/model-implementation.html)
 
-## Problem Statement
+The Model Description Page includes references to the papers on which Epidemia is based. Rather than attempt to re-describe the general ethos of Epidemia and the class of problems it aims to help its users solve, the author reproduces these descriptions from Epedmia.
 
-_The following description is a slightly reworded version of some of Epidemia's introduction page, geared towards influenza hospitalization forecasting. This problem statement attempts to further provide the reader with an intuition for how Epidemia is used in infectious disease modelling._
+On Epidemia...
 
-Suppose, over some interval of time, we received reported daily influenza hospitalization counts for a US territory; these influenza hospitalizations may be represented as $$Y = (Y_1, \dotsc, Y_n)$$
+> The open-source R (R Core Team [2020](https://imperialcollegelondon.github.io/epidemia/articles/model-introduction.html#ref-rcore_2011)) package **epidemia** provides a framework for Bayesian, regression-oriented modeling of the temporal dynamics of infectious diseases. Typically, but not exclusively, these models are fit to areal time-series; i.e. aggregated event counts for a given population and period. Disease dynamics are described explicitly; observed data are linked to latent infections, which are in turn modeled as a self-exciting process tempered by time-varying reproduction numbers. Regression models are specified for several objects in the model. For example, reproduction numbers are expressed as a transformed predictor, which may include both covariates and autoregressive terms. A range of prior distributions can be specified for unknown parameters by leveraging the functionality of **rstanarm** (Goodrich et al. [2020](https://imperialcollegelondon.github.io/epidemia/articles/model-introduction.html#ref-goodrich_2020)). Multilevel models are supported by partially pooling covariate effects appearing in the predictor for reproduction numbers between multiple populations.
 
-where $n$ denotes the $n$-th time step. Further, $Y_t$, i.e. the influenza hospitalization count for day $t$ can be...
+On the class of problems Epidemia is aimed at addressing...
 
-> ...modeled as deriving from past new infections $i_s$, $s<t$, and some parameter $\alpha_t>0$, a multiplier, which in most contexts represents an instantaneous _ascertainment rate_. The general model can be expressed as $$Y_t \sim p(y_t, \phi)$$ $$y_t = \alpha_t \sum_{s<t}i_s \pi_{t-s}$$ where $y_t$ is the expected value of the data distribution and $\phi$ is an auxiliary parameter. $\pi_k$ is typically the time distribution from an infection to an observation, which we refer to as the infection to observation distribution. More generally, however, $\pi_k$ can be used to obtain any linear combination of past infections. New infections $i_t$ at times $t>0$ are modeled through a renewal equation, and are tempered by a non-negative parameter $\mathscr{R}_t$ which represents the reproduction number at time $t$. Formally $$i_t = \mathscr{R}_t \sum_{s<t}i_s g_{t-s}$$ where $g_k$ is a probability mass function for the time between infections. The recursion is initialized with seeded infections $i_{v:0}, v<0$, which are treated as unknown parameters. All parameters are assigned priors, i.e. $$i_{v:0},\mathscr{R},\phi,\alpha \sim p(\cdot)$$ where $\mathscr{R} = (\mathscr{R}_1,\dotsc,\mathscr{R}_n)$ and $\alpha=(\alpha_1,\dotsc,\alpha_n)$. The posterior distribution is then proportional to prior and likelihood, i.e.  $$p(i_{v:0},\mathscr{R},\phi,\alpha∣Y)\propto p(i_{v:0})p(\mathscr{R})p(\phi)p(\alpha)\prod_t p(Y_t∣y_t,\phi)$$.
+> We now formulate the basic version of the model for one homogeneous population. The same model can be used for multiple regions or groups jointly. Suppose we observe a non-negative time series of count data $Y=(Y_1,\dotsc,Y_n)$ for a single population. This could for example be daily death or case incidence. $Y_t$ is modeled as deriving from past new infections is, $s<t$, and some parameter $\alpha_t > 0$, a multiplier, which in most contexts represents an instantaneous ascertainment rate. The general model can be expressed as deriving from past new infections $i_s$, $s<t$, and some parameter $\alpha_t>0$, a multiplier, which in most contexts represents an instantaneous _ascertainment rate_. The general model can be expressed as $$Y_t \sim p(y_t, \phi)$$ $$y_t = \alpha_t \sum_{s<t}i_s \pi_{t-s}$$ where $y_t$ is the expected value of the data distribution and $\phi$ is an auxiliary parameter. $\pi_k$ is typically the time distribution from an infection to an observation, which we refer to as the infection to observation distribution. More generally, however, $\pi_k$ can be used to obtain any linear combination of past infections. New infections $i_t$ at times $t>0$ are modeled through a renewal equation, and are tempered by a non-negative parameter $\mathscr{R}_t$ which represents the reproduction number at time $t$. Formally $$i_t = \mathscr{R}_t \sum_{s<t}i_s g_{t-s}$$ where $g_k$ is a probability mass function for the time between infections. The recursion is initialized with seeded infections $i_{v:0}, v<0$, which are treated as unknown parameters. All parameters are assigned priors, i.e. $$i_{v:0},\mathscr{R},\phi,\alpha \sim p(\cdot)$$ where $\mathscr{R} = (\mathscr{R}_1,\dotsc,\mathscr{R}_n)$ and $\alpha=(\alpha_1,\dotsc,\alpha_n)$. The posterior distribution is then proportional to prior and likelihood, i.e.  $$p(i_{v:0},\mathscr{R},\phi,\alpha∣Y)\propto p(i_{v:0})p(\mathscr{R})p(\phi)p(\alpha)\prod_t p(Y_t∣y_t,\phi)$$.
 
-The aforementioned Epidemia schematics page is worth looking at; see the Appendix.
+## [`cfaepim`](#cfaepim)
 
-# Epidemia For Influenza And MSR Equivalent
+_An introduction to `cfaepim`._
 
-The `cfaepim` model consists of pre- and post-processing components that interface with a model instantiated via Epidemia. This Epidemia model is separated into three sections: (1) a transmission component, (2) an observation component, and (3) a function that integrates the other Epidemia-related components, which includes the infections component.
+In addition to daily death or case incidence, Epidemia can be made to support count data for reported influenza hospitalizations from individual jurisdictions—this data stream, for the United States, is exactly what `cfaepim` is build to model.
 
-<!-- These three sections can be found across the code in `model.R`, which is detailed holistically in the Appendix. -->
+The `cfaepim` model is written in `R` and consists of pre- and post-processing functions that interface with an Epidemia-instantiated model.
 
-## Parameters & Priors
+The calls to Epidemia made in `cfaepim` are spread across three sections: (1) a transmission component, (2) an observation component, and (3) an infections component. In component (3), the earlier transmission and observation components are called and incorporated. See
 
-The variables and their values below are referenced in subsequent sections. Skimming these values now might prove useful. The author of this tutorial cannot currently justify the values of these variables, but is in the process of obtaining justifications. The `cfaepim` code in this section was originally contained in a `toml` configuration file; parameter values are accessed via `params$<config_param>` in upcoming code blocks.
+Since Epidemia affords users a variety of modeling approachings, such as treating infections as parameters or incorporating susceptible depletion, many different models can be built. The explanation and subsequent mathematics below describe what variety of Epidemia model `cfaepim` became.
+
+### [Model Description](#model-description)
+
+Denote[^note_on_descr] $P \in \mathbb{N}$ the population of some US territory. Denote influenza hospitalizations in this terrority over an interval of time $Y = (Y_1, \dotsc, Y_n), \quad Y_t \in \mathbb{N}, \quad t \in \{1, \dotsc, n\}$.
+
+Let the hospitalizations at time $Y_t$ be drawn from negative binomial distribution with $y_t$ as the mean and $\phi \sim \mathcal{N}(10, 5)$ as the dispersion, i.e. $Y_t \sim \text{NB}(y_t, \phi)$.
+
+The expected number of influenza hospitalizations at time $t$, $y_t = \alpha_t \sum_{s<t}i_s' \pi_{t-s}$, is the weighted sum of past infections at times $s < t$, where the weights are given by a delay distribution (Epidemia calls this the _infection to observation distribution_), scaled by the ascertainment rate $\alpha_t > 0$ (i.e. the rate at which influenza infections become reported hospitalizations) for that point in time.
+
+Further, the instananeous ascertainment rate at time $t$, $\alpha_t = h^{-1}_1(\eta_{1,t})$, is a scaled-logit transformed linear predictor.
+
+The scaled-logit is given by $h^{-1}_1(x) = \frac{1}{1 + e^{-x}}, \quad h^{-1}_1: \mathbb{R} \to (0,1)$.
+
+The linear predictor, $\eta_{1,t} = \beta_{1,0} + \sum_{i=1}^9 \beta_{1,i} x_i$, at time $t$ consists of several effects and intercept $\beta_{1,0} \sim \mathcal{N}(-6.5, 0.5)$. In particular, there is an effect for each day of the week (where the reference day is Thursday, indexed 4) with coffecients $\beta_{1,1}, \dotsc, \beta_{1,6} \sim \mathcal{N}(0, 0.25)$, an effect for days that are holidays with coffecient  $\beta_{1,7} \sim \mathcal{N}(-0.2, 0.2)$, an effect for days that occur after a holiday with coffecient $\beta_{1,8} \sim \mathcal{N}(0, 0.2)$, and an effect for days occurring before observations with coefficient $\beta_{1,9} \sim \mathcal{N}(-50, 0.01)$.
+
+Altogether, then, we have:
+
+$$\alpha_t = h^{-1}_1(\eta_{1,t}) = \frac{1}{1 + e^{-\eta_{1,t}}} =  \frac{1}{1 + e^{-\big(\beta_{1,0} + \sum_{i=1}^9 \beta_{1,i} x_i\big)}}$$
+
+New infections at time $t$, $i_t = \mathscr{R}_t \sum_{s < t} i_s g_{t-s}$, are a weighted sum of past infections at times $s < t$, where the weights are given by $g$, _a probability mass function for the time between infections_, that is scaled by the rate at that point in time at which new infections arise from existing infections, i.e. the reproduction number at time $t$, $\mathscr{R}_t$.
 
 
-```yaml
-day_of_week_effect_prior_modes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-day_of_week_effect_prior_scales = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
-holiday_eff_prior_mode = -0.2
-holiday_eff_prior_scale = 0.2
-post_holiday_eff_prior_mode = 0.0
-post_holiday_eff_prior_scale = 0.2
-recency_eff_prior_mode = 0.0
-recency_eff_prior_scale = 0.1
-recency_effect_length = 0
+NOTE: The remaining stands to be done. (1) Describe the depletion of susceptibles. (2) Describe the seeding. (3) Describe the calculations for $\mathscr{R}_t$. As for (3), this has already been somewhat completed in the PR.
 
-generation_time_dist = [0.233, 0.359, 0.198, 0.103, 0.053, 0.027, 0.014, 0.007, 0.003, 0.002, 0.001]
-ihr_intercept_prior_mode = -6.5
-ihr_intercept_prior_scale = 0.5
-inf_model_prior_infections_per_capita = 0.0001
-inf_model_seeds = 8
-inf_to_hosp_dist = [0.05, 0.1, 0.175, 0.225, 0.175, 0.125, 0.075, 0.05, 0.025]
-max_rt = 3.0
-n_pre_observation_days = 14
-non_obs_effect_prior_mode = -50
-non_obs_effect_prior_scale = 0.01
-reciprocal_dispersion_prior_mode = 10
-reciprocal_dispersion_prior_scale = 5
-reference_day_of_week = 4
-rt_intercept_prior_mode = -0.4054651
-rt_intercept_prior_scale = 0.3
-seed = 54321
-susceptible_fraction_prior_mode = 0.9
-susceptible_fraction_prior_scale = 0.1
-weekly_rw_prior_scale = 0.25
-first_fitting_date = "2023-09-15"
 
-[mcmc]
-adapt_delta = 0.9
-max_treedepth = 12
-n_chains = 1
-n_warmup = 1000
-n_iter = 2000
-```
+<!-- these come from a susceptible population $S_t \in [0, P]$.
 
-## Transmission Component
+The delay distribution is given by:
+
+$$\pi = \begin{bmatrix} 0.05 & 0.1 &  0.175 & 0.225 &  0.175 &  0.125 & 0.075 &  0.05 & 0.025\end{bmatrix}$$
+ -->
+
+
+__Terms From The Explanation__
+
+$$
+\begin{aligned}
+& P \in \mathbb{N} \\
+& Y = (Y_1, \dotsc, Y_n), \quad Y_t \in \mathbb{N}, \quad t \in \{1, \dotsc, n\} \\
+& Y_t \sim \text{NB}(y_t, \phi) \\
+& \phi \sim \mathcal{N}(10, 5) \\
+& y_t = \alpha_t \sum_{s<t}i_s' \pi_{t-s} \\
+& \alpha_t = h^{-1}_1(\eta_{1,t}) \\
+& h^{-1}_1(x) = \frac{1}{1 + e^{-x}}, \quad h^{-1}_1: \mathbb{R} \to (0,1)  \\
+& \eta_{1,t} = \beta_{1,0} + \sum_{i=1}^9 \beta_{1,i} x_i \\
+& \beta_{1,0} \sim \mathcal{N}(-6.5, 0.5) \\
+& \beta_{1,1}, \dotsc, \beta_{1,6} \sim \mathcal{N}(0, 0.25) \\
+& \beta_{1,7} \sim \mathcal{N}(-0.2, 0.2) \\
+& \beta_{1,8} \sim \mathcal{N}(0, 0.2) \\
+& \beta_{1,9} \sim \mathcal{N}(-50, 0.01)\\
+& \pi = \begin{bmatrix} 0.05 & 0.1 &  0.175 & 0.225 &  0.175 &\\  0.125 & 0.075 &  0.05 & 0.025\end{bmatrix} \\
+& i_t' = \mathscr{R}_t \sum_{s < t} i_s g_{t-s} \\
+& g = \begin{bmatrix} 0.233 & 0.359 & 0.198 & 0.103 & 0.053 &\\ 0.027 & 0.014 & 0.007 & 0.003 & 0.002 & 0.001\end{bmatrix}\\
+& i_k = i, \quad k \in \{v, \dotsc, 0\}, \quad v = -8 \\
+& i \sim \text{Exp}(\tau^{-1}) \\
+& \tau \sim \text{Exp}(\lambda_0), \quad \lambda_0 \in (0, \infty) \\
+& S_t \in [0, P] \\
+& i_t = S_{t-1} \bigg(1 - \exp\bigg(-\frac{i_t'}{P}\bigg) \bigg) \\
+& S_t = S_{t-1} - i_t \\
+& \frac{S_{v-1}}{P} \sim \mathcal{N}(0.9, 0.1) \\
+& \mathscr{R}_t = h^{-1}_2(\eta_{2,t}) \\
+& h^{-1}_2(x) = \frac{K}{1 + e^{-x}}, \quad h^{-1}_2: \mathbb{R} \to (0, K), \quad K = 3\\
+& \eta_{2,t} = \beta_{2,0} + W_t \\
+& \beta_{2,0} \sim \mathcal{N}(-0.4054651, 0.3) \\
+& W_t = W_{t-1} + \gamma_t, \quad W_0 = 0\\
+& \gamma_t \sim \mathcal{N}(0, \sigma) \\
+& \sigma \sim \mathcal{N}^{+}(0, 0.25) \\
+& p(i_{v:0},\mathscr{R},\phi,\alpha∣Y) \propto p(i_{v:0})p(\mathscr{R})p(\phi)p(\alpha)\prod_t p(Y_t∣y_t,\phi)
+\end{aligned}
+$$
+
+[^note_on_descr]: This description can be reproduced for each US territory. I decided, for clarity, to not index variables here by territory, e.g. if Alabama is territory $1$, then $Y_t^{(1)}$ would be the influenza hospitalizations at time $t$ for territory $1$.
+
+
+### [Transmission Component](#transmission)
 
 In `cfaepim`, the influenza hospitalizations for each US territory are modelled separately, as though each territory's influenza dynamics are completely unique, i.e. independent of the influenza dynamics in other territories. This corresponds to an "unpooled" modelling case (see [Epidemia's partial pooling page](https://imperialcollegelondon.github.io/epidemia/articles/partial-pooling.html)). For each US territory, the effective reproduction number at time $t$, $\mathscr{R}_t$, can be modeled as a transformed linear prediction:
 
@@ -148,55 +256,8 @@ $$\eta_t = \beta_0 + W_t$$
 
 where $W_t$ is a random walk satisfying $$W_t = W_{t-1} + \gamma_t$$ with $t > 0$ and $W_0 = 0$, and $\gamma_t \sim \mathcal{N}(0, \sigma)$, where $\sigma \sim \mathcal{N}^{+}(0, 0.25)$ since `weekly_rw_prior_scale = 0.25`. Note that the $\mathscr{R}_t$ intercept, i.e. $\beta_0$, has a prior. Since `rt_intercept_prior_mode = -0.4054651` and  `rt_intercept_prior_scale = 0.3`, $\beta_0 \sim \mathcal{N}(-0.4054651, 0.3)$.
 
-### As Code In `cfaepim`
 
-```r
-#' Build the R(t) component of a "covariate
-#' light" epidemia model.
-#'
-#' @param rt_intercept_prior_mode prior mode
-#' for R(t) intercept. Prior is Normal on the
-#' transformed (scaled logit) scale.
-#' @param rt_intercept_prior_scale prior standard
-#' deviation (scale) for R(t) intercept. Prior is
-#' Normal on the transformed (scaled logit) scale.
-#' @param max_rt Maximum permitted R(t) value (upper
-#' limit of the scaled logit), on the natural scale.
-#' R(t) will be permitted to range between 0 and
-#' this value.
-#' @param rw_prior_scale prior standard deviation
-#' (scale parameter) for the random walk on R(t).
-#' Random walk steps are Normal on the transformed
-#' (scaled logit) scale.
-#' @return the R(t) model, as the output
-#' of an [epidemia::epirt()] call.
-#' @export
-build_light_rt <- function(rt_intercept_prior_mode,
-                           rt_intercept_prior_scale,
-                           max_rt,
-                           rw_prior_scale) {
-  rt_model <- epidemia::epirt(
-    formula = as.formula(
-      sprintf(
-        paste0(
-          "R(location, date) ~ 1 + ",
-          "rw(time = week, gr = location, prior_scale = %f)"
-        ),
-        rw_prior_scale
-      )
-    ),
-    prior_intercept = rstanarm::normal(
-      location = rt_intercept_prior_mode,
-      scale = rt_intercept_prior_scale
-    ),
-    link = epidemia::scaled_logit(K = max_rt)
-  )
-  return(rt_model)
-}
-```
-
-
-## Observation Component
+### [Observation Component](#observation)
 
 Proceeding, each US territory has is own time series of observed influenza hospitalizations $Y = (Y_1, \dotsc, Y_n)$. The observed influenza hospitalizations at time $t$ are given by $$Y_t \sim \mathcal{D}(y_t, \phi)$$ where $\mathcal{D}(y_t, \phi)$ is the sampling distribution with auxiliary parameter $\phi$.
 
@@ -237,407 +298,216 @@ where
 
 Within `cfaepim`, we have the infection to hospitalization delay distribution as $$\pi = \begin{bmatrix} 0.05 & 0.1 &  0.175 & 0.225 &  0.175 &  0.125 & 0.075 &  0.05 & 0.025\end{bmatrix}$$ given the selected value for `inf_to_hosp_dist`.
 
+## [Dataset](#dataset)
 
-The corresponding code in `cfaepim`:
+The `cfaepim` repository was employed during the 2023-24 respiratory season to forecast weekly influenza hospitalizations in US territories.
 
-```r
-#' Build the observation component of a "covariate
-#' light" epidemia model.
-#'
-#' @param inf_to_hosp_dist infection to hospitalization
-#' delay distribution, passed as the `i2o` parameter
-#' to [epidemia::epiobs()].
-#' @param ihr_intercept_prior_mode Normal prior mode for
-#' the overall infection (observed) hospitalization rate
-#' (i.e. the probability that an arbitrary infected individual
-#' gets observed admitted to the hospital), before taking
-#' into account any covariates.
-#' Specified on the transformed scale (see `link` parameter).
-#' @param ihr_intercept_prior_scale Normal prior scale for the
-#' intercept of the regression predicting the
-#' infection (observed) hospitalization rate
-#' (i.e. the probability that an arbitrary infected individual
-#' gets observed admitted to the hospital), before taking
-#' into account any covariates.
-#' Specified on the transformed scale (see `link` parameter).
-#' @param day_of_week_eff_prior_modes Normal prior
-#' modes for the day of the week effect on observation
-#' probability, relative to the reference day of the week.
-#' Should be a vector of length 6.
-#' Specified on the transformed scale (see `link` parameter).
-#' @param day_of_week_eff_prior_scales Normal prior
-#' scales for the day of the week effect on observation
-#' probability, relative to the reference day of the week.
-#' Should be a vector of length 6.
-#' Specified on the transformed scale (see `link` parameter).
-#' @param non_obs_effect_prior_mode Normal prior
-#' mode for the change in the observation probability
-#' during the nonobservation (seeding) period. Useful
-#' for model initialization. Should typically be a large
-#' negative number.
-#' Specified on the transformed scale (see `link` parameter).
-#' @param non_obs_effect_prior_scale Normal prior
-#' scale for the change in the observation probability
-#' during the nonobservation (seeding) period. Useful
-#' for model initialization. Should typically be a small
-#' number, to enforce the large negative effect given in
-#' non_obs_effect_prior_mode.
-#' Specified on the transformed scale (see `link` parameter).
-#' @param inv_dispersion_prior_mode Normal prior mode
-#' for the reciprocal dispersion of the negative binomial
-#' observation process.
-#' @param inv_dispersion_prior_mode Normal prior scale
-#' for the reciprocal dispersion of the negative binomial
-#' observation process.
-#' @param link link function for the observation model,
-#' passed as the `link` parameter to [epidemia::epiobs()]
-#' Default `"logit"`.
-#' @return the observation model, as the output
-#' of an [epidemia::epiobs()] call.
-#' @export
-build_light_obs <- function(inf_to_hosp_dist,
-                            ihr_intercept_prior_mode,
-                            ihr_intercept_prior_scale,
-                            day_of_week_eff_prior_modes,
-                            day_of_week_eff_prior_scales,
-                            holiday_eff_prior_mode,
-                            holiday_eff_prior_scale,
-                            post_holiday_eff_prior_mode,
-                            post_holiday_eff_prior_scale,
-                            non_obs_effect_prior_mode,
-                            non_obs_effect_prior_scale,
-                            inv_dispersion_prior_mode,
-                            inv_dispersion_prior_scale,
-                            link = "logit") {
-  return(epidemia::epiobs(
-    formula = as.formula(paste0(
-      "hosp ~ 1 + day_of_week + ",
-      "is_holiday + ",
-      "is_post_holiday + ",
-      "nonobservation_period"
-    )),
-    ## Add a covariate for the
-    ## nonobservation window to
-    ## leave an initial evolution
-    ## period with no observations
-    i2o = inf_to_hosp_dist,
-    link = link,
-    family = "neg_binom",
-    prior_intercept = rstanarm::normal(
-      location = ihr_intercept_prior_mode,
-      scale = ihr_intercept_prior_scale
-    ),
-    prior = rstanarm::normal(
-      location = c(
-        day_of_week_eff_prior_modes,
-        holiday_eff_prior_mode,
-        post_holiday_eff_prior_mode,
-        non_obs_effect_prior_mode
-      ),
-      ## a large negative non_obs_effect
-      ## effectively conditions on detection
-      ## prob = 0 outside the observation period
-      scale = c(
-        day_of_week_eff_prior_scales,
-        holiday_eff_prior_scale,
-        post_holiday_eff_prior_scale,
-        non_obs_effect_prior_scale
-        ## non-obs prior scale
-        ## should be small to
-        ## enforce non-obs effect
-        ## close to (large negative) mode
-      )
-    ),
-    prior_aux = rstanarm::normal(
-      location = inv_dispersion_prior_mode,
-      scale = inv_dispersion_prior_scale
-    )
-  ))
-}
+As for the influenza dynamics of each US state, `cfaepim` treats these dynamics as being unique to the state; this is typically termed the "unpooled" approach, which is the same as assuming that information on influenza dynamics in other states will not provide any guidance on the influenza dynamics in the current state. While `cfaepim` constitutes an "unpooled" approach, Epidemia does allow for [partial pooling](https://imperialcollegelondon.github.io/epidemia/articles/partial-pooling.html).
+
+The influenza hospital admissions data `cfaepim` uses was released by the Center For Disease Control and Prevention (CDC) (see [heathdata.gov](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh)). This data is commonly referred to as the "NHSN" (the National Healthcare Safety Network) dataset[^flusight].
+
+While not all columns[^columns] are represented here, the slightly modified version of the data, incorporating US Census 2020 population figures for each state, looks like:
+
+[^columns]: The column names of the dataset employed in `cfaepim` are ['location', 'date', 'hosp', 'epiweek', 'epiyear', 'day_of_week', 'is_weekend', 'is_holiday', 'is_post_holiday', 'recency', 'week', 'location_code', 'population', 'first_week_hosp']
+
+| location | date       | hosp | … | location_code | population | first_week_hosp |
+|----------|------------|------|---|---------------|------------|-----------------|
+| AK       | 2023-09-15 | 0    | … | 02            | 732673     | 2               |
+| AK       | 2023-09-16 | 2    | … | 02            | 732673     | 2               |
+| AK       | 2023-09-17 | 0    | … | 02            | 732673     | 2               |
+| AK       | 2023-09-18 | 0    | … | 02            | 732673     | 2               |
+| AK       | 2023-09-19 | 1    | … | 02            | 732673     | 2               |
+| AK       | 2023-09-20 | 2    | … | 02            | 732673     | 2               |
+| AK       | 2023-09-21 | 1    | … | 02            | 732673     | 2               |
+| AK       | 2023-09-22 | 1    | … | 02            | 732673     | 2               |
+| …        | …          | …    | … | …             | …          | …               |
+| WY       | 2024-01-07 | 8    | … | 56            | 578803     | 0               |
+| WY       | 2024-01-08 | 3    | … | 56            | 578803     | 0               |
+| WY       | 2024-01-09 | 4    | … | 56            | 578803     | 0               |
+| WY       | 2024-01-10 | 10   | … | 56            | 578803     | 0               |
+| WY       | 2024-01-11 | 14   | … | 56            | 578803     | 0               |
+| WY       | 2024-01-12 | 10   | … | 56            | 578803     | 0               |
+| WY       | 2024-01-13 | 7    | … | 56            | 578803     | 0               |
+
+For some weeks during the respiratory season, some territories (e.g., Kansas) experienced major reporting delays and errors. To handle such reporting anomalies, `cfaepim` users are able to select data start and cutoff intervals, in addition to data exclusion intervals, for particular territories and epiweeks.
+
+[^flusight]: To see forecasts from influenza models using this data, see [here](https://github.com/cdcepi/FluSight-forecasts). For more information regarding how this data has been used for influenza forecasting, see [here](https://github.com/cdcepi/FluSight-forecast-hub/tree/main/target-data).
+
+The following is influenza hospital admissions for New York state from the NHSN dataset over the last few years:
+
+![New York state influenza hospitalizations.](./figures/NY_2022-01-01-2024-03-10.png){ width=75% }
+
+The following are some `cfaepim` forecasts for NY during the 2023-24 season:
+
+![The 4 week projected influenza hospitalizations (quantilized) for target epiweek 2024-03-30. The `cfaepim` forecast was made excluding the epiweek ending on 2024-03-20; this exclusion was reported in the epiweek's `output` folder.](./figures/NY_cfaepim_2024-03-30_snapshot.png){ width=75% }
+
+![Historical influenza hospitalizations for NY preceding the target epiweek 2024-03-30, along with a quantilized `cfaepim` forecast.](./figures/NY_cfaepim_2024-03-30_historical.png){ width=75% }
+
+For each forecasting week in the 2023-24 respiratory season, the author of `cfaepim` stored the NHSN data as it stood prior to making forecasts. For this reason, the least biased method of comparing `cfaepim` and MSR-`cfaepim` forecasts is by week.
+
+# [MSR-Porting Of `cfaepim`](#msr-port-cfaepim)
+
+__Section Overview__:
+
+1. The author begins by outlining the `cfaepim` configuration file.
+2. Next, the author details the imports required for the re-implementation.
+3. Finally, the author builds the components of MSR-`cfaepim` one component at a time, while explaining the MSR design principles that inform the decision-making in the re-implementation.
+
+## [Configuration File](#configuration)
+
+The following variables and their values (which the author has stored in a file called `params.toml`) come from the specification of `cfaepim` in the [Model Description](#model-description).
+
+Skimming these values now might prove useful, but knowing them in detail is not necessary. The author of this tutorial cannot currently justify the values of these variables, but is in the process of obtaining justifications.
+
+```yaml
+day_of_week_effect_prior_modes = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+day_of_week_effect_prior_scales = [0.25, 0.25, 0.25, 0.25, 0.25, 0.25]
+holiday_eff_prior_mode = -0.2
+holiday_eff_prior_scale = 0.2
+post_holiday_eff_prior_mode = 0.0
+post_holiday_eff_prior_scale = 0.2
+recency_eff_prior_mode = 0.0
+recency_eff_prior_scale = 0.1
+recency_effect_length = 0
+
+generation_time_dist = [0.233, 0.359, 0.198, 0.103, 0.053, 0.027, 0.014, 0.007, 0.003, 0.002, 0.001]
+ihr_intercept_prior_mode = -6.5
+ihr_intercept_prior_scale = 0.5
+inf_model_prior_infections_per_capita = 0.0001
+inf_model_seeds = 8
+inf_to_hosp_dist = [0.05, 0.1, 0.175, 0.225, 0.175, 0.125, 0.075, 0.05, 0.025]
+max_rt = 3.0
+n_pre_observation_days = 14
+non_obs_effect_prior_mode = -50
+non_obs_effect_prior_scale = 0.01
+reciprocal_dispersion_prior_mode = 10
+reciprocal_dispersion_prior_scale = 5
+reference_day_of_week = 4
+rt_intercept_prior_mode = -0.4054651
+rt_intercept_prior_scale = 0.3
+seed = 54321
+susceptible_fraction_prior_mode = 0.9
+susceptible_fraction_prior_scale = 0.1
+weekly_rw_prior_scale = 0.25
+first_fitting_date = "2023-09-15"
+
+[location_specific_start_dates]
+
+[location_specific_cutoff_dates]
+
+[location_specific_excluded_dates]
+KS = ["2024-01-30", "2024-01-31",
+      "2024-02-01", "2024-02-02",
+      "2024-02-03", "2024-02-04",
+      "2024-02-05", "2024-02-06",
+      "2024-02-07", "2024-02-08",
+      "2024-02-09", "2024-02-10",
+      "2024-02-11", "2024-02-12",
+      "2024-02-13", "2024-02-14",
+      "2024-02-15", "2024-02-16",
+      "2024-02-17"]
+AZ = ["2024-03-04", "2024-03-09",
+      "2024-03-11", "2024-03-16"]
+GA = ["2024-03-11", "2024-03-12",
+      "2024-03-22", "2024-03-23"]
+HI = ["2024-01-30", "2024-01-31",
+      "2024-02-01"]
+IL = ["2024-03-17", "2024-03-18"]
+IA = ["2024-03-23"]
+KY = ["2024-03-01", "2024-03-14"]
+MO = ["2024-03-10"]
+NV = ["2024-02-23", "2024-02-26"]
+NH = ["2024-03-21", "2024-03-22",
+      "2024-03-23"]
+NY = ["2024-03-20"]
+NC = ["2024-03-14", "2024-03-15"]
+OK = ["2024-03-19"]
+RI = ["2024-02-18", "2024-02-19",
+      "2024-02-20", "2024-02-21",
+      "2024-02-26"]
+SD = ["2024-03-21"]
+TN = ["2024-03-16"]
+TX = ["2024-03-21"]
+WA = ["2024-03-08", "2024-03-12"]
+WI = ["2024-02-05"]
+WV = ["2024-03-03"]
+
+[mcmc]
+adapt_delta = 0.9
+max_treedepth = 12
+n_chains = 1
+n_warmup = 1000
+n_iter = 2000
+
+[postprocess]
+exclude = ["HI"]
 ```
 
-## Infections Component
+Since for each week `cfaepim` used a different snapshot of NHSN data for forecasting, each week also had its own configuration file in `cfaepim`. The above configuration file is for the week ending on 2024-03-30, for example.
 
-With a more thorough understanding of the observation process, let us turn our attention to the infection process.
+Each configuration file contains different data inclusions and exclusions based on new anomalies following weekly updates to the NHSN dataset.
 
-NOTE: The infections component code is contained within the `build_state_light_model()` function in `model.R`. The code for this entire function appears in the next section.
+For each week on which `cfaepim` has forecasted, the author of this tutorial adopts the appropriate configuration file.
 
+<!-- modify this writing somewhat -->
 
+However, for the sake of brevity in this tutorial, the author separates the fundamental model categories (all variables except for those in `[location_specific_start_dates]`, `[location_specific_cutoff_dates]`, `[location_specific_excluded_dates]`, `[postprocess]`) into there own configuration file called `params_<week>.toml`.
 
-```r
-mode_ihr <- plogis(params$ihr_intercept_prior_mode)
-state_data <- clean_data |>
-  dplyr::filter(location == !!state)
+## [Libraries](#libraries)
 
-mean_inf_df <- state_data |>
-  dplyr::distinct(location, population, first_week_hosp) |>
-  dplyr::mutate(
-    mean_seed_inf_per_day = (
-      (params$inf_model_prior_infections_per_capita * population) +
-        (first_week_hosp / (!!mode_ihr * 7))
-    )
-  )
-mean_inf_val <- mean_inf_df$mean_seed_inf_per_day[1]
-infection_model <- epidemia::epiinf(
-  params$generation_time_dist,
-  seed_days = params$inf_model_seeds,
-  prior_seeds = rstanarm::exponential(1 / mean_inf_val),
-  pop_adjust = TRUE,
-  pops = "population",
-  prior_susc = rstanarm::normal(
-    location = params$susceptible_fraction_prior_mode,
-    scale = params$susceptible_fraction_prior_scale
-  )
+Let us begin with the appropriate libraries. How this libraries are utilized will soon become apparent.
+
+```python
+# | label: setup
+import datetime as dt
+import os
+
+import jax
+import jax.numpy as jnp
+import matplotlib.dates as mdates
+import matplotlib.pyplot as plt
+import numpy as np
+import numpyro as npro
+import numpyro.distributions as dist
+import numpyro.distributions.transforms as transforms
+import polars as pl
+import pyrenew.transformation as t
+import toml
+from matplotlib import font_manager as fm
+from pyrenew.deterministic import DeterministicPMF
+from pyrenew.latent import (
+    HospitalAdmissions,
+    InfectionInitializationProcess,
+    Infections,
+    InitializeInfectionsZeroPad,
 )
+from pyrenew import model, process, observation, metaclass, transformation
+from pyrenew.metaclass import DistributionalRV, Model
+from pyrenew.model import HospitalAdmissionsModel
+from pyrenew.observation import NegativeBinomialObservation
+from pyrenew.process import RtRandomWalkProcess
 ```
 
+## [Data & Configuration Loading](#data-config-load)
 
 
 
-The corresponding code in `cfaepim`:
-
-```r
-#' Build a complete "covariate light" epidemia
-#' model
-#'
-#' For the given state with
-#' the given parameter list
-#'
-#' @param state state for which to build the model
-#' @param clean_data data frame of all fitting data
-#' @param params the parameter list
-#' @param n_warmup number of warmup samples for Stan to draw per chain.
-#' Default `1000`.
-#' @param n_iter total number of iterations for Stan per chain.
-#' Default `2000`.
-#' @param n_chains number of separate NUTS chains to run.
-#' Default `4`.
-#' @param max_treedepth maximum treedepth for NUTS,
-#' passed to [rstan::sampling()]. Default `11`.
-#' @param adapt_delta target acceptance probability
-#' for NUTS adaptation, passed to [rstan::sampling()].
-#' Default `0.85`.
-#' @param refresh How often to print Stan progress
-#' to terminal. Default `0` (never).
-#' @return a list of arguments that can be passed
-#' to [epidemia::epim()]
-#' @export
-build_state_light_model <- function(
-    state,
-    clean_data,
-    params,
-    n_warmup = 1000,
-    n_iter = 2000,
-    n_chains = 4,
-    max_treedepth = 11,
-    adapt_delta = 0.85,
-    refresh = 0) {
-  rw_prior_scale <- params$weekly_rw_prior_scale
-
-  rt_model <- build_light_rt(
-    params$rt_intercept_prior_mode,
-    params$rt_intercept_prior_scale,
-    params$max_rt,
-    params$weekly_rw_prior_scale
-  )
-
-  ## make sure day_of_week is properly
-  ## set up as a factor
-  dow_levels <- levels(
-    lubridate::wday("2023-01-01",
-      label = TRUE,
-      week_start = params$reference_day_of_week
-    )
-  )
-  clean_data <- clean_data |>
-    dplyr::mutate(
-      day_of_week = factor(day_of_week,
-        ordered = FALSE,
-        levels = dow_levels
-      )
-    )
-  # create the mean infections per day to use in prior_seeds
-  # to population adjust the seeded infections
-  mode_ihr <- plogis(params$ihr_intercept_prior_mode)
-  state_data <- clean_data |>
-    dplyr::filter(location == !!state)
-
-  mean_inf_df <- state_data |>
-    dplyr::distinct(location, population, first_week_hosp) |>
-    dplyr::mutate(
-      mean_seed_inf_per_day = (
-        (params$inf_model_prior_infections_per_capita * population) +
-          (first_week_hosp / (!!mode_ihr * 7))
-      )
-    )
-  mean_inf_val <- mean_inf_df$mean_seed_inf_per_day[1]
-  infection_model <- epidemia::epiinf(
-    params$generation_time_dist,
-    seed_days = params$inf_model_seeds,
-    prior_seeds = rstanarm::exponential(1 / mean_inf_val),
-    pop_adjust = TRUE,
-    pops = "population",
-    prior_susc = rstanarm::normal(
-      location = params$susceptible_fraction_prior_mode,
-      scale = params$susceptible_fraction_prior_scale
-    )
-  )
-  obs_model <- build_light_obs(
-    params$inf_to_hosp_dist,
-    params$ihr_intercept_prior_mode,
-    params$ihr_intercept_prior_scale,
-    params$day_of_week_effect_prior_modes,
-    params$day_of_week_effect_prior_scales,
-    params$holiday_eff_prior_mode,
-    params$holiday_eff_prior_scale,
-    params$post_holiday_eff_prior_mode,
-    params$post_holiday_eff_prior_scale,
-    params$non_obs_effect_prior_mode,
-    params$non_obs_effect_prior_scale,
-    params$reciprocal_dispersion_prior_mode,
-    params$reciprocal_dispersion_prior_scale
-  )
-  stan_data <- state_data |>
-    dplyr::select(
-      date,
-      location,
-      population,
-      hosp,
-      day_of_week,
-      is_holiday,
-      is_post_holiday,
-      recency,
-      nonobservation_period,
-      week
-    )
-  aug_stan_data <- add_pre_observation_period(
-    stan_data,
-    params$n_pre_observation_days
-  )
-  epim_args <- list(
-    rt = rt_model,
-    obs = obs_model,
-    inf = infection_model,
-    data = aug_stan_data,
-    warmup = n_warmup,
-    iter = n_iter,
-    seed = params$seed,
-    chains = n_chains,
-    refresh = refresh,
-    control = list(
-      max_treedepth = max_treedepth,
-      adapt_delta = adapt_delta
-    )
-  )
-  return(epim_args)
-}
-```
-
-## Additional Components
-
-
-The corresponding code in `cfaepim`:
-
-```r
-#' Augment a set of epidemia data with a
-#' preobservation period
-#'
-#' This allows for more robust initialization
-#' of the renewal process.
-#'
-#' @param data The data to augment
-#' @param n_pre_observation_days number of
-#' pre-observation days with which to augment it.
-#' @return the augmented data frame, as a [tibble::tibble()]
-#' @export
-add_pre_observation_period <- function(data,
-                                       n_pre_observation_days) {
-  pre_observation_data <- tibble::tibble(
-    date = min(data$date) - n_pre_observation_days:1,
-    hosp = NA,
-    nonobservation_period = TRUE,
-    location = data$location[1],
-    population = data$population[1],
-    day_of_week = factor(
-      lubridate::wday(date,
-        label = TRUE
-      ),
-      ordered = FALSE,
-      levels = levels(data$day_of_week)
-    ),
-    is_holiday = FALSE,
-    is_post_holiday = FALSE,
-    recency = 0,
-    week = data$week[1] ## this prevents RW during seeding
-  )
-
-  aug_data <- pre_observation_data |>
-    dplyr::bind_rows(data) |>
-    dplyr::mutate(hosp = ifelse(nonobservation_period,
-      0,
-      hosp
-    ))
-  print(aug_data |> tail())
-  return(aug_data)
-}
-```
 
 
 
-# Appendix
-
-## Terms
-
-The reader might find having the definitions of the following terms useful.
-
-__Basic Reproduction Number__ [@van2002reproduction, pp. 32-33]
-
-> The basic reproduction number, denoted $\mathscr{R}_0$, is 'the expected number of secondary cases produced, in a completely susceptible population, by a typical infective individual' [2]; see also [5, p. 17]. If $\mathscr{R}_0 < 1$, then on average an infected individual produces less than one new infected individual over the course of its infectious period, and the infection cannot grow. Conversely, if $\mathscr{R}_0 > 1$, then each infected individual produces, on average, more than one new infection, and the disease can invade the population. For the case of a single infected compartment, $\mathscr{R}_0$ is simply the product of the infection rate and the mean duration of the infection. However, for more complicated models with several infected compartments this simple heuristic definition of $\mathscr{R}_0$ is insufficient. A more general basic reproduction number can be defined as the number of new infections produced by a typical infective individual in a population at a [disease free equilibrium (DFE)].
-
-__Generation Interval__ [@champredon2018equivalence, pp.3258-3267]
-
-> The generation interval is the interval between the time when an individual is infected by an infector and the time when this infector was infected.
-
-and
-
-> The generation interval is rarely observed (because the actual transmission time is usually not observed), but through contact tracing it is possible to directly observe the _serial interval_ (i.e., the interval of time between the onset of symptoms for the infector and her/his infectee).
 
 
-__Renewal Equation__ (Historical) [@champredon2018equivalence, pp.3258-3267]
 
-> The renewal equation was introduced by Euler in 1767 [@euler1767recherches] in his work on population dynamics and was reframed in a modern continuous formulation by Lotka in 1907 [@lotka1907relation]. Lotka's formulation is usually expressed as $$B(t) = \int^{\infty}_0 B(t-a) p(a) \nu(a) da$$ where $B(t)$ is the number of births at time $t$, $p(a)$ is the probability of survival to age $a$, and $\nu(a)$ is the fertility at age $a$. This equation was derived for demographic studies and has been adapted to epidemics using an "age of infection" model that was described in the seminal work of Kermack and McKendrick in 1927 [@kermack1927contribution]. This epidemic model changes the interpretation of the variables: $B(t)$ represents the number of new infectious individuals at time $t$, $p(a)$ the probability to be infectious a time units after acquiring the disease, and $\nu(a)$ the "transmission potential" that is, the average number of secondary infections at "infection age" $a$.
 
-__Renewal Equation__ (Epidemiology) [@pakkanen2023unifying, pp.35]
 
-> The form of this renewal equation when only considering $\mathscr{R}_0$ is exactly what is commonly used in epidemic modelling where the incidence of infections $I(t)$ follows a renewal equation given by $$I(t) = \mathscr{R}_0 \int_0^{\infty} I(t-u)g(u)du$$ where $g(\cdot)$ is the probability density function (PDF) of the generation interval. Introducing a time-varying reproduction number $\mathscr{R}(t)$ within the Bellman–Harris process in general does not simply entail replacing $\mathscr{R}_0$ with $\mathscr{R}(t)$ in the renewal equation.
 
-<!-- ## Epidemia Schematics Page
+# [Appendix](#appendix)
 
-> We provide schematics for different parts of the model outlined [here](https://imperialcollegelondon.github.io/epidemia/articles/model-description.html). These are useful because they clarify how different model objects, including data and parameters, are related to one another.
->
-> Figure [2.1](https://imperialcollegelondon.github.io/epidemia/articles/model-schematic.html#fig:schem-obs) illustrates a complete observational model, and in particular details the model for multipliers $\alpha_t$. Figure [3.1](https://imperialcollegelondon.github.io/epidemia/articles/model-schematic.html#fig:schem-inf) presents the basic infection model, and also shows the GLM-style model for reproduction numbers $\mathscr{R}_t$. Finally Figure [4.1](https://imperialcollegelondon.github.io/epidemia/articles/model-schematic.html#fig:schem-latent) shows treating latent infections as parameters.
->
-> All mathematical notation shown in the figures corresponds to that used in the model description article. Each node is outlined in a color corresponding to the type of object considered. These are interpreted as follows.
->
-> -   **Grey**: A user provided object or quantity that is assumed to be known.
--   **Green**: A model parameter that is, generally speaking, directly sampled. Occasionally **epidemia** will sample a transformation of this parameter for efficiency purposes.
--   **Red**: A transformed parameter. This is a quantity that is a deterministic function of other model parameters.
--   **Orange**: A quantity that is either a parameter or transformed parameter, depending on the context.
--   **Blue**: An observation.
+## [Available `cfaepim` Code](#available)
 
-![From Epidemia's site: _A schematic for observational models. Only one observational model is shown here, however the figure makes clear that additional models may be included. The model for the multiplier $\alpha_t$ is shown in the shaded green region. This is very similar in form to the transmission model shown in Figure 3.1. Infections shown at the bottom may be directly from either the basic infection model, or from an extended model (as described in the model description)._](./source/figures/Epidemia_02.png){ width=75% }
+### [`model.R`](#modelR)
 
-![From Epidemia's site: _A schematic showing both the basic infection model and the transmission model (the green region). Here infections are a transformed parameter, and are recursively linked to previous infections. The model for $\mathscr{R}_t$ is similar to a GLM, however autocorrelation terms can be included. $\eta_t$ is the predictor for the reproduction number at time $t$, and is one element of the predictor $\eta$ introduced in the model description._](./source/figures/Epidemia_03.png){ width=75% }
-
-![From Epidemia's site: _Shows schematic for adding variation to the infection process._](./source/figures/Epidemia_04.png){ width=75% } -->
-
-## `cfaepim` Model, Fit, And Forecast Code
-
-The full code from `model.R`, `fit.R`, and `forecast.R`.
-
-### Model
-
-```r
+```R
 #' Augment a set of epidemia data with a
 #' preobservation period
 #'
@@ -972,9 +842,9 @@ build_state_light_model <- function(
 }
 ```
 
-### Fit
+### [`fit.R`](#fitR)
 
-```r
+```R
 #!/usr/bin/env Rscript
 
 #' fit forecast models for a given report date
@@ -1231,11 +1101,12 @@ fit(
   healthdata_api_key_secret = api_creds$key,
   overwrite_params = argv$overwrite_params
 )
+
 ```
 
-### Forecast
+### [`forecast.R`](#forecastR)
 
-```r
+```R
 #' synthetic_forecast_data
 #'
 #' Given a dataframe of timeseries data used
@@ -1577,193 +1448,20 @@ forecast_and_output_flusight <- function(
 }
 ```
 
-## Metadata For This Document
+## [A Worked Example](#worked)
 
-```yaml
-title: "Implementing Existing Epidemiology Models Using MSR"
-subtitle: "A Tutorial Example Porting Epidemia"
-author: "UPX3"
-date: "2024 June 09"
-geometry:
-- lmargin=1.5in
-- rmargin=1.5in
-- tmargin=1.0in
-- bmargin=1.0in
-tightlist: true
-colorlinks: true
-linkcolor: black
-urlcolor: Maroon
-filecolor: magenta
-citecolor: Maroon
-highlight-style: espresso
-lang: en-US
-fontsize: 12pt
-papersize: letter
-toc: true
-toc-depth: 3
-numbersections: true
-mainfont: TeX Gyre Schola
-header-includes:
-- \usepackage{xcolor}
-- \usepackage{fontspec}
-- \setmonofont{DejaVuSansMono}
-- \usepackage{lettrine}
-- \newfontface\customfont[Path=./source/fonts/]{GoudyInitialen.ttf}
-- \renewcommand{\LettrineFontHook}{\customfont}
-- \usepackage{sectsty}
-- \allsectionsfont{\scshape}
-- \usepackage{fancyvrb}
-- \fvset{fontsize=\small, frame=single,framesep=2mm,rulecolor=\color{black}, framerule=0.4mm}
-- \usepackage{float}
-- \let\origfigure\figure
-- \let\endorigfigure\endfigure
-- \renewenvironment{figure}[1][H]{\origfigure[H]}{\endorigfigure}
-- \usepackage{mathrsfs}
-- \usepackage{fvextra}
-- \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,breakanywhere,commandchars=\\\{\}}
-```
+__Problem__: Suppose you reside in a jurisdiction of 500000 individuals. There is an influenza outbreak, and you know that as of today, Tuesday 2024-09-03 (one day after labor day), the reported hospitalizations for the last four days (including today) have been 12, 15, 26, and 32, respectively. Forecast the next two days of influenza hospitalizations using the `cfaepim` model presets, where applicable.
 
-## Full MSR Implementation
-
-
-
-
-## Full Mathematical Outline
-
-Using information for AL:
+__Answer__: With the problem statement, know that the popluation $P = 500000$ and the reported influenza hospitalizations $Y = (Y_1, \dotsc, Y_4) = (12, 15, 26, 32)$. From `cfaepim`, the infections per capita $\Omega = 0.0001$. For the mean infected individuals per day during the seeding period we have
 
 $$
 \begin{aligned}
-& P \in \mathbb{N} \\
-& Y = (Y_1, \dotsc, Y_n), \quad Y_t \in \mathbb{N}, \quad t \in \{1, \dotsc, n\} \\
-& Y_t \sim \text{NB}(y_t, \phi) \\
-& \phi \sim \mathcal{N}(10, 5) \\
-& y_t = \alpha_t \sum_{s<t}i_s' \pi_{t-s} \\
-& \alpha_t = h^{-1}_1(\eta_{1,t}) \\
-& h^{-1}_1(x) = \frac{1}{1 + e^{-x}}, \quad h^{-1}_1: \mathbb{R} \to (0,1)  \\
-& \eta_{1,t} = \beta_{1,0} + \sum_{i=1}^9 \beta_{1,i} x_i \\
-& \beta_{1,0} \sim \mathcal{N}(-6.5, 0.5) \\
-& \beta_{1,1}, \dotsc, \beta_6 \sim \mathcal{N}(0, 0.25) \\
-& \beta_{1,7} \sim \mathcal{N}(-0.2, 0.2) \\
-& \beta_{1,8} \sim \mathcal{N}(0, 0.2) \\
-& \beta_{1,9} \sim \mathcal{N}(-50, 0.01)
+\exp \bigg( \frac{1}{\Omega P + \frac{12 + 15 + 26 + 32}{\frac{1}{1 + e^{-(-6.5)}} \cdot 4}}\bigg)
 \end{aligned}
 $$
 
----
-
-$$
-\begin{aligned}
-& \pi = \begin{bmatrix} 0.05 & 0.1 &  0.175 & 0.225 &  0.175 &\\  0.125 & 0.075 &  0.05 & 0.025\end{bmatrix} \\
-& i_t' = \mathscr{R}_t \sum_{s < t} i_s g_{t-s} \\
-& g = \begin{bmatrix} 0.233 & 0.359 & 0.198 & 0.103 & 0.053 &\\ 0.027 & 0.014 & 0.007 & 0.003 & 0.002 & 0.001\end{bmatrix}\\
-& i_k = i, \quad k \in \{v, \dotsc, 0\}, \quad v = -8 \\
-& i \sim \text{Exp}(\tau^{-1}) \\
-& \tau \sim \text{Exp}(\lambda_0), \quad \lambda_0 \in (0, \infty) \\
-& S_t \in [0, P] \\
-& i_t = S_{t-1} \bigg(1 - \exp\bigg(-\frac{i_t'}{P}\bigg) \bigg) \\
-& S_t = S_{t-1} - i_t \\
-& \frac{S_{v-1}}{P} \sim \mathcal{N}(0.9, 0.1)
-\end{aligned}
-$$
-
----
-
-$$
-\begin{aligned}
-& \mathscr{R}_t = h^{-1}_2(\eta_{2,t}) \\
-& h^{-1}_2(x) = \frac{K}{1 + e^{-x}}, \quad h^{-1}_2: \mathbb{R} \to (0, K), \quad K = 3\\
-& \eta_{2,t} = \beta_{2,0} + W_t \\
-& \beta_{2,0} \sim \mathcal{N}(-0.4054651, 0.3) \\
-& W_t = W_{t-1} + \gamma_t, \quad W_0 = 0\\
-& \gamma_t \sim \mathcal{N}(0, \sigma) \\
-& \sigma \sim \mathcal{N}^{+}(0, 0.25) \\
-& p(i_{v:0},\mathscr{R},\phi,\alpha∣Y) \propto p(i_{v:0})p(\mathscr{R})p(\phi)p(\alpha)\prod_t p(Y_t∣y_t,\phi)
-\end{aligned}
-$$
 <!--
-With support:
-
-$$
-\begin{aligned}
-Y &= (Y_1, \dotsc, Y_n), \quad Y_t \in \mathbb{N}, \; t \in \{1, 2, \dots, n\} \\
-Y_t &\sim \mathcal{D}(y_t, \phi), \quad t > 0 \\
-\mathcal{D} &= \text{NegBin} \\
-\phi &\sim \mathcal{N}(10, 5) \\
-y_t &= \alpha_t \sum_{s<t} i_s \pi_{t-s}, \quad t > 0 \\
-\alpha_t &= g_1^{-1}(\eta_{1,t}), \quad \alpha_t > 0 \\
-g_1^{-1}(x) &= \frac{1}{1 + e^{-x}}, \quad g_1^{-1}: \mathbb{R} \to (0, 1) \\
-\eta_{1,t} &= \beta_{0,1} + \sum_{i=1}^9 \beta_{i,1} x_i, \quad t > 0 \\
-\beta_{0,1} &\sim \mathcal{N}(-6.5, 0.5) \\
-\beta_{1,1}, \dotsc, \beta_{6,1} &\sim \mathcal{N}(0, 0.25) \\
-\beta_{7,1} &\sim \mathcal{N}(-0.2, 0.2) \\
-\beta_{8,1} &\sim \mathcal{N}(0, 0.2) \\
-\beta_{9,1} &\sim \mathcal{N}(-50, 0.01) \\
-\pi &= \begin{bmatrix} 0.05 & 0.1 & 0.175 & 0.225 & 0.175 & 0.125 & 0.075 & 0.05 & 0.025 \end{bmatrix}, \quad \pi_k \geq 0, \; \sum_{k=1}^9 \pi_k = 1 \\
-i_t' &= \mathscr{R}_t \sum_{s < t} i_s g_{t-s}, \quad i_t \in \mathbb{R}_{\geq 0}, \; t > 0 \\
-i_{v:0}, \mathscr{R}, \phi, \alpha &\sim p(\cdot), \quad v \leq 0 \\
-\mathscr{R}_t &= g_2^{-1}(\eta_{2,t}), \quad \mathscr{R}_t \geq 0 \\
-g_2^{-1}(x) &= \frac{K}{1 + e^{-x}}, \quad g_2^{-1}: \mathbb{R} \to (0, K) \\
-\eta_{2,t} &= \beta_{0,2} + W_t, \quad t > 0 \\
-\beta_{0,2} &\sim \mathcal{N}(-0.4054651, 0.3) \\
-W_0 &= 0 \\
-W_t &= W_{t-1} + \gamma_t, \quad t > 0 \\
-\gamma_t &\sim \mathcal{N}(0, \sigma) \\
-\sigma &\sim \mathcal{N}^{+}(0, 0.25) \\
-\mathscr{R} &= (\mathscr{R}_1, \dotsc, \mathscr{R}_n), \quad \mathscr{R}_t \in \mathbb{R}_{\geq 0}, \; t > 0 \\
-\alpha &= (\alpha_1, \dotsc, \alpha_n), \quad \alpha_t > 0, \; t > 0 \\
-p(i_{v:0}, \mathscr{R}, \phi, \alpha ∣ Y) &\propto p(i_{v:0}) p(\mathscr{R}) p(\phi) p(\alpha) \prod_t p(Y_t ∣ y_t, \phi), \quad t > 0
-\end{aligned}
-$$
-
-Now altogether: -->
-
-<!-- gen_int_rev = jnp.flip(gen_int)
-        recent_I0 = I0[-gen_int_rev.size :]
-
-        post_seed_infections = inf.compute_infections_from_rt(
-            I0=recent_I0,
-            Rt=Rt,
-            reversed_generation_interval_pmf=gen_int_rev,
-        )
-
-        return InfectionsSample(post_seed_infections) -->
-
-
-<!-- $$
-\begin{aligned}
-\textcolor{blue}{Y} &= (\textcolor{red}{Y_1}, \dotsc, \textcolor{red}{Y_n}) \\
-\textcolor{red}{Y_t} &\sim \textcolor{teal}{\mathcal{D}}(y_t, \phi) \\
-\textcolor{teal}{\mathcal{D}} &= \text{NegBin} \\
-\textcolor{orange}{\phi} &\sim \mathcal{N}(10, 5) \\
-\textcolor{purple}{y_t} &= \textcolor{brown}{\alpha_t} \sum_{s<t}\textcolor{magenta}{i_s} \pi_{t-s} \quad t > 0 \\
-\textcolor{brown}{\alpha_t} &= g^{-1}(\eta_t) \\
-g^{-1}(x) &= \frac{1}{1 + e^{-x}} \quad g^{-1}: \mathbb{R} \to \mathbb{R}\\
-\textcolor{olive}{\eta_t} &= \beta_0 + \sum_{i=1}^9 \beta_i x_i \\
-\textcolor{cyan}{\beta_0} &\sim \mathcal{N}(-6.5, 0.5) \\
-\textcolor{cyan}{\beta_1}, \dotsc, \textcolor{cyan}{\beta_6} &\sim \mathcal{N}(0, 0.25) \\
-\textcolor{cyan}{\beta_7} &\sim \mathcal{N}(-0.2, 0.2) \\
-\textcolor{cyan}{\beta_8} &\sim \mathcal{N}(0, 0.2) \\
-\textcolor{cyan}{\beta_9} &\sim \mathcal{N}(-50, 0.01) \\
-\pi &= \begin{bmatrix} 0.05 & 0.1 &  0.175 & 0.225 &  0.175 &  0.125 & 0.075 &  0.05 & 0.025 \end{bmatrix} \\
-\textcolor{magenta}{i_t} &= \textcolor{violet}{\mathscr{R}_t} \sum_{s < t} \textcolor{magenta}{i_s} g_{t-s} \\
-\textcolor{magenta}{i_{v:0}}, \textcolor{violet}{\mathscr{R}}, \textcolor{orange}{\phi}, \textcolor{brown}{\alpha} &\sim p(\cdot) \\
-\textcolor{violet}{\mathscr{R}} &= (\textcolor{violet}{\mathscr{R}_1}, \dotsc, \textcolor{violet}{\mathscr{R}_n}) \\
-\textcolor{brown}{\alpha} &= (\textcolor{brown}{\alpha_1}, \dotsc, \textcolor{brown}{\alpha_n}) \\
-p(\textcolor{magenta}{i_{v:0}},\textcolor{violet}{\mathscr{R}},\textcolor{orange}{\phi},\textcolor{brown}{\alpha}∣\textcolor{blue}{Y}) &\propto p(\textcolor{magenta}{i_{v:0}})p(\textcolor{violet}{\mathscr{R}})p(\textcolor{orange}{\phi})p(\textcolor{brown}{\alpha})\prod_t p(\textcolor{red}{Y_t}∣\textcolor{purple}{y_t},\textcolor{orange}{\phi})
-\end{aligned}
-$$
-
-
-Example for -->
-
-
-## Worked Out Artificial Example
-
-
-
-
-## Other Python Implementations
+## Interesting
 
 ### Transmission Component, As Code In Python
 
@@ -1805,77 +1503,16 @@ eta = beta_0 + W
 R_ts = inverse_link(eta, K)
 ```
 
-![Example transmission component, i.e. $\mathscr{R}_t$ estimates, using `cfaepim` presets. This is the `R_ts` in the Python code example.](./source/figures/transmission_eg.png){ width=100% }
+![Example transmission component, i.e. $\mathscr{R}_t$ estimates, using `cfaepim` presets. This is the `R_ts` in the Python code example.](./figures/transmission_eg.png){ width=100% } -->
 
 
 
-##  Resources
+##  [Resources](#resources)
 
+Pending.
 
 
 # References
 
-<!-- MSR allows users to simulate basic [renewal processes](https://en.wikipedia.org/wiki/Renewal_theory). -->
-
-
-<!-- Outline:
-
-* An Epidemia Model For Influenza
-* Preparing Data For MSR
-* Model Validation And Comparison -->
-
-
-<!--
-- \usepackage{minted}
-- \setminted[python]{breaklines=true, tabsize=4}
-- \setminted[r]{breaklines=true, tabsize=2}
-
-- \usepackage{float}
-- \let\origfigure\figure
-- \let\endorigfigure\endfigure
-- \renewenvironment{figure}[1][H]{\origfigure[H]}{\endorigfigure}
--
-- - \setminted[python]{frame=single, framesep=2mm, rulecolor=\color{black}, numbersep=5pt, breaklines=true, tabsize=4, linenos=false, xleftmargin=5mm, xrightmargin=5mm}
--
-- \inputminted{python}{./source/code/example.py}
--
-def load_NHSN(data_path: str):
-    """
-    Loads NHSN hospitalization data from tsv file
-    path.
-
-    Parameters
-    ----------
-    data_path : str
-        The path to the tsv file to be read.
-
-    Returns
-    -------
-    pl.DataFrame
-        A polars dataframe of NHSN hospitalization
-        data.
-    """
-    return pl.read_csv(data_path, separator="\t", infer_schema_length=10000)-->
-
-<!-- In the description above, the reader is confronted with some questions:
-
-* What choice if sampling distribution $p(y_t, \phi)$ should be made?
-* What priors $p(\cdot)$ are adequate, given existing uncertainties?
-* What considerations are there for handling susceptibles?
-* How should transmission be modelled, i.e. choosing $\mathscr{R}$?
-* What are appropriate link functions for $g$?
-
-These questions will be addressed in the following section. -->
-
-<!--
-Use parameters and priors
-  For transmission to define math of transmission
-  For observation to define math of observation
-  To then write entire model, w/ presets
-Then begin with entire model
-  Walk through loading the data
--->
-
-<!-- Given `cfaepim` is an influenza forecasting model, the author describes the Epidemia modeling approach (following the language used in Epidemia's Model Description page) with influenza data in mind. -->
-
-<!-- Consider the United States (US) as consisting of a single homogeneous population. This population can be stratified by the US's 50 states and additional territories (e.g., Puetro Rico). -->
+::: {#refs}
+:::
