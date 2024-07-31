@@ -1,4 +1,4 @@
-name: model
+name: dependency-check
 
 on:
   pull_request:
@@ -25,7 +25,7 @@ jobs:
         run: pip install poetry
 
       - name: install package
-        run: poetry install --with docs
+        run: poetry install --with docs, test
 
       - name: run deptry
         run: |
