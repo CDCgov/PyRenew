@@ -194,7 +194,7 @@ def PeriodicBroadcaster(
                 raise ValueError(
                     "The data is too short to broadcast to "
                     f"the given number of timepoints ({n_timepoints}). The "
-                    "repeated data would have a size of data.size * = "
+                    "repeated data would have a size of data.size * "
                     f"period_size = {data.size} * {period_size} = "
                     f"{data.size * period_size}."
                 )
