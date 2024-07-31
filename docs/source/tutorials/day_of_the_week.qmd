@@ -4,76 +4,29 @@ format: gfm
 engine: jupyter
 ---
 
-This document illustrates how a hospital admissions-only model can be fitted using data from the Pyrenew package, particularly the wastewater dataset. The CFA wastewater team created this dataset, which contains simulated data.
-
-We begin by loading `numpyro` and configuring the device count to 2 to enable running MCMC chains in parallel. By default, XLA (which is used by JAX for compilation) considers all CPU cores as one device. Depending on your system's configuration, we recommend using numpyro's [set_host_device_count()](https://num.pyro.ai/en/stable/utilities.html#set-host-device-count) function to set the number of devices available for parallel computing.
+This document illustrates how to leverage the time-aware arrays to create a a day of the week effect. We use the same model designed in the hospital admissions-only tutorial.
 
 ```{python}
-# | label: numpyro setup
+# | label: setup
+# Setup
 import numpyro
-
-numpyro.set_host_device_count(2)
-```
-## Model definition
-
-In this section, we provide the formal definition of the model. The hospital admissions model is a semi-mechanistic model that describes the number of observed hospital admissions as a function of a set of latent variables. Mainly, the observed number of hospital admissions is discretely distributed with location at the number of latent hospital admissions:
-
-$$
-h(t) \sim \text{HospDist}\left(H(t)\right)
-$$
-
-Where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$. The distribution $\text{HospDist}$ is discrete. For this example, we will use a negative binomial distribution with an inferred concentration.
-
-$$
-\begin{align*}
-h(t) & \sim \mathrm{NegativeBinomial}\left(\mathrm{mean} = H(t), \mathrm{concentration} = k\right) \\
-H(t) & = p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau) \\
-\log[p_\mathrm{hosp}(t)] & \sim \mathrm{Normal}(\mu=\log(0.05), \sigma=\log(1.1) \\
-\log(k) & \sim \mathrm{Normal}(\mu=\log(1), \sigma=\log(10))
-\end{align*}
-$$
-
-Were $d(\tau)$ is the infection to hospital admission interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to admission rate.
-
-The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to admission rate. The latent infections are modeled as a renewal process:
-
-$$
-\begin{align*}
-I(t) &= \mathcal{R}(t) \times \sum_{\tau < t} I(\tau) g(t - \tau) \\
-\log[I(0)] &\sim \text{Normal}(\mu=\log(100), \sigma=\log(1.75))
-\end{align*}
-$$
-
-The reproduction number $\mathcal{R}(t)$ is modeled as a random walk in logarithmic space, i.e.:
-
-$$
-\begin{align*}
-\log[\mathcal{R}(t)] & = \log[\mathcal{R}(t-1)] + \epsilon\\
-\epsilon & \sim \text{Normal}(\mu=0, \sigma=0.025) \\
-\mathcal{R}(0) &\sim \text{TruncatedNormal}(\text{loc}=1.2, \text{scale}=0.2, \text{min}=0)
-\end{align*}
-$$
-
-
-## Data processing
-
-We start by loading the data and inspecting the first five rows.
-
-```{python}
-# | label: data-inspect
 import polars as pl
 from pyrenew import datasets
 
+# Setting the number of devices
+numpyro.set_host_device_count(2)
+
+# Loading and processing the data
 dat = datasets.load_wastewater()
-dat.head(5)
-```
 
-The data shows one entry per site, but the way it was simulated, the number of admissions is the same across sites. Thus, we will only keep the first observation per day.
-
-```{python}
-# | label: aggregation
 # Keeping the first observation of each date
-dat = dat.group_by("date").first().select(["date", "daily_hosp_admits"])
+dat = (
+    dat.group_by("date")
+    .first()
+    .select(
+        ["date", "daily_hosp_admits"],
+    )
+)
 
 # Now, sorting by date
 dat = dat.sort("date")
@@ -81,37 +34,10 @@ dat = dat.sort("date")
 # Keeping the first 90 days
 dat = dat.head(90)
 
-dat.head(5)
-```
-
-Let's take a look at the daily prevalence of hospital admissions.
-
-```{python}
-# | label: fig-plot-hospital-admissions
-# | fig-cap: Daily hospital admissions from the simulated data
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-
 daily_hosp_admits = dat["daily_hosp_admits"].to_numpy()
 dates = dat["date"].to_numpy()
-ax = plt.gca()
-ax.xaxis.set_major_formatter(mdates.DateFormatter("%Y-%m-%d"))
-ax.xaxis.set_major_locator(mdates.DayLocator(interval=7))
-ax.set_xlim(dates[0], dates[-1])
-plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
-plt.plot(dates, daily_hosp_admits, "-o")
-plt.xlabel("Date")
-plt.ylabel("Admissions")
-plt.show()
-```
 
-## Building the model
-
-First, we will extract two datasets we will use as deterministic quantities: the generation interval and the infection to hospital admission interval.
-
-```{python}
-# | label: fig-data-extract
-# | fig-cap: Generation interval and infection to hospital admission interval
+# Loading additional datasets
 gen_int = datasets.load_generation_interval()
 inf_hosp_int = datasets.load_infection_admission_interval()
 
@@ -119,18 +45,6 @@ inf_hosp_int = datasets.load_infection_admission_interval()
 gen_int_array = gen_int["probability_mass"].to_numpy()
 gen_int = gen_int_array
 inf_hosp_int = inf_hosp_int["probability_mass"].to_numpy()
-
-# Taking a peek at the first 5 elements of each
-gen_int[:5], inf_hosp_int[:5]
-
-# Visualizing both quantities side by side
-fig, axs = plt.subplots(1, 2)
-
-axs[0].plot(gen_int)
-axs[0].set_title("Generation interval")
-axs[1].plot(inf_hosp_int)
-axs[1].set_title("Infection to hospital admission interval")
-plt.show()
 ```
 
 With these two in hand, we can start building the model. First, we will define the latent hospital admissions:
@@ -153,12 +67,7 @@ latent_hosp = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
     infect_hosp_rate_rv=hosp_rate,
 )
-```
 
-The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospital admission interval as input. The `hosp_rate` is a `DistributionalRV` object that takes a numpyro distribution to represent the infection to hospital admission rate. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospital admission rate. Now, we can define the rest of the other components:
-
-```{python}
-# | label: initializing-rest-of-model
 from pyrenew import model, process, observation, metaclass, transformation
 from pyrenew.latent import (
     InfectionInitializationProcess,
@@ -256,6 +165,8 @@ hosp_model = model.HospitalAdmissionsModel(
 We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect distribution. To do this, we will create a new instance of `RandomVariable` to model the effect. The class will be based on a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0. The random variable will be repeated for the number of weeks in the dataset.
 Note a similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
 
+October 30th, 2023 is a Monday. So we will need to take that into account when building this effect.
+
 ```{python}
 # | label: weekly-effect
 from pyrenew import metaclass
@@ -265,13 +176,16 @@ import numpyro as npro
 class DayOfWeekEffect(metaclass.RandomVariable):
     """Day of the week effect"""
 
+    def __init__(self, offset: int):
+        self.offset = offset
+
     @staticmethod
     def validate():
         return None
 
     def sample(self, n_timepoints: int, **kwargs):
 
-        nweeks = (n_timepoints // 7) + 1
+        nweeks = ((n_timepoints + self.offset) // 7) + 1
 
         ans = npro.sample(
             name="dayofweek_effect",
@@ -281,11 +195,17 @@ class DayOfWeekEffect(metaclass.RandomVariable):
             sample_shape=(7,),
         )
 
-        return (metaclass.SampledValue(jnp.tile(ans, nweeks)[:n_timepoints]),)
+        return (
+            metaclass.SampledValue(
+                jnp.tile(ans, nweeks)[
+                    self.offset : (n_timepoints + self.offset)
+                ]
+            ),
+        )
 
 
 # Initializing the RV.
-dayofweek_effect = DayOfWeekEffect()
+dayofweek_effect = DayOfWeekEffect(offset=1)  # The data starts 1 day off
 ```
 
 Notice that the instance's `nweeks` and `len` members are defined during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new effect, we can rebuild the latent hospitalization model:
@@ -308,12 +228,22 @@ hosp_model_weekday = model.HospitalAdmissionsModel(
 )
 ```
 
-Running the model (with the same padding as before):
+Running the model:
 
 ```{python}
 # | label: model-2-run
 import jax
 
+# Model without weekday effect
+hosp_model.run(
+    num_samples=2000,
+    num_warmup=2000,
+    data_observed_hosp_admissions=daily_hosp_admits,
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
+)
+
+# Model with weekday effect
 hosp_model_weekday.run(
     num_samples=2000,
     num_warmup=2000,
@@ -326,11 +256,26 @@ hosp_model_weekday.run(
 And plotting the results:
 
 ```{python}
-# | label: fig-output-admissions-padding-and-weekday
-# | fig-cap: Hospital Admissions posterior distribution
+# | label: fig-output-admissions
+# | fig-cap: Hospital Admissions posterior distribution with weekday effect
 import numpy as np
 
+# Figure with weekday effect
 out = hosp_model_weekday.plot_posterior(
+    var="latent_hospital_admissions",
+    ylab="Hospital Admissions",
+    obs_signal=np.pad(
+        daily_hosp_admits.astype(float),
+        (gen_int_array.size, 0),
+        constant_values=np.nan,
+    ),
+)
+```
+
+```{python}
+# | label: fig-output-admissions-padding-and-weekday
+# | fig-cap: Hospital Admissions posterior distribution without weekday effect
+out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
     obs_signal=np.pad(
