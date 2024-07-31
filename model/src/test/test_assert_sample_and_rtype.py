@@ -2,8 +2,6 @@
 Tests for _assert_sample_and_rtype method
 """
 
-import re
-
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import pytest
