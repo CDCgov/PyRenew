@@ -2,7 +2,8 @@
 Utility functions for processing arrays.
 """
 
-from typing import NamedTuple
+import warnings
+from typing import Callable, NamedTuple
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
@@ -112,72 +113,58 @@ class PeriodicProcessSample(NamedTuple):
         return f"PeriodicProcessSample(value={self.value})"
 
 
-class PeriodicBroadcaster:
-    r"""
-    Broadcast arrays periodically using either repeat or tile,
-    considering period size and starting point.
+def PeriodicBroadcaster(
+    offset: int,
+    broadcast_type: str,
+    period_size: int | None = None,
+) -> Callable:
+    """
+    Factory function to create a "broadcaster". Broadcast arrays periodically
+    using either repeat or tile, considering period size and starting point.
+
+    Parameters
+    ----------
+    offset : int
+        Relative point at which data starts, must be between 0 and
+        period_size - 1.
+    broadcast_type : str
+        Type of broadcasting to use, either "repeat" or "tile".
+    period_size : int, optional
+        Size of the period for the repeat broadcast.
+
+    Notes
+    -----
+    The broadcasting is done by repeating or tiling the data. When
+    self.broadcast_type = "repeat", the function will repeat each value of
+    the data `self.period_size` times until it reaches `n_timepoints`. When
+    self.broadcast_type = "tile", the function will tile the data until it
+    reaches `n_timepoints`.
+
+    Using the `offset` parameter, the function will start the broadcast
+    from the `offset`-th element of the data. If the data is shorter than
+    `n_timepoints`, the function will repeat or tile the data until it
+    reaches `n_timepoints`.
+
+    Returns
+    -------
+    Callable
+        A broadcasting function that repeats or tiles the data.
     """
 
-    def __init__(
-        self,
-        offset: int,
-        period_size: int,
-        broadcast_type: str,
-    ) -> None:
-        """
-        Default constructor for PeriodicBroadcaster class.
+    # Broadcast type should be either "repeat" or "tile"
+    assert broadcast_type in ["repeat", "tile"], (
+        "broadcast_type should be either 'repeat' or 'tile'. "
+        f"It is {broadcast_type}."
+    )
 
-        Parameters
-        ----------
-        offset : int
-            Relative point at which data starts, must be between 0 and
-            period_size - 1.
-        period_size : int
-            Size of the period.
-        broadcast_type : str
-            Type of broadcasting to use, either "repeat" or "tile".
+    # Data starts should be a positive integer
+    assert isinstance(
+        offset, int
+    ), f"offset should be an integer. It is {type(offset)}."
 
-        Notes
-        -----
-        See the sample method for more information on the broadcasting types.
+    assert 0 <= offset, f"offset should be a positive integer. It is {offset}."
 
-        Returns
-        -------
-        None
-        """
-
-        self.validate(
-            offset=offset,
-            period_size=period_size,
-            broadcast_type=broadcast_type,
-        )
-
-        self.period_size = period_size
-        self.offset = offset
-        self.broadcast_type = broadcast_type
-
-        return None
-
-    @staticmethod
-    def validate(offset: int, period_size: int, broadcast_type: str) -> None:
-        """
-        Validate the input parameters.
-
-        Parameters
-        ----------
-        offset : int
-            Relative point at which data starts, must be between 0 and
-            period_size - 1.
-        period_size : int
-            Size of the period.
-        broadcast_type : str
-            Type of broadcasting to use, either "repeat" or "tile".
-
-        Returns
-        -------
-        None
-        """
-
+    if broadcast_type == "repeat":
         # Period size should be a positive integer
         assert isinstance(
             period_size, int
@@ -187,63 +174,45 @@ class PeriodicBroadcaster:
             period_size > 0
         ), f"period_size should be a positive integer. It is {period_size}."
 
-        # Data starts should be a positive integer
-        assert isinstance(
-            offset, int
-        ), f"offset should be an integer. It is {type(offset)}."
-
-        assert (
-            0 <= offset
-        ), f"offset should be a positive integer. It is {offset}."
-
         assert offset <= period_size - 1, (
             "offset should be less than or equal to period_size - 1."
             f"It is {offset}. It should be less than or equal "
             f"to {period_size - 1}."
         )
 
-        # Broadcast type should be either "repeat" or "tile"
-        assert broadcast_type in ["repeat", "tile"], (
-            "broadcast_type should be either 'repeat' or 'tile'. "
-            f"It is {broadcast_type}."
-        )
+        def _broadcast_fn(data: ArrayLike, n_timepoints: int) -> ArrayLike:
+            """
+            Parameters
+            ----------
+            data: ArrayLike
+                Data to broadcast.
+            n_timepoints : int
+                Duration of the sequence.
+            """
 
-        return None
+            if (data.size * period_size) < n_timepoints:
+                raise ValueError(
+                    "The data is too short to broadcast to "
+                    f"the given number of timepoints ({n_timepoints}). The "
+                    "repeated data would have a size of data.size * = "
+                    f"period_size = {data.size} * {period_size} = "
+                    f"{data.size * period_size}."
+                )
 
-    def __call__(
-        self,
-        data: ArrayLike,
-        n_timepoints: int,
-    ) -> ArrayLike:
-        """
-        Broadcast the data to the given number of timepoints
-        considering the period size and starting point.
-
-        Parameters
-        ----------
-        data: ArrayLike
-            Data to broadcast.
-        n_timepoints : int
-            Duration of the sequence.
-
-        Notes
-        -----
-        The broadcasting is done by repeating or tiling the data. When
-        self.broadcast_type = "repeat", the function will repeat each value of the data `self.period_size` times until it reaches `n_timepoints`. When self.broadcast_type = "tile", the function will tile the data until it reaches `n_timepoints`.
-
-        Using the `offset` parameter, the function will start the broadcast from the `offset`-th element of the data. If the data is shorter than `n_timepoints`, the function will repeat or tile the data until it reaches `n_timepoints`.
-
-        Returns
-        -------
-        ArrayLike
-            Broadcasted array.
-        """
-
-        if self.broadcast_type == "repeat":
-            return jnp.repeat(data, self.period_size)[
-                self.offset : (self.offset + n_timepoints)
+            return jnp.repeat(data, period_size)[
+                offset : (offset + n_timepoints)
             ]
-        elif self.broadcast_type == "tile":
-            return jnp.tile(
-                data, int(jnp.ceil(n_timepoints / self.period_size))
-            )[self.offset : (self.offset + n_timepoints)]
+
+    else:
+        if period_size is not None:
+            warnings.warn(
+                "Period size is not used when broadcasting with the 'tile' "
+                "method."
+            )
+
+        def _broadcast_fn(data: ArrayLike, n_timepoints: int) -> ArrayLike:
+            return jnp.tile(data, (n_timepoints // data.size) + 1)[
+                offset : (offset + n_timepoints)
+            ]
+
+    return _broadcast_fn
