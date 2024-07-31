@@ -103,7 +103,7 @@ def test_input_rv():  # numpydoc ignore=GL08
 
     with pytest.raises(
         Exception,
-        match=re.escape(f"{not_rv} is not an instance of RandomVariable"),
+        match="is not an instance of RandomVariable",
     ):
         _assert_sample_and_rtype(not_rv)
 
@@ -119,6 +119,6 @@ def test_sample_return():  # numpydoc ignore=GL08
     rv4 = RVnoAnnotation()
     with pytest.raises(
         Exception,
-        match=f"The RandomVariable {rv4} does not have return type annotation",
+        match="does not have return type annotation",
     ):
         _assert_sample_and_rtype(rv4)
