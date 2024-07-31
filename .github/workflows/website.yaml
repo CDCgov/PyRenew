@@ -36,7 +36,7 @@ jobs:
         run: pip install poetry
 
       - name: install package
-        run: poetry install --with dev
+        run: poetry install --with docs
 
       # This section renders the quarto documents (and the README file)
       # and moves them to the docs/source/_compiled_qmd directory
