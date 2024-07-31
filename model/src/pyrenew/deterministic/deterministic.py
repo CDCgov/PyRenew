@@ -40,8 +40,8 @@ class DeterministicVariable(RandomVariable):
         None
         """
         self.name = name
-        self.value = jnp.atleast_1d(value)
         self.validate(value)
+        self.value = jnp.atleast_1d(value)
         self.set_timeseries(t_start, t_unit)
 
         return None
@@ -49,7 +49,7 @@ class DeterministicVariable(RandomVariable):
     @staticmethod
     def validate(value: ArrayLike) -> None:
         """
-        Validates input to DeterministicPMF
+        Validates input to DeterministicVariable
 
         Parameters
         ----------
@@ -63,10 +63,14 @@ class DeterministicVariable(RandomVariable):
         Raises
         ------
         Exception
-            If the input value object is not a ArrayLike.
+            If the input value object is not an ArrayLike object.
         """
         if not isinstance(value, ArrayLike):
-            raise Exception("value is not a ArrayLike")
+            raise ValueError(
+                f"value {value} passed to a DeterministicVariable "
+                f"is of type {type(value).__name__}, expected "
+                "an ArrayLike object"
+            )
 
         return None
 
