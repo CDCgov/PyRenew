@@ -25,7 +25,7 @@ jobs:
         run: pip install poetry
 
       - name: install package
-        run: poetry install --with dev
+        run: poetry install --with dev,test
 
       - name: run deptry
         run: |

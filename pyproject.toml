@@ -23,7 +23,6 @@ matplotlib = "^3.8.3"
 optional = true
 
 [tool.poetry.group.dev.dependencies]
-pyyaml = "^6.0.0"
 ipykernel = "^6.29.3"
 pillow = "^10.3.0"
 nbconvert = "^7.16.4"
@@ -34,6 +33,7 @@ deptry = "^0.17.0"
 optional = true
 
 [tool.poetry.group.docs.dependencies]
+pyyaml = "^6.0.0"
 nbclient = "^0.10.0"
 nbformat = "^5.10.0"
 numpydoc = "^1.7.0"
