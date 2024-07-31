@@ -115,7 +115,7 @@ class PeriodicProcessSample(NamedTuple):
 def tile_until_n(
     data: ArrayLike,
     n_timepoints: int,
-    offset: int | None = 0,
+    offset: int = 0,
 ) -> ArrayLike:
     """
     Tile the data until it reaches `n_timepoints`.
@@ -126,8 +126,9 @@ def tile_until_n(
         Data to broadcast.
     n_timepoints : int
         Duration of the sequence.
-    offset : int, optional
+    offset : int
         Relative point at which data starts, must be a non-negative integer.
+        Default is zero, i.e., no offset.
 
     Notes
     -----
@@ -158,7 +159,7 @@ def repeat_until_n(
     data: ArrayLike,
     n_timepoints: int,
     period_size: int,
-    offset: int | None = 0,
+    offset: int = 0,
 ):
     """
     Repeat the data until it reaches `n_timepoints`.
@@ -178,9 +179,9 @@ def repeat_until_n(
         Duration of the sequence.
     period_size : int
         Size of the period for the repeat broadcast.
-    offset : int, optional
+    offset : int
         Relative point at which data starts, must be between 0 and
-        period_size - 1. By default 0.
+        period_size - 1. By default 0, i.e., no offset.
 
     Returns
     -------
