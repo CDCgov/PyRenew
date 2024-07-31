@@ -2,6 +2,8 @@
 Tests for _assert_sample_and_rtype method
 """
 
+import re
+
 import pytest
 from numpy.testing import assert_equal
 from pyrenew.metaclass import (
@@ -85,10 +87,13 @@ def test_none_rv():  # numpydoc ignore=GL08
 
 
 def test_not_a_rv():  # numpydoc ignore=GL08
+    not_rv = (1,)
+
     with pytest.raises(
-        Exception, match="is not an instance of RandomVariable"
+        Exception,
+        match=re.escape(f"{not_rv} is not an instance of RandomVariable"),
     ):
-        _assert_sample_and_rtype(1)
+        _assert_sample_and_rtype(not_rv)
 
 
 def test_sample_return():  # numpydoc ignore=GL08
@@ -101,6 +106,7 @@ def test_sample_return():  # numpydoc ignore=GL08
 
     rv2 = RVnoAnnotation()
     with pytest.raises(
-        Exception, match="does not have return type annotation"
+        Exception,
+        match=f"The RandomVariable {rv2} does not have return type annotation",
     ):
         _assert_sample_and_rtype(rv2)
