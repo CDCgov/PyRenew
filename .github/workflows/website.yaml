@@ -92,7 +92,7 @@ jobs:
       run: pip install poetry
 
     - name: Install dependencies with Poetry
-      run: poetry install --with dev
+      run: poetry install --with docs
 
     # Building
     - name: Build HTML using Poetry
