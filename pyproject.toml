@@ -32,7 +32,6 @@ optional = true
 
 [tool.poetry.group.docs.dependencies]
 ipykernel = "^6.29.3"
-pillow = "^10.3.0"
 pyyaml = "^6.0.0"
 nbclient = "^0.10.0"
 nbformat = "^5.10.0"
