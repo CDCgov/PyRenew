@@ -4,9 +4,13 @@ Tests for _assert_sample_and_rtype method
 
 import re
 
+import jax.numpy as jnp
+import numpyro.distributions as dist
 import pytest
 from numpy.testing import assert_equal
+from pyrenew.deterministic import DeterministicVariable, NullObservation
 from pyrenew.metaclass import (
+    DistributionalRV,
     RandomVariable,
     SampledValue,
     _assert_sample_and_rtype,
@@ -86,8 +90,16 @@ def test_none_rv():  # numpydoc ignore=GL08
         _assert_sample_and_rtype(None, skip_if_none=False)
 
 
-def test_not_a_rv():  # numpydoc ignore=GL08
-    not_rv = (1,)
+def test_input_rv():  # numpydoc ignore=GL08
+    valid_rv = [
+        NullObservation(),
+        DeterministicVariable(name="rv1", value=jnp.array([1, 2, 3, 4])),
+        DistributionalRV(name="rv2", dist=dist.Normal(0, 1)),
+    ]
+    not_rv = jnp.array([1])
+
+    for rv in valid_rv:
+        _assert_sample_and_rtype(rv)
 
     with pytest.raises(
         Exception,
@@ -101,12 +113,12 @@ def test_sample_return():  # numpydoc ignore=GL08
     Test that RandomVariable has a sample method with return type tuple
     """
 
-    rv1 = RVreturnsTuple()
-    _assert_sample_and_rtype(rv1)
+    rv3 = RVreturnsTuple()
+    _assert_sample_and_rtype(rv3)
 
-    rv2 = RVnoAnnotation()
+    rv4 = RVnoAnnotation()
     with pytest.raises(
         Exception,
-        match=f"The RandomVariable {rv2} does not have return type annotation",
+        match=f"The RandomVariable {rv4} does not have return type annotation",
     ):
-        _assert_sample_and_rtype(rv2)
+        _assert_sample_and_rtype(rv4)
