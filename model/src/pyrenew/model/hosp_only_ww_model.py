@@ -1,8 +1,8 @@
 # numpydoc ignore=GL08
 import jax.numpy as jnp
 import numpyro.distributions as dist
-
-# import pyrenew.transformation as transformation
+import pyrenew.transformation as transformation
+from pyrenew.arrayutils import PeriodicBroadcaster
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     InfectionInitializationProcess,
@@ -13,7 +13,7 @@ from pyrenew.metaclass import (  # TransformedRandomVariable,
     DistributionalRV,
     Model,
 )
-from pyrenew.process import RtWeeklyDiffProcess
+from pyrenew.process import ARProcess, RtWeeklyDiffProcess
 
 
 class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
@@ -32,17 +32,9 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         p_hosp_w_sd_rv,
         autoreg_p_hosp_rv,
         n_initialization_points,
-        n_timepoints,
     ):  # numpydoc ignore=GL08
         self.infection_initialization_process = InfectionInitializationProcess(
             "I0_initialization",
-            # TransformedRandomVariable(
-            #     "i0",
-            #     i0_over_n_rv,
-            #     transforms=transformation.AffineTransform(
-            #         loc=0, scale=state_pop
-            #     ),
-            # ),
             i0_over_n_rv,
             InitializeInfectionsExponentialGrowth(
                 n_initialization_points,
@@ -66,13 +58,14 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         self.p_hosp_w_sd_rv = p_hosp_w_sd_rv
         self.autoreg_p_hosp_rv = autoreg_p_hosp_rv
         self.state_pop = state_pop
-        self.n_timepoints = n_timepoints
         return None
 
     def validate(self):  # numpydoc ignore=GL08
         return None
 
-    def sample(self):  # numpydoc ignore=GL08
+    def sample(self, n_timepoints):  # numpydoc ignore=GL08
+        n_weeks = n_timepoints // 7 + 1
+
         i0 = self.infection_initialization_process()
 
         eta_sd = self.eta_sd_rv()[0].value
@@ -107,7 +100,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             ),
         )
 
-        rtu = rt_proc.sample(duration=self.n_timepoints)
+        rtu = rt_proc.sample(duration=n_timepoints)
         generation_interval_pmf = self.generation_interval_pmf_rv()
 
         inf_with_feedback_proc_sample = self.inf_with_feedback_proc.sample(
@@ -116,7 +109,40 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             gen_int=generation_interval_pmf[0].value,
         )
 
-        # p_hosp_ar = ARProcess("p_hosp", mean=x, autoreg=[x, y], noise_sd=z)
+        p_hosp_mean = self.p_hosp_mean_rv()[0].value
+        p_hosp_w_sd = self.p_hosp_w_sd_rv()[0].value
+        autoreg_p_hosp = self.autoreg_p_hosp_rv()[0].value
+
+        p_hosp_ar_proc = ARProcess(
+            "p_hosp",
+            mean=p_hosp_mean,
+            autoreg=autoreg_p_hosp,
+            noise_sd=p_hosp_w_sd,
+        )
+
+        p_hosp_ar_init_rv = DistributionalRV(
+            "p_hosp_ar_init",
+            dist.Normal(
+                p_hosp_mean,
+                p_hosp_w_sd / jnp.sqrt(1 - jnp.pow(autoreg_p_hosp, 2)),
+            ),
+        )
+        p_hosp_ar_init = p_hosp_ar_init_rv()[0].value
+
+        p_hosp_ar = p_hosp_ar_proc.sample(
+            duration=n_weeks, inits=p_hosp_ar_init
+        )
+
+        weekly_broadcaster = PeriodicBroadcaster(
+            offset=0,
+            period_size=7,
+            broadcast_type="repeat",
+        )
+
+        ihr = weekly_broadcaster(
+            transformation.SigmoidTransform()(p_hosp_ar[0].value),
+            n_weeks,
+        )  # need to cutoff probably
 
         # Now expand it to daily?
 
@@ -153,8 +179,4 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         #     "latent_hospital_admissions", latent_hospital_admissions
         # )
 
-        return (
-            i0,
-            rtu,
-            inf_with_feedback_proc_sample,
-        )
+        return (i0, rtu, inf_with_feedback_proc_sample, p_hosp_ar, ihr)

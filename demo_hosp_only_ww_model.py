@@ -134,10 +134,7 @@ my_model = hosp_only_ww_model(
     p_hosp_w_sd_rv=p_hosp_w_sd_rv,
     autoreg_p_hosp_rv=autoreg_p_hosp_rv,
     n_initialization_points=uot,
-    n_timepoints=50,
 )
 
 with numpyro.handlers.seed(rng_seed=202):
-    my_model_samp = my_model.sample()
-
-my_model_samp
+    my_model_samp = my_model.sample(n_timepoints=50)
