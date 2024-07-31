@@ -39,6 +39,7 @@ pillow = "^10.3.0"
 nbconvert = "^7.16.4"
 ipywidgets = "^8.1.3"
 deptry = "^0.17.0"
+toml = "^0.10.2"
 
 [tool.numpydoc_validation]
 checks = [
