@@ -18,6 +18,7 @@ jax = ">=0.4.30"
 numpy = "^1.26.4"
 polars = "^1.2.1"
 matplotlib = "^3.8.3"
+toml = "^0.10.2"
 
 [tool.poetry.group.dev]
 optional = true
