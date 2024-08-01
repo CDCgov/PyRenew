@@ -41,7 +41,9 @@ class InfectionInitializationProcess(RandomVariable):
         -------
         None
         """
-        InfectionInitializationProcess.validate(I_pre_init_rv, infection_init_method)
+        InfectionInitializationProcess.validate(
+            I_pre_init_rv, infection_init_method
+        )
 
         self.I_pre_init_rv = I_pre_init_rv
         self.infection_init_method = infection_init_method
