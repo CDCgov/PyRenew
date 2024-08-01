@@ -1,4 +1,8 @@
- seeding ("initialization" in MSR lingo):
+
+NOTES
+
+
+seeding ("initialization" in MSR lingo):
 
  no renewal process, no need for a defined R(t)
 
@@ -8,6 +12,108 @@ pre-observation: renewal process in progress but we set observed hosps to zero a
 observation: renewal process in progress, alpha ≠ 0, and observed hosps have values, so they are used for inference
 
 
+Look to Admission Model for inspiration for sample().
+
+
+
+REMOVE doc string for now, co-code (2)
+
+    """
+    The `cfaepim` model. Its properties are derived
+    from the configuration file provided. Forecasts
+    for a single state can be made using the model.
+    The fundamental question, for each part of
+    `cfaepim`, comes in asking whether a component
+    ought to made in base MSR or made custom in MSR.
+    Remember some parameters, e.g. first_fitting_date,
+    are already accounted for in the data that has
+    been made available.
+    """
+
+
+REMOVE I0 structure, co-code (2)
+
+
+
+"attempt at transmforming to get exponentially dist"
+
+# infections:  initialized infections
+# rate_RV = DeterministicVariable(name="rate_RV", value=0.5)
+# I_pre_init_RV = DeterministicVariable(name="I_pre_init_RV", value=10.0)
+# default_t_pre_init = n_timepoints - 1
+
+# (I_pre_init,) = I_pre_init_RV()
+# (rate,) = rate_RV()
+
+# I_pre_init = I_pre_init.value
+# rate = rate.value
+# infections_default_t_pre_init = InitializeInfectionsExponentialGrowth(
+#     n_timepoints, rate=rate_RV
+# ).initialize_infections(I_pre_init)
+
+self.I0 = TransformedRandomVariable(
+    name="transformed_I0",
+    base_rv=self.I0,
+    transforms=dist.Exponential(rate=1/mean_inf_val)
+)
+
+and
+
+# update: compute from data, to match `cfaepim`
+        # update: then replace with thing that is better
+        # FromVec, drawn as IID exp. len N
+        # update: update, inf_model_seed_days = 8
+        self.lambda_I0 = 0.1
+        self.I0 = InfectionInitializationProcess(
+            name="I0_initialization",
+            I_pre_init_rv=DistributionalRV(
+                name="I0",
+                dist=DeterministicVariable(
+                    name="I_pre_init_RV", value=self.lambda_I0
+                ),
+            ),
+            infection_init_method=InitializeInfectionsExponential(
+                n_timepoints=self.inf_model_seed_days,
+                rate=DistributionalRV(
+                    name="rate", dist=dist.Exponential(self.lambda_I0)
+                ),
+            ),
+            t_unit=1,
+        )
+        #
+        # update: seeding, pre_obs, obs
+        # update: init_period (8), post_init_pre_obs (14) renewal process with no observation (no random walk on Rt, fixed), obs_period
+        # update: make issue on InitializationProcess & ...Method classes
+        # and their use; write up some suggestions.
+        # 22 days before observation
+
+
+
+REMOVE Observation structure, co-code (2)
+
+day_of_week_priors = dist.Normal(
+            jnp.array(self.day_of_week_effect_prior_modes),
+            jnp.array(self.day_of_week_effect_prior_scales),
+        ).expand([len(self.day_of_week_effect_prior_modes)])
+        holiday_prior = dist.Normal(
+            self.holiday_eff_prior_mode, self.holiday_eff_prior_scale
+        ).expand([1])
+        post_holiday_prior = dist.Normal(
+            self.post_holiday_eff_prior_mode, self.post_holiday_eff_prior_scale
+        ).expand([1])
+        pre_observation_prior = dist.Normal(
+            self.non_obs_effect_prior_mode, self.non_obs_effect_prior_scale
+        ).expand([1])
+        coefficient_priors = [
+            day_of_week_priors,
+            holiday_prior,
+            post_holiday_prior,
+            pre_observation_prior
+        ]
+        all_coefficient_priors = dist.Normal(
+            loc=jnp.array([prior.mean for prior in coefficient_priors]),
+            scale=jnp.array([prior.variance for prior in coefficient_priors]) ** 0.5
+        )
 
 
 REMOVE I0 initialization, co-code (1)
