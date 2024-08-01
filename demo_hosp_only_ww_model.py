@@ -138,3 +138,5 @@ my_model = hosp_only_ww_model(
 
 with numpyro.handlers.seed(rng_seed=202):
     my_model_samp = my_model.sample(n_timepoints=50)
+
+my_model_samp
