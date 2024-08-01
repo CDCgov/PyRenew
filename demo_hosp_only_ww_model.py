@@ -121,8 +121,12 @@ autoreg_p_hosp_rv = DistributionalRV(
 # wday_effect_prior_sd = stan_data["wday_effect_prior_sd"][0]
 
 # using a dirichlet prior instead
-hosp_wday_effect_rv = DistributionalRV(
-    "hosp_wday_effect", dist.Dirichlet(concentration=jnp.ones(7))
+hosp_wday_effect_rv = TransformedRandomVariable(
+    "hosp_wday_effect",
+    DistributionalRV(
+        "hosp_wday_effect_raw", dist.Dirichlet(concentration=jnp.ones(7))
+    ),
+    transforms.AffineTransform(loc=0, scale=7),
 )
 
 uot = stan_data["uot"][0]
