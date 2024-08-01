@@ -2,7 +2,6 @@
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import pyrenew.transformation as transformation
-from pyrenew.arrayutils import PeriodicBroadcaster
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     InfectionInitializationProcess,
@@ -133,16 +132,9 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             duration=n_weeks, inits=p_hosp_ar_init
         )
 
-        weekly_broadcaster = PeriodicBroadcaster(
-            offset=0,
-            period_size=7,
-            broadcast_type="repeat",
-        )
-
-        ihr = weekly_broadcaster(
-            transformation.SigmoidTransform()(p_hosp_ar[0].value),
-            n_weeks,
-        )  # need to cutoff probably
+        ihr = jnp.repeat(
+            transformation.SigmoidTransform()(p_hosp_ar[0].value), repeats=7
+        )[:n_timepoints]
 
         # Now expand it to daily?
 
