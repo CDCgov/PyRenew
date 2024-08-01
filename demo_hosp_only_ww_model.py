@@ -125,10 +125,6 @@ hosp_wday_effect_rv = DistributionalRV(
     "hosp_wday_effect", dist.Dirichlet(concentration=jnp.ones(7))
 )
 
-
-with numpyro.handlers.seed(rng_seed=202):
-    hosp_wday_effect_samp = hosp_wday_effect_rv.sample()
-
 uot = stan_data["uot"][0]
 state_pop = stan_data["state_pop"][0]
 
