@@ -113,9 +113,21 @@ autoreg_p_hosp_b = stan_data["autoreg_p_hosp_b"][0]
 autoreg_p_hosp_rv = DistributionalRV(
     "autoreg_p_hosp", dist.Beta(autoreg_p_hosp_a, autoreg_p_hosp_b)
 )
-
+# hosp_wday_effect ~ normal(effect_mean, wday_effect_prior_sd);
+# stan_data["effect_mean"]
 # p_hosp_w ~ std_normal();
 
+# wday_effect_prior_mean = stan_data["wday_effect_prior_mean"][0]
+# wday_effect_prior_sd = stan_data["wday_effect_prior_sd"][0]
+
+# using a dirichlet prior instead
+hosp_wday_effect_rv = DistributionalRV(
+    "hosp_wday_effect", dist.Dirichlet(concentration=jnp.ones(7))
+)
+
+
+with numpyro.handlers.seed(rng_seed=202):
+    hosp_wday_effect_samp = hosp_wday_effect_rv.sample()
 
 uot = stan_data["uot"][0]
 state_pop = stan_data["state_pop"][0]
@@ -133,6 +145,7 @@ my_model = hosp_only_ww_model(
     p_hosp_mean_rv=p_hosp_mean_rv,
     p_hosp_w_sd_rv=p_hosp_w_sd_rv,
     autoreg_p_hosp_rv=autoreg_p_hosp_rv,
+    hosp_wday_effect_rv=hosp_wday_effect_rv,
     n_initialization_points=uot,
 )
 

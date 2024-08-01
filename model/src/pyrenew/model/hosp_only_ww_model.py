@@ -30,6 +30,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         p_hosp_mean_rv,
         p_hosp_w_sd_rv,
         autoreg_p_hosp_rv,
+        hosp_wday_effect_rv,
         n_initialization_points,
     ):  # numpydoc ignore=GL08
         self.infection_initialization_process = InfectionInitializationProcess(
@@ -38,7 +39,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             InitializeInfectionsExponentialGrowth(
                 n_initialization_points,
                 initialization_rate_rv,
-                t_pre_init=0,
+                t_pre_init=-50,
             ),
             t_unit=1,
         )
@@ -56,6 +57,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         self.p_hosp_mean_rv = p_hosp_mean_rv
         self.p_hosp_w_sd_rv = p_hosp_w_sd_rv
         self.autoreg_p_hosp_rv = autoreg_p_hosp_rv
+        self.hosp_wday_effect_rv = hosp_wday_effect_rv
         self.state_pop = state_pop
         return None
 
@@ -136,7 +138,10 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             transformation.SigmoidTransform()(p_hosp_ar[0].value), repeats=7
         )[:n_timepoints]
 
-        # Now expand it to daily?
+        hosp_wday_effect_raw = self.hosp_wday_effect_rv()[0].value
+        hosp_wday_effect = jnp.tile(hosp_wday_effect_raw, n_weeks)[
+            :n_timepoints
+        ]
 
         # infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
 
@@ -171,4 +176,11 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         #     "latent_hospital_admissions", latent_hospital_admissions
         # )
 
-        return (i0, rtu, inf_with_feedback_proc_sample, p_hosp_ar, ihr)
+        return (
+            i0,
+            rtu,
+            inf_with_feedback_proc_sample,
+            p_hosp_ar,
+            ihr,
+            hosp_wday_effect,
+        )
