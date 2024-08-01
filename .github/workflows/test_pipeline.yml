@@ -22,7 +22,7 @@ jobs:
         run: pip install poetry
 
       - name: install package
-        run: poetry install --with dev
+        run: poetry install --with test
 
       - name: install pytest-cov
         run: poetry run pip install pytest-cov
