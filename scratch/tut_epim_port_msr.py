@@ -426,14 +426,9 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
     def validate() -> None:  # numpydoc ignore=GL08
         pass
 
-    def sample(
-        self, n_steps: int, jr_key: ArrayLike, **kwargs
-    ) -> tuple:  # numpydoc ignore=GL08
-        rng_key_sd_wt, rng_key_wt = jax.random.split(jr_key, 2)
+    def sample(self, n_steps: int, **kwargs) -> tuple:  # numpydoc ignore=GL08
         sd_wt = numpyro.sample(
-            "Wt_rw_sd",
-            dist.HalfNormal(self.gamma_RW_prior_scale),
-            rng_key=rng_key_sd_wt,
+            "Wt_rw_sd", dist.HalfNormal(self.gamma_RW_prior_scale)
         )
         wt_rv = SimpleRandomWalkProcess(
             name="Wt",
@@ -451,7 +446,7 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
             name="transformed_rt_rw",
             base_rv=wt_rv,
             transforms=t.ScaledLogitTransform(x_max=self.max_rt),
-        ).sample(n_steps=n_steps, rng_key=rng_key_wt, **kwargs)
+        ).sample(n_steps=n_steps, **kwargs)
         return transformed_rt_samples
 
     # update: eventually want canonical ways to do this
@@ -617,14 +612,19 @@ def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
     print(
         f"CFAEPIM RT PROCESS:\n{cfaepim_MSR_model.Rt_process}\n{dir(cfaepim_MSR_model.Rt_process)}"
     )
-    # sampled_Rt = cfaepim_MSR_model.Rt_process.sample(
-    #     n_steps=100, jr_key=jax.random.key(cfaepim_MSR_model.seed))
-    # print(sampled_Rt)
+    with numpyro.handlers.seed(
+        rng_seed=jax.random.key(cfaepim_MSR_model.seed)
+    ):
+        sampled_Rt = cfaepim_MSR_model.Rt_process.sample(n_steps=100)
+    print(sampled_Rt)
     # verification: (infections) first week hosp
     print(cfaepim_MSR_model.mean_inf_val)
     # verification: (infections) initial infections
     print(f"CFAEPIM I0:\n{cfaepim_MSR_model.I0}\n{dir(cfaepim_MSR_model.I0)}")
-    sampled_I0 = cfaepim_MSR_model.I0.sample()
+    with numpyro.handlers.seed(
+        rng_seed=jax.random.key(cfaepim_MSR_model.seed)
+    ):
+        sampled_I0 = cfaepim_MSR_model.I0.sample()
     print(sampled_I0)
     # verification: observation process
     print(
