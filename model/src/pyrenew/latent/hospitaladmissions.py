@@ -7,7 +7,6 @@ from typing import Any, NamedTuple
 
 import jax.numpy as jnp
 import numpyro
-from jax.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable, SampledValue
 
@@ -150,7 +149,7 @@ class HospitalAdmissions(RandomVariable):
 
     def sample(
         self,
-        latent_infections: ArrayLike,
+        latent_infections: SampledValue,
         **kwargs,
     ) -> HospitalAdmissionsSample:
         """
@@ -171,7 +170,9 @@ class HospitalAdmissions(RandomVariable):
 
         infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
 
-        infection_hosp_rate_t = infection_hosp_rate.value * latent_infections
+        infection_hosp_rate_t = (
+            infection_hosp_rate.value * latent_infections.value
+        )
 
         (
             infection_to_admission_interval,
@@ -188,7 +189,11 @@ class HospitalAdmissions(RandomVariable):
         latent_hospital_admissions = (
             latent_hospital_admissions
             * self.day_of_week_effect_rv(
-                n_timepoints=latent_hospital_admissions.size, **kwargs
+                obs=SampledValue(
+                    latent_hospital_admissions,
+                    t_start=latent_infections.t_start,
+                ),
+                **kwargs,
             )[0].value
         )
 

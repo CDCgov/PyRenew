@@ -183,9 +183,13 @@ class DayOfWeekEffect(metaclass.RandomVariable):
     def validate():
         return None
 
-    def sample(self, n_timepoints: int, **kwargs):
+    def sample(self, obs: SampledValue, **kwargs):
 
+        n_timepoints = obs.value.size
         nweeks = ((n_timepoints + self.offset) // 7) + 1
+
+        # Re-computing the offset
+        adj = (self.offset + obs.t_start) % 7
 
         ans = npro.sample(
             name="dayofweek_effect",
@@ -197,9 +201,7 @@ class DayOfWeekEffect(metaclass.RandomVariable):
 
         return (
             metaclass.SampledValue(
-                jnp.tile(ans, nweeks)[
-                    self.offset : (n_timepoints + self.offset)
-                ]
+                jnp.tile(ans, nweeks)[adj : (n_timepoints + adj)]
             ),
         )
 
