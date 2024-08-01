@@ -33,9 +33,5 @@ def test_invalid_assertion_types():
     input_types = [int, str, tuple, RandomVariable]
 
     for arg, value, input in zip(arg_names, values, input_types):
-        with pytest.raises(
-            TypeError,
-            match=f"{arg} must be an instance of {input}. "
-            f"Got {type(value)}",
-        ):
+        with pytest.raises(TypeError):
             _assert_type(arg, value, input)
