@@ -21,7 +21,7 @@ from pyrenew.mcmcutils import plot_posterior, spread_draws
 from pyrenew.transformation import Transform
 
 
-def _assert_type_error(arg_name: str, value, expected_type) -> None:
+def _assert_type(arg_name: str, value, expected_type) -> None:
     """
     Matches TypeError arising during validation
 
@@ -46,14 +46,11 @@ def _assert_type_error(arg_name: str, value, expected_type) -> None:
 
     if not isinstance(value, expected_type):
         raise TypeError(
-            f"{arg_name} must be an instance of {expected_type}. "
-            f"Got {type(value)}"
+            f"{arg_name} must be an instance of {expected_type}. " f"Got {type(value)}"
         )
 
 
-def _assert_sample_and_rtype(
-    rp: "RandomVariable", skip_if_none: bool = True
-) -> None:
+def _assert_sample_and_rtype(rp: "RandomVariable", skip_if_none: bool = True) -> None:
     """
     Return type-checking for RandomVariable's sample function
 
@@ -81,9 +78,7 @@ def _assert_sample_and_rtype(
 
     # Addressing the None case
     if (rp is None) and (not skip_if_none):
-        Exception(
-            "The passed object cannot be None. It should be RandomVariable"
-        )
+        Exception("The passed object cannot be None. It should be RandomVariable")
     elif skip_if_none and (rp is None):
         return None
 
@@ -104,15 +99,13 @@ def _assert_sample_and_rtype(
 
     if rettype is None:
         raise Exception(
-            f"The RandomVariable {rp} does not have return type "
-            + "annotation."
+            f"The RandomVariable {rp} does not have return type " + "annotation."
         )
 
     try:
         if not isinstance(rettype(), tuple):
             raise Exception(
-                f"The RandomVariable {rp}'s return type annotation is not"
-                + "a tuple"
+                f"The RandomVariable {rp}'s return type annotation is not" + "a tuple"
             )
     except Exception:
         raise Exception(
@@ -223,9 +216,7 @@ class RandomVariable(metaclass=ABCMeta):
         ), f"t_unit should be an integer. It is {type(t_unit)}."
 
         # Timeseries unit should be a positive integer
-        assert (
-            t_unit > 0
-        ), f"t_unit should be a positive integer. It is {t_unit}."
+        assert t_unit > 0, f"t_unit should be a positive integer. It is {t_unit}."
 
         # Data starts should be a positive integer
         assert isinstance(
@@ -497,9 +488,7 @@ class Model(metaclass=ABCMeta):
             mcmc_args=mcmc_args,
         )
         if rng_key is None:
-            rand_int = np.random.randint(
-                np.iinfo(np.int64).min, np.iinfo(np.int64).max
-            )
+            rand_int = np.random.randint(np.iinfo(np.int64).min, np.iinfo(np.int64).max)
             rng_key = jr.key(rand_int)
 
         self.mcmc.run(rng_key=rng_key, **kwargs)
@@ -599,9 +588,7 @@ class Model(metaclass=ABCMeta):
             )
 
         if rng_key is None:
-            rand_int = np.random.randint(
-                np.iinfo(np.int64).min, np.iinfo(np.int64).max
-            )
+            rand_int = np.random.randint(np.iinfo(np.int64).min, np.iinfo(np.int64).max)
             rng_key = jr.key(rand_int)
 
         predictive = Predictive(
@@ -636,9 +623,7 @@ class Model(metaclass=ABCMeta):
         """
 
         if rng_key is None:
-            rand_int = np.random.randint(
-                np.iinfo(np.int64).min, np.iinfo(np.int64).max
-            )
+            rand_int = np.random.randint(np.iinfo(np.int64).min, np.iinfo(np.int64).max)
             rng_key = jr.key(rand_int)
 
         predictive = Predictive(
@@ -751,9 +736,7 @@ class TransformedRandomVariable(RandomVariable):
         """
         for t in self.transforms:
             if not callable(t):
-                raise ValueError(
-                    "All entries in self.transforms " "must be callable"
-                )
+                raise ValueError("All entries in self.transforms " "must be callable")
         if hasattr(self.base_rv, "sample_length"):
             n_transforms = len(self.transforms)
             n_entries = self.base_rv.sample_length()

@@ -4,7 +4,7 @@ import numpyro
 from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
 )
-from pyrenew.metaclass import RandomVariable, SampledValue, _assert_type_error
+from pyrenew.metaclass import RandomVariable, SampledValue, _assert_type
 
 
 class InfectionInitializationProcess(RandomVariable):
@@ -41,9 +41,7 @@ class InfectionInitializationProcess(RandomVariable):
         -------
         None
         """
-        InfectionInitializationProcess.validate(
-            I_pre_init_rv, infection_init_method
-        )
+        InfectionInitializationProcess.validate(I_pre_init_rv, infection_init_method)
 
         self.I_pre_init_rv = I_pre_init_rv
         self.infection_init_method = infection_init_method
@@ -74,8 +72,8 @@ class InfectionInitializationProcess(RandomVariable):
         -------
         None
         """
-        _assert_type_error("I_pre_init_rv", I_pre_init_rv, RandomVariable)
-        _assert_type_error(
+        _assert_type("I_pre_init_rv", I_pre_init_rv, RandomVariable)
+        _assert_type(
             "infection_init_method",
             infection_init_method,
             InfectionInitializationMethod,
