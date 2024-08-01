@@ -3,7 +3,11 @@
 
 import jax.numpy as jnp
 from numpyro.contrib.control_flow import scan
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import (
+    RandomVariable,
+    SampledValue,
+    _assert_sample_and_rtype,
+)
 
 
 class SimpleRandomWalkProcess(RandomVariable):
@@ -45,6 +49,7 @@ class SimpleRandomWalkProcess(RandomVariable):
         None
         """
         self.name = name
+        self.validate(step_rv=step_rv, init_rv=init_rv)
         self.step_rv = step_rv
         self.init_rv = init_rv
         self.t_start = t_start
@@ -95,9 +100,22 @@ class SimpleRandomWalkProcess(RandomVariable):
         )
 
     @staticmethod
-    def validate():
+    def validate(step_rv: any, init_rv: any) -> None:
         """
-        Validates input parameters, implementation pending.
+        Validates input parameters.
+
+        Parameters
+        ----------
+        step_rv: any
+            step distribution.
+        init_rv: any
+            initial value of the distribution.
+
+        Returns
+        -------
+        None
         """
-        super().validate()
+        _assert_sample_and_rtype(step_rv)
+        _assert_sample_and_rtype(init_rv)
+
         return None
