@@ -28,5 +28,5 @@ def ScaledLogitTransform(
         - numpyro.distributions.transforms.SigmoidTransform().inv
     """
     return nt.ComposeTransform(
-        [nt.SigmoidTransform().inv, nt.AffineTransform(0.0, 1.0 / x_max)]
+        [nt.AffineTransform(0.0, 1.0 / x_max), nt.SigmoidTransform().inv]
     )
