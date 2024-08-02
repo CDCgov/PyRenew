@@ -173,6 +173,12 @@ my_model = hosp_only_ww_model(
     n_initialization_points=uot,
 )
 
+
+prior_predictive = my_model.prior_predictive(
+    n_datapoints=len(data_observed_hospital_admissions),
+    numpyro_predictive_args={"num_samples": 200},
+)
+
 with numpyro.handlers.seed(rng_seed=202):
     my_model_samp = my_model.sample(
         n_datapoints=50, data_observed_hospital_admissions=None
