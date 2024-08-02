@@ -133,6 +133,21 @@ inf_to_hosp_rv = DeterministicVariable(
     "inf_to_hosp", jnp.array(stan_data["inf_to_hosp"])
 )
 
+inv_sqrt_phi_prior_mean = stan_data["inv_sqrt_phi_prior_mean"][0]
+inv_sqrt_phi_prior_sd = stan_data["inv_sqrt_phi_prior_sd"][0]
+
+phi_rv = TransformedRandomVariable(
+    "phi",
+    DistributionalRV(
+        "inv_sqrt_phi",
+        dist.TruncatedNormal(
+            loc=inv_sqrt_phi_prior_mean,
+            scale=inv_sqrt_phi_prior_sd,
+            low=1 / jnp.sqrt(5000),
+        ),
+    ),
+    transforms=transforms.PowerTransform(-2),
+)
 
 uot = stan_data["uot"][0]
 state_pop = stan_data["state_pop"][0]
@@ -151,11 +166,14 @@ my_model = hosp_only_ww_model(
     p_hosp_w_sd_rv=p_hosp_w_sd_rv,
     autoreg_p_hosp_rv=autoreg_p_hosp_rv,
     hosp_wday_effect_rv=hosp_wday_effect_rv,
+    phi_rv=phi_rv,
     inf_to_hosp_rv=inf_to_hosp_rv,
     n_initialization_points=uot,
 )
 
 with numpyro.handlers.seed(rng_seed=202):
-    my_model_samp = my_model.sample(n_timepoints=50)
+    my_model_samp = my_model.sample(
+        n_timepoints=50, data_observed_hospital_admissions=None
+    )
 
 my_model_samp

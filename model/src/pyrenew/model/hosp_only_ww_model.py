@@ -12,6 +12,7 @@ from pyrenew.metaclass import (  # TransformedRandomVariable,
     DistributionalRV,
     Model,
 )
+from pyrenew.observation import NegativeBinomialObservation
 from pyrenew.process import ARProcess, RtWeeklyDiffProcess
 
 
@@ -32,6 +33,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         autoreg_p_hosp_rv,
         hosp_wday_effect_rv,
         inf_to_hosp_rv,
+        phi_rv,
         n_initialization_points,
     ):  # numpydoc ignore=GL08
         self.infection_initialization_process = InfectionInitializationProcess(
@@ -60,13 +62,16 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         self.autoreg_p_hosp_rv = autoreg_p_hosp_rv
         self.hosp_wday_effect_rv = hosp_wday_effect_rv
         self.inf_to_hosp_rv = inf_to_hosp_rv
+        self.phi_rv = phi_rv
         self.state_pop = state_pop
         return None
 
     def validate(self):  # numpydoc ignore=GL08
         return None
 
-    def sample(self, n_timepoints):  # numpydoc ignore=GL08
+    def sample(
+        self, n_timepoints, data_observed_hospital_admissions
+    ):  # numpydoc ignore=GL08
         n_weeks = n_timepoints // 7 + 1
 
         i0 = self.infection_initialization_process()
@@ -165,6 +170,15 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             potential_latent_hospital_admissions * ihr * hosp_wday_effect
         )
 
+        hospital_admission_obs_rv = NegativeBinomialObservation(
+            "observed_hospital_admissions", concentration_rv=self.phi_rv
+        )
+
+        observed_hospital_admissions = hospital_admission_obs_rv(
+            mu=latent_hospital_admissions,
+            obs=data_observed_hospital_admissions,
+        )
+
         return (
             i0,
             rtu,
@@ -174,4 +188,5 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             hosp_wday_effect,
             potential_latent_hospital_admissions,
             latent_hospital_admissions,
+            observed_hospital_admissions,
         )
