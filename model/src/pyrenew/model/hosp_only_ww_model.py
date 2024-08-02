@@ -70,9 +70,9 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         return None
 
     def sample(
-        self, n_timepoints, data_observed_hospital_admissions
+        self, n_datapoints=None, data_observed_hospital_admissions=None
     ):  # numpydoc ignore=GL08
-        n_weeks = n_timepoints // 7 + 1
+        n_weeks = n_datapoints // 7 + 1
 
         i0 = self.infection_initialization_process()
 
@@ -108,7 +108,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             ),
         )
 
-        rtu = rt_proc.sample(duration=n_timepoints)
+        rtu = rt_proc.sample(duration=n_datapoints)
         generation_interval_pmf = self.generation_interval_pmf_rv()
 
         inf_with_feedback_proc_sample = self.inf_with_feedback_proc.sample(
@@ -151,12 +151,12 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         ihr = jnp.repeat(
             transformation.SigmoidTransform()(p_hosp_ar[0].value), repeats=7
         )[
-            :n_timepoints
+            :n_datapoints
         ]  # this is only applied after the hospital_admissions are generated, not to all the latent infectios
 
         hosp_wday_effect_raw = self.hosp_wday_effect_rv()[0].value
         hosp_wday_effect = jnp.tile(hosp_wday_effect_raw, n_weeks)[
-            :n_timepoints
+            :n_datapoints
         ]
         inf_to_hosp = self.inf_to_hosp_rv()[0].value
 
@@ -164,7 +164,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             latent_infections,
             inf_to_hosp,
             mode="full",
-        )[:n_timepoints]
+        )[:n_datapoints]
 
         latent_hospital_admissions = (
             potential_latent_hospital_admissions * ihr * hosp_wday_effect
