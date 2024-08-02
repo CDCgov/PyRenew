@@ -1,7 +1,9 @@
+# Run this after running the `toy_data_vignette.Rmd` vignette
+# https://github.com/CDCgov/wastewater-informed-covid-forecasting/blob/prod/cfaforecastrenewalww/vignettes/toy_data_vignette.Rmd
 library(jsonlite)
 library(fs)
 
-base_dir <- path("~/Documents/multisignal-epi-inference/scratch")
+base_dir <- path("scratch")
 
 
 write_json(stan_data, path(base_dir, "stan_data", ext = "json"))

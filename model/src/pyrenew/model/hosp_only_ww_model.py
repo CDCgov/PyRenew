@@ -195,7 +195,8 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             mu=latent_hospital_admissions,
             obs=data_observed_hospital_admissions,
         )
-
+        # These are returned only for debugging purposes
+        # We should record more deterministic variables for plotting and diagnostics
         return (
             i0,
             rtu,
