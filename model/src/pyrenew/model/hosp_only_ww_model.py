@@ -72,6 +72,23 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
     def sample(
         self, n_datapoints=None, data_observed_hospital_admissions=None
     ):  # numpydoc ignore=GL08
+        if n_datapoints is None and data_observed_hospital_admissions is None:
+            raise ValueError(
+                "Either n_datapoints or data_observed_hosp_admissions "
+                "must be passed."
+            )
+        elif (
+            n_datapoints is not None
+            and data_observed_hospital_admissions is not None
+        ):
+            raise ValueError(
+                "Cannot pass both n_datapoints and data_observed_hospital_admissions."
+            )
+        elif n_datapoints is None:
+            n_datapoints = len(data_observed_hospital_admissions)
+        else:
+            n_datapoints = n_datapoints
+
         n_weeks = n_datapoints // 7 + 1
 
         i0 = self.infection_initialization_process()

@@ -152,6 +152,8 @@ phi_rv = TransformedRandomVariable(
 uot = stan_data["uot"][0]
 state_pop = stan_data["state_pop"][0]
 
+data_observed_hospital_admissions = jnp.array(stan_data["hosp"])
+
 my_model = hosp_only_ww_model(
     state_pop=state_pop,
     i0_over_n_rv=i0_over_n_rv,
