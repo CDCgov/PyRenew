@@ -129,6 +129,11 @@ hosp_wday_effect_rv = TransformedRandomVariable(
     transforms.AffineTransform(loc=0, scale=7),
 )
 
+inf_to_hosp_rv = DeterministicVariable(
+    "inf_to_hosp", jnp.array(stan_data["inf_to_hosp"])
+)
+
+
 uot = stan_data["uot"][0]
 state_pop = stan_data["state_pop"][0]
 
@@ -146,6 +151,7 @@ my_model = hosp_only_ww_model(
     p_hosp_w_sd_rv=p_hosp_w_sd_rv,
     autoreg_p_hosp_rv=autoreg_p_hosp_rv,
     hosp_wday_effect_rv=hosp_wday_effect_rv,
+    inf_to_hosp_rv=inf_to_hosp_rv,
     n_initialization_points=uot,
 )
 

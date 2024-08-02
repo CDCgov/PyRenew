@@ -31,6 +31,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         p_hosp_w_sd_rv,
         autoreg_p_hosp_rv,
         hosp_wday_effect_rv,
+        inf_to_hosp_rv,
         n_initialization_points,
     ):  # numpydoc ignore=GL08
         self.infection_initialization_process = InfectionInitializationProcess(
@@ -58,6 +59,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         self.p_hosp_w_sd_rv = p_hosp_w_sd_rv
         self.autoreg_p_hosp_rv = autoreg_p_hosp_rv
         self.hosp_wday_effect_rv = hosp_wday_effect_rv
+        self.inf_to_hosp_rv = inf_to_hosp_rv
         self.state_pop = state_pop
         return None
 
@@ -110,6 +112,13 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             gen_int=generation_interval_pmf[0].value,
         )
 
+        latent_infections = jnp.concat(
+            [
+                i0[0].value,
+                inf_with_feedback_proc_sample.post_initialization_infections.value,
+            ]
+        )
+
         p_hosp_mean = self.p_hosp_mean_rv()[0].value
         p_hosp_w_sd = self.p_hosp_w_sd_rv()[0].value
         autoreg_p_hosp = self.autoreg_p_hosp_rv()[0].value
@@ -136,45 +145,25 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
 
         ihr = jnp.repeat(
             transformation.SigmoidTransform()(p_hosp_ar[0].value), repeats=7
-        )[:n_timepoints]
+        )[
+            :n_timepoints
+        ]  # this is only applied after the hospitalizations are generated, not to all the latent infectios
 
         hosp_wday_effect_raw = self.hosp_wday_effect_rv()[0].value
         hosp_wday_effect = jnp.tile(hosp_wday_effect_raw, n_weeks)[
             :n_timepoints
         ]
+        inf_to_hosp = self.inf_to_hosp_rv()[0].value
 
-        # infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
+        potential_latent_hospitalizations = jnp.convolve(
+            latent_infections,
+            inf_to_hosp,
+            mode="full",
+        )[:n_timepoints]
 
-        # infection_hosp_rate_t = infection_hosp_rate.value * latent_infections
-
-        # (
-        #     infection_to_admission_interval,
-        #     *_,
-        # ) = self.infection_to_admission_interval_rv(**kwargs)
-
-        # latent_hospital_admissions = jnp.convolve(
-        #     infection_hosp_rate_t,
-        #     infection_to_admission_interval.value,
-        #     mode="full",
-        # )[: infection_hosp_rate_t.shape[0]]
-
-        # # Applying the day of the week effect
-        # latent_hospital_admissions = (
-        #     latent_hospital_admissions
-        #     * self.day_of_week_effect_rv(
-        #         n_timepoints=latent_hospital_admissions.size, **kwargs
-        #     )[0].value
-        # )
-
-        # # Applying reporting probability
-        # latent_hospital_admissions = (
-        #     latent_hospital_admissions
-        #     * self.hosp_report_prob_rv(**kwargs)[0].value
-        # )
-
-        # numpyro.deterministic(
-        #     "latent_hospital_admissions", latent_hospital_admissions
-        # )
+        latent_hospitalizations = (
+            potential_latent_hospitalizations * ihr * hosp_wday_effect
+        )
 
         return (
             i0,
@@ -183,4 +172,6 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             p_hosp_ar,
             ihr,
             hosp_wday_effect,
+            potential_latent_hospitalizations,
+            latent_hospitalizations,
         )
