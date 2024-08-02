@@ -1,6 +1,7 @@
 # numpydoc ignore=GL08
 import json
 
+import jax
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -9,6 +10,8 @@ import numpyro.distributions.transforms as transforms
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
 from pyrenew.model import hosp_only_ww_model
+
+numpyro.set_host_device_count(1)
 
 
 def convert_to_logmean_log_sd(mean, sd):
@@ -173,15 +176,27 @@ my_model = hosp_only_ww_model(
     n_initialization_points=uot,
 )
 
-
+# Prior Predictive
 prior_predictive = my_model.prior_predictive(
     n_datapoints=len(data_observed_hospital_admissions),
     numpyro_predictive_args={"num_samples": 200},
 )
 
-with numpyro.handlers.seed(rng_seed=202):
-    my_model_samp = my_model.sample(
-        n_datapoints=50, data_observed_hospital_admissions=None
-    )
+# Posterior Inference
+my_model.run(
+    num_warmup=750,
+    num_samples=500,
+    rng_key=jax.random.key(200),
+    data_observed_hospital_admissions=data_observed_hospital_admissions,
+    mcmc_args=dict(num_chains=2),
+)
 
-my_model_samp
+# Posterior Predictive
+my_model.posterior_predictive(
+    n_datapoints=len(data_observed_hospital_admissions)
+)
+
+# Posterior Forecasting is broken
+my_model.posterior_predictive(
+    n_datapoints=len(data_observed_hospital_admissions) + 2
+)
