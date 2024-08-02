@@ -50,7 +50,9 @@ def convert_to_logmean_log_sd(mean, sd):
 
 
 # Load the JSON file
-with open(
+import builtins
+
+with builtins.open(
     "../../../scratch/stan_data_hosp_only.json",
     "r",
 ) as file:
