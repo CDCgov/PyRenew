@@ -1,5 +1,5 @@
 ---
-title: "Replicating Hospital Only Model from `cdcgov/wastewater-informed-covid-forecasting"`
+title: "Replicating Hospital Only Model from `cdcgov/wastewater-informed-covid-forecasting`"
 format: gfm
 engine: jupyter
 ---
