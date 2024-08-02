@@ -147,7 +147,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             transformation.SigmoidTransform()(p_hosp_ar[0].value), repeats=7
         )[
             :n_timepoints
-        ]  # this is only applied after the hospitalizations are generated, not to all the latent infectios
+        ]  # this is only applied after the hospital_admissions are generated, not to all the latent infectios
 
         hosp_wday_effect_raw = self.hosp_wday_effect_rv()[0].value
         hosp_wday_effect = jnp.tile(hosp_wday_effect_raw, n_weeks)[
@@ -155,14 +155,14 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         ]
         inf_to_hosp = self.inf_to_hosp_rv()[0].value
 
-        potential_latent_hospitalizations = jnp.convolve(
+        potential_latent_hospital_admissions = jnp.convolve(
             latent_infections,
             inf_to_hosp,
             mode="full",
         )[:n_timepoints]
 
-        latent_hospitalizations = (
-            potential_latent_hospitalizations * ihr * hosp_wday_effect
+        latent_hospital_admissions = (
+            potential_latent_hospital_admissions * ihr * hosp_wday_effect
         )
 
         return (
@@ -172,6 +172,6 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             p_hosp_ar,
             ihr,
             hosp_wday_effect,
-            potential_latent_hospitalizations,
-            latent_hospitalizations,
+            potential_latent_hospital_admissions,
+            latent_hospital_admissions,
         )
