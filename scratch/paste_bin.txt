@@ -15,6 +15,65 @@ observation: renewal process in progress, alpha ≠ 0, and observed hosps have v
 Look to Admission Model for inspiration for sample().
 
 
+REMOVE infections, fix co-code (3)
+
+class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
+    @staticmethod
+    def validate() -> None:  # numpydoc ignore=GL08
+        return None
+
+    def sample(
+        self, Rt: ArrayLike, gen_int: ArrayLike, P: float, **kwargs
+    ) -> tuple:  # numpydoc ignore=GL08
+        I0_samples = self.I0.sample()
+        I0 = I0_samples[0].value
+        if I0.size < gen_int.size:
+            raise ValueError(
+                "Initial infections vector must be at least as long as "
+                "the generation interval. "
+                f"Initial infections vector length: {I0.size}, "
+                f"generation interval length: {gen_int.size}."
+            )
+        gen_int_rev = jnp.flip(gen_int)
+        recent_I0 = I0[-gen_int_rev.size :]
+        all_infections = compute_infections_from_rt(
+            I0=recent_I0,
+            Rt=Rt,
+            reversed_generation_interval_pmf=gen_int_rev,
+        )
+        S_t = jnp.zeros_like(all_infections)
+        S_t = S_t.at[0].set(P)  # initial P
+
+        # update: avoid set as much as possible
+        # update: hstack(); can be changed uniformly later
+        # update: per DB's update, use numpyro.contrib.flow something scan
+        def update_infections(carry, x):  # numpydoc ignore=GL08
+            S_prev, I_prev = carry
+            Rt, gen_int_rev_t = x
+            # update: ^ not actually the backwards looking convolve desired
+            # verify this; use fixed value for gen_int doesn't need to change;
+            # could work if you want a time varying generation interval;
+            i_raw_t = Rt * jnp.dot(I_prev, gen_int_rev_t)
+            i_t = logistic_susceptibility_adjustment(i_raw_t, S_prev / P, P)
+            S_t = S_prev - i_t
+            I_prev = jnp.roll(I_prev, -1)
+            I_prev = I_prev.at[-1].set(i_t)
+            return (S_t, I_prev), i_t
+
+        # confirm: update this to set prior on S_{v-1} / P
+        # update: the prior will change init_carry, [0, P]
+        init_carry = (P, recent_I0)
+        Rt_gen_int_rev = jnp.stack(
+            [Rt, jnp.tile(gen_int_rev, (Rt.size, 1))], axis=-1
+        )
+        (_, all_S_t), all_I_t = jax.lax.scan(
+            update_infections, init_carry, Rt_gen_int_rev
+        )
+        # update: realized Rt is a consequence of the sus. adjustment
+        # Epidemia does not document this well.
+        return all_I_t, all_S_t
+
+
 
 REMOVE doc string for now, co-code (2)
 

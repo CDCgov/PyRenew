@@ -6,6 +6,7 @@ data from the 2023-24 season.
 
 import datetime as dt
 import inspect
+import logging
 import os
 from pprint import pprint
 
@@ -27,7 +28,6 @@ from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
     InfectionInitializationProcess,
     InitializeInfectionsFromVec,
-    compute_infections_from_rt,
     logistic_susceptibility_adjustment,
 )
 from pyrenew.metaclass import (
@@ -46,6 +46,11 @@ LABEL_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=12.5)
 AXES_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=16.5)
 
 plt.style.use("epim_port.mplstyle")
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 
 class Config:  # numpydoc ignore=GL08
@@ -259,6 +264,14 @@ def plot_single_location_hosp_data(
 
 
 class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
+    def __init__(
+        self,
+        I0: ArrayLike,
+        susceptibility_prior: numpyro.distributions,
+    ):  # numpydoc ignore=GL08
+        self.I0 = I0
+        self.susceptibility_prior = susceptibility_prior
+
     @staticmethod
     def validate() -> None:  # numpydoc ignore=GL08
         return None
@@ -266,6 +279,46 @@ class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
     def sample(
         self, Rt: ArrayLike, gen_int: ArrayLike, P: float, **kwargs
     ) -> tuple:  # numpydoc ignore=GL08
+        """
+        Given an array a reproduction numbers, a generation
+        interval, and the size of the population, calculate
+        infections under scheme of susceptible depletion.
+
+        Parameters
+        ----------
+        Rt : ArrayLike
+            Reproduction number over time.
+            This is an array of Rt values for each time step.
+        gen_int : ArrayLike
+            Generation interval probability mass function.
+            This is an array of probabilities representing the
+            distribution of times between successive infections
+            in a chain of transmission.
+        P : float
+            Population size. This is the total
+            population size used for
+            susceptibility adjustment.
+        **kwargs : dict, optional
+            Additional keyword arguments
+            passed through to internal
+            sample calls, should there be any.
+
+        Returns
+        -------
+        tuple
+            A tuple containing two arrays (all_I_t) array
+            of infections at each time step and (all_S_t)
+            array of susceptible individuals at each
+            time step.
+
+        Raises
+        ------
+        ValueError
+            If the length of the initial infections vector (I0) is less
+            than the length of the generation interval.
+        """
+
+        # get initial infections
         I0_samples = self.I0.sample()
         I0 = I0_samples[0].value
         if I0.size < gen_int.size:
@@ -275,43 +328,53 @@ class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
                 f"Initial infections vector length: {I0.size}, "
                 f"generation interval length: {gen_int.size}."
             )
+
+        # reverse generation interval (recency)
         gen_int_rev = jnp.flip(gen_int)
         recent_I0 = I0[-gen_int_rev.size :]
-        all_infections = compute_infections_from_rt(
-            I0=recent_I0,
-            Rt=Rt,
-            reversed_generation_interval_pmf=gen_int_rev,
-        )
-        S_t = jnp.zeros_like(all_infections)
-        S_t = S_t.at[0].set(P)  # initial P
 
-        # update: avoid set as much as possible
-        # update: hstack(); can be changed uniformly later
-        # update: per DB's update, use numpyro.contrib.flow something scan
-        def update_infections(carry, x):  # numpydoc ignore=GL08
-            S_prev, I_prev = carry
-            Rt, gen_int_rev_t = x
-            # update: ^ not actually the backwards looking convolve desired
-            # verify this; use fixed value for gen_int doesn't need to change;
-            # could work if you want a time varying generation interval;
-            i_raw_t = Rt * jnp.dot(I_prev, gen_int_rev_t)
-            i_t = logistic_susceptibility_adjustment(i_raw_t, S_prev / P, P)
-            S_t = S_prev - i_t
-            I_prev = jnp.roll(I_prev, -1)
-            I_prev = I_prev.at[-1].set(i_t)
-            return (S_t, I_prev), i_t
+        # sample the initial susceptible population
+        # proportion S_{v-1} / P from prior
+        init_S_proportion = numpyro.sample(
+            "S_v_minus_1_over_P", self.susceptibility_prior
+        )
 
-        # confirm: update this to set prior on S_{v-1} / P
-        # update: the prior will change init_carry, [0, P]
-        init_carry = (P, recent_I0)
-        Rt_gen_int_rev = jnp.stack(
-            [Rt, jnp.tile(gen_int_rev, (Rt.size, 1))], axis=-1
+        # confirm: ensure the proportion is between 0 and 1
+        init_S_proportion = jnp.clip(init_S_proportion, 0, 1)
+
+        # calculate initial susceptible population S_{v-1}
+        init_S = init_S_proportion * P
+
+        def update_infections(carry, Rt):  # numpydoc ignore=GL08
+            S_t, I_recent = carry
+
+            # compute raw infections
+            i_raw_t = Rt * jnp.dot(I_recent, gen_int_rev)
+
+            # apply the logistic susceptibility
+            # adjustment to a potential new
+            # incidence I_unadjusted proposed in
+            # equation 6 of Bhatt et al 2023
+            i_t = logistic_susceptibility_adjustment(
+                I_raw_t=i_raw_t, frac_susceptible=S_t / P, n_population=P
+            )
+
+            # update susceptible population
+            S_t -= i_t
+
+            # update infections
+            I_recent = jnp.concatenate([I_recent[:-1], jnp.array([i_t])])
+
+            return (S_t, I_recent), i_t
+
+        # initial carry state
+        init_carry = (init_S, recent_I0)
+
+        # scan to iterate over time steps and update infections
+        (_, all_S_t), all_I_t = numpyro.contrib.control_flow.scan(
+            update_infections, init_carry, Rt
         )
-        (_, all_S_t), all_I_t = jax.lax.scan(
-            update_infections, init_carry, Rt_gen_int_rev
-        )
-        # update: realized Rt is a consequence of the sus. adjustment
-        # Epidemia does not document this well.
+
         return all_I_t, all_S_t
 
 
@@ -381,7 +444,7 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
             fixed_predictor_values=predictor_values,
             intercept_prior=alpha_intercept_prior,
             coefficient_priors=all_coefficient_priors,
-            transform=t.ScaledLogitTransform(x_max=self.max_rt).inv,
+            transform=t.ScaledLogitTransform(x_max=1.0),
         )
 
     def _init_negative_binomial(self):  # numpydoc ignore=GL08
@@ -415,6 +478,42 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
         return nb_samples
 
 
+def broadcast_rt_to_days(
+    rt_values: ArrayLike, num_days: int, start_day: int
+) -> ArrayLike:
+    """
+    Broadcasts weekly Rt values
+    to daily Rt values, considering
+    the start day of the week.
+
+    Parameters
+    ----------
+    rt_values : ArrayLike
+        Array of weekly Rt values.
+    num_days : int
+        Total number of days.
+    start_day : int
+        The starting day of the week
+        (0 for Sunday, 6 for Saturday).
+
+    Returns
+    -------
+    ArrayLike
+        Array of daily Rt values.
+    """
+    num_weeks = len(rt_values)
+    days_in_week = 7
+    week_days = [days_in_week] * num_weeks
+    week_days[0] -= start_day
+    week_days[-1] = num_days - sum(week_days[:-1])
+    daily_rt = jnp.concatenate(
+        [jnp.full(days, rt) for rt, days in zip(rt_values, week_days)]
+    )
+    return daily_rt
+    # update: 0-indexed week ID vector to broadcast;
+    # generate weekly Rt n_steps = weeks of data
+
+
 class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
     def __init__(
         self,
@@ -446,8 +545,6 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
                 dist=self.intercept_RW_prior,
             ),
         )
-        wt_samples = wt_rv.sample(n_steps=n_steps, **kwargs)
-        print(f"Non-Transformed Samples: {wt_samples}")
         transformed_rt_samples = TransformedRandomVariable(
             name="transformed_rt_rw",
             base_rv=wt_rv,
@@ -539,8 +636,16 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
             t_unit=1,
         )
 
+        # infections: susceptibility depletion prior
+        self.susceptibility_prior = dist.Normal(
+            self.susceptible_fraction_prior_mode,
+            self.susceptible_fraction_prior_scale,
+        )
+
         # infections component
-        # self.infections = CFAEPIM_Infections(self.I0)
+        self.infections = CFAEPIM_Infections(
+            I0=self.I0, susceptibility_prior=self.susceptibility_prior
+        )
 
         # observations component
         self.nb_concentration_prior = dist.Normal(
@@ -601,6 +706,8 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
 
 
 def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
+    logger.info(f"Population Value:\n{cfaepim_MSR_model.population}\n")
+
     # verification: population
     print(f"Population Value:\n{cfaepim_MSR_model.population}\n\n")
     # verification: predictors
@@ -634,11 +741,20 @@ def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
     print(
         f"(Sample Method For I0):\n{inspect.signature(cfaepim_MSR_model.I0.sample)}"
     )
-    with numpyro.handlers.seed(
-        rng_seed=jax.random.key(cfaepim_MSR_model.seed)
-    ):
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
         sampled_I0 = cfaepim_MSR_model.I0.sample()
     print(f"Samples:\n{sampled_I0}\n\n")
+
+    # verification: infections
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        all_I_t, all_S_t = cfaepim_MSR_model.infections.sample(
+            Rt=jnp.array([0.1, 0.1, 0.1]),
+            gen_int=jnp.array([0.25, 0.5, 0.25]),
+            P=23000,
+        )
+    print("INFECTIONS")
+    print(all_I_t, all_S_t)
+
     # verification: observation process
     print(
         f"CFAEPIM OBSERVATION PROCESS:\n{cfaepim_MSR_model.obs_process}\n{dir(cfaepim_MSR_model.obs_process)}"
@@ -646,18 +762,14 @@ def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
     print(
         f"(Sample Method For Obs. Process):\n{inspect.signature(cfaepim_MSR_model.obs_process.sample)}\n\n"
     )
-    with numpyro.handlers.seed(
-        rng_seed=jax.random.key(cfaepim_MSR_model.seed)
-    ):
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
         sampled_alpha = cfaepim_MSR_model.obs_process.alpha_process.sample()[
             "prediction"
         ]
     print(f"CFAEPIM ALPHA PROCESS:\n{sampled_alpha}\n\n")
     random_infs = jnp.array(np.random.randint(low=1000, high=5000, size=20))
     delay_dist = jnp.array(cfaepim_MSR_model.inf_to_hosp_dist)
-    with numpyro.handlers.seed(
-        rng_seed=jax.random.key(cfaepim_MSR_model.seed)
-    ):
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
         sampled_obs = cfaepim_MSR_model.obs_process(
             infections=random_infs, delay_distribution=delay_dist
         )
