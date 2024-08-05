@@ -6,21 +6,24 @@ from __future__ import annotations
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable, SampledValue
-from pyrenew.process import ARProcess
+from pyrenew.process.ar import ARProcess
+from pyrenew.process.differencedprocess import FirstDifferencedProcess
 
 
-class FirstDifferenceARProcess(RandomVariable):
+class FirstDifferencedARProcess(FirstDifferencedProcess):
     """
     Class for a stochastic process
-    with an AR(1) process on the first
+    with an AR(n) process on the first
     differences (i.e. the rate of change).
     """
 
     def __init__(
-        self,
-        name: str,
-        autoreg: ArrayLike,
-        noise_sd: float,
+            self,
+            name: str,
+            autoreg: ArrayLike,
+            noise_sd: float,
+            ar_process_suffix = "_diff_ar"
+            **kwargs,
     ) -> None:
         """
         Default constructor
@@ -28,64 +31,35 @@ class FirstDifferenceARProcess(RandomVariable):
         Parameters
         ----------
         name : str
-            Passed to ARProcess()
+            Name for the random variable
         autoreg : ArrayLike
-            Process parameters pyrenew.processesARprocess.
+            Array of AR process autoregressive coefficient(s),
+            passed to `class:`pyrenew.process.ARprocess`.
+            Length of the vector will determine the order
+            of the process.
         noise_sd : float
-            Error passed to pyrenew.processes.ARProcess.
+            s.d. of the AR process zero-mean Normal step,
+            distribution, passed to `class`:pyrenew.process.ARProcess`
+        ar_process_suffix: str
+            Suffix to add to self.name when naming the underlying
+            ARProcess RandomVariable. Default "_diff_ar".
+        **kwargs :
+            Additional keyword arguments passed to the
+            parent class constructor
 
         Returns
         -------
         None
         """
+        super().__init__(
+            name=name,
+            fundamental_process=ARProcess(
+                self.name + ar_process_suffix,
+                jnp.atleast_1d(autoreg),
+                jnp.atleast_1d(noise_sd)
+            
         self.rate_of_change_proc = ARProcess(
             "arprocess", 0, jnp.array([autoreg]), noise_sd
         )
         self.name = name
 
-    def sample(
-        self,
-        duration: int,
-        init_val: ArrayLike = None,
-        init_rate_of_change: ArrayLike = None,
-        **kwargs,
-    ) -> tuple:
-        """
-        Sample from the process
-
-        Parameters
-        ----------
-        duration : int
-            Passed to ARProcess()
-        init_val : ArrayLike, optional
-            Starting point of the AR process, by default None.
-        init_rate_of_change : ArrayLike, optional
-            Passed to ARProcess.sample, by default None.
-        **kwargs : dict, optional
-            Additional keyword arguments passed through to internal sample()
-            calls, should there be any.
-
-        Returns
-        -------
-        tuple
-            With a single array of shape (duration,).
-        """
-        rates_of_change, *_ = self.rate_of_change_proc.sample(
-            name=self.name + "_rate_of_change",
-            duration=duration,
-            inits=jnp.atleast_1d(init_rate_of_change),
-        )
-        return (
-            SampledValue(
-                init_val + jnp.cumsum(rates_of_change.value.flatten()),
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
-
-    @staticmethod
-    def validate():
-        """
-        Validates input parameters, implementation pending.
-        """
-        return None
