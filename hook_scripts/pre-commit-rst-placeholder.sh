@@ -28,7 +28,6 @@ for qmd in ${TUTORIALS_DIR}/*.qmd; do
 
     # Check if the corresponding rst file already exists
     if [ -f ${TUTORIALS_DIR}/${bname}.rst ]; then
-        echo "RST file already exists: ${TUTORIALS_DIR}${bname}.rst"
         continue
     fi
 
