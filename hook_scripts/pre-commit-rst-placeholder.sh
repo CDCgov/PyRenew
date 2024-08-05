@@ -2,8 +2,8 @@
 
 TUTORIALS_DIR=docs/source/tutorials
 
-# For each *qmd file in model/docs, create a corresponding rst file
-# under docs/source/tutorial
+# For each *qmd file in docs/source/tutorials, create a corresponding rst file
+# under docs/source/tutorials
 COUNTER=0
 
 # Removing everything under docs/source/tutorials/*rst with the exception of the index.rst file.
@@ -16,10 +16,9 @@ for rst in $RST_FILES; do
     bname=$(basename $rst .rst)
 
     # Check if the corresponding qmd file exists
-    if [ ! -f model/docs/${bname}.qmd ]; then
+    if [ ! -f ${TUTORIALS_DIR}/${bname}.qmd ]; then
         echo "Removing $rst"
         rm $rst
-        COUNTER=$((COUNTER+1))
     fi
 done
 
@@ -48,9 +47,3 @@ for qmd in ${TUTORIALS_DIR}/*.qmd; do
     echo ".. <https://github.com/CDCgov/multisignal-epi-inference/tree/main/${TUTORIALS_DIR}/${bname}.qmd>" >> $rst
 
 done
-
-# Exit with 1 if COUNTER != 0
-if [ $COUNTER -ne 0 ]; then
-    echo "Tutorials' RST placeholders were generated."
-    exit 1
-fi
