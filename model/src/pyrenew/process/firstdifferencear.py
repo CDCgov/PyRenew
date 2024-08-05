@@ -57,9 +57,8 @@ class FirstDifferencedARProcess(FirstDifferencedProcess):
                 self.name + ar_process_suffix,
                 jnp.atleast_1d(autoreg),
                 jnp.atleast_1d(noise_sd)
-            
+
         self.rate_of_change_proc = ARProcess(
             "arprocess", 0, jnp.array([autoreg]), noise_sd
         )
         self.name = name
-

@@ -16,11 +16,12 @@ class FirstDifferencedProcess(RandomVariable):
     """
 
     def __init__(
-            self,
-            name: str,
-            fundamental_process: RandomVariable,
-            init_value: ArrayLike,
-            **kwargs) -> None:
+        self,
+        name: str,
+        fundamental_process: RandomVariable,
+        init_value: ArrayLike,
+        **kwargs,
+    ) -> None:
         """
         Default constructor
 
@@ -68,7 +69,8 @@ class FirstDifferencedProcess(RandomVariable):
         return SampledValue(
             value=jnp.cumsum(jnp.hstack[self.init_value, diffs.flatten()]),
             t_start=self.t_start,
-            t_unit=self.t_unit)
+            t_unit=self.t_unit,
+        )
 
     @staticmethod
     def validate():
