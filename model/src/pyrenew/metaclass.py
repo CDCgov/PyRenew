@@ -21,6 +21,36 @@ from pyrenew.mcmcutils import plot_posterior, spread_draws
 from pyrenew.transformation import Transform
 
 
+def _assert_type(arg_name: str, value, expected_type) -> None:
+    """
+    Matches TypeError arising during validation
+
+    Parameters
+    ----------
+    arg_name : str
+        Name of the argument
+    value : object
+        The object to be validated
+    expected_type : type
+        The expected object type
+
+    Raises
+    -------
+    TypeError
+        If `value` is not an instance of `expected_type`.
+
+    Returns
+    -------
+    None
+    """
+
+    if not isinstance(value, expected_type):
+        raise TypeError(
+            f"{arg_name} must be an instance of {expected_type}. "
+            f"Got {type(value)}"
+        )
+
+
 def _assert_sample_and_rtype(
     rp: "RandomVariable", skip_if_none: bool = True
 ) -> None:
