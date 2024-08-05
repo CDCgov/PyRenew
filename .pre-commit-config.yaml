@@ -18,7 +18,7 @@ repos:
         name: Tutorials .rst placeholders (local run only)
         entry: ./hook_scripts/pre-commit-rst-placeholder.sh
         language: script
-        files: 'docs/source/tutorials/*\.qmd'
+        files: 'docs/source/tutorials/.*\.qmd'
   - repo: https://github.com/psf/black
     rev: 23.10.0
     hooks:
