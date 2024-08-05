@@ -15,7 +15,7 @@ repos:
   - repo: local
     hooks:
       - id: generate-rst-placeholders
-        name: Tutorials .rst placeholders (local run only)
+        name: Tutorials .rst placeholders
         entry: ./hook_scripts/pre-commit-rst-placeholder.sh
         language: script
         files: 'docs/source/tutorials/.*\.qmd'

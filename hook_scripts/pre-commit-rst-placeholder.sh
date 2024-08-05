@@ -47,3 +47,9 @@ for qmd in ${TUTORIALS_DIR}/*.qmd; do
     echo ".. <https://github.com/CDCgov/multisignal-epi-inference/tree/main/${TUTORIALS_DIR}/${bname}.qmd>" >> $rst
 
 done
+
+# Exit with 1 if COUNTER != 0
+if [ $COUNTER -ne 0 ]; then
+    echo "Tutorials' RST placeholders were generated."
+    exit 1
+fi
