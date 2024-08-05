@@ -43,16 +43,11 @@ jobs:
       # which is then uploaded as an artifact.
       - name: Render documents
         run: |
-            poetry run quarto render README.md --to rst -o index2.rst
-            mv docs/source/tutorials model/
-            cd model
-            mkdir _compiled_qmd
-            mv ../index2.rst _compiled_qmd
-            for file in $(find tutorials -name '*.qmd'); do
-                poetry run quarto render $file --to rst --output-dir ../_compiled_qmd
-            done
-            for rst_file in _compiled_qmd/*.rst; do
-                poetry run python ../docs/post_process_rst.py "$rst_file"
+            cd docs/source/tutorials
+            poetry run make tutorials_clean
+            poetry run make tutorials_rst
+            for rst_file in *.rst; do
+                poetry run python ../../docs/post_process_rst.py "$rst_file"
             done
 
       # Upload
@@ -60,7 +55,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: tutorials
-          path: model/_compiled_qmd/
+          path: docs/source/tutorials
 
   build:
     needs: render-docs
@@ -81,7 +76,8 @@ jobs:
         name: tutorials
         path: docs/source/tutorials/
 
-    - run: mv docs/source/tutorials/index2.rst docs/source/index.rst
+    - name: Render documentation index from README
+      run: poetry run quarto render README.md --to rst -o docs/source/index.rst
 
     - name: Set up Python
       uses: actions/setup-python@v5

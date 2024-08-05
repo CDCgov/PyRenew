@@ -4,6 +4,7 @@ format: gfm
 engine: jupyter
 ---
 
+
 This document will show the steps to build a simple renewal model featuring a latent infection process, a random walk Rt process, and an observation process for the reported infections.
 
 We start by loading the needed components to build a basic renewal model:
