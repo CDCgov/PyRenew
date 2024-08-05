@@ -15,6 +15,118 @@ observation: renewal process in progress, alpha ≠ 0, and observed hosps have v
 Look to Admission Model for inspiration for sample().
 
 
+REMOVE verification structure, use logging
+
+def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
+    logger.info(f"Population Value:\n{cfaepim_MSR_model.population}\n")
+
+    # verification: population
+    print(f"Population Value:\n{cfaepim_MSR_model.population}\n\n")
+    # verification: predictors
+    print(f"Predictors:\n{cfaepim_MSR_model.predictors}\n\n")
+    # verification: (transmission) generation interval deterministic PMF
+    cfaepim_MSR_model.gen_int.validate(cfaepim_MSR_model.pmf_array)
+    sampled_gen_int = cfaepim_MSR_model.gen_int.sample()
+    print(f"CFAEPIM GENERATION INTERVAL:\n{sampled_gen_int}\n\n")
+    base_object_plot(
+        y=sampled_gen_int[0].value,
+        X=np.arange(0, len(sampled_gen_int[0].value)),
+        title="Sampled Generation Interval",
+        filename="sample_generation_interval",
+        save_as_img=False,
+        display=False,
+    )
+    # verification: (transmission) Rt process
+    print(
+        f"CFAEPIM RT PROCESS:\n{cfaepim_MSR_model.Rt_process}\n{dir(cfaepim_MSR_model.Rt_process)}"
+    )
+    print(
+        f"(Sample Method For Rt Process):\n{inspect.signature(cfaepim_MSR_model.Rt_process.sample)}"
+    )
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        sampled_Rt = cfaepim_MSR_model.Rt_process.sample(n_steps=100)
+    print(f"TRANSFORMED Samples:\n{sampled_Rt}\n\n")
+    # verification: (infections) first week hosp
+    print(f"First Week Mean Infections:\n{cfaepim_MSR_model.mean_inf_val}\n\n")
+    # verification: (infections) initial infections
+    print(f"CFAEPIM I0:\n{cfaepim_MSR_model.I0}\n{dir(cfaepim_MSR_model.I0)}")
+    print(
+        f"(Sample Method For I0):\n{inspect.signature(cfaepim_MSR_model.I0.sample)}"
+    )
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        sampled_I0 = cfaepim_MSR_model.I0.sample()
+    print(f"Samples:\n{sampled_I0}\n\n")
+
+    # verification: infections
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        all_I_t, all_S_t = cfaepim_MSR_model.infections.sample(
+            Rt=jnp.array([0.1, 0.1, 0.1]),
+            gen_int=jnp.array([0.25, 0.5, 0.25]),
+            P=23000,
+        )
+    print("INFECTIONS")
+    print(all_I_t, all_S_t)
+
+    # verification: observation process
+    print(
+        f"CFAEPIM OBSERVATION PROCESS:\n{cfaepim_MSR_model.obs_process}\n{dir(cfaepim_MSR_model.obs_process)}"
+    )
+    print(
+        f"(Sample Method For Obs. Process):\n{inspect.signature(cfaepim_MSR_model.obs_process.sample)}\n\n"
+    )
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        sampled_alpha = cfaepim_MSR_model.obs_process.alpha_process.sample()[
+            "prediction"
+        ]
+    print(f"CFAEPIM ALPHA PROCESS:\n{sampled_alpha}\n\n")
+    random_infs = jnp.array(np.random.randint(low=1000, high=5000, size=20))
+    delay_dist = jnp.array(cfaepim_MSR_model.inf_to_hosp_dist)
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        sampled_obs = cfaepim_MSR_model.obs_process(
+            infections=random_infs, delay_distribution=delay_dist
+        )
+    print(f"Samples:\n{sampled_obs}\n\n")
+
+
+REMOVE broadcasting function, co-code (4)
+
+def broadcast_rt_to_days(
+    rt_values: ArrayLike, num_days: int, start_day: int
+) -> ArrayLike:
+    """
+    Broadcasts weekly Rt values
+    to daily Rt values, considering
+    the start day of the week.
+
+    Parameters
+    ----------
+    rt_values : ArrayLike
+        Array of weekly Rt values.
+    num_days : int
+        Total number of days.
+    start_day : int
+        The starting day of the week
+        (0 for Sunday, 6 for Saturday).
+
+    Returns
+    -------
+    ArrayLike
+        Array of daily Rt values.
+    """
+    num_weeks = len(rt_values)
+    days_in_week = 7
+    week_days = [days_in_week] * num_weeks
+    week_days[0] -= start_day
+    week_days[-1] = num_days - sum(week_days[:-1])
+    daily_rt = jnp.concatenate(
+        [jnp.full(days, rt) for rt, days in zip(rt_values, week_days)]
+    )
+    return daily_rt
+    # update: 0-indexed week ID vector to broadcast;
+    # generate weekly Rt n_steps = weeks of data
+
+
+
 REMOVE infections, fix co-code (3)
 
 class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
