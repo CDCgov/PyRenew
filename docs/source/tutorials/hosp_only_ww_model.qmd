@@ -52,10 +52,12 @@ def convert_to_logmean_log_sd(mean, sd):
 # Load the JSON file
 import os
 
-print(os.listdir("../../../"))
+print(os.listdir("."))
+
+print(os.listdir("../../"))
 
 with open(
-    "../../../scratch/stan_data_hosp_only.json",
+    "../../scratch/stan_data_hosp_only.json",
     "r",
 ) as file:
     stan_data = json.load(file)
