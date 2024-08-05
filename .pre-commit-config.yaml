@@ -18,6 +18,7 @@ repos:
         name: Tutorials .rst placeholders
         entry: ./hook_scripts/pre-commit-rst-placeholder.sh
         language: script
+        always_run: true
   - repo: https://github.com/psf/black
     rev: 23.10.0
     hooks:
