@@ -2,6 +2,7 @@ Developer Documentation
 =======================
 
 **Note this document is a work in progress. Contrbitions to all sections are welcome.**
+
 Github Workflow
 ---------------
 
@@ -42,10 +43,10 @@ Class conventions
 -  Use ``DeterministicVariable``\ s instead of constants within a model.
 
 Naming of ``RandomVariable`` instances and associated sample sites
-----------------------------------------------------
+------------------------------------------------------------------
 In ``numpyro``, Bayesian models are specified in terms of named `"sample sites" <https://num.pyro.ai/en/stable/primitives.html#sample>`_. These "sample sites" represent individual observed or inferred values or groups of such values; they can be thought of as the nodes of a [directed acyclic graph](https://en.wikipedia.org/wiki/Bayesian_network) defining the model.
 
-In ``numpyro``, one defines sample sites via calls to `numpyro.sample()` or `numpyro.deterministic()`. The sites must be given names at that point.
+In ``numpyro``, one defines sample sites via calls to ``numpyro.sample()`` or ``numpyro.deterministic()``. The sites must be given names at that point.
 
 In ``pyrenew``, we define sample sites within the ``sample()`` methods of ``RandomVariable`` objects. In general, the names of the sample sites associated to a particular instance of a ``RandomVariable`` should be specified by the end user when they create that instance.
 
