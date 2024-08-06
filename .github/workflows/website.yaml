@@ -66,23 +66,10 @@ jobs:
     - name: Setup Pages
       uses: actions/configure-pages@v4
 
-    # Load the artifact github-pages-tutorials
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: tutorials
-        path: docs/source/tutorials/
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
-
-    - name: cache poetry
-      uses: actions/cache@v4
-      with:
-        path: ~/.local
-        key: ${{ runner.os }}-poetry
 
     - name: Install Poetry
       run: pip install poetry
@@ -95,10 +82,16 @@ jobs:
         poetry run quarto render README.md --to rst -o index.rst --output-dir docs/source
         poetry run python docs/post_process_rst.py docs/source/index.rst
 
-    - name: Check files are present
-      run: |
-        ls docs/source | cat
-        ls docs/source/tutorials | cat
+    # Download the rendered tutorials
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: tutorials
+        path: docs/source/tutorials/
+
+    - name: Check tutorials downloaded
+      run: ls -R docs/source/tutorials
+
     # Building
     - name: Build HTML using Poetry
       run: poetry run sphinx-build -M html docs/source/ docs/build/
