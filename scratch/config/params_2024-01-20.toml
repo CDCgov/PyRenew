@@ -30,7 +30,7 @@ first_fitting_date = "2023-09-15"
 
 
 adapt_delta = 0.85
-max_treedepth = 13
-n_chains = 3
+max_treedepth = 9
+n_chains = 1
 n_warmup = 1000
 n_iter = 2000

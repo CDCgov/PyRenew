@@ -3,8 +3,6 @@ Porting `cfa-forecast-renewal-epidemia`
 over to MSR. Validated on NHSN influenza
 data from the 2023-24 season.
 """
-
-
 import datetime as dt
 import glob
 import inspect
@@ -12,6 +10,7 @@ import logging
 import os
 from datetime import datetime
 
+import arviz as az
 import jax
 import jax.numpy as jnp
 import matplotlib as mpl
@@ -41,6 +40,9 @@ from pyrenew.metaclass import (
 from pyrenew.observation import NegativeBinomialObservation
 from pyrenew.process import SimpleRandomWalkProcess
 from pyrenew.regression import GLMPrediction
+
+# from typing import NamedTuple
+
 
 FONT_PATH = "texgyreschola-regular.otf"
 if os.path.exists(FONT_PATH):
@@ -89,6 +91,7 @@ def display_data(
     Returns
     -------
     None
+        Displays data.
     """
     rows, cols = data.shape
     assert (
@@ -117,6 +120,7 @@ def check_file_path_valid(file_path: str) -> None:
     Returns
     -------
     None
+        Checks files.
     """
     if not os.path.exists(file_path):
         raise FileNotFoundError(f"The path '{file_path}' does not exist.")
@@ -515,8 +519,10 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
             fixed_predictor_values=self.predictors,
             intercept_prior=self.alpha_prior_dist,
             coefficient_priors=self.coefficient_priors,
-            transform=t.ScaledLogitTransform(x_max=1.0),
+            transform=t.SigmoidTransform().inv,
         )
+        # MAKE ISSUE where inversion happens (which is g, which is g_{-1})
+        # just escape underscores & minus
 
     def _init_negative_binomial(self):  # numpydoc ignore=GL08
         self.nb_observation = NegativeBinomialObservation(
@@ -545,8 +551,11 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
                 : infections.shape[0]
             ]
         )
-        nb_samples = self.nb_observation.sample(mu=expected_hosp, **kwargs)
-        return nb_samples
+        return alpha_samples, expected_hosp
+
+        # update: explore this further;
+        # would be unobserved discrete site if not used
+        # nb_samples = self.nb_observation.sample(mu=expected_hosp, **kwargs)
 
 
 class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
@@ -587,8 +596,31 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
             base_rv=wt_rv,
             transforms=t.ScaledLogitTransform(x_max=self.max_rt).inv,
         ).sample(n_steps=n_steps, **kwargs)
+        broadcasted_rt_samples = transformed_rt_samples[0].value[
+            self.week_indices
+        ]
+        return broadcasted_rt_samples
 
-        return transformed_rt_samples[0].value[self.week_indices]
+
+# # nice to have not essential
+# class CFAEPIM_Model_Sample(NamedTuple): # numpydoc ignore=GL08
+
+#     Rt: SampledValue | None = None
+#     latent_infections: SampledValue | None = None
+#     susceptibles: SampledValue | None = None
+#     ascertainment_rates: SampledValue | None = None
+#     expected_hospitalizations: SampledValue | None = None
+#     observed_hosp_admissions: SampledValue | None = None
+
+#     def __repr__(self):
+#         return (
+#             f"HospModelSample(Rt={self.Rt}, "
+#             f"latent_infections={self.latent_infections}, "
+#             f"susceptibles={self.susceptibles}, "
+#             f"ascertainment_rates={self.ascertainment_rates}, "
+#             f"expected_hospitalizations={self.expected_hospitalizations} ",
+#             f"observed_hosp_admissions={self.observed_hosp_admissions}"
+#         )
 
 
 class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
@@ -599,11 +631,13 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         week_indices: ArrayLike,
         first_week_hosp: int,
         predictors: list[int],
+        data_observed_hosp_admissions: pl.DataFrame,
     ):  # numpydoc ignore=GL08
         self.population = population
         self.week_indices = week_indices
         self.first_week_hosp = first_week_hosp
         self.predictors = predictors
+        self.data_observed_hosp_admissions = data_observed_hosp_admissions
 
         self.config = config
         for key, value in config.items():
@@ -656,6 +690,9 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         self.infections = CFAEPIM_Infections(
             I0=self.I0, susceptibility_prior=self.susceptibility_prior
         )
+        # update: check that post-instantiation, changing
+        # sus_prior changes CFAEPIM_Infections values, believe
+        # does, but check
 
         # observations component
         self.nb_concentration_prior = dist.Normal(
@@ -700,36 +737,35 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         n_steps: int,
         **kwargs,
     ) -> tuple:  # numpydoc ignore=GL08
-        with numpyro.handlers.seed(rng_seed=self.seed):
-            sampled_Rt = self.Rt_process.sample(n_steps=len(self.week_indices))
-            sampled_gen_int = self.gen_int.sample()
-            all_I_t, all_S_t = self.infections.sample(
-                Rt=sampled_Rt,
-                gen_int=sampled_gen_int[0].value,
-                P=self.population,
-            )
-            sampled_obs = self.obs_process(
-                infections=all_I_t,
-                inf_to_hosp_dist=jnp.array(self.inf_to_hosp_dist),
-            )
-        return sampled_Rt, all_I_t, all_S_t, sampled_obs
-
-    def predict(
-        self, n_steps: int, observed_data: dict = None, **kwargs
-    ):  # numpydoc ignore=GL08
-        with numpyro.handlers.seed(rng_seed=self.seed):
-            predictive = numpyro.infer.Predictive(
-                self.model,
-                posterior_samples=self.mcmc.get_samples(),
-                return_sites=["Rt", "infections", "S_t", "obs"],
-            )
-            predictions = predictive(
-                rng_key=jax.random.key(self.config["seed"]),
-                n_steps=n_steps,
-                observed_data=observed_data,
-                **kwargs,
-            )
-        return predictions
+        sampled_Rt = self.Rt_process.sample(n_steps=n_steps)
+        sampled_gen_int = self.gen_int.sample()
+        all_I_t, all_S_t = self.infections.sample(
+            Rt=sampled_Rt,
+            gen_int=sampled_gen_int[0].value,
+            P=self.population,
+        )
+        sampled_alpha, expected_hosp = self.obs_process.sample(
+            infections=all_I_t,
+            inf_to_hosp_dist=jnp.array(self.inf_to_hosp_dist),
+        )
+        observed_hosp_admissions = self.obs_process.nb_observation.sample(
+            mu=expected_hosp,
+            obs=self.data_observed_hosp_admissions,
+            **kwargs,
+        )
+        numpyro.deterministic("Rts", sampled_Rt)
+        numpyro.deterministic("all_I_t", all_I_t)
+        numpyro.deterministic("all_S_t", all_S_t)
+        numpyro.deterministic("alphas", sampled_alpha)
+        numpyro.deterministic("expected_hosp", expected_hosp)
+        numpyro.deterministic("obs", observed_hosp_admissions[0].value)
+        # return {
+        #     "Rts": sampled_Rt,
+        #     "all_I_t": all_I_t,
+        #     "all_S_t": all_S_t,
+        #     "alphas": sampled_alpha,
+        #     "expected_hosp": expected_hosp,
+        #     "obs": observed_hosp_admissions}
 
 
 def run(
@@ -769,7 +805,6 @@ def run(
             "hosp"
         ]
     )
-    print(data_observed_hosp_admissions)
 
     # instantiate cfaepim-MSR
     cfaepim_MSR = CFAEPIM_Model(
@@ -778,14 +813,15 @@ def run(
         week_indices=week_indices,
         first_week_hosp=first_week_hosp,
         predictors=predictors,
+        data_observed_hosp_admissions=data_observed_hosp_admissions,
     )
+    # update:
 
     cfaepim_MSR.run(
         n_steps=week_indices.size,
         num_warmup=config["n_warmup"],
         num_samples=config["n_iter"],
         nuts_args={
-            "adapt_step_size": True,
             "target_accept_prob": config["adapt_delta"],
             "max_tree_depth": config["max_treedepth"],
         },
@@ -794,39 +830,56 @@ def run(
             "progress_bar": True,
         },
     )
+    # update: getting stuck at very small step size
 
-    cfaepim_MSR.print_summary()
-    posterior_predictive_samples = cfaepim_MSR.posterior_predictive()
+    # cfaepim_MSR.print_summary()
+
+    # sample
+    # samples = cfaepim_MSR.mcmc.get_samples()
+
+    posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
+        n_steps=week_indices.size,
+        numpyro_predictive_args={"num_samples": config["n_iter"]},
+        rng_key=jax.random.key(config["seed"]),
+    )
+
     print(f"Posterior Predictive Samples:\n{posterior_predictive_samples}\n\n")
-    prior_predictive_samples = cfaepim_MSR.prior_predictive()
+
+    prior_predictive_samples = cfaepim_MSR.prior_predictive(
+        n_steps=week_indices.size,
+        numpyro_predictive_args={"num_samples": config["n_iter"]},
+        rng_key=jax.random.key(config["seed"]),
+    )
+
     print(f"Prior Predictive Samples:\n{prior_predictive_samples}\n\n")
 
-    predictions = cfaepim_MSR.predict(
-        rng_key=config["seed"],
-        n_steps=week_indices.size,
-        observed_data=data_observed_hosp_admissions,
+    # out2 = cfaepim_MSR.plot_posterior(var="Rts", ylab="Rt")
+    idata = az.from_numpyro(
+        cfaepim_MSR.mcmc,
+        posterior_predictive=posterior_predictive_samples,
+        prior=prior_predictive_samples,
     )
-    print(predictions)
+    fig, ax = plt.subplots()
+    az.plot_lm(
+        "negbinom_rv",
+        idata=idata,
+        kind_pp="hdi",
+        y_kwargs={"color": "black"},
+        y_hat_fill_kwargs={"color": "C0"},
+        axes=ax,
+    )
+    ax.set_title("Posterior Predictive Plot")
+    ax.set_ylabel("Hospital Admissions")
+    ax.set_xlabel("Days")
 
-    # with numpyro.handlers.seed(rng_seed=cfaepim_MSR.seed):
-    #     sampled_Rt = cfaepim_MSR.Rt_process.sample(
-    #         n_steps=len(cfaepim_MSR.week_indices))
-    #     sampled_gen_int = cfaepim_MSR.gen_int.sample()
-    #     all_I_t, all_S_t = cfaepim_MSR.infections.sample(
-    #         Rt=sampled_Rt,
-    #         gen_int=sampled_gen_int[0].value,
-    #         P=population,
-    #     )
-    #     sampled_alpha = cfaepim_MSR.obs_process.alpha_process.sample()[
-    #         "prediction"
-    #     ]
-    #     sampled_obs = cfaepim_MSR.obs_process(
-    #         infections=all_I_t,
-    #         inf_to_hosp_dist=jnp.array(
-    #             cfaepim_MSR.inf_to_hosp_dist),
-    #     )
+    plt.show()
 
-    # print(sampled_obs)
+    # predictions = cfaepim_MSR.predict(
+    #     n_steps=week_indices.size,
+    #     lookahead=28,
+    #     observed_data=data_observed_hosp_admissions,
+    # )
+    # print(predictions)
 
 
 def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
@@ -953,6 +1006,7 @@ def main():  # numpydoc ignore=GL08
     # args = parser.parse_args()
 
     # determine number of CPU cores
+    numpyro.set_platform("cpu")
     num_cores = os.cpu_count()
     numpyro.set_host_device_count(num_cores - (num_cores - 3))
 
@@ -963,10 +1017,10 @@ def main():  # numpydoc ignore=GL08
     data_path = "./data/2024-01-20/2024-01-20_clean_data.tsv"
     influenza_hosp_data = load_data(data_path=data_path)
     rows, cols = influenza_hosp_data.shape
-    display_data(data=influenza_hosp_data, n_col_count=cols)
+    display_data(data=influenza_hosp_data, n_row_count=10, n_col_count=cols)
 
     run(state="NY", dataset=influenza_hosp_data, config=config)
-
+    # max_tree depth 13
     # verification: plot single state hospitalizations
     plot_single_location_hosp_data(
         incidence_data=influenza_hosp_data,
