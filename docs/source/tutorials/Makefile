@@ -14,22 +14,21 @@ help:
 
 # Pattern rule to build a markdown file from a qmd file
 %.md: %.qmd
-	poetry run quarto render $<
+	quarto render $<
 
 # Pattern rule to build a reStructuredText file from a qmd file
 %.rst: %.qmd
-	if [ ! -d $(dir $@) ]; then mkdir rendered_rst; fi
-	poetry run quarto render $< --to rst --output-dir rendered_rst
-	poetry run python ../docs/post_process_rst.py $@
+	quarto render $< --to rst
+	python ../../post_process_rst.py $@
 
 # Pattern rule to build a notebook file from a qmd file
 %.ipynb: %.qmd
-	poetry run quarto convert $< --output $@
+	quarto convert $< --output $@
 
 # Pattern rule to build a Python file from a notebook file
 %.py: %.ipynb
 	sed -i.bak 's/"cell_type": "raw"/"cell_type": "markdown"/g' $<
-	poetry run jupyter nbconvert --to python $<
+	jupyter nbconvert --to python $<
 	rm $<.bak
 
 # Automatically get all .qmd files in the docs directory
@@ -38,6 +37,9 @@ QMD_FILES := $(wildcard *.qmd)
 # Derive the corresponding markdown files
 MD_FILES := $(QMD_FILES:.qmd=.md)
 
+# Derive the corresponding restructured text files
+RST_FILES := $(QMD_FILES:.qmd=.rst)
+
 # Derive the corresponding notebook files
 IPYNB_FILES := $(QMD_FILES:.qmd=.ipynb)
 
@@ -45,7 +47,7 @@ IPYNB_FILES := $(QMD_FILES:.qmd=.ipynb)
 PY_FILES := $(IPYNB_FILES:.ipynb=.py)
 
 # Target to build all docs
-tutorials: tutorials_md tutorials_ipynb tutorials_py
+tutorials: tutorials_md tutorials_ipynb tutorials_py tutorials_rst
 
 # Target to build all markdown files
 tutorials_md: $(MD_FILES)
@@ -60,5 +62,5 @@ tutorials_ipynb: $(IPYNB_FILES)
 tutorials_py: $(PY_FILES)
 
 tutorials_clean:
-	rm -rf docs/*_files/
-	rm -f $(MD_FILES) $(IPYNB_FILES) $(PY_FILES)
+	rm -rf ./*_files/
+	rm -f $(MD_FILES) $(IPYNB_FILES) $(PY_FILES) $(RST_FILES)
