@@ -25,12 +25,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: cache poetry
-        uses: actions/cache@v4
-        with:
-          path: ~/.local
-          key: ${{ runner.os }}-poetry
-
       - name: install poetry
         run: pip install poetry
 
