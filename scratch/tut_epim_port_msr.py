@@ -495,33 +495,14 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
     def __init__(
         self,
         predictors,
-        alpha_intercept_prior_mode,
-        alpha_intercept_prior_scale,
-        day_of_week_effect_prior_modes,
-        day_of_week_effect_prior_scales,
-        holiday_eff_prior_mode,
-        holiday_eff_prior_scale,
-        post_holiday_eff_prior_mode,
-        post_holiday_eff_prior_scale,
-        non_obs_effect_prior_mode,
-        non_obs_effect_prior_scale,
+        alpha_prior_dist,
+        coefficient_priors,
         max_rt,
         nb_concentration_prior,
     ):  # numpydoc ignore=GL08
         self.predictors = predictors
-        self.alpha_intercept_prior_mode = alpha_intercept_prior_mode
-        self.alpha_intercept_prior_scale = alpha_intercept_prior_scale
-
-        # update: this should not depend on explicit covariates, it should
-        # receive all_coefficient_priors? (works fine)
-        self.day_of_week_effect_prior_modes = day_of_week_effect_prior_modes
-        self.day_of_week_effect_prior_scales = day_of_week_effect_prior_scales
-        self.holiday_eff_prior_mode = holiday_eff_prior_mode
-        self.holiday_eff_prior_scale = holiday_eff_prior_scale
-        self.post_holiday_eff_prior_mode = post_holiday_eff_prior_mode
-        self.post_holiday_eff_prior_scale = post_holiday_eff_prior_scale
-        self.non_obs_effect_prior_mode = non_obs_effect_prior_mode
-        self.non_obs_effect_prior_scale = non_obs_effect_prior_scale
+        self.alpha_prior_dist = alpha_prior_dist
+        self.coefficient_priors = coefficient_priors
         self.max_rt = max_rt
         self.nb_concentration_prior = nb_concentration_prior
 
@@ -529,34 +510,11 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
         self._init_negative_binomial()
 
     def _init_alpha_t(self):  # numpydoc ignore=GL08
-        predictor_values = self.predictors
-        alpha_intercept_prior = dist.Normal(
-            self.alpha_intercept_prior_mode, self.alpha_intercept_prior_scale
-        )
-        # update: fine for
-        all_coefficient_priors = dist.Normal(
-            loc=jnp.array(
-                self.day_of_week_effect_prior_modes
-                + [
-                    self.holiday_eff_prior_mode,
-                    self.post_holiday_eff_prior_mode,
-                    self.non_obs_effect_prior_mode,
-                ]
-            ),
-            scale=jnp.array(
-                self.day_of_week_effect_prior_scales
-                + [
-                    self.holiday_eff_prior_scale,
-                    self.post_holiday_eff_prior_scale,
-                    self.non_obs_effect_prior_scale,
-                ]
-            ),
-        )
         self.alpha_process = GLMPrediction(
             name="alpha_t",
-            fixed_predictor_values=predictor_values,
-            intercept_prior=alpha_intercept_prior,
-            coefficient_priors=all_coefficient_priors,
+            fixed_predictor_values=self.predictors,
+            intercept_prior=self.alpha_prior_dist,
+            coefficient_priors=self.coefficient_priors,
             transform=t.ScaledLogitTransform(x_max=1.0),
         )
 
@@ -576,14 +534,14 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
     def sample(
         self,
         infections: ArrayLike,
-        delay_distribution: ArrayLike,
+        inf_to_hosp_dist: ArrayLike,
         **kwargs,
     ) -> tuple:  # numpydoc ignore=GL08
         alpha_samples = self.alpha_process.sample()["prediction"]
         alpha_samples = alpha_samples[: infections.shape[0]]
         expected_hosp = (
             alpha_samples
-            * jnp.convolve(infections, delay_distribution, mode="full")[
+            * jnp.convolve(infections, inf_to_hosp_dist, mode="full")[
                 : infections.shape[0]
             ]
         )
@@ -597,10 +555,12 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
         intercept_RW_prior: numpyro.distributions,
         max_rt: float,
         gamma_RW_prior_scale: float,
+        week_indices: ArrayLike,
     ):  # numpydoc ignore=GL08
         self.intercept_RW_prior = intercept_RW_prior
         self.max_rt = max_rt
         self.gamma_RW_prior_scale = gamma_RW_prior_scale
+        self.week_indices = week_indices
 
     @staticmethod
     def validate() -> None:  # numpydoc ignore=GL08
@@ -627,25 +587,23 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
             base_rv=wt_rv,
             transforms=t.ScaledLogitTransform(x_max=self.max_rt).inv,
         ).sample(n_steps=n_steps, **kwargs)
-        return transformed_rt_samples
 
-    # update: eventually want canonical ways to do this
-    # update: to sampled value or in the sample call
+        return transformed_rt_samples[0].value[self.week_indices]
 
 
 class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
     def __init__(
         self,
-        config: dist[str, any],
+        config: dict[str, any],
         population: int,
-        week_indices: list[int],
+        week_indices: ArrayLike,
         first_week_hosp: int,
         predictors: list[int],
     ):  # numpydoc ignore=GL08
-        self.population = (population,)
-        self.week_indices = (week_indices,)
-        self.first_week_hosp = (first_week_hosp,)
-        self.predictors = (predictors,)
+        self.population = population
+        self.week_indices = week_indices
+        self.first_week_hosp = first_week_hosp
+        self.predictors = predictors
 
         self.config = config
         for key, value in config.items():
@@ -665,6 +623,7 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
             intercept_RW_prior=self.intercept_RW_prior,
             max_rt=self.max_rt,
             gamma_RW_prior_scale=self.weekly_rw_prior_scale,
+            week_indices=self.week_indices,
         )
 
         # infections: get value rate for infection seeding (initialization)
@@ -703,20 +662,33 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
             self.reciprocal_dispersion_prior_mode,
             self.reciprocal_dispersion_prior_scale,
         )
+        self.alpha_prior_dist = dist.Normal(
+            self.ihr_intercept_prior_mode, self.ihr_intercept_prior_scale
+        )
+        self.coefficient_priors = dist.Normal(
+            loc=jnp.array(
+                self.day_of_week_effect_prior_modes
+                + [
+                    self.holiday_eff_prior_mode,
+                    self.post_holiday_eff_prior_mode,
+                    self.non_obs_effect_prior_mode,
+                ]
+            ),
+            scale=jnp.array(
+                self.day_of_week_effect_prior_scales
+                + [
+                    self.holiday_eff_prior_scale,
+                    self.post_holiday_eff_prior_scale,
+                    self.non_obs_effect_prior_scale,
+                ]
+            ),
+        )
         self.obs_process = CFAEPIM_Observation(
-            self.predictors,
-            self.ihr_intercept_prior_mode,
-            self.ihr_intercept_prior_scale,
-            self.day_of_week_effect_prior_modes,
-            self.day_of_week_effect_prior_scales,
-            self.holiday_eff_prior_mode,
-            self.holiday_eff_prior_scale,
-            self.post_holiday_eff_prior_mode,
-            self.post_holiday_eff_prior_scale,
-            self.non_obs_effect_prior_mode,
-            self.non_obs_effect_prior_scale,
-            self.max_rt,
-            self.nb_concentration_prior,
+            predictors=self.predictors,
+            alpha_prior_dist=self.alpha_prior_dist,
+            coefficient_priors=self.coefficient_priors,
+            max_rt=self.max_rt,
+            nb_concentration_prior=self.nb_concentration_prior,
         )
 
     @staticmethod
@@ -728,31 +700,35 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         n_steps: int,
         **kwargs,
     ) -> tuple:  # numpydoc ignore=GL08
-        # updated state of the components as classes
-        # update: unfinished!
-        # update: n_steps
+        with numpyro.handlers.seed(rng_seed=self.seed):
+            sampled_Rt = self.Rt_process.sample(n_steps=len(self.week_indices))
+            sampled_gen_int = self.gen_int.sample()
+            all_I_t, all_S_t = self.infections.sample(
+                Rt=sampled_Rt,
+                gen_int=sampled_gen_int[0].value,
+                P=self.population,
+            )
+            sampled_obs = self.obs_process(
+                infections=all_I_t,
+                inf_to_hosp_dist=jnp.array(self.inf_to_hosp_dist),
+            )
+        return sampled_Rt, all_I_t, all_S_t, sampled_obs
 
-        rt_samples = self.Rt_process.sample(n_steps=n_steps, **kwargs)["value"]
-        all_I_t, all_S_t = self.infections.sample(
-            Rt=rt_samples, gen_int=self.gen_int, P=self.population, **kwargs
-        )
-        nb_samples = self.observation.sample(
-            infections=all_I_t,
-            delay_distribution=self.inf_to_hosp_dist,
-            **kwargs,
-        )
-        return rt_samples, all_I_t, all_S_t, nb_samples
-
-    def predict(self, rng_key, **kwargs):  # numpydoc ignore=GL08
-        posterior_pred_dist = numpyro.infer.Predictive(
-            self.model, self.mcmc.get_samples()
-        )
-        predictions = posterior_pred_dist(
-            rng_key=jax.random.PRNGKey(
-                self.seed
-            ),  # confirm: do not just define as instance attribute?
-            num_samples=self.n_iter,
-        )
+    def predict(
+        self, n_steps: int, observed_data: dict = None, **kwargs
+    ):  # numpydoc ignore=GL08
+        with numpyro.handlers.seed(rng_seed=self.seed):
+            predictive = numpyro.infer.Predictive(
+                self.model,
+                posterior_samples=self.mcmc.get_samples(),
+                return_sites=["Rt", "infections", "S_t", "obs"],
+            )
+            predictions = predictive(
+                rng_key=jax.random.key(self.config["seed"]),
+                n_steps=n_steps,
+                observed_data=observed_data,
+                **kwargs,
+            )
         return predictions
 
 
@@ -768,7 +744,7 @@ def run(
     )
 
     # extract week indices
-    week_indices = list(
+    week_indices = jnp.array(
         dataset.filter(pl.col("location") == state).select(["week"])["week"]
     )
 
@@ -803,7 +779,54 @@ def run(
         first_week_hosp=first_week_hosp,
         predictors=predictors,
     )
-    print(cfaepim_MSR)
+
+    cfaepim_MSR.run(
+        n_steps=week_indices.size,
+        num_warmup=config["n_warmup"],
+        num_samples=config["n_iter"],
+        nuts_args={
+            "adapt_step_size": True,
+            "target_accept_prob": config["adapt_delta"],
+            "max_tree_depth": config["max_treedepth"],
+        },
+        mcmc_args={
+            "num_chains": config["n_chains"],
+            "progress_bar": True,
+        },
+    )
+
+    cfaepim_MSR.print_summary()
+    posterior_predictive_samples = cfaepim_MSR.posterior_predictive()
+    print(f"Posterior Predictive Samples:\n{posterior_predictive_samples}\n\n")
+    prior_predictive_samples = cfaepim_MSR.prior_predictive()
+    print(f"Prior Predictive Samples:\n{prior_predictive_samples}\n\n")
+
+    predictions = cfaepim_MSR.predict(
+        rng_key=config["seed"],
+        n_steps=week_indices.size,
+        observed_data=data_observed_hosp_admissions,
+    )
+    print(predictions)
+
+    # with numpyro.handlers.seed(rng_seed=cfaepim_MSR.seed):
+    #     sampled_Rt = cfaepim_MSR.Rt_process.sample(
+    #         n_steps=len(cfaepim_MSR.week_indices))
+    #     sampled_gen_int = cfaepim_MSR.gen_int.sample()
+    #     all_I_t, all_S_t = cfaepim_MSR.infections.sample(
+    #         Rt=sampled_Rt,
+    #         gen_int=sampled_gen_int[0].value,
+    #         P=population,
+    #     )
+    #     sampled_alpha = cfaepim_MSR.obs_process.alpha_process.sample()[
+    #         "prediction"
+    #     ]
+    #     sampled_obs = cfaepim_MSR.obs_process(
+    #         infections=all_I_t,
+    #         inf_to_hosp_dist=jnp.array(
+    #             cfaepim_MSR.inf_to_hosp_dist),
+    #     )
+
+    # print(sampled_obs)
 
 
 def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
@@ -879,7 +902,7 @@ def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
     with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
         sampled_obs = cfaepim_MSR_model.obs_process(
             infections=all_I_t,
-            delay_distribution=jnp.array(cfaepim_MSR_model.inf_to_hosp_dist),
+            inf_to_hosp_dist=jnp.array(cfaepim_MSR_model.inf_to_hosp_dist),
         )
     logger.info(f"Hospitalization Observation Samples:\n{sampled_obs}\n")
 
@@ -931,7 +954,7 @@ def main():  # numpydoc ignore=GL08
 
     # determine number of CPU cores
     num_cores = os.cpu_count()
-    numpyro.set_host_device_count(num_cores - (num_cores - 1))
+    numpyro.set_host_device_count(num_cores - (num_cores - 3))
 
     # load parameters config (2024-01-20)
     config = load_config(config_path="./config/params_2024-01-20.toml")

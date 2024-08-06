@@ -15,6 +15,20 @@ observation: renewal process in progress, alpha ≠ 0, and observed hosps have v
 Look to Admission Model for inspiration for sample().
 
 
+REMOVE various removals:
+
+# rt_samples = self.Rt_process.sample(n_steps=n_steps, **kwargs)["value"]
+        # all_I_t, all_S_t = self.infections.sample(
+        #     Rt=rt_samples, gen_int=self.gen_int, P=self.population, **kwargs
+        # )
+        # nb_samples = self.observation.sample(
+        #     infections=all_I_t,
+        #     delay_distribution=self.inf_to_hosp_dist,
+        #     **kwargs,
+        # )
+        # return rt_samples, all_I_t, all_S_t, nb_samples
+
+
 REMOVE verification structure, use logging
 
 def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
