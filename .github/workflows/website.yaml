@@ -77,17 +77,11 @@ jobs:
     - name: Install dependencies with Poetry
       run: poetry install --with docs
 
-    - name: Check state of source dir
-      run: ls -R docs/source
-
     - name: Render documentation index from README
       run: |
         poetry run quarto render README.md --to rst -o index.rst
         mv index.rst docs/source
         poetry run python docs/post_process_rst.py docs/source/index.rst
-
-    - name: Check state of source dir
-      run: ls -R docs/source
 
     # Download the rendered tutorials
     - name: Download artifacts
@@ -95,9 +89,6 @@ jobs:
       with:
         name: tutorials
         path: docs/source/tutorials/
-
-    - name: Check tutorials downloaded
-      run: ls -R docs/source
 
     # Building
     - name: Build HTML using Poetry
@@ -129,4 +120,4 @@ jobs:
       uses: actions/deploy-pages@v4
       with:
         artifact_name: github-pages
-        preview: true # Not yet available to the public.
+        preview: true
