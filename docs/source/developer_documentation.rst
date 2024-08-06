@@ -50,7 +50,7 @@ In ``numpyro``, one defines sample sites via calls to ``numpyro.sample()`` or ``
 
 In ``pyrenew``, we define sample sites within the ``sample()`` methods of ``RandomVariable`` objects. In general, the names of the sample sites associated to a particular instance of a ``RandomVariable`` should be specified by the end user when they create that instance.
 
-Hard-coding sample site names in a ``RandomVariable.sample()`` call is strongly discouraged, and even setting subclass-level default values should generally be avoided. Instead, instances of a ``RandomVariable`` should have a user-specified ``name`` attribute defined at instance construction; that ``name`` attribute should then be used to define any sample site names when the `.sample()` method is called.
+Hard-coding sample site names in a ``RandomVariable.sample()`` call is strongly discouraged, and even setting subclass-level default values should generally be avoided. Instead, instances of a ``RandomVariable`` should have a user-specified ``name`` attribute defined at instance construction; that ``name`` attribute should then be used to define any sample site names when the ``.sample()`` method is called.
 
 
 Adding Documentation to Sphinx
