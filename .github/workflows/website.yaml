@@ -90,7 +90,7 @@ jobs:
         path: docs/source/tutorials/
 
     - name: Check tutorials downloaded
-      run: ls -R docs/source/tutorials
+      run: ls -R docs/source
 
     # Building
     - name: Build HTML using Poetry
