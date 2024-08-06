@@ -60,6 +60,7 @@ jobs:
       contents: write
     steps:
     - uses: actions/checkout@v4
+    - uses: quarto-dev/quarto-actions/setup@v2
 
     # Setting up the environment
     - name: Setup Pages
