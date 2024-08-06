@@ -26,14 +26,16 @@ A variety of coding conventions are enforced by automated tools in continuous in
 PyRenew Principles
 ------------------
 
--  Variable naming conventions
+  Variable naming conventions
+  ---------------------------
 
    -  Use the ``data_`` prefix for (potentially) observed data.
    -  Use the ``_rv`` suffix for random variables.
    -  Use the ``observed_`` for the output of sample statements where ``obs`` is a ``data_`` prefixed object.
    -  Thus, code which may reasonably written like ``infections = infections.sample(x, obs=infections)`` should instead be written ``observed_infections = infections_rv.sample(x, obs=data_infections)``.
 
--  Class conventions
+  Class conventions
+  -----------------
 
    -  Composing ``Model`` objects is discouraged. To modularize and reuse code across ``Model``s, create custom ``RandomVariable`` classes.
    -  Returning anything from ``Model.sample`` is discouraged. Instead, sample from models using ``Predictive`` or our ``prior_predictive`` or ``posterior_predictive`` functions.
