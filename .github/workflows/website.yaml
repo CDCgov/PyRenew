@@ -82,7 +82,8 @@ jobs:
 
     - name: Render documentation index from README
       run: |
-        poetry run quarto render README.md --to rst -o index.rst --output-dir docs/source
+        poetry run quarto render README.md --to rst -o index.rst
+        mv index.rst docs/source
         poetry run python docs/post_process_rst.py docs/source/index.rst
 
     - name: Check state of source dir
