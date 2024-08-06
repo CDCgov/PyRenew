@@ -45,9 +45,6 @@ jobs:
             cd docs/source/tutorials
             poetry run make tutorials_clean
             poetry run make tutorials_rst
-            for rst_file in *.rst; do
-                poetry run python ../../docs/post_process_rst.py "$rst_file"
-            done
 
       # Upload
       - name: Upload artifacts
