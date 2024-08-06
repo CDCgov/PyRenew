@@ -19,6 +19,12 @@ def test_broadcaster() -> None:
         jnp.array([1, 2, 3, 1, 2, 3, 1, 2, 3, 1]),
     )
 
+    # With an offset of 2
+    testing.assert_array_equal(
+        tile_until_n(base_array, 10, offset=2),
+        jnp.array([3, 1, 2, 3, 1, 2, 3, 1, 2, 3]),
+    )
+
     testing.assert_array_equal(
         repeat_until_n(
             data=base_array,
@@ -27,6 +33,17 @@ def test_broadcaster() -> None:
             period_size=7,
         ),
         jnp.array([1, 1, 1, 1, 1, 1, 1, 2, 2, 2]),
+    )
+
+    # With an offset of 2
+    testing.assert_array_equal(
+        repeat_until_n(
+            data=base_array,
+            n_timepoints=10,
+            offset=2,
+            period_size=7,
+        ),
+        jnp.array([1, 1, 1, 1, 1, 2, 2, 2, 2, 2]),
     )
 
     with pytest.raises(ValueError, match="The data is too short to broadcast"):

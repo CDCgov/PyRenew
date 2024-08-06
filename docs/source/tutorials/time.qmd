@@ -32,7 +32,7 @@ The `t_unit, t_start` pair can encode different types of time series data. For e
 
 ## How it relates to periodicity
 
-The `tile_until_n()` and `repeat_until_n()` functions provide a way of tiling and repeating data accounting starting time, but it does not encode the time unit, only the period length and starting point. Furthermore, samples returned from `PeriodicEffect()` and `RtPeriodicDiffProcess()` both currently return daily values shifted so that the first entry of their arrays matches day 0 in the model.
+The `tile_until_n()` and `repeat_until_n()` functions provide a way of tiling and repeating data accounting starting time, but they do not encode the time unit, only the period length and starting point. Furthermore, samples returned from `PeriodicEffect()` and `RtPeriodicDiffProcess()` both currently return daily values shifted so that the first entry of their arrays matches day 0 in the model.
 
 ## Unimplemented features
 

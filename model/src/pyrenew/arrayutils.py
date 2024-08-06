@@ -166,10 +166,10 @@ def repeat_until_n(
 
     Notes
     -----
-    Using the `offset` parameter, the function will start the broadcast
-    from the `offset`-th element of the data. If the data is shorter than
-    `n_timepoints`, the function will repeat or tile the data until it
-    reaches `n_timepoints`.
+    Using the `offset` parameter, the function will offset the data after
+    the repeat operation. So, if the offset is 2, the repeat operation
+    will repeat the data until `n_timepoints + 2` and then offset the
+    data by 2, returning an array of size `n_timepoints`.
 
     Parameters
     ----------
@@ -215,13 +215,17 @@ def repeat_until_n(
         f"to {period_size - 1}."
     )
 
-    if (data.size * period_size) < n_timepoints:
+    if (data.size * period_size) < (n_timepoints + offset):
         raise ValueError(
-            "The data is too short to broadcast to "
-            f"the given number of timepoints ({n_timepoints}). The "
+            "The data is too short to broadcast to the given number "
+            f"of timepoints + offset ({n_timepoints + offset}). The "
             "repeated data would have a size of data.size * "
             f"period_size = {data.size} * {period_size} = "
             f"{data.size * period_size}."
         )
 
-    return jnp.repeat(data, period_size)[offset : (offset + n_timepoints)]
+    return jnp.repeat(
+        a=data,
+        repeats=period_size,
+        total_repeat_length=n_timepoints + offset,
+    )[offset : (offset + n_timepoints)]
