@@ -19,6 +19,7 @@ for rst in $RST_FILES; do
     if [ ! -f ${TUTORIALS_DIR}/${bname}.qmd ]; then
         echo "Removing $rst"
         rm $rst
+	COUNTER=$((COUNTER+1))
     fi
 done
 
