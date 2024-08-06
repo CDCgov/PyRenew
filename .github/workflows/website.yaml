@@ -72,9 +72,6 @@ jobs:
         name: tutorials
         path: docs/source/tutorials/
 
-    - name: Render documentation index from README
-      run: poetry run quarto render README.md --to rst -o docs/source/index.rst
-
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
@@ -85,6 +82,11 @@ jobs:
 
     - name: Install dependencies with Poetry
       run: poetry install --with docs
+
+    - name: Render documentation index from README
+      run: |
+        poetry run quarto render README.md --to rst -o docs/source/index.rst
+        poetry run python docs/post_process_rst.py docs/source/index.rst
 
     # Building
     - name: Build HTML using Poetry
