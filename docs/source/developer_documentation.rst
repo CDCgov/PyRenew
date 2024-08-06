@@ -39,8 +39,17 @@ Class conventions
 -  Composing ``Model`` objects is discouraged. To modularize and reuse code across ``Model``s, create custom ``RandomVariable`` classes.
 -  Returning anything from ``Model.sample`` is discouraged. Instead, sample from models using ``Predictive`` or our ``prior_predictive`` or ``posterior_predictive`` functions.
 -  Using ``numpyro.deterministic`` within a ``RandomVariable.sample`` method is discouraged. Only use it in ``Model.model`` calls. If something might need to be recorded from a ``RandomVariable``, it should be returned from the ``RandomVariable.sample`` call so it can be recorded within the ``Model.model`` call.
--  Using default site names in a ``RandomVariable.sample`` is discouraged. Only use default site names at the ``Model.model`` level.
 -  Use ``DeterministicVariable``\ s instead of constants within a model.
+
+Naming of ``RandomVariable`` instances and associated sample sites
+----------------------------------------------------
+In ``numpyro``, Bayesian models are specified in terms of named `"sample sites" <https://num.pyro.ai/en/stable/primitives.html#sample>`_. These "sample sites" represent individual observed or inferred values or groups of such values; they can be thought of as the nodes of a [directed acyclic graph](https://en.wikipedia.org/wiki/Bayesian_network) defining the model.
+
+In ``numpyro``, one defines sample sites via calls to `numpyro.sample()` or `numpyro.deterministic()`. The sites must be given names at that point.
+
+In ``pyrenew``, we define sample sites within the ``sample()`` methods of ``RandomVariable`` objects. In general, the names of the sample sites associated to a particular instance of a ``RandomVariable`` should be specified by the end user when they create that instance.
+
+Hard-coding sample site names in a ``RandomVariable.sample()`` call is strongly discouraged, and even setting subclass-level default values should generally be avoided. Instead, instances of a ``RandomVariable`` should have a user-specified ``name`` attribute defined at instance construction; that ``name`` attribute should then be used to define any sample site names when the `.sample()` method is called.
 
 
 Adding Documentation to Sphinx
