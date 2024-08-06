@@ -77,10 +77,16 @@ jobs:
     - name: Install dependencies with Poetry
       run: poetry install --with docs
 
+    - name: Check state of source dir
+      run: ls -R docs/source
+
     - name: Render documentation index from README
       run: |
         poetry run quarto render README.md --to rst -o index.rst --output-dir docs/source
         poetry run python docs/post_process_rst.py docs/source/index.rst
+
+    - name: Check state of source dir
+      run: ls -R docs/source
 
     # Download the rendered tutorials
     - name: Download artifacts
