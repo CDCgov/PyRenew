@@ -4,11 +4,13 @@ over to MSR. Validated on NHSN influenza
 data from the 2023-24 season.
 """
 
+
 import datetime as dt
+import glob
 import inspect
 import logging
 import os
-from pprint import pprint
+from datetime import datetime
 
 import jax
 import jax.numpy as jnp
@@ -41,12 +43,19 @@ from pyrenew.process import SimpleRandomWalkProcess
 from pyrenew.regression import GLMPrediction
 
 FONT_PATH = "texgyreschola-regular.otf"
-TITLE_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=17.5)
-LABEL_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=12.5)
-AXES_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=16.5)
+if os.path.exists(FONT_PATH):
+    TITLE_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=17.5)
+    LABEL_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=12.5)
+    AXES_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=16.5)
 
-plt.style.use("epim_port.mplstyle")
+# use first mplstyle file that appears, should one exist
+if len(glob.glob("*mplstyle")) != 0:
+    plt.style.use(glob.glob("*mplstyle")[0])
 
+CURRENT_DATE = datetime.today().strftime("%Y-%m-%d")
+CURRENT_DATE_EXTENDED = datetime.today().strftime("%Y-%m-%d_%H:%M:%S")
+
+# set up logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -59,40 +68,141 @@ class Config:  # numpydoc ignore=GL08
             setattr(self, key, value)
 
 
-def load_influenza_hosp_data(
-    data_path: str, print_first_n_rows: bool = False, n_row_count: int = 15
-):
+def display_data(
+    data: pl.DataFrame, n_row_count: int = 15, n_col_count: int = 5
+) -> None:
     """
-    Loads NHSN hospitalization data from
-    tsv file path.
+    Display the columns and rows of
+    a polars dataframe.
+
+    Parameters
+    ----------
+    data : pl.DataFrame
+        A polars dataframe.
+    n_row_count : int, optional
+        How many rows to print.
+        Defaults to 15.
+    n_col_count : int, optional
+        How many columns to print.
+        Defaults to 15.
+
+    Returns
+    -------
+    None
+    """
+    rows, cols = data.shape
+    assert (
+        1 <= n_col_count <= cols
+    ), f"Must have reasonable column count; was {n_col_count}"
+    assert (
+        1 <= n_row_count <= rows
+    ), f"Must have reasonable row count; was {n_row_count}"
+    pl.Config.set_tbl_hide_dataframe_shape(True)
+    pl.Config.set_tbl_formatting("ASCII_MARKDOWN")
+    pl.Config.set_tbl_hide_column_data_types(True)
+    with pl.Config(tbl_rows=n_row_count, tbl_cols=n_col_count):
+        print(f"Dataset In Use For `cfaepim`:\n{data}\n")
+
+
+def check_file_path_valid(file_path: str) -> None:
+    """
+    Checks if a file path is valid. Used to check
+    the entered data and config paths.
+
+    Parameters
+    ----------
+    file_path : str
+        Path to the file (usually data or config).
+
+    Returns
+    -------
+    None
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"The path '{file_path}' does not exist.")
+    if not os.path.isfile(file_path):
+        raise IsADirectoryError(f"The path '{file_path}' is not a file.")
+    return None
+
+
+def load_data(
+    data_path: str,
+    sep: str = "\t",
+    schema_length: int = 10000,
+) -> pl.DataFrame:
+    """
+    Loads historical (i.e., `.tsv` data generated
+    `cfaepim` for a weekly run) data.
 
     Parameters
     ----------
     data_path : str
         The path to the tsv file to be read.
-    print_first_n_rows : bool
-        Whether to print the data rows.
-    n_row_count : int
-        How many rows to print.
+    sep : str, optional
+        The separator between values in the
+        data file. Defaults to tab-separated.
+    schema_length : int, optional
+        An approximation of the expected
+        maximum number of rows. Defaults
+        to 10000.
 
     Returns
     -------
     pl.DataFrame
-        A polars dataframe of NHSN
+        An unvetted polars dataframe of NHSN
         hospitalization data.
     """
-    data = pl.read_csv(data_path, separator="\t", infer_schema_length=10000)
-    # verification: columns
-
-    if print_first_n_rows and (5 <= n_row_count <= 50):
-        pl.Config.set_tbl_hide_dataframe_shape(True)
-        pl.Config.set_tbl_formatting("ASCII_MARKDOWN")
-        pl.Config.set_tbl_hide_column_data_types(True)
-        with pl.Config(tbl_rows=n_row_count, tbl_cols=6):
-            # verification: rows and columns of data
-            print(f"DATASET:\n{data}\n")
-            print(f"Dataset Columns:\n{data.columns}\n\n")
+    check_file_path_valid(file_path=data_path)
+    assert sep in ["\t", ","], f"Separator must be tabs or commas; was {sep}"
+    assert (
+        7500 <= schema_length <= 25000
+    ), f"Schema length must be reasonable; was {schema_length}"
+    data = pl.read_csv(
+        data_path, separator=sep, infer_schema_length=schema_length
+    )
     return data
+
+
+def load_config(config_path: str) -> dict[str, any]:
+    """
+    Attempts to load config toml file.
+
+    Parameters
+    ----------
+    config_path : str
+        The path to the configuration file,
+        read in via argparse.
+
+    Returns
+    -------
+    config
+        A dictionary of variables with
+        associates values for `cfaepim`.
+    """
+    check_file_path_valid(file_path=config_path)
+    try:
+        config = toml.load(config_path)
+    except toml.TomlDecodeError as e:
+        raise ValueError(
+            f"Failed to parse the TOML file at '{config_path}'; error: {e}"
+        )
+    except Exception as e:
+        raise RuntimeError(
+            f"An unexpected error occurred while reading the TOML file: {e}"
+        )
+    return config
+
+
+def forecast_report():  # numpydoc ignore=GL08
+    pass
+
+
+def model_report():  # numpydoc ignore=GL08
+    pass
+
+
+def prior_report():  # numpydoc ignore=GL08
+    pass
 
 
 def plot_utils(
@@ -525,35 +635,21 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
 
 class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
     def __init__(
-        self, state: str, dataset: pl.DataFrame, config: any
+        self,
+        config: dist[str, any],
+        population: int,
+        week_indices: list[int],
+        first_week_hosp: int,
+        predictors: list[int],
     ):  # numpydoc ignore=GL08
-        self.state = state
-        self.dataset = dataset
+        self.population = (population,)
+        self.week_indices = (week_indices,)
+        self.first_week_hosp = (first_week_hosp,)
+        self.predictors = (predictors,)
 
-        # population
-        self.population = int(
-            self.dataset.filter(pl.col("location") == state)
-            .select(["population"])
-            .unique()
-            .to_numpy()[0][0]
-        )
-
-        # convert config values into instance attributes
         self.config = config
         for key, value in config.items():
             setattr(self, key, value)
-
-        # predictors
-        day_of_week_covariate = self.dataset.select(
-            pl.col("day_of_week")
-        ).to_dummies()
-        remaining_covariates = self.dataset.select(
-            ["is_holiday", "is_post_holiday"]
-        )
-        covariates = pl.concat(
-            [day_of_week_covariate, remaining_covariates], how="horizontal"
-        )
-        self.predictors = covariates.to_numpy()
 
         # transmission: generation time distribution
         self.pmf_array = jnp.array(self.generation_time_dist)
@@ -564,13 +660,6 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
             self.rt_intercept_prior_mode, self.rt_intercept_prior_scale
         )
 
-        # confirm: not needed
-        # transmission: prior for gamma term
-        # self.gamma_RW_prior_scale = dist.HalfNormal(
-        #     self.weekly_rw_prior_scale
-        # ).sample(jax.random.PRNGKey(self.seed))
-        # self.gamma_RW_prior = dist.Normal(0, self.gamma_RW_prior_scale)
-
         # transmission: Rt process
         self.Rt_process = CFAEPIM_Rt(
             intercept_RW_prior=self.intercept_RW_prior,
@@ -579,14 +668,9 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         )
 
         # infections: get value rate for infection seeding (initialization)
-        first_week_hosp = (
-            self.dataset.filter((pl.col("location") == state))
-            .select(["first_week_hosp"])
-            .to_numpy()[0][0]
-        )
         self.mean_inf_val = (
             self.inf_model_prior_infections_per_capita * self.population
-        ) + (first_week_hosp / (self.ihr_intercept_prior_mode * 7))
+        ) + (self.first_week_hosp / (self.ihr_intercept_prior_mode * 7))
 
         # infections: initial infections
         self.I0 = InfectionInitializationProcess(
@@ -672,6 +756,56 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         return predictions
 
 
+def run(
+    state: str, dataset: pl.DataFrame, config: dict[str, any]
+):  # numpydoc ignore=GL08
+    # extract population
+    population = int(
+        dataset.filter(pl.col("location") == state)
+        .select(["population"])
+        .unique()
+        .to_numpy()[0][0]
+    )
+
+    # extract week indices
+    week_indices = list(
+        dataset.filter(pl.col("location") == state).select(["week"])["week"]
+    )
+
+    # first week hospitalizations
+    first_week_hosp = (
+        dataset.filter((pl.col("location") == state))
+        .select(["first_week_hosp"])
+        .to_numpy()[0][0]
+    )
+
+    # extract predictors
+    day_of_week_covariate = dataset.select(pl.col("day_of_week")).to_dummies()
+    remaining_covariates = dataset.select(["is_holiday", "is_post_holiday"])
+    covariates = pl.concat(
+        [day_of_week_covariate, remaining_covariates], how="horizontal"
+    )
+    predictors = covariates.to_numpy()
+
+    # extract reported hospitalizations
+    data_observed_hosp_admissions = np.array(
+        dataset.filter(pl.col("location") == state).select(["date", "hosp"])[
+            "hosp"
+        ]
+    )
+    print(data_observed_hosp_admissions)
+
+    # instantiate cfaepim-MSR
+    cfaepim_MSR = CFAEPIM_Model(
+        config=config,
+        population=population,
+        week_indices=week_indices,
+        first_week_hosp=first_week_hosp,
+        predictors=predictors,
+    )
+    print(cfaepim_MSR)
+
+
 def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
     logger.info(f"Population Value:\n{cfaepim_MSR_model.population}\n")
 
@@ -751,20 +885,64 @@ def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
 
 
 def main():  # numpydoc ignore=GL08
+    """
+    The `cfaepim` model required a configuration
+    file and a dataset. The configuration file must
+    follow some detailed specifications, as must the
+    dataset. Once these are in place, the model is
+    used in the following manner for each state:
+    (1) extract the population, the indices of the weeks,
+    the hospitalizations during the first week, & the
+    covariates, (2) the configuration file and the
+    previous content then will be used to produce
+    an Rt, infections, and observation process by
+    passing them to the `cfaepim` model, (3) the user
+    can use argparse to test or compare the forecasts.
+
+    Notes
+    -----
+    Testing in `cfaepim` includes ensuring the dataset
+    and configuration have the correct variables and
+    values in a proper range. Testing also ensures that
+    each part of the `cfaepim` model works as desired.
+    """
+
+    # parser = argparse.ArgumentParser(
+    #     description="Forecast, simulate, and analyze the CFAEPIM model."
+    # )
+    # parser.add_argument(
+    #     "--config_path",
+    #     type=str,
+    #     required=True,
+    #     help="Crowd forecasts (sep. w/ space).",
+    # )
+    # parser.add_argument(
+    #     "--data_path",
+    #     type=str,
+    #     required=True,
+    #     help="Crowd forecasts (sep. w/ space).",
+    # )
+    # parser.add_argument(
+    #     "--historical_data",
+    #     action="store_true",
+    #     help="Load model weights before training.",
+    # )
+    # args = parser.parse_args()
+
     # determine number of CPU cores
     num_cores = os.cpu_count()
     numpyro.set_host_device_count(num_cores - (num_cores - 1))
 
     # load parameters config (2024-01-20)
-    config = toml.load("./config/params_2024-01-20.toml")
-    # verification: config file
-    pprint(f"CONFIG:\n{config}\n\n")
+    config = load_config(config_path="./config/params_2024-01-20.toml")
 
-    # load NHSN data w/ population counts (2024-01-20)
-    data_path_01 = "./data/2024-01-20/2024-01-20_clean_data.tsv"
-    influenza_hosp_data = load_influenza_hosp_data(
-        data_path=data_path_01, print_first_n_rows=True, n_row_count=15
-    )
+    # load & display NHSN data w/ population counts (2024-01-20)
+    data_path = "./data/2024-01-20/2024-01-20_clean_data.tsv"
+    influenza_hosp_data = load_data(data_path=data_path)
+    rows, cols = influenza_hosp_data.shape
+    display_data(data=influenza_hosp_data, n_col_count=cols)
+
+    run(state="NY", dataset=influenza_hosp_data, config=config)
 
     # verification: plot single state hospitalizations
     plot_single_location_hosp_data(
@@ -779,27 +957,11 @@ def main():  # numpydoc ignore=GL08
         display=False,
     )
 
-    # confirm: add parallelization over states
-    placeholder_state = "NY"
-    data_observed_hosp_admissions = np.array(
-        influenza_hosp_data.filter(
-            pl.col("location") == placeholder_state
-        ).select(["date", "hosp"])["hosp"]
-    )
-    # verification: data_observed_hosp_admissions
-    print(f"HOSPITALIZATIONS:\n{data_observed_hosp_admissions}\n\n")
+    # # verification: data_observed_hosp_admissions
+    # print(f"HOSPITALIZATIONS:\n{data_observed_hosp_admissions}\n\n")
 
-    # instantiate cfaepim-MSR
-    cfaepim_MSR = CFAEPIM_Model(
-        state=placeholder_state, dataset=influenza_hosp_data, config=config
-    )
-
-    # verify and visualize aspects of the model
-    verify_cfaepim_MSR(cfaepim_MSR)
-
-    # confirm: the model is given... a config (w/ the necessary params and
-    # possible ranges), a dataset of daily hospitalizations (if weekly data, then
-    # turn off some covariates, or broadcast weekly to daily).
+    # # verify and visualize aspects of the model
+    # verify_cfaepim_MSR(cfaepim_MSR)
 
     # model_instance.run(
     #     num_warmup=model_instance.config["n_warmup"],
@@ -822,3 +984,15 @@ def main():  # numpydoc ignore=GL08
 
 if __name__ == "__main__":
     main()
+
+
+# you have a dataset and a configuration file
+# you can generate 3 reports, one on the priors, one on
+# the model, one on the forecasts; these are intelligently
+# looked for and then concatenated; file naming is done
+# intelligently.
+# you can choose, using argparse, which states are run
+# as well as the report date and target end date;
+# data is used differently when available
+# comparison is done with --historical
+#
