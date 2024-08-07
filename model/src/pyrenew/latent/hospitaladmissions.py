@@ -21,13 +21,18 @@ class HospitalAdmissionsSample(NamedTuple):
         The infection-to-hospitalization rate. Defaults to None.
     latent_hospital_admissions : SampledValue or None
         The computed number of hospital admissions. Defaults to None.
+    day_of_week_effect_mult : SampledValue or None
+        The day of the week effect multiplier. Defaults to None. It
+        should match the number of timepoints in the latent hospital
+        admissions.
     """
 
     infection_hosp_rate: SampledValue | None = None
     latent_hospital_admissions: SampledValue | None = None
+    day_of_week_effect_mult: SampledValue | None = None
 
     def __repr__(self):
-        return f"HospitalAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, latent_hospital_admissions={self.latent_hospital_admissions})"
+        return f"HospitalAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, latent_hospital_admissions={self.latent_hospital_admissions}, day_of_week_effect_mult={self.day_of_week_effect_mult})"
 
 
 class HospitalAdmissions(RandomVariable):
@@ -66,6 +71,7 @@ class HospitalAdmissions(RandomVariable):
         infect_hosp_rate_rv: RandomVariable,
         day_of_week_effect_rv: RandomVariable | None = None,
         hosp_report_prob_rv: RandomVariable | None = None,
+        obs_data_first_day_of_the_week: int = 0,
     ) -> None:
         """
         Default constructor
@@ -84,6 +90,10 @@ class HospitalAdmissions(RandomVariable):
         hosp_report_prob_rv  : RandomVariable, optional
             Random variable for the hospital admission reporting
             probability. Defaults to 1 (full reporting).
+        obs_data_first_day_of_the_week : int, optional
+            The day of the week that the first day of the observation data
+            corresponds to. Valid values are 0-6, where 0 is Monday and 6 is
+            Sunday. Defaults to 0.
 
         Returns
         -------
@@ -100,24 +110,28 @@ class HospitalAdmissions(RandomVariable):
             )
 
         HospitalAdmissions.validate(
+            infection_to_admission_interval_rv,
             infect_hosp_rate_rv,
             day_of_week_effect_rv,
             hosp_report_prob_rv,
+            obs_data_first_day_of_the_week,
         )
 
-        self.infect_hosp_rate_rv = infect_hosp_rate_rv
-        self.day_of_week_effect_rv = day_of_week_effect_rv
-        self.hosp_report_prob_rv = hosp_report_prob_rv
         self.infection_to_admission_interval_rv = (
             infection_to_admission_interval_rv
         )
-        # Why isn't infection_to_admission_interval_rv validated?
+        self.infect_hosp_rate_rv = infect_hosp_rate_rv
+        self.day_of_week_effect_rv = day_of_week_effect_rv
+        self.hosp_report_prob_rv = hosp_report_prob_rv
+        self.obs_data_first_day_of_the_week = obs_data_first_day_of_the_week
 
     @staticmethod
     def validate(
+        infection_to_admission_interval_rv: Any,
         infect_hosp_rate_rv: Any,
         day_of_week_effect_rv: Any,
         hosp_report_prob_rv: Any,
+        obs_data_first_day_of_the_week: Any,
     ) -> None:
         """
         Validates that the IHR, weekday effects, and probability of being
@@ -125,6 +139,9 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
+        infection_to_admission_interval_rv : Any
+            Possibly incorrect input for the infection to hospitalization
+            interval distribution.
         infect_hosp_rate_rv : Any
             Possibly incorrect input for infection to hospitalization rate distribution.
         day_of_week_effect_rv : Any
@@ -132,6 +149,10 @@ class HospitalAdmissions(RandomVariable):
         hosp_report_prob_rv : Any
             Possibly incorrect input for distribution or fixed value for the
             hospital admission reporting probability.
+        obs_data_first_day_of_the_week : Any
+            Possibly incorrect input for the day of the week that the first day
+            of the observation data corresponds to. Valid values are 0-6, where
+            0 is Monday and 6 is Sunday.
 
         Returns
         -------
@@ -140,12 +161,15 @@ class HospitalAdmissions(RandomVariable):
         Raises
         ------
         AssertionError
-            If the object `distr` is not an instance of `dist.Distribution`, indicating
-            that the validation has failed.
+            If any of the random variables are not of the correct type, or if
+            the day of the week is not within the valid range.
         """
+        assert isinstance(infection_to_admission_interval_rv, RandomVariable)
         assert isinstance(infect_hosp_rate_rv, RandomVariable)
         assert isinstance(day_of_week_effect_rv, RandomVariable)
         assert isinstance(hosp_report_prob_rv, RandomVariable)
+        assert isinstance(obs_data_first_day_of_the_week, int)
+        assert 0 <= obs_data_first_day_of_the_week <= 6
 
         return None
 
@@ -191,14 +215,14 @@ class HospitalAdmissions(RandomVariable):
         # 1. Get the day of the week effect
         # 2. Identify the offset of the latent_infections
         # 3. Apply the day of the week effect to the latent_hospital_admissions
-        dow_effect = self.day_of_week_effect_rv(
+        dow_effect_sampled = self.day_of_week_effect_rv(
             n_timepoints=latent_hospital_admissions.size, **kwargs
         )[0]
 
-        if dow_effect.value.size != 7:
+        if dow_effect_sampled.value.size != 7:
             raise ValueError(
                 "Day of the week effect should have 7 values. "
-                f"Got {dow_effect.value.size} instead."
+                f"Got {dow_effect_sampled.value.size} instead."
             )
 
         # Identifying the offset
@@ -206,12 +230,12 @@ class HospitalAdmissions(RandomVariable):
             latent_infections.t_start % 7
             if latent_infections.t_start is not None
             else 0
-        )
+        ) + self.obs_data_first_day_of_the_week
 
         # Replicating the day of the week effect to match the number of
         # timepoints
         dow_effect = jnp.tile(
-            dow_effect.value,
+            dow_effect_sampled.value,
             (latent_hospital_admissions.size + inf_offset) // 7 + 1,
         )[inf_offset : (latent_hospital_admissions.size + inf_offset)]
 
@@ -231,6 +255,11 @@ class HospitalAdmissions(RandomVariable):
             infection_hosp_rate=infection_hosp_rate,
             latent_hospital_admissions=SampledValue(
                 value=latent_hospital_admissions,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+            day_of_week_effect_mult=SampledValue(
+                dow_effect,
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
