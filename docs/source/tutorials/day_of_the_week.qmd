@@ -228,7 +228,7 @@ dayofweek_effect = DistributionalRV(
 )
 ```
 
-Notice that the instance's `nweeks` and `len` members are defined during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new effect, we can rebuild the latent hospitalization model:
+Now, by re-defining the latent hospital admissions random variable with the day-of-the-week effect, we can build a model that includes this effect:
 
 ```{python}
 # | label: latent-hosp-weekday
@@ -241,7 +241,8 @@ latent_hosp_wday_effect = latent.HospitalAdmissions(
     obs_data_first_day_of_the_week=0,
 )
 
-hosp_model_weekday = model.HospitalAdmissionsModel(
+# New model with day-of-the-week effect
+hosp_model_dow = model.HospitalAdmissionsModel(
     latent_infections_rv=latent_inf,
     latent_hosp_admissions_rv=latent_hosp_wday_effect,
     I0_rv=I0,
@@ -253,11 +254,10 @@ hosp_model_weekday = model.HospitalAdmissionsModel(
 
 Running the model:
 
-
 ```{python}
 # | label: model-2-run-weekday
 # Model with weekday effect
-hosp_model_weekday.run(
+hosp_model_dow.run(
     num_samples=2000,
     num_warmup=2000,
     data_observed_hosp_admissions=daily_hosp_admits,
@@ -266,13 +266,23 @@ hosp_model_weekday.run(
 )
 ```
 
-And plotting the results:
+As a result, we can see the posterior distribution of our novel day-of-the-week effect:
 
 ```{python}
-# | label: fig-output-admissions
-# | fig-cap: Hospital Admissions posterior distribution with weekday effect
-# Figure with weekday effect
-out = hosp_model_weekday.plot_posterior(
+# | label: fig-output-day-of-week
+# | fig-cap: Day of the week effect
+out = hosp_model_dow.plot_posterior(
+    var="dayofweek_effect", ylab="Day of the Week Effect", samples=500
+)
+```
+
+The new model with the day-of-the-week effect can be compared to the previous model without the effect. Let's start by reproducing the figure without the day-of-the-week effect, and then plotting the new model with the effect:
+
+```{python}
+# | label: fig-output-admissions-original
+# | fig-cap: Hospital Admissions posterior distribution without weekday effect
+# Figure without weekday effect
+out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
     obs_signal=np.pad(
@@ -283,12 +293,17 @@ out = hosp_model_weekday.plot_posterior(
 )
 ```
 
-The day of the week effect can also be visualized:
-
 ```{python}
-# | label: fig-output-day-of-week
-# | fig-cap: Day of the week effect
-out = hosp_model_weekday.plot_posterior(
-    var="dayofweek_effect", ylab="Day of the Week Effect", samples=500
+# | label: fig-output-admissions-wof
+# | fig-cap: Hospital Admissions posterior distribution with weekday effect
+# Figure with weekday effect
+out_dow = hosp_model_dow.plot_posterior(
+    var="latent_hospital_admissions",
+    ylab="Hospital Admissions",
+    obs_signal=np.pad(
+        daily_hosp_admits.astype(float),
+        (gen_int_array.size, 0),
+        constant_values=np.nan,
+    ),
 )
 ```
