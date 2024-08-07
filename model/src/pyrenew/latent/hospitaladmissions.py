@@ -79,7 +79,9 @@ class HospitalAdmissions(RandomVariable):
         infect_hosp_rate_rv : RandomVariable
             Infection to hospitalization rate random variable.
         day_of_week_effect_rv : RandomVariable, optional
-            Day of the week effect.
+            Day of the week effect. Should return a SampledValue with 7
+            values. Defaults to a deterministic variable with
+            jax.numpy.ones(7) (no effect).
         hosp_report_prob_rv  : RandomVariable, optional
             Random variable for the hospital admission reporting
             probability. Defaults to 1 (full reporting).
@@ -91,11 +93,11 @@ class HospitalAdmissions(RandomVariable):
 
         if day_of_week_effect_rv is None:
             day_of_week_effect_rv = DeterministicVariable(
-                name="weekday_effect", value=1
+                name="weekday_effect", value=jnp.ones(7)
             )
         if hosp_report_prob_rv is None:
             hosp_report_prob_rv = DeterministicVariable(
-                name="hosp_report_prob", value=1
+                name="hosp_report_prob", value=1.0
             )
 
         HospitalAdmissions.validate(
@@ -185,12 +187,23 @@ class HospitalAdmissions(RandomVariable):
         )[: infection_hosp_rate_t.shape[0]]
 
         # Applying the day of the week effect
-        latent_hospital_admissions = (
-            latent_hospital_admissions
-            * self.day_of_week_effect_rv(
-                n_timepoints=latent_hospital_admissions.size, **kwargs
-            )[0].value
-        )
+        dow_effect = self.day_of_week_effect_rv(
+            n_timepoints=latent_hospital_admissions.size, **kwargs
+        )[0]
+
+        if dow_effect.value.size != 7:
+            raise ValueError(
+                "Day of the week effect should have 7 values. "
+                f"Got {dow_effect.value.size} instead."
+            )
+
+        # Replicating the day of the week effect to match the number of
+        # timepoints
+        dow_effect = jnp.tile(
+            dow_effect.value, latent_hospital_admissions.size // 7 + 1
+        )[: latent_hospital_admissions.size]
+
+        latent_hospital_admissions = latent_hospital_admissions * dow_effect
 
         # Applying reporting probability
         latent_hospital_admissions = (
