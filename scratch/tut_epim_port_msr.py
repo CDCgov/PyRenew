@@ -13,7 +13,7 @@ import os
 from datetime import datetime
 from typing import NamedTuple
 
-# import arviz as az
+import arviz as az
 import jax
 import jax.numpy as jnp
 import matplotlib as mpl
@@ -1397,6 +1397,27 @@ def main():  # numpydoc ignore=GL08
         cfaepim_MSR,
     ) = results[0]
     print(prior_predictive_samples)
+
+    idata = az.from_numpyro(
+        cfaepim_MSR.mcmc,
+        posterior_predictive=posterior_predictive_samples,
+        prior=prior_predictive_samples,
+    )
+    fig, ax = plt.subplots()
+    az.plot_lm(
+        "negbinom_rv",
+        idata=idata,
+        kind_pp="hdi",
+        y_kwargs={"color": "black"},
+        y_hat_fill_kwargs={"color": "C0"},
+        axes=ax,
+    )
+    ax.set_title("Posterior Predictive Plot")
+    ax.set_ylabel("Hospital Admissions")
+    ax.set_xlabel("Days")
+
+    plt.show()
+
     # plot_results(
     #     prior_predictive_samples,
     #     posterior_predictive_samples,
