@@ -180,10 +180,10 @@ class RtPeriodicDiffProcess(RandomVariable):
         s_r = self.periodic_diff_sd_rv.sample(**kwargs)[0].value
 
         # How many periods to sample?
-        n_periods = int(jnp.ceil(duration / self.period_size))
+        n_periods = (duration + self.period_size - 1) // self.period_size
 
         # Running the process
-        ar_diff = FirstDifferenceARProcess("trend_rw", autoreg=b, noise_sd=s_r)
+        ar_diff = FirstDifferenceARProcess(self.name, autoreg=b, noise_sd=s_r)
         log_rt = ar_diff.sample(
             duration=n_periods,
             init_val=log_rt_rv[1],

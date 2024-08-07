@@ -242,9 +242,6 @@ class RtInfectionsRenewalModel(Model):
 
         return RtInfectionsRenewalSample(
             Rt=SampledValue(Rt),
-            latent_infections=SampledValue(
-                all_latent_infections,
-                t_start=post_initialization_latent_infections.t_start,
-            ),
+            latent_infections=SampledValue(all_latent_infections),
             observed_infections=SampledValue(observed_infections),
         )
