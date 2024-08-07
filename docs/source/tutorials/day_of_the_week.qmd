@@ -6,8 +6,15 @@ engine: jupyter
 
 This document illustrates how to leverage the time-aware arrays to create a a day of the week effect. We use the same model designed in the hospital admissions-only tutorial.
 
+## Recap: Hospital Admissions Model
+
+In the "Fitting a hospital admissions-only model" tutorial, we built a fairly complicated model that included pre-defined random variables as well as a custom random variable representing the reproductive number. As this is not the focus of this tutorial, we will not go into detail about the model's components. Instead, we will focus on the day-of-the-week effect. Yet, we still need to re-define the model's components to build the day-of-the-week effect.
+
+1. We load the data:
+
 ```{python}
 # | label: setup
+# | code-fold: true
 # Setup
 import numpyro
 import polars as pl
@@ -17,22 +24,14 @@ from pyrenew import datasets
 numpyro.set_host_device_count(2)
 
 # Loading and processing the data
-dat = datasets.load_wastewater()
-
-# Keeping the first observation of each date
 dat = (
-    dat.group_by("date")
+    datasets.load_wastewater()
+    .group_by("date")
     .first()
-    .select(
-        ["date", "daily_hosp_admits"],
-    )
+    .select(["date", "daily_hosp_admits"])
+    .sort("date")
+    .head(90)
 )
-
-# Now, sorting by date
-dat = dat.sort("date")
-
-# Keeping the first 90 days
-dat = dat.head(90)
 
 daily_hosp_admits = dat["daily_hosp_admits"].to_numpy()
 dates = dat["date"].to_numpy()
@@ -47,10 +46,11 @@ gen_int = gen_int_array
 inf_hosp_int = inf_hosp_int["probability_mass"].to_numpy()
 ```
 
-With these two in hand, we can start building the model. First, we will define the latent hospital admissions:
+2. Next, we defined the model's components:
 
 ```{python}
 # | label: latent-hosp
+# | code-fold: true
 from pyrenew import latent, deterministic, metaclass
 import jax.numpy as jnp
 import numpyro.distributions as dist
@@ -91,8 +91,13 @@ I0 = InfectionInitializationProcess(
 
 # Generation interval and Rt
 gen_int = deterministic.DeterministicPMF(name="gen_int", value=gen_int)
+```
 
+including the Rt effect:
 
+```{python}
+# | label: Rt-process
+# | code-fold: true
 class MyRt(metaclass.RandomVariable):
     def __init__(self, sd_rv):
         self.sd_rv = sd_rv
@@ -101,23 +106,33 @@ class MyRt(metaclass.RandomVariable):
         pass
 
     def sample(self, n_steps: int, **kwargs) -> tuple:
+        # Standard deviation of the random walk
         sd_rt, *_ = self.sd_rv()
 
+        # Random walk step
+        step_rv = metaclass.DistributionalRV(
+            name="rw_step_rv", dist=dist.Normal(0, sd_rt.value)
+        )
+
+        init_rv = metaclass.DistributionalRV(
+            name="init_log_rt", dist=dist.Normal(0, 0.2)
+        )
+
+        # Random walk process
+        base_rv = process.SimpleRandomWalkProcess(
+            name="log_rt",
+            step_rv=step_rv,
+            init_rv=init_rv,
+        )
+
+        # Transforming the random walk to the Rt scale
         rt_rv = metaclass.TransformedRandomVariable(
-            "Rt_rv",
-            base_rv=process.SimpleRandomWalkProcess(
-                name="log_rt",
-                step_rv=metaclass.DistributionalRV(
-                    name="rw_step_rv", dist=dist.Normal(0, sd_rt.value)
-                ),
-                init_rv=metaclass.DistributionalRV(
-                    name="init_log_rt", dist=dist.Normal(0, 0.2)
-                ),
-            ),
+            name="Rt_rv",
+            base_rv=base_rv,
             transforms=transformation.ExpTransform(),
         )
 
-        return rt_rv.sample(n_steps=n_steps, **kwargs)
+        return rt_rv(n_steps=n_steps, **kwargs)
 
 
 rtproc = MyRt(
@@ -125,9 +140,13 @@ rtproc = MyRt(
         name="Rt_random_walk_sd", dist=dist.HalfNormal(0.025)
     )
 )
+```
 
-# The observation model
+3. We defined the observation model:
 
+```{python}
+# | label: obs-model
+# | code-fold: true
 # we place a log-Normal prior on the concentration
 # parameter of the negative binomial.
 nb_conc_rv = metaclass.TransformedRandomVariable(
@@ -146,7 +165,7 @@ obs = observation.NegativeBinomialObservation(
 )
 ```
 
-Notice all the components are `RandomVariable` instances. We can now build the model:
+4. And finally, we built the model:
 
 ```{python}
 # | label: init-model
@@ -160,54 +179,53 @@ hosp_model = model.HospitalAdmissionsModel(
 )
 ```
 
+Here is what the model looks like without the day-of-the-week effect:
+
+```{python}
+# | label: fig-output-admissions-padding-and-weekday
+# | fig-cap: Hospital Admissions posterior distribution without weekday effect
+import jax
+import numpy as np
+
+# Model without weekday effect
+hosp_model.run(
+    num_samples=2000,
+    num_warmup=2000,
+    data_observed_hosp_admissions=daily_hosp_admits,
+    rng_key=jax.random.PRNGKey(54),
+    mcmc_args=dict(progress_bar=False),
+)
+
+# Plotting the posterior
+out = hosp_model.plot_posterior(
+    var="latent_hospital_admissions",
+    ylab="Hospital Admissions",
+    obs_signal=np.pad(
+        daily_hosp_admits.astype(float),
+        (gen_int_array.size, 0),
+        constant_values=np.nan,
+    ),
+)
+```
+
+
 ## Round 2: Incorporating day-of-the-week effects
 
-We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect distribution. To do this, we will create a new instance of `RandomVariable` to model the effect. The class will be based on a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0. The random variable will be repeated for the number of weeks in the dataset.
-Note a similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
+We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect. To do this, we will add two additional arguments to the latent hospital admissions random variable: `day_of_the_week_rv` (a `RandomVariable`) and `obs_data_first_day_of_the_week` (an `int` mapping days of the week from 0:6, zero being Monday). The `day_of_the_week_rv`'s sample method should return a vector of length seven; those values are then broadcasted to match the length of the dataset. Moreover, since the observed data may start in a weekday other than Monday, the `obs_data_first_day_of_the_week` argument is used to offset the day-of-the-week effect.
 
-October 30th, 2023 is a Monday. So we will need to take that into account when building this effect.
+For this example, the effect will be passed as a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0[^note-other-examples]:
+
+[^note-other-examples]: A similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
 
 ```{python}
 # | label: weekly-effect
-from pyrenew import metaclass
-import numpyro as npro
-
-
-class DayOfWeekEffect(metaclass.RandomVariable):
-    """Day of the week effect"""
-
-    def __init__(self, offset: int):
-        self.offset = offset
-
-    @staticmethod
-    def validate():
-        return None
-
-    def sample(self, obs: SampledValue, **kwargs):
-
-        n_timepoints = obs.value.size
-        nweeks = ((n_timepoints + self.offset) // 7) + 1
-
-        # Re-computing the offset
-        adj = (self.offset + obs.t_start) % 7
-
-        ans = npro.sample(
-            name="dayofweek_effect",
-            fn=npro.distributions.TruncatedNormal(
-                loc=1.0, scale=0.5, low=0.1, high=10.0
-            ),
-            sample_shape=(7,),
-        )
-
-        return (
-            metaclass.SampledValue(
-                jnp.tile(ans, nweeks)[adj : (n_timepoints + adj)]
-            ),
-        )
-
-
 # Initializing the RV.
-dayofweek_effect = DayOfWeekEffect(offset=1)  # The data starts 1 day off
+from pyrenew.metaclass import DistributionalRV
+
+dayofweek_effect = DistributionalRV(
+    "dayofweek_effect",
+    dist.TruncatedNormal(loc=1.0, scale=0.5, low=0.1, high=10.0).expand([7]),
+)
 ```
 
 Notice that the instance's `nweeks` and `len` members are defined during construction. Trying to compute the number of weeks and the length of the dataset in the `validate` method will raise a `jit` error in `jax` as the shape and size of elements are not known during the validation step, which happens before the model is run. With the new effect, we can rebuild the latent hospitalization model:
@@ -218,6 +236,9 @@ latent_hosp_wday_effect = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
     infect_hosp_rate_rv=hosp_rate,
     day_of_week_effect_rv=dayofweek_effect,
+    # As the dataset starts on October 30th, 2023 (Monday)
+    # there's no need to offset the day-of-the-week effect
+    obs_data_first_day_of_the_week=0,
 )
 
 hosp_model_weekday = model.HospitalAdmissionsModel(
@@ -232,19 +253,9 @@ hosp_model_weekday = model.HospitalAdmissionsModel(
 
 Running the model:
 
+
 ```{python}
-# | label: model-2-run
-import jax
-
-# Model without weekday effect
-hosp_model.run(
-    num_samples=2000,
-    num_warmup=2000,
-    data_observed_hosp_admissions=daily_hosp_admits,
-    rng_key=jax.random.PRNGKey(54),
-    mcmc_args=dict(progress_bar=False),
-)
-
+# | label: model-2-run-weekday
 # Model with weekday effect
 hosp_model_weekday.run(
     num_samples=2000,
@@ -260,8 +271,6 @@ And plotting the results:
 ```{python}
 # | label: fig-output-admissions
 # | fig-cap: Hospital Admissions posterior distribution with weekday effect
-import numpy as np
-
 # Figure with weekday effect
 out = hosp_model_weekday.plot_posterior(
     var="latent_hospital_admissions",
@@ -274,16 +283,12 @@ out = hosp_model_weekday.plot_posterior(
 )
 ```
 
+The day of the week effect can also be visualized:
+
 ```{python}
-# | label: fig-output-admissions-padding-and-weekday
-# | fig-cap: Hospital Admissions posterior distribution without weekday effect
-out = hosp_model.plot_posterior(
-    var="latent_hospital_admissions",
-    ylab="Hospital Admissions",
-    obs_signal=np.pad(
-        daily_hosp_admits.astype(float),
-        (gen_int_array.size, 0),
-        constant_values=np.nan,
-    ),
+# | label: fig-output-day-of-week
+# | fig-cap: Day of the week effect
+out = hosp_model_weekday.plot_posterior(
+    var="dayofweek_effect", ylab="Day of the Week Effect", samples=500
 )
 ```

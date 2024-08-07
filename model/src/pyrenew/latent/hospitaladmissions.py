@@ -215,9 +215,7 @@ class HospitalAdmissions(RandomVariable):
         # 1. Get the day of the week effect
         # 2. Identify the offset of the latent_infections
         # 3. Apply the day of the week effect to the latent_hospital_admissions
-        dow_effect_sampled = self.day_of_week_effect_rv(
-            n_timepoints=latent_hospital_admissions.size, **kwargs
-        )[0]
+        dow_effect_sampled = self.day_of_week_effect_rv(**kwargs)[0]
 
         if dow_effect_sampled.value.size != 7:
             raise ValueError(
