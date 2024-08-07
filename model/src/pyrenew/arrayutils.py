@@ -134,7 +134,7 @@ def tile_until_n(
     -----
     Using the `offset` parameter, the function will start the broadcast
     from the `offset`-th element of the data. If the data is shorter than
-    `n_timepoints`, the function will repeat or tile the data until it
+    `n_timepoints`, the function will tile the data until it
     reaches `n_timepoints`.
 
     Returns
@@ -162,14 +162,22 @@ def repeat_until_n(
     offset: int = 0,
 ):
     """
-    Repeat the data until it reaches `n_timepoints`.
+    Repeat each entry in `data` a given number of times (`period_size`)
+    until an array of length `n_timepoints` has been produced.
 
     Notes
     -----
     Using the `offset` parameter, the function will offset the data after
     the repeat operation. So, if the offset is 2, the repeat operation
     will repeat the data until `n_timepoints + 2` and then offset the
-    data by 2, returning an array of size `n_timepoints`.
+    data by 2, returning an array of size `n_timepoints`. This is a way to start
+    part-way into a period. For example, the following code will each array
+    element four times until 10 timepoints and then offset the data by 2:
+
+    .. code-block:: python
+      data = jnp.array([1, 2, 3])
+      repeat_until_n(data, 4, 10, 2)
+      # Array([1, 1, 2, 2, 2, 2, 3, 3, 3, 3], dtype=int32)
 
     Parameters
     ----------
