@@ -25,12 +25,6 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: cache poetry
-        uses: actions/cache@v4
-        with:
-          path: ~/.local
-          key: ${{ runner.os }}-poetry
-
       - name: install poetry
         run: pip install poetry
 
@@ -42,24 +36,16 @@ jobs:
       # which is then uploaded as an artifact.
       - name: Render documents
         run: |
-            poetry run quarto render README.md --to rst -o index2.rst
-            mv docs/source/tutorials model/
-            cd model
-            mkdir _compiled_qmd
-            mv ../index2.rst _compiled_qmd
-            for file in $(find tutorials -name '*.qmd'); do
-                poetry run quarto render $file --to rst --output-dir ../_compiled_qmd
-            done
-            for rst_file in _compiled_qmd/*.rst; do
-                poetry run python ../docs/post_process_rst.py "$rst_file"
-            done
+            cd docs/source/tutorials
+            poetry run make tutorials_clean
+            poetry run make tutorials_rst
 
       # Upload
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tutorials
-          path: model/_compiled_qmd/
+          path: docs/source/tutorials
 
   build:
     needs: render-docs
@@ -68,19 +54,11 @@ jobs:
       contents: write
     steps:
     - uses: actions/checkout@v4
+    - uses: quarto-dev/quarto-actions/setup@v2
 
     # Setting up the environment
     - name: Setup Pages
       uses: actions/configure-pages@v4
-
-    # Load the artifact github-pages-tutorials
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: tutorials
-        path: docs/source/tutorials/
-
-    - run: mv docs/source/tutorials/index2.rst docs/source/index.rst
 
     - name: Set up Python
       uses: actions/setup-python@v5
@@ -92,6 +70,19 @@ jobs:
 
     - name: Install dependencies with Poetry
       run: poetry install --with docs
+
+    - name: Render documentation index from README
+      run: |
+        poetry run quarto render README.md --to rst -o index.rst
+        mv index.rst docs/source
+        poetry run python docs/post_process_rst.py docs/source/index.rst
+
+    # Download the rendered tutorials
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: tutorials
+        path: docs/source/tutorials/
 
     # Building
     - name: Build HTML using Poetry
@@ -123,4 +114,4 @@ jobs:
       uses: actions/deploy-pages@v4
       with:
         artifact_name: github-pages
-        preview: true # Not yet available to the public.
+        preview: true
