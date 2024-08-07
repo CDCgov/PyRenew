@@ -8,4 +8,4 @@ _compiled
 
 *.ipynb
 *.py
-*.rst
+!*.rst
