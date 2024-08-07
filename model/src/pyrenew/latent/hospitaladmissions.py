@@ -7,7 +7,6 @@ from typing import Any, NamedTuple
 
 import jax.numpy as jnp
 import numpyro
-from jax.typing import ArrayLike
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable, SampledValue
 
@@ -152,7 +151,7 @@ class HospitalAdmissions(RandomVariable):
 
     def sample(
         self,
-        latent_infections: ArrayLike,
+        latent_infections: SampledValue,
         **kwargs,
     ) -> HospitalAdmissionsSample:
         """
@@ -160,8 +159,8 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        latent_infections : ArrayLike
-            Latent infections.
+        latent_infections : SampledValue
+            Latent infections. Possibly the output of the `latent.Infections()`.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
             calls, should there be any.
@@ -173,7 +172,9 @@ class HospitalAdmissions(RandomVariable):
 
         infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
 
-        infection_hosp_rate_t = infection_hosp_rate.value * latent_infections
+        infection_hosp_rate_t = (
+            infection_hosp_rate.value * latent_infections.value
+        )
 
         (
             infection_to_admission_interval,
@@ -186,7 +187,10 @@ class HospitalAdmissions(RandomVariable):
             mode="full",
         )[: infection_hosp_rate_t.shape[0]]
 
-        # Applying the day of the week effect
+        # Applying the day of the week effect. For this we need to:
+        # 1. Get the day of the week effect
+        # 2. Identify the offset of the latent_infections
+        # 3. Apply the day of the week effect to the latent_hospital_admissions
         dow_effect = self.day_of_week_effect_rv(
             n_timepoints=latent_hospital_admissions.size, **kwargs
         )[0]
@@ -197,11 +201,19 @@ class HospitalAdmissions(RandomVariable):
                 f"Got {dow_effect.value.size} instead."
             )
 
+        # Identifying the offset
+        inf_offset = (
+            latent_infections.t_start % 7
+            if latent_infections.t_start is not None
+            else 0
+        )
+
         # Replicating the day of the week effect to match the number of
         # timepoints
         dow_effect = jnp.tile(
-            dow_effect.value, latent_hospital_admissions.size // 7 + 1
-        )[: latent_hospital_admissions.size]
+            dow_effect.value,
+            (latent_hospital_admissions.size + inf_offset) // 7 + 1,
+        )[inf_offset : (latent_hospital_admissions.size + inf_offset)]
 
         latent_hospital_admissions = latent_hospital_admissions * dow_effect
 

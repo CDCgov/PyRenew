@@ -80,7 +80,7 @@ def test_admissions_sample():
     )
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_1 = hosp1(latent_infections=inf_sampled1[0].value)
+        sim_hosp_1 = hosp1(latent_infections=inf_sampled1[0])
 
     testing.assert_array_less(
         sim_hosp_1.latent_hospital_admissions.value,
