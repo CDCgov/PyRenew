@@ -15,6 +15,461 @@ observation: renewal process in progress, alpha ≠ 0, and observed hosps have v
 Look to Admission Model for inspiration for sample().
 
 
+locations = dict(sorted([(elt[0], int(elt[1])) for elt in list(
+            influenza_hosp_data.select(["location", "location_code"]).unique().to_numpy()) if elt[1] != "US" ]))
+
+
+LOCATION_CODES = {
+#     "AK": 2,
+#     "AL": 1,
+#     "AR": 5,
+#     "AZ": 4,
+#     "CA": 6,
+#     "CO": 8,
+#     "CT": 9,
+#     "DC": 11,
+#     "DE": 10,
+#     "FL": 12,
+#     "GA": 13,
+#     "HI": 15,
+#     "IA": 19,
+#     "ID": 16,
+#     "IL": 17,
+#     "IN": 18,
+#     "KS": 20,
+#     "KY": 21,
+#     "LA": 22,
+#     "MA": 25,
+#     "MD": 24,
+#     "ME": 23,
+#     "MI": 26,
+#     "MN": 27,
+#     "MO": 29,
+#     "MS": 28,
+#     "MT": 30,
+#     "NC": 37,
+#     "ND": 38,
+#     "NE": 31,
+#     "NH": 33,
+#     "NJ": 34,
+#     "NM": 35,
+#     "NV": 32,
+#     "NY": 36,
+#     "OH": 39,
+#     "OK": 40,
+#     "OR": 41,
+#     "PA": 42,
+#     "PR": 72,
+#     "RI": 44,
+#     "SC": 45,
+#     "SD": 46,
+#     "TN": 47,
+#     "TX": 48,
+#     "UT": 49,
+#     "VA": 51,
+#     "VI": 78,
+#     "VT": 50,
+#     "WA": 53,
+#     "WI": 55,
+#     "WV": 54,
+#     "WY": 56,
+# }
+# REVERSED_LOCATION_CODES = {value: key for key, value in LOCATION_CODES.items()}
+
+
+REMOVE EXTRACTION CODE
+
+# extract population
+        population = int(
+            dataset.filter(pl.col("location") == REVERSED_LOCATION_CODES[state])
+            .select(["population"])
+            .unique()
+            .to_numpy()[0][0]
+        )
+        # extract week indices
+        week_indices = jnp.array(
+            dataset.filter(pl.col("location") == REVERSED_LOCATION_CODES[state]).select(["week"])["week"]
+        )
+        # first week hospitalizations
+        first_week_hosp = (
+            dataset.filter((pl.col("location") == REVERSED_LOCATION_CODES[state]))
+            .select(["first_week_hosp"])
+            .to_numpy()[0][0]
+        )
+        # extract predictors
+        day_of_week_covariate = dataset.select(pl.col("day_of_week")).to_dummies()
+        remaining_covariates = dataset.select(["is_holiday", "is_post_holiday"])
+        covariates = pl.concat(
+            [day_of_week_covariate, remaining_covariates], how="horizontal"
+        )
+        predictors = jnp.array(covariates.to_numpy())
+
+        # extract reported hospitalizations
+        data_observed_hosp_admissions = jnp.array(
+            dataset.filter(pl.col("location") == REVERSED_LOCATION_CODES[state]).select(["date", "hosp"])[
+                "hosp"
+            ]
+        )
+
+REMOVE VERIFICATION
+
+def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
+    logger.info(f"Population Value:\n{cfaepim_MSR_model.population}\n")
+
+    logger.info(f"Predictors:\n{cfaepim_MSR_model.predictors}\n")
+
+    cfaepim_MSR_model.gen_int.validate(cfaepim_MSR_model.pmf_array)
+    sampled_gen_int = cfaepim_MSR_model.gen_int.sample()
+    logger.info(f"Generation Interval (Sampled):\n{sampled_gen_int}\n")
+
+    base_object_plot(
+        y=sampled_gen_int[0].value,
+        X=np.arange(0, len(sampled_gen_int[0].value)),
+        title="Sampled Generation Interval",
+        filename="sample_generation_interval",
+        save_as_img=False,
+        display=False,
+    )
+
+    logger.info(
+        f"Rt Process Object:\n{cfaepim_MSR_model.Rt_process}\n{dir(cfaepim_MSR_model.Rt_process)}"
+    )
+    logger.info(
+        f"Rt Process Sample Method Signature):\n{inspect.signature(cfaepim_MSR_model.Rt_process.sample)}"
+    )
+
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        sampled_Rt = cfaepim_MSR_model.Rt_process.sample(n_steps=100)
+    logger.info(f"Rt Process Samples:\n{sampled_Rt}\n")
+
+    logger.info(
+        f"First Week Mean Infections:\n{cfaepim_MSR_model.mean_inf_val}\n"
+    )
+
+    logger.info(
+        f"Initialization Infections Object:\n{cfaepim_MSR_model.I0}\n{dir(cfaepim_MSR_model.I0)}"
+    )
+    logger.info(
+        f"Initialization Infections Sample Method Signature:\n{inspect.signature(cfaepim_MSR_model.I0.sample)}"
+    )
+
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        sampled_I0 = cfaepim_MSR_model.I0.sample()
+    logger.info(f"Initial Infections Samples:\n{sampled_I0}\n")
+
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        sampled_gen_int = cfaepim_MSR_model.gen_int.sample()
+        all_I_t, all_S_t = cfaepim_MSR_model.infections.sample(
+            Rt=sampled_Rt[0].value,
+            gen_int=sampled_gen_int[0].value,
+            P=1000000,
+        )
+    logger.info(
+        f"Infections & Susceptibles\nall_I_t: {all_I_t}\nall_S_t: {all_S_t}"
+    )
+
+    logger.info(
+        f"Observation Process Object:\n{cfaepim_MSR_model.obs_process}\n{dir(cfaepim_MSR_model.obs_process)}"
+    )
+    logger.info(
+        f"Observation Process Sample Method Signature:\n{inspect.signature(cfaepim_MSR_model.obs_process.sample)}\n"
+    )
+
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        sampled_alpha = cfaepim_MSR_model.obs_process.alpha_process.sample()[
+            "prediction"
+        ]
+    logger.info(
+        f"Instantaneous Ascertainment Rate Samples:\n{sampled_alpha}\n"
+    )
+
+    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
+        sampled_obs = cfaepim_MSR_model.obs_process(
+            infections=all_I_t,
+            inf_to_hosp_dist=jnp.array(cfaepim_MSR_model.inf_to_hosp_dist),
+        )
+    logger.info(f"Hospitalization Observation Samples:\n{sampled_obs}\n")
+
+EDIT RUN
+
+def run(
+    state: str, dataset: pl.DataFrame, config: dict[str, any]
+):  # numpydoc ignore=GL08
+    # extract population
+    population = int(
+        dataset.filter(pl.col("location") == state)
+        .select(["population"])
+        .unique()
+        .to_numpy()[0][0]
+    )
+
+    # extract week indices
+    week_indices = jnp.array(
+        dataset.filter(pl.col("location") == state).select(["week"])["week"]
+    )
+
+    # first week hospitalizations
+    first_week_hosp = (
+        dataset.filter((pl.col("location") == state))
+        .select(["first_week_hosp"])
+        .to_numpy()[0][0]
+    )
+
+    # extract predictors
+    day_of_week_covariate = dataset.select(pl.col("day_of_week")).to_dummies()
+    remaining_covariates = dataset.select(["is_holiday", "is_post_holiday"])
+    covariates = pl.concat(
+        [day_of_week_covariate, remaining_covariates], how="horizontal"
+    )
+    predictors = covariates.to_numpy()
+
+    # extract reported hospitalizations
+    data_observed_hosp_admissions = np.array(
+        dataset.filter(pl.col("location") == state).select(["date", "hosp"])[
+            "hosp"
+        ]
+    )
+
+    # instantiate cfaepim-MSR
+    cfaepim_MSR = CFAEPIM_Model(
+        config=config,
+        population=population,
+        week_indices=week_indices,
+        first_week_hosp=first_week_hosp,
+        predictors=predictors,
+        data_observed_hosp_admissions=data_observed_hosp_admissions,
+    )
+
+    cfaepim_MSR.run(
+        n_steps=week_indices.size,
+        num_warmup=config["n_warmup"],
+        num_samples=config["n_iter"],
+        nuts_args={
+            "target_accept_prob": config["adapt_delta"],
+            "max_tree_depth": config["max_treedepth"],
+        },
+        mcmc_args={
+            "num_chains": config["n_chains"],
+            "progress_bar": True,
+        },
+    )
+    # update: getting stuck at very small step size
+
+    cfaepim_MSR.print_summary()
+
+    posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
+        n_steps=week_indices.size,
+        numpyro_predictive_args={"num_samples": config["n_iter"]},
+        rng_key=jax.random.key(config["seed"]),
+    )
+
+    # print(f"Posterior Predictive Samples:\n{posterior_predictive_samples}\n\n")
+
+    prior_predictive_samples = cfaepim_MSR.prior_predictive(
+        n_steps=week_indices.size,
+        numpyro_predictive_args={"num_samples": config["n_iter"]},
+        rng_key=jax.random.key(config["seed"]),
+    )
+
+    return prior_predictive_samples, posterior_predictive_samples, cfaepim_MSR
+
+# print(f"Prior Predictive Samples:\n{prior_predictive_samples}\n\n")
+
+    # out2 = cfaepim_MSR.plot_posterior(var="Rts", ylab="Rt")
+    idata = az.from_numpyro(
+        cfaepim_MSR.mcmc,
+        posterior_predictive=posterior_predictive_samples,
+        prior=prior_predictive_samples,
+    )
+    fig, ax = plt.subplots()
+    az.plot_lm(
+        "negbinom_rv",
+        idata=idata,
+        kind_pp="hdi",
+        y_kwargs={"color": "black"},
+        y_hat_fill_kwargs={"color": "C0"},
+        axes=ax,
+    )
+    ax.set_title("Posterior Predictive Plot")
+    ax.set_ylabel("Hospital Admissions")
+    ax.set_xlabel("Days")
+
+    plt.show()
+
+
+EDIT PLOTTING
+
+
+def plot_utils(
+    axes: mpl.axes,
+    figure: plt.figure,
+    use_log: bool = False,
+    title: str = "",
+    ylabel: str = "",
+    xlabel: str = "",
+    use_legend: bool = False,
+    display: bool = True,
+    filename: str = "delete_me",
+    save_as_img: bool = False,
+    save_to_pdf: bool = False,
+):  # numpydoc ignore=GL08
+    if use_legend:
+        axes.legend(loc="best")
+    if use_log:
+        axes.set_yscale("log")
+        axes.set_ylabel(ylabel + " (Log-Scale)", fontproperties=AXES_FONT_PROP)
+    axes.set_title(
+        title,
+        fontproperties=TITLE_FONT_PROP,
+    )
+    if not use_log:
+        axes.set_xlabel(xlabel, fontproperties=AXES_FONT_PROP)
+        axes.set_ylabel(ylabel, fontproperties=AXES_FONT_PROP)
+    for label in axes.get_xticklabels():
+        label.set_rotation(45)
+        label.set_fontproperties(LABEL_FONT_PROP)
+    for label in axes.get_yticklabels():
+        label.set_fontproperties(LABEL_FONT_PROP)
+    if display:
+        plt.tight_layout()
+        plt.show()
+    if not os.path.exists(f"./figures/{filename}.png"):
+        plt.tight_layout()
+        if save_as_img:
+            figure.savefig(f"./figures/{filename}")
+        if save_to_pdf:
+            return figure
+    return None
+
+
+def base_object_plot(
+    y: np.ndarray,
+    X: np.ndarray,
+    title: str = "",
+    X_label: str = "",
+    Y_label: str = "",
+    use_log: bool = False,
+    use_legend: bool = False,
+    display: bool = True,
+    filename: str = "delete_me",
+    save_as_img: bool = False,
+    save_to_pdf: bool = False,
+):  # numpydoc ignore=GL08
+    figure, axes = plt.subplots(1, 1)
+    axes.plot(X, y, color="black")
+    axes.set_xlim(left=0)
+    axes.set_ylim(bottom=0)
+    plot_utils(
+        figure=figure,
+        axes=axes,
+        title=title,
+        xlabel=X_label,
+        ylabel=Y_label,
+        use_log=use_log,
+        use_legend=use_legend,
+        display=display,
+        filename=filename,
+        save_as_img=save_as_img,
+        save_to_pdf=save_to_pdf,
+    )
+
+
+def plot_single_location_hosp_data(
+    incidence_data: pl.DataFrame,
+    states: str | list[str],
+    lower_date: str,
+    upper_date: str,
+    use_log: bool = False,
+    use_legend: bool = True,
+    save_as_img: bool = False,
+    save_to_pdf: bool = False,
+    display: bool = True,
+) -> None:
+    """
+    Plots incidence data between some
+    lower and upper date (inclusive) for
+    a single US territory.
+
+    Parameters
+    ----------
+    incidence_data : pl.DataFrame
+        A polars dataframe containing
+        hospital admissions data.
+    states : str | list[str]
+        Two letter region abbreviation.
+    lower_date : str
+        Start date for data visualization.
+    upper_date : str
+        End date for data visualization.
+    use_log : bool, optional
+        Whether to use log-scaling on the
+        y-axis. Defaults to False.
+    use_legend : bool, optional
+        Whether to use a legend. Defaults
+        to True.
+    save_as_img : bool, optional
+        Whether to save the plot as an
+        image. Defaults to False.
+    save_to_pdf : bool, optional
+        Whether to return the figure for
+        use in a collected PDF of images.
+    display : bool, optional
+        Whether to show the image.
+
+    Returns
+    -------
+    None | plt.figure
+        Returns nothing if not saving
+        to a pdf, otherwise return the
+        figure.
+    """
+    # check states and set up linestyles
+    if isinstance(states, str):
+        states = [states]
+    assert len(states) <= 4, "Use not more than four states."
+    linestyles = ["solid", "dashed", "dotted", "dashdot"]
+    # create figure and plot
+    figure, axes = plt.subplots(1, 1)
+    axes.xaxis.set_major_formatter(mdates.DateFormatter("%b %y"))
+    axes.xaxis.set_major_locator(mdates.MonthLocator())
+    # retrieve hospital admissions data and plot
+    for i, state in enumerate(states):
+        state_data = incidence_data.filter(
+            (pl.col("location") == state)
+            & (pl.col("date") >= lower_date)
+            & (pl.col("date") <= upper_date)
+        ).sort("date")
+        observed_hosp_admissions = [
+            int(elt) for elt in state_data["hosp"].to_list()
+        ]
+        dates = [
+            dt.datetime.strptime(date, "%Y-%m-%d")
+            for date in state_data["date"].to_list()
+        ]
+        axes.plot(
+            dates,
+            observed_hosp_admissions,
+            color="black",
+            linestyle=linestyles[i],
+            label=state,
+        )
+    # other settings and saving figure
+    ylabel = "Hospital Admissions"
+    plot_utils(
+        axes=axes,
+        figure=figure,
+        use_log=use_log,
+        ylabel=ylabel,
+        title=f"Reported Hospital Admissions: [{lower_date}, {upper_date}]",
+        use_legend=use_legend,
+        display=display,
+        filename=f"{state}_{lower_date}-{upper_date}",
+        save_as_img=save_as_img,
+        save_to_pdf=save_to_pdf,
+    )
+    return None
+
+
 REMOVE undoc'd Model Proc
 
 

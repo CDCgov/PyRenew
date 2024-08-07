@@ -3,15 +3,17 @@ Porting `cfa-forecast-renewal-epidemia`
 over to MSR. Validated on NHSN influenza
 data from the 2023-24 season.
 """
+import argparse
 import datetime as dt
 import glob
-import inspect
+
+# import inspect
 import logging
 import os
 from datetime import datetime
 from typing import NamedTuple
 
-import arviz as az
+# import arviz as az
 import jax
 import jax.numpy as jnp
 import matplotlib as mpl
@@ -48,6 +50,8 @@ if os.path.exists(FONT_PATH):
     TITLE_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=17.5)
     LABEL_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=12.5)
     AXES_FONT_PROP = fm.FontProperties(fname=FONT_PATH, size=16.5)
+if not os.path.exists(FONT_PATH):
+    TITLE_FONT_PROP, LABEL_FONT_PROP, AXES_FONT_PROP = None, None, None
 
 # use first mplstyle file that appears, should one exist
 if len(glob.glob("*mplstyle")) != 0:
@@ -55,6 +59,7 @@ if len(glob.glob("*mplstyle")) != 0:
 
 CURRENT_DATE = datetime.today().strftime("%Y-%m-%d")
 CURRENT_DATE_EXTENDED = datetime.today().strftime("%Y-%m-%d_%H:%M:%S")
+
 
 # set up logging
 logging.basicConfig(
@@ -199,6 +204,36 @@ def load_config(config_path: str) -> dict[str, any]:
     return config
 
 
+def ensure_output_directory(args: dict[str, any]):  # numpydoc ignore=GL08
+    output_directory = "./output/"
+    if not os.path.exists(output_directory):
+        os.makedirs(output_directory)
+    if args.historical_data:
+        output_directory += f"Historical_{args.reporting_date}/"
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+    return output_directory
+
+
+def assert_historical_data_files_exist(
+    reporting_date: str,
+):  # numpydoc ignore=GL08
+    data_directory = f"./data/{reporting_date}/"
+    assert os.path.exists(
+        data_directory
+    ), f"Data directory {data_directory} does not exist."
+    required_files = [
+        f"{reporting_date}_clean_data.tsv",
+        f"{reporting_date}_config.toml",
+        f"{reporting_date}-cfarenewal-cfaepimlight.csv",
+    ]
+    for file in required_files:
+        assert os.path.exists(
+            os.path.join(data_directory, file)
+        ), f"Required file {file} does not exist in {data_directory}."
+    return data_directory
+
+
 def forecast_report():  # numpydoc ignore=GL08
     pass
 
@@ -212,8 +247,8 @@ def prior_report():  # numpydoc ignore=GL08
 
 
 def plot_utils(
-    axes: mpl.axes,
-    figure: plt.figure,
+    axes: mpl.axes.Axes,
+    figure: plt.Figure,
     use_log: bool = False,
     title: str = "",
     ylabel: str = "",
@@ -223,16 +258,55 @@ def plot_utils(
     filename: str = "delete_me",
     save_as_img: bool = False,
     save_to_pdf: bool = False,
-):  # numpydoc ignore=GL08
+) -> None | plt.Figure:  # numpydoc ignore=GL08
+    """
+    Utility function to format and save plots.
+
+    Parameters
+    ----------
+    axes : mpl.axes.Axes
+        The axes object to format.
+    figure : plt.Figure
+        The figure object to format and possibly save.
+    use_log : bool, optional
+        Whether to use log-scaling on the y-axis.
+        Defaults to False.
+    title : str, optional
+        Title of the plot.
+        Defaults to "".
+    ylabel : str, optional
+        Label for the y-axis.
+        Defaults to "".
+    xlabel : str, optional
+        Label for the x-axis.
+        Defaults to "".
+    use_legend : bool, optional
+        Whether to display a legend.
+        Defaults to False.
+    display : bool, optional
+        Whether to display the plot.
+        Defaults to True.
+    filename : str, optional
+        Filename for saving the plot.
+        Defaults to "delete_me".
+    save_as_img : bool, optional
+        Whether to save the plot as an image.
+        Defaults to False.
+    save_to_pdf : bool, optional
+        Whether to return the figure for saving as a PDF.
+        Defaults to False.
+
+    Returns
+    -------
+    None | plt.Figure
+        Returns the figure if save_to_pdf is True, otherwise returns None.
+    """
     if use_legend:
         axes.legend(loc="best")
     if use_log:
         axes.set_yscale("log")
         axes.set_ylabel(ylabel + " (Log-Scale)", fontproperties=AXES_FONT_PROP)
-    axes.set_title(
-        title,
-        fontproperties=TITLE_FONT_PROP,
-    )
+    axes.set_title(title, fontproperties=TITLE_FONT_PROP)
     if not use_log:
         axes.set_xlabel(xlabel, fontproperties=AXES_FONT_PROP)
         axes.set_ylabel(ylabel, fontproperties=AXES_FONT_PROP)
@@ -244,10 +318,12 @@ def plot_utils(
     if display:
         plt.tight_layout()
         plt.show()
-    if not os.path.exists(f"./figures/{filename}.png"):
+    if save_as_img or save_to_pdf:
         plt.tight_layout()
         if save_as_img:
-            figure.savefig(f"./figures/{filename}")
+            if not os.path.exists("./figures"):
+                os.makedirs("./figures")
+            figure.savefig(f"./figures/{filename}.png")
         if save_to_pdf:
             return figure
     return None
@@ -265,12 +341,45 @@ def base_object_plot(
     filename: str = "delete_me",
     save_as_img: bool = False,
     save_to_pdf: bool = False,
-):  # numpydoc ignore=GL08
+) -> None | plt.Figure:  # numpydoc ignore=GL08
+    """
+    Basic plot function for y vs X.
+
+    Parameters
+    ----------
+    y : np.ndarray
+        Data for the y-axis.
+    X : np.ndarray
+        Data for the x-axis.
+    title : str, optional
+        Title of the plot. Defaults to "".
+    X_label : str, optional
+        Label for the x-axis. Defaults to "".
+    Y_label : str, optional
+        Label for the y-axis. Defaults to "".
+    use_log : bool, optional
+        Whether to use log-scaling on the y-axis. Defaults to False.
+    use_legend : bool, optional
+        Whether to display a legend. Defaults to False.
+    display : bool, optional
+        Whether to display the plot. Defaults to True.
+    filename : str, optional
+        Filename for saving the plot. Defaults to "delete_me".
+    save_as_img : bool, optional
+        Whether to save the plot as an image. Defaults to False.
+    save_to_pdf : bool, optional
+        Whether to return the figure for saving as a PDF. Defaults to False.
+
+    Returns
+    -------
+    None | plt.Figure
+        Returns the figure if save_to_pdf is True, otherwise returns None.
+    """
     figure, axes = plt.subplots(1, 1)
     axes.plot(X, y, color="black")
     axes.set_xlim(left=0)
     axes.set_ylim(bottom=0)
-    plot_utils(
+    return plot_utils(
         figure=figure,
         axes=axes,
         title=title,
@@ -295,17 +404,15 @@ def plot_single_location_hosp_data(
     save_as_img: bool = False,
     save_to_pdf: bool = False,
     display: bool = True,
-) -> None:
+) -> None | plt.Figure:
     """
-    Plots incidence data between some
-    lower and upper date (inclusive) for
-    a single US territory.
+    Plots incidence data between some lower and upper date
+    (inclusive) for a single US territory.
 
     Parameters
     ----------
     incidence_data : pl.DataFrame
-        A polars dataframe containing
-        hospital admissions data.
+        A polars dataframe containing hospital admissions data.
     states : str | list[str]
         Two letter region abbreviation.
     lower_date : str
@@ -313,26 +420,20 @@ def plot_single_location_hosp_data(
     upper_date : str
         End date for data visualization.
     use_log : bool, optional
-        Whether to use log-scaling on the
-        y-axis. Defaults to False.
+        Whether to use log-scaling on the y-axis. Defaults to False.
     use_legend : bool, optional
-        Whether to use a legend. Defaults
-        to True.
+        Whether to use a legend. Defaults to True.
     save_as_img : bool, optional
-        Whether to save the plot as an
-        image. Defaults to False.
+        Whether to save the plot as an image. Defaults to False.
     save_to_pdf : bool, optional
-        Whether to return the figure for
-        use in a collected PDF of images.
+        Whether to return the figure for use in a collected PDF of images.
     display : bool, optional
         Whether to show the image.
 
     Returns
     -------
-    None | plt.figure
-        Returns nothing if not saving
-        to a pdf, otherwise return the
-        figure.
+    None | plt.Figure
+        Returns nothing if not saving to a PDF, otherwise returns the figure.
     """
     # check states and set up linestyles
     if isinstance(states, str):
@@ -366,7 +467,7 @@ def plot_single_location_hosp_data(
         )
     # other settings and saving figure
     ylabel = "Hospital Admissions"
-    plot_utils(
+    return plot_utils(
         axes=axes,
         figure=figure,
         use_log=use_log,
@@ -378,6 +479,63 @@ def plot_single_location_hosp_data(
         save_as_img=save_as_img,
         save_to_pdf=save_to_pdf,
     )
+
+
+def plot_prior_distributions(
+    prior_distributions: dict,
+    num_samples: int = 1000,
+    save_as_img: bool = False,
+    save_to_pdf: bool = False,
+    display: bool = True,
+) -> None:
+    """
+    Plot prior distributions and save them as images or PDF.
+
+    Parameters
+    ----------
+    prior_distributions : dict
+        Dictionary of prior distributions to plot.
+    num_samples : int, optional
+        Number of samples to draw from each distribution. Defaults to 1000.
+    save_as_img : bool, optional
+        Whether to save the plots as images. Defaults to False.
+    save_to_pdf : bool, optional
+        Whether to save the plots to a PDF. Defaults to False.
+    display : bool, optional
+        Whether to display the plots. Defaults to True.
+
+    Returns
+    -------
+    None
+    """
+    figures = []
+    for name, distribution in prior_distributions.items():
+        samples = distribution.sample(jax.random.PRNGKey(0), (num_samples,))
+        figure, axes = plt.subplots(1, 1)
+        axes.hist(samples, bins=50, density=True, alpha=0.6, color="g")
+        title = f"Prior Distribution: {name}"
+        ylabel = "Density"
+        xlabel = "Value"
+        fig = plot_utils(
+            axes=axes,
+            figure=figure,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            use_legend=False,
+            display=display,
+            filename=name,
+            save_as_img=save_as_img,
+            save_to_pdf=save_to_pdf,
+        )
+        if save_to_pdf:
+            figures.append(fig)
+    # change further
+    # if save_to_pdf:
+    #     from matplotlib.backends.backend_pdf import PdfPages
+    #     with PdfPages('./figures/prior_distributions.pdf') as pdf:
+    #         for fig in figures:
+    #             pdf.savefig(fig)
     return None
 
 
@@ -422,7 +580,7 @@ class CFAEPIM_Infections(RandomVariable):
             susceptibility_prior is not
             a numpyro distribution.
         """
-        if not isinstance(I0, (np.ndarray, jnp.DeviceArray)):
+        if not isinstance(I0, (np.ndarray, jnp.ndarray)):
             raise TypeError(
                 f"Initial infections (I0) must be an array-like structure; was type {type(I0)}"
             )
@@ -615,7 +773,7 @@ class CFAEPIM_Observation(RandomVariable):
         binomial concentration prior are correctly specified. If any parameter
         is invalid, an appropriate error is raised.
         """
-        if not isinstance(predictors, (np.ndarray, jnp.DeviceArray)):
+        if not isinstance(predictors, (np.ndarray, jnp.ndarray)):
             raise TypeError(
                 f"Predictors must be an array-like structure; was type {type(predictors)}"
             )
@@ -934,7 +1092,6 @@ class CFAEPIM_Model(Model):
             predictors=self.predictors,
             alpha_prior_dist=self.alpha_prior_dist,
             coefficient_priors=self.coefficient_priors,
-            max_rt=self.max_rt,
             nb_concentration_prior=self.nb_concentration_prior,
         )
 
@@ -959,17 +1116,17 @@ class CFAEPIM_Model(Model):
         """
         if not isinstance(population, int) or population <= 0:
             raise ValueError("Population must be a positive integer.")
-        if not isinstance(week_indices, (np.ndarray, jnp.DeviceArray)):
+        if not isinstance(week_indices, jax.ndarray):
             raise ValueError("Week indices must be an array-like structure.")
         if not isinstance(first_week_hosp, int) or first_week_hosp < 0:
             raise ValueError(
                 "First week hospitalizations must be a non-negative integer."
             )
-        if not isinstance(predictors, list):
+        if not isinstance(predictors, jnp.ndarray):
             raise ValueError("Predictors must be a list of integers.")
-        if not isinstance(data_observed_hosp_admissions, pl.DataFrame):
+        if not isinstance(data_observed_hosp_admissions, jnp.ndarray):
             raise ValueError(
-                "Observed hospital admissions must be a polars DataFrame."
+                "Observed hospital admissions must be a jax array."
             )
 
         CFAEPIM_Model.infections.validate()
@@ -1034,188 +1191,118 @@ class CFAEPIM_Model(Model):
         )
 
 
-def run(
-    state: str, dataset: pl.DataFrame, config: dict[str, any]
+def prepare_jurisdiction_data_jax(
+    states: list[str], dataset: pl.DataFrame
 ):  # numpydoc ignore=GL08
-    # extract population
-    population = int(
-        dataset.filter(pl.col("location") == state)
-        .select(["population"])
+    filtered_data = dataset.filter(pl.col("location").is_in(states))
+    populations = (
+        filtered_data.select(pl.col("population"))
         .unique()
-        .to_numpy()[0][0]
+        .to_numpy()
+        .flatten()
     )
-
-    # extract week indices
-    week_indices = jnp.array(
-        dataset.filter(pl.col("location") == state).select(["week"])["week"]
+    week_indices = (
+        filtered_data.select(pl.col("week"))
+        .to_numpy()
+        .reshape(len(states), -1)
     )
-
-    # first week hospitalizations
-    first_week_hosp = (
-        dataset.filter((pl.col("location") == state))
-        .select(["first_week_hosp"])
-        .to_numpy()[0][0]
+    first_week_hosps = (
+        filtered_data.select(pl.col("first_week_hosp"))
+        .unique()
+        .to_numpy()
+        .flatten()
     )
-
-    # extract predictors
-    day_of_week_covariate = dataset.select(pl.col("day_of_week")).to_dummies()
-    remaining_covariates = dataset.select(["is_holiday", "is_post_holiday"])
+    day_of_week_covariate = filtered_data.select(
+        pl.col("day_of_week")
+    ).to_dummies()
+    remaining_covariates = filtered_data.select(
+        ["is_holiday", "is_post_holiday"]
+    )
     covariates = pl.concat(
         [day_of_week_covariate, remaining_covariates], how="horizontal"
     )
-    predictors = covariates.to_numpy()
-
-    # extract reported hospitalizations
-    data_observed_hosp_admissions = np.array(
-        dataset.filter(pl.col("location") == state).select(["date", "hosp"])[
-            "hosp"
-        ]
+    predictors = covariates.to_numpy().reshape(
+        len(states), -1, covariates.shape[1]
+    )
+    data_observed_hosp_admissions = (
+        filtered_data.select(pl.col("hosp"))
+        .to_numpy()
+        .reshape(len(states), -1)
+    )
+    return (
+        jnp.array(populations),
+        jnp.array(week_indices),
+        jnp.array(first_week_hosps),
+        jnp.array(predictors),
+        jnp.array(data_observed_hosp_admissions),
     )
 
-    # instantiate cfaepim-MSR
-    cfaepim_MSR = CFAEPIM_Model(
-        config=config,
-        population=population,
-        week_indices=week_indices,
-        first_week_hosp=first_week_hosp,
-        predictors=predictors,
-        data_observed_hosp_admissions=data_observed_hosp_admissions,
-    )
 
-    cfaepim_MSR.run(
-        n_steps=week_indices.size,
-        num_warmup=config["n_warmup"],
-        num_samples=config["n_iter"],
-        nuts_args={
-            "target_accept_prob": config["adapt_delta"],
-            "max_tree_depth": config["max_treedepth"],
-        },
-        mcmc_args={
-            "num_chains": config["n_chains"],
-            "progress_bar": True,
-        },
-    )
-    # update: getting stuck at very small step size
+def run_batched(
+    states: list[str], dataset: pl.DataFrame, config: dict[str, any]
+):  # numpydoc ignore=GL08
+    (
+        populations,
+        week_indices,
+        first_week_hosps,
+        predictors,
+        data_observed_hosp_admissions,
+    ) = prepare_jurisdiction_data_jax(states, dataset)
 
-    cfaepim_MSR.print_summary()
-
-    # sample
-    # samples = cfaepim_MSR.mcmc.get_samples()
-
-    posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
-        n_steps=week_indices.size,
-        numpyro_predictive_args={"num_samples": config["n_iter"]},
-        rng_key=jax.random.key(config["seed"]),
-    )
-
-    # print(f"Posterior Predictive Samples:\n{posterior_predictive_samples}\n\n")
-
-    prior_predictive_samples = cfaepim_MSR.prior_predictive(
-        n_steps=week_indices.size,
-        numpyro_predictive_args={"num_samples": config["n_iter"]},
-        rng_key=jax.random.key(config["seed"]),
-    )
-
-    # print(f"Prior Predictive Samples:\n{prior_predictive_samples}\n\n")
-
-    # out2 = cfaepim_MSR.plot_posterior(var="Rts", ylab="Rt")
-    idata = az.from_numpyro(
-        cfaepim_MSR.mcmc,
-        posterior_predictive=posterior_predictive_samples,
-        prior=prior_predictive_samples,
-    )
-    fig, ax = plt.subplots()
-    az.plot_lm(
-        "negbinom_rv",
-        idata=idata,
-        kind_pp="hdi",
-        y_kwargs={"color": "black"},
-        y_hat_fill_kwargs={"color": "C0"},
-        axes=ax,
-    )
-    ax.set_title("Posterior Predictive Plot")
-    ax.set_ylabel("Hospital Admissions")
-    ax.set_xlabel("Days")
-
-    plt.show()
-
-
-def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
-    logger.info(f"Population Value:\n{cfaepim_MSR_model.population}\n")
-
-    logger.info(f"Predictors:\n{cfaepim_MSR_model.predictors}\n")
-
-    cfaepim_MSR_model.gen_int.validate(cfaepim_MSR_model.pmf_array)
-    sampled_gen_int = cfaepim_MSR_model.gen_int.sample()
-    logger.info(f"Generation Interval (Sampled):\n{sampled_gen_int}\n")
-
-    base_object_plot(
-        y=sampled_gen_int[0].value,
-        X=np.arange(0, len(sampled_gen_int[0].value)),
-        title="Sampled Generation Interval",
-        filename="sample_generation_interval",
-        save_as_img=False,
-        display=False,
-    )
-
-    logger.info(
-        f"Rt Process Object:\n{cfaepim_MSR_model.Rt_process}\n{dir(cfaepim_MSR_model.Rt_process)}"
-    )
-    logger.info(
-        f"Rt Process Sample Method Signature):\n{inspect.signature(cfaepim_MSR_model.Rt_process.sample)}"
-    )
-
-    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
-        sampled_Rt = cfaepim_MSR_model.Rt_process.sample(n_steps=100)
-    logger.info(f"Rt Process Samples:\n{sampled_Rt}\n")
-
-    logger.info(
-        f"First Week Mean Infections:\n{cfaepim_MSR_model.mean_inf_val}\n"
-    )
-
-    logger.info(
-        f"Initialization Infections Object:\n{cfaepim_MSR_model.I0}\n{dir(cfaepim_MSR_model.I0)}"
-    )
-    logger.info(
-        f"Initialization Infections Sample Method Signature:\n{inspect.signature(cfaepim_MSR_model.I0.sample)}"
-    )
-
-    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
-        sampled_I0 = cfaepim_MSR_model.I0.sample()
-    logger.info(f"Initial Infections Samples:\n{sampled_I0}\n")
-
-    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
-        sampled_gen_int = cfaepim_MSR_model.gen_int.sample()
-        all_I_t, all_S_t = cfaepim_MSR_model.infections.sample(
-            Rt=sampled_Rt[0].value,
-            gen_int=sampled_gen_int[0].value,
-            P=1000000,
+    def run_single(
+        population,
+        week_index,
+        first_week_hosp,
+        predictor,
+        data_observed_hosp_admission,
+    ):  # numpydoc ignore=GL08
+        cfaepim_MSR = CFAEPIM_Model(
+            config=config,
+            population=population,
+            week_indices=week_index,
+            first_week_hosp=first_week_hosp,
+            predictors=predictor,
+            data_observed_hosp_admissions=data_observed_hosp_admission,
         )
-    logger.info(
-        f"Infections & Susceptibles\nall_I_t: {all_I_t}\nall_S_t: {all_S_t}"
-    )
-
-    logger.info(
-        f"Observation Process Object:\n{cfaepim_MSR_model.obs_process}\n{dir(cfaepim_MSR_model.obs_process)}"
-    )
-    logger.info(
-        f"Observation Process Sample Method Signature:\n{inspect.signature(cfaepim_MSR_model.obs_process.sample)}\n"
-    )
-
-    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
-        sampled_alpha = cfaepim_MSR_model.obs_process.alpha_process.sample()[
-            "prediction"
-        ]
-    logger.info(
-        f"Instantaneous Ascertainment Rate Samples:\n{sampled_alpha}\n"
-    )
-
-    with numpyro.handlers.seed(rng_seed=cfaepim_MSR_model.seed):
-        sampled_obs = cfaepim_MSR_model.obs_process(
-            infections=all_I_t,
-            inf_to_hosp_dist=jnp.array(cfaepim_MSR_model.inf_to_hosp_dist),
+        cfaepim_MSR.run(
+            n_steps=week_indices.size,
+            num_warmup=config["n_warmup"],
+            num_samples=config["n_iter"],
+            nuts_args={
+                "target_accept_prob": config["adapt_delta"],
+                "max_tree_depth": config["max_treedepth"],
+            },
+            mcmc_args={
+                "num_chains": config["n_chains"],
+                "progress_bar": False,
+            },  # needs to be False to support vmap usage
         )
-    logger.info(f"Hospitalization Observation Samples:\n{sampled_obs}\n")
+        cfaepim_MSR.print_summary()
+        posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
+            n_steps=week_indices.size,
+            numpyro_predictive_args={"num_samples": config["n_iter"]},
+            rng_key=jax.random.key(config["seed"]),
+        )
+        prior_predictive_samples = cfaepim_MSR.prior_predictive(
+            n_steps=week_indices.size,
+            numpyro_predictive_args={"num_samples": config["n_iter"]},
+            rng_key=jax.random.key(config["seed"]),
+        )
+        return (
+            prior_predictive_samples,
+            posterior_predictive_samples,
+            cfaepim_MSR,
+        )
+
+    # run_single_vmap = jax.vmap(run_single, in_axes=(0, 0, 0, 0, 0))
+    return jax.vmap(run_single)(
+        populations,
+        week_indices,
+        first_week_hosps,
+        predictors,
+        data_observed_hosp_admissions,
+    )
+    # return jax.pmap(run_single)(jnp.arange(len(states)))
 
 
 def main():  # numpydoc ignore=GL08
@@ -1232,6 +1319,8 @@ def main():  # numpydoc ignore=GL08
     an Rt, infections, and observation process by
     passing them to the `cfaepim` model, (3) the user
     can use argparse to test or compare the forecasts.
+    The `cfaepim` tool is used for runs on hospitalization
+    data retrieved from an API or stored historically.
 
     Notes
     -----
@@ -1241,9 +1330,15 @@ def main():  # numpydoc ignore=GL08
     each part of the `cfaepim` model works as desired.
     """
 
-    # parser = argparse.ArgumentParser(
-    #     description="Forecast, simulate, and analyze the CFAEPIM model."
-    # )
+    parser = argparse.ArgumentParser(
+        description="Forecast, simulate, and analyze the CFAEPIM model."
+    )
+    parser.add_argument(
+        "--reporting_date",
+        type=str,
+        required=True,
+        help="The reporting date.",
+    )
     # parser.add_argument(
     #     "--config_path",
     #     type=str,
@@ -1256,42 +1351,71 @@ def main():  # numpydoc ignore=GL08
     #     required=True,
     #     help="Crowd forecasts (sep. w/ space).",
     # )
-    # parser.add_argument(
-    #     "--historical_data",
-    #     action="store_true",
-    #     help="Load model weights before training.",
-    # )
-    # args = parser.parse_args()
+    parser.add_argument(
+        "--historical_data",
+        action="store_true",
+        help="Load model weights before training.",
+    )
+    args = parser.parse_args()
 
     # determine number of CPU cores
     numpyro.set_platform("cpu")
     num_cores = os.cpu_count()
     numpyro.set_host_device_count(num_cores - (num_cores - 3))
 
-    # load parameters config (2024-01-20)
-    config = load_config(config_path="./config/params_2024-01-20.toml")
-
-    # load & display NHSN data w/ population counts (2024-01-20)
-    data_path = "./data/2024-01-20/2024-01-20_clean_data.tsv"
-    influenza_hosp_data = load_data(data_path=data_path)
+    # data, output, and config directory
+    # output_directory = ensure_output_directory(args)
+    if args.historical_data:
+        historical_data_directory = assert_historical_data_files_exist(
+            args.reporting_date
+        )
+        config = load_config(
+            config_path=f"./config/params_{args.reporting_date}_historical.toml"
+        )
+        data_path = os.path.join(
+            historical_data_directory, f"{args.reporting_date}_clean_data.tsv"
+        )
+        influenza_hosp_data = load_data(data_path=data_path)
+    if not args.historical_data:
+        config = load_config(
+            config_path=f"./config/params_{args.reporting_date}_historical.toml"
+        )
+    # influenza_hosp_data = influenza_hosp_data.with_column(
+    #     pl.col("location_code").cast(pl.Int32)
+    # )
     rows, cols = influenza_hosp_data.shape
     display_data(data=influenza_hosp_data, n_row_count=10, n_col_count=cols)
 
-    run(state="NY", dataset=influenza_hosp_data, config=config)
-    # max_tree depth 13
+    # parallelized run over states
+    states = ["NY", "CA"]
+    results = run_batched(
+        states=states, dataset=influenza_hosp_data, config=config
+    )
+    (
+        prior_predictive_samples,
+        posterior_predictive_samples,
+        cfaepim_MSR,
+    ) = results[0]
+    print(prior_predictive_samples)
+    # plot_results(
+    #     prior_predictive_samples,
+    #     posterior_predictive_samples,
+    #     cfaepim_MSR)
+
+    # plot data: for each state,
 
     # verification: plot single state hospitalizations
-    plot_single_location_hosp_data(
-        incidence_data=influenza_hosp_data,
-        states=["NY"],
-        lower_date="2022-01-01",
-        upper_date="2024-03-10",
-        use_log=False,
-        use_legend=True,
-        save_as_img=False,
-        save_to_pdf=False,
-        display=False,
-    )
+    # plot_single_location_hosp_data(
+    #     incidence_data=influenza_hosp_data,
+    #     states=["NY"],
+    #     lower_date="2022-01-01",
+    #     upper_date="2024-03-10",
+    #     use_log=False,
+    #     use_legend=True,
+    #     save_as_img=False,
+    #     save_to_pdf=False,
+    #     display=False,
+    # )
 
     # # verification: data_observed_hosp_admissions
     # print(f"HOSPITALIZATIONS:\n{data_observed_hosp_admissions}\n\n")
