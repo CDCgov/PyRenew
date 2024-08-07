@@ -57,7 +57,7 @@ for i in range(0, 30, 7):
 plt.show()
 ```
 
-The implementation of the `RtWeeklyDiffProcess` (which is an instance of `RtPeriodicDiffProcess`), uses `PeriodicBroadcaster` to repeating values: `PeriodicBroadcaster(..., period_size=7, broadcast_type="repeat")`. Setting the `broadcast_type` to `"repeat"` repeats each vector element for the specified period size. The `RtWeeklyDiff` class is a particular case of `RtPeriodicDiff` with a period size of seven.
+The implementation of the `RtWeeklyDiffProcess` (which is an instance of `RtPeriodicDiffProcess`), uses `repeat_until_n` to repeating values: `repeat_until_n(..., period_size=7)`. The `RtWeeklyDiff` class is a particular case of `RtPeriodicDiff` with a period size of seven.
 
 ## Repeated sequences (tiling)
 

@@ -35,7 +35,6 @@ class PeriodicEffect(RandomVariable):
     def __init__(
         self,
         offset: int,
-        period_size: int,
         quantity_to_broadcast: RandomVariable,
         t_start: int,
         t_unit: int,
@@ -48,8 +47,6 @@ class PeriodicEffect(RandomVariable):
         offset : int
             Relative point at which data starts, must be between 0 and
             period_size - 1.
-        period_size : int
-            Size of the period.
         quantity_to_broadcast : RandomVariable
             Values to be broadcasted (repeated or tiled).
         t_start : int
@@ -64,11 +61,7 @@ class PeriodicEffect(RandomVariable):
 
         PeriodicEffect.validate(quantity_to_broadcast)
 
-        self.broadcaster = au.PeriodicBroadcaster(
-            offset=offset,
-            period_size=period_size,
-            broadcast_type="tile",
-        )
+        self.offset = offset
 
         self.set_timeseries(
             t_start=t_start,
@@ -114,9 +107,10 @@ class PeriodicEffect(RandomVariable):
 
         return PeriodicEffectSample(
             value=SampledValue(
-                self.broadcaster(
+                au.tile_until_n(
                     data=self.quantity_to_broadcast.sample(**kwargs)[0].value,
                     n_timepoints=duration,
+                    offset=self.offset,
                 ),
                 t_start=self.t_start,
                 t_unit=self.t_unit,
@@ -157,7 +151,6 @@ class DayOfWeekEffect(PeriodicEffect):
 
         super().__init__(
             offset=offset,
-            period_size=7,
             quantity_to_broadcast=quantity_to_broadcast,
             t_start=t_start,
             t_unit=1,
