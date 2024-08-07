@@ -9,6 +9,7 @@ import inspect
 import logging
 import os
 from datetime import datetime
+from typing import NamedTuple
 
 import arviz as az
 import jax
@@ -35,14 +36,12 @@ from pyrenew.metaclass import (
     DistributionalRV,
     Model,
     RandomVariable,
+    SampledValue,
     TransformedRandomVariable,
 )
 from pyrenew.observation import NegativeBinomialObservation
 from pyrenew.process import SimpleRandomWalkProcess
 from pyrenew.regression import GLMPrediction
-
-# from typing import NamedTuple
-
 
 FONT_PATH = "texgyreschola-regular.otf"
 if os.path.exists(FONT_PATH):
@@ -96,10 +95,10 @@ def display_data(
     rows, cols = data.shape
     assert (
         1 <= n_col_count <= cols
-    ), f"Must have reasonable column count; was {n_col_count}"
+    ), f"Must have reasonable column count; was type {n_col_count}"
     assert (
         1 <= n_row_count <= rows
-    ), f"Must have reasonable row count; was {n_row_count}"
+    ), f"Must have reasonable row count; was type {n_row_count}"
     pl.Config.set_tbl_hide_dataframe_shape(True)
     pl.Config.set_tbl_formatting("ASCII_MARKDOWN")
     pl.Config.set_tbl_hide_column_data_types(True)
@@ -157,10 +156,13 @@ def load_data(
         hospitalization data.
     """
     check_file_path_valid(file_path=data_path)
-    assert sep in ["\t", ","], f"Separator must be tabs or commas; was {sep}"
+    assert sep in [
+        "\t",
+        ",",
+    ], f"Separator must be tabs or commas; was type {sep}"
     assert (
         7500 <= schema_length <= 25000
-    ), f"Schema length must be reasonable; was {schema_length}"
+    ), f"Schema length must be reasonable; was type {schema_length}"
     data = pl.read_csv(
         data_path, separator=sep, infer_schema_length=schema_length
     )
@@ -379,7 +381,23 @@ def plot_single_location_hosp_data(
     return None
 
 
-class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
+class CFAEPIM_Infections(RandomVariable):
+    """
+    Class representing the infection process in
+    the CFAEPIM model. This class handles the sampling of
+    infection counts over time, considering the
+    reproduction number, generation interval, and population size,
+    while accounting for susceptibility depletion.
+
+    Parameters
+    ----------
+    I0 : ArrayLike
+        Initial infection counts.
+    susceptibility_prior : numpyro.distributions
+        Prior distribution for the susceptibility proportion
+        (S_{v-1} / P).
+    """
+
     def __init__(
         self,
         I0: ArrayLike,
@@ -389,51 +407,72 @@ class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
         self.susceptibility_prior = susceptibility_prior
 
     @staticmethod
-    def validate() -> None:  # numpydoc ignore=GL08
-        return None
+    def validate(I0: any, susceptibility_prior: any) -> None:
+        """
+        Validate the parameters of the
+        infection process. Checks that the initial infections
+        (I0) and susceptibility_prior are
+        correctly specified. If any parameter is invalid,
+        an appropriate error is raised.
+
+        Raises
+        ------
+        TypeError
+            If I0 is not array-like or
+            susceptibility_prior is not
+            a numpyro distribution.
+        """
+        if not isinstance(I0, (np.ndarray, jnp.DeviceArray)):
+            raise TypeError(
+                f"Initial infections (I0) must be an array-like structure; was type {type(I0)}"
+            )
+
+        if not isinstance(susceptibility_prior, dist.Distribution):
+            raise TypeError(
+                f"susceptibility_prior must be a numpyro distribution; was type {type(susceptibility_prior)}"
+            )
 
     def sample(
         self, Rt: ArrayLike, gen_int: ArrayLike, P: float, **kwargs
-    ) -> tuple:  # numpydoc ignore=GL08
+    ) -> tuple:
         """
-        Given an array a reproduction numbers, a generation
-        interval, and the size of the population, calculate
-        infections under scheme of susceptible depletion.
+        Given an array of reproduction numbers,
+        a generation interval, and the size of a
+        jurisdiction's population,
+        calculate infections under the scheme
+        of susceptible depletion.
 
         Parameters
         ----------
         Rt : ArrayLike
-            Reproduction number over time.
-            This is an array of Rt values for each time step.
+            Reproduction numbers over time; this is an array of
+            Rt values for each time step.
         gen_int : ArrayLike
-            Generation interval probability mass function.
-            This is an array of probabilities representing the
+            Generation interval probability mass function. This is
+            an array of probabilities representing the
             distribution of times between successive infections
             in a chain of transmission.
         P : float
-            Population size. This is the total
-            population size used for
-            susceptibility adjustment.
+            Population size. This is the total population
+            size used for susceptibility adjustment.
         **kwargs : dict, optional
-            Additional keyword arguments
-            passed through to internal
+            Additional keyword arguments passed through to internal
             sample calls, should there be any.
 
         Returns
         -------
         tuple
-            A tuple containing two arrays (all_I_t) array
-            of infections at each time step and (all_S_t)
-            array of susceptible individuals at each
-            time step.
+            A tuple containing two arrays: all_I_t, an array of
+            latent infections at each time step and all_S_t, an
+            array of susceptible individuals at each time step.
 
         Raises
         ------
         ValueError
-            If the length of the initial infections vector (I0) is less
-            than the length of the generation interval.
+            If the length of the initial infections
+            vector (I0) is less than the length of
+            the generation interval.
         """
-
         # get initial infections
         I0_samples = self.I0.sample()
         I0 = I0_samples[0].value
@@ -450,13 +489,12 @@ class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
             )
         recent_I0 = I0[-gen_int_rev.size :]
 
-        # sample the initial susceptible population
-        # proportion S_{v-1} / P from prior
+        # sample the initial susceptible population proportion S_{v-1} / P from prior
         init_S_proportion = numpyro.sample(
             "S_v_minus_1_over_P", self.susceptibility_prior
         )
 
-        # confirm: ensure the proportion is between 0 and 1
+        # ensure the proportion is between 0 and 1
         init_S_proportion = jnp.clip(init_S_proportion, 0, 1)
 
         # calculate initial susceptible population S_{v-1}
@@ -468,10 +506,7 @@ class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
             # compute raw infections
             i_raw_t = Rt * jnp.dot(I_recent, gen_int_rev)
 
-            # apply the logistic susceptibility
-            # adjustment to a potential new
-            # incidence I_unadjusted proposed in
-            # equation 6 of Bhatt et al 2023
+            # apply the logistic susceptibility adjustment to a potential new incidence
             i_t = logistic_susceptibility_adjustment(
                 I_raw_t=i_raw_t, frac_susceptible=S_t / P, n_population=P
             )
@@ -495,25 +530,56 @@ class CFAEPIM_Infections(RandomVariable):  # numpydoc ignore=GL08
         return all_I_t, all_S_t
 
 
-class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
+class CFAEPIM_Observation(RandomVariable):
+    """
+    Class representing the observation process
+    in the CFAEPIM model. This class handles the generation
+    of the alpha (instantaneous ascertaintment rate) process
+    and the negative binomial observation process for
+    modeling hospitalizations from latent infections.
+
+    Parameters
+    ----------
+    predictors : ArrayLike
+        Array of predictor (covariates) values for the alpha process.
+    alpha_prior_dist : numpyro.distributions
+        Prior distribution for the intercept in the alpha process.
+    coefficient_priors : numpyro.distributions
+        Prior distributions for the coefficients in the alpha process.
+    nb_concentration_prior : numpyro.distributions
+        Prior distribution for the concentration parameter of
+        the negative binomial distribution.
+    """
+
     def __init__(
         self,
         predictors,
         alpha_prior_dist,
         coefficient_priors,
-        max_rt,
         nb_concentration_prior,
     ):  # numpydoc ignore=GL08
+        CFAEPIM_Observation.validate(
+            predictors,
+            alpha_prior_dist,
+            coefficient_priors,
+            nb_concentration_prior,
+        )
+
         self.predictors = predictors
         self.alpha_prior_dist = alpha_prior_dist
         self.coefficient_priors = coefficient_priors
-        self.max_rt = max_rt
         self.nb_concentration_prior = nb_concentration_prior
 
         self._init_alpha_t()
         self._init_negative_binomial()
 
-    def _init_alpha_t(self):  # numpydoc ignore=GL08
+    def _init_alpha_t(self):
+        """
+        Initialize the alpha process using a generalized
+        linear model (GLM) (transformed linear predictor).
+        The transform is set to the inverse of the sigmoid
+        transformation.
+        """
         self.alpha_process = GLMPrediction(
             name="alpha_t",
             fixed_predictor_values=self.predictors,
@@ -521,10 +587,13 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
             coefficient_priors=self.coefficient_priors,
             transform=t.SigmoidTransform().inv,
         )
-        # MAKE ISSUE where inversion happens (which is g, which is g_{-1})
-        # just escape underscores & minus
 
-    def _init_negative_binomial(self):  # numpydoc ignore=GL08
+    def _init_negative_binomial(self):
+        """
+        Sets up the negative binomial
+        distribution for modeling hospitalizations
+        with a prior on the concentration parameter.
+        """
         self.nb_observation = NegativeBinomialObservation(
             name="negbinom_rv",
             concentration_rv=DistributionalRV(
@@ -534,15 +603,68 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
         )
 
     @staticmethod
-    def validate() -> None:  # numpydoc ignore=GL08
-        pass
+    def validate(
+        predictors: any,
+        alpha_prior_dist: any,
+        coefficient_priors: any,
+        nb_concentration_prior: any,
+    ) -> None:
+        """
+        Validate the parameters of the CFAEPIM observation process. Checks that
+        the predictors, alpha prior distribution, coefficient priors, and negative
+        binomial concentration prior are correctly specified. If any parameter
+        is invalid, an appropriate error is raised.
+        """
+        if not isinstance(predictors, (np.ndarray, jnp.DeviceArray)):
+            raise TypeError(
+                f"Predictors must be an array-like structure; was type {type(predictors)}"
+            )
+        if not isinstance(alpha_prior_dist, dist.Distribution):
+            raise TypeError(
+                f"alpha_prior_dist must be a numpyro distribution; was type {type(alpha_prior_dist)}"
+            )
+        if not isinstance(coefficient_priors, dist.Distribution):
+            raise TypeError(
+                f"coefficient_priors must be a numpyro distribution; was type {type(coefficient_priors)}"
+            )
+        if not isinstance(nb_concentration_prior, dist.Distribution):
+            raise TypeError(
+                f"nb_concentration_prior must be a numpyro distribution; was type {type(nb_concentration_prior)}"
+            )
 
     def sample(
         self,
         infections: ArrayLike,
         inf_to_hosp_dist: ArrayLike,
         **kwargs,
-    ) -> tuple:  # numpydoc ignore=GL08
+    ) -> tuple:
+        """
+        Sample from the observation process. Generates samples
+        from the alpha process and calculates the expected number
+        of hospitalizations by convolving the infections with
+        the infection-to-hospitalization (delay distribution)
+        distribution. It then samples from the negative binomial
+        distribution to model the observed
+        hospitalizations.
+
+        Parameters
+        ----------
+        infections : ArrayLike
+            Array of infection counts over time.
+        inf_to_hosp_dist : ArrayLike
+            Array representing the distribution of times
+            from infection to hospitalization.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through
+            to internal sample calls, should there be any.
+
+        Returns
+        -------
+        tuple
+            A tuple containing the sampled instantaneous
+            ascertainment values and the expected
+            hospitalizations.
+        """
         alpha_samples = self.alpha_process.sample()["prediction"]
         alpha_samples = alpha_samples[: infections.shape[0]]
         expected_hosp = (
@@ -553,10 +675,6 @@ class CFAEPIM_Observation(RandomVariable):  # numpydoc ignore=GL08
         )
         return alpha_samples, expected_hosp
 
-        # update: explore this further;
-        # would be unobserved discrete site if not used
-        # nb_samples = self.nb_observation.sample(mu=expected_hosp, **kwargs)
-
 
 class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
     def __init__(
@@ -566,19 +684,85 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
         gamma_RW_prior_scale: float,
         week_indices: ArrayLike,
     ):  # numpydoc ignore=GL08
+        """
+        Initialize the CFAEPIM_Rt class.
+
+        Parameters
+        ----------
+        intercept_RW_prior : numpyro.distributions.Distribution
+            Prior distribution for the random walk intercept.
+        max_rt : float
+            Maximum value of the reproduction number. Used as
+            the scale in the `ScaledLogitTransform()`.
+        gamma_RW_prior_scale : float
+            Scale parameter for the HalfNormal distribution
+            used for random walk standard deviation.
+        week_indices : ArrayLike
+            Array of week indices used for broadcasting
+            the Rt values.
+        """
         self.intercept_RW_prior = intercept_RW_prior
         self.max_rt = max_rt
         self.gamma_RW_prior_scale = gamma_RW_prior_scale
         self.week_indices = week_indices
 
     @staticmethod
-    def validate() -> None:  # numpydoc ignore=GL08
-        pass
+    def validate(
+        intercept_RW_prior: any,
+        max_rt: any,
+        gamma_RW_prior_scale: any,
+        week_indices: any,
+    ) -> None:  # numpydoc ignore=GL08
+        """
+        Validate the parameters of the CFAEPIM_Rt class.
+
+        Raises
+        ------
+        ValueError
+            If any of the parameters are not valid.
+        """
+        if not isinstance(intercept_RW_prior, dist.Distribution):
+            raise ValueError(
+                f"intercept_RW_prior must be a numpyro distribution; was type {type(intercept_RW_prior)}"
+            )
+        if not isinstance(max_rt, (float, int)) or max_rt <= 0:
+            raise ValueError(
+                f"max_rt must be a positive number; was type {type(max_rt)}"
+            )
+        if (
+            not isinstance(gamma_RW_prior_scale, (float, int))
+            or gamma_RW_prior_scale <= 0
+        ):
+            raise ValueError(
+                f"gamma_RW_prior_scale must be a positive number; was type {type(gamma_RW_prior_scale)}"
+            )
+        if not isinstance(week_indices, (np.ndarray, jnp.ndarray)):
+            raise ValueError(
+                f"week_indices must be an array-like structure; was type {type(week_indices)}"
+            )
 
     def sample(self, n_steps: int, **kwargs) -> tuple:  # numpydoc ignore=GL08
+        """
+        Sample the Rt values using a random walk process
+        and broadcast them to daily values.
+
+        Parameters
+        ----------
+        n_steps : int
+            Number of time steps to sample.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to internal sample calls.
+
+        Returns
+        -------
+        ArrayLike
+            An array containing the broadcasted Rt values.
+        """
+        # sample the standard deviation for the random walk process
         sd_wt = numpyro.sample(
             "Wt_rw_sd", dist.HalfNormal(self.gamma_RW_prior_scale)
         )
+        # Rt random walk process
         wt_rv = SimpleRandomWalkProcess(
             name="Wt",
             step_rv=DistributionalRV(
@@ -591,39 +775,62 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
                 dist=self.intercept_RW_prior,
             ),
         )
+        # transform Rt random walk w/ scaled logit
         transformed_rt_samples = TransformedRandomVariable(
             name="transformed_rt_rw",
             base_rv=wt_rv,
             transforms=t.ScaledLogitTransform(x_max=self.max_rt).inv,
         ).sample(n_steps=n_steps, **kwargs)
+        # broadcast the Rt samples to daily values
         broadcasted_rt_samples = transformed_rt_samples[0].value[
             self.week_indices
         ]
         return broadcasted_rt_samples
 
 
-# # nice to have not essential
-# class CFAEPIM_Model_Sample(NamedTuple): # numpydoc ignore=GL08
+class CFAEPIM_Model_Sample(NamedTuple):  # numpydoc ignore=GL08
+    Rts: SampledValue | None = None
+    latent_infections: SampledValue | None = None
+    susceptibles: SampledValue | None = None
+    ascertainment_rates: SampledValue | None = None
+    expected_hospitalizations: SampledValue | None = None
+    observed_hospital_admissions: SampledValue | None = None
 
-#     Rt: SampledValue | None = None
-#     latent_infections: SampledValue | None = None
-#     susceptibles: SampledValue | None = None
-#     ascertainment_rates: SampledValue | None = None
-#     expected_hospitalizations: SampledValue | None = None
-#     observed_hosp_admissions: SampledValue | None = None
-
-#     def __repr__(self):
-#         return (
-#             f"HospModelSample(Rt={self.Rt}, "
-#             f"latent_infections={self.latent_infections}, "
-#             f"susceptibles={self.susceptibles}, "
-#             f"ascertainment_rates={self.ascertainment_rates}, "
-#             f"expected_hospitalizations={self.expected_hospitalizations} ",
-#             f"observed_hosp_admissions={self.observed_hosp_admissions}"
-#         )
+    def __repr__(self):
+        return (
+            f"CFAEPIM_Model_Sample(Rts={self.Rts}, "
+            f"latent_infections={self.latent_infections}, "
+            f"susceptibles={self.susceptibles}, "
+            f"ascertainment_rates={self.ascertainment_rates}, "
+            f"expected_hospitalizations={self.expected_hospitalizations} ",
+            f"observed_hospital_admissions={self.observed_hospital_admissions}",
+        )
 
 
-class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
+class CFAEPIM_Model(Model):
+    """
+    CFAEPIM Model class for epidemic inference,
+    ported over from `cfaepim`. This class handles the
+    initialization and sampling of the CFAEPIM model,
+    including the transmission process, infection process,
+    and observation process.
+
+    Parameters
+    ----------
+    config : dict[str, any]
+        Configuration dictionary containing model parameters.
+    population : int
+        Total population size.
+    week_indices : ArrayLike
+        Array of week indices corresponding to the time steps.
+    first_week_hosp : int
+        Number of hospitalizations in the first week.
+    predictors : list[int]
+        List of predictors (covariates) for the model.
+    data_observed_hosp_admissions : pl.DataFrame
+        DataFrame containing observed hospital admissions data.
+    """
+
     def __init__(
         self,
         config: dict[str, any],
@@ -690,18 +897,19 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         self.infections = CFAEPIM_Infections(
             I0=self.I0, susceptibility_prior=self.susceptibility_prior
         )
-        # update: check that post-instantiation, changing
-        # sus_prior changes CFAEPIM_Infections values, believe
-        # does, but check
 
-        # observations component
+        # observations: negative binomial concentration prior
         self.nb_concentration_prior = dist.Normal(
             self.reciprocal_dispersion_prior_mode,
             self.reciprocal_dispersion_prior_scale,
         )
+
+        # observations: instantaneous ascertainment rate prior
         self.alpha_prior_dist = dist.Normal(
             self.ihr_intercept_prior_mode, self.ihr_intercept_prior_scale
         )
+
+        # observations: prior on covariate coefficients
         self.coefficient_priors = dist.Normal(
             loc=jnp.array(
                 self.day_of_week_effect_prior_modes
@@ -720,6 +928,8 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
                 ]
             ),
         )
+
+        # observations component
         self.obs_process = CFAEPIM_Observation(
             predictors=self.predictors,
             alpha_prior_dist=self.alpha_prior_dist,
@@ -729,43 +939,99 @@ class CFAEPIM_Model(Model):  # numpydoc ignore=GL08,PR01
         )
 
     @staticmethod
-    def validate() -> None:  # numpydoc ignore=GL08
-        pass
+    def validate(
+        population: any,
+        week_indices: any,
+        first_week_hosp: any,
+        predictors: any,
+        data_observed_hosp_admissions: any,
+    ) -> None:
+        """
+        Validate the parameters of the CFAEPIM model.
+
+        This method checks that all necessary parameters and priors are correctly specified.
+        If any parameter is invalid, an appropriate error is raised.
+
+        Raises
+        ------
+        ValueError
+            If any parameter is missing or invalid.
+        """
+        if not isinstance(population, int) or population <= 0:
+            raise ValueError("Population must be a positive integer.")
+        if not isinstance(week_indices, (np.ndarray, jnp.DeviceArray)):
+            raise ValueError("Week indices must be an array-like structure.")
+        if not isinstance(first_week_hosp, int) or first_week_hosp < 0:
+            raise ValueError(
+                "First week hospitalizations must be a non-negative integer."
+            )
+        if not isinstance(predictors, list):
+            raise ValueError("Predictors must be a list of integers.")
+        if not isinstance(data_observed_hosp_admissions, pl.DataFrame):
+            raise ValueError(
+                "Observed hospital admissions must be a polars DataFrame."
+            )
+
+        CFAEPIM_Model.infections.validate()
+        CFAEPIM_Model.obs_process.validate()
+        CFAEPIM_Model.Rt_process.validate()
 
     def sample(
         self,
         n_steps: int,
         **kwargs,
-    ) -> tuple:  # numpydoc ignore=GL08
-        sampled_Rt = self.Rt_process.sample(n_steps=n_steps)
+    ) -> tuple:
+        """
+        Samples the reproduction numbers, generation interval,
+        infections, and hospitalizations from the CFAEPIM model.
+
+        Parameters
+        ----------
+        n_steps : int
+            Number of time steps to sample.
+        **kwargs : dict, optional
+            Additional keyword arguments passed through to
+            internal sample calls, should there be any.
+
+        Returns
+        -------
+        CFAEPIM_Model_Sample
+            A named tuple containing sampled values for reproduction numbers,
+            latent infections, susceptibles, ascertainment rates, expected
+            hospitalizations, and observed hospital admissions.
+        """
+        sampled_Rts = self.Rt_process.sample(n_steps=n_steps)
         sampled_gen_int = self.gen_int.sample()
         all_I_t, all_S_t = self.infections.sample(
-            Rt=sampled_Rt,
+            Rt=sampled_Rts,
             gen_int=sampled_gen_int[0].value,
             P=self.population,
         )
-        sampled_alpha, expected_hosp = self.obs_process.sample(
+        sampled_alphas, expected_hosps = self.obs_process.sample(
             infections=all_I_t,
             inf_to_hosp_dist=jnp.array(self.inf_to_hosp_dist),
         )
         observed_hosp_admissions = self.obs_process.nb_observation.sample(
-            mu=expected_hosp,
+            mu=expected_hosps,
             obs=self.data_observed_hosp_admissions,
             **kwargs,
         )
-        numpyro.deterministic("Rts", sampled_Rt)
-        numpyro.deterministic("all_I_t", all_I_t)
-        numpyro.deterministic("all_S_t", all_S_t)
-        numpyro.deterministic("alphas", sampled_alpha)
-        numpyro.deterministic("expected_hosp", expected_hosp)
-        numpyro.deterministic("obs", observed_hosp_admissions[0].value)
-        # return {
-        #     "Rts": sampled_Rt,
-        #     "all_I_t": all_I_t,
-        #     "all_S_t": all_S_t,
-        #     "alphas": sampled_alpha,
-        #     "expected_hosp": expected_hosp,
-        #     "obs": observed_hosp_admissions}
+        numpyro.deterministic("Rts", sampled_Rts)
+        numpyro.deterministic("latent_infections", all_I_t)
+        numpyro.deterministic("susceptibles", all_S_t)
+        numpyro.deterministic("alphas", sampled_alphas)
+        numpyro.deterministic("expected_hospitalizations", expected_hosps)
+        numpyro.deterministic(
+            "observed_hospitalizations", observed_hosp_admissions[0].value
+        )
+        return CFAEPIM_Model_Sample(
+            Rts=sampled_Rts,
+            latent_infections=all_I_t,
+            susceptibles=all_S_t,
+            ascertainment_rates=sampled_alphas,
+            expected_hospitalizations=expected_hosps,
+            observed_hospital_admissions=observed_hosp_admissions[0].value,
+        )
 
 
 def run(
@@ -815,7 +1081,6 @@ def run(
         predictors=predictors,
         data_observed_hosp_admissions=data_observed_hosp_admissions,
     )
-    # update:
 
     cfaepim_MSR.run(
         n_steps=week_indices.size,
@@ -832,7 +1097,7 @@ def run(
     )
     # update: getting stuck at very small step size
 
-    # cfaepim_MSR.print_summary()
+    cfaepim_MSR.print_summary()
 
     # sample
     # samples = cfaepim_MSR.mcmc.get_samples()
@@ -843,7 +1108,7 @@ def run(
         rng_key=jax.random.key(config["seed"]),
     )
 
-    print(f"Posterior Predictive Samples:\n{posterior_predictive_samples}\n\n")
+    # print(f"Posterior Predictive Samples:\n{posterior_predictive_samples}\n\n")
 
     prior_predictive_samples = cfaepim_MSR.prior_predictive(
         n_steps=week_indices.size,
@@ -851,7 +1116,7 @@ def run(
         rng_key=jax.random.key(config["seed"]),
     )
 
-    print(f"Prior Predictive Samples:\n{prior_predictive_samples}\n\n")
+    # print(f"Prior Predictive Samples:\n{prior_predictive_samples}\n\n")
 
     # out2 = cfaepim_MSR.plot_posterior(var="Rts", ylab="Rt")
     idata = az.from_numpyro(
@@ -873,13 +1138,6 @@ def run(
     ax.set_xlabel("Days")
 
     plt.show()
-
-    # predictions = cfaepim_MSR.predict(
-    #     n_steps=week_indices.size,
-    #     lookahead=28,
-    #     observed_data=data_observed_hosp_admissions,
-    # )
-    # print(predictions)
 
 
 def verify_cfaepim_MSR(cfaepim_MSR_model) -> None:  # numpydoc ignore=GL08
@@ -1021,6 +1279,7 @@ def main():  # numpydoc ignore=GL08
 
     run(state="NY", dataset=influenza_hosp_data, config=config)
     # max_tree depth 13
+
     # verification: plot single state hospitalizations
     plot_single_location_hosp_data(
         incidence_data=influenza_hosp_data,
@@ -1040,36 +1299,6 @@ def main():  # numpydoc ignore=GL08
     # # verify and visualize aspects of the model
     # verify_cfaepim_MSR(cfaepim_MSR)
 
-    # model_instance.run(
-    #     num_warmup=model_instance.config["n_warmup"],
-    #     num_samples=model_instance.config["n_iter"],
-    #     rng_key=jax.random.PRNGKey(model_instance.config["seed"]),
-    #     data_observed_hosp_admissions=data_observed_hosp_admissions,
-    #     nuts_args={
-    #         "max_tree_depth": model_instance.config["max_tree_depth"],
-    #         "step_size": model_instance.config["adapt_delta"]}
-    # )
-
-    # instantiate MSR-cfaepim model
-    # simulate data
-    # run the model for NY
-    # print summary (print_summary)
-    # visualize prior predictive (prior_predictive)
-    # visualize posterior predictive (posterior_predictive)
-    # spread draws (spread_draws)
-
 
 if __name__ == "__main__":
     main()
-
-
-# you have a dataset and a configuration file
-# you can generate 3 reports, one on the priors, one on
-# the model, one on the forecasts; these are intelligently
-# looked for and then concatenated; file naming is done
-# intelligently.
-# you can choose, using argparse, which states are run
-# as well as the report date and target end date;
-# data is used differently when available
-# comparison is done with --historical
-#
