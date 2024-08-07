@@ -12,4 +12,3 @@ This section contains tutorials that demonstrate how to use the `pyrenew` packag
    extending_pyrenew
    periodic_effects
    time
-   day_of_the_week
