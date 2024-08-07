@@ -158,7 +158,7 @@ def tile_until_n(
 def repeat_until_n(
     data: ArrayLike,
     period_size: int,
-    n_timepoints: int | None = None,
+    n_timepoints: int,
     offset: int = 0,
 ):
     """
@@ -177,9 +177,8 @@ def repeat_until_n(
         Data to broadcast.
     period_size : int
         Size of the period for the repeat broadcast.
-    n_timepoints : int, optional
-        Duration of the sequence. When `None`, the function will default
-        to `n_timepoints = data.size * period_size`. By default `None`.
+    n_timepoints : int
+        Duration of the sequence.
     offset : int, optional
         Relative point at which data starts, must be between 0 and
         period_size - 1. By default 0, i.e., no offset.
@@ -189,9 +188,6 @@ def repeat_until_n(
     ArrayLike
         Repeated data.
     """
-
-    if n_timepoints is None:
-        n_timepoints = data.size * period_size
 
     # Data starts should be a positive integer
     assert isinstance(

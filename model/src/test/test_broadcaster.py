@@ -54,12 +54,4 @@ def test_broadcaster() -> None:
             period_size=7,
         )
 
-    # Checking the default value of `n_timepoints`
-    ans0 = repeat_until_n(base_array, period_size=10)
-    ans1 = repeat_until_n(
-        base_array, period_size=10, n_timepoints=10 * base_array.size
-    )
-
-    testing.assert_array_equal(ans0, ans1)
-
     return None
