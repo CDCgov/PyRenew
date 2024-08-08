@@ -561,6 +561,8 @@ class CFAEPIM_Infections(RandomVariable):
         I0: ArrayLike,
         susceptibility_prior: numpyro.distributions,
     ):  # numpydoc ignore=GL08
+        logging.info("Initializing CFAEPIM_Infections")
+
         self.I0 = I0
         self.susceptibility_prior = susceptibility_prior
 
@@ -580,6 +582,7 @@ class CFAEPIM_Infections(RandomVariable):
             susceptibility_prior is not
             a numpyro distribution.
         """
+        logging.info("Validating CFAEPIM_Infections parameters")
         if not isinstance(I0, (np.ndarray, jnp.ndarray)):
             raise TypeError(
                 f"Initial infections (I0) must be an array-like structure; was type {type(I0)}"
@@ -631,9 +634,13 @@ class CFAEPIM_Infections(RandomVariable):
             vector (I0) is less than the length of
             the generation interval.
         """
+        logging.info("Sampling infections")
+
         # get initial infections
         I0_samples = self.I0.sample()
         I0 = I0_samples[0].value
+
+        logging.debug(f"I0 samples: {I0}")
 
         # reverse generation interval (recency)
         gen_int_rev = jnp.flip(gen_int)
@@ -651,9 +658,7 @@ class CFAEPIM_Infections(RandomVariable):
         init_S_proportion = numpyro.sample(
             "S_v_minus_1_over_P", self.susceptibility_prior
         )
-
-        # ensure the proportion is between 0 and 1
-        init_S_proportion = jnp.clip(init_S_proportion, 0, 1)
+        logging.debug(f"Initial susceptible proportion: {init_S_proportion}")
 
         # calculate initial susceptible population S_{v-1}
         init_S = init_S_proportion * P
@@ -681,9 +686,12 @@ class CFAEPIM_Infections(RandomVariable):
         init_carry = (init_S, recent_I0)
 
         # scan to iterate over time steps and update infections
-        (_, all_S_t), all_I_t = numpyro.contrib.control_flow.scan(
+        (all_S_t, _), all_I_t = numpyro.contrib.control_flow.scan(
             update_infections, init_carry, Rt
         )
+
+        logging.debug(f"All infections: {all_I_t}")
+        logging.debug(f"All susceptibles: {all_S_t}")
 
         return all_I_t, all_S_t
 
@@ -716,6 +724,8 @@ class CFAEPIM_Observation(RandomVariable):
         coefficient_priors,
         nb_concentration_prior,
     ):  # numpydoc ignore=GL08
+        logging.info("Initializing CFAEPIM_Observation")
+
         CFAEPIM_Observation.validate(
             predictors,
             alpha_prior_dist,
@@ -738,6 +748,7 @@ class CFAEPIM_Observation(RandomVariable):
         The transform is set to the inverse of the sigmoid
         transformation.
         """
+        logging.info("Initializing alpha process")
         self.alpha_process = GLMPrediction(
             name="alpha_t",
             fixed_predictor_values=self.predictors,
@@ -752,6 +763,7 @@ class CFAEPIM_Observation(RandomVariable):
         distribution for modeling hospitalizations
         with a prior on the concentration parameter.
         """
+        logging.info("Initializing negative binomial process")
         self.nb_observation = NegativeBinomialObservation(
             name="negbinom_rv",
             concentration_rv=DistributionalRV(
@@ -773,6 +785,7 @@ class CFAEPIM_Observation(RandomVariable):
         binomial concentration prior are correctly specified. If any parameter
         is invalid, an appropriate error is raised.
         """
+        logging.info("Validating CFAEPIM_Observation parameters")
         if not isinstance(predictors, (np.ndarray, jnp.ndarray)):
             raise TypeError(
                 f"Predictors must be an array-like structure; was type {type(predictors)}"
@@ -823,6 +836,7 @@ class CFAEPIM_Observation(RandomVariable):
             ascertainment values and the expected
             hospitalizations.
         """
+        logging.info("Sampling from observation process")
         alpha_samples = self.alpha_process.sample()["prediction"]
         alpha_samples = alpha_samples[: infections.shape[0]]
         expected_hosp = (
@@ -831,6 +845,8 @@ class CFAEPIM_Observation(RandomVariable):
                 : infections.shape[0]
             ]
         )
+        logging.debug(f"Alpha samples: {alpha_samples}")
+        logging.debug(f"Expected hospitalizations: {expected_hosp}")
         return alpha_samples, expected_hosp
 
 
@@ -859,6 +875,7 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
             Array of week indices used for broadcasting
             the Rt values.
         """
+        logging.info("Initializing CFAEPIM_Rt")
         self.intercept_RW_prior = intercept_RW_prior
         self.max_rt = max_rt
         self.gamma_RW_prior_scale = gamma_RW_prior_scale
@@ -879,6 +896,7 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
         ValueError
             If any of the parameters are not valid.
         """
+        logging.info("Validating CFAEPIM_Rt parameters")
         if not isinstance(intercept_RW_prior, dist.Distribution):
             raise ValueError(
                 f"intercept_RW_prior must be a numpyro distribution; was type {type(intercept_RW_prior)}"
@@ -916,6 +934,7 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
         ArrayLike
             An array containing the broadcasted Rt values.
         """
+        logging.info("Sampling Rt values")
         # sample the standard deviation for the random walk process
         sd_wt = numpyro.sample(
             "Wt_rw_sd", dist.HalfNormal(self.gamma_RW_prior_scale)
@@ -943,6 +962,7 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
         broadcasted_rt_samples = transformed_rt_samples[0].value[
             self.week_indices
         ]
+        logging.debug(f"Broadcasted Rt samples: {broadcasted_rt_samples}")
         return broadcasted_rt_samples
 
 
@@ -952,7 +972,6 @@ class CFAEPIM_Model_Sample(NamedTuple):  # numpydoc ignore=GL08
     susceptibles: SampledValue | None = None
     ascertainment_rates: SampledValue | None = None
     expected_hospitalizations: SampledValue | None = None
-    observed_hospital_admissions: SampledValue | None = None
 
     def __repr__(self):
         return (
@@ -960,8 +979,7 @@ class CFAEPIM_Model_Sample(NamedTuple):  # numpydoc ignore=GL08
             f"latent_infections={self.latent_infections}, "
             f"susceptibles={self.susceptibles}, "
             f"ascertainment_rates={self.ascertainment_rates}, "
-            f"expected_hospitalizations={self.expected_hospitalizations} ",
-            f"observed_hospital_admissions={self.observed_hospital_admissions}",
+            f"expected_hospitalizations={self.expected_hospitalizations}"
         )
 
 
@@ -1011,6 +1029,7 @@ class CFAEPIM_Model(Model):
         # transmission: generation time distribution
         self.pmf_array = jnp.array(self.generation_time_dist)
         self.gen_int = DeterministicPMF(name="gen_int", value=self.pmf_array)
+        # update: record in sample ought to be False by default
 
         # transmission: prior for RW intercept
         self.intercept_RW_prior = dist.Normal(
@@ -1046,9 +1065,18 @@ class CFAEPIM_Model(Model):
         )
 
         # infections: susceptibility depletion prior
-        self.susceptibility_prior = dist.Normal(
-            self.susceptible_fraction_prior_mode,
-            self.susceptible_fraction_prior_scale,
+        # update: truncated Normal needed here, done
+        # "under the hood" in Epidemia, use Beta for the
+        # time being.
+        self.susceptibility_prior = dist.Beta(
+            1
+            + (
+                self.susceptible_fraction_prior_mode
+                / self.susceptible_fraction_prior_scale
+            ),
+            1
+            + (1 - self.susceptible_fraction_prior_mode)
+            / self.susceptible_fraction_prior_scale,
         )
 
         # infections component
@@ -1129,9 +1157,9 @@ class CFAEPIM_Model(Model):
                 "Observed hospital admissions must be a jax array."
             )
 
-        CFAEPIM_Model.infections.validate()
-        CFAEPIM_Model.obs_process.validate()
-        CFAEPIM_Model.Rt_process.validate()
+        # CFAEPIM_Model.infections.validate()
+        # CFAEPIM_Model.obs_process.validate()
+        # CFAEPIM_Model.Rt_process.validate()
 
     def sample(
         self,
@@ -1158,7 +1186,7 @@ class CFAEPIM_Model(Model):
             hospitalizations, and observed hospital admissions.
         """
         sampled_Rts = self.Rt_process.sample(n_steps=n_steps)
-        sampled_gen_int = self.gen_int.sample()
+        sampled_gen_int = self.gen_int.sample(record=False)
         all_I_t, all_S_t = self.infections.sample(
             Rt=sampled_Rts,
             gen_int=sampled_gen_int[0].value,
@@ -1168,33 +1196,31 @@ class CFAEPIM_Model(Model):
             infections=all_I_t,
             inf_to_hosp_dist=jnp.array(self.inf_to_hosp_dist),
         )
-        observed_hosp_admissions = self.obs_process.nb_observation.sample(
-            mu=expected_hosps,
-            obs=self.data_observed_hosp_admissions,
-            **kwargs,
-        )
+        # observed_hosp_admissions = self.obs_process.nb_observation.sample(
+        #     mu=expected_hosps,
+        #     obs=self.data_observed_hosp_admissions,
+        #     **kwargs,
+        # )
         numpyro.deterministic("Rts", sampled_Rts)
         numpyro.deterministic("latent_infections", all_I_t)
         numpyro.deterministic("susceptibles", all_S_t)
         numpyro.deterministic("alphas", sampled_alphas)
         numpyro.deterministic("expected_hospitalizations", expected_hosps)
-        numpyro.deterministic(
-            "observed_hospitalizations", observed_hosp_admissions[0].value
-        )
         return CFAEPIM_Model_Sample(
             Rts=sampled_Rts,
             latent_infections=all_I_t,
             susceptibles=all_S_t,
             ascertainment_rates=sampled_alphas,
             expected_hospitalizations=expected_hosps,
-            observed_hospital_admissions=observed_hosp_admissions[0].value,
         )
 
 
 def prepare_jurisdiction_data_jax(
     states: list[str], dataset: pl.DataFrame
 ):  # numpydoc ignore=GL08
+    logging.info("Preparing jurisdiction data")
     filtered_data = dataset.filter(pl.col("location").is_in(states))
+
     populations = (
         filtered_data.select(pl.col("population"))
         .unique()
@@ -1212,15 +1238,18 @@ def prepare_jurisdiction_data_jax(
         .to_numpy()
         .flatten()
     )
-    day_of_week_covariate = filtered_data.select(
-        pl.col("day_of_week")
-    ).to_dummies()
+    day_of_week_covariate = (
+        filtered_data.select(pl.col("day_of_week"))
+        .to_dummies()
+        .select(pl.exclude("day_of_week_Thu"))
+    )
     remaining_covariates = filtered_data.select(
         ["is_holiday", "is_post_holiday"]
     )
     covariates = pl.concat(
         [day_of_week_covariate, remaining_covariates], how="horizontal"
     )
+
     predictors = covariates.to_numpy().reshape(
         len(states), -1, covariates.shape[1]
     )
@@ -1229,6 +1258,7 @@ def prepare_jurisdiction_data_jax(
         .to_numpy()
         .reshape(len(states), -1)
     )
+    logging.debug("Jurisdiction data prepared")
     return (
         jnp.array(populations),
         jnp.array(week_indices),
@@ -1249,6 +1279,8 @@ def run_batched(
         data_observed_hosp_admissions,
     ) = prepare_jurisdiction_data_jax(states, dataset)
 
+    # problem is raggedness
+
     def run_single(
         population,
         week_index,
@@ -1256,45 +1288,52 @@ def run_batched(
         predictor,
         data_observed_hosp_admission,
     ):  # numpydoc ignore=GL08
-        cfaepim_MSR = CFAEPIM_Model(
-            config=config,
-            population=population,
-            week_indices=week_index,
-            first_week_hosp=first_week_hosp,
-            predictors=predictor,
-            data_observed_hosp_admissions=data_observed_hosp_admission,
-        )
-        cfaepim_MSR.run(
-            n_steps=week_indices.size,
-            num_warmup=config["n_warmup"],
-            num_samples=config["n_iter"],
-            nuts_args={
-                "target_accept_prob": config["adapt_delta"],
-                "max_tree_depth": config["max_treedepth"],
-            },
-            mcmc_args={
-                "num_chains": config["n_chains"],
-                "progress_bar": False,
-            },  # needs to be False to support vmap usage
-        )
-        cfaepim_MSR.print_summary()
-        posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
-            n_steps=week_indices.size,
-            numpyro_predictive_args={"num_samples": config["n_iter"]},
-            rng_key=jax.random.key(config["seed"]),
-        )
-        prior_predictive_samples = cfaepim_MSR.prior_predictive(
-            n_steps=week_indices.size,
-            numpyro_predictive_args={"num_samples": config["n_iter"]},
-            rng_key=jax.random.key(config["seed"]),
-        )
-        return (
-            prior_predictive_samples,
-            posterior_predictive_samples,
-            cfaepim_MSR,
-        )
+        # might be contingent
 
-    # run_single_vmap = jax.vmap(run_single, in_axes=(0, 0, 0, 0, 0))
+        logging.info(
+            f"Running model for jurisdiction with population: {population}"
+        )
+        try:
+            cfaepim_MSR = CFAEPIM_Model(
+                config=config,
+                population=population,
+                week_indices=week_index,
+                first_week_hosp=first_week_hosp,
+                predictors=predictor,
+                data_observed_hosp_admissions=data_observed_hosp_admission,
+            )
+            cfaepim_MSR.run(
+                n_steps=week_index.size,
+                num_warmup=config["n_warmup"],
+                num_samples=config["n_iter"],
+                nuts_args={
+                    "target_accept_prob": config["adapt_delta"],
+                    "max_tree_depth": config["max_treedepth"],
+                },
+                mcmc_args={
+                    "num_chains": config["n_chains"],
+                    "progress_bar": False,
+                },  # needs to be False to support vmap usage
+            )
+            # cfaepim_MSR.print_summary()
+            posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
+                n_steps=week_index.size,
+                numpyro_predictive_args={"num_samples": config["n_iter"]},
+                rng_key=jax.random.key(config["seed"]),
+            )
+            prior_predictive_samples = cfaepim_MSR.prior_predictive(
+                n_steps=week_index.size,
+                numpyro_predictive_args={"num_samples": config["n_iter"]},
+                rng_key=jax.random.key(config["seed"]),
+            )
+            return (
+                prior_predictive_samples,
+                posterior_predictive_samples,
+            )
+        except Exception as e:
+            logging.error(f"Error running model: {e}")
+            raise
+
     return jax.vmap(run_single)(
         populations,
         week_indices,
@@ -1302,7 +1341,6 @@ def run_batched(
         predictors,
         data_observed_hosp_admissions,
     )
-    # return jax.pmap(run_single)(jnp.arange(len(states)))
 
 
 def main():  # numpydoc ignore=GL08
@@ -1328,8 +1366,9 @@ def main():  # numpydoc ignore=GL08
     and configuration have the correct variables and
     values in a proper range. Testing also ensures that
     each part of the `cfaepim` model works as desired.
+    python3 tut_epim_port_msr.py --reporting_date 2024-01-20 --historical
     """
-
+    logging.info("Starting CFAEPIM")
     parser = argparse.ArgumentParser(
         description="Forecast, simulate, and analyze the CFAEPIM model."
     )
@@ -1387,15 +1426,90 @@ def main():  # numpydoc ignore=GL08
     display_data(data=influenza_hosp_data, n_row_count=10, n_col_count=cols)
 
     # parallelized run over states
-    states = ["NY", "CA"]
-    results = run_batched(
-        states=states, dataset=influenza_hosp_data, config=config
+    # states = ["NY", "CA"]
+    # results = run_batched(
+    #     states=states, dataset=influenza_hosp_data, config=config
+    # )
+    # (
+    #     prior_predictive_samples,
+    #     posterior_predictive_samples,
+    # ) = results[0]
+    # logging.info("Finished processing all states")
+    # print(prior_predictive_samples)
+
+    state = "NY"
+    # create augmented here
+
+    population = int(
+        influenza_hosp_data.filter(pl.col("location") == state)
+        .select(["population"])
+        .unique()
+        .to_numpy()[0][0]
     )
-    (
-        prior_predictive_samples,
-        posterior_predictive_samples,
-        cfaepim_MSR,
-    ) = results[0]
+    week_indices = jnp.array(
+        influenza_hosp_data.filter(pl.col("location") == state).select(
+            ["week"]
+        )["week"]
+    )
+    first_week_hosp = (
+        influenza_hosp_data.filter((pl.col("location") == state))
+        .select(["first_week_hosp"])
+        .to_numpy()[0][0]
+    )
+    day_of_week_covariate = (
+        influenza_hosp_data.select(pl.col("day_of_week"))
+        .to_dummies()
+        .select(pl.exclude("day_of_week_Thu"))
+    )
+    holiday_covariates = influenza_hosp_data.select(
+        ["is_holiday", "is_post_holiday"]
+    )
+
+    covariates = pl.concat(
+        [day_of_week_covariate, holiday_covariates], how="horizontal"
+    )
+    predictors = covariates.to_numpy()
+    data_observed_hosp_admissions = np.array(
+        influenza_hosp_data.filter(pl.col("location") == state).select(
+            ["date", "hosp"]
+        )["hosp"]
+    )
+
+    cfaepim_MSR = CFAEPIM_Model(
+        config=config,
+        population=population,
+        week_indices=week_indices,
+        first_week_hosp=first_week_hosp,
+        predictors=predictors,
+        data_observed_hosp_admissions=data_observed_hosp_admissions,
+    )
+    print(cfaepim_MSR.predictors)
+    # cfaepim_MSR.run(
+    #     n_steps=week_indices.size,
+    #     num_warmup=config["n_warmup"],
+    #     num_samples=config["n_iter"],
+    #     nuts_args={
+    #         "target_accept_prob": config["adapt_delta"],
+    #         "max_tree_depth": config["max_treedepth"],
+    #     },
+    #     mcmc_args={
+    #         "num_chains": config["n_chains"],
+    #         "progress_bar": True,
+    #     },
+    #     # needs to be False to support vmap usage
+    #     # might be fixed soon
+    # )
+    # cfaepim_MSR.print_summary()
+    posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
+        n_steps=week_indices.size,
+        numpyro_predictive_args={"num_samples": config["n_iter"]},
+        rng_key=jax.random.key(config["seed"]),
+    )
+    prior_predictive_samples = cfaepim_MSR.prior_predictive(
+        n_steps=week_indices.size,
+        numpyro_predictive_args={"num_samples": config["n_iter"]},
+        rng_key=jax.random.key(config["seed"]),
+    )
     print(prior_predictive_samples)
 
     idata = az.from_numpyro(
