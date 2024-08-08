@@ -10,7 +10,7 @@ import glob
 # import inspect
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import NamedTuple
 
 import arviz as az
@@ -1014,13 +1014,11 @@ class CFAEPIM_Model(Model):
         week_indices: ArrayLike,
         first_week_hosp: int,
         predictors: list[int],
-        data_observed_hosp_admissions: pl.DataFrame,
     ):  # numpydoc ignore=GL08
         self.population = population
         self.week_indices = week_indices
         self.first_week_hosp = first_week_hosp
         self.predictors = predictors
-        self.data_observed_hosp_admissions = data_observed_hosp_admissions
 
         self.config = config
         for key, value in config.items():
@@ -1129,7 +1127,6 @@ class CFAEPIM_Model(Model):
         week_indices: any,
         first_week_hosp: any,
         predictors: any,
-        data_observed_hosp_admissions: any,
     ) -> None:
         """
         Validate the parameters of the CFAEPIM model.
@@ -1152,10 +1149,6 @@ class CFAEPIM_Model(Model):
             )
         if not isinstance(predictors, jnp.ndarray):
             raise ValueError("Predictors must be a list of integers.")
-        if not isinstance(data_observed_hosp_admissions, jnp.ndarray):
-            raise ValueError(
-                "Observed hospital admissions must be a jax array."
-            )
 
         # CFAEPIM_Model.infections.validate()
         # CFAEPIM_Model.obs_process.validate()
@@ -1164,6 +1157,7 @@ class CFAEPIM_Model(Model):
     def sample(
         self,
         n_steps: int,
+        data_observed_hosp_admissions: ArrayLike = None,
         **kwargs,
     ) -> tuple:
         """
@@ -1198,7 +1192,7 @@ class CFAEPIM_Model(Model):
         )
         # observed_hosp_admissions = self.obs_process.nb_observation.sample(
         #     mu=expected_hosps,
-        #     obs=self.data_observed_hosp_admissions,
+        #     obs=data_observed_hosp_admissions,
         #     **kwargs,
         # )
         numpyro.deterministic("Rts", sampled_Rts)
@@ -1215,132 +1209,54 @@ class CFAEPIM_Model(Model):
         )
 
 
-def prepare_jurisdiction_data_jax(
-    states: list[str], dataset: pl.DataFrame
-):  # numpydoc ignore=GL08
-    logging.info("Preparing jurisdiction data")
-    filtered_data = dataset.filter(pl.col("location").is_in(states))
+def add_pre_observation_period(
+    dataset: pl.DataFrame, n_pre_observation_days: int
+) -> pl.DataFrame:  # numpydoc ignore=GL08
+    dataset = dataset.with_columns(
+        pl.lit(False).alias("nonobservation_period")
+    )
+    min_date = dataset["date"].min()
+    pre_observation_dates = [
+        (min_date - timedelta(days=i))
+        for i in range(1, n_pre_observation_days + 1)
+    ]
+    pre_observation_dates.reverse()
+    day_of_week_series = (
+        pl.Series(pre_observation_dates).dt.strftime("%a").alias("day_of_week")
+    )
+    is_weekend_series = day_of_week_series.is_in(["Sat", "Sun"])
 
-    populations = (
-        filtered_data.select(pl.col("population"))
-        .unique()
-        .to_numpy()
-        .flatten()
-    )
-    week_indices = (
-        filtered_data.select(pl.col("week"))
-        .to_numpy()
-        .reshape(len(states), -1)
-    )
-    first_week_hosps = (
-        filtered_data.select(pl.col("first_week_hosp"))
-        .unique()
-        .to_numpy()
-        .flatten()
-    )
-    day_of_week_covariate = (
-        filtered_data.select(pl.col("day_of_week"))
-        .to_dummies()
-        .select(pl.exclude("day_of_week_Thu"))
-    )
-    remaining_covariates = filtered_data.select(
-        ["is_holiday", "is_post_holiday"]
-    )
-    covariates = pl.concat(
-        [day_of_week_covariate, remaining_covariates], how="horizontal"
-    )
+    first_epiweek = dataset["epiweek"][0]
+    counts = dataset.filter(pl.col("epiweek") == first_epiweek).shape[0]
+    epiweeks = [first_epiweek] * (7 - counts) + [
+        (first_epiweek - 1 - (i // 7))
+        for i in range(n_pre_observation_days - (7 - counts))
+    ]
+    epiweeks.reverse()
 
-    predictors = covariates.to_numpy().reshape(
-        len(states), -1, covariates.shape[1]
+    pre_observation_data = pl.DataFrame(
+        {
+            "location": [dataset["location"][0]] * n_pre_observation_days,
+            "date": pre_observation_dates,
+            "hosp": [0] * n_pre_observation_days,
+            "epiweek": epiweeks,
+            "epiyear": [dataset["epiyear"][0]] * n_pre_observation_days,
+            "day_of_week": day_of_week_series,
+            "is_weekend": is_weekend_series,
+            "is_holiday": [False] * n_pre_observation_days,
+            "is_post_holiday": [False] * n_pre_observation_days,
+            "recency": [0] * n_pre_observation_days,
+            "week": [dataset["week"][0]] * n_pre_observation_days,
+            "location_code": [dataset["location_code"][0]]
+            * n_pre_observation_days,
+            "population": [dataset["population"][0]] * n_pre_observation_days,
+            "first_week_hosp": [dataset["first_week_hosp"][0]]
+            * n_pre_observation_days,
+            "nonobservation_period": [True] * n_pre_observation_days,
+        }
     )
-    data_observed_hosp_admissions = (
-        filtered_data.select(pl.col("hosp"))
-        .to_numpy()
-        .reshape(len(states), -1)
-    )
-    logging.debug("Jurisdiction data prepared")
-    return (
-        jnp.array(populations),
-        jnp.array(week_indices),
-        jnp.array(first_week_hosps),
-        jnp.array(predictors),
-        jnp.array(data_observed_hosp_admissions),
-    )
-
-
-def run_batched(
-    states: list[str], dataset: pl.DataFrame, config: dict[str, any]
-):  # numpydoc ignore=GL08
-    (
-        populations,
-        week_indices,
-        first_week_hosps,
-        predictors,
-        data_observed_hosp_admissions,
-    ) = prepare_jurisdiction_data_jax(states, dataset)
-
-    # problem is raggedness
-
-    def run_single(
-        population,
-        week_index,
-        first_week_hosp,
-        predictor,
-        data_observed_hosp_admission,
-    ):  # numpydoc ignore=GL08
-        # might be contingent
-
-        logging.info(
-            f"Running model for jurisdiction with population: {population}"
-        )
-        try:
-            cfaepim_MSR = CFAEPIM_Model(
-                config=config,
-                population=population,
-                week_indices=week_index,
-                first_week_hosp=first_week_hosp,
-                predictors=predictor,
-                data_observed_hosp_admissions=data_observed_hosp_admission,
-            )
-            cfaepim_MSR.run(
-                n_steps=week_index.size,
-                num_warmup=config["n_warmup"],
-                num_samples=config["n_iter"],
-                nuts_args={
-                    "target_accept_prob": config["adapt_delta"],
-                    "max_tree_depth": config["max_treedepth"],
-                },
-                mcmc_args={
-                    "num_chains": config["n_chains"],
-                    "progress_bar": False,
-                },  # needs to be False to support vmap usage
-            )
-            # cfaepim_MSR.print_summary()
-            posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
-                n_steps=week_index.size,
-                numpyro_predictive_args={"num_samples": config["n_iter"]},
-                rng_key=jax.random.key(config["seed"]),
-            )
-            prior_predictive_samples = cfaepim_MSR.prior_predictive(
-                n_steps=week_index.size,
-                numpyro_predictive_args={"num_samples": config["n_iter"]},
-                rng_key=jax.random.key(config["seed"]),
-            )
-            return (
-                prior_predictive_samples,
-                posterior_predictive_samples,
-            )
-        except Exception as e:
-            logging.error(f"Error running model: {e}")
-            raise
-
-    return jax.vmap(run_single)(
-        populations,
-        week_indices,
-        first_week_hosps,
-        predictors,
-        data_observed_hosp_admissions,
-    )
+    merged_data = pre_observation_data.vstack(dataset)
+    return merged_data
 
 
 def main():  # numpydoc ignore=GL08
@@ -1378,18 +1294,6 @@ def main():  # numpydoc ignore=GL08
         required=True,
         help="The reporting date.",
     )
-    # parser.add_argument(
-    #     "--config_path",
-    #     type=str,
-    #     required=True,
-    #     help="Crowd forecasts (sep. w/ space).",
-    # )
-    # parser.add_argument(
-    #     "--data_path",
-    #     type=str,
-    #     required=True,
-    #     help="Crowd forecasts (sep. w/ space).",
-    # )
     parser.add_argument(
         "--historical_data",
         action="store_true",
@@ -1419,11 +1323,13 @@ def main():  # numpydoc ignore=GL08
         config = load_config(
             config_path=f"./config/params_{args.reporting_date}_historical.toml"
         )
-    # influenza_hosp_data = influenza_hosp_data.with_column(
-    #     pl.col("location_code").cast(pl.Int32)
-    # )
+    # modify data columns
+    influenza_hosp_data = influenza_hosp_data.with_columns(
+        pl.col("date").str.strptime(pl.Date, "%Y-%m-%d")
+    )
     rows, cols = influenza_hosp_data.shape
     display_data(data=influenza_hosp_data, n_row_count=10, n_col_count=cols)
+    print(influenza_hosp_data.columns)
 
     # parallelized run over states
     # states = ["NY", "CA"]
@@ -1438,79 +1344,86 @@ def main():  # numpydoc ignore=GL08
     # print(prior_predictive_samples)
 
     state = "NY"
-    # create augmented here
-
-    population = int(
-        influenza_hosp_data.filter(pl.col("location") == state)
-        .select(["population"])
+    filtered_data = influenza_hosp_data.filter(pl.col("location") == state)
+    filtered_data = add_pre_observation_period(
+        dataset=filtered_data,
+        n_pre_observation_days=config["n_pre_observation_days"],
+    )
+    # add forecast
+    frows, fcols = filtered_data.shape
+    display_data(data=filtered_data, n_row_count=10, n_col_count=fcols)
+    population = (
+        filtered_data.select(pl.col("population"))
         .unique()
-        .to_numpy()[0][0]
-    )
-    week_indices = jnp.array(
-        influenza_hosp_data.filter(pl.col("location") == state).select(
-            ["week"]
-        )["week"]
-    )
+        .to_numpy()
+        .flatten()
+    )[0]
+    week_indices = (
+        filtered_data.select(pl.col("week")).to_numpy().flatten()
+    )  # NOT filtered_data.filter(pl.col("nonobservation_period") == False)
     first_week_hosp = (
-        influenza_hosp_data.filter((pl.col("location") == state))
-        .select(["first_week_hosp"])
-        .to_numpy()[0][0]
-    )
+        filtered_data.select(pl.col("first_week_hosp"))
+        .unique()
+        .to_numpy()
+        .flatten()
+    )[0]
     day_of_week_covariate = (
-        influenza_hosp_data.select(pl.col("day_of_week"))
+        filtered_data.select(pl.col("day_of_week"))
         .to_dummies()
         .select(pl.exclude("day_of_week_Thu"))
     )
-    holiday_covariates = influenza_hosp_data.select(
-        ["is_holiday", "is_post_holiday"]
+    remaining_covariates = filtered_data.select(
+        ["is_holiday", "is_post_holiday", "nonobservation_period"]
     )
-
     covariates = pl.concat(
-        [day_of_week_covariate, holiday_covariates], how="horizontal"
+        [day_of_week_covariate, remaining_covariates], how="horizontal"
     )
     predictors = covariates.to_numpy()
-    data_observed_hosp_admissions = np.array(
-        influenza_hosp_data.filter(pl.col("location") == state).select(
-            ["date", "hosp"]
-        )["hosp"]
+    print(predictors)
+    data_observed_hosp_admissions = (
+        filtered_data.select(pl.col("hosp")).to_numpy().flatten()
     )
+    print(data_observed_hosp_admissions)
 
     cfaepim_MSR = CFAEPIM_Model(
         config=config,
         population=population,
-        week_indices=week_indices,
+        week_indices=week_indices,  # used for Rt
         first_week_hosp=first_week_hosp,
         predictors=predictors,
-        data_observed_hosp_admissions=data_observed_hosp_admissions,
     )
-    print(cfaepim_MSR.predictors)
-    # cfaepim_MSR.run(
-    #     n_steps=week_indices.size,
-    #     num_warmup=config["n_warmup"],
-    #     num_samples=config["n_iter"],
-    #     nuts_args={
-    #         "target_accept_prob": config["adapt_delta"],
-    #         "max_tree_depth": config["max_treedepth"],
-    #     },
-    #     mcmc_args={
-    #         "num_chains": config["n_chains"],
-    #         "progress_bar": True,
-    #     },
-    #     # needs to be False to support vmap usage
-    #     # might be fixed soon
-    # )
-    # cfaepim_MSR.print_summary()
-    posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
+    # print(cfaepim_MSR.predictors)
+    cfaepim_MSR.run(
         n_steps=week_indices.size,
+        data_observed_hosp_admissions=data_observed_hosp_admissions,
+        num_warmup=config["n_warmup"],
+        num_samples=config["n_iter"],
+        nuts_args={
+            "target_accept_prob": config["adapt_delta"],
+            "max_tree_depth": config["max_treedepth"],
+        },
+        mcmc_args={
+            "num_chains": config["n_chains"],
+            "progress_bar": True,
+        },
+        # needs to be False to support vmap usage
+        # might be fixed soon
+    )
+    cfaepim_MSR.print_summary()
+    posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
+        n_steps=week_indices.size + 28,
         numpyro_predictive_args={"num_samples": config["n_iter"]},
         rng_key=jax.random.key(config["seed"]),
+        data_observed_hosp_admissions=None,
     )
+    # Null obs, even if instantiated in constructor
+    # What is the most idiomatic way to do this in the Predictive() call?#
     prior_predictive_samples = cfaepim_MSR.prior_predictive(
         n_steps=week_indices.size,
         numpyro_predictive_args={"num_samples": config["n_iter"]},
         rng_key=jax.random.key(config["seed"]),
     )
-    print(prior_predictive_samples)
+    print(posterior_predictive_samples)
 
     idata = az.from_numpyro(
         cfaepim_MSR.mcmc,

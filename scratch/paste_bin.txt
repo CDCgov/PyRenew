@@ -19,6 +19,176 @@ locations = dict(sorted([(elt[0], int(elt[1])) for elt in list(
             influenza_hosp_data.select(["location", "location_code"]).unique().to_numpy()) if elt[1] != "US" ]))
 
 
+SAVE run batched for later
+
+def run_batched(
+    states: list[str],
+    dataset: pl.DataFrame,
+    config: dict[str, any]
+):  # numpydoc ignore=GL08
+
+    def run_single(
+        population,
+        week_index,
+        first_week_hosp,
+        predictor,
+        data_observed_hosp_admission,
+    ):  # numpydoc ignore=GL08
+        # might be contingent
+
+        logging.info(
+            f"Running model for jurisdiction with population: {population}"
+        )
+        try:
+            cfaepim_MSR = CFAEPIM_Model(
+                config=config,
+                population=population,
+                week_indices=week_index,
+                first_week_hosp=first_week_hosp,
+                predictors=predictor,
+                data_observed_hosp_admissions=data_observed_hosp_admission,
+            )
+            cfaepim_MSR.run(
+                n_steps=week_index.size,
+                num_warmup=config["n_warmup"],
+                num_samples=config["n_iter"],
+                nuts_args={
+                    "target_accept_prob": config["adapt_delta"],
+                    "max_tree_depth": config["max_treedepth"],
+                },
+                mcmc_args={
+                    "num_chains": config["n_chains"],
+                    "progress_bar": False,
+                },  # needs to be False to support vmap usage
+            )
+            # cfaepim_MSR.print_summary()
+            posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
+                n_steps=week_index.size,
+                numpyro_predictive_args={"num_samples": config["n_iter"]},
+                rng_key=jax.random.key(config["seed"]),
+            )
+            prior_predictive_samples = cfaepim_MSR.prior_predictive(
+                n_steps=week_index.size,
+                numpyro_predictive_args={"num_samples": config["n_iter"]},
+                rng_key=jax.random.key(config["seed"]),
+            )
+            return (
+                prior_predictive_samples,
+                posterior_predictive_samples,
+            )
+        except Exception as e:
+            logging.error(f"Error running model: {e}")
+            raise
+
+    return jax.vmap(run_single)(
+        populations,
+        week_indices,
+        first_week_hosps,
+        predictors,
+        data_observed_hosp_admissions,
+    )
+
+REMOVE outdated data extraction
+
+# population = int(
+    #     influenza_hosp_data.filter(pl.col("location") == state)
+    #     .select(["population"])
+    #     .unique()
+    #     .to_numpy()[0][0]
+    # )
+    # week_indices = jnp.array(
+    #     influenza_hosp_data.filter(pl.col("location") == state).select(
+    #         ["week"]
+    #     )["week"]
+    # )
+    # first_week_hosp = (
+    #     influenza_hosp_data.filter((pl.col("location") == state))
+    #     .select(["first_week_hosp"])
+    #     .to_numpy()[0][0]
+    # )
+    # day_of_week_covariate = (
+    #     influenza_hosp_data.select(pl.col("day_of_week"))
+    #     .to_dummies()
+    #     .select(pl.exclude("day_of_week_Thu"))
+    # )
+    # holiday_covariates = influenza_hosp_data.select(
+    #     ["is_holiday", "is_post_holiday"]
+    # )
+    # covariates = pl.concat(
+    #     [day_of_week_covariate, holiday_covariates], how="horizontal"
+    # )
+    # predictors = covariates.to_numpy()
+    # data_observed_hosp_admissions = np.array(
+    #     influenza_hosp_data.filter(pl.col("location") == state).select(
+    #         ["date", "hosp"]
+    #     )["hosp"]
+    # )
+
+
+
+REMOVE jurisdiction preparation
+
+(
+        populations,
+        week_indices,
+        first_week_hosps,
+        predictors,
+        data_observed_hosp_admissions,
+    ) = prepare_jurisdiction_data_jax(states, dataset)
+
+def prepare_jurisdiction_data_jax(
+    states: list[str], dataset: pl.DataFrame
+):  # numpydoc ignore=GL08
+    logging.info("Preparing jurisdiction data")
+    filtered_data = dataset.filter(pl.col("location").is_in(states))
+
+    populations = (
+        filtered_data.select(pl.col("population"))
+        .unique()
+        .to_numpy()
+        .flatten()
+    )
+    week_indices = (
+        filtered_data.select(pl.col("week"))
+        .to_numpy()
+        .reshape(len(states), -1)
+    )
+    first_week_hosps = (
+        filtered_data.select(pl.col("first_week_hosp"))
+        .unique()
+        .to_numpy()
+        .flatten()
+    )
+    day_of_week_covariate = (
+        filtered_data.select(pl.col("day_of_week"))
+        .to_dummies()
+        .select(pl.exclude("day_of_week_Thu"))
+    )
+    remaining_covariates = filtered_data.select(
+        ["is_holiday", "is_post_holiday"]
+    )
+    covariates = pl.concat(
+        [day_of_week_covariate, remaining_covariates], how="horizontal"
+    )
+
+    predictors = covariates.to_numpy().reshape(
+        len(states), -1, covariates.shape[1]
+    )
+    data_observed_hosp_admissions = (
+        filtered_data.select(pl.col("hosp"))
+        .to_numpy()
+        .reshape(len(states), -1)
+    )
+    logging.debug("Jurisdiction data prepared")
+    return (
+        jnp.array(populations),
+        jnp.array(week_indices),
+        jnp.array(first_week_hosps),
+        jnp.array(predictors),
+        jnp.array(data_observed_hosp_admissions),
+    )
+
+
 LOCATION_CODES = {
 #     "AK": 2,
 #     "AL": 1,
