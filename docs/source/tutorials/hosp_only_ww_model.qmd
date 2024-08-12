@@ -313,6 +313,7 @@ def plot_posterior(name, predictive=False):
 ```
 
 ## Plot all posteriors
+# Do we know why some univariate sites have a dimension and others do not?
 ```{python}
 for key in list(idata.posterior.keys()):
     try:
@@ -368,3 +369,16 @@ axes.set_xlabel("Time", fontsize=10)
 axes.set_ylabel("Hospital Admissions", fontsize=10)
 plt.show()
 ```
+
+
+
+```{python}
+idata.posterior["log_r_mu_intercept_rv"]
+az.summary(
+    idata,
+    var_names=["log_rt", "periodic_diff_sd", "autoreg_rt_det", "rtu"],
+    stat_focus="median",
+)
+```
+rtu seems an order of magnitued wrong?
+Why is log_rt 2 dimensional?

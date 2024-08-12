@@ -53,13 +53,19 @@ def test_rtweeklydiff() -> None:
         "name": "test",
         "offset": 0,
         "log_rt_rv": DeterministicVariable(
-            name="log_rt", value=jnp.array([0.1, 0.2])
+            # name="log_rt", value=jnp.array([0.1, 0.2])
+            name="log_rt",
+            value=jnp.array([4.774, 4.803]),
         ),
         "autoreg_rv": DeterministicVariable(
-            name="autoreg_rv", value=jnp.array([0.7])
+            # name="autoreg_rv", value=jnp.array([0.7])
+            name="autoreg_rv",
+            value=jnp.array([0.041]),
         ),
         "periodic_diff_sd_rv": DeterministicVariable(
-            name="periodic_diff_sd_rv", value=jnp.array([0.1])
+            # name="periodic_diff_sd_rv", value=jnp.array([0.1])
+            name="periodic_diff_sd_rv",
+            value=jnp.array([0.009]),
         ),
     }
     duration = 30
