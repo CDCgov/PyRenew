@@ -13,7 +13,6 @@ import os
 from datetime import datetime, timedelta
 from typing import NamedTuple
 
-import arviz as az
 import jax
 import jax.numpy as jnp
 import matplotlib as mpl
@@ -60,6 +59,62 @@ if len(glob.glob("*mplstyle")) != 0:
 CURRENT_DATE = datetime.today().strftime("%Y-%m-%d")
 CURRENT_DATE_EXTENDED = datetime.today().strftime("%Y-%m-%d_%H:%M:%S")
 
+JURISDICTIONS = [
+    "AK",
+    "AL",
+    "AR",
+    "AZ",
+    "CA",
+    "CO",
+    "CT",
+    "DC",
+    "DE",
+    "FL",
+    "GA",
+    "HI",
+    "IA",
+    "ID",
+    "IL",
+    "IN",
+    "KS",
+    "KY",
+    "LA",
+    "MA",
+    "MD",
+    "ME",
+    "MI",
+    "MN",
+    "MO",
+    "MS",
+    "MT",
+    "NC",
+    "ND",
+    "NE",
+    "NH",
+    "NJ",
+    "NM",
+    "NV",
+    "NY",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "PR",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "US",
+    "UT",
+    "VA",
+    "VI",
+    "VT",
+    "WA",
+    "WI",
+    "WV",
+    "WY",
+]
 
 # set up logging
 logging.basicConfig(
@@ -75,7 +130,11 @@ class Config:  # numpydoc ignore=GL08
 
 
 def display_data(
-    data: pl.DataFrame, n_row_count: int = 15, n_col_count: int = 5
+    data: pl.DataFrame,
+    n_row_count: int = 15,
+    n_col_count: int = 5,
+    first_only: bool = False,
+    last_only: bool = False,
 ) -> None:
     """
     Display the columns and rows of
@@ -91,6 +150,10 @@ def display_data(
     n_col_count : int, optional
         How many columns to print.
         Defaults to 15.
+    first_only : bool, optional
+        If True, only display the first `n_row_count` rows. Defaults to False.
+    last_only : bool, optional
+        If True, only display the last `n_row_count` rows. Defaults to False.
 
     Returns
     -------
@@ -104,11 +167,20 @@ def display_data(
     assert (
         1 <= n_row_count <= rows
     ), f"Must have reasonable row count; was type {n_row_count}"
+    assert (
+        first_only + last_only
+    ) != 2, "Can only do one of last or first only."
+    if first_only:
+        data_to_display = data.head(n_row_count)
+    elif last_only:
+        data_to_display = data.tail(n_row_count)
+    else:
+        data_to_display = data.head(n_row_count)
     pl.Config.set_tbl_hide_dataframe_shape(True)
     pl.Config.set_tbl_formatting("ASCII_MARKDOWN")
     pl.Config.set_tbl_hide_column_data_types(True)
     with pl.Config(tbl_rows=n_row_count, tbl_cols=n_col_count):
-        print(f"Dataset In Use For `cfaepim`:\n{data}\n")
+        print(f"Dataset In Use For `cfaepim`:\n{data_to_display}\n")
 
 
 def check_file_path_valid(file_path: str) -> None:
@@ -210,6 +282,10 @@ def ensure_output_directory(args: dict[str, any]):  # numpydoc ignore=GL08
         os.makedirs(output_directory)
     if args.historical_data:
         output_directory += f"Historical_{args.reporting_date}/"
+        if not os.path.exists(output_directory):
+            os.makedirs(output_directory)
+    if not args.historical_data:
+        output_directory += f"{args.reporting_date}/"
         if not os.path.exists(output_directory):
             os.makedirs(output_directory)
     return output_directory
@@ -634,7 +710,6 @@ class CFAEPIM_Infections(RandomVariable):
             vector (I0) is less than the length of
             the generation interval.
         """
-        logging.info("Sampling infections")
 
         # get initial infections
         I0_samples = self.I0.sample()
@@ -836,7 +911,6 @@ class CFAEPIM_Observation(RandomVariable):
             ascertainment values and the expected
             hospitalizations.
         """
-        logging.info("Sampling from observation process")
         alpha_samples = self.alpha_process.sample()["prediction"]
         alpha_samples = alpha_samples[: infections.shape[0]]
         expected_hosp = (
@@ -934,7 +1008,6 @@ class CFAEPIM_Rt(RandomVariable):  # numpydoc ignore=GL08
         ArrayLike
             An array containing the broadcasted Rt values.
         """
-        logging.info("Sampling Rt values")
         # sample the standard deviation for the random walk process
         sd_wt = numpyro.sample(
             "Wt_rw_sd", dist.HalfNormal(self.gamma_RW_prior_scale)
@@ -1150,10 +1223,6 @@ class CFAEPIM_Model(Model):
         if not isinstance(predictors, jnp.ndarray):
             raise ValueError("Predictors must be a list of integers.")
 
-        # CFAEPIM_Model.infections.validate()
-        # CFAEPIM_Model.obs_process.validate()
-        # CFAEPIM_Model.Rt_process.validate()
-
     def sample(
         self,
         n_steps: int,
@@ -1168,6 +1237,9 @@ class CFAEPIM_Model(Model):
         ----------
         n_steps : int
             Number of time steps to sample.
+        data_observed_hosp_admissions : ArrayLike, optional
+            Observation hospital admissions.
+            Defaults to None.
         **kwargs : dict, optional
             Additional keyword arguments passed through to
             internal sample calls, should there be any.
@@ -1209,23 +1281,125 @@ class CFAEPIM_Model(Model):
         )
 
 
+def add_post_observation_period(
+    dataset: pl.DataFrame, n_post_observation_days: int
+) -> pl.DataFrame:  # numpydoc ignore=RT01
+    """
+    Receives a dataframe that is filtered down to a
+    particular jurisdiction, that has pre-observation
+    data, and adds new rows to the end of the dataframe
+    for the post-observation (forecasting) period.
+    """
+
+    # calculate the dates from the latest date in the dataframe
+    max_date = dataset["date"].max()
+    post_observation_dates = [
+        (max_date + timedelta(days=i))
+        for i in range(1, n_post_observation_days + 1)
+    ]
+
+    # get the days of the week (e.g. Fri) from the calculated dates
+    day_of_weeks = (
+        pl.Series(post_observation_dates)
+        .dt.strftime("%a")
+        .alias("day_of_week")
+    )
+    weekends = day_of_weeks.is_in(["Sat", "Sun"])
+
+    # calculate the epiweeks and epiyears, which might not evenly mod 7
+    last_epiweek = dataset["epiweek"][-1]
+    epiweek_counts = dataset.filter(pl.col("epiweek") == last_epiweek).shape[0]
+    epiweeks = [last_epiweek] * (7 - epiweek_counts) + [
+        (last_epiweek + 1 + (i // 7))
+        for i in range(n_post_observation_days - (7 - epiweek_counts))
+    ]
+    last_epiyear = dataset["epiyear"][-1]
+    epiyears = [
+        last_epiyear if epiweek <= 52 else last_epiyear + 1
+        for epiweek in epiweeks
+    ]
+    epiweeks = [
+        epiweek if epiweek <= 52 else epiweek - 52 for epiweek in epiweeks
+    ]
+
+    # calculate week values
+    last_week = dataset["week"][-1]
+    week_counts = dataset.filter(pl.col("week") == last_week).shape[0]
+    weeks = [last_week] * (7 - week_counts) + [
+        (last_week + 1 + (i // 7))
+        for i in range(n_post_observation_days - (7 - week_counts))
+    ]
+    weeks = [week if week <= 52 else week - 52 for week in weeks]
+
+    # calculate holiday series
+    holidays = [
+        datetime.strptime(elt, "%Y-%m-%d")
+        for elt in ["2023-11-23", "2023-12-25", "2023-12-31", "2024-01-01"]
+    ]
+    holidays_values = [date in holidays for date in post_observation_dates]
+    post_holidays = [holiday + timedelta(days=1) for holiday in holidays]
+    post_holiday_values = [
+        date in post_holidays for date in post_observation_dates
+    ]
+
+    # fill in post-observation data entries, zero hospitalizations
+    post_observation_data = pl.DataFrame(
+        {
+            "location": [dataset["location"][0]] * n_post_observation_days,
+            "date": post_observation_dates,
+            "hosp": [None] * n_post_observation_days,
+            "epiweek": epiweeks,
+            "epiyear": epiyears,
+            "day_of_week": day_of_weeks,
+            "is_weekend": weekends,
+            "is_holiday": holidays_values,
+            "is_post_holiday": post_holiday_values,
+            "recency": [0] * n_post_observation_days,
+            "week": weeks,
+            "location_code": [dataset["location_code"][0]]
+            * n_post_observation_days,
+            "population": [dataset["population"][0]] * n_post_observation_days,
+            "first_week_hosp": [dataset["first_week_hosp"][0]]
+            * n_post_observation_days,
+            "nonobservation_period": [False] * n_post_observation_days,
+        }
+    )
+
+    # stack post_observation_data ONTO dataset
+    merged_data = dataset.vstack(post_observation_data)
+    return merged_data
+
+
 def add_pre_observation_period(
     dataset: pl.DataFrame, n_pre_observation_days: int
-) -> pl.DataFrame:  # numpydoc ignore=GL08
+) -> pl.DataFrame:  # numpydoc ignore=RT01
+    """
+    Receives a dataframe that is filtered down to a
+    particular jurisdiction and adds new rows to the
+    beginning of the dataframe for the non-observation
+    period.
+    """
+
+    # create new nonobs column, set to False by default
     dataset = dataset.with_columns(
         pl.lit(False).alias("nonobservation_period")
     )
+
+    # backcalculate the dates from the earliest date in the dataframe
     min_date = dataset["date"].min()
     pre_observation_dates = [
         (min_date - timedelta(days=i))
         for i in range(1, n_pre_observation_days + 1)
     ]
     pre_observation_dates.reverse()
-    day_of_week_series = (
+
+    # get the days of the week (e.g. Fri) from the backcalculated dates
+    day_of_weeks = (
         pl.Series(pre_observation_dates).dt.strftime("%a").alias("day_of_week")
     )
-    is_weekend_series = day_of_week_series.is_in(["Sat", "Sun"])
+    weekends = day_of_weeks.is_in(["Sat", "Sun"])
 
+    # backculate the epiweeks, which might not evenly mod 7
     first_epiweek = dataset["epiweek"][0]
     counts = dataset.filter(pl.col("epiweek") == first_epiweek).shape[0]
     epiweeks = [first_epiweek] * (7 - counts) + [
@@ -1234,6 +1408,18 @@ def add_pre_observation_period(
     ]
     epiweeks.reverse()
 
+    # calculate holiday series
+    holidays = [
+        datetime.strptime(elt, "%Y-%m-%d")
+        for elt in ["2023-11-23", "2023-12-25", "2023-12-31", "2024-01-01"]
+    ]
+    holidays_values = [date in holidays for date in pre_observation_dates]
+    post_holidays = [holiday + timedelta(days=1) for holiday in holidays]
+    post_holiday_values = [
+        date in post_holidays for date in pre_observation_dates
+    ]
+
+    # fill in pre-observation data entries, zero hospitalizations
     pre_observation_data = pl.DataFrame(
         {
             "location": [dataset["location"][0]] * n_pre_observation_days,
@@ -1241,10 +1427,10 @@ def add_pre_observation_period(
             "hosp": [0] * n_pre_observation_days,
             "epiweek": epiweeks,
             "epiyear": [dataset["epiyear"][0]] * n_pre_observation_days,
-            "day_of_week": day_of_week_series,
-            "is_weekend": is_weekend_series,
-            "is_holiday": [False] * n_pre_observation_days,
-            "is_post_holiday": [False] * n_pre_observation_days,
+            "day_of_week": day_of_weeks,
+            "is_weekend": weekends,
+            "is_holiday": holidays_values,
+            "is_post_holiday": post_holiday_values,
             "recency": [0] * n_pre_observation_days,
             "week": [dataset["week"][0]] * n_pre_observation_days,
             "location_code": [dataset["location_code"][0]]
@@ -1255,8 +1441,198 @@ def add_pre_observation_period(
             "nonobservation_period": [True] * n_pre_observation_days,
         }
     )
+
+    # stack dataset ONTO pre_observation_data
     merged_data = pre_observation_data.vstack(dataset)
     return merged_data
+
+
+def process_jurisdictions(value):  # numpydoc ignore=GL08
+    if value.lower() == "all":
+        return JURISDICTIONS
+    elif value.lower().startswith("not:"):
+        exclude = value[4:].split(",")
+        return [state for state in JURISDICTIONS if state not in exclude]
+    else:
+        return value.split(",")
+
+
+def run_single_jurisdiction(
+    jurisdiction: str,
+    dataset: pl.DataFrame,
+    config: dict[str, any],
+    forecasting: bool = False,
+    n_post_observation_days: int = 0,
+):
+    """
+    Runs the ported `cfaepim` model on a single
+    jurisdiction. Pre- and post-observation data
+    for the Rt burn in and for forecasting,
+    respectively, is done before the prior predictive,
+    posterior, and posterior predictive samples
+    are returned.
+
+    Parameters
+    ----------
+    jurisdiction : str
+        The jurisdiction.
+    dataset : pl.DataFrame
+        The incidence data of interest.
+    config : dict[str, any]
+        A configuration file for the model.
+    forecasting : bool, optional
+        Whether or not forecasts are being made.
+        Defaults to True.
+    n_post_observation_days : int, optional
+        The number of days to look ahead. Defaults
+        to 0 if not forecasting.
+
+    Returns
+    -------
+    tuple
+        A tuple of prior predictive, posterior, and
+        posterior predictive samples.
+    """
+
+    # filter data to be the jurisdiction alone
+    filtered_data_jurisdiction = dataset.filter(
+        pl.col("location") == jurisdiction
+    )
+
+    # add the pre-observation period to the dataset
+    filtered_data = add_pre_observation_period(
+        dataset=filtered_data_jurisdiction,
+        n_pre_observation_days=config["n_pre_observation_days"],
+    )
+
+    logging.info(f"{jurisdiction}: Dataset w/ pre-observation ready.")
+
+    if forecasting:
+        # add the post-observation period if forecasting
+        filtered_data = add_post_observation_period(
+            dataset=filtered_data,
+            n_post_observation_days=n_post_observation_days,
+        )
+
+        logging.info(f"{jurisdiction}: Dataset w/ post-observation ready.")
+
+    # extract jurisdiction population
+    population = (
+        filtered_data.select(pl.col("population"))
+        .unique()
+        .to_numpy()
+        .flatten()
+    )[0]
+
+    # extract indices for weeks for Rt broadcasting (weekly to daily)
+    week_indices = filtered_data.select(pl.col("week")).to_numpy().flatten()
+
+    # extract first week hospitalizations for infections seeding
+    first_week_hosp = (
+        filtered_data.select(pl.col("first_week_hosp"))
+        .unique()
+        .to_numpy()
+        .flatten()
+    )[0]
+
+    # extract covariates (typically weekday, holidays, nonobs period)
+    day_of_week_covariate = (
+        filtered_data.select(pl.col("day_of_week"))
+        .to_dummies()
+        .select(pl.exclude("day_of_week_Thu"))
+    )
+    remaining_covariates = filtered_data.select(
+        ["is_holiday", "is_post_holiday", "nonobservation_period"]
+    )
+    covariates = pl.concat(
+        [day_of_week_covariate, remaining_covariates], how="horizontal"
+    )
+    predictors = covariates.to_numpy()
+
+    # extract observation hospital admissions
+    # NOTE: from filtered_data_jurisdiction, not filtered_data, which has null hosp
+    observed_hosp_admissions = (
+        filtered_data.select(pl.col("hosp")).to_numpy().flatten()
+    )
+
+    logging.info(f"{jurisdiction}: Variables extracted from dataset.")
+
+    # instantiate CFAEPIM model
+    total_steps = week_indices.size
+    steps_excluding_forecast = total_steps - n_post_observation_days
+    cfaepim_MSR = CFAEPIM_Model(
+        config=config,
+        population=population,
+        week_indices=week_indices[:steps_excluding_forecast],
+        first_week_hosp=first_week_hosp,
+        predictors=predictors[:steps_excluding_forecast],
+    )
+
+    logging.info(f"{jurisdiction}: CFAEPIM model instantiated!")
+
+    # run the CFAEPIM model
+    cfaepim_MSR.run(
+        n_steps=steps_excluding_forecast,
+        data_observed_hosp_admissions=observed_hosp_admissions[
+            :steps_excluding_forecast
+        ],
+        num_warmup=config["n_warmup"],
+        num_samples=config["n_iter"],
+        nuts_args={
+            "target_accept_prob": config["adapt_delta"],
+            "max_tree_depth": config["max_treedepth"],
+        },
+        mcmc_args={
+            "num_chains": config["n_chains"],
+            "progress_bar": True,
+        },  # progress_bar False if use vmap
+    )
+
+    logging.info(f"{jurisdiction}: CFAEPIM model ran!")
+
+    cfaepim_MSR.print_summary()
+
+    # prior predictive simulation samples
+    prior_predictive_sim_samples = cfaepim_MSR.prior_predictive(
+        n_steps=steps_excluding_forecast,
+        numpyro_predictive_args={"num_samples": config["n_iter"]},
+        rng_key=jax.random.key(config["seed"]),
+    )
+
+    logging.info(f"{jurisdiction}: Prior predictive simulation complete.")
+
+    # posterior predictive simulation samples
+    posterior_predictive_sim_samples = cfaepim_MSR.posterior_predictive(
+        n_steps=steps_excluding_forecast,
+        numpyro_predictive_args={"num_samples": config["n_iter"]},
+        rng_key=jax.random.key(config["seed"]),
+        data_observed_hosp_admissions=observed_hosp_admissions[
+            :steps_excluding_forecast
+        ],
+    )
+
+    logging.info(f"{jurisdiction}: Posterior predictive simulation complete.")
+
+    # posterior predictive forecasting samples
+    if forecasting:
+        posterior_predictive_for_samples = cfaepim_MSR.posterior_predictive(
+            n_steps=total_steps,
+            numpyro_predictive_args={"num_samples": config["n_iter"]},
+            rng_key=jax.random.key(config["seed"]),
+            data_observed_hosp_admissions=None,
+        )
+
+        logging.info(
+            f"{jurisdiction}: Posterior predictive forecasts complete."
+        )
+    else:
+        posterior_predictive_for_samples = None
+
+    return (
+        prior_predictive_sim_samples,
+        posterior_predictive_sim_samples,
+        posterior_predictive_for_samples,
+    )
 
 
 def main():  # numpydoc ignore=GL08
@@ -1285,8 +1661,18 @@ def main():  # numpydoc ignore=GL08
     python3 tut_epim_port_msr.py --reporting_date 2024-01-20 --historical
     """
     logging.info("Starting CFAEPIM")
+
+    # argparse settings
+    # e.g. python3 tut_epim_port_msr.py
+    # --reporting_date 2024-01-20 --regions all --historical --forecast
     parser = argparse.ArgumentParser(
         description="Forecast, simulate, and analyze the CFAEPIM model."
+    )
+    parser.add_argument(
+        "--regions",
+        type=process_jurisdictions,
+        required=True,
+        help="Specify jurisdictions as a comma-separated list. Use 'all' for all states, or 'not:state1,state2' to exclude specific states.",
     )
     parser.add_argument(
         "--reporting_date",
@@ -1299,151 +1685,83 @@ def main():  # numpydoc ignore=GL08
         action="store_true",
         help="Load model weights before training.",
     )
+    parser.add_argument(
+        "--forecast",
+        action="store_true",
+        help="Whether to make a forecast.",
+    )
+    parser.add_argument(
+        "--data_info_save",
+        action="store_true",
+        help="Whether to save information about the dataset.",
+    )
+    parser.add_argument(
+        "--model_info_save",
+        action="store_true",
+        help="Whether to save information about the model.",
+    )
     args = parser.parse_args()
 
     # determine number of CPU cores
     numpyro.set_platform("cpu")
     num_cores = os.cpu_count()
     numpyro.set_host_device_count(num_cores - (num_cores - 3))
+    logging.info("Number of cores set.")
 
-    # data, output, and config directory
-    # output_directory = ensure_output_directory(args)
+    # check that output directory exists, if not create
+    output_directory = ensure_output_directory(args)
+    print(output_directory)
+    logging.info("Output directory ensured working.")
+
     if args.historical_data:
+        # check that historical cfaepim data exists for given reporting date
         historical_data_directory = assert_historical_data_files_exist(
             args.reporting_date
         )
+
+        # load historical configuration file (modified from cfaepim)
         config = load_config(
             config_path=f"./config/params_{args.reporting_date}_historical.toml"
         )
+        logging.info("Configuration (historical) loaded.")
+
+        # load the historical hospitalization data
         data_path = os.path.join(
             historical_data_directory, f"{args.reporting_date}_clean_data.tsv"
         )
         influenza_hosp_data = load_data(data_path=data_path)
-    if not args.historical_data:
-        config = load_config(
-            config_path=f"./config/params_{args.reporting_date}_historical.toml"
+        logging.info("Incidence data (historical) loaded.")
+        _, cols = influenza_hosp_data.shape
+        display_data(
+            data=influenza_hosp_data, n_row_count=10, n_col_count=cols
         )
-    # modify data columns
-    influenza_hosp_data = influenza_hosp_data.with_columns(
-        pl.col("date").str.strptime(pl.Date, "%Y-%m-%d")
-    )
-    rows, cols = influenza_hosp_data.shape
-    display_data(data=influenza_hosp_data, n_row_count=10, n_col_count=cols)
-    print(influenza_hosp_data.columns)
 
-    # parallelized run over states
-    # states = ["NY", "CA"]
-    # results = run_batched(
-    #     states=states, dataset=influenza_hosp_data, config=config
-    # )
-    # (
-    #     prior_predictive_samples,
-    #     posterior_predictive_samples,
-    # ) = results[0]
-    # logging.info("Finished processing all states")
-    # print(prior_predictive_samples)
+        # modify date column from str to datetime
+        influenza_hosp_data = influenza_hosp_data.with_columns(
+            pl.col("date").str.strptime(pl.Date, "%Y-%m-%d")
+        )
 
-    state = "NY"
-    filtered_data = influenza_hosp_data.filter(pl.col("location") == state)
-    filtered_data = add_pre_observation_period(
-        dataset=filtered_data,
-        n_pre_observation_days=config["n_pre_observation_days"],
-    )
-    # add forecast
-    frows, fcols = filtered_data.shape
-    display_data(data=filtered_data, n_row_count=10, n_col_count=fcols)
-    population = (
-        filtered_data.select(pl.col("population"))
-        .unique()
-        .to_numpy()
-        .flatten()
-    )[0]
-    week_indices = (
-        filtered_data.select(pl.col("week")).to_numpy().flatten()
-    )  # NOT filtered_data.filter(pl.col("nonobservation_period") == False)
-    first_week_hosp = (
-        filtered_data.select(pl.col("first_week_hosp"))
-        .unique()
-        .to_numpy()
-        .flatten()
-    )[0]
-    day_of_week_covariate = (
-        filtered_data.select(pl.col("day_of_week"))
-        .to_dummies()
-        .select(pl.exclude("day_of_week_Thu"))
-    )
-    remaining_covariates = filtered_data.select(
-        ["is_holiday", "is_post_holiday", "nonobservation_period"]
-    )
-    covariates = pl.concat(
-        [day_of_week_covariate, remaining_covariates], how="horizontal"
-    )
-    predictors = covariates.to_numpy()
-    print(predictors)
-    data_observed_hosp_admissions = (
-        filtered_data.select(pl.col("hosp")).to_numpy().flatten()
-    )
-    print(data_observed_hosp_admissions)
+    # PLACEHOLDER: load routine data into influenza_hosp_data
 
-    cfaepim_MSR = CFAEPIM_Model(
-        config=config,
-        population=population,
-        week_indices=week_indices,  # used for Rt
-        first_week_hosp=first_week_hosp,
-        predictors=predictors,
-    )
-    # print(cfaepim_MSR.predictors)
-    cfaepim_MSR.run(
-        n_steps=week_indices.size,
-        data_observed_hosp_admissions=data_observed_hosp_admissions,
-        num_warmup=config["n_warmup"],
-        num_samples=config["n_iter"],
-        nuts_args={
-            "target_accept_prob": config["adapt_delta"],
-            "max_tree_depth": config["max_treedepth"],
-        },
-        mcmc_args={
-            "num_chains": config["n_chains"],
-            "progress_bar": True,
-        },
-        # needs to be False to support vmap usage
-        # might be fixed soon
-    )
-    cfaepim_MSR.print_summary()
-    posterior_predictive_samples = cfaepim_MSR.posterior_predictive(
-        n_steps=week_indices.size + 28,
-        numpyro_predictive_args={"num_samples": config["n_iter"]},
-        rng_key=jax.random.key(config["seed"]),
-        data_observed_hosp_admissions=None,
-    )
-    # Null obs, even if instantiated in constructor
-    # What is the most idiomatic way to do this in the Predictive() call?#
-    prior_predictive_samples = cfaepim_MSR.prior_predictive(
-        n_steps=week_indices.size,
-        numpyro_predictive_args={"num_samples": config["n_iter"]},
-        rng_key=jax.random.key(config["seed"]),
-    )
-    print(posterior_predictive_samples)
+    if args.data_info_save:
+        pass
 
-    idata = az.from_numpyro(
-        cfaepim_MSR.mcmc,
-        posterior_predictive=posterior_predictive_samples,
-        prior=prior_predictive_samples,
-    )
-    fig, ax = plt.subplots()
-    az.plot_lm(
-        "negbinom_rv",
-        idata=idata,
-        kind_pp="hdi",
-        y_kwargs={"color": "black"},
-        y_hat_fill_kwargs={"color": "C0"},
-        axes=ax,
-    )
-    ax.set_title("Posterior Predictive Plot")
-    ax.set_ylabel("Hospital Admissions")
-    ax.set_xlabel("Days")
+    if args.model_info_save:
+        pass
 
-    plt.show()
+    # parallel run over jurisdictions
+    for jurisdiction in args.regions:
+        # assumptions, fit, and forecast for each jurisdiction
+        prior_p_s, post_p_s, post_p_f = run_single_jurisdiction(
+            jurisdiction=jurisdiction,
+            dataset=influenza_hosp_data,
+            config=config,
+            forecasting=args.forecast,
+            n_post_observation_days=28,
+        )
+
+    # each config has a report that goes along with it
+    #
 
     # plot_results(
     #     prior_predictive_samples,
@@ -1474,3 +1792,25 @@ def main():  # numpydoc ignore=GL08
 
 if __name__ == "__main__":
     main()
+
+# TODO
+# argparse
+#   turn off reports
+# report(s) generation
+# plotting generation
+# generalized plotting
+# forecasttools formatting
+# MCMC utils (numpyro)
+# issues x 3 (plotting, inv(), infections docs.)
+# tests
+# Save MCMC + Samples
+# Save to Image as Metadata
+# forecast scoring & interpretation
+#   in reports
+#   probabilistic statements on what to expect
+#   relative to historical (several weeks prior + last year)
+# evaluate configuration file
+# tutorial on usage
+# writing again
+# notes about what each function must know
+#

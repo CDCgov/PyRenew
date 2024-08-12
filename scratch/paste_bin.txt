@@ -19,6 +19,19 @@ locations = dict(sorted([(elt[0], int(elt[1])) for elt in list(
             influenza_hosp_data.select(["location", "location_code"]).unique().to_numpy()) if elt[1] != "US" ]))
 
 
+    # parallelized run over states
+    # states = ["NY", "CA"]
+    # results = run_batched(
+    #     states=states, dataset=influenza_hosp_data, config=config
+    # )
+    # (
+    #     prior_predictive_samples,
+    #     posterior_predictive_samples,
+    # ) = results[0]
+    # logging.info("Finished processing all states")
+    # print(prior_predictive_samples)
+
+
 SAVE run batched for later
 
 def run_batched(
