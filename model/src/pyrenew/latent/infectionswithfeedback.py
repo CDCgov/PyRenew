@@ -194,10 +194,6 @@ class InfectionsWithFeedback(RandomVariable):
             reversed_infection_feedback_pmf=inf_fb_pmf_rev,
         )
 
-        # Appending initial infections to the infections
-
-        numpyro.deterministic("Rt_adjusted", Rt_adj)
-
         return InfectionsRtFeedbackSample(
             post_initialization_infections=SampledValue(
                 value=post_initialization_infections,
