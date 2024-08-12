@@ -1,5 +1,6 @@
 # numpydoc ignore=GL08
 import jax.numpy as jnp
+import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as transformation
 from pyrenew.deterministic import DeterministicVariable
@@ -141,6 +142,8 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
                 inf_with_feedback_proc_sample.post_initialization_infections.value,
             ]
         )
+
+        numpyro.deterministic("latent_infections", latent_infections)
 
         p_hosp_mean = self.p_hosp_mean_rv()[0].value
         p_hosp_w_sd = self.p_hosp_w_sd_rv()[0].value
