@@ -142,7 +142,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
                 inf_with_feedback_proc_sample.post_initialization_infections.value,
             ]
         )
-
+        numpyro.deterministic("rtu", rtu[0].value)
         numpyro.deterministic("latent_infections", latent_infections)
 
         p_hosp_mean = self.p_hosp_mean_rv()[0].value
