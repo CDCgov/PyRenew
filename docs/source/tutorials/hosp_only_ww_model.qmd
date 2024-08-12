@@ -231,7 +231,7 @@ Check the posterior predictive:
 
 ```{python}
 # | label: posterior predictive
-my_model.posterior_predictive(
+posterior_predictive = my_model.posterior_predictive(
     n_datapoints=len(data_observed_hospital_admissions)
 )
 ```
@@ -244,3 +244,123 @@ Forecasting is broken (dependent on https://github.com/CDCgov/multisignal-epi-in
 my_model.posterior_predictive(
     n_datapoints=len(data_observed_hospital_admissions) + 2
 )
+```
+
+
+## Prepare for plotting
+```{python}
+import arviz as az
+
+idata = az.from_numpyro(
+    my_model.mcmc, posterior_predictive=posterior_predictive
+)
+```
+
+```{python}
+def compute_eti(dataset, eti_prob):
+    eti_bdry = dataset.quantile(
+        ((1 - eti_prob) / 2, 1 / 2 + eti_prob / 2), dim=("chain", "draw")
+    )
+    return eti_bdry.values.T
+```
+
+
+```{python}
+def plot_posterior(name, predictive=False):
+    if predictive:
+        posterior_object = idata.posterior_predictive
+    else:
+        posterior_object = idata.posterior
+    x_data = posterior_object[f"{name}_dim_0"] + uot
+    y_data = posterior_object[name]
+    fig, axes = plt.subplots(figsize=(6, 5))
+    az.plot_hdi(
+        x_data,
+        hdi_data=compute_eti(y_data, 0.9),
+        color="C0",
+        smooth=False,
+        fill_kwargs={"alpha": 0.3},
+        ax=axes,
+    )
+
+    az.plot_hdi(
+        x_data,
+        hdi_data=compute_eti(y_data, 0.5),
+        color="C0",
+        smooth=False,
+        fill_kwargs={"alpha": 0.6},
+        ax=axes,
+    )
+
+    # Add median of the posterior to the figure
+    median_ts = y_data.median(dim=["chain", "draw"])
+
+    plt.plot(
+        x_data,
+        median_ts,
+        color="C0",
+        label="Median",
+    )
+
+    axes.legend()
+    axes.set_title(name, fontsize=10)
+    axes.set_xlabel("Time", fontsize=10)
+    axes.set_ylabel(name, fontsize=10)
+    plt.show()
+```
+
+## Plot all posteriors
+```{python}
+for key in list(idata.posterior.keys()):
+    try:
+        plot_posterior(key)
+    except Exception as e:
+        print(f"An error occurred while plotting {key}: {e}")
+```
+
+## Posterior predictive hospital admissions
+```{python}
+import matplotlib.pyplot as plt
+
+x_data = idata.posterior_predictive["observed_hospital_admissions_dim_0"] + uot
+y_data = idata.posterior_predictive["observed_hospital_admissions"]
+fig, axes = plt.subplots(figsize=(6, 5))
+az.plot_hdi(
+    x_data,
+    hdi_data=compute_eti(y_data, 0.9),
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.3},
+    ax=axes,
+)
+
+az.plot_hdi(
+    x_data,
+    hdi_data=compute_eti(y_data, 0.5),
+    color="C0",
+    smooth=False,
+    fill_kwargs={"alpha": 0.6},
+    ax=axes,
+)
+
+
+# Add median of the posterior to the figure
+median_ts = y_data.median(dim=["chain", "draw"])
+
+plt.plot(
+    x_data,
+    median_ts,
+    color="C0",
+    label="Median",
+)
+plt.scatter(
+    idata.observed_data["observed_hospital_admissions_dim_0"] + uot,
+    idata.observed_data["observed_hospital_admissions"],
+    color="black",
+)
+axes.legend()
+axes.set_title("Posterior Predictive Admissions", fontsize=10)
+axes.set_xlabel("Time", fontsize=10)
+axes.set_ylabel("Hospital Admissions", fontsize=10)
+plt.show()
+```
