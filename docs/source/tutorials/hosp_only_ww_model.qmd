@@ -266,12 +266,15 @@ def compute_eti(dataset, eti_prob):
 
 
 ```{python}
+import matplotlib.pyplot as plt
+
+
 def plot_posterior(name, predictive=False):
     if predictive:
         posterior_object = idata.posterior_predictive
     else:
         posterior_object = idata.posterior
-    x_data = posterior_object[f"{name}_dim_0"] + uot
+    x_data = posterior_object[f"{name}_dim_0"]
     y_data = posterior_object[name]
     fig, axes = plt.subplots(figsize=(6, 5))
     az.plot_hdi(
@@ -306,14 +309,15 @@ def plot_posterior(name, predictive=False):
     axes.set_title(name, fontsize=10)
     axes.set_xlabel("Time", fontsize=10)
     axes.set_ylabel(name, fontsize=10)
-    plt.show()
+    return fig
 ```
 
 ## Plot all posteriors
 ```{python}
 for key in list(idata.posterior.keys()):
     try:
-        plot_posterior(key)
+        fig = plot_posterior(key)
+        fig.show()
     except Exception as e:
         print(f"An error occurred while plotting {key}: {e}")
 ```
