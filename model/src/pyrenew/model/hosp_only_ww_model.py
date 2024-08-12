@@ -42,7 +42,8 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             InitializeInfectionsExponentialGrowth(
                 n_initialization_points,
                 initialization_rate_rv,
-                t_pre_init=-n_initialization_points,
+                t_pre_init=0,
+                # to match the stan model, we should have t_pre_init=-n_initialization_points, but this works better
             ),
             t_unit=1,
         )
