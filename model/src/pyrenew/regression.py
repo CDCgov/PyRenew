@@ -93,7 +93,7 @@ class GLMPrediction(AbstractRegressionPrediction):
             transform = t.IdentityTransform()
 
         self.name = name
-        self.fixed_predictor_values = fixed_predictor_values
+        self.fixed_predictor_values = fixed_predictor_values  # TODO: fix
         self.transform = transform
         self.intercept_prior = intercept_prior
         self.coefficient_priors = coefficient_priors

@@ -1136,6 +1136,9 @@ class CFAEPIM_Model(Model):
         data_observed_hosp_admissions: ArrayLike = None,
         **kwargs,
     ) -> tuple:
+        # shift towards "reduced statefulness", include here week indices &
+        # predictors which might change; for the same model and different
+        # models.
         """
         Samples the reproduction numbers, generation interval,
         infections, and hospitalizations from the CFAEPIM model.
@@ -1254,7 +1257,7 @@ def add_post_observation_period(
         {
             "location": [dataset["location"][0]] * n_post_observation_days,
             "date": post_observation_dates,
-            "hosp": [None] * n_post_observation_days,
+            "hosp": [-9999] * n_post_observation_days,  # possible
             "epiweek": epiweeks,
             "epiyear": epiyears,
             "day_of_week": day_of_weeks,
@@ -1364,13 +1367,55 @@ def process_jurisdictions(value):  # numpydoc ignore=GL08
         return value.split(",")
 
 
-def instantiate_CFAEPIM(
+# def instantiate_CFAEPIM(
+#     jurisdiction: str,
+#     dataset: pl.DataFrame,
+#     config: dict[str, any],
+#     forecasting: bool = False,
+#     n_post_observation_days: int = 0,
+# ):  # numpydoc ignore=GL08
+#     """
+#     Originally separated to support `model_render`;
+#     possibly reintegrated w/ `run_single_jurisdiction`.
+#     """
+
+
+def run_single_jurisdiction(
     jurisdiction: str,
     dataset: pl.DataFrame,
     config: dict[str, any],
     forecasting: bool = False,
     n_post_observation_days: int = 0,
-):  # numpydoc ignore=GL08
+):
+    """
+    Runs the ported `cfaepim` model on a single
+    jurisdiction. Pre- and post-observation data
+    for the Rt burn in and for forecasting,
+    respectively, is done before the prior predictive,
+    posterior, and posterior predictive samples
+    are returned.
+
+    Parameters
+    ----------
+    jurisdiction : str
+        The jurisdiction.
+    dataset : pl.DataFrame
+        The incidence data of interest.
+    config : dict[str, any]
+        A configuration file for the model.
+    forecasting : bool, optional
+        Whether or not forecasts are being made.
+        Defaults to True.
+    n_post_observation_days : int, optional
+        The number of days to look ahead. Defaults
+        to 0 if not forecasting.
+
+    Returns
+    -------
+    tuple
+        A tuple of prior predictive, posterior, and
+        posterior predictive samples.
+    """
     # filter data to be the jurisdiction alone
     filtered_data_jurisdiction = dataset.filter(
         pl.col("location") == jurisdiction
@@ -1433,10 +1478,10 @@ def instantiate_CFAEPIM(
 
     logging.info(f"{jurisdiction}: Variables extracted from dataset.")
 
-    # instantiate CFAEPIM model
+    # instantiate CFAEPIM model (for fitting)
     total_steps = week_indices.size
     steps_excluding_forecast = total_steps - n_post_observation_days
-    cfaepim_MSR = CFAEPIM_Model(
+    cfaepim_MSR_fit = CFAEPIM_Model(
         config=config,
         population=population,
         week_indices=week_indices[:steps_excluding_forecast],
@@ -1444,64 +1489,10 @@ def instantiate_CFAEPIM(
         predictors=predictors[:steps_excluding_forecast],
     )
 
-    logging.info(f"{jurisdiction}: CFAEPIM model instantiated!")
-    return (
-        total_steps,
-        steps_excluding_forecast,
-        cfaepim_MSR,
-        observed_hosp_admissions,
-    )
-
-
-def run_single_jurisdiction(
-    jurisdiction: str,
-    dataset: pl.DataFrame,
-    config: dict[str, any],
-    forecasting: bool = False,
-    n_post_observation_days: int = 0,
-):
-    """
-    Runs the ported `cfaepim` model on a single
-    jurisdiction. Pre- and post-observation data
-    for the Rt burn in and for forecasting,
-    respectively, is done before the prior predictive,
-    posterior, and posterior predictive samples
-    are returned.
-
-    Parameters
-    ----------
-    jurisdiction : str
-        The jurisdiction.
-    dataset : pl.DataFrame
-        The incidence data of interest.
-    config : dict[str, any]
-        A configuration file for the model.
-    forecasting : bool, optional
-        Whether or not forecasts are being made.
-        Defaults to True.
-    n_post_observation_days : int, optional
-        The number of days to look ahead. Defaults
-        to 0 if not forecasting.
-
-    Returns
-    -------
-    tuple
-        A tuple of prior predictive, posterior, and
-        posterior predictive samples.
-    """
-
-    # instantiate CFAEPIM
-    (
-        total_steps,
-        steps_excluding_forecast,
-        cfaepim_MSR,
-        observed_hosp_admissions,
-    ) = instantiate_CFAEPIM(
-        jurisdiction, dataset, config, forecasting, n_post_observation_days
-    )
+    logging.info(f"{jurisdiction}: CFAEPIM model instantiated (fitting)!")
 
     # run the CFAEPIM model
-    cfaepim_MSR.run(
+    cfaepim_MSR_fit.run(
         n_steps=steps_excluding_forecast,
         data_observed_hosp_admissions=observed_hosp_admissions[
             :steps_excluding_forecast
@@ -1518,12 +1509,12 @@ def run_single_jurisdiction(
         },  # progress_bar False if use vmap
     )
 
-    logging.info(f"{jurisdiction}: CFAEPIM model ran!")
+    logging.info(f"{jurisdiction}: CFAEPIM model (fitting) ran!")
 
-    cfaepim_MSR.print_summary()
+    cfaepim_MSR_fit.print_summary()
 
     # prior predictive simulation samples
-    prior_predictive_sim_samples = cfaepim_MSR.prior_predictive(
+    prior_predictive_sim_samples = cfaepim_MSR_fit.prior_predictive(
         n_steps=steps_excluding_forecast,
         numpyro_predictive_args={"num_samples": config["n_iter"]},
         rng_key=jax.random.key(config["seed"]),
@@ -1532,7 +1523,7 @@ def run_single_jurisdiction(
     logging.info(f"{jurisdiction}: Prior predictive simulation complete.")
 
     # posterior predictive simulation samples
-    posterior_predictive_sim_samples = cfaepim_MSR.posterior_predictive(
+    posterior_predictive_sim_samples = cfaepim_MSR_fit.posterior_predictive(
         n_steps=steps_excluding_forecast,
         numpyro_predictive_args={"num_samples": config["n_iter"]},
         rng_key=jax.random.key(config["seed"]),
@@ -1543,11 +1534,31 @@ def run_single_jurisdiction(
 
     # posterior predictive forecasting samples
     if forecasting:
-        posterior_predictive_for_samples = cfaepim_MSR.posterior_predictive(
-            n_steps=total_steps,
-            numpyro_predictive_args={"num_samples": config["n_iter"]},
-            rng_key=jax.random.key(config["seed"]),
-            data_observed_hosp_admissions=None,
+        cfaepim_MSR_for = CFAEPIM_Model(
+            config=config,
+            population=population,
+            week_indices=week_indices,
+            first_week_hosp=first_week_hosp,
+            predictors=predictors,
+        )
+
+        # run the CFAEPIM model (forecasting, required to do so
+        # single `posterior_predictive` gets sames (need self.mcmc)
+        # from passed model);
+        # ISSUE: GLMPrediction fixed_predictor_values
+        # ISSUE: MCMC saving
+        # ISSUE: inv()
+        # ISSUE: standard plots to make
+        # PR: sample() + OOP behavior & statefulness
+        cfaepim_MSR_for.mcmc = cfaepim_MSR_fit.mcmc
+
+        posterior_predictive_for_samples = (
+            cfaepim_MSR_for.posterior_predictive(
+                n_steps=total_steps,
+                numpyro_predictive_args={"num_samples": config["n_iter"]},
+                rng_key=jax.random.key(config["seed"]),
+                data_observed_hosp_admissions=None,
+            )
         )
 
         logging.info(
@@ -1557,7 +1568,7 @@ def run_single_jurisdiction(
         posterior_predictive_for_samples = None
 
     return (
-        cfaepim_MSR,
+        cfaepim_MSR_for,
         observed_hosp_admissions,
         prior_predictive_sim_samples,
         posterior_predictive_sim_samples,
@@ -1579,9 +1590,10 @@ def save_numpyro_model(
 
     else:
         # instantiate cfaepim_MSR
-        _, _, cfaepim_MSR, _ = instantiate_CFAEPIM(
-            jurisdiction, dataset, config, forecasting, n_post_observation_days
-        )
+        # _, _, cfaepim_MSR, _ = instantiate_CFAEPIM(
+        #     jurisdiction, dataset, config, forecasting, n_post_observation_days
+        # )
+        cfaepim_MSR = ""
         # needs to be fixed; sample
         # then pass model + args to model
 
@@ -1855,7 +1867,7 @@ def main(args):  # numpydoc ignore=GL08
             )
 
         # parallel run over jurisdictions
-        results = dict([(elt, {}) for elt in args.regions])
+        # results = dict([(elt, {}) for elt in args.regions])
         for jurisdiction in args.regions:
             # assumptions, fit, and forecast for each jurisdiction
             (
@@ -1872,25 +1884,16 @@ def main(args):  # numpydoc ignore=GL08
                 n_post_observation_days=28,
             )
 
-            # idata = az.from_numpyro(
-            #     hosp_model.mcmc,
-            #     posterior_predictive=hosp_model.posterior_predictive(
-            #         n_datapoints=len(daily_hosp_admits)
-            #     ),
-            #     prior=hosp_model.prior_predictive(
-            #         n_datapoints=len(daily_hosp_admits),
-            #         numpyro_predictive_args={"num_samples": 1000},
-            #     ),
-            # )
-            # fig, ax = plt.subplots()
-            # az.plot_lm(
-            #     "negbinom_rv",
-            #     idata=idata,
-            #     kind_pp="hdi",
-            #     y_kwargs={"color": "black"},
-            #     y_hat_fill_kwargs={"color": "C0"},
-            #     axes=ax,
-            # )
+            print(prior_p_ss)
+            print()
+            print(post_p_ss)
+            print()
+            print(post_p_fs)
+
+            model.plot_posterior(
+                var=[post_p_fs["negbinom_rv"]], obs_signal=obs
+            )
+            plt.show()
 
             # ax.set_title("Posterior Predictive Plot")
             # ax.set_ylabel("Hospital Admissions")
@@ -1915,7 +1918,6 @@ def main(args):  # numpydoc ignore=GL08
             # )
 
             # print(prior_p_ss_figures_and_descriptions)
-        print(results)
 
         # if args.forecasting:
 
