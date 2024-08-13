@@ -25,7 +25,6 @@ import numpyro.distributions as dist
 import polars as pl
 import pyrenew.transformation as t
 import toml
-import xarray as xr
 from jax.typing import ArrayLike
 from matplotlib import font_manager as fm
 from numpyro import render_model
@@ -1701,10 +1700,10 @@ def plot_trace_arviz(data, var_name=None, **kwargs):  # numpydoc ignore=GL08
 def plot_ppc_arviz(
     observations, samples, data_pairs=None, alpha=0.03, textsize=14, **kwargs
 ):  # numpydoc ignore=GL08
-    data_array = xr.DataArray(samples, dims=["chain", "draw", "timepoint"])
-    samples = az.InferenceData(
-        posterior_predictive={"posterior_predictive": data_array}
-    )
+    # data_array = xr.DataArray(samples, dims=["chain", "draw", "timepoint"])
+    # samples = az.InferenceData(
+    #     posterior_predictive={"posterior_predictive": data_array}
+    # )
     az.style.use("arviz-doc")
     fig, ax = plt.subplots()
     az.plot_ppc(
@@ -1719,32 +1718,6 @@ def plot_ppc_arviz(
     plt.tight_layout()
     plt.show()
     return fig, desc
-
-
-# idata = az.from_numpyro(
-#     hosp_model.mcmc,
-#     posterior_predictive=hosp_model.posterior_predictive(
-#         n_datapoints=len(daily_hosp_admits)
-#     ),
-#     prior=hosp_model.prior_predictive(
-#         n_datapoints=len(daily_hosp_admits),
-#         numpyro_predictive_args={"num_samples": 1000},
-#     ),
-# )
-# fig, ax = plt.subplots()
-# az.plot_lm(
-#     "negbinom_rv",
-#     idata=idata,
-#     kind_pp="hdi",
-#     y_kwargs={"color": "black"},
-#     y_hat_fill_kwargs={"color": "C0"},
-#     axes=ax,
-# )
-
-# ax.set_title("Posterior Predictive Plot")
-# ax.set_ylabel("Hospital Admissions")
-# ax.set_xlabel("Days")
-# plt.show()
 
 
 # x_data = idata.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
@@ -1899,23 +1872,49 @@ def main(args):  # numpydoc ignore=GL08
                 n_post_observation_days=28,
             )
 
-            prior_p_ss_figures_and_descriptions = plot_sample_variables(
-                samples=prior_p_ss,
-                variables=["Rts", "latent_infections", "negbinom_rv"],
-                observations=obs,
-                ylabels=[
-                    "Basic Reproduction Number",
-                    "Latent Infections",
-                    "Hospital Admissions",
-                ],
-                plot_types=["TRACE", "PPC", "HDI"],
-                plot_kwargs={
-                    "HDI": {"hdi_prob": 0.95, "plot_kwargs": {"ls": "-."}},
-                    "TRACE": {"var_names": ["Rts", "latent_infections"]},
-                    "PPC": {"alpha": 0.05, "textsize": 12},
-                },
-            )
-            print(prior_p_ss_figures_and_descriptions)
+            # idata = az.from_numpyro(
+            #     hosp_model.mcmc,
+            #     posterior_predictive=hosp_model.posterior_predictive(
+            #         n_datapoints=len(daily_hosp_admits)
+            #     ),
+            #     prior=hosp_model.prior_predictive(
+            #         n_datapoints=len(daily_hosp_admits),
+            #         numpyro_predictive_args={"num_samples": 1000},
+            #     ),
+            # )
+            # fig, ax = plt.subplots()
+            # az.plot_lm(
+            #     "negbinom_rv",
+            #     idata=idata,
+            #     kind_pp="hdi",
+            #     y_kwargs={"color": "black"},
+            #     y_hat_fill_kwargs={"color": "C0"},
+            #     axes=ax,
+            # )
+
+            # ax.set_title("Posterior Predictive Plot")
+            # ax.set_ylabel("Hospital Admissions")
+            # ax.set_xlabel("Days")
+            # plt.show()
+
+            # prior_p_ss_figures_and_descriptions = plot_sample_variables(
+            #     samples=prior_p_ss,
+            #     variables=["Rts", "latent_infections", "negbinom_rv"],
+            #     observations=obs,
+            #     ylabels=[
+            #         "Basic Reproduction Number",
+            #         "Latent Infections",
+            #         "Hospital Admissions",
+            #     ],
+            #     plot_types=["TRACE", "PPC", "HDI"],
+            #     plot_kwargs={
+            #         "HDI": {"hdi_prob": 0.95, "plot_kwargs": {"ls": "-."}},
+            #         "TRACE": {"var_names": ["Rts", "latent_infections"]},
+            #         "PPC": {"alpha": 0.05, "textsize": 12},
+            #     },
+            # )
+
+            # print(prior_p_ss_figures_and_descriptions)
         print(results)
 
         # if args.forecasting:
