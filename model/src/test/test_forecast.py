@@ -1,10 +1,11 @@
 # numpydoc ignore=GL08
 
+from test.utils import get_default_rt
+
 import jax.numpy as jnp
 import jax.random as jr
 import numpyro
 import numpyro.distributions as dist
-import pyrenew.transformation as t
 from numpy.testing import assert_array_equal
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
@@ -12,10 +13,9 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
+from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
-from pyrenew.process import SimpleRandomWalkProcess
 
 
 def test_forecast():
@@ -30,19 +30,7 @@ def test_forecast():
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation(name="poisson_rv")
-    rt = TransformedRandomVariable(
-        name="Rt_rv",
-        base_rv=SimpleRandomWalkProcess(
-            name="log_rt",
-            step_rv=DistributionalRV(
-                name="rw_step_rv", dist=dist.Normal(0, 0.025)
-            ),
-            init_rv=DistributionalRV(
-                name="init_log_rt", dist=dist.Normal(0, 0.2)
-            ),
-        ),
-        transforms=t.ExpTransform(),
-    )
+    rt = get_default_rt()
 
     model = RtInfectionsRenewalModel(
         I0_rv=I0,

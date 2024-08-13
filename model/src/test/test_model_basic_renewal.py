@@ -2,13 +2,14 @@
 # numpydoc ignore=GL08
 
 
+from test.utils import get_default_rt
+
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
 import numpyro
 import numpyro.distributions as dist
 import polars as pl
-import pyrenew.transformation as t
 import pytest
 from pyrenew.deterministic import DeterministicPMF, NullObservation
 from pyrenew.latent import (
@@ -16,36 +17,9 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
+from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
-from pyrenew.process import SimpleRandomWalkProcess
-
-
-def get_default_rt():
-    """
-    Helper function to create a default Rt
-    RandomVariable for this testing session.
-
-    Returns
-    -------
-    TransformedRandomVariable :
-       A log-scale random walk with fixed
-       init value and step size priors
-    """
-    return TransformedRandomVariable(
-        "Rt_rv",
-        base_rv=SimpleRandomWalkProcess(
-            name="log_rt",
-            step_rv=DistributionalRV(
-                name="rw_step_rv", dist=dist.Normal(0, 0.025)
-            ),
-            init_rv=DistributionalRV(
-                name="init_log_rt", dist=dist.Normal(0, 0.2)
-            ),
-        ),
-        transforms=t.ExpTransform(),
-    )
 
 
 def test_model_basicrenewal_no_timepoints_or_observations():

@@ -1,15 +1,13 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
+from test.utils import get_default_rt
+
 import jax.numpy as jnp
 import numpy.testing as testing
 import numpyro
-import numpyro.distributions as dist
-import pyrenew.transformation as t
 import pytest
 from pyrenew.latent import Infections
-from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
-from pyrenew.process import SimpleRandomWalkProcess
 
 
 def test_infections_as_deterministic():
@@ -18,19 +16,7 @@ def test_infections_as_deterministic():
     the same seed is used.
     """
 
-    rt = TransformedRandomVariable(
-        "Rt_rv",
-        base_rv=SimpleRandomWalkProcess(
-            name="log_rt",
-            step_rv=DistributionalRV(
-                name="rw_step_rv", dist=dist.Normal(0, 0.025)
-            ),
-            init_rv=DistributionalRV(
-                name="init_log_rt", dist=dist.Normal(0, 0.2)
-            ),
-        ),
-        transforms=t.ExpTransform(),
-    )
+    rt = get_default_rt()
 
     with numpyro.handlers.seed(rng_seed=223):
         sim_rt, *_ = rt(n_steps=30)

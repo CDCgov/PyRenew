@@ -5,11 +5,12 @@ Ensures that models created with the same or
 with different random keys behave appropriately.
 """
 
+from test.utils import get_default_rt
+
 import jax.numpy as jnp
 import jax.random as jr
 import numpyro
 import numpyro.distributions as dist
-import pyrenew.transformation as t
 from numpy.testing import assert_array_equal, assert_raises
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
@@ -17,10 +18,9 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
+from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
-from pyrenew.process import SimpleRandomWalkProcess
 
 
 def create_test_model():  # numpydoc ignore=GL08
@@ -34,19 +34,7 @@ def create_test_model():  # numpydoc ignore=GL08
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation("poisson_rv")
-    rt = TransformedRandomVariable(
-        "Rt_rv",
-        base_rv=SimpleRandomWalkProcess(
-            name="log_rt",
-            step_rv=DistributionalRV(
-                name="rw_step_rv", dist=dist.Normal(0, 0.025)
-            ),
-            init_rv=DistributionalRV(
-                name="init_log_rt", dist=dist.Normal(0, 0.2)
-            ),
-        ),
-        transforms=t.ExpTransform(),
-    )
+    rt = get_default_rt()
     model = RtInfectionsRenewalModel(
         I0_rv=I0,
         gen_int_rv=gen_int,
