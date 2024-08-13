@@ -41,7 +41,6 @@ class GLMPrediction(AbstractRegressionPrediction):
     def __init__(
         self,
         name: str,
-        fixed_predictor_values: ArrayLike,
         intercept_prior: dist.Distribution,
         coefficient_priors: dist.Distribution,
         transform: t.Transform = None,
@@ -57,14 +56,6 @@ class GLMPrediction(AbstractRegressionPrediction):
             The name of the observation process,
             which will be used to name the constituent
             sampled parameters in calls to `numpyro.sample`
-
-        fixed_predictor_values : ArrayLike (n_predictors, n_observations)
-            Matrix of fixed values of the predictor variables
-            (covariates) for the regression problem. Each
-            row should represent the predictor values corresponding
-            to an observation; each column should represent
-            a predictor variable. You do not include values of
-            1 for the intercept; these will be added automatically.
 
         intercept_prior : numypro.distributions.Distribution
             Prior distribution for the regression intercept
@@ -93,7 +84,6 @@ class GLMPrediction(AbstractRegressionPrediction):
             transform = t.IdentityTransform()
 
         self.name = name
-        self.fixed_predictor_values = fixed_predictor_values
         self.transform = transform
         self.intercept_prior = intercept_prior
         self.coefficient_priors = coefficient_priors
@@ -101,11 +91,14 @@ class GLMPrediction(AbstractRegressionPrediction):
         self.coefficient_suffix = coefficient_suffix
 
     def predict(
-        self, intercept: ArrayLike, coefficients: ArrayLike
+        self,
+        intercept: ArrayLike,
+        coefficients: ArrayLike,
+        predictor_values: ArrayLike,
     ) -> ArrayLike:
         """
         Generates a transformed prediction w/ intercept, coefficients, and
-        fixed predictor values
+        predictor values
 
         Parameters
         ----------
@@ -114,20 +107,30 @@ class GLMPrediction(AbstractRegressionPrediction):
         coefficients : ArrayLike
             Sampled prediction coefficients distribution generated
             from coefficients priors.
+        predictor_values : ArrayLike(n_predictors, n_observations)
+            Matrix of predictor variables (covariates) for the
+            regression problem. Each row should represent the
+            predictor values corresponding to an observation;
+            each column should represent a predictor variable.
+            You do not include values of 1 for the intercept;
+            these will be added automatically.
 
         Returns
         -------
         ArrayLike
             Array of transformed predictions.
         """
-        transformed_prediction = (
-            intercept + self.fixed_predictor_values @ coefficients
-        )
+        transformed_prediction = intercept + predictor_values @ coefficients
         return self.transform.inv(transformed_prediction)
 
-    def sample(self) -> dict:
+    def sample(self, **kwargs) -> dict:
         """
         Sample generalized linear model
+
+        Parameters
+        -----------
+        **kwargs : dict
+            kwargs containing additional arguments including predictor_values
 
         Returns
         -------
@@ -141,7 +144,9 @@ class GLMPrediction(AbstractRegressionPrediction):
         coefficients = numpyro.sample(
             self.name + self.coefficient_suffix, self.coefficient_priors
         )
-        prediction = self.predict(intercept, coefficients)
+
+        predictor_values = kwargs.get("predictor_values")
+        prediction = self.predict(intercept, coefficients, predictor_values)
         return dict(
             prediction=prediction,
             intercept=intercept,
