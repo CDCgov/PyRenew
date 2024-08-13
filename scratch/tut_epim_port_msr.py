@@ -13,6 +13,7 @@ import os
 from datetime import datetime, timedelta
 from typing import NamedTuple
 
+import arviz as az
 import jax
 import jax.numpy as jnp
 import matplotlib as mpl
@@ -24,8 +25,10 @@ import numpyro.distributions as dist
 import polars as pl
 import pyrenew.transformation as t
 import toml
+import xarray as xr
 from jax.typing import ArrayLike
 from matplotlib import font_manager as fm
+from numpyro import render_model
 from numpyro.infer.reparam import LocScaleReparam
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
@@ -310,18 +313,6 @@ def assert_historical_data_files_exist(
     return data_directory
 
 
-def forecast_report():  # numpydoc ignore=GL08
-    pass
-
-
-def model_report():  # numpydoc ignore=GL08
-    pass
-
-
-def prior_report():  # numpydoc ignore=GL08
-    pass
-
-
 def plot_utils(
     axes: mpl.axes.Axes,
     figure: plt.Figure,
@@ -329,54 +320,12 @@ def plot_utils(
     title: str = "",
     ylabel: str = "",
     xlabel: str = "",
-    use_legend: bool = False,
+    use_legend: bool = True,
     display: bool = True,
     filename: str = "delete_me",
     save_as_img: bool = False,
     save_to_pdf: bool = False,
 ) -> None | plt.Figure:  # numpydoc ignore=GL08
-    """
-    Utility function to format and save plots.
-
-    Parameters
-    ----------
-    axes : mpl.axes.Axes
-        The axes object to format.
-    figure : plt.Figure
-        The figure object to format and possibly save.
-    use_log : bool, optional
-        Whether to use log-scaling on the y-axis.
-        Defaults to False.
-    title : str, optional
-        Title of the plot.
-        Defaults to "".
-    ylabel : str, optional
-        Label for the y-axis.
-        Defaults to "".
-    xlabel : str, optional
-        Label for the x-axis.
-        Defaults to "".
-    use_legend : bool, optional
-        Whether to display a legend.
-        Defaults to False.
-    display : bool, optional
-        Whether to display the plot.
-        Defaults to True.
-    filename : str, optional
-        Filename for saving the plot.
-        Defaults to "delete_me".
-    save_as_img : bool, optional
-        Whether to save the plot as an image.
-        Defaults to False.
-    save_to_pdf : bool, optional
-        Whether to return the figure for saving as a PDF.
-        Defaults to False.
-
-    Returns
-    -------
-    None | plt.Figure
-        Returns the figure if save_to_pdf is True, otherwise returns None.
-    """
     if use_legend:
         axes.legend(loc="best")
     if use_log:
@@ -405,57 +354,32 @@ def plot_utils(
     return None
 
 
-def base_object_plot(
-    y: np.ndarray,
+def base_line_plot(
+    y: list[np.ndarray],
     X: np.ndarray,
+    labels: list[str] = [""],
     title: str = "",
     X_label: str = "",
     Y_label: str = "",
     use_log: bool = False,
-    use_legend: bool = False,
+    use_legend: bool = True,
     display: bool = True,
     filename: str = "delete_me",
     save_as_img: bool = False,
     save_to_pdf: bool = False,
-) -> None | plt.Figure:  # numpydoc ignore=GL08
+) -> None | plt.Figure:  # numpydoc ignore=RT01
     """
-    Basic plot function for y vs X.
-
-    Parameters
-    ----------
-    y : np.ndarray
-        Data for the y-axis.
-    X : np.ndarray
-        Data for the x-axis.
-    title : str, optional
-        Title of the plot. Defaults to "".
-    X_label : str, optional
-        Label for the x-axis. Defaults to "".
-    Y_label : str, optional
-        Label for the y-axis. Defaults to "".
-    use_log : bool, optional
-        Whether to use log-scaling on the y-axis. Defaults to False.
-    use_legend : bool, optional
-        Whether to display a legend. Defaults to False.
-    display : bool, optional
-        Whether to display the plot. Defaults to True.
-    filename : str, optional
-        Filename for saving the plot. Defaults to "delete_me".
-    save_as_img : bool, optional
-        Whether to save the plot as an image. Defaults to False.
-    save_to_pdf : bool, optional
-        Whether to return the figure for saving as a PDF. Defaults to False.
-
-    Returns
-    -------
-    None | plt.Figure
-        Returns the figure if save_to_pdf is True, otherwise returns None.
+    Simple X, y plot with title, labels, and
+    some save features. Plot based on style
+    defined in the style file. Defers non-plotting
+    items (labeling, saving) to plot utils.
     """
     figure, axes = plt.subplots(1, 1)
-    axes.plot(X, y, color="black")
+    for i, vals in enumerate(y):
+        axes.plot(X, vals, label=labels[i])
     axes.set_xlim(left=0)
     axes.set_ylim(bottom=0)
-    return plot_utils(
+    figure = plot_utils(
         figure=figure,
         axes=axes,
         title=title,
@@ -468,6 +392,48 @@ def base_object_plot(
         save_as_img=save_as_img,
         save_to_pdf=save_to_pdf,
     )
+    return figure
+
+
+def base_mcmc_plot(
+    y: list[np.ndarray],
+    X: np.ndarray,
+    labels: list[str] = [""],
+    title: str = "",
+    X_label: str = "",
+    Y_label: str = "",
+    use_log: bool = False,
+    use_legend: bool = True,
+    display: bool = True,
+    filename: str = "delete_me",
+    save_as_img: bool = False,
+    save_to_pdf: bool = False,
+) -> None | plt.Figure:  # numpydoc ignore=RT01
+    """
+    Simple plot for mcmc output with title, labels, and
+    some save features. Plot based on style
+    defined in the style file. Defers non-plotting
+    items (labeling, saving) to plot utils.
+    """
+    figure, axes = plt.subplots(1, 1)
+    for i, vals in enumerate(y):
+        axes.plot(X, vals, label=labels[i])
+    axes.set_xlim(left=0)
+    axes.set_ylim(bottom=0)
+    figure = plot_utils(
+        figure=figure,
+        axes=axes,
+        title=title,
+        xlabel=X_label,
+        ylabel=Y_label,
+        use_log=use_log,
+        use_legend=use_legend,
+        display=display,
+        filename=filename,
+        save_as_img=save_as_img,
+        save_to_pdf=save_to_pdf,
+    )
+    return figure
 
 
 def plot_single_location_hosp_data(
@@ -555,64 +521,6 @@ def plot_single_location_hosp_data(
         save_as_img=save_as_img,
         save_to_pdf=save_to_pdf,
     )
-
-
-def plot_prior_distributions(
-    prior_distributions: dict,
-    num_samples: int = 1000,
-    save_as_img: bool = False,
-    save_to_pdf: bool = False,
-    display: bool = True,
-) -> None:
-    """
-    Plot prior distributions and save them as images or PDF.
-
-    Parameters
-    ----------
-    prior_distributions : dict
-        Dictionary of prior distributions to plot.
-    num_samples : int, optional
-        Number of samples to draw from each distribution. Defaults to 1000.
-    save_as_img : bool, optional
-        Whether to save the plots as images. Defaults to False.
-    save_to_pdf : bool, optional
-        Whether to save the plots to a PDF. Defaults to False.
-    display : bool, optional
-        Whether to display the plots. Defaults to True.
-
-    Returns
-    -------
-    None
-    """
-    figures = []
-    for name, distribution in prior_distributions.items():
-        samples = distribution.sample(jax.random.PRNGKey(0), (num_samples,))
-        figure, axes = plt.subplots(1, 1)
-        axes.hist(samples, bins=50, density=True, alpha=0.6, color="g")
-        title = f"Prior Distribution: {name}"
-        ylabel = "Density"
-        xlabel = "Value"
-        fig = plot_utils(
-            axes=axes,
-            figure=figure,
-            title=title,
-            xlabel=xlabel,
-            ylabel=ylabel,
-            use_legend=False,
-            display=display,
-            filename=name,
-            save_as_img=save_as_img,
-            save_to_pdf=save_to_pdf,
-        )
-        if save_to_pdf:
-            figures.append(fig)
-    # change further
-    # if save_to_pdf:
-    #     from matplotlib.backends.backend_pdf import PdfPages
-    #     with PdfPages('./figures/prior_distributions.pdf') as pdf:
-    #         for fig in figures:
-    #             pdf.savefig(fig)
-    return None
 
 
 class CFAEPIM_Infections(RandomVariable):
@@ -1457,43 +1365,13 @@ def process_jurisdictions(value):  # numpydoc ignore=GL08
         return value.split(",")
 
 
-def run_single_jurisdiction(
+def instantiate_CFAEPIM(
     jurisdiction: str,
     dataset: pl.DataFrame,
     config: dict[str, any],
     forecasting: bool = False,
     n_post_observation_days: int = 0,
-):
-    """
-    Runs the ported `cfaepim` model on a single
-    jurisdiction. Pre- and post-observation data
-    for the Rt burn in and for forecasting,
-    respectively, is done before the prior predictive,
-    posterior, and posterior predictive samples
-    are returned.
-
-    Parameters
-    ----------
-    jurisdiction : str
-        The jurisdiction.
-    dataset : pl.DataFrame
-        The incidence data of interest.
-    config : dict[str, any]
-        A configuration file for the model.
-    forecasting : bool, optional
-        Whether or not forecasts are being made.
-        Defaults to True.
-    n_post_observation_days : int, optional
-        The number of days to look ahead. Defaults
-        to 0 if not forecasting.
-
-    Returns
-    -------
-    tuple
-        A tuple of prior predictive, posterior, and
-        posterior predictive samples.
-    """
-
+):  # numpydoc ignore=GL08
     # filter data to be the jurisdiction alone
     filtered_data_jurisdiction = dataset.filter(
         pl.col("location") == jurisdiction
@@ -1513,7 +1391,6 @@ def run_single_jurisdiction(
             dataset=filtered_data,
             n_post_observation_days=n_post_observation_days,
         )
-
         logging.info(f"{jurisdiction}: Dataset w/ post-observation ready.")
 
     # extract jurisdiction population
@@ -1569,6 +1446,60 @@ def run_single_jurisdiction(
     )
 
     logging.info(f"{jurisdiction}: CFAEPIM model instantiated!")
+    return (
+        total_steps,
+        steps_excluding_forecast,
+        cfaepim_MSR,
+        observed_hosp_admissions,
+    )
+
+
+def run_single_jurisdiction(
+    jurisdiction: str,
+    dataset: pl.DataFrame,
+    config: dict[str, any],
+    forecasting: bool = False,
+    n_post_observation_days: int = 0,
+):
+    """
+    Runs the ported `cfaepim` model on a single
+    jurisdiction. Pre- and post-observation data
+    for the Rt burn in and for forecasting,
+    respectively, is done before the prior predictive,
+    posterior, and posterior predictive samples
+    are returned.
+
+    Parameters
+    ----------
+    jurisdiction : str
+        The jurisdiction.
+    dataset : pl.DataFrame
+        The incidence data of interest.
+    config : dict[str, any]
+        A configuration file for the model.
+    forecasting : bool, optional
+        Whether or not forecasts are being made.
+        Defaults to True.
+    n_post_observation_days : int, optional
+        The number of days to look ahead. Defaults
+        to 0 if not forecasting.
+
+    Returns
+    -------
+    tuple
+        A tuple of prior predictive, posterior, and
+        posterior predictive samples.
+    """
+
+    # instantiate CFAEPIM
+    (
+        total_steps,
+        steps_excluding_forecast,
+        cfaepim_MSR,
+        observed_hosp_admissions,
+    ) = instantiate_CFAEPIM(
+        jurisdiction, dataset, config, forecasting, n_post_observation_days
+    )
 
     # run the CFAEPIM model
     cfaepim_MSR.run(
@@ -1606,9 +1537,7 @@ def run_single_jurisdiction(
         n_steps=steps_excluding_forecast,
         numpyro_predictive_args={"num_samples": config["n_iter"]},
         rng_key=jax.random.key(config["seed"]),
-        data_observed_hosp_admissions=observed_hosp_admissions[
-            :steps_excluding_forecast
-        ],
+        data_observed_hosp_admissions=None,
     )
 
     logging.info(f"{jurisdiction}: Posterior predictive simulation complete.")
@@ -1629,13 +1558,240 @@ def run_single_jurisdiction(
         posterior_predictive_for_samples = None
 
     return (
+        cfaepim_MSR,
+        observed_hosp_admissions,
         prior_predictive_sim_samples,
         posterior_predictive_sim_samples,
         posterior_predictive_for_samples,
     )
 
 
-def main():  # numpydoc ignore=GL08
+def save_numpyro_model(
+    save_path: str,
+    jurisdiction: str,
+    dataset: pl.DataFrame,
+    config: dict[str, any],
+    forecasting: bool = False,
+    n_post_observation_days: int = 0,
+):  # numpydoc ignore=GL08
+    # check if the file exists
+    if os.path.exists(save_path):
+        pass
+
+    else:
+        # instantiate cfaepim_MSR
+        _, _, cfaepim_MSR, _ = instantiate_CFAEPIM(
+            jurisdiction, dataset, config, forecasting, n_post_observation_days
+        )
+        # needs to be fixed; sample
+        # then pass model + args to model
+
+        render_model(cfaepim_MSR, filename=save_path)
+
+
+def template_save_file(
+    title: str, save_path: str, figure_and_descriptions: list[tuple[str, str]]
+):  # numpydoc ignore=GL08
+    header_p1 = f"""
+    ---
+    title: "{title}"
+    author: "CFA"
+    date: "{CURRENT_DATE}"
+    """
+    header_p2 = open("header_p2.txt").read()
+    content = header_p1 + header_p2 + "\n"
+    for plot_title, plot_path in figure_and_descriptions:
+        content += f"""
+        ![{plot_title}]({plot_path}){{ width=75% }}\n
+        """
+    if not os.path.exists(save_path):
+        with open(save_path, "w") as f:
+            f.write(content)
+            f.close()
+
+
+def convert_markdown_output_files_to_pdf():  # numpydoc ignore=GL08
+    markdown_files = glob.glob("*.md")
+    print(markdown_files)
+    pass
+
+
+def save_inference_content():
+    """
+    Saves MCMC inference content.
+    """
+    pass
+
+
+def plot_sample_variables(
+    samples,
+    variables,
+    observations=None,
+    ylabels=None,
+    plot_types=None,
+    plot_kwargs=None,
+):  # numpydoc ignore=GL08
+    # collect figure output descriptions
+    figures_and_descriptions = []
+    plot_kwargs = plot_kwargs or {}
+
+    # iterate through plot_types and variable combinations
+    for i, var in enumerate(variables):
+        ylabel = ylabels[i] if ylabels else var
+        var_samples = az.convert_to_inference_data({var: samples[var]})
+        for plot_type in plot_types:
+            if plot_type == "HDI":
+                fig, desc = plot_hdi_arviz(
+                    var_samples,
+                    observations,
+                    ylabel,
+                    **plot_kwargs.get("HDI", {}),
+                )
+            elif plot_type == "TRACE":
+                fig, desc = plot_trace_arviz(
+                    var_samples, **plot_kwargs.get("TRACE", {})
+                )
+            elif plot_type == "PPC":
+                fig, desc = plot_ppc_arviz(
+                    observations, var_samples, **plot_kwargs.get("PPC", {})
+                )
+            figures_and_descriptions.append((fig, desc))
+    return figures_and_descriptions
+
+
+def plot_hdi_arviz(
+    samples,
+    observations,
+    ylabel,
+    x_data=None,
+    hdi_prob=0.95,
+    plot_kwargs=None,
+    **kwargs,
+):  # numpydoc ignore=GL08
+    plot_kwargs = plot_kwargs or {}
+    az.style.use("arviz-doc")
+    n_samples, n_timepoints = samples.shape
+    if x_data is None:
+        x_data = np.arange(n_timepoints)
+    fig, ax = plt.subplots()
+    az.plot_hdi(
+        x_data, samples.T, hdi_prob=hdi_prob, ax=ax, plot_kwargs=plot_kwargs
+    )
+    if observations is not None:
+        ax.plot(x_data, observations, "o", color="black", label="Observations")
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel("Time")
+    ax.set_title(f"HDI plot for {ylabel}")
+    plt.tight_layout()
+    desc = f"HDI plot for {ylabel} with HDI probability of {hdi_prob}"
+    plt.show()
+    return fig, desc
+
+
+def plot_trace_arviz(data, var_name=None, **kwargs):  # numpydoc ignore=GL08
+    az.style.use("arviz-doc")
+    fig, ax = plt.subplots()
+    az.plot_trace(data, var_names=var_name)  # , **kwargs)
+    desc = f"Trace plot for {var_name if var_name else 'all variables'}"
+    plt.tight_layout()
+    plt.show()
+    return fig, desc
+
+
+def plot_ppc_arviz(
+    observations, samples, data_pairs=None, alpha=0.03, textsize=14, **kwargs
+):  # numpydoc ignore=GL08
+    data_array = xr.DataArray(samples, dims=["chain", "draw", "timepoint"])
+    samples = az.InferenceData(
+        posterior_predictive={"posterior_predictive": data_array}
+    )
+    az.style.use("arviz-doc")
+    fig, ax = plt.subplots()
+    az.plot_ppc(
+        data={"posterior_predictive": samples},
+        data_pairs=data_pairs or {"obs": observations},
+        ax=ax,
+        alpha=alpha,
+        textsize=textsize,
+        **kwargs,
+    )
+    desc = f"PPC plot comparing observations with samples, alpha={alpha}, textsize={textsize}"
+    plt.tight_layout()
+    plt.show()
+    return fig, desc
+
+
+# idata = az.from_numpyro(
+#     hosp_model.mcmc,
+#     posterior_predictive=hosp_model.posterior_predictive(
+#         n_datapoints=len(daily_hosp_admits)
+#     ),
+#     prior=hosp_model.prior_predictive(
+#         n_datapoints=len(daily_hosp_admits),
+#         numpyro_predictive_args={"num_samples": 1000},
+#     ),
+# )
+# fig, ax = plt.subplots()
+# az.plot_lm(
+#     "negbinom_rv",
+#     idata=idata,
+#     kind_pp="hdi",
+#     y_kwargs={"color": "black"},
+#     y_hat_fill_kwargs={"color": "C0"},
+#     axes=ax,
+# )
+
+# ax.set_title("Posterior Predictive Plot")
+# ax.set_ylabel("Hospital Admissions")
+# ax.set_xlabel("Days")
+# plt.show()
+
+
+# x_data = idata.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
+# y_data = idata.posterior_predictive["negbinom_rv"]
+# fig, axes = plt.subplots(figsize=(6, 5))
+# az.plot_hdi(
+#     x_data,
+#     hdi_data=compute_eti(y_data, 0.9),
+#     color="C0",
+#     smooth=False,
+#     fill_kwargs={"alpha": 0.3},
+#     ax=axes,
+# )
+
+# az.plot_hdi(
+#     x_data,
+#     hdi_data=compute_eti(y_data, 0.5),
+#     color="C0",
+#     smooth=False,
+#     fill_kwargs={"alpha": 0.6},
+#     ax=axes,
+# )
+
+# # Add median of the posterior to the figure
+# median_ts = y_data.median(dim=["chain", "draw"])
+
+# plt.plot(
+#     x_data,
+#     median_ts,
+#     color="C0",
+#     label="Median",
+# )
+# plt.scatter(
+#     idata.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
+#     idata.observed_data["negbinom_rv"],
+#     color="black",
+# )
+# axes.legend()
+# axes.set_title(
+#     "Posterior Predictive Admissions, including a forecast", fontsize=10
+# )
+# axes.set_xlabel("Time", fontsize=10)
+# axes.set_ylabel("Hospital Admissions", fontsize=10)
+# plt.show()
+
+
+def main(args):  # numpydoc ignore=GL08
     """
     The `cfaepim` model required a configuration
     file and a dataset. The configuration file must
@@ -1658,49 +1814,9 @@ def main():  # numpydoc ignore=GL08
     and configuration have the correct variables and
     values in a proper range. Testing also ensures that
     each part of the `cfaepim` model works as desired.
-    python3 tut_epim_port_msr.py --reporting_date 2024-01-20 --historical
+    python3 tut_epim_port_msr.py --reporting_date 2024-01-20 --regions NY --historical --forecast
     """
     logging.info("Starting CFAEPIM")
-
-    # argparse settings
-    # e.g. python3 tut_epim_port_msr.py
-    # --reporting_date 2024-01-20 --regions all --historical --forecast
-    parser = argparse.ArgumentParser(
-        description="Forecast, simulate, and analyze the CFAEPIM model."
-    )
-    parser.add_argument(
-        "--regions",
-        type=process_jurisdictions,
-        required=True,
-        help="Specify jurisdictions as a comma-separated list. Use 'all' for all states, or 'not:state1,state2' to exclude specific states.",
-    )
-    parser.add_argument(
-        "--reporting_date",
-        type=str,
-        required=True,
-        help="The reporting date.",
-    )
-    parser.add_argument(
-        "--historical_data",
-        action="store_true",
-        help="Load model weights before training.",
-    )
-    parser.add_argument(
-        "--forecast",
-        action="store_true",
-        help="Whether to make a forecast.",
-    )
-    parser.add_argument(
-        "--data_info_save",
-        action="store_true",
-        help="Whether to save information about the dataset.",
-    )
-    parser.add_argument(
-        "--model_info_save",
-        action="store_true",
-        help="Whether to save information about the model.",
-    )
-    args = parser.parse_args()
 
     # determine number of CPU cores
     numpyro.set_platform("cpu")
@@ -1741,57 +1857,115 @@ def main():  # numpydoc ignore=GL08
             pl.col("date").str.strptime(pl.Date, "%Y-%m-%d")
         )
 
-    # PLACEHOLDER: load routine data into influenza_hosp_data
+        # save plots of the raw hospitalization data,
+        # for all jurisdictions
+        if args.data_info_save:
+            # save pdf of 2, 2x2 (log-scale plots)
+            # total hospitalizations (full season) & last 4 weeks
+            # log scale, log scale
+            # growth rate, moving average
+            # log-scale, log-scale
+            # check if this already exist + do for all juris.
+            pass
 
-    if args.data_info_save:
-        pass
+        if args.model_info_save:
+            # save model diagram
+            # save plots for priors
+            # check if this already exists, do for each config file
+            save_numpyro_model(
+                save_path=output_directory + "cfaepim_diagram.pdf",
+                jurisdiction="NY",
+                dataset=influenza_hosp_data,
+                config=config,
+                forecasting=args.forecast,
+                n_post_observation_days=28,
+            )
 
-    if args.model_info_save:
-        pass
+        # parallel run over jurisdictions
+        results = dict([(elt, {}) for elt in args.regions])
+        for jurisdiction in args.regions:
+            # assumptions, fit, and forecast for each jurisdiction
+            (
+                model,
+                obs,
+                prior_p_ss,
+                post_p_ss,
+                post_p_fs,
+            ) = run_single_jurisdiction(
+                jurisdiction=jurisdiction,
+                dataset=influenza_hosp_data,
+                config=config,
+                forecasting=args.forecast,
+                n_post_observation_days=28,
+            )
 
-    # parallel run over jurisdictions
-    for jurisdiction in args.regions:
-        # assumptions, fit, and forecast for each jurisdiction
-        prior_p_s, post_p_s, post_p_f = run_single_jurisdiction(
-            jurisdiction=jurisdiction,
-            dataset=influenza_hosp_data,
-            config=config,
-            forecasting=args.forecast,
-            n_post_observation_days=28,
-        )
+            prior_p_ss_figures_and_descriptions = plot_sample_variables(
+                samples=prior_p_ss,
+                variables=["Rts", "latent_infections", "negbinom_rv"],
+                observations=obs,
+                ylabels=[
+                    "Basic Reproduction Number",
+                    "Latent Infections",
+                    "Hospital Admissions",
+                ],
+                plot_types=["TRACE", "PPC", "HDI"],
+                plot_kwargs={
+                    "HDI": {"hdi_prob": 0.95, "plot_kwargs": {"ls": "-."}},
+                    "TRACE": {"var_names": ["Rts", "latent_infections"]},
+                    "PPC": {"alpha": 0.05, "textsize": 12},
+                },
+            )
+            print(prior_p_ss_figures_and_descriptions)
+        print(results)
 
-    # each config has a report that goes along with it
-    #
+        # if args.forecasting:
 
-    # plot_results(
-    #     prior_predictive_samples,
-    #     posterior_predictive_samples,
-    #     cfaepim_MSR)
-
-    # plot data: for each state,
-
-    # verification: plot single state hospitalizations
-    # plot_single_location_hosp_data(
-    #     incidence_data=influenza_hosp_data,
-    #     states=["NY"],
-    #     lower_date="2022-01-01",
-    #     upper_date="2024-03-10",
-    #     use_log=False,
-    #     use_legend=True,
-    #     save_as_img=False,
-    #     save_to_pdf=False,
-    #     display=False,
-    # )
-
-    # # verification: data_observed_hosp_admissions
-    # print(f"HOSPITALIZATIONS:\n{data_observed_hosp_admissions}\n\n")
-
-    # # verify and visualize aspects of the model
-    # verify_cfaepim_MSR(cfaepim_MSR)
+    # prior_p_ss & post_p_ss get their own pdf (markdown first then subprocess)
+    # each variable is plotted out, if possible
+    # arviz diagnostics
 
 
 if __name__ == "__main__":
-    main()
+    # argparse settings
+    # e.g. python3 tut_epim_port_msr.py
+    # --reporting_date 2024-01-20 --regions all --historical --forecast
+    parser = argparse.ArgumentParser(
+        description="Forecast, simulate, and analyze the CFAEPIM model."
+    )
+    parser.add_argument(
+        "--regions",
+        type=process_jurisdictions,
+        required=True,
+        help="Specify jurisdictions as a comma-separated list. Use 'all' for all states, or 'not:state1,state2' to exclude specific states.",
+    )
+    parser.add_argument(
+        "--reporting_date",
+        type=str,
+        required=True,
+        help="The reporting date.",
+    )
+    parser.add_argument(
+        "--historical_data",
+        action="store_true",
+        help="Load model weights before training.",
+    )
+    parser.add_argument(
+        "--forecast",
+        action="store_true",
+        help="Whether to make a forecast.",
+    )
+    parser.add_argument(
+        "--data_info_save",
+        action="store_true",
+        help="Whether to save information about the dataset.",
+    )
+    parser.add_argument(
+        "--model_info_save",
+        action="store_true",
+        help="Whether to save information about the model.",
+    )
+    args = parser.parse_args()
+    main(args)
 
 # TODO
 # argparse
@@ -1813,4 +1987,7 @@ if __name__ == "__main__":
 # tutorial on usage
 # writing again
 # notes about what each function must know
-#
+# plot objects include: latent infections, observed hospital
+# admissions, Rt; plot types includes: dist., density, posterior,
+# density comparison, pair plot, posterior predictive check plot,
+# HDI plot,

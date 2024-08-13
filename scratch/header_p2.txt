@@ -1,0 +1,34 @@
+geometry:
+- lmargin=1.5in
+- rmargin=1.5in
+- tmargin=1.0in
+- bmargin=1.0in
+tightlist: true
+colorlinks: true
+linkcolor: black
+urlcolor: Maroon
+filecolor: magenta
+citecolor: Maroon
+highlight-style: espresso
+lang: en-US
+fontsize: 12pt
+papersize: letter
+toc: true
+toc-depth: 3
+numbersections: true
+mainfont: TeX Gyre Schola
+header-includes:
+- \usepackage{xcolor}
+- \usepackage{fontspec}
+- \usepackage{sectsty}
+- \allsectionsfont{\scshape}
+- \usepackage{fancyvrb}
+- \fvset{fontsize=\small, frame=single,framesep=2mm,rulecolor=\color{black}, framerule=0.4mm}
+- \usepackage{float}
+- \let\origfigure\figure
+- \let\endorigfigure\endfigure
+- \renewenvironment{figure}[1][H]{\origfigure[H]}{\endorigfigure}
+- \usepackage{mathrsfs}
+- \usepackage{fvextra}
+- \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,breakanywhere,commandchars=\\\{\}}
+---

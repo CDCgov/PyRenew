@@ -18,6 +18,9 @@ Look to Admission Model for inspiration for sample().
 locations = dict(sorted([(elt[0], int(elt[1])) for elt in list(
             influenza_hosp_data.select(["location", "location_code"]).unique().to_numpy()) if elt[1] != "US" ]))
 
+        influenza_hosp_data = influenza_hosp_data.with_columns(
+            pl.col("hosp").cast(pl.Float64)
+        )
 
     # parallelized run over states
     # states = ["NY", "CA"]
@@ -31,6 +34,164 @@ locations = dict(sorted([(elt[0], int(elt[1])) for elt in list(
     # logging.info("Finished processing all states")
     # print(prior_predictive_samples)
 
+
+
+
+
+SAVING OUTPUT from sampling
+
+# # collect inference and forecasting results
+            # results[jurisdiction]["model"] = model
+            # results[jurisdiction]["observations"] = obs
+            # results[jurisdiction]["prior_predictive_sim_samples"] = prior_p_ss
+            # results[jurisdiction][
+            #     "posterior_predictive_sim_samples"
+            # ] = post_p_ss
+            # results[jurisdiction][
+            #     "posterior_predictive_for_samples"
+            # ] = post_p_fs  # none if not forecasting
+
+PLOTTING docstrings
+
+"""
+    Basic plot function for y vs X.
+
+    Parameters
+    ----------
+    y : np.ndarray
+        Data for the y-axis.
+    X : np.ndarray
+        Data for the x-axis.
+    title : str, optional
+        Title of the plot. Defaults to "".
+    X_label : str, optional
+        Label for the x-axis. Defaults to "".
+    Y_label : str, optional
+        Label for the y-axis. Defaults to "".
+    use_log : bool, optional
+        Whether to use log-scaling on the y-axis. Defaults to False.
+    use_legend : bool, optional
+        Whether to display a legend. Defaults to False.
+    display : bool, optional
+        Whether to display the plot. Defaults to True.
+    filename : str, optional
+        Filename for saving the plot. Defaults to "delete_me".
+    save_as_img : bool, optional
+        Whether to save the plot as an image. Defaults to False.
+    save_to_pdf : bool, optional
+        Whether to return the figure for saving as a PDF. Defaults to False.
+
+    Returns
+    -------
+    None | plt.Figure
+        Returns the figure if save_to_pdf is True, otherwise returns None.
+    """
+    """
+    Utility function to format and save plots.
+
+    Parameters
+    ----------
+    axes : mpl.axes.Axes
+        The axes object to format.
+    figure : plt.Figure
+        The figure object to format and possibly save.
+    use_log : bool, optional
+        Whether to use log-scaling on the y-axis.
+        Defaults to False.
+    title : str, optional
+        Title of the plot.
+        Defaults to "".
+    ylabel : str, optional
+        Label for the y-axis.
+        Defaults to "".
+    xlabel : str, optional
+        Label for the x-axis.
+        Defaults to "".
+    use_legend : bool, optional
+        Whether to display a legend.
+        Defaults to False.
+    display : bool, optional
+        Whether to display the plot.
+        Defaults to True.
+    filename : str, optional
+        Filename for saving the plot.
+        Defaults to "delete_me".
+    save_as_img : bool, optional
+        Whether to save the plot as an image.
+        Defaults to False.
+    save_to_pdf : bool, optional
+        Whether to return the figure for saving as a PDF.
+        Defaults to False.
+
+    Returns
+    -------
+    None | plt.Figure
+        Returns the figure if save_to_pdf is True, otherwise returns None.
+    """
+def plot_prior_distributions(
+    prior_distributions: dict,
+    num_samples: int = 1000,
+    save_as_img: bool = False,
+    save_to_pdf: bool = False,
+    display: bool = True,
+) -> None:
+    """
+    Plot prior distributions and save them as images or PDF.
+
+    Parameters
+    ----------
+    prior_distributions : dict
+        Dictionary of prior distributions to plot.
+    num_samples : int, optional
+        Number of samples to draw from each distribution. Defaults to 1000.
+    save_as_img : bool, optional
+        Whether to save the plots as images. Defaults to False.
+    save_to_pdf : bool, optional
+        Whether to save the plots to a PDF. Defaults to False.
+    display : bool, optional
+        Whether to display the plots. Defaults to True.
+
+    Returns
+    -------
+    None
+    """
+    figures = []
+    for name, distribution in prior_distributions.items():
+        samples = distribution.sample(jax.random.PRNGKey(0), (num_samples,))
+        figure, axes = plt.subplots(1, 1)
+        axes.hist(samples, bins=50, density=True, alpha=0.6, color="g")
+        title = f"Prior Distribution: {name}"
+        ylabel = "Density"
+        xlabel = "Value"
+        fig = plot_utils(
+            axes=axes,
+            figure=figure,
+            title=title,
+            xlabel=xlabel,
+            ylabel=ylabel,
+            use_legend=False,
+            display=display,
+            filename=name,
+            save_as_img=save_as_img,
+            save_to_pdf=save_to_pdf,
+        )
+        if save_to_pdf:
+            figures.append(fig)
+    # change further
+    # if save_to_pdf:
+    #     from matplotlib.backends.backend_pdf import PdfPages
+    #     with PdfPages('./figures/prior_distributions.pdf') as pdf:
+    #         for fig in figures:
+    #             pdf.savefig(fig)
+    return None
+
+
+
+SAMPLE Keys
+
+dict_keys(['I0', 'I0_initialization', 'Rts', 'S_v_minus_1_over_P', 'Wt_rw_sd', 'alpha_t_coefficients', 'alpha_t_intercept', 'alphas', 'expected_hospitalizations', 'init_Wt_rv', 'latent_infections', 'nb_concentration', 'negbinom_rv', 'rw_step_rv', 'rw_step_rv_decentered', 'susceptibles'])
+dict_keys(['I0_initialization', 'Rts', 'alphas', 'expected_hospitalizations', 'latent_infections', 'negbinom_rv', 'rw_step_rv', 'susceptibles'])
+dict_keys(['I0_initialization', 'Rts', 'alphas', 'expected_hospitalizations', 'latent_infections', 'negbinom_rv', 'rw_step_rv', 'susceptibles'])
 
 SAVE run batched for later
 
