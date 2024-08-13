@@ -3,20 +3,14 @@
 # numpydoc ignore=GL08
 
 from pyrenew.process.ar import ARProcess
-from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
+from pyrenew.process.differencedprocess import DifferencedProcess
 from pyrenew.process.periodiceffect import DayOfWeekEffect, PeriodicEffect
-from pyrenew.process.rtperiodicdiff import (
-    RtPeriodicDiffProcess,
-    RtWeeklyDiffProcess,
-)
-from pyrenew.process.simplerandomwalk import SimpleRandomWalkProcess
+from pyrenew.process.randomwalk import RandomWalk
 
 __all__ = [
     "ARProcess",
-    "FirstDifferenceARProcess",
-    "SimpleRandomWalkProcess",
-    "RtPeriodicDiffProcess",
-    "RtWeeklyDiffProcess",
+    "DifferencedProcess",
+    "RandomWalk",
     "PeriodicEffect",
     "DayOfWeekEffect",
 ]
