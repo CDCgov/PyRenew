@@ -7,6 +7,7 @@ from typing import Any, NamedTuple
 
 import jax.numpy as jnp
 import numpyro
+import pyrenew.arrayutils as au
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable, SampledValue
 
@@ -21,7 +22,7 @@ class HospitalAdmissionsSample(NamedTuple):
         The infection-to-hospitalization rate. Defaults to None.
     latent_hospital_admissions : SampledValue or None
         The computed number of hospital admissions. Defaults to None.
-    day_of_week_effect_mult : SampledValue or None
+    multiplier : SampledValue or None
         The day of the week effect multiplier. Defaults to None. It
         should match the number of timepoints in the latent hospital
         admissions.
@@ -29,10 +30,10 @@ class HospitalAdmissionsSample(NamedTuple):
 
     infection_hosp_rate: SampledValue | None = None
     latent_hospital_admissions: SampledValue | None = None
-    day_of_week_effect_mult: SampledValue | None = None
+    multiplier: SampledValue | None = None
 
     def __repr__(self):
-        return f"HospitalAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, latent_hospital_admissions={self.latent_hospital_admissions}, day_of_week_effect_mult={self.day_of_week_effect_mult})"
+        return f"HospitalAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, latent_hospital_admissions={self.latent_hospital_admissions}, multiplier={self.multiplier})"
 
 
 class HospitalAdmissions(RandomVariable):
@@ -196,20 +197,16 @@ class HospitalAdmissions(RandomVariable):
 
         infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
 
-        infection_hosp_rate_t = (
-            infection_hosp_rate.value * latent_infections.value
-        )
-
         (
             infection_to_admission_interval,
             *_,
         ) = self.infection_to_admission_interval_rv(**kwargs)
 
         latent_hospital_admissions = jnp.convolve(
-            infection_hosp_rate_t,
+            infection_hosp_rate.value * latent_infections.value,
             infection_to_admission_interval.value,
             mode="full",
-        )[: infection_hosp_rate_t.shape[0]]
+        )[: latent_infections.value.shape[0]]
 
         # Applying the day of the week effect. For this we need to:
         # 1. Get the day of the week effect
@@ -232,10 +229,11 @@ class HospitalAdmissions(RandomVariable):
 
         # Replicating the day of the week effect to match the number of
         # timepoints
-        dow_effect = jnp.tile(
-            dow_effect_sampled.value,
-            (latent_hospital_admissions.size + inf_offset) // 7 + 1,
-        )[inf_offset : (latent_hospital_admissions.size + inf_offset)]
+        dow_effect = au.tile_until_n(
+            data=dow_effect_sampled.value,
+            n_timepoints=latent_hospital_admissions.size,
+            offset=inf_offset,
+        )
 
         latent_hospital_admissions = latent_hospital_admissions * dow_effect
 
@@ -256,7 +254,7 @@ class HospitalAdmissions(RandomVariable):
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
-            day_of_week_effect_mult=SampledValue(
+            multiplier=SampledValue(
                 dow_effect,
                 t_start=self.t_start,
                 t_unit=self.t_unit,

@@ -129,20 +129,14 @@ def test_admissions_sample():
     inf_sampled2 = SampledValue(jnp.ones(30))
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_2a = hosp2a(
-            latent_infections=inf_sampled2
-        ).day_of_week_effect_mult.value
+        sim_hosp_2a = hosp2a(latent_infections=inf_sampled2).multiplier.value
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_2b = hosp2b(
-            latent_infections=inf_sampled2
-        ).day_of_week_effect_mult.value
+        sim_hosp_2b = hosp2b(latent_infections=inf_sampled2).multiplier.value
 
     with numpyro.handlers.seed(rng_seed=223):
         with testing.assert_raises(ValueError):
-            hosp3b(
-                latent_infections=inf_sampled2
-            ).day_of_week_effect_mult.value
+            hosp3b(latent_infections=inf_sampled2).multiplier.value
 
     testing.assert_array_equal(
         sim_hosp_2a[2 : (sim_hosp_2b.size - 2)],

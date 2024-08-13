@@ -8,7 +8,7 @@ This document illustrates how to leverage the time-aware arrays to create a a da
 
 ## Recap: Hospital Admissions Model
 
-In the "Fitting a hospital admissions-only model" tutorial, we built a fairly complicated model that included pre-defined random variables as well as a custom random variable representing the reproductive number. As this is not the focus of this tutorial, we will not go into detail about the model's components. Instead, we will focus on the day-of-the-week effect. Yet, we still need to re-define the model's components to build the day-of-the-week effect.
+In the ["Fitting a hospital admissions-only model" tutorial](https://cdcgov.github.io/multisignal-epi-inference/tutorials/hospital_admissions_model.html){target="_blank"}, we built a fairly complicated model that included pre-defined random variables as well as a custom random variable representing the reproductive number. In this tutorial, we will focus on adding a new component: the day-of-the-week effect. We start by reproducing the model without the day-of-the-week effect:
 
 1. We load the data:
 
@@ -192,7 +192,7 @@ hosp_model.run(
     num_samples=2000,
     num_warmup=2000,
     data_observed_hosp_admissions=daily_hosp_admits,
-    rng_key=jax.random.PRNGKey(54),
+    rng_key=jax.random.key(54),
     mcmc_args=dict(progress_bar=False),
 )
 
@@ -213,7 +213,7 @@ out = hosp_model.plot_posterior(
 
 We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect. To do this, we will add two additional arguments to the latent hospital admissions random variable: `day_of_the_week_rv` (a `RandomVariable`) and `obs_data_first_day_of_the_week` (an `int` mapping days of the week from 0:6, zero being Monday). The `day_of_the_week_rv`'s sample method should return a vector of length seven; those values are then broadcasted to match the length of the dataset. Moreover, since the observed data may start in a weekday other than Monday, the `obs_data_first_day_of_the_week` argument is used to offset the day-of-the-week effect.
 
-For this example, the effect will be passed as a truncated normal distribution with a mean of 1.0 and a standard deviation of 0.5. The distribution will be truncated between 0.1 and 10.0[^note-other-examples]:
+For this example, the effect will be passed as a Dirichlet distribution with a concentration parameter of 1/7: [^note-other-examples]:
 
 [^note-other-examples]: A similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
 
@@ -224,7 +224,7 @@ from pyrenew.metaclass import DistributionalRV
 
 dayofweek_effect = DistributionalRV(
     "dayofweek_effect",
-    dist.TruncatedNormal(loc=1.0, scale=0.5, low=0.1, high=10.0).expand([7]),
+    dist.Dirichlet(concentration=1 / jnp.ones(7)),
 )
 ```
 
@@ -232,13 +232,18 @@ Now, by re-defining the latent hospital admissions random variable with the day-
 
 ```{python}
 # | label: latent-hosp-weekday
+# Figuring out the day of the week of the first observation
+import datetime as dt
+
+first_dow_in_data = dates[0].astype(dt.datetime).weekday()
+first_dow_in_data  # zero
+
 latent_hosp_wday_effect = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
     infect_hosp_rate_rv=hosp_rate,
     day_of_week_effect_rv=dayofweek_effect,
-    # As the dataset starts on October 30th, 2023 (Monday)
-    # there's no need to offset the day-of-the-week effect
-    obs_data_first_day_of_the_week=0,
+    # Concidirently, this is zero
+    obs_data_first_day_of_the_week=first_dow_in_data,
 )
 
 # New model with day-of-the-week effect
@@ -261,7 +266,7 @@ hosp_model_dow.run(
     num_samples=2000,
     num_warmup=2000,
     data_observed_hosp_admissions=daily_hosp_admits,
-    rng_key=jax.random.PRNGKey(54),
+    rng_key=jax.random.key(54),
     mcmc_args=dict(progress_bar=False),
 )
 ```
@@ -276,7 +281,7 @@ out = hosp_model_dow.plot_posterior(
 )
 ```
 
-The new model with the day-of-the-week effect can be compared to the previous model without the effect. Let's start by reproducing the figure without the day-of-the-week effect, and then plotting the new model with the effect:
+The new model with the day-of-the-week effect can be compared to the previous model without the effect. Finally, let's reproduce the figure without the day-of-the-week effect, and then plot the new model with the effect:
 
 ```{python}
 # | label: fig-output-admissions-original
