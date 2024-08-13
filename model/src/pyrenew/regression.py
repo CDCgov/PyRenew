@@ -123,13 +123,24 @@ class GLMPrediction(AbstractRegressionPrediction):
         transformed_prediction = intercept + predictor_values @ coefficients
         return self.transform.inv(transformed_prediction)
 
-    def sample(self, **kwargs) -> dict:
+    def sample(self, predictor_values: ArrayLike, **kwargs) -> dict:
         """
         Sample generalized linear model
 
         Parameters
         -----------
+        predictor_values : ArrayLike(n_predictors, n_observations)
+            Matrix of predictor variables (covariates) for the
+            regression problem. Each row should represent the
+            predictor values corresponding to an observation;
+            each column should represent a predictor variable.
+            Do not include values of 1 for the intercept;
+            these will be added automatically. Passed as the 
+            `predictor_values` argument to 
+            :meth:`GLMPrediction.predict()`
+
         **kwargs : dict
+             Additional keyword arguments. Ignored.
             kwargs containing additional arguments including predictor_values
 
         Returns
