@@ -5,7 +5,7 @@ Ensures that models created with the same or
 with different random keys behave appropriately.
 """
 
-from test.utils import get_default_rt
+from test.utils import simple_rt
 
 import jax.numpy as jnp
 import jax.random as jr
@@ -34,7 +34,7 @@ def create_test_model():  # numpydoc ignore=GL08
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation("poisson_rv")
-    rt = get_default_rt()
+    rt = simple_rt()
     model = RtInfectionsRenewalModel(
         I0_rv=I0,
         gen_int_rv=gen_int,

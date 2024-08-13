@@ -1,6 +1,6 @@
 # numpydoc ignore=GL08
 
-from test.utils import get_default_rt
+from test.utils import simple_rt
 
 import jax.numpy as jnp
 import jax.random as jr
@@ -30,7 +30,7 @@ def test_forecast():
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation(name="poisson_rv")
-    rt = get_default_rt()
+    rt = simple_rt()
 
     model = RtInfectionsRenewalModel(
         I0_rv=I0,

@@ -2,7 +2,7 @@
 # numpydoc ignore=GL08
 
 
-from test.utils import get_default_rt
+from test.utils import simple_rt
 
 import jax.numpy as jnp
 import jax.random as jr
@@ -39,7 +39,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
 
     observed_infections = PoissonObservation("poisson_rv")
 
-    rt = get_default_rt()
+    rt = simple_rt()
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -70,7 +70,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     observed_infections = PoissonObservation("possion_rv")
 
-    rt = get_default_rt()
+    rt = simple_rt()
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -111,7 +111,7 @@ def test_model_basicrenewal_no_obs_model():
 
     latent_infections = Infections()
 
-    rt = get_default_rt()
+    rt = simple_rt()
 
     model0 = RtInfectionsRenewalModel(
         gen_int_rv=gen_int,
@@ -184,7 +184,7 @@ def test_model_basicrenewal_with_obs_model():
 
     observed_infections = PoissonObservation("poisson_rv")
 
-    rt = get_default_rt()
+    rt = simple_rt()
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -233,7 +233,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
 
     observed_infections = PoissonObservation("poisson_rv")
 
-    rt = get_default_rt()
+    rt = simple_rt()
 
     model1 = RtInfectionsRenewalModel(
         I0_rv=I0,

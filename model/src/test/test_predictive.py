@@ -4,7 +4,7 @@
 Ensures that posterior predictive samples are not generated when no posterior samples are available.
 """
 
-from test.utils import get_default_rt
+from test.utils import simple_rt
 
 import jax.numpy as jnp
 import numpyro.distributions as dist
@@ -29,7 +29,7 @@ I0 = InfectionInitializationProcess(
 )
 latent_infections = Infections()
 observed_infections = PoissonObservation("poisson_rv")
-rt = get_default_rt()
+rt = simple_rt()
 
 model = RtInfectionsRenewalModel(
     I0_rv=I0,

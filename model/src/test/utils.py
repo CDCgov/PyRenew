@@ -10,10 +10,16 @@ from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
 from pyrenew.process import SimpleRandomWalkProcess
 
 
-def get_default_rt():
+def simple_rt(arg_name: str = "Rt_rv"):
     """
     Helper function to create a default Rt
     RandomVariable for testing.
+
+    Parameters
+    -----------
+    arg_name : str
+        Name assigned to the randonvariable.
+        If None, then defaults to "Rt_rv"
 
     Returns
     -------
@@ -22,7 +28,7 @@ def get_default_rt():
        init value and step size priors
     """
     return TransformedRandomVariable(
-        "Rt_rv",
+        arg_name,
         base_rv=SimpleRandomWalkProcess(
             name="log_rt",
             step_rv=DistributionalRV(
