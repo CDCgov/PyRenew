@@ -219,11 +219,11 @@ Now we can fit the model to the observed data:
 ```{python}
 # | label: fit the model
 my_model.run(
-    num_warmup=750,
+    num_warmup=500,
     num_samples=500,
     rng_key=jax.random.key(200),
     data_observed_hospital_admissions=data_observed_hospital_admissions,
-    mcmc_args=dict(num_chains=2),
+    mcmc_args=dict(num_chains=4),
 )
 ```
 
