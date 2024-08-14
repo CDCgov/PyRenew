@@ -79,7 +79,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         coefficient_suffix="_coefficients",
     ) -> None:
         """
-        Default class constructor for GLMPredictions
+        Default class constructor for GLMPrediction
 
         Parameters
         ----------
