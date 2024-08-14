@@ -7,11 +7,13 @@ Helper classes for regression problems
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
+from typing import NamedTuple
 
 import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
 from jax.typing import ArrayLike
+from pyrenew.metaclass import SampledValue
 
 
 class AbstractRegressionPrediction(metaclass=ABCMeta):  # numpydoc ignore=GL08
@@ -32,6 +34,35 @@ class AbstractRegressionPrediction(metaclass=ABCMeta):  # numpydoc ignore=GL08
         pass
 
 
+class GLMPredictionSample(NamedTuple):
+    """
+    A container for holding the output from `GLMPrediction.sample()`.
+
+    Attributes
+    ----------
+    prediction : SampledValue | None, optional
+        Transformed predictions. Defaults to None.
+    intercept : SampledValue | None, optional
+        Sampled intercept from intercept priors.
+        Defaults to None.
+    coefficients : SampledValue | None, optional
+        Prediction coefficients generated
+        from coefficients priors. Defaults to None.
+    """
+
+    prediction: SampledValue | None = None
+    intercept: SampledValue | None = None
+    coefficients: SampledValue | None = None
+
+    def __repr__(self):
+        return (
+            f"GLMPredictionSample("
+            f"prediction={self.prediction}, "
+            f"intercept={self.intercept}, "
+            f"coefficients={self.coefficients})"
+        )
+
+
 class GLMPrediction(AbstractRegressionPrediction):
     """
     Generalized linear model regression
@@ -48,12 +79,12 @@ class GLMPrediction(AbstractRegressionPrediction):
         coefficient_suffix="_coefficients",
     ) -> None:
         """
-        Default class constructor for GLMObservation
+        Default class constructor for GLMPredictions
 
         Parameters
         ----------
         name : str
-            The name of the observation process,
+            The name of the prediction process,
             which will be used to name the constituent
             sampled parameters in calls to `numpyro.sample`
 
@@ -123,7 +154,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         transformed_prediction = intercept + predictor_values @ coefficients
         return self.transform.inv(transformed_prediction)
 
-    def sample(self, predictor_values: ArrayLike, **kwargs) -> dict:
+    def sample(self, predictor_values: ArrayLike) -> dict:
         """
         Sample generalized linear model
 
@@ -135,19 +166,13 @@ class GLMPrediction(AbstractRegressionPrediction):
             predictor values corresponding to an observation;
             each column should represent a predictor variable.
             Do not include values of 1 for the intercept;
-            these will be added automatically. Passed as the 
-            `predictor_values` argument to 
+            these will be added automatically. Passed as the
+            `predictor_values` argument to
             :meth:`GLMPrediction.predict()`
-
-        **kwargs : dict
-             Additional keyword arguments. Ignored.
-            kwargs containing additional arguments including predictor_values
 
         Returns
         -------
-        dict
-            A dictionary containing transformed predictions, and
-            the intercept and coefficients sample distributions.
+        GLMPredictionSample
         """
         intercept = numpyro.sample(
             self.name + self.intercept_suffix, self.intercept_prior
@@ -155,13 +180,12 @@ class GLMPrediction(AbstractRegressionPrediction):
         coefficients = numpyro.sample(
             self.name + self.coefficient_suffix, self.coefficient_priors
         )
-
-        predictor_values = kwargs.get("predictor_values")
         prediction = self.predict(intercept, coefficients, predictor_values)
-        return dict(
-            prediction=prediction,
-            intercept=intercept,
-            coefficients=coefficients,
+
+        return GLMPredictionSample(
+            prediction=SampledValue(prediction),
+            intercept=SampledValue(intercept),
+            coefficients=SampledValue(coefficients),
         )
 
     def __call__(self, **kwargs):

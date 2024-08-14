@@ -10,6 +10,7 @@ import numpyro.distributions as dist
 import pyrenew.regression as r
 import pyrenew.transformation as t
 from numpy.testing import assert_array_almost_equal
+from pyrenew.metaclass import SampledValue
 
 
 def test_glm_prediction():
@@ -59,19 +60,16 @@ def test_glm_prediction():
     with numpyro.handlers.seed(rng_seed=5):
         preds = glm_pred(predictor_values=predictor_values)
 
-    assert isinstance(preds, dict)
-
     ## check prediction output
     ## is of expected type and shape
-    assert "prediction" in preds.keys()
-    assert isinstance(preds["prediction"], jnp.ndarray)
-    assert preds["prediction"].shape[0] == predictor_values.shape[0]
+    assert isinstance(preds.prediction, SampledValue)
+    assert preds.prediction.value.shape[0] == predictor_values.shape[0]
 
     ## check coeffficients
-    assert "coefficients" in preds.keys()
+    assert isinstance(preds.coefficients, SampledValue)
 
     # check results agree with manual calculation
     assert_array_almost_equal(
-        preds["prediction"],
-        preds["intercept"] + predictor_values @ preds["coefficients"],
+        preds.prediction.value,
+        preds.intercept.value + predictor_values @ preds.coefficients.value,
     )
