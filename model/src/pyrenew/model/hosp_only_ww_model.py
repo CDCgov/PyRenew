@@ -3,6 +3,7 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as transformation
+from pyrenew.arrayutils import tile_until_n
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     InfectionInitializationProcess,
@@ -129,6 +130,8 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             ),
         )
 
+        # Should implement my own Rt Weekly Diff since this one seems broken.
+
         rtu = rt_proc.sample(duration=n_datapoints)
         generation_interval_pmf = self.generation_interval_pmf_rv()
 
@@ -178,9 +181,8 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         ]  # this is only applied after the hospital_admissions are generated, not to all the latent infectios
 
         hosp_wday_effect_raw = self.hosp_wday_effect_rv()[0].value
-        hosp_wday_effect = jnp.tile(hosp_wday_effect_raw, n_weeks)[
-            :n_datapoints
-        ]
+        hosp_wday_effect = tile_until_n(hosp_wday_effect_raw, n_datapoints)
+
         inf_to_hosp = self.inf_to_hosp_rv()[0].value
 
         potential_latent_hospital_admissions = jnp.convolve(
