@@ -154,7 +154,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         transformed_prediction = intercept + predictor_values @ coefficients
         return self.transform.inv(transformed_prediction)
 
-    def sample(self, predictor_values: ArrayLike) -> dict:
+    def sample(self, predictor_values: ArrayLike) -> GLMPredictionSample:
         """
         Sample generalized linear model
 
@@ -188,11 +188,11 @@ class GLMPrediction(AbstractRegressionPrediction):
             coefficients=SampledValue(coefficients),
         )
 
-    def __call__(self, **kwargs):
+    def __call__(self, *args, **kwargs):
         """
         Alias for `sample()`.
         """
-        return self.sample(**kwargs)
+        return self.sample(*args, **kwargs)
 
     def __repr__(self):
         return "GLMPrediction " + str(self.name)

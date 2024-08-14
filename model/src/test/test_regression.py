@@ -65,8 +65,9 @@ def test_glm_prediction():
     assert isinstance(preds.prediction, SampledValue)
     assert preds.prediction.value.shape[0] == predictor_values.shape[0]
 
-    ## check coeffficients
+    ## check coeffficients and intercept
     assert isinstance(preds.coefficients, SampledValue)
+    assert isinstance(preds.intercept, SampledValue)
 
     # check results agree with manual calculation
     assert_array_almost_equal(
