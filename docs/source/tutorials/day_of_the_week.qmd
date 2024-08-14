@@ -65,7 +65,7 @@ hosp_rate = metaclass.DistributionalRV(
 
 latent_hosp = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
-    infect_hosp_rate_rv=hosp_rate,
+    infection_hospitalization_ratio_rv=hosp_rate,
 )
 
 from pyrenew import model, process, observation, metaclass, transformation
@@ -240,7 +240,7 @@ first_dow_in_data  # zero
 
 latent_hosp_wday_effect = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
-    infect_hosp_rate_rv=hosp_rate,
+    infection_hospitalization_ratio_rv=hosp_rate,
     day_of_week_effect_rv=dayofweek_effect,
     # Concidirently, this is zero
     obs_data_first_day_of_the_week=first_dow_in_data,

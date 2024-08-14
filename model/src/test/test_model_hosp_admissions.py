@@ -130,7 +130,7 @@ def test_model_hosp_no_timepoints_or_observations():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infect_hosp_rate_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR", dist=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
@@ -195,7 +195,7 @@ def test_model_hosp_both_timepoints_and_observations():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infect_hosp_rate_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR", dist=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
@@ -266,7 +266,7 @@ def test_model_hosp_no_obs_model():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infect_hosp_rate_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR",
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
@@ -377,7 +377,7 @@ def test_model_hosp_with_obs_model():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infect_hosp_rate_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR",
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
@@ -468,8 +468,8 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         day_of_week_effect_rv=weekday,
-        hosp_report_prob_rv=hosp_report_prob_dist,
-        infect_hosp_rate_rv=DistributionalRV(
+        hospitalization_reporting_ratio_rv=hosp_report_prob_dist,
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR", dist=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
@@ -576,8 +576,8 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         day_of_week_effect_rv=weekday,
-        hosp_report_prob_rv=hosp_report_prob_dist,
-        infect_hosp_rate_rv=DistributionalRV(
+        hospitalization_reporting_ratio_rv=hosp_report_prob_dist,
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR",
             dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),

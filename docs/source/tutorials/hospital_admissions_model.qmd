@@ -151,7 +151,7 @@ hosp_rate = metaclass.DistributionalRV(
 
 latent_hosp = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
-    infect_hosp_rate_rv=hosp_rate,
+    infection_hospitalization_ratio_rv=hosp_rate,
 )
 ```
 

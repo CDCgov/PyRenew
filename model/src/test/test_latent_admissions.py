@@ -78,7 +78,7 @@ def test_admissions_sample():
 
     hosp1 = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infect_hosp_rate_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR", dist=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
@@ -107,21 +107,21 @@ def test_admissions_sample():
     )
     hosp2a = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp2,
-        infect_hosp_rate_rv=DeterministicVariable("ihr", 1),
+        infection_hospitalization_ratio_rv=DeterministicVariable("ihr", 1),
         day_of_week_effect_rv=dow_effect,
         obs_data_first_day_of_the_week=0,
     )
 
     hosp2b = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp2,
-        infect_hosp_rate_rv=DeterministicVariable("ihr", 1),
+        infection_hospitalization_ratio_rv=DeterministicVariable("ihr", 1),
         day_of_week_effect_rv=dow_effect,
         obs_data_first_day_of_the_week=2,
     )
 
     hosp3b = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp2,
-        infect_hosp_rate_rv=DeterministicVariable("ihr", 1),
+        infection_hospitalization_ratio_rv=DeterministicVariable("ihr", 1),
         day_of_week_effect_rv=dow_effect_wrong,
         obs_data_first_day_of_the_week=2,
     )

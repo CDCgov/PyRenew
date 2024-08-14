@@ -69,9 +69,9 @@ class HospitalAdmissions(RandomVariable):
     def __init__(
         self,
         infection_to_admission_interval_rv: RandomVariable,
-        infect_hosp_rate_rv: RandomVariable,
+        infection_hospitalization_ratio_rv: RandomVariable,
         day_of_week_effect_rv: RandomVariable | None = None,
-        hosp_report_prob_rv: RandomVariable | None = None,
+        hospitalization_reporting_ratio_rv: RandomVariable | None = None,
         obs_data_first_day_of_the_week: int = 0,
     ) -> None:
         """
@@ -82,13 +82,13 @@ class HospitalAdmissions(RandomVariable):
         infection_to_admission_interval_rv : RandomVariable
             pmf for reporting (informing) hospital admissions (see
             pyrenew.observations.Deterministic).
-        infect_hosp_rate_rv : RandomVariable
+        infection_hospitalization_ratio_rv : RandomVariable
             Infection to hospitalization rate random variable.
         day_of_week_effect_rv : RandomVariable, optional
             Day of the week effect. Should return a SampledValue with 7
             values. Defaults to a deterministic variable with
             jax.numpy.ones(7) (no effect).
-        hosp_report_prob_rv  : RandomVariable, optional
+        hospitalization_reporting_ratio_rv  : RandomVariable, optional
             Random variable for the hospital admission reporting
             probability. Defaults to 1 (full reporting).
         obs_data_first_day_of_the_week : int, optional
@@ -105,33 +105,37 @@ class HospitalAdmissions(RandomVariable):
             day_of_week_effect_rv = DeterministicVariable(
                 name="weekday_effect", value=jnp.ones(7)
             )
-        if hosp_report_prob_rv is None:
-            hosp_report_prob_rv = DeterministicVariable(
+        if hospitalization_reporting_ratio_rv is None:
+            hospitalization_reporting_ratio_rv = DeterministicVariable(
                 name="hosp_report_prob", value=1.0
             )
 
         HospitalAdmissions.validate(
             infection_to_admission_interval_rv,
-            infect_hosp_rate_rv,
+            infection_hospitalization_ratio_rv,
             day_of_week_effect_rv,
-            hosp_report_prob_rv,
+            hospitalization_reporting_ratio_rv,
             obs_data_first_day_of_the_week,
         )
 
         self.infection_to_admission_interval_rv = (
             infection_to_admission_interval_rv
         )
-        self.infect_hosp_rate_rv = infect_hosp_rate_rv
+        self.infection_hospitalization_ratio_rv = (
+            infection_hospitalization_ratio_rv
+        )
         self.day_of_week_effect_rv = day_of_week_effect_rv
-        self.hosp_report_prob_rv = hosp_report_prob_rv
+        self.hospitalization_reporting_ratio_rv = (
+            hospitalization_reporting_ratio_rv
+        )
         self.obs_data_first_day_of_the_week = obs_data_first_day_of_the_week
 
     @staticmethod
     def validate(
         infection_to_admission_interval_rv: Any,
-        infect_hosp_rate_rv: Any,
+        infection_hospitalization_ratio_rv: Any,
         day_of_week_effect_rv: Any,
-        hosp_report_prob_rv: Any,
+        hospitalization_reporting_ratio_rv: Any,
         obs_data_first_day_of_the_week: Any,
     ) -> None:
         """
@@ -143,11 +147,11 @@ class HospitalAdmissions(RandomVariable):
         infection_to_admission_interval_rv : Any
             Possibly incorrect input for the infection to hospitalization
             interval distribution.
-        infect_hosp_rate_rv : Any
+        infection_hospitalization_ratio_rv : Any
             Possibly incorrect input for infection to hospitalization rate distribution.
         day_of_week_effect_rv : Any
             Possibly incorrect input for day of the week effect.
-        hosp_report_prob_rv : Any
+        hospitalization_reporting_ratio_rv : Any
             Possibly incorrect input for distribution or fixed value for the
             hospital admission reporting probability.
         obs_data_first_day_of_the_week : Any
@@ -166,9 +170,9 @@ class HospitalAdmissions(RandomVariable):
             the day of the week is not within the valid range.
         """
         assert isinstance(infection_to_admission_interval_rv, RandomVariable)
-        assert isinstance(infect_hosp_rate_rv, RandomVariable)
+        assert isinstance(infection_hospitalization_ratio_rv, RandomVariable)
         assert isinstance(day_of_week_effect_rv, RandomVariable)
-        assert isinstance(hosp_report_prob_rv, RandomVariable)
+        assert isinstance(hospitalization_reporting_ratio_rv, RandomVariable)
         assert isinstance(obs_data_first_day_of_the_week, int)
         assert 0 <= obs_data_first_day_of_the_week <= 6
 
@@ -195,7 +199,9 @@ class HospitalAdmissions(RandomVariable):
         HospitalAdmissionsSample
         """
 
-        infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
+        infection_hosp_rate, *_ = self.infection_hospitalization_ratio_rv(
+            **kwargs
+        )
 
         (
             infection_to_admission_interval,
@@ -221,11 +227,12 @@ class HospitalAdmissions(RandomVariable):
             )
 
         # Identifying the offset
-        inf_offset = (
-            latent_infections.t_start % 7
-            if latent_infections.t_start is not None
-            else 0
-        ) + self.obs_data_first_day_of_the_week
+        if latent_infections.t_start is None:
+            inf_offset = 0
+        else:
+            inf_offset = inf_offset % 7
+
+        inf_offset = inf_offset + self.obs_data_first_day_of_the_week
 
         # Replicating the day of the week effect to match the number of
         # timepoints
@@ -240,7 +247,7 @@ class HospitalAdmissions(RandomVariable):
         # Applying reporting probability
         latent_hospital_admissions = (
             latent_hospital_admissions
-            * self.hosp_report_prob_rv(**kwargs)[0].value
+            * self.hospitalization_reporting_ratio_rv(**kwargs)[0].value
         )
 
         numpyro.deterministic(
