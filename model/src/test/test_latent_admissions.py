@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
-from test.utils import simple_rt
-
 import jax.numpy as jnp
 import numpy.testing as testing
 import numpyro
@@ -26,7 +24,19 @@ def test_admissions_sample():
 
     # Generating Rt and Infections to compute the hospital admissions
 
-    rt = simple_rt()
+    rt = TransformedRandomVariable(
+        name="Rt_rv",
+        base_rv=SimpleRandomWalkProcess(
+            name="log_rt",
+            step_rv=DistributionalRV(
+                name="rw_step_rv", dist=dist.Normal(0, 0.025)
+            ),
+            init_rv=DistributionalRV(
+                name="init_log_rt", dist=dist.Normal(0, 0.2)
+            ),
+        ),
+        transforms=t.ExpTransform(),
+    )
 
     with numpyro.handlers.seed(rng_seed=223):
         sim_rt = rt(n_steps=30)[0].value
@@ -132,3 +142,6 @@ def test_admissions_sample():
         sim_hosp_2a[2 : (sim_hosp_2b.size - 2)],
         sim_hosp_2b[: (sim_hosp_2b.size - 4)],
     )
+
+
+test_admissions_sample()
