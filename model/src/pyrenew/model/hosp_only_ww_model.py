@@ -43,8 +43,10 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             InitializeInfectionsExponentialGrowth(
                 n_initialization_points,
                 initialization_rate_rv,
-                t_pre_init=0,
-                # to match the stan model, we should have t_pre_init=-n_initialization_points, but this works better
+                # t_pre_init=0,
+                # to match the stan model, we should have
+                t_pre_init=-n_initialization_points,
+                # but this works better
             ),
             t_unit=1,
         )
@@ -188,7 +190,10 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         )[:n_datapoints]
 
         latent_hospital_admissions = (
-            potential_latent_hospital_admissions * ihr * hosp_wday_effect
+            potential_latent_hospital_admissions
+            * ihr
+            * hosp_wday_effect
+            * self.state_pop
         )
 
         hospital_admission_obs_rv = NegativeBinomialObservation(
