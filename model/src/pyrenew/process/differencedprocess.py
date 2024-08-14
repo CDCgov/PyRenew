@@ -65,7 +65,9 @@ class DifferencedProcess(RandomVariable):
         self.fundamental_process = fundamental_process
         super().__init__(name=name, **kwargs)
 
-    def integrate(self, init_diffs: ArrayLike, highest_order_diffs: ArrayLike):
+    def integrate(
+        self, init_diff_vals: ArrayLike, highest_order_diff_vals: ArrayLike
+    ):
         """
         Integrate (de-difference) the differenced process,
         obtaining the process values X(0), X(1), ... X(t)
@@ -76,10 +78,10 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
-        init_diffs : ArrayLike
+        init_diff_vals : ArrayLike
             Values of X(0), X^1(0), X^2(0) ... X^(n-1)(0).
 
-        highest_order_diffs : ArrayLike
+        highest_order_diff_vals : ArrayLike
             Array of differences at the highest of differencing,
             i.e. the order of the overall process.
 
@@ -87,27 +89,29 @@ class DifferencedProcess(RandomVariable):
         -------
         The integrated (de-differenced) sequence of values.
         """
-        if not init_diffs.size == self.differencing_order:
+        if not init_diff_vals.size == self.differencing_order:
             raise ValueError(
                 "Must have exactly as many "
                 "initial difference values as "
                 "the differencing order, given "
                 "in the sequence X(0), X^1(0), etc"
-                f"got {init_diffs.size} values "
+                f"got {init_diff_vals.size} values "
                 "for a process of order "
                 f"{self.differencing_order}"
             )
 
-        def _integrate_one_step(i, val):
+        def _integrate_one_step(diffs, init):
             # numpydoc ignore=GL08
-            return jnp.hstack([init_diffs[-i] + jnp.cumsum(val)])
+            new_diffs = init + jnp.cumsum(diffs)
+            return new_diffs, None
 
-        return jax.lax.fori_loop(
-            0,
-            self.differencing_order,
+        integerated, _ = jax.lax.scan(
             _integrate_one_step,
-            init_val=highest_order_diffs,
+            init=jnp.pad(highest_order_diff_vals, (1, 0)),
+            xs=jnp.flip(init_diff_vals)[1:],
         )
+
+        return integerated
 
     def sample(
         self,
