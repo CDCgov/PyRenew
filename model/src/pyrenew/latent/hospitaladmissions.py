@@ -230,7 +230,7 @@ class HospitalAdmissions(RandomVariable):
         if latent_infections.t_start is None:
             inf_offset = 0
         else:
-            inf_offset = inf_offset
+            inf_offset = latent_infections.t_start
 
         inf_offset = (inf_offset + self.obs_data_first_day_of_the_week) % 7
 
