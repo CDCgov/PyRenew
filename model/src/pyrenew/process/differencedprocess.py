@@ -42,7 +42,6 @@ class DifferencedProcess(RandomVariable):
             of change), 2 a process on the
             2nd differences (rate of change of
             the rate of change), et cetera.
-
         **kwargs :
             Additional keyword arguments passed to
             the parent class constructor.
@@ -70,20 +69,21 @@ class DifferencedProcess(RandomVariable):
     ):
         """
         Integrate (de-difference) the differenced process,
-        obtaining the process values X(0), X(1), ... X(t)
+        obtaining the process values X(t=0), X(t=1), ... X(t)
         from the n-th differences and a set of initial process /
-        difference values X(0), X^1(0), X^2(0), ... X^(n-1)(0),
-        where X^k(0) is the value of the n-th difference
-        at the starting point of the process.
+        difference values X(t=0), X^1(t=1), X^2(t=2), ...
+        X^(n-1)(t=n-1), where X^k(t) is the value of the n-th
+        differenc at index t of the process.
 
         Parameters
         ----------
         init_diff_vals : ArrayLike
-            Values of X(0), X^1(0), X^2(0) ... X^(n-1)(0).
+            Values of X(t=0), X^1(t=1), X^2(t=2) ... X^(n-1)(t=n-1).
 
         highest_order_diff_vals : ArrayLike
             Array of differences at the highest of differencing,
-            i.e. the order of the overall process.
+            i.e. the order of the overall process, starting
+            with X^n(t=n)
 
         Returns
         -------
@@ -94,24 +94,30 @@ class DifferencedProcess(RandomVariable):
                 "Must have exactly as many "
                 "initial difference values as "
                 "the differencing order, given "
-                "in the sequence X(0), X^1(0), etc"
+                "in the sequence X(t=0), X^1(t=1), etc"
                 f"got {init_diff_vals.size} values "
                 "for a process of order "
                 f"{self.differencing_order}"
             )
 
-        def _integrate_one_step(diffs, init):
+        def _integrate_one_step(diffs, scanned):
             # numpydoc ignore=GL08
-            new_diffs = init + jnp.cumsum(diffs)
-            return new_diffs, None
+            order, init = scanned
+            new_diffs = jnp.cumsum(diffs).at[order].set(init)
+            return (new_diffs, None)
 
-        integerated, _ = jax.lax.scan(
+        integrated, _ = jax.lax.scan(
             _integrate_one_step,
-            init=jnp.pad(highest_order_diff_vals, (1, 0)),
-            xs=jnp.flip(init_diff_vals)[1:],
+            init=jnp.pad(
+                highest_order_diff_vals, (self.differencing_order, 0)
+            ),
+            xs=(
+                jnp.flip(jnp.arange(self.differencing_order)),
+                jnp.flip(init_diff_vals),
+            ),
         )
 
-        return integerated
+        return integrated
 
     def sample(
         self,

@@ -2,8 +2,10 @@
 Unit tests for the DifferencedProcess class
 """
 
+import jax
 import jax.numpy as jnp
 import pytest
+from numpy.testing import assert_array_almost_equal
 from pyrenew.deterministic import NullVariable
 from pyrenew.process import DifferencedProcess
 
@@ -96,3 +98,25 @@ def test_integrator_init_validation(order, diffs):
     ):
         proc.integrate(inits_long, diffs)
     proc.integrate(inits_correct, diffs)
+
+
+@pytest.mark.parametrize(
+    ["order", "n_diffs"], [[1, 250], [2, 40], [3, 10], [4, 10], [5, 5]]
+)
+def test_integrator_correctness(order, n_diffs):
+    """
+    Test that the scan-based integrate function built in
+    to DifferencedProcess works equivalently
+    to a manual implementation.
+    """
+    diffs = jax.random.normal(key=jax.random.key(54), shape=(n_diffs,))
+    inits = jax.random.normal(key=jax.random.key(45), shape=(order,))
+    result_manual = diffs
+    for init in jnp.flip(inits):
+        result_manual = jnp.hstack([init, jnp.cumsum(result_manual)])
+
+    proc = DifferencedProcess(
+        "test_process", fundamental_process=None, differencing_order=order
+    )
+    result_proc1 = proc.integrate(inits, diffs)
+    assert_array_almost_equal(result_manual, result_proc1, decimal=5)
