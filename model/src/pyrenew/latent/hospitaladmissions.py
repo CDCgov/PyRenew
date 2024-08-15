@@ -102,6 +102,7 @@ class HospitalAdmissions(RandomVariable):
             infect_hosp_rate_rv,
             day_of_week_effect_rv,
             hosp_report_prob_rv,
+            infection_to_admission_interval_rv,
         )
 
         self.infect_hosp_rate_rv = infect_hosp_rate_rv
@@ -110,17 +111,18 @@ class HospitalAdmissions(RandomVariable):
         self.infection_to_admission_interval_rv = (
             infection_to_admission_interval_rv
         )
-        # Why isn't infection_to_admission_interval_rv validated?
 
     @staticmethod
     def validate(
         infect_hosp_rate_rv: Any,
         day_of_week_effect_rv: Any,
         hosp_report_prob_rv: Any,
+        infection_to_admission_interval_rv: Any,
     ) -> None:
         """
-        Validates that the IHR, weekday effects, and probability of being
-        reported hospitalized distributions are RandomVariable types
+        Validates that the IHR, weekday effects, probability of being
+        reported hospitalized distributions, and infection to
+        hospital admissions reporting delay pmf are RandomVariable types
 
         Parameters
         ----------
@@ -131,6 +133,9 @@ class HospitalAdmissions(RandomVariable):
         hosp_report_prob_rv : Any
             Possibly incorrect input for distribution or fixed value for the
             hospital admission reporting probability.
+        infection_to_admission_interval_rv : Any
+            Possibly incorrect input for hospital admissions
+            reporting delay interval pmf.
 
         Returns
         -------
@@ -145,6 +150,7 @@ class HospitalAdmissions(RandomVariable):
         assert isinstance(infect_hosp_rate_rv, RandomVariable)
         assert isinstance(day_of_week_effect_rv, RandomVariable)
         assert isinstance(hosp_report_prob_rv, RandomVariable)
+        assert isinstance(infection_to_admission_interval_rv, RandomVariable)
 
         return None
 
@@ -171,7 +177,9 @@ class HospitalAdmissions(RandomVariable):
 
         infection_hosp_rate, *_ = self.infect_hosp_rate_rv(**kwargs)
 
-        infection_hosp_rate_t = infection_hosp_rate.value * latent_infections
+        latent_hospital_admissions_raw = (
+            infection_hosp_rate.value * latent_infections
+        )
 
         (
             infection_to_admission_interval,
@@ -179,10 +187,10 @@ class HospitalAdmissions(RandomVariable):
         ) = self.infection_to_admission_interval_rv(**kwargs)
 
         latent_hospital_admissions = jnp.convolve(
-            infection_hosp_rate_t,
+            latent_hospital_admissions_raw,
             infection_to_admission_interval.value,
             mode="full",
-        )[: infection_hosp_rate_t.shape[0]]
+        )[: latent_hospital_admissions_raw.shape[0]]
 
         # Applying the day of the week effect
         latent_hospital_admissions = (
