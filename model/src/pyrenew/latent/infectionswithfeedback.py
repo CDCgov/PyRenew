@@ -4,7 +4,6 @@
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import numpyro
 import pyrenew.arrayutils as au
 import pyrenew.latent.infection_functions as inf
 from numpy.typing import ArrayLike
