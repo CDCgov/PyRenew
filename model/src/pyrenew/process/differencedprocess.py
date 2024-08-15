@@ -81,9 +81,9 @@ class DifferencedProcess(RandomVariable):
             Values of X(t=0), X^1(t=1), X^2(t=2) ... X^(n-1)(t=n-1).
 
         highest_order_diff_vals : ArrayLike
-            Array of differences at the highest of differencing,
-            i.e. the order of the overall process, starting
-            with X^n(t=n)
+            Array of differences at the highest order of
+            differencing, i.e. the order of the overall process,
+            starting with X^n(t=n)
 
         Returns
         -------
@@ -103,7 +103,7 @@ class DifferencedProcess(RandomVariable):
         def _integrate_one_step(diffs, scanned):
             # numpydoc ignore=GL08
             order, init = scanned
-            new_diffs = jnp.cumsum(diffs).at[order].set(init)
+            new_diffs = jnp.cumsum(diffs.at[order].set(init))
             return (new_diffs, None)
 
         integrated, _ = scan(
@@ -121,7 +121,8 @@ class DifferencedProcess(RandomVariable):
 
     def sample(
         self,
-        init_vals,
+        init_vals: ArrayLike,
+        *args,
         **kwargs,
     ) -> tuple:
         """
@@ -129,6 +130,14 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
+        init_vals : ArrayLike
+            initial values for the differenced process,
+            passed as the init_diff_vals to DifferencedProcess.integrate
+
+        *args :
+           Additional positional arguments passed to
+           self.fundamental_process.sample()
+
         **kwargs : dict, optional
             Keyword arguments passed to self.fundamental_process.sample()
 
@@ -138,11 +147,13 @@ class DifferencedProcess(RandomVariable):
             Whose value entry is a single array representing the
             undifferenced timeseries
         """
-        diffs = self.fundamental_process.sample(**kwargs)
-        return SampledValue(
-            value=self.integrate(init_vals, diffs),
-            t_start=self.t_start,
-            t_unit=self.t_unit,
+        diffs, *_ = self.fundamental_process.sample(*args, **kwargs)
+        return (
+            SampledValue(
+                value=self.integrate(init_vals, diffs.value),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
         )
 
     @staticmethod

@@ -39,7 +39,8 @@ class IIDRamdomSequence(RandomVariable):
         -------
         None
         """
-        super().__init__(name=name, **kwargs)
+        super().__init__(**kwargs)
+        self.name = name
         self.element_dist = element_dist
 
     def sample(self, n_elements: int, vectorize: bool = False) -> tuple:
@@ -69,22 +70,22 @@ class IIDRamdomSequence(RandomVariable):
 
             def transition(x_prev, _):
                 # numpydoc ignore=GL08
-                el, *_ = numpyro.sample(self.name, self.element_dist)
+                el = numpyro.sample(self.name, self.element_dist)
                 return el, el
 
             _, result = scan(
                 transition,
-                init=jnp.array(),
+                init=jnp.zeros(self.element_dist.batch_shape),
                 xs=jnp.arange(n_elements),
             )
         else:
-            x = numpyro.sample(
+            result = numpyro.sample(
                 self.name, self.element_dist.expand((n_elements,))
             )
 
         return (
             SampledValue(
-                x,
+                result,
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
@@ -133,7 +134,8 @@ class RandomWalk(RandomVariable):
         -------
         None
         """
-        super().__init__(name, **kwargs)
+        super().__init__(**kwargs)
+        self.name = name
         self.step_rv = step_rv
 
     def sample(
