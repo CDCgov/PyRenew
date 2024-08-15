@@ -213,19 +213,39 @@ out = hosp_model.plot_posterior(
 
 We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect. To do this, we will add two additional arguments to the latent hospital admissions random variable: `day_of_the_week_rv` (a `RandomVariable`) and `obs_data_first_day_of_the_week` (an `int` mapping days of the week from 0:6, zero being Monday). The `day_of_the_week_rv`'s sample method should return a vector of length seven; those values are then broadcasted to match the length of the dataset. Moreover, since the observed data may start in a weekday other than Monday, the `obs_data_first_day_of_the_week` argument is used to offset the day-of-the-week effect.
 
-For this example, the effect will be passed as a Dirichlet distribution with a concentration parameter of 1/7: [^note-other-examples]:
+For this example, the effect will be passed as a scaled Dirichlet distribution[^note-other-examples]:
 
 [^note-other-examples]: A similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
 
 ```{python}
 # | label: weekly-effect
 # Initializing the RV.
-from pyrenew.metaclass import DistributionalRV
+from pyrenew.metaclass import RandomVariable, SampledValue
 
-dayofweek_effect = DistributionalRV(
-    "dayofweek_effect",
-    dist.Dirichlet(concentration=1 / jnp.ones(7)),
-)
+
+class MyDOWEffect(RandomVariable):
+    def __init__(self):
+        self.rv = dist.Dirichlet(concentration=jnp.ones(7))
+
+    def validate(self):
+        pass
+
+    def sample(self, **kwargs) -> tuple:
+
+        res = (
+            numpyro.sample(
+                "dayofweek_effect_simplex",
+                self.rv,
+            )
+            * 7
+        )
+
+        numpyro.deterministic("dayofweek_effect", res)
+
+        return (SampledValue(res),)
+
+
+dayofweek_effect = MyDOWEffect()
 ```
 
 Now, by re-defining the latent hospital admissions random variable with the day-of-the-week effect, we can build a model that includes this effect:
@@ -279,6 +299,8 @@ As a result, we can see the posterior distribution of our novel day-of-the-week 
 out = hosp_model_dow.plot_posterior(
     var="dayofweek_effect", ylab="Day of the Week Effect", samples=500
 )
+
+sp = hosp_model_dow.spread_draws(["dayofweek_effect"])
 ```
 
 The new model with the day-of-the-week effect can be compared to the previous model without the effect. Finally, let's reproduce the figure without the day-of-the-week effect, and then plot the new model with the effect:
