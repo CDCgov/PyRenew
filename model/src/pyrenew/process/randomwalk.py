@@ -2,9 +2,101 @@
 # numpydoc ignore=GL08
 
 import jax.numpy as jnp
+import numpyro
 import numpyro.distributions as dist
 from numpyro.contrib.control_flow import scan
 from pyrenew.metaclass import DistributionalRV, RandomVariable, SampledValue
+from pyrenew.process.differencedprocess import DifferencedProcess
+
+
+class IIDRamdomSequence(RandomVariable):
+    """
+    Class for constructing random sequence with
+    independent and identically distributed elements
+    and an arbitrary next element distribution.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        element_dist: dist.Distribution,
+        **kwargs,
+    ) -> None:
+        """
+        Default constructor
+
+        Parameters
+        ----------
+        name : str
+            A name for the random variable, used to
+            name sites within it in :fun:`numpyro.sample()`
+            calls.
+        element_dist : Distribution
+            numpyro.distributions.Distribution representing
+            the distribution of elements in the sequence.
+
+        Returns
+        -------
+        None
+        """
+        super().__init__(name=name, **kwargs)
+        self.element_dist = element_dist
+
+    def sample(self, n_elements: int, vectorize: bool = False) -> tuple:
+        """
+        Sample an IID random sequence.
+
+        Parameters
+        ----------
+        n_elements : int
+            Length of the sequence to sample.
+
+        vectorize: bool
+            Sample vectorized? If True, use
+            :meth:`dist.Distribution.expand()`,
+            if False use
+            :fun:`numpyro.contrib.control_flow.scan`.
+            Default False.
+
+        Returns
+        -------
+        SampledValue
+            Whose value is an array of n_elements
+            samples from :meth:`self.element_rv.sample()`
+        """
+
+        if not vectorize:
+
+            def transition(x_prev, _):
+                # numpydoc ignore=GL08
+                el, *_ = numpyro.sample(self.name, self.element_dist)
+                return el, el
+
+            _, result = scan(
+                transition,
+                init=jnp.array(),
+                xs=jnp.arange(n_elements),
+            )
+        else:
+            x = numpyro.sample(
+                self.name, self.element_dist.expand((n_elements,))
+            )
+
+        return (
+            SampledValue(
+                x,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )
+
+    @staticmethod
+    def validate():
+        """
+        Validates input parameters, implementation pending.
+        """
+        super().validate()
+        return None
 
 
 class RandomWalk(RandomVariable):
@@ -18,8 +110,7 @@ class RandomWalk(RandomVariable):
         self,
         name: str,
         step_rv: RandomVariable,
-        t_start: int = None,
-        t_unit: int = None,
+        **kwargs,
     ) -> None:
         """
         Default constructor
@@ -30,21 +121,20 @@ class RandomWalk(RandomVariable):
             A name for the random variable, used to
             name sites within it in :fun:`numpyro.sample()`
             calls.
+
         step_rv : RandomVariable
             RandomVariable representing the step distribution.
-        t_start : int
-            See :class:`RandomVariable`
-        t_unit : int
-            See :class:`RandomVariable`
+
+        **kwargs :
+            Additional keyword arguments passed to the parent
+            class constructor.
 
         Returns
         -------
         None
         """
-        self.name = name
+        super().__init__(name, **kwargs)
         self.step_rv = step_rv
-        self.t_start = t_start
-        self.t_unit = t_unit
 
     def sample(
         self,
@@ -104,10 +194,10 @@ class StandardNormalRandomWalk(RandomWalk):
     """
     A random walk with
     standard Normal (mean = 0, standard deviation = 1)
-    steps, implmemented via the base RandomWalk class.
+    steps, implemented via the base RandomWalk class.
     """
 
-    def __init__(self, name: str, step_suffix="_step", **kwargs):
+    def __init__(self, name: str, step_suffix: str = "_step", **kwargs):
         """
         Default constructor
 
@@ -127,8 +217,8 @@ class StandardNormalRandomWalk(RandomWalk):
             Additional keyword arguments passed
             to the parent class constructor.
 
-        Return
-        ------
+        Returns
+        -------
         None
         """
         super().__init__(
@@ -136,5 +226,59 @@ class StandardNormalRandomWalk(RandomWalk):
             step_rv=DistributionalRV(
                 name=name + step_suffix, dist=dist.Normal(loc=0, scale=1)
             ),
+            **kwargs,
+        )
+
+
+class RandomWalk2(DifferencedProcess):
+    """
+    Alternative class for a Markovian
+    random walk with an arbitrary
+    step distribution, implemented
+    via DifferencedProcess and IIDRamdomSequence
+    """
+
+    def __init__(
+        self,
+        name: str,
+        step_distribution: dist.Distribution,
+        step_suffix="_step",
+        **kwargs,
+    ):
+        """
+                Default constructor
+
+        Parameters
+        ----------
+        name : str
+            A name for the random variable, used to
+            name sites within it in :fun:`numpyro.sample()`
+            calls.
+
+        step_distribution : dist.Distribution
+            numpyro.distributions.Distribution
+            representing the step distribution
+            of the random walk.
+
+        step_suffix : str
+            Suffix to append to the RandomVariable's
+            name when naming the random variable that
+            holds its steps (differences). Default
+            "_step".
+
+        **kwargs :
+            Additional keyword arguments passed to the parent
+            class constructor.
+
+        Returns
+        -------
+        None
+        """
+        super().__init__(
+            name=name,
+            fundamental_process=IIDRamdomSequence(
+                name=name + step_suffix, element_dist=step_distribution
+            ),
+            differencing_order=1,
             **kwargs,
         )

@@ -3,9 +3,9 @@
 
 from __future__ import annotations
 
-import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
+from numpyro.contrib.control_flow import scan
 from pyrenew.metaclass import RandomVariable, SampledValue
 
 
@@ -106,7 +106,7 @@ class DifferencedProcess(RandomVariable):
             new_diffs = jnp.cumsum(diffs).at[order].set(init)
             return (new_diffs, None)
 
-        integrated, _ = jax.lax.scan(
+        integrated, _ = scan(
             _integrate_one_step,
             init=jnp.pad(
                 highest_order_diff_vals, (self.differencing_order, 0)
