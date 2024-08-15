@@ -18,7 +18,6 @@ class RandomWalk(RandomVariable):
         self,
         name: str,
         step_rv: RandomVariable,
-        init_rv: RandomVariable,
         t_start: int = None,
         t_unit: int = None,
     ) -> None:
@@ -101,7 +100,7 @@ class RandomWalk(RandomVariable):
         return None
 
 
-class StandardNormal(RandomWalk):
+class StandardNormalRandomWalk(RandomWalk):
     """
     A random walk with
     standard Normal (mean = 0, standard deviation = 1)
@@ -127,6 +126,10 @@ class StandardNormal(RandomWalk):
         **kwargs:
             Additional keyword arguments passed
             to the parent class constructor.
+
+        Return
+        ------
+        None
         """
         super().__init__(
             name=name,
