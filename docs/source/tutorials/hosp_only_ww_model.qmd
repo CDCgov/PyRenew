@@ -197,7 +197,10 @@ my_model = hosp_only_ww_model(
     hosp_wday_effect_rv=hosp_wday_effect_rv,
     phi_rv=phi_rv,
     inf_to_hosp_rv=inf_to_hosp_rv,
-    n_initialization_points=uot,
+    # n_initialization_points=uot,
+    n_initialization_points=len(jnp.array(stan_data["inf_to_hosp"])),
+    # i0_t_offset=-50,  # to match stan model
+    i0_t_offset=0,  # a better way of parameterizing
 )
 ```
 
@@ -380,5 +383,4 @@ az.summary(
     stat_focus="median",
 )
 ```
-rtu seems an order of magnitued wrong?
 Why is log_rt 2 dimensional?

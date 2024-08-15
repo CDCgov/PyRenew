@@ -37,6 +37,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         inf_to_hosp_rv,
         phi_rv,
         n_initialization_points,
+        i0_t_offset,
     ):  # numpydoc ignore=GL08
         self.infection_initialization_process = InfectionInitializationProcess(
             "I0_initialization",
@@ -44,10 +45,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             InitializeInfectionsExponentialGrowth(
                 n_initialization_points,
                 initialization_rate_rv,
-                # t_pre_init=0,
-                # to match the stan model, we should have
-                t_pre_init=-n_initialization_points,
-                # but this works better
+                t_pre_init=i0_t_offset,
             ),
             t_unit=1,
         )
@@ -69,6 +67,7 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
         self.inf_to_hosp_rv = inf_to_hosp_rv
         self.phi_rv = phi_rv
         self.state_pop = state_pop
+        self.n_initialization_points = n_initialization_points
         return None
 
     def validate(self):  # numpydoc ignore=GL08
@@ -180,16 +179,18 @@ class hosp_only_ww_model(Model):  # numpydoc ignore=GL08
             :n_datapoints
         ]  # this is only applied after the hospital_admissions are generated, not to all the latent infectios
 
+        numpyro.deterministic("ihr", ihr)
+
         hosp_wday_effect_raw = self.hosp_wday_effect_rv()[0].value
         hosp_wday_effect = tile_until_n(hosp_wday_effect_raw, n_datapoints)
 
         inf_to_hosp = self.inf_to_hosp_rv()[0].value
-
         potential_latent_hospital_admissions = jnp.convolve(
             latent_infections,
             inf_to_hosp,
-            mode="full",
-        )[:n_datapoints]
+            mode="valid",
+        )[-n_datapoints:]
+        # This may need to be fixed elsewhere
 
         latent_hospital_admissions = (
             potential_latent_hospital_admissions
