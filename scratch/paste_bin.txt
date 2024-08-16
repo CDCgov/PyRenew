@@ -35,6 +35,155 @@ locations = dict(sorted([(elt[0], int(elt[1])) for elt in list(
     # print(prior_predictive_samples)
 
 
+REMOVE attribute-style access class
+
+class Config:  # numpydoc ignore=GL08
+    def __init__(self, config_dict):  # numpydoc ignore=GL08
+        for key, value in config_dict.items():
+            setattr(self, key, value)
+
+VARIOUS PLOTTING CODE
+
+def plot_sample_variables(
+    samples,
+    variables,
+    observations=None,
+    ylabels=None,
+    plot_types=None,
+    plot_kwargs=None,
+):  # numpydoc ignore=GL08
+    # collect figure output descriptions
+    figures_and_descriptions = []
+    plot_kwargs = plot_kwargs or {}
+
+    # iterate through plot_types and variable combinations
+    for i, var in enumerate(variables):
+        ylabel = ylabels[i] if ylabels else var
+        var_samples = az.convert_to_inference_data({var: samples[var]})
+        for plot_type in plot_types:
+            if plot_type == "HDI":
+                fig, desc = plot_hdi_arviz(
+                    var_samples,
+                    observations,
+                    ylabel,
+                    **plot_kwargs.get("HDI", {}),
+                )
+            elif plot_type == "TRACE":
+                fig, desc = plot_trace_arviz(
+                    var_samples, **plot_kwargs.get("TRACE", {})
+                )
+            elif plot_type == "PPC":
+                fig, desc = plot_ppc_arviz(
+                    observations, var_samples, **plot_kwargs.get("PPC", {})
+                )
+            figures_and_descriptions.append((fig, desc))
+    return figures_and_descriptions
+
+
+def plot_hdi_arviz(
+    samples,
+    observations,
+    ylabel,
+    x_data=None,
+    hdi_prob=0.95,
+    plot_kwargs=None,
+    **kwargs,
+):  # numpydoc ignore=GL08
+    plot_kwargs = plot_kwargs or {}
+    az.style.use("arviz-doc")
+    n_samples, n_timepoints = samples.shape
+    if x_data is None:
+        x_data = np.arange(n_timepoints)
+    fig, ax = plt.subplots()
+    az.plot_hdi(
+        x_data, samples.T, hdi_prob=hdi_prob, ax=ax, plot_kwargs=plot_kwargs
+    )
+    if observations is not None:
+        ax.plot(x_data, observations, "o", color="black", label="Observations")
+    ax.set_ylabel(ylabel)
+    ax.set_xlabel("Time")
+    ax.set_title(f"HDI plot for {ylabel}")
+    plt.tight_layout()
+    desc = f"HDI plot for {ylabel} with HDI probability of {hdi_prob}"
+    plt.show()
+    return fig, desc
+
+
+def plot_trace_arviz(data, var_name=None, **kwargs):  # numpydoc ignore=GL08
+    az.style.use("arviz-doc")
+    fig, ax = plt.subplots()
+    az.plot_trace(data, var_names=var_name)  # , **kwargs)
+    desc = f"Trace plot for {var_name if var_name else 'all variables'}"
+    plt.tight_layout()
+    plt.show()
+    return fig, desc
+
+
+def plot_ppc_arviz(
+    observations, samples, data_pairs=None, alpha=0.03, textsize=14, **kwargs
+):  # numpydoc ignore=GL08
+    # data_array = xr.DataArray(samples, dims=["chain", "draw", "timepoint"])
+    # samples = az.InferenceData(
+    #     posterior_predictive={"posterior_predictive": data_array}
+    # )
+    az.style.use("arviz-doc")
+    fig, ax = plt.subplots()
+    az.plot_ppc(
+        data={"posterior_predictive": samples},
+        data_pairs=data_pairs or {"obs": observations},
+        ax=ax,
+        alpha=alpha,
+        textsize=textsize,
+        **kwargs,
+    )
+    desc = f"PPC plot comparing observations with samples, alpha={alpha}, textsize={textsize}"
+    plt.tight_layout()
+    plt.show()
+    return fig, desc
+
+
+# x_data = idata.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
+# y_data = idata.posterior_predictive["negbinom_rv"]
+# fig, axes = plt.subplots(figsize=(6, 5))
+# az.plot_hdi(
+#     x_data,
+#     hdi_data=compute_eti(y_data, 0.9),
+#     color="C0",
+#     smooth=False,
+#     fill_kwargs={"alpha": 0.3},
+#     ax=axes,
+# )
+
+# az.plot_hdi(
+#     x_data,
+#     hdi_data=compute_eti(y_data, 0.5),
+#     color="C0",
+#     smooth=False,
+#     fill_kwargs={"alpha": 0.6},
+#     ax=axes,
+# )
+
+# # Add median of the posterior to the figure
+# median_ts = y_data.median(dim=["chain", "draw"])
+
+# plt.plot(
+#     x_data,
+#     median_ts,
+#     color="C0",
+#     label="Median",
+# )
+# plt.scatter(
+#     idata.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
+#     idata.observed_data["negbinom_rv"],
+#     color="black",
+# )
+# axes.legend()
+# axes.set_title(
+#     "Posterior Predictive Admissions, including a forecast", fontsize=10
+# )
+# axes.set_xlabel("Time", fontsize=10)
+# axes.set_ylabel("Hospital Admissions", fontsize=10)
+# plt.show()
 
 
 

@@ -4,6 +4,7 @@ Built-in pyrenew transformations created using `numpyro.distributions.transforms
 
 
 import numpyro.distributions.transforms as nt
+from numpyro.distributions import constraints
 
 
 def ScaledLogitTransform(
@@ -28,5 +29,10 @@ def ScaledLogitTransform(
         - numpyro.distributions.transforms.SigmoidTransform().inv
     """
     return nt.ComposeTransform(
-        [nt.AffineTransform(0.0, 1.0 / x_max), nt.SigmoidTransform().inv]
+        [
+            nt.AffineTransform(
+                0.0, 1.0 / x_max, domain=constraints.interval(0, x_max)
+            ),
+            nt.SigmoidTransform().inv,
+        ]
     )

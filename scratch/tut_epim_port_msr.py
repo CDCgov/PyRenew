@@ -61,6 +61,8 @@ if len(glob.glob("*mplstyle")) != 0:
 CURRENT_DATE = datetime.today().strftime("%Y-%m-%d")
 CURRENT_DATE_EXTENDED = datetime.today().strftime("%Y-%m-%d_%H:%M:%S")
 
+HOLIDAYS = ["2023-11-23", "2023-12-25", "2023-12-31", "2024-01-01"]
+
 JURISDICTIONS = [
     "AK",
     "AL",
@@ -123,12 +125,6 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
-
-
-class Config:  # numpydoc ignore=GL08
-    def __init__(self, config_dict):  # numpydoc ignore=GL08
-        for key, value in config_dict.items():
-            setattr(self, key, value)
 
 
 def display_data(
@@ -1242,10 +1238,7 @@ def add_post_observation_period(
     weeks = [week if week <= 52 else week - 52 for week in weeks]
 
     # calculate holiday series
-    holidays = [
-        datetime.strptime(elt, "%Y-%m-%d")
-        for elt in ["2023-11-23", "2023-12-25", "2023-12-31", "2024-01-01"]
-    ]
+    holidays = [datetime.strptime(elt, "%Y-%m-%d") for elt in HOLIDAYS]
     holidays_values = [date in holidays for date in post_observation_dates]
     post_holidays = [holiday + timedelta(days=1) for holiday in holidays]
     post_holiday_values = [
@@ -1319,10 +1312,7 @@ def add_pre_observation_period(
     epiweeks.reverse()
 
     # calculate holiday series
-    holidays = [
-        datetime.strptime(elt, "%Y-%m-%d")
-        for elt in ["2023-11-23", "2023-12-25", "2023-12-31", "2024-01-01"]
-    ]
+    holidays = [datetime.strptime(elt, "%Y-%m-%d") for elt in HOLIDAYS]
     holidays_values = [date in holidays for date in pre_observation_dates]
     post_holidays = [holiday + timedelta(days=1) for holiday in holidays]
     post_holiday_values = [
@@ -1545,10 +1535,7 @@ def run_single_jurisdiction(
         # run the CFAEPIM model (forecasting, required to do so
         # single `posterior_predictive` gets sames (need self.mcmc)
         # from passed model);
-        # ISSUE: GLMPrediction fixed_predictor_values
-        # ISSUE: MCMC saving
         # ISSUE: inv()
-        # ISSUE: standard plots to make
         # PR: sample() + OOP behavior & statefulness
         cfaepim_MSR_for.mcmc = cfaepim_MSR_fit.mcmc
 
@@ -1634,146 +1621,74 @@ def save_inference_content():
     pass
 
 
-def plot_sample_variables(
-    samples,
-    variables,
-    observations=None,
-    ylabels=None,
-    plot_types=None,
-    plot_kwargs=None,
-):  # numpydoc ignore=GL08
-    # collect figure output descriptions
-    figures_and_descriptions = []
-    plot_kwargs = plot_kwargs or {}
-
-    # iterate through plot_types and variable combinations
-    for i, var in enumerate(variables):
-        ylabel = ylabels[i] if ylabels else var
-        var_samples = az.convert_to_inference_data({var: samples[var]})
-        for plot_type in plot_types:
-            if plot_type == "HDI":
-                fig, desc = plot_hdi_arviz(
-                    var_samples,
-                    observations,
-                    ylabel,
-                    **plot_kwargs.get("HDI", {}),
-                )
-            elif plot_type == "TRACE":
-                fig, desc = plot_trace_arviz(
-                    var_samples, **plot_kwargs.get("TRACE", {})
-                )
-            elif plot_type == "PPC":
-                fig, desc = plot_ppc_arviz(
-                    observations, var_samples, **plot_kwargs.get("PPC", {})
-                )
-            figures_and_descriptions.append((fig, desc))
-    return figures_and_descriptions
-
-
-def plot_hdi_arviz(
-    samples,
-    observations,
-    ylabel,
-    x_data=None,
-    hdi_prob=0.95,
-    plot_kwargs=None,
-    **kwargs,
-):  # numpydoc ignore=GL08
-    plot_kwargs = plot_kwargs or {}
-    az.style.use("arviz-doc")
-    n_samples, n_timepoints = samples.shape
-    if x_data is None:
-        x_data = np.arange(n_timepoints)
+def plot_lm_arviz_fit(model, post_p_ss, prior_p_ss):  # numpydoc ignore=GL08
+    idata = az.from_numpyro(
+        model.mcmc,
+        posterior_predictive=post_p_ss,
+        prior=prior_p_ss,
+    )
     fig, ax = plt.subplots()
+    az.plot_lm(
+        "negbinom_rv",
+        idata=idata,
+        kind_pp="hdi",
+        y_kwargs={"color": "black"},
+        y_hat_fill_kwargs={"color": "C0"},
+        axes=ax,
+    )
+    ax.set_title("Posterior Predictive Plot")
+    ax.set_ylabel("Hospital Admissions")
+    ax.set_xlabel("Days")
+    plt.show()
+
+
+def compute_eti(dataset, eti_prob):  # numpydoc ignore=GL08
+    eti_bdry = dataset.quantile(
+        ((1 - eti_prob) / 2, 1 / 2 + eti_prob / 2), dim=("chain", "draw")
+    )
+    return eti_bdry.values.T
+
+
+def plot_hdi_arviz_for(idata, forecast_days):  # numpydoc ignore=GL08
+    x_data = idata.posterior_predictive["negbinom_rv_dim_0"] + forecast_days
+    y_data = idata.posterior_predictive["negbinom_rv"]
+    fig, axes = plt.subplots(figsize=(6, 5))
     az.plot_hdi(
-        x_data, samples.T, hdi_prob=hdi_prob, ax=ax, plot_kwargs=plot_kwargs
+        x_data,
+        hdi_data=compute_eti(y_data, 0.9),
+        color="C0",
+        smooth=False,
+        fill_kwargs={"alpha": 0.3},
+        ax=axes,
     )
-    if observations is not None:
-        ax.plot(x_data, observations, "o", color="black", label="Observations")
-    ax.set_ylabel(ylabel)
-    ax.set_xlabel("Time")
-    ax.set_title(f"HDI plot for {ylabel}")
-    plt.tight_layout()
-    desc = f"HDI plot for {ylabel} with HDI probability of {hdi_prob}"
-    plt.show()
-    return fig, desc
 
-
-def plot_trace_arviz(data, var_name=None, **kwargs):  # numpydoc ignore=GL08
-    az.style.use("arviz-doc")
-    fig, ax = plt.subplots()
-    az.plot_trace(data, var_names=var_name)  # , **kwargs)
-    desc = f"Trace plot for {var_name if var_name else 'all variables'}"
-    plt.tight_layout()
-    plt.show()
-    return fig, desc
-
-
-def plot_ppc_arviz(
-    observations, samples, data_pairs=None, alpha=0.03, textsize=14, **kwargs
-):  # numpydoc ignore=GL08
-    # data_array = xr.DataArray(samples, dims=["chain", "draw", "timepoint"])
-    # samples = az.InferenceData(
-    #     posterior_predictive={"posterior_predictive": data_array}
-    # )
-    az.style.use("arviz-doc")
-    fig, ax = plt.subplots()
-    az.plot_ppc(
-        data={"posterior_predictive": samples},
-        data_pairs=data_pairs or {"obs": observations},
-        ax=ax,
-        alpha=alpha,
-        textsize=textsize,
-        **kwargs,
+    az.plot_hdi(
+        x_data,
+        hdi_data=compute_eti(y_data, 0.5),
+        color="C0",
+        smooth=False,
+        fill_kwargs={"alpha": 0.6},
+        ax=axes,
     )
-    desc = f"PPC plot comparing observations with samples, alpha={alpha}, textsize={textsize}"
-    plt.tight_layout()
+    median_ts = y_data.median(dim=["chain", "draw"])
+    plt.plot(
+        x_data,
+        median_ts,
+        color="C0",
+        label="Median",
+    )
+    plt.scatter(
+        idata.observed_data["negbinom_rv_dim_0"] + forecast_days,
+        idata.observed_data["negbinom_rv"],
+        color="black",
+    )
+    axes.legend()
+    axes.set_title(
+        "Posterior Predictive Admissions, including a forecast", fontsize=10
+    )
+    axes.set_xlabel("Time", fontsize=10)
+    axes.set_ylabel("Hospital Admissions", fontsize=10)
     plt.show()
-    return fig, desc
-
-
-# x_data = idata.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
-# y_data = idata.posterior_predictive["negbinom_rv"]
-# fig, axes = plt.subplots(figsize=(6, 5))
-# az.plot_hdi(
-#     x_data,
-#     hdi_data=compute_eti(y_data, 0.9),
-#     color="C0",
-#     smooth=False,
-#     fill_kwargs={"alpha": 0.3},
-#     ax=axes,
-# )
-
-# az.plot_hdi(
-#     x_data,
-#     hdi_data=compute_eti(y_data, 0.5),
-#     color="C0",
-#     smooth=False,
-#     fill_kwargs={"alpha": 0.6},
-#     ax=axes,
-# )
-
-# # Add median of the posterior to the figure
-# median_ts = y_data.median(dim=["chain", "draw"])
-
-# plt.plot(
-#     x_data,
-#     median_ts,
-#     color="C0",
-#     label="Median",
-# )
-# plt.scatter(
-#     idata.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
-#     idata.observed_data["negbinom_rv"],
-#     color="black",
-# )
-# axes.legend()
-# axes.set_title(
-#     "Posterior Predictive Admissions, including a forecast", fontsize=10
-# )
-# axes.set_xlabel("Time", fontsize=10)
-# axes.set_ylabel("Hospital Admissions", fontsize=10)
-# plt.show()
 
 
 def main(args):  # numpydoc ignore=GL08
@@ -1868,7 +1783,11 @@ def main(args):  # numpydoc ignore=GL08
 
         # parallel run over jurisdictions
         # results = dict([(elt, {}) for elt in args.regions])
+        forecast_days = 28
         for jurisdiction in args.regions:
+            # check if a folder for the samples exists
+            # check if a folder for the jurisdiction exists
+
             # assumptions, fit, and forecast for each jurisdiction
             (
                 model,
@@ -1881,19 +1800,27 @@ def main(args):  # numpydoc ignore=GL08
                 dataset=influenza_hosp_data,
                 config=config,
                 forecasting=args.forecast,
-                n_post_observation_days=28,
+                n_post_observation_days=forecast_days,
             )
 
-            print(prior_p_ss)
-            print()
-            print(post_p_ss)
-            print()
-            print(post_p_fs)
+            plot_lm_arviz_fit(model, post_p_ss, prior_p_ss)
 
-            model.plot_posterior(
-                var=[post_p_fs["negbinom_rv"]], obs_signal=obs
+            idata = az.from_numpyro(
+                posterior=model.mcmc,
+                prior=prior_p_ss,
+                posterior_predictive=post_p_fs,
+                constant_data={"obs": obs},
             )
-            plt.show()
+            plot_hdi_arviz_for(idata, forecast_days)
+
+            # save to folder for jurisdiction,
+
+            # idata = az.from_numpyro(model.mcmc)
+            # diagnostic_stats_summary = az.summary(
+            #     idata.posterior,
+            #     kind="diagnostics",
+            # )
+            # print(diagnostic_stats_summary.loc["negbinom_rv"])
 
             # ax.set_title("Posterior Predictive Plot")
             # ax.set_ylabel("Hospital Admissions")
