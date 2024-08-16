@@ -32,4 +32,3 @@ jobs:
           make image-build
           podman tag pyrenew:latest ghcr.io/cdcgov/pyrenew:latest
           podman push ghcr.io/cdcgov/pyrenew:latest
-        working-directory: model
