@@ -2,6 +2,8 @@
 # numpydoc ignore=GL08
 
 
+from test.utils import simple_rt
+
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
@@ -9,7 +11,6 @@ import numpyro
 import numpyro.distributions as dist
 import polars as pl
 import pytest
-from pyrenew import transformation as t
 from pyrenew.deterministic import (
     DeterministicPMF,
     DeterministicVariable,
@@ -21,36 +22,9 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import (
-    DistributionalRV,
-    RandomVariable,
-    TransformedRandomVariable,
-)
+from pyrenew.metaclass import DistributionalRV, RandomVariable, SampledValue
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
-from pyrenew.process import SimpleRandomWalkProcess
-
-
-def get_default_rt():
-    """
-    Helper function to create a default Rt
-    RandomVariable for this testing session.
-
-    Returns
-    -------
-    TransformedRandomVariable :
-       A log-scale random walk with fixed
-       init value and step size priors
-    """
-    return TransformedRandomVariable(
-        "Rt_rv",
-        base_rv=SimpleRandomWalkProcess(
-            name="log_rt",
-            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
-            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
-        ),
-        transforms=t.ExpTransform(),
-    )
 
 
 class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
@@ -65,8 +39,10 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
 
     def sample(self, **kwargs):  # numpydoc ignore=GL08
         return (
-            numpyro.sample(
-                name=self.name, fn=dist.Uniform(high=0.99, low=0.01)
+            SampledValue(
+                numpyro.sample(
+                    name=self.name, fn=dist.Uniform(high=0.99, low=0.01)
+                )
             ),
         )
 
@@ -78,18 +54,19 @@ def test_model_hosp_no_timepoints_or_observations():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
-    Rt_process = get_default_rt()
+    Rt_process = simple_rt()
 
     observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
-        jnp.array(
+        name="inf_hosp",
+        value=jnp.array(
             [
                 0,
                 0,
@@ -111,13 +88,12 @@ def test_model_hosp_no_timepoints_or_observations():
                 0.05,
             ],
         ),
-        name="inf_hosp",
     )
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         infect_hosp_rate_rv=DistributionalRV(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+            name="IHR", dist=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
 
@@ -142,18 +118,20 @@ def test_model_hosp_both_timepoints_and_observations():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int",
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    I0 = DistributionalRV(dist=dist.LogNormal(0, 1), name="I0")
+    I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
-    Rt_process = get_default_rt()
+    Rt_process = simple_rt()
 
     observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
-        jnp.array(
+        name="inf_hosp",
+        value=jnp.array(
             [
                 0,
                 0,
@@ -175,13 +153,12 @@ def test_model_hosp_both_timepoints_and_observations():
                 0.05,
             ],
         ),
-        name="inf_hosp",
     )
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         infect_hosp_rate_rv=DistributionalRV(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+            name="IHR", dist=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
 
@@ -209,21 +186,23 @@ def test_model_hosp_no_obs_model():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int",
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
     latent_infections = Infections()
-    Rt_process = get_default_rt()
+    Rt_process = simple_rt()
 
     inf_hosp = DeterministicPMF(
-        jnp.array(
+        name="inf_hosp",
+        value=jnp.array(
             [
                 0,
                 0,
@@ -245,13 +224,13 @@ def test_model_hosp_no_obs_model():
                 0.05,
             ]
         ),
-        name="inf_hosp",
     )
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         infect_hosp_rate_rv=DistributionalRV(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+            name="IHR",
+            dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
     )
 
@@ -273,26 +252,31 @@ def test_model_hosp_no_obs_model():
     with numpyro.handlers.seed(rng_seed=223):
         model1_samp = model0.sample(n_datapoints=30)
 
-    np.testing.assert_array_almost_equal(model0_samp.Rt, model1_samp.Rt)
-    np.testing.assert_array_equal(
-        model0_samp.latent_infections, model1_samp.latent_infections
+    np.testing.assert_array_almost_equal(
+        model0_samp.Rt.value, model1_samp.Rt.value
     )
     np.testing.assert_array_equal(
-        model0_samp.infection_hosp_rate, model1_samp.infection_hosp_rate
+        model0_samp.latent_infections.value,
+        model1_samp.latent_infections.value,
     )
     np.testing.assert_array_equal(
-        model0_samp.latent_hosp_admissions, model1_samp.latent_hosp_admissions
+        model0_samp.infection_hosp_rate.value,
+        model1_samp.infection_hosp_rate.value,
     )
     np.testing.assert_array_equal(
-        model0_samp.observed_hosp_admissions,
-        model1_samp.observed_hosp_admissions,
+        model0_samp.latent_hosp_admissions.value,
+        model1_samp.latent_hosp_admissions.value,
     )
+
+    # These are supposed to be none, both
+    assert model0_samp.observed_hosp_admissions.value is None
+    assert model1_samp.observed_hosp_admissions.value is None
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model0_samp.latent_hosp_admissions,
+        data_observed_hosp_admissions=model0_samp.latent_hosp_admissions.value,
     )
 
     inf = model0.spread_draws(["latent_hospital_admissions"])
@@ -313,22 +297,23 @@ def test_model_hosp_with_obs_model():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
     latent_infections = Infections()
-    Rt_process = get_default_rt()
+    Rt_process = simple_rt()
     observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
-        jnp.array(
+        name="inf_hosp",
+        value=jnp.array(
             [
                 0,
                 0,
@@ -350,13 +335,13 @@ def test_model_hosp_with_obs_model():
                 0.05,
             ],
         ),
-        name="inf_hosp",
     )
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         infect_hosp_rate_rv=DistributionalRV(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+            name="IHR",
+            dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
     )
 
@@ -377,7 +362,7 @@ def test_model_hosp_with_obs_model():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.value,
     )
 
     inf = model1.spread_draws(["latent_hospital_admissions"])
@@ -398,22 +383,24 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int",
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
     latent_infections = Infections()
-    Rt_process = get_default_rt()
+    Rt_process = simple_rt()
     observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
-        jnp.array(
+        name="inf_hosp",
+        value=jnp.array(
             [
                 0,
                 0,
@@ -435,7 +422,6 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
                 0.05,
             ],
         ),
-        name="inf_hosp",
     )
 
     # Other random components
@@ -452,7 +438,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         day_of_week_effect_rv=weekday,
         hosp_report_prob_rv=hosp_report_prob_dist,
         infect_hosp_rate_rv=DistributionalRV(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+            name="IHR", dist=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
 
@@ -473,7 +459,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.value,
     )
 
     inf = model1.spread_draws(["latent_hospital_admissions"])
@@ -494,25 +480,27 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     """
 
     gen_int = DeterministicPMF(
-        jnp.array([0.25, 0.25, 0.25, 0.25]), name="gen_int"
+        name="gen_int",
+        value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
     n_obs_to_generate = 30
     pad_size = 5
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
     latent_infections = Infections()
-    Rt_process = get_default_rt()
+    Rt_process = simple_rt()
 
     observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
-        jnp.array(
+        name="inf_hosp",
+        value=jnp.array(
             [
                 0,
                 0,
@@ -534,7 +522,6 @@ def test_model_hosp_with_obs_model_weekday_phosp():
                 0.05,
             ],
         ),
-        name="inf_hosp",
     )
 
     # Other random components
@@ -544,7 +531,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     weekday = jnp.tile(weekday, 10)
     weekday = weekday[:total_length]
 
-    weekday = DeterministicVariable(weekday, name="weekday")
+    weekday = DeterministicVariable(name="weekday", value=weekday)
 
     hosp_report_prob_dist = jnp.array([0.9, 0.8, 0.7, 0.7, 0.6, 0.4])
     hosp_report_prob_dist = jnp.tile(hosp_report_prob_dist, 10)
@@ -552,7 +539,8 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     hosp_report_prob_dist = hosp_report_prob_dist / hosp_report_prob_dist.sum()
 
     hosp_report_prob_dist = DeterministicVariable(
-        vars=hosp_report_prob_dist, name="hosp_report_prob_dist"
+        name="hosp_report_prob_dist",
+        value=hosp_report_prob_dist,
     )
 
     latent_admissions = HospitalAdmissions(
@@ -560,7 +548,8 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         day_of_week_effect_rv=weekday,
         hosp_report_prob_rv=hosp_report_prob_dist,
         infect_hosp_rate_rv=DistributionalRV(
-            dist=dist.LogNormal(jnp.log(0.05), 0.05), name="IHR"
+            name="IHR",
+            dist=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
     )
 
@@ -579,12 +568,20 @@ def test_model_hosp_with_obs_model_weekday_phosp():
             n_datapoints=n_obs_to_generate, padding=pad_size
         )
 
+    # Showed during merge conflict, but unsure if it will be needed
+    #  pad_size = 5
+    # obs = jnp.hstack(
+    #     [
+    #         jnp.repeat(jnp.nan, pad_size),
+    #         model1_samp.observed_hosp_admissions.value[pad_size:],
+    #     ]
+    # )
     # Running with padding
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
+        data_observed_hosp_admissions=model1_samp.observed_hosp_admissions.value,
         padding=pad_size,
     )
 

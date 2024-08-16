@@ -1,0 +1,32 @@
+name: dependency-check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: cache poetry
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: ${{ runner.os }}-poetry
+
+      - name: install poetry
+        run: pip install poetry
+
+      - name: install package
+        run: poetry install --with dev
+
+      - name: run deptry
+        run: |
+          poetry run deptry . --per-rule-ignores "DEP001=pyrenew,DEP001=pytest,DEP003=pytest,DEP001=test"

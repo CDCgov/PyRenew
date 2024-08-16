@@ -1,10 +1,11 @@
 # numpydoc ignore=GL08
 
+from test.utils import simple_rt
+
 import jax.numpy as jnp
 import jax.random as jr
 import numpyro
 import numpyro.distributions as dist
-import pyrenew.transformation as t
 from numpy.testing import assert_array_equal
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
@@ -12,33 +13,24 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
+from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
-from pyrenew.process import SimpleRandomWalkProcess
 
 
 def test_forecast():
     """Check that forecasts are the right length and match the posterior up until forecast begins."""
     pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
-    gen_int = DeterministicPMF(pmf_array, name="gen_int")
+    gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
     latent_infections = Infections()
-    observed_infections = PoissonObservation("poisson_rv")
-    rt = TransformedRandomVariable(
-        "Rt_rv",
-        base_rv=SimpleRandomWalkProcess(
-            name="log_rt",
-            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
-            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
-        ),
-        transforms=t.ExpTransform(),
-    )
+    observed_infections = PoissonObservation(name="poisson_rv")
+    rt = simple_rt()
 
     model = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -56,7 +48,7 @@ def test_forecast():
     model.run(
         num_warmup=5,
         num_samples=5,
-        data_observed_infections=model_sample.observed_infections,
+        data_observed_infections=model_sample.observed_infections.value,
         rng_key=jr.key(54),
     )
 

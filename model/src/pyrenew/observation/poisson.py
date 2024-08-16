@@ -7,7 +7,7 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, SampledValue
 
 
 class PoissonObservation(RandomVariable):
@@ -73,4 +73,10 @@ class PoissonObservation(RandomVariable):
             fn=dist.Poisson(rate=mu + self.eps),
             obs=obs,
         )
-        return (poisson_sample,)
+        return (
+            SampledValue(
+                poisson_sample,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )

@@ -5,11 +5,12 @@ Ensures that models created with the same or
 with different random keys behave appropriately.
 """
 
+from test.utils import simple_rt
+
 import jax.numpy as jnp
 import jax.random as jr
 import numpyro
 import numpyro.distributions as dist
-import pyrenew.transformation as t
 from numpy.testing import assert_array_equal, assert_raises
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import (
@@ -17,32 +18,23 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
+from pyrenew.metaclass import DistributionalRV
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
-from pyrenew.process import SimpleRandomWalkProcess
 
 
 def create_test_model():  # numpydoc ignore=GL08
     pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
-    gen_int = DeterministicPMF(pmf_array, name="gen_int")
+    gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(dist=dist.LogNormal(0, 1), name="I0"),
+        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation("poisson_rv")
-    rt = TransformedRandomVariable(
-        "Rt_rv",
-        base_rv=SimpleRandomWalkProcess(
-            name="log_rt",
-            step_rv=DistributionalRV(dist.Normal(0, 0.025), "rw_step_rv"),
-            init_rv=DistributionalRV(dist.Normal(0, 0.2), "init_log_Rt_rv"),
-        ),
-        transforms=t.ExpTransform(),
-    )
+    rt = simple_rt()
     model = RtInfectionsRenewalModel(
         I0_rv=I0,
         gen_int_rv=gen_int,
@@ -104,7 +96,7 @@ def test_rng_keys_produce_correct_samples():
     # as the observed_infections for the rest of the models
     with numpyro.handlers.seed(rng_seed=223):
         model_sample = models[0].sample(n_datapoints=n_datapoints[0])
-    obs_infections = [model_sample.observed_infections] * len(models)
+    obs_infections = [model_sample.observed_infections.value] * len(models)
     rng_keys = [jr.key(54), jr.key(54), None, None, jr.key(74)]
 
     # run test models with the different keys

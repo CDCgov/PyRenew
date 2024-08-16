@@ -4,7 +4,7 @@ import numpyro
 from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
 )
-from pyrenew.metaclass import RandomVariable
+from pyrenew.metaclass import RandomVariable, SampledValue, _assert_type
 
 
 class InfectionInitializationProcess(RandomVariable):
@@ -74,18 +74,12 @@ class InfectionInitializationProcess(RandomVariable):
         -------
         None
         """
-        if not isinstance(I_pre_init_rv, RandomVariable):
-            raise TypeError(
-                "I_pre_init_rv must be an instance of RandomVariable"
-                f"Got {type(I_pre_init_rv)}"
-            )
-        if not isinstance(
-            infection_init_method, InfectionInitializationMethod
-        ):
-            raise TypeError(
-                "infection_init_method must be an instance of InfectionInitializationMethod"
-                f"Got {type(infection_init_method)}"
-            )
+        _assert_type("I_pre_init_rv", I_pre_init_rv, RandomVariable)
+        _assert_type(
+            "infection_init_method",
+            infection_init_method,
+            InfectionInitializationMethod,
+        )
 
     def sample(self) -> tuple:
         """Sample the Infection Initialization Process.
@@ -93,10 +87,21 @@ class InfectionInitializationProcess(RandomVariable):
         Returns
         -------
         tuple
-            a tuple where the only element is an array with the number of initialized infections at each time point.
+            a tuple where the only element is an array with
+            the number of initialized infections at each time point.
         """
+
         (I_pre_init,) = self.I_pre_init_rv()
-        infection_initialization = self.infection_init_method(I_pre_init)
+
+        infection_initialization = self.infection_init_method(
+            I_pre_init.value,
+        )
         numpyro.deterministic(self.name, infection_initialization)
 
-        return (infection_initialization,)
+        return (
+            SampledValue(
+                infection_initialization,
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )
