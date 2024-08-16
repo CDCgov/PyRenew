@@ -90,10 +90,14 @@ class NegativeBinomialObservation(RandomVariable):
         """
         concentration, *_ = self.concentration_rv.sample()
 
+        clipped_mu = jnp.clip(
+            mu + self.eps, min=jnp.finfo(float).eps, max=jnp.inf
+        )
+
         negative_binomial_sample = numpyro.sample(
             name=self.name,
             fn=dist.NegativeBinomial2(
-                mean=mu + self.eps,
+                mean=clipped_mu,
                 concentration=concentration.value,
             ),
             obs=obs,

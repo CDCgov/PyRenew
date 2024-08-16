@@ -20,3 +20,26 @@ def test_poisson_obs():
         sim_pois, *_ = pois(mu=rates)
 
     testing.assert_array_equal(sim_pois.value, jnp.ceil(sim_pois.value))
+
+
+def test_poisson_clipping():
+    """
+    Check that the clipping of the mean parameter works correctly.
+    """
+
+    pois = PoissonObservation(name="pois_rv")
+
+    small_mu = 1e-10
+    expected_clipped_mu = jnp.clip(
+        small_mu + jnp.finfo(float).eps, min=jnp.finfo(float).eps, max=jnp.inf
+    )
+
+    with numpyro.handlers.seed(rng_seed=223):
+        sim_pois, *_ = pois(mu=small_mu)
+
+    mean_sample_value = jnp.mean(sim_pois.value)
+    testing.assert_array_almost_equal(
+        mean_sample_value,
+        expected_clipped_mu,
+        decimal=5,
+    )
