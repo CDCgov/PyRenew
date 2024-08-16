@@ -113,7 +113,7 @@ def test_integrator_correctness(order, n_diffs):
     inits = jax.random.normal(key=jax.random.key(45), shape=(order,))
     result_manual = diffs
     for init in jnp.flip(inits):
-        result_manual = jnp.hstack([init, jnp.cumsum(result_manual)])
+        result_manual = jnp.cumsum(jnp.hstack([init, result_manual]))
 
     proc = DifferencedProcess(
         "test_process", fundamental_process=None, differencing_order=order

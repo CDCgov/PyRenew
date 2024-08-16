@@ -4,13 +4,16 @@
 
 from pyrenew.process.ar import ARProcess
 from pyrenew.process.differencedprocess import DifferencedProcess
+from pyrenew.process.iidrandomsequence import IIDRamdomSequence
 from pyrenew.process.periodiceffect import DayOfWeekEffect, PeriodicEffect
-from pyrenew.process.randomwalk import RandomWalk
+from pyrenew.process.randomwalk import RandomWalk, StandardNormalRandomWalk
 
 __all__ = [
+    "IIDRamdomSequence",
     "ARProcess",
     "DifferencedProcess",
     "RandomWalk",
+    "StandardNormalRandomWalk",
     "PeriodicEffect",
     "DayOfWeekEffect",
 ]

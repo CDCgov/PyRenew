@@ -132,7 +132,8 @@ class DifferencedProcess(RandomVariable):
         ----------
         init_vals : ArrayLike
             initial values for the differenced process,
-            passed as the init_diff_vals to DifferencedProcess.integrate
+            passed as the init_diff_vals to
+            DifferencedProcess.integrate
 
         *args :
            Additional positional arguments passed to

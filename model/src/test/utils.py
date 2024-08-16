@@ -7,7 +7,7 @@ test utilities
 import numpyro.distributions as dist
 import pyrenew.transformation as t
 from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
-from pyrenew.process import SimpleRandomWalkProcess
+from pyrenew.process import RandomWalk
 
 
 def simple_rt(arg_name: str = "Rt_rv"):
@@ -29,13 +29,11 @@ def simple_rt(arg_name: str = "Rt_rv"):
     """
     return TransformedRandomVariable(
         arg_name,
-        base_rv=SimpleRandomWalkProcess(
+        base_rv=RandomWalk(
             name="log_rt",
-            step_rv=DistributionalRV(
-                name="rw_step_rv", dist=dist.Normal(0, 0.025)
-            ),
+            step_distribution=dist.Normal(0, 0.025),
             init_rv=DistributionalRV(
-                name="init_log_rt", dist=dist.Normal(0, 0.2)
+                name="init_log_rt", distribution=dist.Normal(0, 0.2)
             ),
         ),
         transforms=t.ExpTransform(),

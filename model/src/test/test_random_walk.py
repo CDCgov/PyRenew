@@ -6,7 +6,7 @@ import numpyro.distributions as dist
 from numpy.testing import assert_almost_equal
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import DistributionalRV
-from pyrenew.process import SimpleRandomWalkProcess
+from pyrenew.process import RandomWalk
 
 
 def test_rw_can_be_sampled():
@@ -16,29 +16,17 @@ def test_rw_can_be_sampled():
     """
     init_rv_rand = DistributionalRV(
         name="init_rv_rand",
-        dist=dist.Normal(1, 0.5),
+        distribution=dist.Normal(1, 0.5),
     )
     init_rv_fixed = DeterministicVariable(name="init_rv_fixed", value=50.0)
 
-    step_rv = DistributionalRV(
-        name="rw_step",
-        dist=dist.Normal(0, 1),
-    )
-
-    rw_init_rand = SimpleRandomWalkProcess(
-        "rw_rand_init", step_rv=step_rv, init_rv=init_rv_rand
-    )
-
-    rw_init_fixed = SimpleRandomWalkProcess(
-        "rw_fixed_init", step_rv=step_rv, init_rv=init_rv_fixed
-    )
+    rw = RandomWalk("rw_rand_init", dist.Normal(0, 1))
 
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with a fixed init
         # and with a random init
-        ans_rand = rw_init_rand(n_steps=3532)
-        ans_fixed = rw_init_fixed(n_steps=5023)
-
+        ans_rand = rw(n=3532, init_vals=init_rv_rand()[0].value)
+        ans_fixed = rw(n=5023, init_vals=init_rv_fixed()[0].value)
     # check that the samples are of the right shape
     assert ans_rand[0].value.shape == (3532,)
     assert ans_fixed[0].value.shape == (5023,)
@@ -58,20 +46,14 @@ def test_rw_samples_correctly_distributed():
     for step_mean, step_sd in zip(
         [0, 2.253, -3.2521, 1052, 1e-6], [1, 0.025, 3, 1, 0.02]
     ):
-        rw_init_val = 532.0
-        rw_normal = SimpleRandomWalkProcess(
+        rw_init_val = jnp.array([532.0])
+        rw_normal = RandomWalk(
             name="rw_normal_test",
-            step_rv=DistributionalRV(
-                name="rw_normal_dist",
-                dist=dist.Normal(loc=step_mean, scale=step_sd),
-            ),
-            init_rv=DeterministicVariable(
-                name="init_rv_fixed", value=rw_init_val
-            ),
+            step_distribution=dist.Normal(loc=step_mean, scale=step_sd),
         )
 
         with numpyro.handlers.seed(rng_seed=62):
-            samples, *_ = rw_normal(n_steps=n_samples)
+            samples, *_ = rw_normal(n=n_samples, init_vals=rw_init_val)
             samples = samples.value
 
             # Checking the shape
