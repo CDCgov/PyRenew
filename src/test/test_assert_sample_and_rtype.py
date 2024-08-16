@@ -93,7 +93,7 @@ def test_input_rv():  # numpydoc ignore=GL08
     valid_rv = [
         NullObservation(),
         DeterministicVariable(name="rv1", value=jnp.array([1, 2, 3, 4])),
-        DistributionalRV(name="rv2", dist=dist.Normal(0, 1)),
+        DistributionalRV(name="rv2", distribution=dist.Normal(0, 1)),
     ]
     not_rv = jnp.array([1])
 

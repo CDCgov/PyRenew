@@ -64,7 +64,7 @@ def test_admissions_sample():
     hosp1 = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         infect_hosp_rate_rv=DistributionalRV(
-            name="IHR", dist=dist.LogNormal(jnp.log(0.05), 0.05)
+            name="IHR", distribution=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
 

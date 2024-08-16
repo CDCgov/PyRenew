@@ -77,7 +77,7 @@ class DeterministicVariable(RandomVariable):
 
     def sample(
         self,
-        record=True,
+        record=False,
         **kwargs,
     ) -> tuple:
         """
@@ -87,7 +87,7 @@ class DeterministicVariable(RandomVariable):
         ----------
         record : bool, optional
             Whether to record the value of the deterministic
-            RandomVariable. Defaults to True.
+            RandomVariable. Defaults to False.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
             sample calls, should there be any.

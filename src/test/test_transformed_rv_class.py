@@ -68,7 +68,9 @@ def test_transform_rv_validation():
     works as expected.
     """
 
-    base_rv = DistributionalRV(name="test_normal", dist=dist.Normal(0, 1))
+    base_rv = DistributionalRV(
+        name="test_normal", distribution=dist.Normal(0, 1)
+    )
     base_rv.sample_length = lambda: 1  # numpydoc ignore=GL08
 
     l2_rv = LengthTwoRV()
@@ -110,7 +112,9 @@ def test_transforms_applied_at_sampling():
     instances correctly apply their specified
     transformations at sampling
     """
-    norm_rv = DistributionalRV(name="test_normal", dist=dist.Normal(0, 1))
+    norm_rv = DistributionalRV(
+        name="test_normal", distribution=dist.Normal(0, 1)
+    )
     norm_rv.sample_length = lambda: 1
 
     l2_rv = LengthTwoRV()

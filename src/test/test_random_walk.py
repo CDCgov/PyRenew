@@ -17,13 +17,13 @@ def test_rw_can_be_sampled():
     """
     init_rv_rand = DistributionalRV(
         name="init_rv_rand",
-        dist=dist.Normal(1, 0.5),
+        distribution=dist.Normal(1, 0.5),
     )
     init_rv_fixed = DeterministicVariable(name="init_rv_fixed", value=50.0)
 
     step_rv = DistributionalRV(
         name="rw_step",
-        dist=dist.Normal(0, 1),
+        distribution=dist.Normal(0, 1),
     )
 
     rw_init_rand = SimpleRandomWalkProcess(
@@ -64,7 +64,7 @@ def test_rw_samples_correctly_distributed():
             name="rw_normal_test",
             step_rv=DistributionalRV(
                 name="rw_normal_dist",
-                dist=dist.Normal(loc=step_mean, scale=step_sd),
+                distribution=dist.Normal(loc=step_mean, scale=step_sd),
             ),
             init_rv=DeterministicVariable(
                 name="init_rv_fixed", value=rw_init_val
