@@ -693,7 +693,7 @@ class TransformedRandomVariable(RandomVariable):
         self.transforms = transforms
         self.validate()
 
-    def sample(self, record=True, **kwargs) -> tuple:
+    def sample(self, record=False, **kwargs) -> tuple:
         """
         Sample method. Call self.base_rv.sample()
         and then apply the transforms specified
@@ -703,7 +703,7 @@ class TransformedRandomVariable(RandomVariable):
         ----------
         record : bool, optional
             Whether to record the value of the deterministic
-            RandomVariable. Defaults to True.
+            RandomVariable. Defaults to False.
         **kwargs :
             Keyword arguments passed to self.base_rv.sample()
 
