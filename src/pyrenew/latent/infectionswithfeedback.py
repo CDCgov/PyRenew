@@ -4,7 +4,6 @@
 from typing import NamedTuple
 
 import jax.numpy as jnp
-import numpyro
 from numpy.typing import ArrayLike
 
 import pyrenew.arrayutils as au
@@ -194,10 +193,6 @@ class InfectionsWithFeedback(RandomVariable):
             reversed_generation_interval_pmf=gen_int_rev,
             reversed_infection_feedback_pmf=inf_fb_pmf_rev,
         )
-
-        # Appending initial infections to the infections
-
-        numpyro.deterministic("Rt_adjusted", Rt_adj)
 
         return InfectionsRtFeedbackSample(
             post_initialization_infections=SampledValue(
