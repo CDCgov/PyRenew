@@ -693,7 +693,7 @@ class TransformedRandomVariable(RandomVariable):
         self.transforms = transforms
         self.validate()
 
-    def sample(self, **kwargs) -> tuple:
+    def sample(self, record=True, **kwargs) -> tuple:
         """
         Sample method. Call self.base_rv.sample()
         and then apply the transforms specified
@@ -701,6 +701,9 @@ class TransformedRandomVariable(RandomVariable):
 
         Parameters
         ----------
+        record : bool, optional
+            Whether to record the value of the deterministic
+            RandomVariable. Defaults to True.
         **kwargs :
             Keyword arguments passed to self.base_rv.sample()
 
@@ -720,7 +723,9 @@ class TransformedRandomVariable(RandomVariable):
             for t, uv in zip(self.transforms, untransformed_values)
         )
 
-        numpyro.deterministic(self.name, transformed_values[0].value)
+        if record:
+            for i, tv in enumerate(transformed_values):
+                numpyro.deterministic(f"{self.name}_{i}", tv.value)
 
         return transformed_values
 
