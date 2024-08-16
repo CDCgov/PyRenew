@@ -8,7 +8,6 @@ from abc import ABCMeta, abstractmethod
 from typing import Callable, NamedTuple, get_type_hints
 
 import jax
-import jax.numpy as jnp
 import jax.random as jr
 import matplotlib.pyplot as plt
 import numpy as np
@@ -378,7 +377,7 @@ class DynamicDistributionalRV(RandomVariable):
             )
         return (
             SampledValue(
-                jnp.atleast_1d(sample),
+                sample,
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
@@ -472,7 +471,7 @@ class StaticDistributionalRV(RandomVariable):
             )
         return (
             SampledValue(
-                jnp.atleast_1d(sample),
+                sample,
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),

@@ -2,7 +2,7 @@
 # numpydoc ignore=GL08
 
 
-from test.utils import simple_rt
+from test.utils import SimpleRt
 
 import jax.numpy as jnp
 import jax.random as jr
@@ -60,7 +60,7 @@ def test_model_hosp_no_timepoints_or_observations():
     I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
 
     observed_admissions = PoissonObservation("poisson_rv")
 
@@ -125,7 +125,7 @@ def test_model_hosp_both_timepoints_and_observations():
     I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
 
     observed_admissions = PoissonObservation("poisson_rv")
 
@@ -198,7 +198,7 @@ def test_model_hosp_no_obs_model():
     )
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
 
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
@@ -308,7 +308,7 @@ def test_model_hosp_with_obs_model():
     )
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
     observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
@@ -395,7 +395,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     )
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
     observed_admissions = PoissonObservation("poisson_rv")
 
     inf_hosp = DeterministicPMF(
@@ -494,7 +494,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
 
     observed_admissions = PoissonObservation("poisson_rv")
 

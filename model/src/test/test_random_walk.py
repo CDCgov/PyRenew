@@ -20,7 +20,10 @@ def test_rw_can_be_sampled():
     )
     init_rv_fixed = DeterministicVariable(name="init_rv_fixed", value=50.0)
 
-    rw = RandomWalk("rw_rand_init", dist.Normal(0, 1))
+    rw = RandomWalk(
+        "rw",
+        DistributionalRV(name="rw_step_rv", distribution=dist.Normal(0, 0.27)),
+    )
 
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with a fixed init

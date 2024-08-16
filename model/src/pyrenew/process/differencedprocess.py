@@ -89,15 +89,34 @@ class DifferencedProcess(RandomVariable):
         -------
         The integrated (de-differenced) sequence of values.
         """
-        if not init_diff_vals.size == self.differencing_order:
+        init_diff_vals = jnp.atleast_1d(init_diff_vals)
+        highest_order_diff_vals = jnp.atleast_1d(highest_order_diff_vals)
+        n_inits = init_diff_vals.shape[0]
+        if not n_inits == self.differencing_order:
             raise ValueError(
                 "Must have exactly as many "
                 "initial difference values as "
                 "the differencing order, given "
-                "in the sequence X(t=0), X^1(t=1), etc"
-                f"got {init_diff_vals.size} values "
+                "in the sequence X(t=0), X^1(t=1), "
+                "et cetera. "
+                f"Got {n_inits} values "
                 "for a process of order "
                 f"{self.differencing_order}"
+            )
+        init_row_shape = init_diff_vals[0].shape
+        diff_row_shape = highest_order_diff_vals[0].shape
+        if not init_row_shape == diff_row_shape:
+            raise ValueError(
+                "First axis entries for init_diff_vals "
+                "and highest_order_diff_vals (e.g. "
+                "init_diff_vals[0], "
+                "highest_order_diff_vals[1], et cetera) "
+                "must either both be scalars (shape ()) "
+                "or both be arrays of identical shape. "
+                f"Got shape {init_row_shape} for the "
+                "init_diff_vals "
+                f"and shape {diff_row_shape} for the "
+                "highest_order_diff_vals"
             )
 
         def _integrate_one_step(diffs, scanned):

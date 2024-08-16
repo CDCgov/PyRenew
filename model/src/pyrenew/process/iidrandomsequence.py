@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
-import jax.numpy as jnp
 from numpyro.contrib.control_flow import scan
 from pyrenew.metaclass import RandomVariable, SampledValue
 
@@ -40,12 +39,6 @@ class IIDRamdomSequence(RandomVariable):
         super().__init__(**kwargs)
         self.name = name
         self.element_rv = element_rv
-        if not hasattr(element_rv, "sample_shape"):
-            raise ValueError(
-                "Only RandomVariables with a sample_shape()"
-                "method can be used as the element_rv for "
-                "an IIDRamdomSequence"
-            )
 
     def sample(
         self, n: int, *args, vectorize: bool = False, **kwargs
@@ -82,15 +75,16 @@ class IIDRamdomSequence(RandomVariable):
 
         if not vectorize:
 
-            def transition(x_prev, _):
+            def transition(_carry, _x):
                 # numpydoc ignore=GL08
                 el, *_ = self.element_rv.sample(*args, **kwargs)
-                return el.value, el.value
+                return None, el.value
 
             _, result = scan(
                 transition,
-                init=jnp.zeros(self.element_rv.batch_shape),
-                xs=jnp.arange(n),
+                xs=None,
+                init=None,
+                length=n,
             )
         else:
             result = self.element_rv.expand((n,)).sample(*args, **kwargs)

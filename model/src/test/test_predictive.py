@@ -5,7 +5,7 @@ Ensures that posterior predictive samples are not generated
 when no posterior samples are available.
 """
 
-from test.utils import simple_rt
+from test.utils import SimpleRt
 
 import jax.numpy as jnp
 import numpyro.distributions as dist
@@ -30,7 +30,7 @@ I0 = InfectionInitializationProcess(
 )
 latent_infections = Infections()
 observed_infections = PoissonObservation("poisson_rv")
-rt = simple_rt()
+rt = SimpleRt()
 
 model = RtInfectionsRenewalModel(
     I0_rv=I0,
