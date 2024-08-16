@@ -1,4 +1,4 @@
-# PyRenew: A Package for Bayesian Renewal Modeling with JAX and Numpyro.
+# PyRenew: A Package for Bayesian Renewal Modeling with JAX and NumPyro.
 
 ⚠️ This is a work in progress ⚠️
 
