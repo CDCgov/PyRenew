@@ -23,7 +23,7 @@ pmf_array = jnp.array([0.25, 0.1, 0.2, 0.45])
 gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
 I0 = InfectionInitializationProcess(
     "I0_initialization",
-    DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
+    DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
     InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
     t_unit=1,
 )
