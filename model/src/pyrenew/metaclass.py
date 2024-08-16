@@ -711,8 +711,7 @@ class TransformedRandomVariable(RandomVariable):
         """
 
         untransformed_values = self.base_rv.sample(**kwargs)
-
-        return tuple(
+        transformed_values = tuple(
             SampledValue(
                 t(uv.value),
                 t_start=self.t_start,
@@ -720,6 +719,10 @@ class TransformedRandomVariable(RandomVariable):
             )
             for t, uv in zip(self.transforms, untransformed_values)
         )
+
+        numpyro.deterministic(self.name, transformed_values[0].value)
+
+        return transformed_values
 
     def sample_length(self):
         """
