@@ -139,8 +139,9 @@ class HospitalAdmissions(RandomVariable):
         obs_data_first_day_of_the_week: Any,
     ) -> None:
         """
-        Validates that the IHR, weekday effects, and probability of being
-        reported hospitalized distributions are RandomVariable types
+        Validates that the IHR, weekday effects, probability of being
+        reported hospitalized distributions, and infection to
+        hospital admissions reporting delay pmf are RandomVariable types
 
         Parameters
         ----------
