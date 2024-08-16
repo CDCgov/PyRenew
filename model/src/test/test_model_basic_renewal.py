@@ -33,7 +33,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
         name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
-    I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
+    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 
@@ -64,7 +64,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
         value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    I0 = DistributionalRV(name="I0", dist=dist.LogNormal(0, 1))
+    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
 
     latent_infections = Infections()
 
@@ -100,11 +100,11 @@ def test_model_basicrenewal_no_obs_model():
     )
 
     with pytest.raises(ValueError):
-        I0 = DistributionalRV(name="I0", dist=1)
+        I0 = DistributionalRV(name="I0", distribution=1)
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
+        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -175,7 +175,7 @@ def test_model_basicrenewal_with_obs_model():
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
+        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -224,7 +224,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(name="I0", dist=dist.LogNormal(0, 1)),
+        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
