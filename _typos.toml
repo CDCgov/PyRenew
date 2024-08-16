@@ -16,6 +16,7 @@ LOD = "LOD"
 ans = "ans"
 arange = "arange"
 ND = "ND"
+ro = "ro"
 
 [files]
 extend-exclude = [
