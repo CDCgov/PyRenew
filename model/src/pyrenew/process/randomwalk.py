@@ -4,7 +4,7 @@
 import numpyro.distributions as dist
 from pyrenew.metaclass import DistributionalRV, RandomVariable
 from pyrenew.process.differencedprocess import DifferencedProcess
-from pyrenew.process.iidrandomsequence import IIDRamdomSequence
+from pyrenew.process.iidrandomsequence import IIDRandomSequence
 
 
 class RandomWalk(DifferencedProcess):
@@ -13,7 +13,7 @@ class RandomWalk(DifferencedProcess):
     random walk with an arbitrary
     step distribution, implemented
     via DifferencedProcess and
-    IIDRamdomSequence
+    IIDRandomSequence
     """
 
     def __init__(
@@ -39,7 +39,7 @@ class RandomWalk(DifferencedProcess):
 
         step_sequence_suffix : str
             Suffix to append to the RandomVariable's
-            name when naming the IIDRamdomSequence that
+            name when naming the IIDRandomSequence that
             holds its steps (differences). Default
             "_steps".
 
@@ -53,7 +53,7 @@ class RandomWalk(DifferencedProcess):
         """
         super().__init__(
             name=name,
-            fundamental_process=IIDRamdomSequence(
+            fundamental_process=IIDRandomSequence(
                 name=name + step_sequence_suffix, element_rv=step_rv
             ),
             differencing_order=1,

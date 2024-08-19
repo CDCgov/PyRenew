@@ -6,7 +6,7 @@ from numpyro.contrib.control_flow import scan
 from pyrenew.metaclass import DistributionalRV, RandomVariable, SampledValue
 
 
-class IIDRamdomSequence(RandomVariable):
+class IIDRandomSequence(RandomVariable):
     """
     Class for constructing random sequence of
     independent and identically distributed elements
@@ -107,7 +107,7 @@ class IIDRamdomSequence(RandomVariable):
         return None
 
 
-class StandardNormalSequence(IIDRamdomSequence):
+class StandardNormalSequence(IIDRandomSequence):
     """
     Class for a sequence of IID standard Normal
     (mean = 0, sd = 1) random variables.
@@ -125,7 +125,7 @@ class StandardNormalSequence(IIDRamdomSequence):
         Parameters
         ----------
         name : str
-            see :class:`IIDRamdomSequence`.
+            see :class:`IIDRandomSequence`.
         element_suffix: str
             Suffix appended to name to name
             the internal element_rv, here a
