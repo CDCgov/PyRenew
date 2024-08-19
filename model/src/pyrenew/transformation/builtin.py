@@ -30,7 +30,7 @@ def ScaledLogitTransform(
     return nt.ComposeTransform(
         [
             nt.AffineTransform(
-                0.0, 1.0 / x_max, domain=constraints.interval(0, x_max)
+                0.0, 1.0 / x_max, domain=constraints.interval(0., 1. * x_max)
             ),
             nt.SigmoidTransform().inv,
         ]
