@@ -213,7 +213,7 @@ class RtInfectionsRenewalModel(Model):
         )
 
         observed_infections, *_ = self.infection_obs_process_rv(
-            mu=post_initialization_latent_infections.value,
+            mu=post_initialization_latent_infections.value[padding:],
             obs=data_observed_infections,
             **kwargs,
         )
