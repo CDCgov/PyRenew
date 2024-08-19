@@ -19,7 +19,7 @@ def test_infections_as_deterministic():
     rt = SimpleRt()
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt, *_ = rt(n_steps=30)
+        sim_rt, *_ = rt(n=30)
 
     gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
 

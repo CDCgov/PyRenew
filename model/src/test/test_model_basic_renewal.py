@@ -33,7 +33,12 @@ def test_model_basicrenewal_no_timepoints_or_observations():
         name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
-    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
+    I0_init_rv = InfectionInitializationProcess(
+        "I0_initialization",
+        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
+        t_unit=1,
+    )
 
     latent_infections = Infections()
 
@@ -42,7 +47,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
     rt = SimpleRt()
 
     model1 = RtInfectionsRenewalModel(
-        I0_rv=I0,
+        I0_rv=I0_init_rv,
         gen_int_rv=gen_int,
         latent_infections_rv=latent_infections,
         infection_obs_process_rv=observed_infections,
@@ -64,7 +69,12 @@ def test_model_basicrenewal_both_timepoints_and_observations():
         value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
+    I0_init_rv = InfectionInitializationProcess(
+        "I0_initialization",
+        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
+        t_unit=1,
+    )
 
     latent_infections = Infections()
 
@@ -73,7 +83,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
     rt = SimpleRt()
 
     model1 = RtInfectionsRenewalModel(
-        I0_rv=I0,
+        I0_rv=I0_init_rv,
         gen_int_rv=gen_int,
         latent_infections_rv=latent_infections,
         infection_obs_process_rv=observed_infections,
@@ -100,12 +110,12 @@ def test_model_basicrenewal_no_obs_model():
     )
 
     with pytest.raises(ValueError):
-        I0 = DistributionalRV(name="I0", distribution=1)
+        _ = DistributionalRV(name="I0", distribution=1)
 
-    I0 = InfectionInitializationProcess(
+    I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
         t_unit=1,
     )
 
@@ -115,7 +125,7 @@ def test_model_basicrenewal_no_obs_model():
 
     model0 = RtInfectionsRenewalModel(
         gen_int_rv=gen_int,
-        I0_rv=I0,
+        I0_rv=I0_init_rv,
         latent_infections_rv=latent_infections,
         Rt_process_rv=rt,
         # Explicitly use None, this should call the NullObservation
@@ -125,6 +135,7 @@ def test_model_basicrenewal_no_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     with numpyro.handlers.seed(rng_seed=223):
         model0_samp = model0.sample(n_datapoints=30)
+    print(model0_samp)
     model0_samp.Rt
     model0_samp.latent_infections
     model0_samp.observed_infections
@@ -173,10 +184,10 @@ def test_model_basicrenewal_with_obs_model():
         name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
-    I0 = InfectionInitializationProcess(
+    I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
         t_unit=1,
     )
 
@@ -187,7 +198,7 @@ def test_model_basicrenewal_with_obs_model():
     rt = SimpleRt()
 
     model1 = RtInfectionsRenewalModel(
-        I0_rv=I0,
+        I0_rv=I0_init_rv,
         gen_int_rv=gen_int,
         latent_infections_rv=latent_infections,
         infection_obs_process_rv=observed_infections,
@@ -197,6 +208,11 @@ def test_model_basicrenewal_with_obs_model():
     # Sampling and fitting model 1 (with obs infections)
     with numpyro.handlers.seed(rng_seed=223):
         model1_samp = model1.sample(n_datapoints=30)
+
+    print(model1_samp)
+    print(model1_samp.Rt.value.size)
+    print(model1_samp.latent_infections.value.size)
+    print(model1_samp.observed_infections.value.size)
 
     model1.run(
         num_warmup=500,
@@ -222,10 +238,10 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
-    I0 = InfectionInitializationProcess(
+    I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
         t_unit=1,
     )
 
@@ -236,24 +252,21 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     rt = SimpleRt()
 
     model1 = RtInfectionsRenewalModel(
-        I0_rv=I0,
+        I0_rv=I0_init_rv,
         gen_int_rv=gen_int,
         latent_infections_rv=latent_infections,
         infection_obs_process_rv=observed_infections,
         Rt_process_rv=rt,
     )
 
-    # Sampling and fitting model 1 (with obs infections)
-    pad_size = 5
     with numpyro.handlers.seed(rng_seed=223):
-        model1_samp = model1.sample(n_datapoints=30, padding=pad_size)
+        model1_samp = model1.sample(n_datapoints=30)
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
         data_observed_infections=model1_samp.observed_infections.value,
-        padding=5,
     )
 
     inf = model1.spread_draws(["all_latent_infections"])

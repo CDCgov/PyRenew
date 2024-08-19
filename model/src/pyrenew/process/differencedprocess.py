@@ -32,7 +32,9 @@ class DifferencedProcess(RandomVariable):
             Name of the stochastic process
         fundamental_process : RandomVariable
             Stochastic process for the
-            first differences
+            first differences. Should accept an
+            `n` argument specifying the number
+            of samples to draw.
         differencing_order : int
             How many fold-differencing the
             the process represents. Must be
@@ -141,6 +143,7 @@ class DifferencedProcess(RandomVariable):
     def sample(
         self,
         init_vals: ArrayLike,
+        n: int,
         *args,
         **kwargs,
     ) -> tuple:
@@ -153,6 +156,10 @@ class DifferencedProcess(RandomVariable):
             initial values for the differenced process,
             passed as the init_diff_vals to
             DifferencedProcess.integrate
+
+        n : int
+            Number of values to sample. Will sample n - 1
+            values from self.fundamental_process.
 
         *args :
            Additional positional arguments passed to
@@ -167,7 +174,7 @@ class DifferencedProcess(RandomVariable):
             Whose value entry is a single array representing the
             undifferenced timeseries
         """
-        diffs, *_ = self.fundamental_process.sample(*args, **kwargs)
+        diffs, *_ = self.fundamental_process.sample(*args, n=n - 1, **kwargs)
         return (
             SampledValue(
                 value=self.integrate(init_vals, diffs.value),

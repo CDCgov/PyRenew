@@ -23,7 +23,7 @@ def test_admissions_sample():
     rt = SimpleRt()
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt = rt(n_steps=30)[0].value
+        sim_rt = rt(n=30)[0].value
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
     i0 = 10 * jnp.ones_like(gen_int)

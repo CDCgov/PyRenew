@@ -7,7 +7,6 @@ from typing import NamedTuple
 
 import jax.numpy as jnp
 import numpyro
-import pyrenew.arrayutils as au
 from numpy.typing import ArrayLike
 from pyrenew.deterministic import NullObservation
 from pyrenew.metaclass import (
@@ -214,34 +213,22 @@ class RtInfectionsRenewalModel(Model):
         )
 
         observed_infections, *_ = self.infection_obs_process_rv(
-            mu=post_initialization_latent_infections.value[padding:],
+            mu=post_initialization_latent_infections.value,
             obs=data_observed_infections,
             **kwargs,
         )
 
-        all_latent_infections = jnp.hstack(
-            [I0.value, post_initialization_latent_infections.value]
+        all_latent_infections = SampledValue(
+            jnp.hstack([I0.value, post_initialization_latent_infections.value])
         )
-        numpyro.deterministic("all_latent_infections", all_latent_infections)
-
-        if observed_infections is not None:
-            observed_infections = au.pad_x_to_match_y(
-                observed_infections.value,
-                all_latent_infections,
-                jnp.nan,
-                pad_direction="start",
-            )
-
-        Rt = au.pad_x_to_match_y(
-            Rt.value,
-            all_latent_infections,
-            jnp.nan,
-            pad_direction="start",
+        numpyro.deterministic(
+            "all_latent_infections", all_latent_infections.value
         )
-        numpyro.deterministic("Rt", Rt)
+
+        numpyro.deterministic("Rt", Rt.value)
 
         return RtInfectionsRenewalSample(
-            Rt=SampledValue(Rt),
-            latent_infections=SampledValue(all_latent_infections),
-            observed_infections=SampledValue(observed_infections),
+            Rt=Rt,
+            latent_infections=all_latent_infections,
+            observed_infections=observed_infections,
         )

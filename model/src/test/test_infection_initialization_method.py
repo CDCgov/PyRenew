@@ -84,9 +84,13 @@ def test_initialize_infections_zero_pad():
     infections = InitializeInfectionsZeroPad(
         n_timepoints
     ).initialize_infections(I_pre_init)
-    testing.assert_array_equal(
-        infections, np.pad(I_pre_init, (n_timepoints - I_pre_init.size, 0))
+
+    manual_infections = np.pad(
+        np.atleast_1d(I_pre_init),
+        (n_timepoints - np.array(I_pre_init).size, 0),
     )
+
+    testing.assert_array_equal(infections, manual_infections)
 
     I_pre_init_RV_2 = DeterministicVariable(
         name="I_pre_init_RV", value=np.array([10.0, 10.0])
