@@ -68,9 +68,7 @@ class PoissonObservation(RandomVariable):
         tuple
         """
 
-        clipped_mu = jnp.clip(
-            mu + self.eps, min=jnp.finfo(float).eps, max=jnp.inf
-        )
+        clipped_mu = jnp.clip(mu, min=self.eps, max=jnp.inf)
 
         poisson_sample = numpyro.sample(
             name=self.name,

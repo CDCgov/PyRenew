@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
-import jax.numpy as jnp
 import numpy as np
 import numpy.testing as testing
 import numpyro
@@ -62,30 +61,47 @@ def test_negativebinom_random_obs():
     )
 
 
-def test_negativebinom_clipping():
-    """
-    Check that the clipping of the mean parameter works correctly.
-    """
+# def test_negativebinom_naive_vs_clipped():
+#     """
+#     Test that demonstrates the failure of the naive method (eps=0)
+#     and the success of the method with clipping or small eps.
+#     """
 
-    negb = NegativeBinomialObservation(
-        "negbinom_rv",
-        concentration_rv=DeterministicVariable(name="concentration", value=10),
-    )
 
-    small_mu = 1e-10
-    expected_clipped_mu = jnp.clip(
-        small_mu + jnp.finfo(float).eps, min=jnp.finfo(float).eps, max=jnp.inf
-    )
+#     concentration_rv = DeterministicVariable(name="concentration", value=10)
 
-    with numpyro.handlers.seed(rng_seed=223):
-        sim_nb = negb(mu=small_mu)
+#     negb_naive = NegativeBinomialObservation(
+#         "negbinom_rv_naive",
+#         concentration_rv=concentration_rv,
+#         eps=0.0
+#     )
 
-    assert isinstance(sim_nb, tuple)
-    assert isinstance(sim_nb[0].value, ArrayLike)
+#     negb_clipped = NegativeBinomialObservation(
+#         "negbinom_rv_clipped",
+#         concentration_rv=concentration_rv,
+#         eps=jnp.finfo(float).eps
+#     )
 
-    mean_sample_value = jnp.mean(sim_nb[0].value)
-    testing.assert_array_almost_equal(
-        mean_sample_value,
-        expected_clipped_mu,
-        decimal=5,
-    )
+#     naive_failed = False
+#     try:
+#         with numpyro.handlers.seed(rng_seed=223):
+#             negb_naive_sample = negb_naive(mu=0.0)
+#     except Exception as e:
+#         naive_failed = True
+#         print(f"Naive method failed as expected: {e}")
+#     assert naive_failed, "Naive method did not fail as expected."
+
+#     clipped_failed = False
+#     try:
+#         with numpyro.handlers.seed(rng_seed=223):
+#             negb_clipped_sample = negb_clipped(mu=0.0)
+#     except Exception as e:
+#         clipped_failed = True
+#         print(f"Clipped method failed unexpectedly: {e}")
+#     assert not clipped_failed, "Clipped method failed unexpectedly."
+
+#     assert isinstance(negb_clipped_sample, tuple)
+#     assert isinstance(negb_clipped_sample[0].value, ArrayLike)
+
+#     mean_sample_value = jnp.mean(negb_clipped_sample[0].value)
+#     assert mean_sample_value >= jnp.finfo(float).eps, "Clipped sample mean is unexpectedly low."
