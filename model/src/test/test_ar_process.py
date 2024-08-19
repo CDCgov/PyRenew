@@ -18,7 +18,7 @@ def test_ar_can_be_sampled():
             n=3532,
             init_vals=jnp.array([50.0]),
             autoreg=jnp.array([0.95]),
-            noise_sd=jnp.array([0.5]),
+            noise_sd=0.5,
         )
 
     ar3 = ARProcess("ar3process")
@@ -29,7 +29,7 @@ def test_ar_can_be_sampled():
             n=1230,
             init_vals=jnp.array([50.0, 49.9, 48.2]),
             autoreg=jnp.array([0.05, 0.025, 0.025]),
-            noise_sd=jnp.array([0.5]),
+            noise_sd=0.5,
         )
 
 
