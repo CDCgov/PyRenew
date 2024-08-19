@@ -226,12 +226,12 @@ class InfFeedback(RandomVariable):
             **kwargs,
         )
 
-        inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength)
+        inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength.value)
 
         inf_feedback_strength = au.pad_x_to_match_y(
-            x=inf_feedback_strength.value,
+            x=inf_feedback_strength,
             y=Rt,
-            fill_value=inf_feedback_strength.value[0],
+            fill_value=inf_feedback_strength[0],
         )
 
         # Sampling inf feedback and adjusting the shape
