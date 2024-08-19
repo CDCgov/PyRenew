@@ -159,9 +159,11 @@ class InfectionsWithFeedback(RandomVariable):
         I0 = I0[-gen_int_rev.size :]
 
         # Sampling inf feedback strength
-        inf_feedback_strength = self.infection_feedback_strength(
-            **kwargs,
-        )[0].value
+        inf_feedback_strength = jnp.atleast_1d(
+            self.infection_feedback_strength(
+                **kwargs,
+            )[0].value
+        )
 
         # Making sure inf_feedback_strength spans the Rt length
         if inf_feedback_strength.size == 1:
@@ -172,8 +174,9 @@ class InfectionsWithFeedback(RandomVariable):
             )
         elif inf_feedback_strength.size != Rt.size:
             raise ValueError(
-                "Infection feedback strength must be of size 1 or the same "
-                f"size as the reproduction number. Got {inf_feedback_strength.size} "
+                "Infection feedback strength must be of size 1 "
+                "or the same size as the reproduction number array. "
+                f"Got {inf_feedback_strength.size} "
                 f"and {Rt.size} respectively."
             )
 

@@ -48,9 +48,7 @@ The following code-chunk defines the model components. Notice that for both the 
 gen_int_array = jnp.array([0.25, 0.5, 0.15, 0.1])
 
 gen_int = DeterministicPMF(name="gen_int", value=gen_int_array)
-feedback_strength = DeterministicVariable(
-    name="feedback_strength", value=jnp.array([0.01])
-)
+feedback_strength = DeterministicVariable(name="feedback_strength", value=0.01)
 
 
 I0 = InfectionInitializationProcess(
