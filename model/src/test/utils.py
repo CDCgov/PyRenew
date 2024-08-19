@@ -32,10 +32,10 @@ def simple_rt(arg_name: str = "Rt_rv"):
         base_rv=SimpleRandomWalkProcess(
             name="log_rt",
             step_rv=DistributionalRV(
-                name="rw_step_rv", dist=dist.Normal(0, 0.025)
+                name="rw_step_rv", distribution=dist.Normal(0, 0.025)
             ),
             init_rv=DistributionalRV(
-                name="init_log_rt", dist=dist.Normal(0, 0.2)
+                name="init_log_rt", distribution=dist.Normal(0, 0.2)
             ),
         ),
         transforms=t.ExpTransform(),
