@@ -65,30 +65,19 @@ class LengthTwoRV(RandomVariable):
         return None
 
 
-class RVSamplesLengthTwo(NamedTuple):
+class RVSamples(NamedTuple):
     """
-    A container to hold the output of `NamedBaseRVLengthTwo()`.
+    A container to hold the output of `NamedBaseRV()`.
     """
 
     rv1: SampledValue | None = None
     rv2: SampledValue | None = None
 
     def __repr__(self):
-        return f"RVSamplesLengthTwo(rv1={self.rv1},rv2={self.rv2})"
+        return f"RVSamples(rv1={self.rv1},rv2={self.rv2})"
 
 
-class RVSamplesLengthOne(NamedTuple):
-    """
-    A container to hold the output of `NamedBaseRVLengthOne()`.
-    """
-
-    rv1: SampledValue | None = None
-
-    def __repr__(self):
-        return f"RVSamplesLengthOne(rv1={self.rv1},)"
-
-
-class NamedBaseRVLengthTwo(RandomVariable):
+class NamedBaseRV(RandomVariable):
     """
     Class for a RandomVariable
     returning NamedTuples "rv1", and "rv2"
@@ -105,40 +94,9 @@ class NamedBaseRVLengthTwo(RandomVariable):
             rv2= SampledValue(val, t_start=self.t_start, t_unit=self.t_unit))
         """
         val = numpyro.sample("my_normal", dist.Normal(0, 1))
-        return RVSamplesLengthTwo(
+        return RVSamples(
             rv1=SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
             rv2=SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
-        )
-
-    def validate(self):
-        """
-        No validation.
-
-        Returns
-        -------
-        None
-        """
-        return None
-
-
-class NamedBaseRVLengthOne(RandomVariable):
-    """
-    Class for a RandomVariable
-    returning NamedTuples "rv1"
-    """
-
-    def sample(self, **kwargs):
-        """
-        Sampling method that returns two named tuples
-
-        Returns
-        -------
-        tuple
-           (rv1= SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),)
-        """
-        val = numpyro.sample("my_normal", dist.Normal(0, 1))
-        return RVSamplesLengthOne(
-            rv1=SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
         )
 
     def validate(self):
@@ -255,38 +213,32 @@ def test_transforms_applied_at_sampling():
         )
 
 
-def test_transforms_variable_naming_length_two():
+def test_transforms_variable_naming():
     """
     Tests TransformedRandomVariable name
     recording is as expected.
     """
-    transformed_dist = TransformedRandomVariable(
+    transformed_dist_named_base_rv = TransformedRandomVariable(
         "transformed_rv",
-        NamedBaseRVLengthTwo(),
+        NamedBaseRV(),
         (t.ExpTransform(), t.IdentityTransform()),
     )
 
-    mymodel = MyModel(transformed_dist)
-
-    mymodel.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(4))
-
-    assert "transformed_rv_rv1" in mymodel.mcmc.get_samples()
-    assert "transformed_rv_rv2" in mymodel.mcmc.get_samples()
-
-
-def test_transforms_variable_naming_length_one():
-    """
-    Tests TransformedRandomVariable name
-    recording is as expected.
-    """
-    transformed_dist = TransformedRandomVariable(
+    transformed_dist_unnamed_base_rv = TransformedRandomVariable(
         "transformed_rv",
-        NamedBaseRVLengthOne(),
-        t.IdentityTransform(),
+        DistributionalRV(name="my_normal", distribution=dist.Normal(0, 1)),
+        (t.ExpTransform(), t.IdentityTransform()),
     )
 
-    mymodel = MyModel(transformed_dist)
+    mymodel1 = MyModel(transformed_dist_named_base_rv)
 
-    mymodel.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(4))
+    mymodel1.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(4))
 
-    assert "transformed_rv_rv1" in mymodel.mcmc.get_samples()
+    assert "transformed_rv_rv1" in mymodel1.mcmc.get_samples()
+    assert "transformed_rv_rv2" in mymodel1.mcmc.get_samples()
+
+    mymodel2 = MyModel(transformed_dist_unnamed_base_rv)
+
+    mymodel2.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(5))
+
+    assert "transformed_rv" in mymodel2.mcmc.get_samples()
