@@ -4,6 +4,9 @@
 Tests for TransformedRandomVariable class
 """
 
+from typing import NamedTuple
+
+import jax
 import numpyro
 import numpyro.distributions as dist
 import pyrenew.transformation as t
@@ -11,6 +14,7 @@ import pytest
 from numpy.testing import assert_almost_equal
 from pyrenew.metaclass import (
     DistributionalRV,
+    Model,
     RandomVariable,
     SampledValue,
     TransformedRandomVariable,
@@ -59,6 +63,66 @@ class LengthTwoRV(RandomVariable):
         None
         """
         return None
+
+
+class RVSamples(NamedTuple):
+    """
+    A container to hold the output of `NamedBaseRV()`.
+    """
+
+    rv1: SampledValue | None = None
+    rv2: SampledValue | None = None
+
+    def __repr__(self):
+        return f"RVSamples(rv1={self.rv1},rv2={self.rv2})"
+
+
+class NamedBaseRV(RandomVariable):
+    """
+    Class for a RandomVariable
+    returning NamedTuples "rv1", and "rv2"
+    """
+
+    def sample(self, **kwargs):
+        """
+        Sampling method that returns two named tuples
+
+        Returns
+        -------
+        tuple
+           (rv1= SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
+            rv2= SampledValue(val, t_start=self.t_start, t_unit=self.t_unit))
+        """
+        val = numpyro.sample("my_normal", dist.Normal(0, 1))
+        return RVSamples(
+            rv1=SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
+            rv2=SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
+        )
+
+    def validate(self):
+        """
+        No validation.
+
+        Returns
+        -------
+        None
+        """
+        return None
+
+
+class MyModel(Model):
+    """
+    Model class to create and run variable name recording
+    """
+
+    def __init__(self, rv):  # numpydoc ignore=GL08
+        self.rv = rv
+
+    def validate(self):  # numpydoc ignore=GL08
+        pass
+
+    def sample(self, **kwargs):  # numpydoc ignore=GL08
+        return self.rv(record=True, **kwargs)
 
 
 def test_transform_rv_validation():
@@ -147,3 +211,22 @@ def test_transforms_applied_at_sampling():
             ),
             (l2_transformed_sample[0].value, l2_transformed_sample[1].value),
         )
+
+
+def test_transforms_variable_naming():
+    """
+    Tests TransformedRandomVariable name
+    recording is as expected.
+    """
+    transformed_dist = TransformedRandomVariable(
+        "transformed_rv",
+        NamedBaseRV(),
+        (t.ExpTransform(), t.IdentityTransform()),
+    )
+
+    mymodel = MyModel(transformed_dist)
+
+    mymodel.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(4))
+
+    assert "transformed_rv_rv1" in mymodel.mcmc.get_samples()
+    assert "transformed_rv_rv2" in mymodel.mcmc.get_samples()
