@@ -153,7 +153,8 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         # Running the process
         ar_diff = DifferencedProcess(
-            name=None, fundamental_process=ARProcess(name=None)
+            name="log_rt",
+            fundamental_process=ARProcess(name="first_diff_log_rt_ar"),
         )
 
         log_rt = ar_diff(
