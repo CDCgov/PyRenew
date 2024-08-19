@@ -9,7 +9,6 @@ from pyrenew.metaclass import (
     SampledValue,
     _assert_sample_and_rtype,
 )
-from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
 
 
 class RtPeriodicDiffProcessSample(NamedTuple):

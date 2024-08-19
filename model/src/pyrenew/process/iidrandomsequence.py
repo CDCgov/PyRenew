@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
+import numpyro.distributions as dist
 from numpyro.contrib.control_flow import scan
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import DistributionalRV, RandomVariable, SampledValue
 
 
 class IIDRamdomSequence(RandomVariable):
@@ -68,7 +69,7 @@ class IIDRamdomSequence(RandomVariable):
 
         Returns
         -------
-        SampledValue
+        tuple[SampledValue]
             Whose value is an array of `n`
             samples from `self.distribution`
         """
@@ -104,3 +105,41 @@ class IIDRamdomSequence(RandomVariable):
         """
         super().validate()
         return None
+
+
+class StandardNormalSequence(IIDRamdomSequence):
+    """
+    Class for a sequence of IID standard Normal
+    (mean = 0, sd = 1) random variables.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        element_suffix: str = "_standard_normal_element",
+        **kwargs,
+    ):
+        """
+        Default constructor
+
+        Parameters
+        ----------
+        name : str
+            see :class:`IIDRamdomSequence`.
+        element_suffix: str
+            Suffix appended to name to name
+            the internal element_rv, here a
+            DistributionalRV encoding a
+            standard Normal (mean = 0, sd = 1)
+            distribution. Default "_standard_normal_element"
+
+        Returns
+        -------
+        None
+        """
+        super().__init__(
+            name=name,
+            element_rv=DistributionalRV(
+                name=name + element_suffix, distribution=dist.Normal(0, 1)
+            ),
+        )

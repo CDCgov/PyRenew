@@ -174,7 +174,7 @@ class DifferencedProcess(RandomVariable):
             Whose value entry is a single array representing the
             undifferenced timeseries
         """
-        diffs, *_ = self.fundamental_process.sample(*args, n=n - 1, **kwargs)
+        diffs, *_ = self.fundamental_process.sample(*args, n=(n - 1), **kwargs)
         return (
             SampledValue(
                 value=self.integrate(init_vals, diffs.value),
