@@ -259,15 +259,17 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         Rt_process_rv=rt,
     )
 
+    pad_size = 5
+
     with numpyro.handlers.seed(rng_seed=223):
-        model1_samp = model1.sample(n_datapoints=30)
+        model1_samp = model1.sample(n_datapoints=30, padding=pad_size)
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
         data_observed_infections=model1_samp.observed_infections.value,
-        padding=5,
+        padding=pad_size,
     )
 
     inf = model1.spread_draws(["all_latent_infections"])
