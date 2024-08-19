@@ -37,7 +37,7 @@ class SimpleRt(RandomVariable):
         """
         self.name = name
         self.rt_rv_ = TransformedRandomVariable(
-            name=name + "log_rt_random_walk",
+            name=f"{name}_log_rt_random_walk",
             base_rv=RandomWalk(
                 name="log_rt",
                 step_rv=DistributionalRV(
@@ -47,7 +47,7 @@ class SimpleRt(RandomVariable):
             transforms=t.ExpTransform(),
         )
         self.rt_init_rv_ = DistributionalRV(
-            name=name + "init_log_rt", distribution=dist.Normal(0, 0.2)
+            name=f"{name}_init_log_rt", distribution=dist.Normal(0, 0.2)
         )
 
     def sample(self, n=None, **kwargs) -> SampledValue:
