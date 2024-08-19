@@ -36,7 +36,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
@@ -72,7 +72,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
@@ -115,7 +115,7 @@ def test_model_basicrenewal_no_obs_model():
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
@@ -135,7 +135,6 @@ def test_model_basicrenewal_no_obs_model():
     # Sampling and fitting model 0 (with no obs for infections)
     with numpyro.handlers.seed(rng_seed=223):
         model0_samp = model0.sample(n_datapoints=30)
-    print(model0_samp)
     model0_samp.Rt
     model0_samp.latent_infections
     model0_samp.observed_infections
@@ -187,7 +186,7 @@ def test_model_basicrenewal_with_obs_model():
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
@@ -241,7 +240,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.basevar.value.size),
+        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
 
