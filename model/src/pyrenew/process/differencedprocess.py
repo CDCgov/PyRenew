@@ -145,6 +145,7 @@ class DifferencedProcess(RandomVariable):
         init_vals: ArrayLike,
         n: int,
         *args,
+        fundamental_process_init_vals: ArrayLike = None,
         **kwargs,
     ) -> tuple:
         """
@@ -165,6 +166,11 @@ class DifferencedProcess(RandomVariable):
            Additional positional arguments passed to
            self.fundamental_process.sample()
 
+        fundamental_process_init_vals : ArrayLike
+           Initial values for the fundamental process.
+           Passed as the `init_vals` keyword argument
+           to self.fundamental_process.sample().
+
         **kwargs : dict, optional
             Keyword arguments passed to self.fundamental_process.sample()
 
@@ -174,7 +180,9 @@ class DifferencedProcess(RandomVariable):
             Whose value entry is a single array representing the
             undifferenced timeseries
         """
-        diffs, *_ = self.fundamental_process.sample(*args, n=(n - 1), **kwargs)
+        diffs, *_ = self.fundamental_process.sample(
+            *args, n=(n - 1), init_vals=fundamental_process_init_vals, **kwargs
+        )
         return (
             SampledValue(
                 value=self.integrate(init_vals, diffs.value),

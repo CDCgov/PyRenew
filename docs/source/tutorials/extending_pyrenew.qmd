@@ -28,8 +28,12 @@ import numpyro.distributions as dist
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import InfectionsWithFeedback
 from pyrenew.model import RtInfectionsRenewalModel
-from pyrenew.process import SimpleRandomWalkProcess
-from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
+from pyrenew.process import RandomWalk
+from pyrenew.metaclass import (
+    RandomVariable,
+    DistributionalRV,
+    TransformedRandomVariable,
+)
 from pyrenew.latent import (
     InfectionInitializationProcess,
     InitializeInfectionsExponentialGrowth,
@@ -44,7 +48,9 @@ The following code-chunk defines the model components. Notice that for both the 
 gen_int_array = jnp.array([0.25, 0.5, 0.15, 0.1])
 
 gen_int = DeterministicPMF(name="gen_int", value=gen_int_array)
-feedback_strength = DeterministicVariable(name="feedback_strength", value=0.01)
+feedback_strength = DeterministicVariable(
+    name="feedback_strength", value=jnp.array([0.01])
+)
 
 
 I0 = InfectionInitializationProcess(
@@ -62,19 +68,31 @@ latent_infections = InfectionsWithFeedback(
     infection_feedback_pmf=gen_int,
 )
 
-rt = TransformedRandomVariable(
-    "Rt_rv",
-    base_rv=SimpleRandomWalkProcess(
-        name="log_rt",
-        step_rv=DistributionalRV(
-            name="rw_step_rv", distribution=dist.Normal(0, 0.025)
-        ),
-        init_rv=DistributionalRV(
+
+class MyRt(RandomVariable):
+
+    def validate(self):
+        pass
+
+    def sample(self, n: int, **kwargs) -> tuple:
+        sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
+
+        rt_rv = TransformedRandomVariable(
+            name="log_rt_random_walk",
+            base_rv=RandomWalk(
+                name="log_rt",
+                step_rv=DistributionalRV(
+                    name="rw_step_rv", distribution=dist.Normal(0, 0.025)
+                ),
+            ),
+            transforms=t.ExpTransform(),
+        )
+        rt_init_rv = DistributionalRV(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
-        ),
-    ),
-    transforms=t.ExpTransform(),
-)
+        )
+        init_rt, *_ = rt_init_rv.sample()
+
+        return rt_rv.sample(n=n, init_vals=init_rt.value, **kwargs)
 ```
 
 With all the components defined, we can build the model:
@@ -85,7 +103,7 @@ model0 = RtInfectionsRenewalModel(
     gen_int_rv=gen_int,
     I0_rv=I0,
     latent_infections_rv=latent_infections,
-    Rt_process_rv=rt,
+    Rt_process_rv=MyRt(),
     infection_obs_process_rv=None,
 )
 ```
@@ -260,7 +278,7 @@ model1 = RtInfectionsRenewalModel(
     gen_int_rv=gen_int,
     I0_rv=I0,
     latent_infections_rv=latent_infections2,
-    Rt_process_rv=rt,
+    Rt_process_rv=MyRt(),
     infection_obs_process_rv=None,
 )
 

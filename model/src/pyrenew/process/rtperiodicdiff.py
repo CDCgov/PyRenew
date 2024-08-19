@@ -155,13 +155,17 @@ class RtPeriodicDiffProcess(RandomVariable):
         ar_diff = DifferencedProcess(
             name="log_rt",
             fundamental_process=ARProcess(name="first_diff_log_rt_ar"),
+            differencing_order=1,
         )
 
         log_rt = ar_diff(
             n=n_periods,
-            init_vals=jnp.array([log_rt_rv[1], log_rt_rv[1] - log_rt_rv[0]]),
+            init_vals=jnp.array([log_rt_rv[1]]),
             autoreg=b,
             noise_sd=s_r,
+            fundamental_process_init_vals=jnp.array(
+                [log_rt_rv[1] - log_rt_rv[0]]
+            ),
         )[0]
 
         return RtPeriodicDiffProcessSample(
