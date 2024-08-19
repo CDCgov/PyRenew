@@ -1,5 +1,5 @@
 """
-Test the rtweeklydiff module
+Test the RtPeriodicDiffARProcess module
 """
 
 import jax.numpy as jnp
@@ -8,7 +8,7 @@ import numpyro
 from jax.typing import ArrayLike
 from numpy.testing import assert_array_equal
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.process import RtWeeklyDiffProcess
+from pyrenew.process import RtWeeklyDiffARProcess
 
 
 def _manual_rt_weekly_diff(
@@ -29,7 +29,7 @@ def _manual_rt_weekly_diff(
     Returns
     -------
     ArrayLike
-        The reconstructed RtWeeklyDiffProcess process.
+        The reconstructed RtWeeklyDiffARProcess process.
     """
 
     log_ans = np.zeros(sd.size + 2)
@@ -63,7 +63,7 @@ def test_rtweeklydiff() -> None:
     }
     duration = 30
 
-    rtwd = RtWeeklyDiffProcess(**params)
+    rtwd = RtWeeklyDiffARProcess(**params)
 
     with numpyro.handlers.seed(rng_seed=223):
         rt = rtwd(duration=duration).rt.value
@@ -78,7 +78,7 @@ def test_rtweeklydiff() -> None:
 
     # Checking start off a different day of the week
     params["offset"] = 5
-    rtwd = RtWeeklyDiffProcess(**params)
+    rtwd = RtWeeklyDiffARProcess(**params)
 
     with numpyro.handlers.seed(rng_seed=223):
         rt2 = rtwd(duration=duration).rt.value
@@ -112,7 +112,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
         ),
     }
 
-    rtwd = RtWeeklyDiffProcess(**params)
+    rtwd = RtWeeklyDiffARProcess(**params)
 
     duration = 1000
 
@@ -153,7 +153,7 @@ def test_rtperiodicdiff_smallsample():
         ),
     }
 
-    rtwd = RtWeeklyDiffProcess(**params)
+    rtwd = RtWeeklyDiffARProcess(**params)
 
     with numpyro.handlers.seed(rng_seed=223):
         rt = rtwd(duration=6).rt.value
