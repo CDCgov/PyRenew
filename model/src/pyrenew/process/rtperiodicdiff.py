@@ -3,12 +3,12 @@ from typing import NamedTuple
 
 import jax.numpy as jnp
 import pyrenew.arrayutils as au
-from jax.typing import ArrayLike
 from pyrenew.metaclass import (
     RandomVariable,
     SampledValue,
     _assert_sample_and_rtype,
 )
+from pyrenew.process import ARProcess, DifferencedProcess
 
 
 class RtPeriodicDiffProcessSample(NamedTuple):
@@ -121,31 +121,6 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         return None
 
-    @staticmethod
-    def autoreg_process(
-        dat: ArrayLike, sigma: float
-    ) -> tuple[ArrayLike, float]:
-        """
-        Scan function for the autoregressive process.
-
-        Parameters
-        ----------
-        dat : ArrayLike
-            Data array with three elements: log_rt0, log_rt1, and b.
-        sigma : float
-            Standard deviation of the noise.
-
-        Returns
-        -------
-        tuple
-        """
-
-        log_rt0, log_rt1, b = dat
-
-        next_log_rt = log_rt1 + b * (log_rt1 - log_rt0) + sigma
-
-        return jnp.hstack([log_rt1, next_log_rt, b]), next_log_rt
-
     def sample(
         self,
         duration: int,
@@ -177,17 +152,21 @@ class RtPeriodicDiffProcess(RandomVariable):
         n_periods = (duration + self.period_size - 1) // self.period_size
 
         # Running the process
-        ar_diff = FirstDifferenceARProcess(self.name, autoreg=b, noise_sd=s_r)
-        log_rt = ar_diff.sample(
-            duration=n_periods,
-            init_val=log_rt_rv[1],
-            init_rate_of_change=log_rt_rv[1] - log_rt_rv[0],
+        ar_diff = DifferencedProcess(
+            name=None, fundamental_process=ARProcess(name=None)
+        )
+
+        log_rt = ar_diff(
+            n=n_periods,
+            init_vals=jnp.array([log_rt_rv[1], log_rt_rv[1] - log_rt_rv[0]]),
+            autoreg=b,
+            noise_sd=s_r,
         )[0]
 
         return RtPeriodicDiffProcessSample(
             rt=SampledValue(
                 au.repeat_until_n(
-                    data=jnp.exp(log_rt.value.flatten()),
+                    data=jnp.exp(log_rt.value),
                     n_timepoints=duration,
                     offset=self.offset,
                     period_size=self.period_size,
