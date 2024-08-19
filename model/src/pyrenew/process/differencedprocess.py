@@ -75,7 +75,7 @@ class DifferencedProcess(RandomVariable):
         from the n-th differences and a set of initial process /
         difference values X(t=0), X^1(t=1), X^2(t=2), ...
         X^(n-1)(t=n-1), where X^k(t) is the value of the n-th
-        differenc at index t of the process.
+        difference at index t of the process.
 
         Parameters
         ----------
