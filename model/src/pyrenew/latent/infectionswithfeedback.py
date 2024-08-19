@@ -164,7 +164,6 @@ class InfectionsWithFeedback(RandomVariable):
                 **kwargs,
             )[0].value
         )
-
         # Making sure inf_feedback_strength spans the Rt length
         if inf_feedback_strength.size == 1:
             inf_feedback_strength = au.pad_x_to_match_y(

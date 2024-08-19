@@ -225,6 +225,9 @@ class InfFeedback(RandomVariable):
         inf_feedback_strength, *_ = self.infection_feedback_strength(
             **kwargs,
         )
+
+        inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength)
+
         inf_feedback_strength = au.pad_x_to_match_y(
             x=inf_feedback_strength.value,
             y=Rt,
