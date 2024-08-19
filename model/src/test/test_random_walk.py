@@ -40,7 +40,7 @@ def test_rw_can_be_sampled():
     assert ans_rand[0].value[0] != init_rv_fixed.value
 
 
-@pytest.mark.paraemetrize(
+@pytest.mark.parametrize(
     ["step_mean", "step_sd"],
     [
         [0, 1],
