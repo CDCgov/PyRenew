@@ -5,7 +5,7 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import NamedTuple, get_type_hints
+from typing import Callable, NamedTuple, get_type_hints
 
 import jax
 import jax.numpy as jnp
@@ -13,6 +13,7 @@ import jax.random as jr
 import matplotlib.pyplot as plt
 import numpy as np
 import numpyro
+import numpyro.distributions as dist
 import polars as pl
 from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive
@@ -126,7 +127,7 @@ def _assert_sample_and_rtype(
 
 class SampledValue(NamedTuple):
     """
-    A container for a sampled value from a RandomVariable.
+    A container for a value sampled from a RandomVariable.
 
     Attributes
     ----------
@@ -135,7 +136,8 @@ class SampledValue(NamedTuple):
     t_start : int, optional
         The start time of the value.
     t_unit : int, optional
-        The unit of time relative to the model's fundamental (smallest) time unit.
+        The unit of time relative to the model's fundamental
+        (smallest) time unit.
     """
 
     value: ArrayLike | None = None
@@ -274,16 +276,127 @@ class RandomVariable(metaclass=ABCMeta):
         return self.sample(**kwargs)
 
 
-class DistributionalRV(RandomVariable):
+class DynamicDistributionalRV(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single :class:`numpyro.distributions.Distribution`.
+    from a single :class:`numpyro.distributions.Distribution`
+    that is parameterized / instantiated at `sample()` time
+    (rather than at RandomVariable instantiation time).
     """
 
     def __init__(
         self,
         name: str,
-        dist: numpyro.distributions.Distribution,
+        distribution_constructor: Callable,
+        reparam: Reparam = None,
+    ) -> None:
+        """
+        Default constructor for DynamicDistributionalRV.
+
+        Parameters
+        ----------
+        name : str
+            Name of the random variable.
+        distribution_constructor : Callable
+            Callable that returns a concrete parametrized
+            numpyro.Distributions.distribution instance.
+        reparam : numpyro.infer.reparam.Reparam
+            If not None, reparameterize sampling
+            from the distribution according to the
+            given numpyro reparameterizer
+
+        Returns
+        -------
+        None
+        """
+
+        self.name = name
+        self.validate(distribution_constructor)
+        self.distribution_constructor = distribution_constructor
+        if reparam is not None:
+            self.reparam_dict = {self.name: reparam}
+        else:
+            self.reparam_dict = {}
+
+        return None
+
+    @staticmethod
+    def validate(distribution_constructor: any) -> None:
+        """
+        Confirm that the distribution_constructor is
+        callable.
+
+        Parameters
+        ----------
+        distribution_constructor : any
+            Putative distribution_constructor to validate.
+
+        Returns
+        -------
+        None or raises a ValueError
+        """
+        if not callable(distribution_constructor):
+            raise ValueError(
+                "To instantiate a DynamicDistributionalRV, ",
+                "one must provide a Callable that returns a "
+                "numpyro.distributions.Distribution as the "
+                "distribution_constructor argument. "
+                f"Got {type(distribution_constructor)}, which "
+                "does not appear to be callable",
+            )
+        return None
+
+    def sample(
+        self,
+        *args,
+        obs: ArrayLike = None,
+        **kwargs,
+    ) -> tuple:
+        """
+        Sample from the distributional rv.
+
+        Parameters
+        ----------
+        *args :
+            Positional arguments passed to self.distribution_constructor
+        obs : ArrayLike, optional
+            Observations passed as the `obs` argument to
+            :fun:`numpyro.sample()`. Default `None`.
+        **kwargs : dict, optional
+            Keyword arguments passed to self.distribution_constructor
+
+        Returns
+        -------
+        SampledValue
+           Containing a sample from the distribution.
+        """
+        with numpyro.handlers.reparam(config=self.reparam_dict):
+            sample = numpyro.sample(
+                name=self.name,
+                fn=self.distribution_constructor(*args, **kwargs),
+                obs=obs,
+            )
+        return (
+            SampledValue(
+                jnp.atleast_1d(sample),
+                t_start=self.t_start,
+                t_unit=self.t_unit,
+            ),
+        )
+
+
+class StaticDistributionalRV(RandomVariable):
+    """
+    Wrapper class for random variables that sample
+    from a single :class:`numpyro.distributions.Distribution`
+    that is parameterized / instantiated at RandomVariable
+    instantiation time (rather than at `sample()`-ing time).
+    """
+
+    def __init__(
+        self,
+        name: str,
+        distribution: numpyro.distributions.Distribution,
         reparam: Reparam = None,
     ) -> None:
         """
@@ -293,7 +406,7 @@ class DistributionalRV(RandomVariable):
         ----------
         name : str
             Name of the random variable.
-        dist : numpyro.distributions.Distribution
+        distribution : numpyro.distributions.Distribution
             Distribution of the random variable.
         reparam : numpyro.infer.reparam.Reparam
             If not None, reparameterize sampling
@@ -306,8 +419,8 @@ class DistributionalRV(RandomVariable):
         """
 
         self.name = name
-        self.validate(dist)
-        self.dist = dist
+        self.validate(distribution)
+        self.distribution = distribution
         if reparam is not None:
             self.reparam_dict = {self.name: reparam}
         else:
@@ -316,14 +429,15 @@ class DistributionalRV(RandomVariable):
         return None
 
     @staticmethod
-    def validate(dist: any) -> None:
+    def validate(distribution: any) -> None:
         """
         Validation of the distribution to be implemented in subclasses.
         """
-        if not isinstance(dist, numpyro.distributions.Distribution):
+        if not isinstance(distribution, numpyro.distributions.Distribution):
             raise ValueError(
-                "dist should be an instance of "
-                f"numpyro.distributions.Distribution, got {dist}"
+                "distribution should be an instance of "
+                "numpyro.distributions.Distribution, got "
+                "{type(distribution)}"
             )
 
         return None
@@ -347,13 +461,13 @@ class DistributionalRV(RandomVariable):
 
         Returns
         -------
-        tuple
-           Containing the sampled from the distribution.
+        SampledValue
+           Containing a sample from the distribution.
         """
         with numpyro.handlers.reparam(config=self.reparam_dict):
             sample = numpyro.sample(
                 name=self.name,
-                fn=self.dist,
+                fn=self.distribution,
                 obs=obs,
             )
         return (
@@ -362,6 +476,58 @@ class DistributionalRV(RandomVariable):
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
+        )
+
+
+def DistributionalRV(
+    name: str,
+    distribution: numpyro.distributions.Distribution | Callable,
+    reparam: Reparam = None,
+) -> RandomVariable:
+    """
+    Factory function to generate Distributional RandomVariables,
+    either static or dynamic.
+
+    Parameters
+    ----------
+    name : str
+        Name of the random variable.
+
+    distribution: numpyro.distributions.Distribution | Callable
+        Either numpyro.distributions.Distribution instance
+        given the static distribution of the random variable or
+        a callable that returns a parameterized
+        numpyro.distributions.Distribution when called, which
+        allows for dynamically-parameterized DistributionalRVs,
+        e.g. a Normal distribution with an inferred location and
+        scale.
+
+    reparam : numpyro.infer.reparam.Reparam
+        If not None, reparameterize sampling
+        from the distribution according to the
+        given numpyro reparameterizer
+
+    Returns
+    -------
+    DynamicDistributionalRV | StaticDistributionalRV or
+    raises a ValueError if a distribution cannot be constructed.
+    """
+    if isinstance(distribution, dist.Distribution):
+        return StaticDistributionalRV(
+            name=name, distribution=distribution, reparam=reparam
+        )
+    elif callable(distribution):
+        return DynamicDistributionalRV(
+            name=name, distribution_constructor=distribution, reparam=reparam
+        )
+    else:
+        raise ValueError(
+            "distribution argument to DistributionalRV "
+            "must be either a numpyro.distributions.Distribution "
+            "(for instantiating a static DistributionalRV) "
+            "or a callable that returns a "
+            "numpyro.distributions.Distribution (for "
+            "a dynamic DistributionalRV"
         )
 
 

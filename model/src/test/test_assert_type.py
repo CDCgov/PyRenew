@@ -14,7 +14,7 @@ def test_valid_assertion_types():
         5,
         "Hello",
         (1,),
-        DistributionalRV(name="rv", dist=dist.Beta(1, 1)),
+        DistributionalRV(name="rv", distribution=dist.Beta(1, 1)),
     ]
     arg_names = ["input_int", "input_string", "input_tuple", "input_rv"]
     input_types = [int, str, tuple, RandomVariable]
