@@ -14,7 +14,11 @@ class DifferencedProcess(RandomVariable):
     """
     Class for differenced stochastic process X(t),
     constructed by placing a fundamental stochastic
-    process on the first differences (rates of change).
+    process on the :math:`n^{th}` differences
+    (rates of change). See
+    https://otexts.com/fpp2/stationarity.html
+    for a discussion of differencing in the
+    context of discrete timeseries data.
     """
 
     def __init__(
@@ -72,21 +76,23 @@ class DifferencedProcess(RandomVariable):
     ):
         """
         Integrate (de-difference) the differenced process,
-        obtaining the process values X(t=0), X(t=1), ... X(t)
-        from the n-th differences and a set of initial process /
-        difference values X(t=0), X^1(t=1), X^2(t=2), ...
-        X^(n-1)(t=n-1), where X^k(t) is the value of the n-th
-        difference at index t of the process.
+        obtaining the process values :math:`X(t=0), X(t=1), ... X(t)`
+        from the math:`n^{th}` differences and a set of initial process /
+        difference values
+        :math:`X(t=0), X^1(t=1), X^2(t=2), ... X^(n-1)(t=n-1)`,
+        where :math:`X^k(t)` is the value of the math:`n^{th}`
+        difference at index math:`t` of the process.
 
         Parameters
         ----------
         init_diff_vals : ArrayLike
-            Values of X(t=0), X^1(t=1), X^2(t=2) ... X^(n-1)(t=n-1).
+            Values of
+            `math:`X(t=0), X^1(t=1), X^2(t=2) ... X^(n-1)(t=n-1)`.
 
         highest_order_diff_vals : ArrayLike
             Array of differences at the highest order of
             differencing, i.e. the order of the overall process,
-            starting with X^n(t=n)
+            starting with :math:`X^n(t=n)`
 
         Returns
         -------
@@ -100,7 +106,7 @@ class DifferencedProcess(RandomVariable):
                 "Must have exactly as many "
                 "initial difference values as "
                 "the differencing order, given "
-                "in the sequence X(t=0), X^1(t=1), "
+                "in the sequence :math:`X(t=0), X^1(t=1),` "
                 "et cetera. "
                 f"Got {n_inits} values "
                 "for a process of order "
