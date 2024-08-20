@@ -226,12 +226,13 @@ class DifferencedProcess(RandomVariable):
         """
         if not isinstance(differencing_order, int):
             raise ValueError(
-                "differcing_order must be an integer."
-                f"got {type(differencing_order)}"
+                "differencing_order must be an integer. "
+                f"got type {type(differencing_order)} "
+                f"and value {differencing_order}"
             )
         if not differencing_order >= 1:
             raise ValueError(
-                "differcing_order must be an integer "
+                "differencing_order must be an integer "
                 "greater than or equal to 1. Got "
                 f"{differencing_order}"
             )

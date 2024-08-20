@@ -2,6 +2,7 @@
 
 import jax.numpy as jnp
 import numpyro
+import pytest
 from numpy.testing import assert_almost_equal
 
 from pyrenew.process import ARProcess
@@ -32,6 +33,35 @@ def test_ar_can_be_sampled():
             autoreg=jnp.array([0.05, 0.025, 0.025]),
             noise_sd=0.5,
         )
+        ar3(
+            n=1230,
+            init_vals=jnp.array([50.0, 49.9, 48.2]),
+            autoreg=jnp.array([0.05, 0.025, 0.025]),
+            noise_sd=[0.25],
+        )
+        ar3(
+            n=1230,
+            init_vals=jnp.array([50.0, 49.9, 48.2]),
+            autoreg=jnp.array([0.05, 0.025, 0.025]),
+            noise_sd=jnp.array([0.25]),
+        )
+
+        # vector valued noise with raises
+        # error
+        with pytest.raises(ValueError, match="must be a scalar"):
+            ar3(
+                n=1230,
+                init_vals=jnp.array([50.0, 49.9, 48.2]),
+                autoreg=jnp.array([0.05, 0.025, 0.025]),
+                noise_sd=jnp.array([1.0, 2.0]),
+            )
+        with pytest.raises(ValueError, match="must be a scalar"):
+            ar3(
+                n=1230,
+                init_vals=jnp.array([50.0, 49.9, 48.2]),
+                autoreg=jnp.array([0.05, 0.025, 0.025]),
+                noise_sd=[1.0, 2.0],
+            )
 
 
 def test_ar_samples_correctly_distributed():

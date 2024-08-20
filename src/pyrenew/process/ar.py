@@ -40,7 +40,7 @@ class ARProcess(RandomVariable):
         n: int,
         autoreg: ArrayLike,
         init_vals: ArrayLike,
-        noise_sd: ArrayLike,
+        noise_sd: float | ArrayLike,
         **kwargs,
     ) -> tuple:
         """
@@ -58,6 +58,10 @@ class ARProcess(RandomVariable):
         init_vals : ArrayLike
             Array of initial values. Must have the
             same first dimension size as the order.
+        noise_sd : float | ArrayLike
+            Scalar giving the s.d. of the AR
+            process Normal noise, which by
+            definition has mean 0.
         **kwargs : dict, optional
             Additional keyword arguments passed to
             self.noise_rv_.sample()
@@ -68,9 +72,12 @@ class ARProcess(RandomVariable):
             With a single SampledValue containing an
             array of shape (n,).
         """
+        flat_noise_sd = jnp.array(noise_sd).flatten()
+        if not flat_noise_sd.shape == (1,):
+            raise ValueError("noise_sd must be a scalar. " f"Got {noise_sd}")
         order = autoreg.shape[0]
         raw_noise, *_ = self.noise_rv_(n=n, **kwargs)
-        noise = noise_sd * raw_noise.value
+        noise = flat_noise_sd * raw_noise.value
 
         def transition(recent_vals, next_noise):  # numpydoc ignore=GL08
             new_term = jnp.dot(autoreg, recent_vals) + next_noise
