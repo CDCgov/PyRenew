@@ -475,7 +475,7 @@ class StaticDistributionalRV(RandomVariable):
     @staticmethod
     def validate(distribution: any) -> None:
         """
-        Validation of the distribution to be implemented in subclasses.
+        Validation of the distribution.
         """
         if not isinstance(distribution, numpyro.distributions.Distribution):
             raise ValueError(

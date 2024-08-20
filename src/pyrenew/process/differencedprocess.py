@@ -198,9 +198,19 @@ class DifferencedProcess(RandomVariable):
             Whose value entry is a single array representing the
             undifferenced timeseries
         """
+        n_diffs = n - self.differencing_order
+        if n_diffs < 1:
+            raise ValueError(
+                "Cannot sample a sequence equal to "
+                "or shorter than the differencing order "
+                f"User requested {n} samples with a "
+                "differencing order of "
+                f"{self.differencing_order}"
+            )
+
         diffs, *_ = self.fundamental_process.sample(
             *args,
-            n=(n - self.differencing_order),
+            n=n_diffs,
             init_vals=fundamental_process_init_vals,
             **kwargs,
         )

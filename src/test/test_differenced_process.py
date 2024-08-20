@@ -4,11 +4,18 @@ Unit tests for the DifferencedProcess class
 
 import jax
 import jax.numpy as jnp
+import numpyro
+import numpyro.distributions as dist
 import pytest
 from numpy.testing import assert_array_almost_equal
 
 from pyrenew.deterministic import NullVariable
-from pyrenew.process import DifferencedProcess
+from pyrenew.metaclass import DistributionalRV
+from pyrenew.process import (
+    DifferencedProcess,
+    IIDRandomSequence,
+    StandardNormalSequence,
+)
 
 
 @pytest.mark.parametrize(
@@ -147,3 +154,53 @@ def test_manual_integrator_correctness(diffs, inits, expected_solution):
     )
     result = proc.integrate(inits, diffs)
     assert_array_almost_equal(result, expected_solution)
+
+
+@pytest.mark.parametrize(
+    ["fundamental_process", "differencing_order", "init_diff_vals"],
+    [
+        [
+            IIDRandomSequence(
+                "test",
+                DistributionalRV("element_dist", dist.Cauchy(0.02, 0.3)),
+            ),
+            3,
+            jnp.array([0.25, 0.67, 5]),
+        ],
+        [
+            StandardNormalSequence("test_stand_norm"),
+            5,
+            jnp.array([0.23, 5.2, 1, 0.2, 3]),
+        ],
+    ],
+)
+def test_differenced_process_sample(
+    fundamental_process, differencing_order, init_diff_vals
+):
+    """
+    Test that differenced processes can be sampled,
+    that they yield the correct sample shapes, and that
+    they raise errors if non-feasible sample lengths are
+    requested.
+    """
+    proc = DifferencedProcess(
+        "test",
+        differencing_order=differencing_order,
+        fundamental_process=fundamental_process,
+    )
+
+    n_succeed = differencing_order + 1032
+    n_succeed_two = differencing_order + 235
+    n_fail = differencing_order
+    n_fail_two = differencing_order - 1
+    with numpyro.handlers.seed(rng_seed=6723):
+        samp, *_ = proc.sample(n=n_succeed, init_vals=init_diff_vals)
+        samp_two, *_ = proc.sample(n=n_succeed_two, init_vals=init_diff_vals)
+    assert samp.value.shape == (n_succeed,)
+    assert samp_two.value.shape == (n_succeed_two,)
+
+    with numpyro.handlers.seed(rng_seed=7834):
+        with pytest.raises(ValueError, match="equal to or shorter than"):
+            proc.sample(n=n_fail, init_vals=init_diff_vals)
+        with pytest.raises(ValueError, match="equal to or shorter than"):
+            proc.sample(n=n_fail_two, init_vals=init_diff_vals)
