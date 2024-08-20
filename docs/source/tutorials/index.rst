@@ -1,7 +1,7 @@
 Tutorials
 =========
 
-This section contains tutorials that demonstrate how to use the `pyrenew` package. The source code for the tutorials can be found in the project repository: https://github.com/CDCgov/multisignal-epi-inference/tree/main/model/docs/.
+This section contains tutorials that demonstrate how to use the `pyrenew` package. The source code for the tutorials can be found in the project repository: https://github.com/CDCgov/multisignal-epi-inference/tree/main/docs/source/tutorials.
 
 .. toctree::
    :maxdepth: 2

@@ -1,21 +1,63 @@
-# Multisignal Renewal Project
+# PyRenew: A Package for Bayesian Renewal Modeling with JAX and NumPyro.
 
 ⚠️ This is a work in progress ⚠️
 
-[![Pre-commit](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/pre-commit.yaml/badge.svg)](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/pre-commit.yaml)
-[![installation and testing model](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/model.yaml/badge.svg)](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/model.yaml)
-[![installation and testing pipeline](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/pipeline.yaml/badge.svg)](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/pipeline.yaml)
-[![Docs: model](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/website.yaml/badge.svg)](https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/website.yaml)
-[![codecov (model)](https://codecov.io/gh/CDCgov/multisignal-epi-inference/graph/badge.svg?token=7Z06HOMYR1)](https://codecov.io/gh/CDCgov/multisignal-epi-inference)
+`pyrenew` is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing renewal models. Built on top of the [`numpyro`](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building, including pre-defined models for processing various types of observational processes. To start, visit the tutorials section on the project's website [here](https://cdcgov.github.io/multisignal-epi-inference/tutorials/index.html).
 
-## Overview
+The following diagram illustrates the composition of the `HospitalAdmissionsModel` class. Notably, all components are modular and can be replaced with custom implementations.
 
-The **Multisignal Renewal Project** aims to develop a modeling framework that leverages multiple data sources to enhance CDC's epidemiological modeling capabilities. The project's goal is twofold: (a) **create a Python library** that provides a flexible renewal modeling framework and (b) **develop a pipeline** that leverages this framework to estimate epidemiological parameters from multiple data sources and produce forecasts. The library and pipeline are located in the [**model/**](https://github.com/CDCgov/multisignal-epi-inference/tree/main/model) and [**pipeline/**](https://github.com/CDCgov/multisignal-epi-inference/tree/main/pipeline/) directories of the GitHub repository, respectively.
+```mermaid
+flowchart LR
+
+  %% Elements
+  rt_proc["Random Walk Rt\nProcess (latent)"];
+  latent_inf["Latent Infections"]
+  latent_ihr["Infection to Hosp.\nrate (latent)"]
+  neg_binom["Observation process\n(hospitalizations)"]
+  latent_hosp["Latent Hospitalizations"];
+  i0["Initial infections\n(latent)"];
+  gen_int["Generation\ninterval (fixed)"];
+  hosp_int["Hospitalization\ninterval (fixed)"];
+
+  %% Models
+  basic_model(("Infections\nModel"));
+  admin_model(("Hospital Admissions\nModel"));
+
+  %% Latent infections
+  rt_proc --> latent_inf;
+  i0 --> latent_inf;
+  gen_int --> latent_inf;
+  latent_inf --> basic_model
+
+  %% Hospitalizations
+  hosp_int --> latent_hosp
+
+  neg_binom --> admin_model;
+  latent_ihr --> latent_hosp;
+  basic_model --> admin_model;
+  latent_hosp --> admin_model;
+```
+
+## Installation
+
+Install via pip with
+
+```bash
+pip install git+https://github.com/CDCgov/multisignal-epi-inference@main
+```
+
+## Container image
+
+A container image is available at `ghcr.io/CDCgov/pyrenew:latest`. You can pull it with
+
+```bash
+docker pull ghcr.io/CDCgov/pyrenew:latest
+```
 
 ## Resources
 
 * [The MSR Website](https://cdcgov.github.io/multisignal-epi-inference/tutorials/index.html) provides general documentation and tutorials on using MSR.
-* [The Model Equations Sheet](https://github.com/CDCgov/multisignal-epi-inference/blob/main/model/equations.md) describe the mathematics of the renewal processes and models MSR supports.
+* [The Model Equations Sheet](https://github.com/CDCgov/multisignal-epi-inference/blob/main/equations.md) describe the mathematics of the renewal processes and models MSR supports.
 * Additional reading on renewal processes in epidemiology
   * [_Semi-mechanistic Bayesian modelling of COVID-19 with renewal processes_](https://academic.oup.com/jrsssa/article-pdf/186/4/601/54770289/qnad030.pdf)
   * [_Unifying incidence and prevalence under a time-varying general branching process_](https://link.springer.com/content/pdf/10.1007/s00285-023-01958-w.pdf)
