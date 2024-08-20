@@ -48,6 +48,7 @@ optional = true
 [tool.poetry.group.test.dependencies]
 pytest-cov = "^5.0.0"
 pytest-mpl = "^0.17.0"
+scipy = "^1.14.0"
 
 [tool.numpydoc_validation]
 checks = [
