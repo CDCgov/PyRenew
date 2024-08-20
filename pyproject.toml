@@ -50,7 +50,6 @@ pytest = "^8.3.2"
 pytest-cov = "^5.0.0"
 pytest-mpl = "^0.17.0"
 scipy = "^1.14.0"
-pytest = "^8.3.2"
 
 [tool.numpydoc_validation]
 checks = [
@@ -83,4 +82,4 @@ build-backend = "poetry.core.masonry.api"
 known_first_party = ["pyrenew", "test"]
 
 [tool.deptry.per_rule_ignores]
-DEP004 = ["pytest"]
+DEP004 = ["pytest", "scipy"]
