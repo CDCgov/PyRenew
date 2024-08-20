@@ -289,7 +289,7 @@ class DynamicDistributionalRV(RandomVariable):
         name: str,
         distribution_constructor: Callable,
         reparam: Reparam = None,
-        expand_shape: tuple = None,
+        expand_by_shape: tuple = None,
     ) -> None:
         """
         Default constructor for DynamicDistributionalRV.
@@ -305,9 +305,10 @@ class DynamicDistributionalRV(RandomVariable):
             If not None, reparameterize sampling
             from the distribution according to the
             given numpyro reparameterizer
-        expand_shape : tuple, optional
-            If not None, expand the underlying distribution
-            at sample() call by to the given expand_shape.
+        expand_by_shape : tuple, optional
+            If not None, call :meth:`expand_by()` on the
+            underlying distribution once it is instianted
+            with the given `expand_by_shape`.
             Default None.
 
         Returns
@@ -322,12 +323,12 @@ class DynamicDistributionalRV(RandomVariable):
             self.reparam_dict = {self.name: reparam}
         else:
             self.reparam_dict = {}
-        if not (expand_shape is None or isinstance(expand_shape, tuple)):
+        if not (expand_by_shape is None or isinstance(expand_by_shape, tuple)):
             raise ValueError(
-                "expand_shape must be a tuple or be None ",
-                f"Got {type(expand_shape)}",
+                "expand_by_shape must be a tuple or be None ",
+                f"Got {type(expand_by_shape)}",
             )
-        self.expand_shape = expand_shape
+        self.expand_by_shape = expand_by_shape
 
         return None
 
@@ -382,8 +383,8 @@ class DynamicDistributionalRV(RandomVariable):
            Containing a sample from the distribution.
         """
         distribution = self.distribution_constructor(*args, **kwargs)
-        if self.expand_shape is not None:
-            distribution = distribution.expand(self.expand_shape)
+        if self.expand_by_shape is not None:
+            distribution = distribution.expand_by(self.expand_by_shape)
         with numpyro.handlers.reparam(config=self.reparam_dict):
             sample = numpyro.sample(
                 name=self.name,
@@ -398,32 +399,33 @@ class DynamicDistributionalRV(RandomVariable):
             ),
         )
 
-    def expand(self, batch_shape) -> Self:
+    def expand_by(self, sample_shape) -> Self:
         """
-        Expand the distribution to a different
-        batch_shape, if possible. Returns a
+        Expand the distribution by a given
+        shape_shape, if possible. Returns a
         new DynamicDistributionalRV whose underlying
         distribution will be expanded by the given shape
         at sample() time.
 
         Parameters
         ----------
-        batch_shape : tuple
-            Batch shape for the expand. Will ultimately
-            be passed to the expand() method of
-            :class:`numpyro.distributions.Distribution`.
+        sample_shape : tuple
+            Sample shape by which to expand the distribution.
+            Passed to the expand_by() method of
+            :class:`numpyro.distributions.Distribution`
+            after the distribution is instantiated.
 
         Returns
         -------
         DynamicDistributionalRV
-            Whose underlying distribution will be expanded to
-            the desired batch shape at sampling time.
+            Whose underlying distribution will be expanded by
+            the given sample shape at sampling time.
         """
         return DynamicDistributionalRV(
             name=self.name,
             distribution_constructor=self.distribution_constructor,
             reparam=self.reparam_dict.get(self.name, None),
-            expand_shape=batch_shape,
+            expand_by_shape=sample_shape,
         )
 
 
@@ -520,35 +522,36 @@ class StaticDistributionalRV(RandomVariable):
             ),
         )
 
-    def expand(self, batch_shape) -> Self:
+    def expand_by(self, sample_shape) -> Self:
         """
-        Expand the distribution to a different
-        batch_shape, if possible. Returns a
-        new StaticDistributionalRV whose underlying
-        distribution has been expanded by the given
-        batch_shape.
+        Expand the distribution by the given sample_shape,
+        if possible. Returns a new StaticDistributionalRV
+        whose underlying distribution has been expanded by
+        the given sample_shape via
+        :meth:`~numpyro.distributions.Distribution.expand_by()`
 
         Parameters
         ----------
-        batch_shape : tuple
-            Batch shape for the expand. Passed to the expand()
-            method of :class:`numpyro.distributions.Distribution`.
+        sample_shape : tuple
+            Sample shape for the expansion. Passed to the
+            :meth:`expand_by()` method of
+            :class:`numpyro.distributions.Distribution`.
 
         Returns
         -------
         StaticDistributionalRV
-            Whose underlying distribution has been expanded to
-            the desired batch shape.
+            Whose underlying distribution has been expanded by
+            the given sample shape.
         """
-        if not isinstance(batch_shape, tuple):
+        if not isinstance(sample_shape, tuple):
             raise ValueError(
-                "batch_shape for expand()-ing "
+                "sample_shape for expand()-ing "
                 "a DistributionalRV must be a "
-                f"tuple. Got {type(batch_shape)}"
+                f"tuple. Got {type(sample_shape)}"
             )
         return StaticDistributionalRV(
             name=self.name,
-            distribution=self.distribution.expand(batch_shape),
+            distribution=self.distribution.expand_by(sample_shape),
             reparam=self.reparam_dict.get(self.name, None),
         )
 
@@ -634,8 +637,8 @@ class Model(metaclass=ABCMeta):
         Parameters
         ----------
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal `sample()`
-            calls, should there be any.
+            Additional keyword arguments passed through to internal
+            `sample()` calls, should there be any.
 
         Returns
         -------

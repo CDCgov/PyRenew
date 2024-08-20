@@ -59,9 +59,10 @@ class IIDRandomSequence(RandomVariable):
 
         vectorize: bool
             Sample vectorized? If True, use
-            :meth:`RandomVariable.expand()`,
-            if False use
+            :meth:`RandomVariable.expand_by()`,
+            whenever available, and fall back on
             :fun:`numpyro.contrib.control_flow.scan`.
+            If False, always use :fun:`scan()`.
             Default False.
 
         **kwargs:
@@ -75,7 +76,12 @@ class IIDRandomSequence(RandomVariable):
             samples from `self.distribution`
         """
 
-        if not vectorize:
+        if vectorize and hasattr(self.element_rv, "expand_by"):
+            result, *_ = self.element_rv.expand_by((n,)).sample(
+                *args, **kwargs
+            )
+            result = result.value
+        else:
 
             def transition(_carry, _x):
                 # numpydoc ignore=GL08
@@ -88,8 +94,6 @@ class IIDRandomSequence(RandomVariable):
                 init=None,
                 length=n,
             )
-        else:
-            result = self.element_rv.expand((n,)).sample(*args, **kwargs)
 
         return (
             SampledValue(

@@ -31,20 +31,30 @@ def test_iidrandomsequence_with_dist_rv(distribution, n):
     """
     element_rv = DistributionalRV("el_rv", distribution=distribution)
     rseq = IIDRandomSequence(name="randseq", element_rv=element_rv)
-
-    with numpyro.handlers.seed(rng_seed=62):
-        ans, *_ = rseq.sample(n=n)
-
-    # check that samples are the right type
-    assert isinstance(ans, SampledValue)
-
-    # check that the samples are of the right shape
     expected_shape = distribution.batch_shape
     if expected_shape == () or expected_shape == (1,):
         expected_shape = (n,)
     else:
         expected_shape = tuple([n] + [x for x in expected_shape])
-    assert ans.value.shape == expected_shape
+
+    with numpyro.handlers.seed(rng_seed=62):
+        ans_vec, *_ = rseq.sample(n=n, vectorize=True)
+        ans_serial, *_ = rseq.sample(n=n, vectorize=False)
+
+    # check that samples are the right type
+    for ans in [ans_serial, ans_vec]:
+        assert isinstance(ans, SampledValue)
+        # check that the samples are of the right shape
+        assert ans.value.shape == expected_shape
+
+    # vectorized and unvectorized sampling should
+    # not give the same answer
+    # but they should give similar distributions
+    assert all(ans_serial.value.flatten() != ans_vec.value.flatten())
+
+    if expected_shape == (n,):
+        kstest_out = kstest(ans_serial.value, ans_vec.value)
+        assert kstest_out.pvalue > 0.01
 
 
 def test_standard_normal_sequence():
@@ -68,4 +78,4 @@ def test_standard_normal_sequence():
     assert isinstance(ans, SampledValue)
     # samples should be approximately standard normal
     kstest_out = kstest(ans.value, "norm", (0, 1))
-    assert kstest_out.pvalue > 0.001
+    assert kstest_out.pvalue > 0.01
