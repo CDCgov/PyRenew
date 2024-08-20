@@ -5,7 +5,7 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Callable, NamedTuple, get_type_hints
+from typing import Callable, NamedTuple, Self, get_type_hints
 
 import jax
 import jax.random as jr
@@ -289,6 +289,7 @@ class DynamicDistributionalRV(RandomVariable):
         name: str,
         distribution_constructor: Callable,
         reparam: Reparam = None,
+        expand_shape: tuple = None,
     ) -> None:
         """
         Default constructor for DynamicDistributionalRV.
@@ -304,6 +305,10 @@ class DynamicDistributionalRV(RandomVariable):
             If not None, reparameterize sampling
             from the distribution according to the
             given numpyro reparameterizer
+        expand_shape : tuple, optional
+            If not None, expand the underlying distribution
+            at sample() call by to the given expand_shape.
+            Default None.
 
         Returns
         -------
@@ -317,6 +322,12 @@ class DynamicDistributionalRV(RandomVariable):
             self.reparam_dict = {self.name: reparam}
         else:
             self.reparam_dict = {}
+        if not (expand_shape is None or isinstance(expand_shape, tuple)):
+            raise ValueError(
+                "expand_shape must be a tuple or be None ",
+                f"Got {type(expand_shape)}",
+            )
+        self.expand_shape = expand_shape
 
         return None
 
@@ -370,10 +381,13 @@ class DynamicDistributionalRV(RandomVariable):
         SampledValue
            Containing a sample from the distribution.
         """
+        distribution = self.distribution_constructor(*args, **kwargs)
+        if self.expand_shape is not None:
+            distribution = distribution.expand(self.expand_shape)
         with numpyro.handlers.reparam(config=self.reparam_dict):
             sample = numpyro.sample(
                 name=self.name,
-                fn=self.distribution_constructor(*args, **kwargs),
+                fn=distribution,
                 obs=obs,
             )
         return (
@@ -382,6 +396,34 @@ class DynamicDistributionalRV(RandomVariable):
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
+        )
+
+    def expand(self, batch_shape) -> Self:
+        """
+        Expand the distribution to a different
+        batch_shape, if possible. Returns a
+        new DynamicDistributionalRV whose underlying
+        distribution will be expanded by the given shape
+        at sample() time.
+
+        Parameters
+        ----------
+        batch_shape : tuple
+            Batch shape for the expand. Will ultimately
+            be passed to the expand() method of
+            :class:`numpyro.distributions.Distribution`.
+
+        Returns
+        -------
+        DynamicDistributionalRV
+            Whose underlying distribution will be expanded to
+            the desired batch shape at sampling time.
+        """
+        return DynamicDistributionalRV(
+            name=self.name,
+            distribution_constructor=self.distribution_constructor,
+            reparam=self.reparam_dict.get(self.name, None),
+            expand_shape=batch_shape,
         )
 
 
@@ -476,6 +518,38 @@ class StaticDistributionalRV(RandomVariable):
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
+        )
+
+    def expand(self, batch_shape) -> Self:
+        """
+        Expand the distribution to a different
+        batch_shape, if possible. Returns a
+        new StaticDistributionalRV whose underlying
+        distribution has been expanded by the given
+        batch_shape.
+
+        Parameters
+        ----------
+        batch_shape : tuple
+            Batch shape for the expand. Passed to the expand()
+            method of :class:`numpyro.distributions.Distribution`.
+
+        Returns
+        -------
+        StaticDistributionalRV
+            Whose underlying distribution has been expanded to
+            the desired batch shape.
+        """
+        if not isinstance(batch_shape, tuple):
+            raise ValueError(
+                "batch_shape for expand()-ing "
+                "a DistributionalRV must be a "
+                f"tuple. Got {type(batch_shape)}"
+            )
+        return StaticDistributionalRV(
+            name=self.name,
+            distribution=self.distribution.expand(batch_shape),
+            reparam=self.reparam_dict.get(self.name, None),
         )
 
 
