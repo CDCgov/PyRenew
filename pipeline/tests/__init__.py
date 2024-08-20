@@ -1,1 +1,0 @@
-# numpydoc ignore=GL08
