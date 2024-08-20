@@ -2,7 +2,7 @@
 
 ⚠️ This is a work in progress ⚠️
 
-`pyrenew` is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing renewal models. Built on top of the [`numpyro`](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building, including pre-defined models for processing various types of observational processes. To start, visit the tutorials section on the project's website [here](https://cdcgov.github.io/multisignal-epi-inference/tutorials/index.html).
+`pyrenew` is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing renewal models. Built on top of the [`numpyro`](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building, including pre-defined models for processing various types of observational processes. To start, visit the tutorials section on the project's website [here](https://cdcgov.github.io/PyRenew/tutorials/index.html).
 
 The following diagram illustrates the composition of the `HospitalAdmissionsModel` class. Notably, all components are modular and can be replaced with custom implementations.
 
@@ -43,7 +43,7 @@ flowchart LR
 Install via pip with
 
 ```bash
-pip install git+https://github.com/CDCgov/multisignal-epi-inference@main
+pip install git+https://github.com/CDCgov/PyRenew@main
 ```
 
 ## Container image
@@ -56,8 +56,8 @@ docker pull ghcr.io/CDCgov/pyrenew:latest
 
 ## Resources
 
-* [The MSR Website](https://cdcgov.github.io/multisignal-epi-inference/tutorials/index.html) provides general documentation and tutorials on using MSR.
-* [The Model Equations Sheet](https://github.com/CDCgov/multisignal-epi-inference/blob/main/equations.md) describe the mathematics of the renewal processes and models MSR supports.
+* [The MSR Website](https://cdcgov.github.io/PyRenew/tutorials/index.html) provides general documentation and tutorials on using MSR.
+* [The Model Equations Sheet](https://github.com/CDCgov/PyRenew/blob/main/equations.md) describe the mathematics of the renewal processes and models MSR supports.
 * Additional reading on renewal processes in epidemiology
   * [_Semi-mechanistic Bayesian modelling of COVID-19 with renewal processes_](https://academic.oup.com/jrsssa/article-pdf/186/4/601/54770289/qnad030.pdf)
   * [_Unifying incidence and prevalence under a time-varying general branching process_](https://link.springer.com/content/pdf/10.1007/s00285-023-01958-w.pdf)
