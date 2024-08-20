@@ -163,25 +163,25 @@ class DifferencedProcess(RandomVariable):
         init_vals : ArrayLike
             initial values for the :math:`0^{th}` through
             math:`(n-1)^{st}` differences, passed as the
-            init_diff_vals argument to
+            :param:`init_diff_vals` argument to
             :meth:`DifferencedProcess.integrate()`
 
         n : int
             Number of values to sample. Will sample n - 1
-            values from self.fundamental_process.
+            values from :meth:`self.fundamental_process`.
 
         *args :
            Additional positional arguments passed to
-           self.fundamental_process.sample()
+           :meth:`self.fundamental_process.sample()`
 
         fundamental_process_init_vals : ArrayLike
            Initial values for the fundamental process.
-           Passed as the `init_vals` keyword argument
-           to self.fundamental_process.sample().
+           Passed as the :param:`init_vals` keyword argument
+           to :meth:`self.fundamental_process.sample()`.
 
         **kwargs : dict, optional
             Keyword arguments passed to
-            self.fundamental_process.sample()
+            :meth:`self.fundamental_process.sample()`.
 
         Returns
         -------
