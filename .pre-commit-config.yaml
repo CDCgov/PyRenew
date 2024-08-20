@@ -58,8 +58,6 @@ repos:
           [
             "--baseline",
             ".secrets.baseline",
-            "--exclude-files",
-            "model/docs/*_cache",
           ]
         exclude: package.lock.json
   ####
