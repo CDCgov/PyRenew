@@ -4,9 +4,14 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pytest
+from scipy.stats import kstest
 
-from pyrenew.metaclass import DistributionalRV
-from pyrenew.process import IIDRandomSequence
+from pyrenew.metaclass import (
+    DistributionalRV,
+    SampledValue,
+    StaticDistributionalRV,
+)
+from pyrenew.process import IIDRandomSequence, StandardNormalSequence
 
 
 @pytest.mark.parametrize(
@@ -28,11 +33,39 @@ def test_iidrandomsequence_with_dist_rv(distribution, n):
     rseq = IIDRandomSequence(name="randseq", element_rv=element_rv)
 
     with numpyro.handlers.seed(rng_seed=62):
-        ans = rseq.sample(n=n)
+        ans, *_ = rseq.sample(n=n)
+
+    # check that samples are the right type
+    assert isinstance(ans, SampledValue)
+
     # check that the samples are of the right shape
     expected_shape = distribution.batch_shape
     if expected_shape == () or expected_shape == (1,):
         expected_shape = (n,)
     else:
         expected_shape = tuple([n] + [x for x in expected_shape])
-    assert ans[0].value.shape == expected_shape
+    assert ans.value.shape == expected_shape
+
+
+def test_standard_normal_sequence():
+    """
+    Test the StandardNormalSequence RandomVariable
+    class.
+    """
+    norm_seq = StandardNormalSequence("test_norm")
+
+    # should be implemented with a DistributionalRV
+    # that is a standard normal
+    assert isinstance(norm_seq.element_rv, StaticDistributionalRV)
+    assert isinstance(norm_seq.element_rv.distribution, dist.Normal)
+    assert norm_seq.element_rv.distribution.loc == 0
+    assert norm_seq.element_rv.distribution.scale == 1
+
+    # should be sampleable
+    with numpyro.handlers.seed(rng_seed=67):
+        ans, *_ = norm_seq.sample(n=50000)
+
+    assert isinstance(ans, SampledValue)
+    # samples should be approximately standard normal
+    kstest_out = kstest(ans.value, "norm", (0, 1))
+    assert kstest_out.pvalue > 0.001
