@@ -77,22 +77,22 @@ class DifferencedProcess(RandomVariable):
         """
         Integrate (de-difference) the differenced process,
         obtaining the process values :math:`X(t=0), X(t=1), ... X(t)`
-        from the math:`n^{th}` differences and a set of initial process /
-        difference values
-        :math:`X(t=0), X^1(t=1), X^2(t=2), ... X^(n-1)(t=n-1)`,
-        where :math:`X^k(t)` is the value of the math:`n^{th}`
-        difference at index math:`t` of the process.
+        from the :math:`n^{th}` differences and a set of
+        initial process / difference values
+        :math:`X(t=0), X^1(t=1), X^2(t=2), ... X^{(n-1)}(t=n-1)`,
+        where :math:`X^k(t)` is the value of the :math:`n^{th}`
+        difference at index :math:`t` of the process.
 
         Parameters
         ----------
         init_diff_vals : ArrayLike
             Values of
-            `math:`X(t=0), X^1(t=1), X^2(t=2) ... X^(n-1)(t=n-1)`.
+            :math:`X(t=0), X^1(t=1), X^2(t=2) ... X^(n-1)(t=n-1)`.
 
         highest_order_diff_vals : ArrayLike
             Array of differences at the highest order of
             differencing, i.e. the order of the overall process,
-            starting with :math:`X^n(t=n)`
+            starting with :math:`X^{(n-1)}(t=n-1)`
 
         Returns
         -------
@@ -161,9 +161,10 @@ class DifferencedProcess(RandomVariable):
         Parameters
         ----------
         init_vals : ArrayLike
-            initial values for the differenced process,
-            passed as the init_diff_vals to
-            DifferencedProcess.integrate
+            initial values for the :math:`0^{th}` through
+            math:`(n-1)^{st}` differences, passed as the
+            init_diff_vals argument to
+            :meth:`DifferencedProcess.integrate()`
 
         n : int
             Number of values to sample. Will sample n - 1
@@ -179,7 +180,8 @@ class DifferencedProcess(RandomVariable):
            to self.fundamental_process.sample().
 
         **kwargs : dict, optional
-            Keyword arguments passed to self.fundamental_process.sample()
+            Keyword arguments passed to
+            self.fundamental_process.sample()
 
         Returns
         -------
