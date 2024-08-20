@@ -78,7 +78,7 @@ def test_factory_triage(valid_static_dist_arg, valid_dynamic_dist_arg):
 
 
 @pytest.mark.parametrize(
-    ["dist", "params", "expand_shape"],
+    ["dist", "params", "expand_by_shape"],
     [
         [dist.Normal, {"loc": 0.0, "scale": 0.5}, (5,)],
         [dist.Poisson, {"rate": 0.35265}, (20, 25)],
@@ -92,20 +92,20 @@ def test_factory_triage(valid_static_dist_arg, valid_dynamic_dist_arg):
         ],
     ],
 )
-def test_expand(dist, params, expand_shape):
+def test_expand_by(dist, params, expand_by_shape):
     """
-    Test the expand method for static
+    Test the expand_by method for static
     distributional RVs.
     """
     static = DistributionalRV(name="static", distribution=dist(**params))
     dynamic = DistributionalRV(name="dynamic", distribution=dist)
-    expanded_static = static.expand(expand_shape)
-    expanded_dynamic = dynamic.expand(expand_shape)
+    expanded_static = static.expand_by(expand_by_shape)
+    expanded_dynamic = dynamic.expand_by(expand_by_shape)
 
     assert isinstance(expanded_dynamic, DynamicDistributionalRV)
-    assert dynamic.expand_shape is None
-    assert isinstance(expanded_dynamic.expand_shape, tuple)
-    assert expanded_dynamic.expand_shape == expand_shape
+    assert dynamic.expand_by_shape is None
+    assert isinstance(expanded_dynamic.expand_by_shape, tuple)
+    assert expanded_dynamic.expand_by_shape == expand_by_shape
     assert dynamic.reparam_dict == expanded_dynamic.reparam_dict
     assert (
         dynamic.distribution_constructor
@@ -114,12 +114,12 @@ def test_expand(dist, params, expand_shape):
 
     assert isinstance(expanded_static, StaticDistributionalRV)
     assert isinstance(expanded_static.distribution, ExpandedDistribution)
-    assert expanded_static.distribution.batch_shape == expand_shape
+    assert expanded_static.distribution.batch_shape == expand_by_shape
 
     with pytest.raises(ValueError):
-        dynamic.expand("not a tuple")
+        dynamic.expand_by("not a tuple")
     with pytest.raises(ValueError):
-        static.expand("not a tuple")
+        static.expand_by("not a tuple")
 
 
 @pytest.mark.parametrize(
