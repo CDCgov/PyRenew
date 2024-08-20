@@ -58,8 +58,8 @@ def test_standard_normal_sequence():
     # that is a standard normal
     assert isinstance(norm_seq.element_rv, StaticDistributionalRV)
     assert isinstance(norm_seq.element_rv.distribution, dist.Normal)
-    assert norm_seq.element_rv.distribution.loc == 0
-    assert norm_seq.element_rv.distribution.scale == 1
+    assert norm_seq.element_rv.distribution.loc == 0.0
+    assert norm_seq.element_rv.distribution.scale == 1.0
 
     # should be sampleable
     with numpyro.handlers.seed(rng_seed=67):
