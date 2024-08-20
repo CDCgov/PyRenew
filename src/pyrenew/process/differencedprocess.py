@@ -87,12 +87,12 @@ class DifferencedProcess(RandomVariable):
         ----------
         init_diff_vals : ArrayLike
             Values of
-            :math:`X(t=0), X^1(t=1), X^2(t=2) ... X^(n-1)(t=n-1)`.
+            :math:`X(t=0), X^1(t=1), X^2(t=2) ... X^{(n-1)}(t=n-1)`.
 
         highest_order_diff_vals : ArrayLike
             Array of differences at the highest order of
             differencing, i.e. the order of the overall process,
-            starting with :math:`X^{(n-1)}(t=n-1)`
+            starting with :math:`X^{n}(t=n)`
 
         Returns
         -------
@@ -162,8 +162,8 @@ class DifferencedProcess(RandomVariable):
         ----------
         init_vals : ArrayLike
             initial values for the :math:`0^{th}` through
-            math:`(n-1)^{st}` differences, passed as the
-            :param:`init_diff_vals` argument to
+            :math:`(n-1)^{st}` differences, passed as the
+            ``init_diff_vals`` argument to
             :meth:`DifferencedProcess.integrate()`
 
         n : int
@@ -176,7 +176,7 @@ class DifferencedProcess(RandomVariable):
 
         fundamental_process_init_vals : ArrayLike
            Initial values for the fundamental process.
-           Passed as the :param:`init_vals` keyword argument
+           Passed as the ``init_vals`` keyword argument
            to :meth:`self.fundamental_process.sample()`.
 
         **kwargs : dict, optional
