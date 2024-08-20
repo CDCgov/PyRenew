@@ -81,7 +81,10 @@ class DifferencedProcess(RandomVariable):
         initial process / difference values
         :math:`X(t=0), X^1(t=1), X^2(t=2), ... X^{(n-1)}(t=n-1)`,
         where :math:`X^k(t)` is the value of the :math:`n^{th}`
-        difference at index :math:`t` of the process.
+        difference at index :math:`t` of the process,
+        obtaining a sequence of length equal to the length of
+        the provided `highest_order_diff_vals` vector plus
+        the order of the process.
 
         Parameters
         ----------
@@ -96,7 +99,10 @@ class DifferencedProcess(RandomVariable):
 
         Returns
         -------
-        The integrated (de-differenced) sequence of values.
+        The integrated (de-differenced) sequence of values,
+        of length n_diffs + order, where n_diffs is the
+        number of highest_order_diff_vals and order is the
+        order of the process.
         """
         init_diff_vals = jnp.atleast_1d(init_diff_vals)
         highest_order_diff_vals = jnp.atleast_1d(highest_order_diff_vals)
@@ -167,8 +173,11 @@ class DifferencedProcess(RandomVariable):
             :meth:`DifferencedProcess.integrate()`
 
         n : int
-            Number of values to sample. Will sample n - 1
-            values from :meth:`self.fundamental_process`.
+            Number of values to sample. Will sample
+            ``n - self.differencing_order`` values from
+            :meth:`self.fundamental_process` to ensure
+            that the de-differenced output is of length
+            ``n``.
 
         *args :
            Additional positional arguments passed to
@@ -190,7 +199,10 @@ class DifferencedProcess(RandomVariable):
             undifferenced timeseries
         """
         diffs, *_ = self.fundamental_process.sample(
-            *args, n=(n - 1), init_vals=fundamental_process_init_vals, **kwargs
+            *args,
+            n=(n - self.differencing_order),
+            init_vals=fundamental_process_init_vals,
+            **kwargs,
         )
         return (
             SampledValue(

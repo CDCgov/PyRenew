@@ -120,4 +120,30 @@ def test_integrator_correctness(order, n_diffs):
         "test_process", fundamental_process=None, differencing_order=order
     )
     result_proc1 = proc.integrate(inits, diffs)
+    assert result_proc1.shape == (n_diffs + order,)
     assert_array_almost_equal(result_manual, result_proc1, decimal=5)
+    assert result_proc1[0] == inits[0]
+
+
+@pytest.mark.parametrize(
+    ["diffs", "inits", "expected_solution"],
+    [
+        [
+            jnp.array([0.25, 0.5, 0.5]),
+            jnp.array([0]),
+            jnp.array([0, 0.25, 0.75, 1.25]),
+        ],
+        [jnp.array([1, 1, 1]), jnp.array([0, 2]), jnp.array([0, 2, 5, 9, 14])],
+    ],
+)
+def test_manual_integrator_correctness(diffs, inits, expected_solution):
+    """
+    Test the integrator correctness with manually computed
+    solutions.
+    """
+    order = inits.size
+    proc = DifferencedProcess(
+        "test_proc", fundamental_process=None, differencing_order=order
+    )
+    result = proc.integrate(inits, diffs)
+    assert_array_almost_equal(result, expected_solution)
