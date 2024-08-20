@@ -25,22 +25,23 @@ class LengthTwoRV(RandomVariable):
     """
     Class for a RandomVariable
     with sample_length 2
-    and values 1 and 5
     """
 
     def sample(self, **kwargs):
         """
-        Deterministic sampling method
+        Sampling method
         that returns a length-2 tuple
 
         Returns
         -------
         tuple
-           (SampledValue(1, t_start=self.t_start, t_unit=self.t_unit), SampledValue(5, t_start=self.t_start, t_unit=self.t_unit))
+           (SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
+            SampledValue(val, t_start=self.t_start, t_unit=self.t_unit))
         """
+        val = numpyro.sample("my_normal", dist.Normal(0, 1))
         return (
-            SampledValue(1, t_start=self.t_start, t_unit=self.t_unit),
-            SampledValue(5, t_start=self.t_start, t_unit=self.t_unit),
+            SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
+            SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
         )
 
     def sample_length(self):
@@ -230,15 +231,25 @@ def test_transforms_variable_naming():
         (t.ExpTransform(), t.IdentityTransform()),
     )
 
-    mymodel1 = MyModel(transformed_dist_named_base_rv)
+    transformed_dist_unnamed_base_l2_rv = TransformedRandomVariable(
+        "transformed_rv",
+        LengthTwoRV(),
+        (t.ExpTransform(), t.IdentityTransform()),
+    )
 
+    mymodel1 = MyModel(transformed_dist_named_base_rv)
     mymodel1.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(4))
 
     assert "transformed_rv_rv1" in mymodel1.mcmc.get_samples()
     assert "transformed_rv_rv2" in mymodel1.mcmc.get_samples()
 
     mymodel2 = MyModel(transformed_dist_unnamed_base_rv)
-
     mymodel2.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(5))
 
     assert "transformed_rv" in mymodel2.mcmc.get_samples()
+
+    mymodel3 = MyModel(transformed_dist_unnamed_base_l2_rv)
+    mymodel3.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(4))
+
+    assert "transformed_rv_0" in mymodel3.mcmc.get_samples()
+    assert "transformed_rv_1" in mymodel3.mcmc.get_samples()

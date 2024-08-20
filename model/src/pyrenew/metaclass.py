@@ -894,8 +894,11 @@ class TransformedRandomVariable(RandomVariable):
                 for i, tv in enumerate(transformed_values):
                     suffix = untransformed_values._fields[i]
                     numpyro.deterministic(f"{self.name}_{suffix}", tv.value)
-            else:
+            elif len(untransformed_values) == 1:
                 numpyro.deterministic(self.name, transformed_values[0].value)
+            else:
+                for i, tv in enumerate(transformed_values):
+                    numpyro.deterministic(f"{self.name}_{i}", tv.value)
 
         return transformed_values
 
