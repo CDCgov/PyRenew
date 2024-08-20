@@ -29,4 +29,6 @@ jobs:
 
       - name: run deptry
         run: |
-          poetry run deptry . --per-rule-ignores "DEP001=pyrenew,DEP001=pytest,DEP003=pytest,DEP001=test"
+          poetry run deptry src/pyrenew --per-rule-ignores "DEP001=pyrenew"
+          poetry run deptry src/test --ignore DEP004 --per-rule-ignores "DEP001=pyrenew,DEP001=test,DEP002=matplotlib"
+        # tests can use dev dependencies (DEP004), main codebase cannot
