@@ -114,7 +114,9 @@ def test_expand_by(dist, params, expand_by_shape):
 
     assert isinstance(expanded_static, StaticDistributionalRV)
     assert isinstance(expanded_static.distribution, ExpandedDistribution)
-    assert expanded_static.distribution.batch_shape == expand_by_shape
+    assert expanded_static.distribution.batch_shape == (
+        expand_by_shape + static.distribution.batch_shape
+    )
 
     with pytest.raises(ValueError):
         dynamic.expand_by("not a tuple")
