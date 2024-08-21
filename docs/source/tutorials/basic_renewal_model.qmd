@@ -68,7 +68,7 @@ flowchart LR
     end
 
     subgraph process[Process module]
-        rt["Rt_process_rv\n(Custom class built using SimpleRandomWalk)"]
+        rt["Rt_process_rv\n(Custom class built using RandomWalk)"]
     end
 
     subgraph deterministic[Deterministic module]
