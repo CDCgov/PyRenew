@@ -104,9 +104,21 @@ class DifferencedProcess(RandomVariable):
         number of highest_order_diff_vals and order is the
         order of the process.
         """
-        init_diff_vals = jnp.atleast_1d(init_diff_vals)
-        highest_order_diff_vals = jnp.atleast_1d(highest_order_diff_vals)
-        n_inits = init_diff_vals.shape[0]
+        init_arr = jnp.atleast_1d(init_diff_vals)
+        diff_arr = jnp.atleast_1d(highest_order_diff_vals)
+        if not init_arr.ndim == 1:
+            raise ValueError(
+                "init_diff_vals must be 1-dimensional "
+                "array or coercible to 1D array. "
+                f"Got {init_diff_vals}"
+            )
+        if not diff_arr.ndim == 1:
+            raise ValueError(
+                "highest_order_diff_vals must be a "
+                "1-dimensional array or coercible to "
+                f"a 1D array. Got {highest_order_diff_vals}"
+            )
+        n_inits = init_arr.size
         if not n_inits == self.differencing_order:
             raise ValueError(
                 "Must have exactly as many "
@@ -118,21 +130,6 @@ class DifferencedProcess(RandomVariable):
                 "for a process of order "
                 f"{self.differencing_order}"
             )
-        init_row_shape = init_diff_vals[0].shape
-        diff_row_shape = highest_order_diff_vals[0].shape
-        if not init_row_shape == diff_row_shape:
-            raise ValueError(
-                "First axis entries for init_diff_vals "
-                "and highest_order_diff_vals (e.g. "
-                "init_diff_vals[0], "
-                "highest_order_diff_vals[1], et cetera) "
-                "must either both be scalars (shape ()) "
-                "or both be arrays of identical shape. "
-                f"Got shape {init_row_shape} for the "
-                "init_diff_vals "
-                f"and shape {diff_row_shape} for the "
-                "highest_order_diff_vals"
-            )
 
         def _integrate_one_step(diffs, scanned):
             # numpydoc ignore=GL08
@@ -142,12 +139,10 @@ class DifferencedProcess(RandomVariable):
 
         integrated, _ = scan(
             _integrate_one_step,
-            init=jnp.pad(
-                highest_order_diff_vals, (self.differencing_order, 0)
-            ),
+            init=jnp.pad(diff_arr, (self.differencing_order, 0)),
             xs=(
                 jnp.flip(jnp.arange(self.differencing_order)),
-                jnp.flip(init_diff_vals),
+                jnp.flip(init_arr),
             ),
         )
 
@@ -198,25 +193,23 @@ class DifferencedProcess(RandomVariable):
             Whose value entry is a single array representing the
             undifferenced timeseries
         """
-        n_diffs = n - self.differencing_order
-        if n_diffs < 1:
-            raise ValueError(
-                "Cannot sample a sequence equal to "
-                "or shorter than the differencing order "
-                f"User requested {n} samples with a "
-                "differencing order of "
-                f"{self.differencing_order}"
-            )
+        if n < 1:
+            raise ValueError("n must be positive. " f"Got {n}")
 
-        diffs, *_ = self.fundamental_process.sample(
-            *args,
-            n=n_diffs,
-            init_vals=fundamental_process_init_vals,
-            **kwargs,
-        )
+        n_diffs = n - self.differencing_order
+        if n_diffs > 0:
+            diff_samp, *_ = self.fundamental_process.sample(
+                *args,
+                n=n_diffs,
+                init_vals=fundamental_process_init_vals,
+                **kwargs,
+            )
+            diffs = diff_samp.value
+        else:
+            diffs = jnp.array([])
         return (
             SampledValue(
-                value=self.integrate(init_vals, diffs.value),
+                value=self.integrate(init_vals, diffs)[:n],
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
