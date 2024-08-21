@@ -5,6 +5,7 @@ Test the RtPeriodicDiffARProcess module
 import jax.numpy as jnp
 import numpy as np
 import numpyro
+import pytest
 from jax.typing import ArrayLike
 from numpy.testing import assert_array_equal
 
@@ -135,7 +136,10 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     return None
 
 
-def test_rtperiodicdiff_smallsample():
+@pytest.mark.parametrize(
+    "inits", [jnp.array([0.1, 0.2]), jnp.array([0.5, 0.7])]
+)
+def test_rtperiodicdiff_smallsample(inits):
     """Checks basic functionality of the process with a small sample size."""
 
     params = {
@@ -143,7 +147,7 @@ def test_rtperiodicdiff_smallsample():
         "offset": 0,
         "log_rt_rv": DeterministicVariable(
             name="log_rt",
-            value=jnp.array([0.1, 0.2]),
+            value=inits,
         ),
         "autoreg_rv": DeterministicVariable(
             name="autoreg_rv", value=jnp.array([0.7])
@@ -163,4 +167,5 @@ def test_rtperiodicdiff_smallsample():
     assert rt.shape == (6,)
 
     # Check that all values in rt are the same
-    assert jnp.all(rt == rt[0])
+    # as the first initial value
+    assert jnp.all(rt == jnp.exp(inits[0]))
