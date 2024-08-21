@@ -526,7 +526,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     observed_admissions = PoissonObservation("poisson_rv")
 
     # Other random components
-    total_length = n_obs_to_generate + pad_size + gen_int.size()
+    total_length = n_obs_to_generate + pad_size + 1  # gen_int.size()
     weekday = jnp.array([1, 1, 1, 1, 2, 2, 2])
     weekday = weekday / weekday.sum()
 
