@@ -16,7 +16,7 @@ class DifferencedProcess(RandomVariable):
     constructed by placing a fundamental stochastic
     process on the :math:`n^{th}` differences
     (rates of change). See
-    https://otexts.com/fpp2/stationarity.html
+    https://otexts.com/fpp3/stationarity.html
     for a discussion of differencing in the
     context of discrete timeseries data.
     """
