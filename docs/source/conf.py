@@ -7,7 +7,7 @@
 import os
 import sys
 
-sys.path.insert(0, os.path.abspath("../../model/src"))
+sys.path.insert(0, os.path.abspath("../../src"))
 
 
 # -- Project information -----------------------------------------------------
@@ -61,7 +61,7 @@ todo_include_todos = False
 
 html_theme = "sphinx_book_theme"
 html_theme_options = {
-    "repository_url": "https://github.com/CDCgov/multisignal-epi-inference",
+    "repository_url": "https://github.com/CDCgov/PyRenew",
     "use_edit_page_button": True,
     "use_issues_button": True,
     "use_repository_button": True,
