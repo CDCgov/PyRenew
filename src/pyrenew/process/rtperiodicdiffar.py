@@ -57,6 +57,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         log_rt_rv: RandomVariable,
         autoreg_rv: RandomVariable,
         periodic_diff_sd_rv: RandomVariable,
+        ar_process_suffix: str = "_first_diff_ar_process",
     ) -> None:
         """
         Default constructor for RtPeriodicDiffARProcess class.
@@ -74,6 +75,11 @@ class RtPeriodicDiffARProcess(RandomVariable):
             Autoregressive parameter.
         periodic_diff_sd_rv : RandomVariable
             Standard deviation of the noise.
+        ar_process_suffix : str
+            Suffix to append to the :class:`RandomVariable`'s ``name``
+            when naming the :class:`RandomVariable` that represents
+            the underlying AR process.
+            Default "_first_diff_ar_process".
 
         Returns
         -------
@@ -92,6 +98,10 @@ class RtPeriodicDiffARProcess(RandomVariable):
         self.log_rt_rv = log_rt_rv
         self.autoreg_rv = autoreg_rv
         self.periodic_diff_sd_rv = periodic_diff_sd_rv
+        self.ar_diff = DifferencedProcess(
+            fundamental_process=ARProcess(name=f"{name}{ar_process_suffix}"),
+            differencing_order=1,
+        )
 
         return None
 
@@ -155,14 +165,10 @@ class RtPeriodicDiffARProcess(RandomVariable):
         n_periods = (duration + self.period_size - 1) // self.period_size
 
         # Running the process
-        ar_diff = DifferencedProcess(
-            fundamental_process=ARProcess(name="first_diff_log_rt_ar"),
-            differencing_order=1,
-        )
 
-        log_rt = ar_diff(
+        log_rt = self.ar_diff(
             n=n_periods,
-            init_vals=jnp.array([log_rt_rv[1]]),
+            init_vals=jnp.array([log_rt_rv[0]]),
             autoreg=b,
             noise_sd=s_r,
             fundamental_process_init_vals=jnp.array(
