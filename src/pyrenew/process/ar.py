@@ -72,12 +72,38 @@ class ARProcess(RandomVariable):
             With a single SampledValue containing an
             array of shape (n,).
         """
-        flat_noise_sd = jnp.array(noise_sd).flatten()
-        if not flat_noise_sd.shape == (1,):
+        noise_sd_arr = jnp.atleast_1d(jnp.array(noise_sd))
+        if not noise_sd_arr.shape == (1,):
             raise ValueError("noise_sd must be a scalar. " f"Got {noise_sd}")
-        order = autoreg.shape[0]
+        autoreg = jnp.atleast_1d(jnp.array(autoreg))
+        init_vals = jnp.atleast_1d(jnp.array(init_vals))
+
+        if not autoreg.ndim == 1:
+            raise ValueError(
+                "Array of autoregressive coefficients "
+                "must be no more than 1 dimension",
+                f"Got {autoreg.ndim}",
+            )
+        if not init_vals.ndim == 1:
+            raise ValueError(
+                "Array of initial values must be " "no more than 1 dimension",
+                f"Got {init_vals.ndim}",
+            )
+        order = autoreg.size
+        if not init_vals.size == order:
+            raise ValueError(
+                "Array of initial values must be "
+                "be the same size as the order of "
+                "the autoregressive process, "
+                "which is determined by the number "
+                "of autoregressive coefficients "
+                "provided. Got {init_vals.size} "
+                "initial values for a process of "
+                f"order {order}"
+            )
+
         raw_noise, *_ = self.noise_rv_(n=n, **kwargs)
-        noise = flat_noise_sd * raw_noise.value
+        noise = noise_sd_arr * raw_noise.value
 
         def transition(recent_vals, next_noise):  # numpydoc ignore=GL08
             new_term = jnp.dot(autoreg, recent_vals) + next_noise

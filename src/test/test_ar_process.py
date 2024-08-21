@@ -46,7 +46,7 @@ def test_ar_can_be_sampled():
             noise_sd=jnp.array([0.25]),
         )
 
-        # vector valued noise with raises
+        # vector valued noise raises
         # error
         with pytest.raises(ValueError, match="must be a scalar"):
             ar3(
@@ -61,6 +61,29 @@ def test_ar_can_be_sampled():
                 init_vals=jnp.array([50.0, 49.9, 48.2]),
                 autoreg=jnp.array([0.05, 0.025, 0.025]),
                 noise_sd=[1.0, 2.0],
+            )
+
+        # bad dimensionality raises error
+        with pytest.raises(ValueError, match="Array of autoregressive"):
+            ar3(
+                n=1230,
+                init_vals=jnp.array([50.0, 49.9, 48.2]),
+                autoreg=jnp.array([[0.05, 0.025, 0.025]]),
+                noise_sd=0.5,
+            )
+        with pytest.raises(ValueError, match="Array of initial"):
+            ar3(
+                n=1230,
+                init_vals=jnp.array([[50.0, 49.9, 48.2]]),
+                autoreg=jnp.array([0.05, 0.025, 0.025]),
+                noise_sd=0.5,
+            )
+        with pytest.raises(ValueError, match="same size as the order"):
+            ar3(
+                n=1230,
+                init_vals=jnp.array([50.0, 49.9, 1, 1, 1]),
+                autoreg=jnp.array([0.05, 0.025, 0.025]),
+                noise_sd=0.5,
             )
 
 
