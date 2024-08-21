@@ -4,23 +4,20 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pytest
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import DistributionalRV
 from pyrenew.process import RandomWalk
 
 
-def test_rw_can_be_sampled():
+@pytest.mark.parametrize("init_value", [50.0, -3, jnp.array(3)])
+def test_rw_can_be_sampled(init_value):
     """
     Check that a simple random walk
     can be initialized and sampled from
     """
-    init_rv_rand = DistributionalRV(
-        name="init_rv_rand",
-        distribution=dist.Normal(1, 0.5),
-    )
-    init_rv_fixed = DeterministicVariable(name="init_rv_fixed", value=50.0)
+    init_rv = DeterministicVariable(name="init_rv_fixed", value=init_value)
 
     rw = RandomWalk(
         "rw",
@@ -30,15 +27,25 @@ def test_rw_can_be_sampled():
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with a fixed init
         # and with a random init
-        ans_rand = rw(n=3532, init_vals=init_rv_rand()[0].value)
-        ans_fixed = rw(n=5023, init_vals=init_rv_fixed()[0].value)
-    # check that the samples are of the right shape
-    assert ans_rand[0].value.shape == (3532,)
-    assert ans_fixed[0].value.shape == (5023,)
+        init_vals = init_rv()[0].value
+        ans_long = rw(n=5023, init_vals=init_vals)
+        ans_short = rw(n=1, init_vals=init_vals)
 
-    # check that fixing inits works
-    assert_almost_equal(ans_fixed[0].value[0], init_rv_fixed.value)
-    assert ans_rand[0].value[0] != init_rv_fixed.value
+        # Providing more than one init val should
+        # raise an error.
+        with pytest.raises(ValueError, match="differencing order"):
+            rw(n=523, init_vals=jnp.hstack([init_vals, 0.25]))
+    # check that the samples are of the right shape
+    assert ans_long[0].value.shape == (5023,)
+    assert ans_short[0].value.shape == (1,)
+    # check that the first n_inits samples are the inits
+    n_inits = jnp.atleast_1d(init_vals).size
+    assert_array_almost_equal(
+        ans_long[0].value[0:n_inits], jnp.atleast_1d(init_vals)
+    )
+    assert_array_almost_equal(
+        ans_short[0].value, jnp.atleast_1d(init_vals)[:1]
+    )
 
 
 @pytest.mark.parametrize(
