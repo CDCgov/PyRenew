@@ -10,7 +10,11 @@ import numpyro
 
 import pyrenew.arrayutils as au
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import (
+    RandomVariable,
+    SampledValue,
+    compute_incidence_observed_with_delay,
+)
 
 
 class HospitalAdmissionsSample(NamedTuple):
@@ -210,11 +214,12 @@ class HospitalAdmissions(RandomVariable):
             *_,
         ) = self.infection_to_admission_interval_rv(**kwargs)
 
-        latent_hospital_admissions = jnp.convolve(
-            infection_hosp_rate.value * latent_infections.value,
+        latent_hospital_admissions = compute_incidence_observed_with_delay(
+            infection_hosp_rate.value,
+            latent_infections.value,
             infection_to_admission_interval.value,
-            mode="valid",
         )
+
         # Applying the day of the week effect. For this we need to:
         # 1. Get the day of the week effect
         # 2. Identify the offset of the latent_infections
