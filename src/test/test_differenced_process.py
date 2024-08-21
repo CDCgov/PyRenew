@@ -88,7 +88,6 @@ def test_integrator_init_validation(order, diffs):
     inits_correct = jnp.ones(order)
     inits_long = jnp.ones(order + 1)
     proc = DifferencedProcess(
-        f"test_difference_process_of_order_{order}",
         fundamental_process=None,
         differencing_order=order,
     )
