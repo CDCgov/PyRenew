@@ -3,48 +3,12 @@ Test the RtPeriodicDiffARProcess module
 """
 
 import jax.numpy as jnp
-import numpy as np
 import numpyro
 import pytest
-from jax.typing import ArrayLike
 from numpy.testing import assert_array_equal
 
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.process import RtWeeklyDiffARProcess
-
-
-def _manual_rt_weekly_diff(
-    log_seed: ArrayLike, sd: ArrayLike, b: ArrayLike
-) -> ArrayLike:
-    """
-    'Manually' (for-loop) reconstruct the scanner process
-
-    Parameters
-    ----------
-    log_seed : ArrayLike
-        The initial log seed.
-    sd : ArrayLike
-        The noise.
-    b : ArrayLike
-        The autoregressive parameter.
-
-    Returns
-    -------
-    ArrayLike
-        The reconstructed RtWeeklyDiffARProcess process.
-    """
-
-    log_ans = np.zeros(sd.size + 2)
-    log_ans[0] = log_seed[0]
-    log_ans[1] = log_seed[1]
-    for i in range(2, sd.size + 2):
-        log_ans[i] = (
-            log_ans[i - 1]
-            + b[0] * (log_ans[i - 1] - log_ans[i - 2])
-            + sd[i - 2]
-        )
-
-    return log_ans[2:]
 
 
 def test_rtweeklydiff() -> None:
