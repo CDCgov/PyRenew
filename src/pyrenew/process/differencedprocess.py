@@ -37,7 +37,7 @@ class DifferencedProcess(RandomVariable):
             Name of the stochastic process
         fundamental_process : RandomVariable
             Stochastic process for the
-            first differences. Should accept an
+           differences. Should accept an
             `n` argument specifying the number
             of samples to draw.
         differencing_order : int
