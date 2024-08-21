@@ -127,7 +127,7 @@ def _assert_sample_and_rtype(
 
 
 def compute_incidence_observed_with_delay(
-    incidence_to_observation_rate: float,
+    incidence_to_observation_rate: ArrayLike,
     latent_incidence: ArrayLike,
     incidence_to_observation_delay_interval: ArrayLike,
 ) -> ArrayLike:
@@ -138,7 +138,7 @@ def compute_incidence_observed_with_delay(
 
     Parameters
     ----------
-    incidence_to_observation_rate: float
+    incidence_to_observation_rate: ArrayLike
         The rate at which latent incidences are observed.
     latent_incidence: ArrayLike
         Incidence values based on the true underlying process.
