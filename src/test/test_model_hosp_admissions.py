@@ -4,7 +4,6 @@
 
 from test.utils import SimpleRt
 
-
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
