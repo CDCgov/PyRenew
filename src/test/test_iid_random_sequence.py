@@ -31,11 +31,10 @@ def test_iidrandomsequence_with_dist_rv(distribution, n):
     """
     element_rv = DistributionalRV("el_rv", distribution=distribution)
     rseq = IIDRandomSequence(name="randseq", element_rv=element_rv)
-    expected_shape = distribution.batch_shape
-    if expected_shape == () or expected_shape == (1,):
+    if distribution.batch_shape == () or distribution.batch_shape == (1,):
         expected_shape = (n,)
     else:
-        expected_shape = tuple([n] + [x for x in expected_shape])
+        expected_shape = tuple([n] + [x for x in distribution.batch_shape])
 
     with numpyro.handlers.seed(rng_seed=62):
         ans_vec, *_ = rseq.sample(n=n, vectorize=True)
