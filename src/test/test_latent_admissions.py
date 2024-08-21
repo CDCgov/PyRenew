@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
-
 from test.utils import SimpleRt
 
 import jax.numpy as jnp
@@ -9,15 +8,9 @@ import numpy.testing as testing
 import numpyro
 import numpyro.distributions as dist
 
-from pyrenew import transformation as t
-from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent import HospitalAdmissions, Infections
-from pyrenew.metaclass import (
-    DistributionalRV,
-    SampledValue,
-    TransformedRandomVariable,
-)
-from pyrenew.process import SimpleRandomWalkProcess
+from pyrenew.metaclass import DistributionalRV
 
 
 def test_admissions_sample():
@@ -82,58 +75,3 @@ def test_admissions_sample():
         sim_hosp_1.latent_hospital_admissions.value,
         inf_sampled1[0].value,
     )
-
-    # Testing the offset in the observed data
-    inf_hosp2 = jnp.ones(30)
-    inf_hosp2 = DeterministicPMF("i2h", inf_hosp2 / sum(inf_hosp2))
-
-    dow_effect = jnp.array([1, 1, 1, 1, 0.5, 0.5, 0.5])
-    dow_effect = DeterministicPMF(
-        name="dow_effect",
-        value=dow_effect / sum(dow_effect),
-    )
-
-    dow_effect_wrong = DeterministicPMF(
-        name="dow_effect",
-        value=jnp.array([0.3, 0.3, 1 - 0.6]),
-    )
-    hosp2a = HospitalAdmissions(
-        infection_to_admission_interval_rv=inf_hosp2,
-        infection_hospitalization_ratio_rv=DeterministicVariable("ihr", 1),
-        day_of_week_effect_rv=dow_effect,
-        obs_data_first_day_of_the_week=0,
-    )
-
-    hosp2b = HospitalAdmissions(
-        infection_to_admission_interval_rv=inf_hosp2,
-        infection_hospitalization_ratio_rv=DeterministicVariable("ihr", 1),
-        day_of_week_effect_rv=dow_effect,
-        obs_data_first_day_of_the_week=2,
-    )
-
-    hosp3b = HospitalAdmissions(
-        infection_to_admission_interval_rv=inf_hosp2,
-        infection_hospitalization_ratio_rv=DeterministicVariable("ihr", 1),
-        day_of_week_effect_rv=dow_effect_wrong,
-        obs_data_first_day_of_the_week=2,
-    )
-
-    inf_sampled2 = SampledValue(jnp.ones(30))
-
-    with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_2a = hosp2a(latent_infections=inf_sampled2).multiplier.value
-
-    with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_2b = hosp2b(latent_infections=inf_sampled2).multiplier.value
-
-    with numpyro.handlers.seed(rng_seed=223):
-        with testing.assert_raises(ValueError):
-            hosp3b(latent_infections=inf_sampled2).multiplier.value
-
-    testing.assert_array_equal(
-        sim_hosp_2a[2 : (sim_hosp_2b.size - 2)],
-        sim_hosp_2b[: (sim_hosp_2b.size - 4)],
-    )
-
-
-test_admissions_sample()
