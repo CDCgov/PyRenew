@@ -35,14 +35,11 @@ def test_differencing_order_type_validation(wrong_type_order):
         DifferencedProcess.assert_valid_differencing_order(wrong_type_order)
     with pytest.raises(ValueError, match=err_match):
         _ = DifferencedProcess(
-            "should_fail",
             fundamental_process=None,
             differencing_order=wrong_type_order,
         )
     DifferencedProcess.assert_valid_differencing_order(1)
-    _ = DifferencedProcess(
-        "should_succeed", fundamental_process=None, differencing_order=1
-    )
+    _ = DifferencedProcess(fundamental_process=None, differencing_order=1)
 
 
 @pytest.mark.parametrize(
@@ -60,14 +57,12 @@ def test_differencing_order_value_validation(wrong_value, right_value):
     with pytest.raises(ValueError, match="greater than or equal to 1"):
         DifferencedProcess.assert_valid_differencing_order(wrong_value)
         _ = DifferencedProcess(
-            "should_fail",
             fundamental_process=None,
             differencing_order=wrong_value,
         )
 
     DifferencedProcess.assert_valid_differencing_order(right_value)
     _ = DifferencedProcess(
-        "should_succeed",
         fundamental_process=None,
         differencing_order=right_value,
     )
@@ -124,7 +119,7 @@ def test_integrator_correctness(order, n_diffs):
         result_manual = jnp.cumsum(jnp.hstack([init, result_manual]))
 
     proc = DifferencedProcess(
-        "test_process", fundamental_process=None, differencing_order=order
+        fundamental_process=None, differencing_order=order
     )
     result_proc1 = proc.integrate(inits, diffs)
     assert result_proc1.shape == (n_diffs + order,)
@@ -150,7 +145,7 @@ def test_manual_integrator_correctness(diffs, inits, expected_solution):
     """
     order = inits.size
     proc = DifferencedProcess(
-        "test_proc", fundamental_process=None, differencing_order=order
+        fundamental_process=None, differencing_order=order
     )
     result = proc.integrate(inits, diffs)
     assert_array_almost_equal(result, expected_solution)
@@ -184,7 +179,6 @@ def test_differenced_process_sample(
     requested.
     """
     proc = DifferencedProcess(
-        "test",
         differencing_order=differencing_order,
         fundamental_process=fundamental_process,
     )
@@ -277,7 +271,6 @@ def test_manual_difference_process_sample(
     with manually computed solutions
     """
     proc = DifferencedProcess(
-        "test",
         differencing_order=len(inits),
         fundamental_process=fundamental_process,
     )

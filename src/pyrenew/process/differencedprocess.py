@@ -23,7 +23,6 @@ class DifferencedProcess(RandomVariable):
 
     def __init__(
         self,
-        name: str,
         fundamental_process: RandomVariable,
         differencing_order: int,
         **kwargs,
@@ -33,8 +32,6 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
-        name : str
-            Name of the stochastic process
         fundamental_process : RandomVariable
             Stochastic process for the
             differences. Should accept an
@@ -69,7 +66,7 @@ class DifferencedProcess(RandomVariable):
         self.assert_valid_differencing_order(differencing_order)
         self.differencing_order = differencing_order
         self.fundamental_process = fundamental_process
-        super().__init__(name=name, **kwargs)
+        super().__init__(**kwargs)
 
     def integrate(
         self, init_diff_vals: ArrayLike, highest_order_diff_vals: ArrayLike

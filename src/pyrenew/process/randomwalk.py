@@ -53,7 +53,6 @@ class RandomWalk(DifferencedProcess):
         None
         """
         super().__init__(
-            name=name,
             fundamental_process=IIDRandomSequence(
                 name=name + step_sequence_suffix, element_rv=step_rv
             ),
