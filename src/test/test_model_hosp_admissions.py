@@ -4,6 +4,7 @@
 
 from test.utils import SimpleRt
 
+
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
@@ -29,7 +30,12 @@ from pyrenew.observation import PoissonObservation
 
 
 class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
-    def __init__(self, pname: str):  # numpydoc ignore=GL08
+    def __init__(
+        self,
+        size: int,
+        pname: str,
+    ):  # numpydoc ignore=GL08
+        self.size = size
         self.name = pname
 
         return None
@@ -42,7 +48,9 @@ class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
         return (
             SampledValue(
                 numpyro.sample(
-                    name=self.name, fn=dist.Uniform(high=0.99, low=0.01)
+                    name=self.name,
+                    fn=dist.Uniform(high=0.99, low=0.01),
+                    sample_shape=(self.size,),
                 )
             ),
         )
@@ -93,7 +101,7 @@ def test_model_hosp_no_timepoints_or_observations():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infect_hosp_rate_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR", distribution=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
@@ -158,7 +166,7 @@ def test_model_hosp_both_timepoints_and_observations():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infect_hosp_rate_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR", distribution=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
@@ -229,7 +237,7 @@ def test_model_hosp_no_obs_model():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infect_hosp_rate_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR",
             distribution=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
@@ -340,7 +348,7 @@ def test_model_hosp_with_obs_model():
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infect_hosp_rate_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR",
             distribution=dist.LogNormal(jnp.log(0.05), 0.05),
         ),
@@ -425,20 +433,14 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         ),
     )
 
-    # Other random components
-    weekday = jnp.array([1, 1, 1, 1, 2, 2])
-    weekday = weekday / weekday.sum()
-    weekday = jnp.tile(weekday, 10)
-    weekday = weekday[:31]
-
-    hosp_report_prob_dist = UniformProbForTest("hosp_report_prob_dist")
-    weekday = UniformProbForTest("weekday")
+    hosp_report_prob_dist = UniformProbForTest(1, "hosp_report_prob_dist")
+    weekday = UniformProbForTest(7, "weekday")
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         day_of_week_effect_rv=weekday,
-        hosp_report_prob_rv=hosp_report_prob_dist,
-        infect_hosp_rate_rv=DistributionalRV(
+        hospitalization_reporting_ratio_rv=hosp_report_prob_dist,
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR", distribution=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )
@@ -527,10 +529,8 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     # Other random components
     total_length = n_obs_to_generate + pad_size + gen_int.size()
-    weekday = jnp.array([1, 1, 1, 1, 2, 2])
+    weekday = jnp.array([1, 1, 1, 1, 2, 2, 2])
     weekday = weekday / weekday.sum()
-    weekday = jnp.tile(weekday, 10)
-    weekday = weekday[:total_length]
 
     weekday = DeterministicVariable(name="weekday", value=weekday)
 
@@ -547,8 +547,8 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
         day_of_week_effect_rv=weekday,
-        hosp_report_prob_rv=hosp_report_prob_dist,
-        infect_hosp_rate_rv=DistributionalRV(
+        hospitalization_reporting_ratio_rv=hosp_report_prob_dist,
+        infection_hospitalization_ratio_rv=DistributionalRV(
             name="IHR",
             distribution=dist.LogNormal(jnp.log(0.05), 0.05),
         ),

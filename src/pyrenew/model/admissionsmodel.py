@@ -201,7 +201,7 @@ class HospitalAdmissionsModel(Model):
             latent_hosp_admissions,
             *_,
         ) = self.latent_hosp_admissions_rv(
-            latent_infections=basic_model.latent_infections.value,
+            latent_infections=basic_model.latent_infections,
             **kwargs,
         )
 
