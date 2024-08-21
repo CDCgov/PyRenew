@@ -193,6 +193,8 @@ class DifferencedProcess(RandomVariable):
             Whose value entry is a single array representing the
             undifferenced timeseries
         """
+        if not isinstance(n, int):
+            raise ValueError("n must be an integer. " f"Got {type(n)}")
         if n < 1:
             raise ValueError("n must be positive. " f"Got {n}")
 
@@ -207,9 +209,10 @@ class DifferencedProcess(RandomVariable):
             diffs = diff_samp.value
         else:
             diffs = jnp.array([])
+        integrated_ts = self.integrate(init_vals, diffs)[:n]
         return (
             SampledValue(
-                value=self.integrate(init_vals, diffs)[:n],
+                value=integrated_ts,
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
