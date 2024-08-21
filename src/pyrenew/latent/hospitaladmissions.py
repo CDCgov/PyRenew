@@ -191,7 +191,7 @@ class HospitalAdmissions(RandomVariable):
             latent_hospital_admissions_raw,
             infection_to_admission_interval.value,
             mode="valid",
-        )[: latent_hospital_admissions_raw.shape[0]]
+        )
 
         # Applying the day of the week effect
         latent_hospital_admissions = (
