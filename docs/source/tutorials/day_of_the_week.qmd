@@ -60,7 +60,7 @@ inf_hosp_int = deterministic.DeterministicPMF(
 )
 
 hosp_rate = metaclass.DistributionalRV(
-    name="IHR", dist=dist.LogNormal(jnp.log(0.05), jnp.log(1.1))
+    name="IHR", distribution=dist.LogNormal(jnp.log(0.05), jnp.log(1.1))
 )
 
 latent_hosp = latent.HospitalAdmissions(
@@ -80,7 +80,8 @@ latent_inf = latent.Infections()
 I0 = InfectionInitializationProcess(
     "I0_initialization",
     metaclass.DistributionalRV(
-        name="I0", dist=dist.LogNormal(loc=jnp.log(100), scale=jnp.log(1.75))
+        name="I0",
+        distribution=dist.LogNormal(loc=jnp.log(100), scale=jnp.log(1.75)),
     ),
     InitializeInfectionsExponentialGrowth(
         gen_int_array.size,
@@ -111,11 +112,11 @@ class MyRt(metaclass.RandomVariable):
 
         # Random walk step
         step_rv = metaclass.DistributionalRV(
-            name="rw_step_rv", dist=dist.Normal(0, sd_rt.value)
+            name="rw_step_rv", distribution=dist.Normal(0, sd_rt.value)
         )
 
         init_rv = metaclass.DistributionalRV(
-            name="init_log_rt", dist=dist.Normal(0, 0.2)
+            name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
 
         # Random walk process
@@ -137,7 +138,7 @@ class MyRt(metaclass.RandomVariable):
 
 rtproc = MyRt(
     metaclass.DistributionalRV(
-        name="Rt_random_walk_sd", dist=dist.HalfNormal(0.025)
+        name="Rt_random_walk_sd", distribution=dist.HalfNormal(0.025)
     )
 )
 ```
@@ -153,7 +154,7 @@ nb_conc_rv = metaclass.TransformedRandomVariable(
     "concentration",
     metaclass.DistributionalRV(
         name="concentration_raw",
-        dist=dist.TruncatedNormal(loc=0, scale=1, low=0.01),
+        distribution=dist.TruncatedNormal(loc=0, scale=1, low=0.01),
     ),
     transformation.PowerTransform(-2),
 )
