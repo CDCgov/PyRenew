@@ -109,14 +109,14 @@ class DifferencedProcess(RandomVariable):
         if not init_arr.ndim == 1:
             raise ValueError(
                 "init_diff_vals must be 1-dimensional "
-                "array or coercible to 1D array. "
+                "array or a scalar. "
                 f"Got {init_diff_vals}"
             )
         if not diff_arr.ndim == 1:
             raise ValueError(
                 "highest_order_diff_vals must be a "
-                "1-dimensional array or coercible to "
-                f"a 1D array. Got {highest_order_diff_vals}"
+                "1-dimensional array or a scalar "
+                f"Got {highest_order_diff_vals}"
             )
         n_inits = init_arr.size
         if not n_inits == self.differencing_order:
