@@ -139,16 +139,26 @@ def compute_delay_ascertained_incidence(
     Parameters
     ----------
     incidence_to_observation_rate: ArrayLike
-        The rate at which latent incidences are observed.
+        The rate at which latent incident counts translated into observed counts.
+        For example, setting ``incidence_to_observation_rate=0.001``
+        when the incident counts are infections and the observed counts are 
+        reported hospital admissions could be used to model disease and population 
+        for which the probability (reported) hospital.admission given infection is
+        0.001.
     latent_incidence: ArrayLike
         Incidence values based on the true underlying process.
     incidence_to_observation_delay_interval: ArrayLike
-        Pmf of delay interval between incidence to observation.
+        Probability mass function of delay interval from incidence to observation,
+        where the :math`i^{th}` entry (0-indexed) represents a delay of :math:`1+i` 
+        time units, i.e. ``incidence_to_observation_delay_interval[0]`` represents 
+        the fraction of observations that are delayed 1 time unit, 
+        ``incidence_to_observation_delay_interval[1]`` represents the fraction
+        that are delayed 2 time units, et cetera.
 
     Returns
     --------
     ArrayLike
-        The incidence after the observation delay.
+        The predicted timeseries of delayed observations.
     """
     delay_obs_incidence = jnp.convolve(
         incidence_to_observation_rate * latent_incidence,
