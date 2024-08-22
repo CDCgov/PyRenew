@@ -373,7 +373,7 @@ class DynamicDistributionalRV(RandomVariable):
             Positional arguments passed to self.distribution_constructor
         obs : ArrayLike, optional
             Observations passed as the `obs` argument to
-            :fun:`numpyro.sample()`. Default `None`.
+            :meth:`numpyro.sample()`. Default `None`.
         **kwargs : dict, optional
             Keyword arguments passed to self.distribution_constructor
 
