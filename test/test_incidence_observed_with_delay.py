@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import pytest
 from numpy.testing import assert_array_equal
 
-from pyrenew.metaclass import compute_incidence_observed_with_delay
+from pyrenew.metaclass import compute_delay_ascertained_incidence
 
 
 @pytest.mark.parametrize(
@@ -41,7 +41,7 @@ def test(obs_rate, latent_incidence, delay_interval, expected_output):
     Tests for helper function to compute
     incidence observed with a delay
     """
-    result = compute_incidence_observed_with_delay(
+    result = compute_delay_ascertained_incidence(
         obs_rate,
         latent_incidence,
         delay_interval,

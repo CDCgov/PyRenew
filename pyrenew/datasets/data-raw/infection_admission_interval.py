@@ -13,7 +13,6 @@ infection_admission_interval = pl.read_csv(url)
 
 # Building path to save the file
 path = os.path.join(
-    "src",
     "pyrenew",
     "datasets",
     "infection_admission_interval.tsv",
