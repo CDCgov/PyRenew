@@ -77,6 +77,8 @@ from pyrenew.latent import (
 
 # Infection process
 latent_inf = latent.Infections()
+n_initialization_points = max(gen_int_array.size, inf_hosp_int_array.size)
+
 I0 = InfectionInitializationProcess(
     "I0_initialization",
     metaclass.DistributionalRV(
@@ -84,7 +86,7 @@ I0 = InfectionInitializationProcess(
         distribution=dist.LogNormal(loc=jnp.log(100), scale=jnp.log(1.75)),
     ),
     InitializeInfectionsExponentialGrowth(
-        inf_hosp_int_array.size,
+        n_initialization_points,
         deterministic.DeterministicVariable(name="rate", value=0.05),
     ),
     t_unit=1,

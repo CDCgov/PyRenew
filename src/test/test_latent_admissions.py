@@ -22,9 +22,10 @@ def test_admissions_sample():
     # Generating Rt and Infections to compute the hospital admissions
 
     rt = SimpleRt()
+    n_steps = 30
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt = rt(n_steps=30)[0].value
+        sim_rt = rt(n=n_steps)[0].value
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
     inf_hosp_int_array = jnp.array(

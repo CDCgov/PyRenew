@@ -13,7 +13,7 @@ from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import (
     RandomVariable,
     SampledValue,
-    compute_incidence_observed_with_delay,
+    compute_delay_ascertained_incidence,
 )
 
 
@@ -214,7 +214,7 @@ class HospitalAdmissions(RandomVariable):
             *_,
         ) = self.infection_to_admission_interval_rv(**kwargs)
 
-        latent_hospital_admissions = compute_incidence_observed_with_delay(
+        latent_hospital_admissions = compute_delay_ascertained_incidence(
             infection_hosp_rate.value,
             latent_infections.value,
             infection_to_admission_interval.value,

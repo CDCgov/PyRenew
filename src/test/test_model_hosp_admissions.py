@@ -222,11 +222,12 @@ def test_model_hosp_no_obs_model():
             ]
         ),
     )
+    n_initialization_points = max(gen_int.size(), inf_hosp.size())
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=inf_hosp.size()),
+        InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
         t_unit=1,
     )
 
@@ -259,7 +260,9 @@ def test_model_hosp_no_obs_model():
     with numpyro.handlers.seed(rng_seed=223):
         model1_samp = model0.sample(n_datapoints=30)
 
-    np.testing.assert_array_almost_equal(model0_samp.Rt.value, model1_samp.Rt.value)
+    np.testing.assert_array_almost_equal(
+        model0_samp.Rt.value, model1_samp.Rt.value
+    )
     np.testing.assert_array_equal(
         model0_samp.latent_infections.value,
         model1_samp.latent_infections.value,
@@ -331,10 +334,12 @@ def test_model_hosp_with_obs_model():
         ),
     )
 
+    n_initialization_points = max(gen_int.size(), inf_hosp.size())
+
     I0 = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=inf_hosp.size()),
+        InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
         t_unit=1,
     )
 
@@ -418,10 +423,12 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         ),
     )
 
+    n_initialization_points = max(gen_int.size(), inf_hosp.size())
+
     I0 = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=inf_hosp.size()),
+        InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
         t_unit=1,
     )
 
@@ -511,10 +518,12 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         ),
     )
 
+    n_initialization_points = max(gen_int.size(), inf_hosp.size())
+
     I0 = InfectionInitializationProcess(
         "I0_initialization",
         DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=inf_hosp.size()),
+        InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
         t_unit=1,
     )
 
@@ -561,7 +570,9 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     # Sampling and fitting model 0 (with no obs for infections)
     with numpyro.handlers.seed(rng_seed=223):
-        model1_samp = model1.sample(n_datapoints=n_obs_to_generate, padding=pad_size)
+        model1_samp = model1.sample(
+            n_datapoints=n_obs_to_generate, padding=pad_size
+        )
 
     # Showed during merge conflict, but unsure if it will be needed
     #  pad_size = 5

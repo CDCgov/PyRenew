@@ -8,6 +8,7 @@ from abc import ABCMeta, abstractmethod
 from typing import Callable, NamedTuple, Self, get_type_hints
 
 import jax
+import jax.numpy as jnp
 import jax.random as jr
 import matplotlib.pyplot as plt
 import numpy as np
@@ -125,7 +126,7 @@ def _assert_sample_and_rtype(
     return None
 
 
-def compute_incidence_observed_with_delay(
+def compute_delay_ascertained_incidence(
     incidence_to_observation_rate: ArrayLike,
     latent_incidence: ArrayLike,
     incidence_to_observation_delay_interval: ArrayLike,
