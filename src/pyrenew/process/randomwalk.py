@@ -29,7 +29,7 @@ class RandomWalk(DifferencedProcess):
         ----------
         name : str
             A name for the random variable, used to
-            name sites within it in :fun:`numpyro.sample()`
+            name sites within it in :meth:`numpyro.sample()`
             calls.
 
         step_rv : RandomVariable

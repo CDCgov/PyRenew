@@ -27,7 +27,7 @@ class IIDRandomSequence(RandomVariable):
         ----------
         name : str
             A name for the random variable, used to
-            name sites within it in :fun:`numpyro.sample()`
+            name sites within it in :meth:`numpyro.sample()`
             calls.
         element_rv : RandomVariable
             RandomVariable representing a single element
@@ -59,8 +59,8 @@ class IIDRandomSequence(RandomVariable):
             Sample vectorized? If True, use
             :meth:`RandomVariable.expand_by()`,
             whenever available, and fall back on
-            :fun:`numpyro.contrib.control_flow.scan`.
-            If False, always use :fun:`scan()`.
+            :meth:`numpyro.contrib.control_flow.scan`.
+            If False, always use :meth:`scan()`.
             Default False.
 
         **kwargs:
