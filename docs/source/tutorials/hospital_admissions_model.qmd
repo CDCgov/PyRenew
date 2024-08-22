@@ -137,7 +137,7 @@ With these two in hand, we can start building the model. First, we will define t
 
 ```{python}
 # | label: latent-hosp
-from pyrenew import latent, deterministic, metaclass
+from pyrenew import latent, deterministic, metaclass, randomvariable
 import jax.numpy as jnp
 import numpyro.distributions as dist
 
@@ -145,7 +145,7 @@ inf_hosp_int = deterministic.DeterministicPMF(
     name="inf_hosp_int", value=inf_hosp_int_array
 )
 
-hosp_rate = metaclass.DistributionalVariable(
+hosp_rate = randomvariable.DistributionalVariable(
     name="IHR", distribution=dist.LogNormal(jnp.log(0.05), jnp.log(1.1))
 )
 
@@ -171,7 +171,7 @@ latent_inf = latent.Infections()
 n_initialization_points = max(gen_int_array.size, inf_hosp_int_array.size)
 I0 = InfectionInitializationProcess(
     "I0_initialization",
-    metaclass.DistributionalVariable(
+    randomvariable.DistributionalVariable(
         name="I0",
         distribution=dist.LogNormal(loc=jnp.log(100), scale=jnp.log(1.75)),
     ),
@@ -194,17 +194,17 @@ class MyRt(metaclass.RandomVariable):
     def sample(self, n: int, **kwargs) -> tuple:
         sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
 
-        rt_rv = metaclass.TransformedVariable(
+        rt_rv = randomvariable.TransformedVariable(
             name="log_rt_random_walk",
             base_rv=process.RandomWalk(
                 name="log_rt",
-                step_rv=metaclass.DistributionalVariable(
+                step_rv=randomvariable.DistributionalVariable(
                     name="rw_step_rv", distribution=dist.Normal(0, 0.025)
                 ),
             ),
             transforms=transformation.ExpTransform(),
         )
-        rt_init_rv = metaclass.DistributionalVariable(
+        rt_init_rv = randomvariable.DistributionalVariable(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
         init_rt, *_ = rt_init_rv.sample()
@@ -218,9 +218,9 @@ rtproc = MyRt()
 
 # we place a log-Normal prior on the concentration
 # parameter of the negative binomial.
-nb_conc_rv = metaclass.TransformedVariable(
+nb_conc_rv = randomvariable.TransformedVariable(
     "concentration",
-    metaclass.DistributionalVariable(
+    randomvariable.DistributionalVariable(
         name="concentration_raw",
         distribution=dist.TruncatedNormal(loc=0, scale=1, low=0.01),
     ),
