@@ -18,7 +18,7 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV
+from pyrenew.metaclass import DistributionalVariable
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
 
@@ -36,7 +36,7 @@ def test_model_basicrenewal_no_timepoints_or_observations():
 
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -72,7 +72,7 @@ def test_model_basicrenewal_both_timepoints_and_observations():
 
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -111,11 +111,11 @@ def test_model_basicrenewal_no_obs_model():
     )
 
     with pytest.raises(ValueError):
-        _ = DistributionalRV(name="I0", distribution=1)
+        _ = DistributionalVariable(name="I0", distribution=1)
 
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -186,7 +186,7 @@ def test_model_basicrenewal_with_obs_model():
 
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )
@@ -240,7 +240,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
 
     I0_init_rv = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )

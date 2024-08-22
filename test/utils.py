@@ -8,10 +8,10 @@ import numpyro.distributions as dist
 
 import pyrenew.transformation as t
 from pyrenew.metaclass import (
-    DistributionalRV,
+    DistributionalVariable,
     RandomVariable,
     SampledValue,
-    TransformedRandomVariable,
+    TransformedVariable,
 )
 from pyrenew.process import RandomWalk
 
@@ -37,17 +37,17 @@ class SimpleRt(RandomVariable):
         None
         """
         self.name = name
-        self.rt_rv_ = TransformedRandomVariable(
+        self.rt_rv_ = TransformedVariable(
             name=f"{name}_log_rt_random_walk",
             base_rv=RandomWalk(
                 name="log_rt",
-                step_rv=DistributionalRV(
+                step_rv=DistributionalVariable(
                     name="rw_step_rv", distribution=dist.Normal(0, 0.025)
                 ),
             ),
             transforms=t.ExpTransform(),
         )
-        self.rt_init_rv_ = DistributionalRV(
+        self.rt_init_rv_ = DistributionalVariable(
             name=f"{name}_init_log_rt", distribution=dist.Normal(0, 0.2)
         )
 

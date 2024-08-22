@@ -7,15 +7,15 @@ import pytest
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.metaclass import DistributionalRV, RandomVariable
+from pyrenew.metaclass import DistributionalVariable, RandomVariable
 from pyrenew.process import RandomWalk, StandardNormalRandomWalk
 
 
 @pytest.mark.parametrize(
     ["element_rv", "init_value"],
     [
-        [DistributionalRV("test_normal", dist.Normal(0.5, 1)), 50.0],
-        [DistributionalRV("test_cauchy", dist.Cauchy(0.25, 0.25)), -3],
+        [DistributionalVariable("test_normal", dist.Normal(0.5, 1)), 50.0],
+        [DistributionalVariable("test_cauchy", dist.Cauchy(0.25, 0.25)), -3],
         ["test standard normal", jnp.array(3)],
     ],
 )
@@ -81,7 +81,7 @@ def test_normal_rw_samples_correctly_distributed(step_mean, step_sd):
         rw_normal = StandardNormalRandomWalk("test standard normal")
     else:
         rw_normal = RandomWalk(
-            step_rv=DistributionalRV(
+            step_rv=DistributionalVariable(
                 name="rw_step_dist",
                 distribution=dist.Normal(loc=step_mean, scale=step_sd),
             ),

@@ -1,6 +1,7 @@
 """
 Tests for the distributional RV classes
 """
+
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
@@ -9,16 +10,16 @@ from numpy.testing import assert_array_equal
 from numpyro.distributions import ExpandedDistribution
 
 from pyrenew.metaclass import (
-    DistributionalRV,
-    DynamicDistributionalRV,
-    StaticDistributionalRV,
+    DistributionalVariable,
+    DynamicDistributionalVariable,
+    StaticDistributionalVariable,
 )
 
 
 class NonCallableTestClass:
     """
     Generic non-callable object to test
-    callable checking for DynamicDistributionalRV.
+    callable checking for DynamicDistributionalVariable.
     """
 
     def __init__(self):
@@ -37,9 +38,11 @@ def test_invalid_constructor_args(not_a_dist):
     """
 
     with pytest.raises(
-        ValueError, match="distribution argument to DistributionalRV"
+        ValueError, match="distribution argument to DistributionalVariable"
     ):
-        DistributionalRV(name="this should fail", distribution=not_a_dist)
+        DistributionalVariable(
+            name="this should fail", distribution=not_a_dist
+        )
     with pytest.raises(
         ValueError,
         match=(
@@ -47,9 +50,9 @@ def test_invalid_constructor_args(not_a_dist):
             "numpyro.distributions.Distribution"
         ),
     ):
-        StaticDistributionalRV.validate(not_a_dist)
+        StaticDistributionalVariable.validate(not_a_dist)
     with pytest.raises(ValueError, match="must provide a Callable"):
-        DynamicDistributionalRV.validate(not_a_dist)
+        DynamicDistributionalVariable.validate(not_a_dist)
 
 
 @pytest.mark.parametrize(
@@ -63,18 +66,18 @@ def test_invalid_constructor_args(not_a_dist):
 def test_factory_triage(valid_static_dist_arg, valid_dynamic_dist_arg):
     """
     Test that passing a numpyro.distributions.Distribution
-    instance to the DistributionalRV factory instaniates
-    a StaticDistributionalRV, while passing a callable
-    instaniates a DynamicDistributionalRV
+    instance to the DistributionalVariable factory instaniates
+    a StaticDistributionalVariable, while passing a callable
+    instaniates a DynamicDistributionalVariable
     """
-    static = DistributionalRV(
+    static = DistributionalVariable(
         name="test static", distribution=valid_static_dist_arg
     )
-    assert isinstance(static, StaticDistributionalRV)
-    dynamic = DistributionalRV(
+    assert isinstance(static, StaticDistributionalVariable)
+    dynamic = DistributionalVariable(
         name="test dynamic", distribution=valid_dynamic_dist_arg
     )
-    assert isinstance(dynamic, DynamicDistributionalRV)
+    assert isinstance(dynamic, DynamicDistributionalVariable)
 
 
 @pytest.mark.parametrize(
@@ -97,12 +100,12 @@ def test_expand_by(dist, params, expand_by_shape):
     Test the expand_by method for static
     distributional RVs.
     """
-    static = DistributionalRV(name="static", distribution=dist(**params))
-    dynamic = DistributionalRV(name="dynamic", distribution=dist)
+    static = DistributionalVariable(name="static", distribution=dist(**params))
+    dynamic = DistributionalVariable(name="dynamic", distribution=dist)
     expanded_static = static.expand_by(expand_by_shape)
     expanded_dynamic = dynamic.expand_by(expand_by_shape)
 
-    assert isinstance(expanded_dynamic, DynamicDistributionalRV)
+    assert isinstance(expanded_dynamic, DynamicDistributionalVariable)
     assert dynamic.expand_by_shape is None
     assert isinstance(expanded_dynamic.expand_by_shape, tuple)
     assert expanded_dynamic.expand_by_shape == expand_by_shape
@@ -112,7 +115,7 @@ def test_expand_by(dist, params, expand_by_shape):
         == expanded_dynamic.distribution_constructor
     )
 
-    assert isinstance(expanded_static, StaticDistributionalRV)
+    assert isinstance(expanded_static, StaticDistributionalVariable)
     assert isinstance(expanded_static.distribution, ExpandedDistribution)
     assert expanded_static.distribution.batch_shape == (
         expand_by_shape + static.distribution.batch_shape
@@ -140,15 +143,15 @@ def test_expand_by(dist, params, expand_by_shape):
 )
 def test_sampling_equivalent(dist, params):
     """
-    Test that sampling a DynamicDistributionalRV
+    Test that sampling a DynamicDistributionalVariable
     with a given parameterization is equivalent to
-    sampling a StaticDistributionalRV with the
+    sampling a StaticDistributionalVariable with the
     same parameterization and the same random seed
     """
-    static = DistributionalRV(name="static", distribution=dist(**params))
-    dynamic = DistributionalRV(name="dynamic", distribution=dist)
-    assert isinstance(static, StaticDistributionalRV)
-    assert isinstance(dynamic, DynamicDistributionalRV)
+    static = DistributionalVariable(name="static", distribution=dist(**params))
+    dynamic = DistributionalVariable(name="dynamic", distribution=dist)
+    assert isinstance(static, StaticDistributionalVariable)
+    assert isinstance(dynamic, DynamicDistributionalVariable)
     with numpyro.handlers.seed(rng_seed=5):
         static_samp, *_ = static()
     with numpyro.handlers.seed(rng_seed=5):

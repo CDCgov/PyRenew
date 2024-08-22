@@ -11,7 +11,7 @@ from pyrenew.latent import (
     InitializeInfectionsFromVec,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV
+from pyrenew.metaclass import DistributionalVariable
 
 
 def test_infection_initialization_process():
@@ -20,14 +20,14 @@ def test_infection_initialization_process():
 
     zero_pad_model = InfectionInitializationProcess(
         "zero_pad_model",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints),
         t_unit=1,
     )
 
     exp_model = InfectionInitializationProcess(
         "exp_model",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsExponentialGrowth(
             n_timepoints, DeterministicVariable(name="rate", value=0.5)
         ),

@@ -10,7 +10,7 @@ import numpyro.distributions as dist
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HospitalAdmissions, Infections
-from pyrenew.metaclass import DistributionalRV, SampledValue
+from pyrenew.metaclass import DistributionalVariable, SampledValue
 
 
 def test_admissions_sample():
@@ -64,7 +64,7 @@ def test_admissions_sample():
 
     hosp1 = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
-        infection_hospitalization_ratio_rv=DistributionalRV(
+        infection_hospitalization_ratio_rv=DistributionalVariable(
             name="IHR", distribution=dist.LogNormal(jnp.log(0.05), 0.05)
         ),
     )

@@ -59,7 +59,7 @@ inf_hosp_int = deterministic.DeterministicPMF(
     name="inf_hosp_int", value=inf_hosp_int_array
 )
 
-hosp_rate = metaclass.DistributionalRV(
+hosp_rate = metaclass.DistributionalVariable(
     name="IHR", distribution=dist.LogNormal(jnp.log(0.05), jnp.log(1.1))
 )
 
@@ -81,7 +81,7 @@ n_initialization_points = max(gen_int_array.size, inf_hosp_int_array.size)
 
 I0 = InfectionInitializationProcess(
     "I0_initialization",
-    metaclass.DistributionalRV(
+    metaclass.DistributionalVariable(
         name="I0",
         distribution=dist.LogNormal(loc=jnp.log(100), scale=jnp.log(1.75)),
     ),
@@ -113,11 +113,11 @@ class MyRt(metaclass.RandomVariable):
         sd_rt, *_ = self.sd_rv()
 
         # Random walk step
-        step_rv = metaclass.DistributionalRV(
+        step_rv = metaclass.DistributionalVariable(
             name="rw_step_rv", distribution=dist.Normal(0, sd_rt.value)
         )
 
-        rt_init_rv = metaclass.DistributionalRV(
+        rt_init_rv = metaclass.DistributionalVariable(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
 
@@ -128,7 +128,7 @@ class MyRt(metaclass.RandomVariable):
         )
 
         # Transforming the random walk to the Rt scale
-        rt_rv = metaclass.TransformedRandomVariable(
+        rt_rv = metaclass.TransformedVariable(
             name="Rt_rv",
             base_rv=base_rv,
             transforms=transformation.ExpTransform(),
@@ -139,7 +139,7 @@ class MyRt(metaclass.RandomVariable):
 
 
 rtproc = MyRt(
-    metaclass.DistributionalRV(
+    metaclass.DistributionalVariable(
         name="Rt_random_walk_sd", distribution=dist.HalfNormal(0.025)
     )
 )
@@ -152,9 +152,9 @@ rtproc = MyRt(
 # | code-fold: true
 # we place a log-Normal prior on the concentration
 # parameter of the negative binomial.
-nb_conc_rv = metaclass.TransformedRandomVariable(
+nb_conc_rv = metaclass.TransformedVariable(
     "concentration",
-    metaclass.DistributionalRV(
+    metaclass.DistributionalVariable(
         name="concentration_raw",
         distribution=dist.TruncatedNormal(loc=0, scale=1, low=0.01),
     ),
@@ -212,16 +212,16 @@ out = hosp_model.plot_posterior(
 
 We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect. To do this, we will add two additional arguments to the latent hospital admissions random variable: `day_of_the_week_rv` (a `RandomVariable`) and `obs_data_first_day_of_the_week` (an `int` mapping days of the week from 0:6, zero being Monday). The `day_of_the_week_rv`'s sample method should return a vector of length seven; those values are then broadcasted to match the length of the dataset. Moreover, since the observed data may start in a weekday other than Monday, the `obs_data_first_day_of_the_week` argument is used to offset the day-of-the-week effect.
 
-For this example, the effect will be passed as a scaled Dirichlet distribution. It will consist of a `TransformedRandomVariable` that samples an array of length seven from numpyro's `distributions.Dirichlet` and applies a `transformation.AffineTransform` to scale it by seven. [^note-other-examples]:
+For this example, the effect will be passed as a scaled Dirichlet distribution. It will consist of a `TransformedVariable` that samples an array of length seven from numpyro's `distributions.Dirichlet` and applies a `transformation.AffineTransform` to scale it by seven. [^note-other-examples]:
 
 [^note-other-examples]: A similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
 
 ```{python}
 # | label: weekly-effect
 # Instantiating the day-of-the-week effect
-dayofweek_effect = metaclass.TransformedRandomVariable(
+dayofweek_effect = metaclass.TransformedVariable(
     name="dayofweek_effect",
-    base_rv=metaclass.DistributionalRV(
+    base_rv=metaclass.DistributionalVariable(
         name="dayofweek_effect_raw",
         distribution=dist.Dirichlet(jnp.ones(7)),
     ),

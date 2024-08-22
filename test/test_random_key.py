@@ -19,7 +19,7 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalRV
+from pyrenew.metaclass import DistributionalVariable
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
 
@@ -29,7 +29,7 @@ def create_test_model():  # numpydoc ignore=GL08
     gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
     I0 = InfectionInitializationProcess(
         "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
         t_unit=1,
     )

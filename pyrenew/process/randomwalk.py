@@ -3,7 +3,7 @@
 
 import numpyro.distributions as dist
 
-from pyrenew.metaclass import DistributionalRV, RandomVariable
+from pyrenew.metaclass import DistributionalVariable, RandomVariable
 from pyrenew.process.differencedprocess import DifferencedProcess
 from pyrenew.process.iidrandomsequence import IIDRandomSequence
 
@@ -69,7 +69,7 @@ class StandardNormalRandomWalk(RandomWalk):
         Parameters
         ----------
         step_rv_name :
-            Name for the DistributionalRV
+            Name for the DistributionalVariable
             from which the Normal(0, 1)
             steps are sampled.
         **kwargs:
@@ -80,7 +80,7 @@ class StandardNormalRandomWalk(RandomWalk):
         None
         """
         super().__init__(
-            step_rv=DistributionalRV(
+            step_rv=DistributionalVariable(
                 name=step_rv_name, distribution=dist.Normal(0.0, 1.0)
             ),
             **kwargs,

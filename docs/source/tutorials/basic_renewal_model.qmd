@@ -27,8 +27,8 @@ from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.metaclass import (
     RandomVariable,
-    DistributionalRV,
-    TransformedRandomVariable,
+    DistributionalVariable,
+    TransformedVariable,
 )
 import pyrenew.transformation as t
 from numpyro.infer.reparam import LocScaleReparam
@@ -64,7 +64,7 @@ flowchart LR
 
     subgraph latent[Latent module]
         inf["latent_infections_rv\n(Infections)"]
-        i0["I0_rv\n(DistributionalRV)"]
+        i0["I0_rv\n(DistributionalVariable)"]
     end
 
     subgraph process[Process module]
@@ -126,7 +126,7 @@ gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
 # (2) Initial infections (inferred with a prior)
 I0 = InfectionInitializationProcess(
     "I0_initialization",
-    DistributionalRV(name="I0", distribution=dist.LogNormal(2.5, 1)),
+    DistributionalVariable(name="I0", distribution=dist.LogNormal(2.5, 1)),
     InitializeInfectionsZeroPad(pmf_array.size),
     t_unit=1,
 )
@@ -142,17 +142,17 @@ class MyRt(RandomVariable):
     def sample(self, n: int, **kwargs) -> tuple:
         sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
 
-        rt_rv = TransformedRandomVariable(
+        rt_rv = TransformedVariable(
             name="log_rt_random_walk",
             base_rv=RandomWalk(
                 name="log_rt",
-                step_rv=DistributionalRV(
+                step_rv=DistributionalVariable(
                     name="rw_step_rv", distribution=dist.Normal(0, 0.025)
                 ),
             ),
             transforms=t.ExpTransform(),
         )
-        rt_init_rv = DistributionalRV(
+        rt_init_rv = DistributionalVariable(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
         init_rt, *_ = rt_init_rv.sample()
