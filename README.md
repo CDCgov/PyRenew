@@ -46,14 +46,6 @@ Install via pip with
 pip install git+https://github.com/CDCgov/PyRenew@main
 ```
 
-## Container image
-
-A container image is available at `ghcr.io/CDCgov/pyrenew:latest`. You can pull it with
-
-```bash
-docker pull ghcr.io/CDCgov/pyrenew:latest
-```
-
 ## Resources
 
 * [The MSR Website](https://cdcgov.github.io/PyRenew/tutorials/index.html) provides general documentation and tutorials on using MSR.
