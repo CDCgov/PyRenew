@@ -13,7 +13,6 @@ gen_int = pl.read_csv(
 
 # Building path to save the file
 path = os.path.join(
-    "src",
     "pyrenew",
     "datasets",
     "gen_int.tsv",
