@@ -498,7 +498,7 @@ class StaticDistributionalRV(RandomVariable):
         ----------
         obs : ArrayLike, optional
             Observations passed as the `obs` argument to
-            :fun:`numpyro.sample()`. Default `None`.
+            :meth:`numpyro.sample()`. Default `None`.
         **kwargs : dict, optional
             Additional keyword arguments passed through
             to internal sample calls, should there be any.
