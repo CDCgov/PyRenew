@@ -57,7 +57,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         log_rt_rv: RandomVariable,
         autoreg_rv: RandomVariable,
         periodic_diff_sd_rv: RandomVariable,
-        ar_process_suffix: str = "_first_diff_ar_process",
+        ar_process_suffix: str = "_first_diff_ar_process_noise",
     ) -> None:
         """
         Default constructor for RtPeriodicDiffARProcess class.
@@ -78,8 +78,8 @@ class RtPeriodicDiffARProcess(RandomVariable):
         ar_process_suffix : str
             Suffix to append to the :class:`RandomVariable`'s ``name``
             when naming the :class:`RandomVariable` that represents
-            the underlying AR process.
-            Default "_first_diff_ar_process".
+            the underlying AR process noise.
+            Default "_first_diff_ar_process_noise".
 
         Returns
         -------
@@ -99,7 +99,9 @@ class RtPeriodicDiffARProcess(RandomVariable):
         self.autoreg_rv = autoreg_rv
         self.periodic_diff_sd_rv = periodic_diff_sd_rv
         self.ar_diff = DifferencedProcess(
-            fundamental_process=ARProcess(name=f"{name}{ar_process_suffix}"),
+            fundamental_process=ARProcess(
+                noise_rv_name=f"{name}{ar_process_suffix}"
+            ),
             differencing_order=1,
         )
 

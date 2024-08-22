@@ -7,22 +7,31 @@ import pytest
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.metaclass import DistributionalRV
-from pyrenew.process import RandomWalk
+from pyrenew.metaclass import DistributionalRV, RandomVariable
+from pyrenew.process import RandomWalk, StandardNormalRandomWalk
 
 
-@pytest.mark.parametrize("init_value", [50.0, -3, jnp.array(3)])
-def test_rw_can_be_sampled(init_value):
+@pytest.mark.parametrize(
+    ["element_rv", "init_value"],
+    [
+        [DistributionalRV("test_normal", dist.Normal(0.5, 1)), 50.0],
+        [DistributionalRV("test_cauchy", dist.Cauchy(0.25, 0.25)), -3],
+        ["test standard normal", jnp.array(3)],
+    ],
+)
+def test_rw_can_be_sampled(element_rv, init_value):
     """
-    Check that a simple random walk
+    Check that a RandomWalk and a StandardNormalRandomWalk
     can be initialized and sampled from
     """
     init_rv = DeterministicVariable(name="init_rv_fixed", value=init_value)
 
-    rw = RandomWalk(
-        "rw",
-        DistributionalRV(name="rw_step_rv", distribution=dist.Normal(0, 0.27)),
-    )
+    if isinstance(element_rv, RandomVariable):
+        rw = RandomWalk(element_rv)
+    elif element_rv == "test standard normal":
+        rw = StandardNormalRandomWalk("std_normal_step")
+    else:
+        raise ValueError("Unexpected element_rv")
 
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with a fixed init
@@ -52,27 +61,31 @@ def test_rw_can_be_sampled(init_value):
     ["step_mean", "step_sd"],
     [
         [0, 1],
+        [0, 0.25],
         [2.253, 0.025],
         [-3.2521, 1],
         [1052, 3],
         [1e-6, 0.02],
     ],
 )
-def test_rw_samples_correctly_distributed(step_mean, step_sd):
+def test_normal_rw_samples_correctly_distributed(step_mean, step_sd):
     """
-    Check that a simple random walk has steps
-    distributed according to the target distribution
+    Check that Normal random walks have steps
+    distributed according to the target Normal distributions,
+    including the StandardNormalRandomWalk.
     """
 
     n_samples = 10000
     rw_init_val = jnp.array([532.0])
-    rw_normal = RandomWalk(
-        name="rw_normal_test",
-        step_rv=DistributionalRV(
-            name="rw_step_dist",
-            distribution=dist.Normal(loc=step_mean, scale=step_sd),
-        ),
-    )
+    if step_mean == 0 and step_sd == 1:
+        rw_normal = StandardNormalRandomWalk("test standard normal")
+    else:
+        rw_normal = RandomWalk(
+            step_rv=DistributionalRV(
+                name="rw_step_dist",
+                distribution=dist.Normal(loc=step_mean, scale=step_sd),
+            ),
+        )
 
     with numpyro.handlers.seed(rng_seed=62):
         samples, *_ = rw_normal(n=n_samples, init_vals=rw_init_val)

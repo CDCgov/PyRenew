@@ -13,7 +13,7 @@ def test_ar_can_be_sampled():
     Check that an AR process
     can be initialized and sampled from
     """
-    ar1 = ARProcess("ar1process")
+    ar1 = ARProcess(noise_rv_name="ar1process_noise")
     with numpyro.handlers.seed(rng_seed=62):
         # can sample
         ar1(
@@ -23,7 +23,7 @@ def test_ar_can_be_sampled():
             noise_sd=0.5,
         )
 
-    ar3 = ARProcess("ar3process")
+    ar3 = ARProcess(noise_rv_name="ar3process_noise")
 
     with numpyro.handlers.seed(rng_seed=62):
         # can sample

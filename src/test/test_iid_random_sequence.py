@@ -30,7 +30,7 @@ def test_iidrandomsequence_with_dist_rv(distribution, n):
     distributions
     """
     element_rv = DistributionalRV("el_rv", distribution=distribution)
-    rseq = IIDRandomSequence(name="randseq", element_rv=element_rv)
+    rseq = IIDRandomSequence(element_rv=element_rv)
     if distribution.batch_shape == () or distribution.batch_shape == (1,):
         expected_shape = (n,)
     else:
@@ -61,7 +61,7 @@ def test_standard_normal_sequence():
     Test the StandardNormalSequence RandomVariable
     class.
     """
-    norm_seq = StandardNormalSequence("test_norm")
+    norm_seq = StandardNormalSequence("test_norm_elements")
 
     # should be implemented with a DistributionalRV
     # that is a standard normal

@@ -155,7 +155,6 @@ def test_manual_integrator_correctness(diffs, inits, expected_solution):
     [
         [
             IIDRandomSequence(
-                "test",
                 DistributionalRV("element_dist", dist.Cauchy(0.02, 0.3)),
             ),
             3,
@@ -217,7 +216,6 @@ def test_differenced_process_sample(
     [
         [
             IIDRandomSequence(
-                "zeros",
                 element_rv=DeterministicVariable("zero", jnp.array(0.0)),
             ),
             jnp.array([0.0, 0, 0, 0, 0]),
@@ -226,7 +224,6 @@ def test_differenced_process_sample(
         ],
         [
             IIDRandomSequence(
-                "steps",
                 element_rv=DeterministicVariable("zero", jnp.array(1.0)),
             ),
             jnp.array([0]),
@@ -235,7 +232,6 @@ def test_differenced_process_sample(
         ],
         [
             IIDRandomSequence(
-                "steps",
                 element_rv=DeterministicVariable("zero", jnp.array(1.0)),
             ),
             jnp.array([0, 1]),
@@ -244,7 +240,6 @@ def test_differenced_process_sample(
         ],
         [
             IIDRandomSequence(
-                "steps",
                 element_rv=DeterministicVariable("zero", jnp.array(1.0)),
             ),
             jnp.array([0, 1]),
@@ -253,7 +248,6 @@ def test_differenced_process_sample(
         ],
         [
             IIDRandomSequence(
-                "steps",
                 element_rv=DeterministicVariable("zero", jnp.array(1.0)),
             ),
             jnp.array([0, 1]),

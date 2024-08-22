@@ -19,9 +19,7 @@ class RandomWalk(DifferencedProcess):
 
     def __init__(
         self,
-        name: str,
         step_rv: RandomVariable,
-        step_sequence_suffix="_steps",
         **kwargs,
     ):
         """
@@ -38,12 +36,6 @@ class RandomWalk(DifferencedProcess):
             RandomVariable representing a single step
             (difference) in the random walk.
 
-        step_sequence_suffix : str
-            Suffix to append to the RandomVariable's
-            name when naming the IIDRandomSequence that
-            holds its steps (differences). Default
-            "_steps".
-
         **kwargs :
             Additional keyword arguments passed to the parent
             class constructor.
@@ -53,9 +45,7 @@ class RandomWalk(DifferencedProcess):
         None
         """
         super().__init__(
-            fundamental_process=IIDRandomSequence(
-                name=name + step_sequence_suffix, element_rv=step_rv
-            ),
+            fundamental_process=IIDRandomSequence(element_rv=step_rv),
             differencing_order=1,
             **kwargs,
         )
@@ -71,24 +61,17 @@ class StandardNormalRandomWalk(RandomWalk):
 
     def __init__(
         self,
-        name: str,
-        step_rv_suffix="_step",
-        step_sequence_suffix="_steps",
+        step_rv_name: str,
         **kwargs,
     ):
         """
         Default constructor
         Parameters
         ----------
-        name : str
-            A name for the random variable.
-        step_rv_suffix :
-            Suffix to append to the random variable
-            when naming the DistributionalRV
-            from which its Normal(0, 1)
-            steps are sampled. Default "_step".
-        step_sequence_suffix : str
-            See :class:`RandomWalk`. Default "_steps".
+        step_rv_name :
+            Name for the DistributionalRV
+            from which the Normal(0, 1)
+            steps are sampled.
         **kwargs:
             Additional keyword arguments passed
             to the parent class constructor.
@@ -97,10 +80,8 @@ class StandardNormalRandomWalk(RandomWalk):
         None
         """
         super().__init__(
-            name=name,
             step_rv=DistributionalRV(
-                name=name + step_rv_suffix, distribution=dist.Normal(0.0, 1.0)
+                name=step_rv_name, distribution=dist.Normal(0.0, 1.0)
             ),
-            step_sequence_suffix=step_sequence_suffix,
             **kwargs,
         )

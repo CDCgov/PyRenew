@@ -17,23 +17,18 @@ class ARProcess(RandomVariable):
     an AR(p) process.
     """
 
-    def __init__(self, name, *args, noise_rv_suffix: str = "_noise", **kwargs):
+    def __init__(self, noise_rv_name: str, *args, **kwargs) -> None:
         """
         Default constructor.
 
         Parameters
         ----------
-        name : str
-           A name for the process.
-
-        noise_rv_suffix : str
-           A suffix to append to name when naming the
-           internal RandomVariable holding the process
-           noise. Default `"_noise"`.
+        noise_rv_name : str
+           A name for the internal RandomVariable
+           holding the process noise.
         """
-        self.name = name
         super().__init__(*args, **kwargs)
-        self.noise_rv_ = StandardNormalSequence(name=name + noise_rv_suffix)
+        self.noise_rv_ = StandardNormalSequence(element_rv_name=noise_rv_name)
 
     def sample(
         self,

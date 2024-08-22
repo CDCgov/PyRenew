@@ -17,7 +17,6 @@ class IIDRandomSequence(RandomVariable):
 
     def __init__(
         self,
-        name: str,
         element_rv: RandomVariable,
         **kwargs,
     ) -> None:
@@ -39,7 +38,6 @@ class IIDRandomSequence(RandomVariable):
         None
         """
         super().__init__(**kwargs)
-        self.name = name
         self.element_rv = element_rv
 
     def sample(
@@ -120,8 +118,7 @@ class StandardNormalSequence(IIDRandomSequence):
 
     def __init__(
         self,
-        name: str,
-        element_suffix: str = "_standard_normal_element",
+        element_rv_name: str,
         **kwargs,
     ):
         """
@@ -131,20 +128,18 @@ class StandardNormalSequence(IIDRandomSequence):
         ----------
         name : str
             see :class:`IIDRandomSequence`.
-        element_suffix: str
-            Suffix appended to name to name
-            the internal element_rv, here a
+        element_rv_name: str
+            Name for the internal element_rv, here a
             DistributionalRV encoding a
             standard Normal (mean = 0, sd = 1)
-            distribution. Default "_standard_normal_element"
+            distribution.
 
         Returns
         -------
         None
         """
         super().__init__(
-            name=name,
             element_rv=DistributionalRV(
-                name=name + element_suffix, distribution=dist.Normal(0, 1)
+                name=element_rv_name, distribution=dist.Normal(0, 1)
             ),
         )
