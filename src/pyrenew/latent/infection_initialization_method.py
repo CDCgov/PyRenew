@@ -87,6 +87,7 @@ class InitializeInfectionsZeroPad(InfectionInitializationMethod):
         ArrayLike
             An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
+        I_pre_init = jnp.atleast_1d(I_pre_init)
         if self.n_timepoints < I_pre_init.size:
             raise ValueError(
                 "I_pre_init must be no longer than n_timepoints. "
@@ -105,20 +106,23 @@ class InitializeInfectionsFromVec(InfectionInitializationMethod):
         Parameters
         ----------
         I_pre_init : ArrayLike
-            An array with the same length as ``n_timepoints`` to be used as the initial infections.
+            An array with the same length as ``n_timepoints`` to be
+            used as the initial infections.
 
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
+            An array of length ``n_timepoints`` with the number of
+        initialized infections at each time point.
         """
+        I_pre_init = jnp.array(I_pre_init)
         if I_pre_init.size != self.n_timepoints:
             raise ValueError(
                 "I_pre_init must have the same size as n_timepoints. "
                 f"Got I_pre_init of size {I_pre_init.size} "
                 f"and n_timepoints of size {self.n_timepoints}."
             )
-        return jnp.array(I_pre_init)
+        return I_pre_init
 
 
 class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
@@ -173,11 +177,12 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         ArrayLike
             An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
+        I_pre_init = jnp.array(I_pre_init)
         if I_pre_init.size != 1:
             raise ValueError(
                 f"I_pre_init must be an array of size 1. Got size {I_pre_init.size}."
             )
-        rate = self.rate()[0].value
+        rate = jnp.array(self.rate()[0].value)
         if rate.size != 1:
             raise ValueError(
                 f"rate must be an array of size 1. Got size {rate.size}."

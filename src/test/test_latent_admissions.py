@@ -1,20 +1,16 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
+from test.utils import SimpleRt
+
 import jax.numpy as jnp
 import numpy.testing as testing
 import numpyro
 import numpyro.distributions as dist
 
-from pyrenew import transformation as t
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HospitalAdmissions, Infections
-from pyrenew.metaclass import (
-    DistributionalRV,
-    SampledValue,
-    TransformedRandomVariable,
-)
-from pyrenew.process import SimpleRandomWalkProcess
+from pyrenew.metaclass import DistributionalRV, SampledValue
 
 
 def test_admissions_sample():
@@ -25,22 +21,10 @@ def test_admissions_sample():
 
     # Generating Rt and Infections to compute the hospital admissions
 
-    rt = TransformedRandomVariable(
-        name="Rt_rv",
-        base_rv=SimpleRandomWalkProcess(
-            name="log_rt",
-            step_rv=DistributionalRV(
-                name="rw_step_rv", distribution=dist.Normal(0, 0.025)
-            ),
-            init_rv=DistributionalRV(
-                name="init_log_rt", distribution=dist.Normal(0, 0.2)
-            ),
-        ),
-        transforms=t.ExpTransform(),
-    )
+    rt = SimpleRt()
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt = rt(n_steps=30)[0].value
+        sim_rt = rt(n=30)[0].value
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
     i0 = 10 * jnp.ones_like(gen_int)
@@ -91,8 +75,6 @@ def test_admissions_sample():
         sim_hosp_1.latent_hospital_admissions.value,
         inf_sampled1[0].value,
     )
-
-    # Testing the offset in the observed data
     inf_hosp2 = jnp.ones(30)
     inf_hosp2 = DeterministicPMF("i2h", inf_hosp2 / sum(inf_hosp2))
 
@@ -143,6 +125,3 @@ def test_admissions_sample():
         sim_hosp_2a[2 : (sim_hosp_2b.size - 2)],
         sim_hosp_2b[: (sim_hosp_2b.size - 4)],
     )
-
-
-test_admissions_sample()

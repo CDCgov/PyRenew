@@ -1,6 +1,6 @@
 # numpydoc ignore=GL08
 
-from test.utils import simple_rt
+from test.utils import SimpleRt
 
 import jax.numpy as jnp
 import jax.random as jr
@@ -20,7 +20,10 @@ from pyrenew.observation import PoissonObservation
 
 
 def test_forecast():
-    """Check that forecasts are the right length and match the posterior up until forecast begins."""
+    """
+    Check that forecasts are the right length and
+    match the posterior up until forecast begins.
+    """
     pmf_array = jnp.array([0.25, 0.25, 0.25, 0.25])
     gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
     I0 = InfectionInitializationProcess(
@@ -31,7 +34,7 @@ def test_forecast():
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation(name="poisson_rv")
-    rt = simple_rt()
+    rt = SimpleRt()
 
     model = RtInfectionsRenewalModel(
         I0_rv=I0,
@@ -63,8 +66,8 @@ def test_forecast():
         == n_datapoints + n_forecast_points
     )
 
-    # Check the first elements of the posterior predictive Rt are the same as the
-    # posterior Rt
+    # Check the first elements of the posterior predictive Rt
+    # are the same as the posterior Rt
     assert_array_equal(
         model.mcmc.get_samples()["Rt"][0],
         posterior_predictive_samples["Rt"][0][

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
-from test.utils import simple_rt
+from test.utils import SimpleRt
 
 import jax.numpy as jnp
 import numpy.testing as testing
@@ -17,10 +17,10 @@ def test_infections_as_deterministic():
     the same seed is used.
     """
 
-    rt = simple_rt()
+    rt = SimpleRt()
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt, *_ = rt(n_steps=30)
+        sim_rt, *_ = rt(n=30)
 
     gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
 
