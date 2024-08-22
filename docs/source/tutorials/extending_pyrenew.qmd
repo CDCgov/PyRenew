@@ -28,8 +28,12 @@ import numpyro.distributions as dist
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import InfectionsWithFeedback
 from pyrenew.model import RtInfectionsRenewalModel
-from pyrenew.process import SimpleRandomWalkProcess
-from pyrenew.metaclass import DistributionalRV, TransformedRandomVariable
+from pyrenew.process import RandomWalk
+from pyrenew.metaclass import (
+    RandomVariable,
+    DistributionalRV,
+    TransformedRandomVariable,
+)
 from pyrenew.latent import (
     InfectionInitializationProcess,
     InitializeInfectionsExponentialGrowth,
@@ -62,19 +66,31 @@ latent_infections = InfectionsWithFeedback(
     infection_feedback_pmf=gen_int,
 )
 
-rt = TransformedRandomVariable(
-    "Rt_rv",
-    base_rv=SimpleRandomWalkProcess(
-        name="log_rt",
-        step_rv=DistributionalRV(
-            name="rw_step_rv", distribution=dist.Normal(0, 0.025)
-        ),
-        init_rv=DistributionalRV(
+
+class MyRt(RandomVariable):
+
+    def validate(self):
+        pass
+
+    def sample(self, n: int, **kwargs) -> tuple:
+        sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
+
+        rt_rv = TransformedRandomVariable(
+            name="log_rt_random_walk",
+            base_rv=RandomWalk(
+                name="log_rt",
+                step_rv=DistributionalRV(
+                    name="rw_step_rv", distribution=dist.Normal(0, 0.025)
+                ),
+            ),
+            transforms=t.ExpTransform(),
+        )
+        rt_init_rv = DistributionalRV(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
-        ),
-    ),
-    transforms=t.ExpTransform(),
-)
+        )
+        init_rt, *_ = rt_init_rv.sample()
+
+        return rt_rv.sample(n=n, init_vals=init_rt.value, **kwargs)
 ```
 
 With all the components defined, we can build the model:
@@ -85,7 +101,7 @@ model0 = RtInfectionsRenewalModel(
     gen_int_rv=gen_int,
     I0_rv=I0,
     latent_infections_rv=latent_infections,
-    Rt_process_rv=rt,
+    Rt_process_rv=MyRt(),
     infection_obs_process_rv=None,
 )
 ```
@@ -209,10 +225,13 @@ class InfFeedback(RandomVariable):
         inf_feedback_strength, *_ = self.infection_feedback_strength(
             **kwargs,
         )
+
+        inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength.value)
+
         inf_feedback_strength = au.pad_x_to_match_y(
-            x=inf_feedback_strength.value,
+            x=inf_feedback_strength,
             y=Rt,
-            fill_value=inf_feedback_strength.value[0],
+            fill_value=inf_feedback_strength[0],
         )
 
         # Sampling inf feedback and adjusting the shape
@@ -260,7 +279,7 @@ model1 = RtInfectionsRenewalModel(
     gen_int_rv=gen_int,
     I0_rv=I0,
     latent_infections_rv=latent_infections2,
-    Rt_process_rv=rt,
+    Rt_process_rv=MyRt(),
     infection_obs_process_rv=None,
 )
 

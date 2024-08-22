@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
-from test.utils import simple_rt
+from test.utils import SimpleRt
 
 import jax.numpy as jnp
 import numpy.testing as testing
@@ -21,11 +21,10 @@ def test_admissions_sample():
 
     # Generating Rt and Infections to compute the hospital admissions
 
-    rt = simple_rt()
+    rt = SimpleRt()
 
-    n_steps = 30
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt = rt(n_steps=n_steps)[0].value
+        sim_rt = rt(n_steps=30)[0].value
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
     inf_hosp_int_array = jnp.array(
@@ -82,8 +81,6 @@ def test_admissions_sample():
         sim_hosp_1.latent_hospital_admissions.value[-n_steps:],
         inf_sampled1[0].value,
     )
-
-    # Testing the offset in the observed data
     inf_hosp2 = jnp.ones(30)
     inf_hosp2 = DeterministicPMF("i2h", inf_hosp2 / sum(inf_hosp2))
 
@@ -134,6 +131,3 @@ def test_admissions_sample():
         sim_hosp_2a[2 : (sim_hosp_2b.size - 2)],
         sim_hosp_2b[: (sim_hosp_2b.size - 4)],
     )
-
-
-test_admissions_sample()

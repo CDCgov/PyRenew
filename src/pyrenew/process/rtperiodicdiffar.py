@@ -2,7 +2,6 @@
 from typing import NamedTuple
 
 import jax.numpy as jnp
-from jax.typing import ArrayLike
 
 import pyrenew.arrayutils as au
 from pyrenew.metaclass import (
@@ -10,12 +9,13 @@ from pyrenew.metaclass import (
     SampledValue,
     _assert_sample_and_rtype,
 )
-from pyrenew.process.firstdifferencear import FirstDifferenceARProcess
+from pyrenew.process import ARProcess, DifferencedProcess
 
 
-class RtPeriodicDiffProcessSample(NamedTuple):
+class RtPeriodicDiffARProcessSample(NamedTuple):
     """
-    A container for holding the output from `process.RtPeriodicDiffProcess()`.
+    A container for holding the output from
+    `process.RtPeriodicDiffARProcess()`.
 
     Attributes
     ----------
@@ -26,17 +26,18 @@ class RtPeriodicDiffProcessSample(NamedTuple):
     rt: SampledValue | None = None
 
     def __repr__(self):
-        return f"RtPeriodicDiffProcessSample(rt={self.rt})"
+        return f"RtPeriodicDiffARProcessSample(rt={self.rt})"
 
 
-class RtPeriodicDiffProcess(RandomVariable):
+class RtPeriodicDiffARProcess(RandomVariable):
     r"""
-    Periodic Rt with autoregressive difference.
+    Periodic Rt with autoregressive first differences
 
     Notes
     -----
-    This class samples a periodic Rt with autoregressive difference. The
-    mathematical formulation is given by:
+    This class samples a periodic reproduction number R(t)
+    by placing an AR(1) process
+    on the first differences in log[R(t)]. Formally:
 
     .. math::
         \log[\mathcal{R}^\mathrm{u}(t_3)] \sim \mathrm{Normal}\left(\log[\mathcal{R}^\mathrm{u}(t_2)] \
@@ -56,9 +57,10 @@ class RtPeriodicDiffProcess(RandomVariable):
         log_rt_rv: RandomVariable,
         autoreg_rv: RandomVariable,
         periodic_diff_sd_rv: RandomVariable,
+        ar_process_suffix: str = "_first_diff_ar_process_noise",
     ) -> None:
         """
-        Default constructor for RtPeriodicDiffProcess class.
+        Default constructor for RtPeriodicDiffARProcess class.
 
         Parameters
         ----------
@@ -73,6 +75,11 @@ class RtPeriodicDiffProcess(RandomVariable):
             Autoregressive parameter.
         periodic_diff_sd_rv : RandomVariable
             Standard deviation of the noise.
+        ar_process_suffix : str
+            Suffix to append to the :class:`RandomVariable`'s ``name``
+            when naming the :class:`RandomVariable` that represents
+            the underlying AR process noise.
+            Default "_first_diff_ar_process_noise".
 
         Returns
         -------
@@ -91,6 +98,12 @@ class RtPeriodicDiffProcess(RandomVariable):
         self.log_rt_rv = log_rt_rv
         self.autoreg_rv = autoreg_rv
         self.periodic_diff_sd_rv = periodic_diff_sd_rv
+        self.ar_diff = DifferencedProcess(
+            fundamental_process=ARProcess(
+                noise_rv_name=f"{name}{ar_process_suffix}"
+            ),
+            differencing_order=1,
+        )
 
         return None
 
@@ -123,36 +136,11 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         return None
 
-    @staticmethod
-    def autoreg_process(
-        dat: ArrayLike, sigma: float
-    ) -> tuple[ArrayLike, float]:
-        """
-        Scan function for the autoregressive process.
-
-        Parameters
-        ----------
-        dat : ArrayLike
-            Data array with three elements: log_rt0, log_rt1, and b.
-        sigma : float
-            Standard deviation of the noise.
-
-        Returns
-        -------
-        tuple
-        """
-
-        log_rt0, log_rt1, b = dat
-
-        next_log_rt = log_rt1 + b * (log_rt1 - log_rt0) + sigma
-
-        return jnp.hstack([log_rt1, next_log_rt, b]), next_log_rt
-
     def sample(
         self,
         duration: int,
         **kwargs,
-    ) -> RtPeriodicDiffProcessSample:
+    ) -> RtPeriodicDiffARProcessSample:
         """
         Samples the periodic Rt with autoregressive difference.
 
@@ -166,7 +154,7 @@ class RtPeriodicDiffProcess(RandomVariable):
 
         Returns
         -------
-        RtPeriodicDiffProcessSample
+        RtPeriodicDiffARProcessSample
             Named tuple with "rt".
         """
 
@@ -179,17 +167,21 @@ class RtPeriodicDiffProcess(RandomVariable):
         n_periods = (duration + self.period_size - 1) // self.period_size
 
         # Running the process
-        ar_diff = FirstDifferenceARProcess(self.name, autoreg=b, noise_sd=s_r)
-        log_rt = ar_diff.sample(
-            duration=n_periods,
-            init_val=log_rt_rv[1],
-            init_rate_of_change=log_rt_rv[1] - log_rt_rv[0],
+
+        log_rt = self.ar_diff(
+            n=n_periods,
+            init_vals=jnp.array([log_rt_rv[0]]),
+            autoreg=b,
+            noise_sd=s_r,
+            fundamental_process_init_vals=jnp.array(
+                [log_rt_rv[1] - log_rt_rv[0]]
+            ),
         )[0]
 
-        return RtPeriodicDiffProcessSample(
+        return RtPeriodicDiffARProcessSample(
             rt=SampledValue(
                 au.repeat_until_n(
-                    data=jnp.exp(log_rt.value.flatten()),
+                    data=jnp.exp(log_rt.value),
                     n_timepoints=duration,
                     offset=self.offset,
                     period_size=self.period_size,
@@ -200,9 +192,9 @@ class RtPeriodicDiffProcess(RandomVariable):
         )
 
 
-class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
+class RtWeeklyDiffARProcess(RtPeriodicDiffARProcess):
     """
-    Weekly Rt with autoregressive difference.
+    Weekly Rt with autoregressive first differences.
     """
 
     def __init__(
@@ -214,7 +206,7 @@ class RtWeeklyDiffProcess(RtPeriodicDiffProcess):
         periodic_diff_sd_rv: RandomVariable,
     ) -> None:
         """
-        Default constructor for RtWeeklyDiffProcess class.
+        Default constructor for RtWeeklyDiffARProcess class.
 
         Parameters
         ----------

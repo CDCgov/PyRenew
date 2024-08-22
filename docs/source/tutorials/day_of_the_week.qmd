@@ -106,7 +106,7 @@ class MyRt(metaclass.RandomVariable):
     def validate(self):
         pass
 
-    def sample(self, n_steps: int, **kwargs) -> tuple:
+    def sample(self, n: int, **kwargs) -> tuple:
         # Standard deviation of the random walk
         sd_rt, *_ = self.sd_rv()
 
@@ -115,15 +115,14 @@ class MyRt(metaclass.RandomVariable):
             name="rw_step_rv", distribution=dist.Normal(0, sd_rt.value)
         )
 
-        init_rv = metaclass.DistributionalRV(
+        rt_init_rv = metaclass.DistributionalRV(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
 
         # Random walk process
-        base_rv = process.SimpleRandomWalkProcess(
+        base_rv = process.RandomWalk(
             name="log_rt",
             step_rv=step_rv,
-            init_rv=init_rv,
         )
 
         # Transforming the random walk to the Rt scale
@@ -132,8 +131,9 @@ class MyRt(metaclass.RandomVariable):
             base_rv=base_rv,
             transforms=transformation.ExpTransform(),
         )
+        init_rt, *_ = rt_init_rv.sample()
 
-        return rt_rv(n_steps=n_steps, **kwargs)
+        return rt_rv.sample(n=n, init_vals=init_rt.value, **kwargs)
 
 
 rtproc = MyRt(

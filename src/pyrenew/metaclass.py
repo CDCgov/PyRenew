@@ -5,10 +5,9 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Callable, NamedTuple, get_type_hints
+from typing import Callable, NamedTuple, Self, get_type_hints
 
 import jax
-import jax.numpy as jnp
 import jax.random as jr
 import matplotlib.pyplot as plt
 import numpy as np
@@ -322,6 +321,7 @@ class DynamicDistributionalRV(RandomVariable):
         name: str,
         distribution_constructor: Callable,
         reparam: Reparam = None,
+        expand_by_shape: tuple = None,
     ) -> None:
         """
         Default constructor for DynamicDistributionalRV.
@@ -337,6 +337,11 @@ class DynamicDistributionalRV(RandomVariable):
             If not None, reparameterize sampling
             from the distribution according to the
             given numpyro reparameterizer
+        expand_by_shape : tuple, optional
+            If not None, call :meth:`expand_by()` on the
+            underlying distribution once it is instianted
+            with the given `expand_by_shape`.
+            Default None.
 
         Returns
         -------
@@ -350,6 +355,12 @@ class DynamicDistributionalRV(RandomVariable):
             self.reparam_dict = {self.name: reparam}
         else:
             self.reparam_dict = {}
+        if not (expand_by_shape is None or isinstance(expand_by_shape, tuple)):
+            raise ValueError(
+                "expand_by_shape must be a tuple or be None ",
+                f"Got {type(expand_by_shape)}",
+            )
+        self.expand_by_shape = expand_by_shape
 
         return None
 
@@ -394,7 +405,7 @@ class DynamicDistributionalRV(RandomVariable):
             Positional arguments passed to self.distribution_constructor
         obs : ArrayLike, optional
             Observations passed as the `obs` argument to
-            :fun:`numpyro.sample()`. Default `None`.
+            :meth:`numpyro.sample()`. Default `None`.
         **kwargs : dict, optional
             Keyword arguments passed to self.distribution_constructor
 
@@ -403,18 +414,50 @@ class DynamicDistributionalRV(RandomVariable):
         SampledValue
            Containing a sample from the distribution.
         """
+        distribution = self.distribution_constructor(*args, **kwargs)
+        if self.expand_by_shape is not None:
+            distribution = distribution.expand_by(self.expand_by_shape)
         with numpyro.handlers.reparam(config=self.reparam_dict):
             sample = numpyro.sample(
                 name=self.name,
-                fn=self.distribution_constructor(*args, **kwargs),
+                fn=distribution,
                 obs=obs,
             )
         return (
             SampledValue(
-                jnp.atleast_1d(sample),
+                sample,
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
+        )
+
+    def expand_by(self, sample_shape) -> Self:
+        """
+        Expand the distribution by a given
+        shape_shape, if possible. Returns a
+        new DynamicDistributionalRV whose underlying
+        distribution will be expanded by the given shape
+        at sample() time.
+
+        Parameters
+        ----------
+        sample_shape : tuple
+            Sample shape by which to expand the distribution.
+            Passed to the expand_by() method of
+            :class:`numpyro.distributions.Distribution`
+            after the distribution is instantiated.
+
+        Returns
+        -------
+        DynamicDistributionalRV
+            Whose underlying distribution will be expanded by
+            the given sample shape at sampling time.
+        """
+        return DynamicDistributionalRV(
+            name=self.name,
+            distribution_constructor=self.distribution_constructor,
+            reparam=self.reparam_dict.get(self.name, None),
+            expand_by_shape=sample_shape,
         )
 
 
@@ -464,7 +507,7 @@ class StaticDistributionalRV(RandomVariable):
     @staticmethod
     def validate(distribution: any) -> None:
         """
-        Validation of the distribution to be implemented in subclasses.
+        Validation of the distribution.
         """
         if not isinstance(distribution, numpyro.distributions.Distribution):
             raise ValueError(
@@ -487,7 +530,7 @@ class StaticDistributionalRV(RandomVariable):
         ----------
         obs : ArrayLike, optional
             Observations passed as the `obs` argument to
-            :fun:`numpyro.sample()`. Default `None`.
+            :meth:`numpyro.sample()`. Default `None`.
         **kwargs : dict, optional
             Additional keyword arguments passed through
             to internal sample calls, should there be any.
@@ -505,10 +548,43 @@ class StaticDistributionalRV(RandomVariable):
             )
         return (
             SampledValue(
-                jnp.atleast_1d(sample),
+                sample,
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),
+        )
+
+    def expand_by(self, sample_shape) -> Self:
+        """
+        Expand the distribution by the given sample_shape,
+        if possible. Returns a new StaticDistributionalRV
+        whose underlying distribution has been expanded by
+        the given sample_shape via
+        :meth:`~numpyro.distributions.Distribution.expand_by()`
+
+        Parameters
+        ----------
+        sample_shape : tuple
+            Sample shape for the expansion. Passed to the
+            :meth:`expand_by()` method of
+            :class:`numpyro.distributions.Distribution`.
+
+        Returns
+        -------
+        StaticDistributionalRV
+            Whose underlying distribution has been expanded by
+            the given sample shape.
+        """
+        if not isinstance(sample_shape, tuple):
+            raise ValueError(
+                "sample_shape for expand()-ing "
+                "a DistributionalRV must be a "
+                f"tuple. Got {type(sample_shape)}"
+            )
+        return StaticDistributionalRV(
+            name=self.name,
+            distribution=self.distribution.expand_by(sample_shape),
+            reparam=self.reparam_dict.get(self.name, None),
         )
 
 
@@ -593,8 +669,8 @@ class Model(metaclass=ABCMeta):
         Parameters
         ----------
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal `sample()`
-            calls, should there be any.
+            Additional keyword arguments passed through to internal
+            `sample()` calls, should there be any.
 
         Returns
         -------

@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
-from test.utils import simple_rt
+
+from test.utils import SimpleRt
 
 import jax.numpy as jnp
 import jax.random as jr
@@ -64,13 +65,6 @@ def test_model_hosp_no_timepoints_or_observations():
         name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
-    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
-
-    latent_infections = Infections()
-    Rt_process = simple_rt()
-
-    observed_admissions = PoissonObservation("poisson_rv")
-
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
         value=jnp.array(
@@ -96,6 +90,13 @@ def test_model_hosp_no_timepoints_or_observations():
             ],
         ),
     )
+
+    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
+
+    latent_infections = Infections()
+    Rt_process = SimpleRt()
+
+    observed_admissions = PoissonObservation("poisson_rv")
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
@@ -129,13 +130,6 @@ def test_model_hosp_both_timepoints_and_observations():
         value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
-
-    latent_infections = Infections()
-    Rt_process = simple_rt()
-
-    observed_admissions = PoissonObservation("poisson_rv")
-
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
         value=jnp.array(
@@ -161,6 +155,12 @@ def test_model_hosp_both_timepoints_and_observations():
             ],
         ),
     )
+
+    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
+
+    latent_infections = Infections()
+    Rt_process = SimpleRt()
+    observed_admissions = PoissonObservation("poisson_rv")
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
@@ -231,7 +231,7 @@ def test_model_hosp_no_obs_model():
     )
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
@@ -259,9 +259,7 @@ def test_model_hosp_no_obs_model():
     with numpyro.handlers.seed(rng_seed=223):
         model1_samp = model0.sample(n_datapoints=30)
 
-    np.testing.assert_array_almost_equal(
-        model0_samp.Rt.value, model1_samp.Rt.value
-    )
+    np.testing.assert_array_almost_equal(model0_samp.Rt.value, model1_samp.Rt.value)
     np.testing.assert_array_equal(
         model0_samp.latent_infections.value,
         model1_samp.latent_infections.value,
@@ -341,7 +339,7 @@ def test_model_hosp_with_obs_model():
     )
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
     observed_admissions = PoissonObservation("poisson_rv")
 
     latent_admissions = HospitalAdmissions(
@@ -428,7 +426,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
     )
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
     observed_admissions = PoissonObservation("poisson_rv")
 
     hosp_report_prob_dist = UniformProbForTest(1, "hosp_report_prob_dist")
@@ -521,7 +519,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     )
 
     latent_infections = Infections()
-    Rt_process = simple_rt()
+    Rt_process = SimpleRt()
 
     observed_admissions = PoissonObservation("poisson_rv")
 
@@ -563,9 +561,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     # Sampling and fitting model 0 (with no obs for infections)
     with numpyro.handlers.seed(rng_seed=223):
-        model1_samp = model1.sample(
-            n_datapoints=n_obs_to_generate, padding=pad_size
-        )
+        model1_samp = model1.sample(n_datapoints=n_obs_to_generate, padding=pad_size)
 
     # Showed during merge conflict, but unsure if it will be needed
     #  pad_size = 5

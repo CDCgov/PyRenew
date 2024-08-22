@@ -3,7 +3,6 @@
 
 from __future__ import annotations
 
-import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
 
@@ -42,7 +41,7 @@ class DeterministicVariable(RandomVariable):
         """
         self.name = name
         self.validate(value)
-        self.value = jnp.atleast_1d(value)
+        self.value = value
         self.set_timeseries(t_start, t_unit)
 
         return None
