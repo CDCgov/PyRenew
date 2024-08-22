@@ -11,7 +11,7 @@ from pyrenew.latent import (
     InitializeInfectionsFromVec,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalVariable
+from pyrenew.randomvariable import DistributionalVariable
 
 
 def test_infection_initialization_process():

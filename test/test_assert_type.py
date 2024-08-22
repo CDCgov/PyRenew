@@ -3,11 +3,8 @@
 import numpyro.distributions as dist
 import pytest
 
-from pyrenew.metaclass import (
-    DistributionalVariable,
-    RandomVariable,
-    _assert_type,
-)
+from pyrenew.metaclass import RandomVariable, _assert_type
+from pyrenew.randomvariable import DistributionalVariable
 
 
 def test_valid_assertion_types():

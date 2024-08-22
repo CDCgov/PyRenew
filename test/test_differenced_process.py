@@ -10,12 +10,12 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 
 from pyrenew.deterministic import DeterministicVariable, NullVariable
-from pyrenew.metaclass import DistributionalVariable
 from pyrenew.process import (
     DifferencedProcess,
     IIDRandomSequence,
     StandardNormalSequence,
 )
+from pyrenew.randomvariable import DistributionalVariable
 
 
 @pytest.mark.parametrize(

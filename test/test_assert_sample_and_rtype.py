@@ -9,11 +9,11 @@ from numpy.testing import assert_equal
 
 from pyrenew.deterministic import DeterministicVariable, NullObservation
 from pyrenew.metaclass import (
-    DistributionalVariable,
     RandomVariable,
     SampledValue,
     _assert_sample_and_rtype,
 )
+from pyrenew.randomvariable import DistributionalVariable
 
 
 class RVreturnsTuple(RandomVariable):

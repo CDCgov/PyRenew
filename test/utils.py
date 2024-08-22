@@ -7,13 +7,9 @@ test utilities
 import numpyro.distributions as dist
 
 import pyrenew.transformation as t
-from pyrenew.metaclass import (
-    DistributionalVariable,
-    RandomVariable,
-    SampledValue,
-    TransformedVariable,
-)
+from pyrenew.metaclass import RandomVariable, SampledValue
 from pyrenew.process import RandomWalk
+from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 
 
 class SimpleRt(RandomVariable):

@@ -19,9 +19,9 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalVariable
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
+from pyrenew.randomvariable import DistributionalVariable
 
 
 def create_test_model():  # numpydoc ignore=GL08

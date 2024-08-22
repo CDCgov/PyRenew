@@ -7,8 +7,9 @@ import pytest
 from numpy.testing import assert_almost_equal, assert_array_almost_equal
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.metaclass import DistributionalVariable, RandomVariable
+from pyrenew.metaclass import RandomVariable
 from pyrenew.process import RandomWalk, StandardNormalRandomWalk
+from pyrenew.randomvariable import DistributionalVariable
 
 
 @pytest.mark.parametrize(

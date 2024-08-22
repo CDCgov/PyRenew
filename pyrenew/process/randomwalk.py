@@ -3,9 +3,10 @@
 
 import numpyro.distributions as dist
 
-from pyrenew.metaclass import DistributionalVariable, RandomVariable
+from pyrenew.metaclass import RandomVariable
 from pyrenew.process.differencedprocess import DifferencedProcess
 from pyrenew.process.iidrandomsequence import IIDRandomSequence
+from pyrenew.randomvariable import DistributionalVariable
 
 
 class RandomWalk(DifferencedProcess):

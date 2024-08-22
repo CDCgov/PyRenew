@@ -13,13 +13,8 @@ import pytest
 from numpy.testing import assert_almost_equal
 
 import pyrenew.transformation as t
-from pyrenew.metaclass import (
-    DistributionalVariable,
-    Model,
-    RandomVariable,
-    SampledValue,
-    TransformedVariable,
-)
+from pyrenew.metaclass import Model, RandomVariable, SampledValue
+from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 
 
 class LengthTwoRV(RandomVariable):

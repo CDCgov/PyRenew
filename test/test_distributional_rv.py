@@ -9,7 +9,7 @@ import pytest
 from numpy.testing import assert_array_equal
 from numpyro.distributions import ExpandedDistribution
 
-from pyrenew.metaclass import (
+from pyrenew.randomvariable import (
     DistributionalVariable,
     DynamicDistributionalVariable,
     StaticDistributionalVariable,

@@ -10,7 +10,8 @@ import numpyro.distributions as dist
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HospitalAdmissions, Infections
-from pyrenew.metaclass import DistributionalVariable, SampledValue
+from pyrenew.metaclass import SampledValue
+from pyrenew.randomvariable import DistributionalVariable
 
 
 def test_admissions_sample():

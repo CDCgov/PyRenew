@@ -23,13 +23,10 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import (
-    DistributionalVariable,
-    RandomVariable,
-    SampledValue,
-)
+from pyrenew.metaclass import RandomVariable, SampledValue
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
+from pyrenew.randomvariable import DistributionalVariable
 
 
 class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08

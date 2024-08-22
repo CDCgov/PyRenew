@@ -17,9 +17,9 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalVariable
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
+from pyrenew.randomvariable import DistributionalVariable
 
 pmf_array = jnp.array([0.25, 0.1, 0.2, 0.45])
 gen_int = DeterministicPMF(name="gen_int", value=pmf_array)

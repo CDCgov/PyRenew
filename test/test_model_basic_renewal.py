@@ -18,9 +18,9 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import DistributionalVariable
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
+from pyrenew.randomvariable import DistributionalVariable
 
 
 def test_model_basicrenewal_no_timepoints_or_observations():

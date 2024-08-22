@@ -4,11 +4,8 @@
 import numpyro.distributions as dist
 from numpyro.contrib.control_flow import scan
 
-from pyrenew.metaclass import (
-    DistributionalVariable,
-    RandomVariable,
-    SampledValue,
-)
+from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.randomvariable import DistributionalVariable
 
 
 class IIDRandomSequence(RandomVariable):

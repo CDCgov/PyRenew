@@ -6,12 +6,12 @@ import numpyro.distributions as dist
 import pytest
 from scipy.stats import kstest
 
-from pyrenew.metaclass import (
+from pyrenew.metaclass import SampledValue
+from pyrenew.process import IIDRandomSequence, StandardNormalSequence
+from pyrenew.randomvariable import (
     DistributionalVariable,
-    SampledValue,
     StaticDistributionalVariable,
 )
-from pyrenew.process import IIDRandomSequence, StandardNormalSequence
 
 
 @pytest.mark.parametrize(

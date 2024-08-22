@@ -29,11 +29,8 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import InfectionsWithFeedback
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.process import RandomWalk
-from pyrenew.metaclass import (
-    RandomVariable,
-    DistributionalVariable,
-    TransformedVariable,
-)
+from pyrenew.metaclass import RandomVariable
+from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 from pyrenew.latent import (
     InfectionInitializationProcess,
     InitializeInfectionsExponentialGrowth,

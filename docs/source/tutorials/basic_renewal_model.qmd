@@ -25,11 +25,8 @@ from pyrenew.latent import (
 from pyrenew.observation import PoissonObservation
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.model import RtInfectionsRenewalModel
-from pyrenew.metaclass import (
-    RandomVariable,
-    DistributionalVariable,
-    TransformedVariable,
-)
+from pyrenew.metaclass import RandomVariable
+from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 import pyrenew.transformation as t
 from numpyro.infer.reparam import LocScaleReparam
 ```
