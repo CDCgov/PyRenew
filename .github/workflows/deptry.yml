@@ -29,4 +29,4 @@ jobs:
 
       - name: run deptry
         run: |
-          poetry run deptry . --per-rule-ignores "DEP001=pyrenew,DEP001=pytest,DEP003=pytest,DEP001=test"
+          poetry run deptry .

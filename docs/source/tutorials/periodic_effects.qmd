@@ -24,7 +24,7 @@ from pyrenew import process, deterministic
 
 ```{python}
 # The random process for Rt
-rt_proc = process.RtWeeklyDiffProcess(
+rt_proc = process.RtWeeklyDiffARProcess(
     name="rt_weekly_diff",
     offset=0,
     log_rt_rv=deterministic.DeterministicVariable(
@@ -57,7 +57,7 @@ for i in range(0, 30, 7):
 plt.show()
 ```
 
-The implementation of the `RtWeeklyDiffProcess` (which is an instance of `RtPeriodicDiffProcess`), uses `repeat_until_n` to repeating values: `repeat_until_n(..., period_size=7)`. The `RtWeeklyDiff` class is a particular case of `RtPeriodicDiff` with a period size of seven.
+The implementation of the `RtWeeklyDiffARProcess` (which is an instance of `RtPeriodicDiffARProcess`), uses `repeat_until_n` to repeating values: `repeat_until_n(..., period_size=7)`. The `RtWeeklyDiff` class is a particular case of `RtPeriodicDiff` with a period size of seven.
 
 ## Repeated sequences (tiling)
 

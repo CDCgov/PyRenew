@@ -5,8 +5,8 @@ Developer Documentation
 Github Workflow
 ---------------
 
--  You should request reviews for pull requests from ``multisignal-epi-inference-devs``, unless you have a good reason to request reviews from a smaller group.
--  Reviews from all of ``multisignal-epi-inference-devs`` are  encouraged, but an approving review from a `codeowner <https://github.com/CDCgov/multisignal-epi-inference/blob/main/.github/CODEOWNERS>`_ (@dylanhmorris, @damonbayer, or @gvegayon) is required before a pull request can be merged to ``main``.
+-  You should request reviews for pull requests from ``PyRenew-devs``, unless you have a good reason to request reviews from a smaller group.
+-  Reviews from all of ``PyRenew-devs`` are  encouraged, but an approving review from a `codeowner <https://github.com/CDCgov/PyRenew/blob/main/.github/CODEOWNERS>`_ (@dylanhmorris, @damonbayer, or @gvegayon) is required before a pull request can be merged to ``main``.
 -  For CDC contributors, If your pull request has not received a review at the time of the next standup, use standup to find a reviewer.
 -  External contributors should expect to receive a review within a few days of creating a pull request.
 -  If you create a draft pull request, indicate what, if anything, about the current pull request should be reviewed.
@@ -67,7 +67,7 @@ This entry tells Sphinx to generate documentation for the ``HospitalAdmissions``
 New tutorials
 ~~~~~~~~~~~~~
 
-``PyRenew`` tutorials are `quarto documents <https://quarto.org>`__ located under `./docs/source/tutorials <https://github.com/CDCgov/multisignal-epi-inference/tree/main/docs/source/tutorials>`__. Tutorials are automatically rendered using GitHub actions (see the Workflow file `here <https://github.com/CDCgov/multisignal-epi-inference/actions/workflows/website.yaml>`__).
+``PyRenew`` tutorials are `quarto documents <https://quarto.org>`__ located under `./docs/source/tutorials <https://github.com/CDCgov/PyRenew/tree/main/docs/source/tutorials>`__. Tutorials are automatically rendered using GitHub actions (see the Workflow file `here <https://github.com/CDCgov/PyRenew/actions/workflows/website.yaml>`__).
 
 To make the new tutorial available in the website, developers should follow these steps:
 
@@ -82,7 +82,7 @@ To make the new tutorial available in the website, developers should follow thes
           getting_started
           example_with_datasets
 
-3. Add an rst entry with the same basename as the ``quarto`` file in the ``./docs/source/tutorials`` directory. For instance, the `example_with_datasets.rst` file was added to the repository. This last step can be done running the bash script `./hook_scripts/pre-commit-rst-placeholder.sh <https://github.com/CDCgov/multisignal-epi-inference/blob/main/hook_scripts/pre-commit-rst-placeholder.sh>`__. Note the script should be executed by ``pre-commit``.
+3. Add an rst entry with the same basename as the ``quarto`` file in the ``./docs/source/tutorials`` directory. For instance, the `example_with_datasets.rst` file was added to the repository. This last step can be done running the bash script `./hook_scripts/pre-commit-rst-placeholder.sh <https://github.com/CDCgov/PyRenew/blob/main/hook_scripts/pre-commit-rst-placeholder.sh>`__. Note the script should be executed by ``pre-commit``.
 
 
 Adding new pages
