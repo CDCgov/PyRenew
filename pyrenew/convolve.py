@@ -168,9 +168,9 @@ def new_double_convolve_scanner(
 
 
 def compute_delay_ascertained_incidence(
-    incidence_to_observation_rate: ArrayLike,
+    p_observed_given_incident: ArrayLike,
     latent_incidence: ArrayLike,
-    incidence_to_observation_delay_interval: ArrayLike,
+    delay_incidence_to_observation_delay_pmf: ArrayLike,
 ) -> ArrayLike:
     """
     Computes incidences observed according
@@ -179,21 +179,21 @@ def compute_delay_ascertained_incidence(
 
     Parameters
     ----------
-    incidence_to_observation_rate: ArrayLike
-        The rate at which latent incident counts translated into observed counts.
-        For example, setting ``incidence_to_observation_rate=0.001``
+    p_observed_given_incident: ArrayLike
+        The rate at which latent incident counts translate into observed counts.
+        For example, setting ``p_observed_given_incident=0.001``
         when the incident counts are infections and the observed counts are
         reported hospital admissions could be used to model disease and population
         for which the probability (reported) hospital.admission given infection is
         0.001.
     latent_incidence: ArrayLike
         Incidence values based on the true underlying process.
-    incidence_to_observation_delay_interval: ArrayLike
+    delay_incidence_to_observation_delay_pmf: ArrayLike
         Probability mass function of delay interval from incidence to observation,
         where the :math`i^{th}` entry (0-indexed) represents a delay of :math:`1+i`
-        time units, i.e. ``incidence_to_observation_delay_interval[0]`` represents
+        time units, i.e. ``delay_incidence_to_observation_delay_pmf[0]`` represents
         the fraction of observations that are delayed 1 time unit,
-        ``incidence_to_observation_delay_interval[1]`` represents the fraction
+        ``delay_incidence_to_observation_delay_pmf[1]`` represents the fraction
         that are delayed 2 time units, et cetera.
 
     Returns
@@ -202,8 +202,8 @@ def compute_delay_ascertained_incidence(
         The predicted timeseries of delayed observations.
     """
     delay_obs_incidence = jnp.convolve(
-        incidence_to_observation_rate * latent_incidence,
-        incidence_to_observation_delay_interval,
+        p_observed_given_incident * latent_incidence,
+        delay_incidence_to_observation_delay_pmf,
         mode="valid",
     )
     return delay_obs_incidence
