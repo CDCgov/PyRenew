@@ -378,16 +378,6 @@ axes.set_ylabel("Hospital Admissions", fontsize=10)
 plt.show()
 ```
 
-We can look at individual draws from the posterior distribution of latent infections:
-
-```{python}
-# | label: fig-output-infections
-# | fig-cap: Latent infections
-out2 = hosp_model.plot_posterior(
-    var="all_latent_infections", ylab="Latent Infections"
-)
-```
-
 We can also look at credible intervals for the posterior distribution of latent infections:
 
 ```{python}
