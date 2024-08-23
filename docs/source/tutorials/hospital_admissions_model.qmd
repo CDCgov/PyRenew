@@ -393,7 +393,9 @@ We can also look at credible intervals for the posterior distribution of latent 
 ```{python}
 # | label: fig-output-infections-distribution
 # | fig-cap: Posterior Latent Infections
-x_data = idata.posterior["all_latent_infections_dim_0"]
+x_data = (
+    idata.posterior["all_latent_infections_dim_0"] - n_initialization_points
+)
 y_data = idata.posterior["all_latent_infections"]
 
 fig, axes = plt.subplots(figsize=(6, 5))
