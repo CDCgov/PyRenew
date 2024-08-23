@@ -170,7 +170,7 @@ def new_double_convolve_scanner(
 def compute_delay_ascertained_incidence(
     p_observed_given_incident: ArrayLike,
     latent_incidence: ArrayLike,
-    delay_incidence_to_observation_delay_pmf: ArrayLike,
+    delay_incidence_to_observation_pmf: ArrayLike,
 ) -> ArrayLike:
     """
     Computes incidences observed according
@@ -188,12 +188,12 @@ def compute_delay_ascertained_incidence(
         0.001.
     latent_incidence: ArrayLike
         Incidence values based on the true underlying process.
-    delay_incidence_to_observation_delay_pmf: ArrayLike
+    delay_incidence_to_observation_pmf: ArrayLike
         Probability mass function of delay interval from incidence to observation,
         where the :math`i^{th}` entry (0-indexed) represents a delay of :math:`1+i`
-        time units, i.e. ``delay_incidence_to_observation_delay_pmf[0]`` represents
+        time units, i.e. ``delay_incidence_to_observation_pmf[0]`` represents
         the fraction of observations that are delayed 1 time unit,
-        ``delay_incidence_to_observation_delay_pmf[1]`` represents the fraction
+        ``delay_incidence_to_observation_pmf[1]`` represents the fraction
         that are delayed 2 time units, et cetera.
 
     Returns
@@ -203,7 +203,7 @@ def compute_delay_ascertained_incidence(
     """
     delay_obs_incidence = jnp.convolve(
         p_observed_given_incident * latent_incidence,
-        delay_incidence_to_observation_delay_pmf,
+        delay_incidence_to_observation_pmf,
         mode="valid",
     )
     return delay_obs_incidence
