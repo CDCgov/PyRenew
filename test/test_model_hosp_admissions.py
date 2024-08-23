@@ -222,7 +222,7 @@ def test_model_hosp_no_obs_model():
             ]
         ),
     )
-    n_initialization_points = max(gen_int.size(), inf_hosp.size())
+    n_initialization_points = max(gen_int.size(), inf_hosp.size()) - 1
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
@@ -334,7 +334,7 @@ def test_model_hosp_with_obs_model():
         ),
     )
 
-    n_initialization_points = max(gen_int.size(), inf_hosp.size())
+    n_initialization_points = max(gen_int.size(), inf_hosp.size()) - 1
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
@@ -423,7 +423,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         ),
     )
 
-    n_initialization_points = max(gen_int.size(), inf_hosp.size())
+    n_initialization_points = max(gen_int.size(), inf_hosp.size()) - 1
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
@@ -518,7 +518,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         ),
     )
 
-    n_initialization_points = max(gen_int.size(), inf_hosp.size())
+    n_initialization_points = max(gen_int.size(), inf_hosp.size()) - 1
 
     I0 = InfectionInitializationProcess(
         "I0_initialization",
@@ -533,7 +533,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     observed_admissions = PoissonObservation("poisson_rv")
 
     # Other random components
-    total_length = n_obs_to_generate + pad_size + 1
+    total_length = n_obs_to_generate + pad_size
     weekday = jnp.array([1, 1, 1, 1, 2, 2, 2])
     weekday = weekday / weekday.sum()
 
