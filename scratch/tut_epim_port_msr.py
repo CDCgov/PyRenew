@@ -1048,15 +1048,21 @@ class CFAEPIM_Model(Model):
         # update: truncated Normal needed here, done
         # "under the hood" in Epidemia, use Beta for the
         # time being.
-        self.susceptibility_prior = dist.Beta(
-            1
-            + (
-                self.susceptible_fraction_prior_mode
-                / self.susceptible_fraction_prior_scale
-            ),
-            1
-            + (1 - self.susceptible_fraction_prior_mode)
-            / self.susceptible_fraction_prior_scale,
+        # self.susceptibility_prior = dist.Beta(
+        #     1
+        #     + (
+        #         self.susceptible_fraction_prior_mode
+        #         / self.susceptible_fraction_prior_scale
+        #     ),
+        #     1
+        #     + (1 - self.susceptible_fraction_prior_mode)
+        #     / self.susceptible_fraction_prior_scale,
+        # )
+        # now:
+        self.susceptibility_prior = dist.TruncatedNormal(
+            self.susceptible_fraction_prior_mode,
+            self.susceptible_fraction_prior_scale,
+            low=0.0,
         )
 
         # infections component
@@ -1627,12 +1633,7 @@ def save_inference_content():
     pass
 
 
-def plot_lm_arviz_fit(model, post_p_ss, prior_p_ss):  # numpydoc ignore=GL08
-    idata = az.from_numpyro(
-        model.mcmc,
-        posterior_predictive=post_p_ss,
-        prior=prior_p_ss,
-    )
+def plot_lm_arviz_fit(idata):  # numpydoc ignore=GL08
     fig, ax = plt.subplots()
     az.plot_lm(
         "negbinom_rv",
@@ -1849,14 +1850,14 @@ def main(args):  # numpydoc ignore=GL08
                 n_post_observation_days=forecast_days,
             )
 
-            plot_lm_arviz_fit(model, post_p_ss, prior_p_ss)
-
             idata = az.from_numpyro(
                 posterior=model.mcmc,
                 prior=prior_p_ss,
-                posterior_predictive=post_p_fs,
+                posterior_predictive=post_p_ss,
                 constant_data={"obs": obs},
             )
+            print(dir(idata))
+            # plot_lm_arviz_fit(idata)
             plot_hdi_arviz_for(idata, forecast_days)
 
             # save to folder for jurisdiction,
