@@ -118,17 +118,17 @@ inf_hosp_int = datasets.load_infection_admission_interval()
 # We only need the probability_mass column of each dataset
 gen_int_array = gen_int["probability_mass"].to_numpy()
 gen_int = gen_int_array
-inf_hosp_int = inf_hosp_int["probability_mass"].to_numpy()
+inf_hosp_int_array = inf_hosp_int["probability_mass"].to_numpy()
 
 # Taking a peek at the first 5 elements of each
-gen_int[:5], inf_hosp_int[:5]
+gen_int[:5], inf_hosp_int_array[:5]
 
 # Visualizing both quantities side by side
 fig, axs = plt.subplots(1, 2)
 
 axs[0].plot(gen_int)
 axs[0].set_title("Generation interval")
-axs[1].plot(inf_hosp_int)
+axs[1].plot(inf_hosp_int_array)
 axs[1].set_title("Infection to hospital admission interval")
 plt.show()
 ```
@@ -142,7 +142,7 @@ import jax.numpy as jnp
 import numpyro.distributions as dist
 
 inf_hosp_int = deterministic.DeterministicPMF(
-    name="inf_hosp_int", value=inf_hosp_int
+    name="inf_hosp_int", value=inf_hosp_int_array
 )
 
 hosp_rate = metaclass.DistributionalRV(
@@ -168,6 +168,7 @@ from pyrenew.latent import (
 
 # Infection process
 latent_inf = latent.Infections()
+n_initialization_points = max(gen_int_array.size, inf_hosp_int_array.size) - 1
 I0 = InfectionInitializationProcess(
     "I0_initialization",
     metaclass.DistributionalRV(
@@ -175,7 +176,7 @@ I0 = InfectionInitializationProcess(
         distribution=dist.LogNormal(loc=jnp.log(100), scale=jnp.log(1.75)),
     ),
     InitializeInfectionsExponentialGrowth(
-        gen_int_array.size,
+        n_initialization_points,
         deterministic.DeterministicVariable(name="rate", value=0.05),
     ),
     t_unit=1,
@@ -308,11 +309,7 @@ We can use the `Model` object's `plot_posterior` method to visualize the model f
 out = hosp_model.plot_posterior(
     var="latent_hospital_admissions",
     ylab="Hospital Admissions",
-    obs_signal=np.pad(
-        daily_hosp_admits.astype(float),
-        (gen_int_array.size, 0),
-        constant_values=np.nan,
-    ),
+    obs_signal=daily_hosp_admits.astype(float),
 )
 ```
 
@@ -381,22 +378,14 @@ axes.set_ylabel("Hospital Admissions", fontsize=10)
 plt.show()
 ```
 
-We can look at individual draws from the posterior distribution of latent infections:
-
-```{python}
-# | label: fig-output-infections
-# | fig-cap: Latent infections
-out2 = hosp_model.plot_posterior(
-    var="all_latent_infections", ylab="Latent Infections"
-)
-```
-
 We can also look at credible intervals for the posterior distribution of latent infections:
 
 ```{python}
 # | label: fig-output-infections-distribution
 # | fig-cap: Posterior Latent Infections
-x_data = idata.posterior["all_latent_infections_dim_0"]
+x_data = (
+    idata.posterior["all_latent_infections_dim_0"] - n_initialization_points
+)
 y_data = idata.posterior["all_latent_infections"]
 
 fig, axes = plt.subplots(figsize=(6, 5))
@@ -499,7 +488,7 @@ def compute_eti(dataset, eti_prob):
 
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
-    idata.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
+    idata.prior_predictive["negbinom_rv_dim_0"],
     hdi_data=compute_eti(idata.prior_predictive["negbinom_rv"], 0.9),
     color="C0",
     smooth=False,
@@ -508,7 +497,7 @@ az.plot_hdi(
 )
 
 az.plot_hdi(
-    idata.prior_predictive["negbinom_rv_dim_0"] + gen_int.size(),
+    idata.prior_predictive["negbinom_rv_dim_0"],
     hdi_data=compute_eti(idata.prior_predictive["negbinom_rv"], 0.5),
     color="C0",
     smooth=False,
@@ -517,7 +506,7 @@ az.plot_hdi(
 )
 
 plt.scatter(
-    idata.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
+    idata.observed_data["negbinom_rv_dim_0"],
     idata.observed_data["negbinom_rv"],
     color="black",
 )
@@ -533,7 +522,7 @@ And now we plot the posterior predictive distributions with a `{python} n_foreca
 ```{python}
 # | label: fig-output-posterior-predictive-forecast
 # | fig-cap: Posterior predictive admissions, including a forecast.
-x_data = idata.posterior_predictive["negbinom_rv_dim_0"] + gen_int.size()
+x_data = idata.posterior_predictive["negbinom_rv_dim_0"]
 y_data = idata.posterior_predictive["negbinom_rv"]
 fig, axes = plt.subplots(figsize=(6, 5))
 az.plot_hdi(
@@ -564,7 +553,7 @@ plt.plot(
     label="Median",
 )
 plt.scatter(
-    idata.observed_data["negbinom_rv_dim_0"] + gen_int.size(),
+    idata.observed_data["negbinom_rv_dim_0"],
     idata.observed_data["negbinom_rv"],
     color="black",
 )

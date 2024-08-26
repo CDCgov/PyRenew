@@ -65,13 +65,6 @@ def test_model_hosp_no_timepoints_or_observations():
         name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
-    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
-
-    latent_infections = Infections()
-    Rt_process = SimpleRt()
-
-    observed_admissions = PoissonObservation("poisson_rv")
-
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
         value=jnp.array(
@@ -97,6 +90,13 @@ def test_model_hosp_no_timepoints_or_observations():
             ],
         ),
     )
+
+    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
+
+    latent_infections = Infections()
+    Rt_process = SimpleRt()
+
+    observed_admissions = PoissonObservation("poisson_rv")
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
@@ -130,13 +130,6 @@ def test_model_hosp_both_timepoints_and_observations():
         value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
-
-    latent_infections = Infections()
-    Rt_process = SimpleRt()
-
-    observed_admissions = PoissonObservation("poisson_rv")
-
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
         value=jnp.array(
@@ -162,6 +155,12 @@ def test_model_hosp_both_timepoints_and_observations():
             ],
         ),
     )
+
+    I0 = DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1))
+
+    latent_infections = Infections()
+    Rt_process = SimpleRt()
+    observed_admissions = PoissonObservation("poisson_rv")
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
@@ -198,16 +197,6 @@ def test_model_hosp_no_obs_model():
         value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    I0 = InfectionInitializationProcess(
-        "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
-    )
-
-    latent_infections = Infections()
-    Rt_process = SimpleRt()
-
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
         value=jnp.array(
@@ -233,6 +222,17 @@ def test_model_hosp_no_obs_model():
             ]
         ),
     )
+    n_initialization_points = max(gen_int.size(), inf_hosp.size()) - 1
+
+    I0 = InfectionInitializationProcess(
+        "I0_initialization",
+        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
+        t_unit=1,
+    )
+
+    latent_infections = Infections()
+    Rt_process = SimpleRt()
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
@@ -308,17 +308,6 @@ def test_model_hosp_with_obs_model():
         name="gen_int", value=jnp.array([0.25, 0.25, 0.25, 0.25])
     )
 
-    I0 = InfectionInitializationProcess(
-        "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
-    )
-
-    latent_infections = Infections()
-    Rt_process = SimpleRt()
-    observed_admissions = PoissonObservation("poisson_rv")
-
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
         value=jnp.array(
@@ -341,9 +330,22 @@ def test_model_hosp_with_obs_model():
                 0.1,
                 0.1,
                 0.05,
-            ],
+            ]
         ),
     )
+
+    n_initialization_points = max(gen_int.size(), inf_hosp.size()) - 1
+
+    I0 = InfectionInitializationProcess(
+        "I0_initialization",
+        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
+        t_unit=1,
+    )
+
+    latent_infections = Infections()
+    Rt_process = SimpleRt()
+    observed_admissions = PoissonObservation("poisson_rv")
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
@@ -395,17 +397,6 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         value=jnp.array([0.25, 0.25, 0.25, 0.25]),
     )
 
-    I0 = InfectionInitializationProcess(
-        "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
-    )
-
-    latent_infections = Infections()
-    Rt_process = SimpleRt()
-    observed_admissions = PoissonObservation("poisson_rv")
-
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
         value=jnp.array(
@@ -428,9 +419,22 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
                 0.1,
                 0.1,
                 0.05,
-            ],
+            ]
         ),
     )
+
+    n_initialization_points = max(gen_int.size(), inf_hosp.size()) - 1
+
+    I0 = InfectionInitializationProcess(
+        "I0_initialization",
+        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
+        t_unit=1,
+    )
+
+    latent_infections = Infections()
+    Rt_process = SimpleRt()
+    observed_admissions = PoissonObservation("poisson_rv")
 
     hosp_report_prob_dist = UniformProbForTest(1, "hosp_report_prob_dist")
     weekday = UniformProbForTest(7, "weekday")
@@ -488,18 +492,6 @@ def test_model_hosp_with_obs_model_weekday_phosp():
     n_obs_to_generate = 30
     pad_size = 5
 
-    I0 = InfectionInitializationProcess(
-        "I0_initialization",
-        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
-        InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
-    )
-
-    latent_infections = Infections()
-    Rt_process = SimpleRt()
-
-    observed_admissions = PoissonObservation("poisson_rv")
-
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
         value=jnp.array(
@@ -522,12 +514,26 @@ def test_model_hosp_with_obs_model_weekday_phosp():
                 0.1,
                 0.1,
                 0.05,
-            ],
+            ]
         ),
     )
 
+    n_initialization_points = max(gen_int.size(), inf_hosp.size()) - 1
+
+    I0 = InfectionInitializationProcess(
+        "I0_initialization",
+        DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+        InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
+        t_unit=1,
+    )
+
+    latent_infections = Infections()
+    Rt_process = SimpleRt()
+
+    observed_admissions = PoissonObservation("poisson_rv")
+
     # Other random components
-    total_length = n_obs_to_generate + pad_size + gen_int.size()
+    total_length = n_obs_to_generate + pad_size
     weekday = jnp.array([1, 1, 1, 1, 2, 2, 2])
     weekday = weekday / weekday.sum()
 

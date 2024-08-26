@@ -22,13 +22,35 @@ def test_admissions_sample():
     # Generating Rt and Infections to compute the hospital admissions
 
     rt = SimpleRt()
+    n_steps = 30
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt = rt(n=30)[0].value
+        sim_rt = rt(n=n_steps)[0].value
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
-    i0 = 10 * jnp.ones_like(gen_int)
-
+    inf_hosp_int_array = jnp.array(
+        [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0.25,
+            0.5,
+            0.1,
+            0.1,
+            0.05,
+        ]
+    )
+    i0 = 10 * jnp.ones_like(inf_hosp_int_array)
     inf1 = Infections()
 
     with numpyro.handlers.seed(rng_seed=223):
@@ -37,28 +59,7 @@ def test_admissions_sample():
     # Testing the hospital admissions
     inf_hosp = DeterministicPMF(
         name="inf_hosp",
-        value=jnp.array(
-            [
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                0.25,
-                0.5,
-                0.1,
-                0.1,
-                0.05,
-            ]
-        ),
+        value=inf_hosp_int_array,
     )
 
     hosp1 = HospitalAdmissions(
@@ -69,10 +70,16 @@ def test_admissions_sample():
     )
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_1 = hosp1(latent_infections=inf_sampled1[0])
+        sim_hosp_1 = hosp1(
+            latent_infections=SampledValue(
+                value=jnp.hstack(
+                    [i0, inf_sampled1.post_initialization_infections.value]
+                )
+            )
+        )
 
     testing.assert_array_less(
-        sim_hosp_1.latent_hospital_admissions.value,
+        sim_hosp_1.latent_hospital_admissions.value[-n_steps:],
         inf_sampled1[0].value,
     )
     inf_hosp2 = jnp.ones(30)
