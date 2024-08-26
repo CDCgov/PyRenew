@@ -190,7 +190,7 @@ def compute_delay_ascertained_incidence(
         Incidence values based on the true underlying process.
     delay_incidence_to_observation_pmf: ArrayLike
         Probability mass function of delay interval from incidence to observation,
-        where the :math:`i`th entry represents a delay of :math:`i`
+        where the :math:`i`\th entry represents a delay of :math:`i`
         time units, i.e. ``delay_incidence_to_observation_pmf[0]`` represents
         the fraction of observations that are delayed 0 time unit,
         ``delay_incidence_to_observation_pmf[1]`` represents the fraction
