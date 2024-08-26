@@ -77,7 +77,7 @@ from pyrenew.latent import (
 
 # Infection process
 latent_inf = latent.Infections()
-n_initialization_points = max(gen_int_array.size, inf_hosp_int_array.size)
+n_initialization_points = max(gen_int_array.size, inf_hosp_int_array.size) - 1
 
 I0 = InfectionInitializationProcess(
     "I0_initialization",

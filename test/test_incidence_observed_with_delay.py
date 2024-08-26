@@ -4,7 +4,7 @@ import jax.numpy as jnp
 import pytest
 from numpy.testing import assert_array_equal
 
-from pyrenew.metaclass import compute_delay_ascertained_incidence
+from pyrenew.convolve import compute_delay_ascertained_incidence
 
 
 @pytest.mark.parametrize(

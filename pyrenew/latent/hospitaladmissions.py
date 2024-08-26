@@ -9,6 +9,7 @@ import jax.numpy as jnp
 import numpyro
 
 import pyrenew.arrayutils as au
+from pyrenew.convolve import compute_delay_ascertained_incidence
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import (
     RandomVariable,

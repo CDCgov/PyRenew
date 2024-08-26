@@ -168,7 +168,7 @@ from pyrenew.latent import (
 
 # Infection process
 latent_inf = latent.Infections()
-n_initialization_points = max(gen_int_array.size, inf_hosp_int_array.size)
+n_initialization_points = max(gen_int_array.size, inf_hosp_int_array.size) - 1
 I0 = InfectionInitializationProcess(
     "I0_initialization",
     randomvariable.DistributionalVariable(
@@ -378,22 +378,14 @@ axes.set_ylabel("Hospital Admissions", fontsize=10)
 plt.show()
 ```
 
-We can look at individual draws from the posterior distribution of latent infections:
-
-```{python}
-# | label: fig-output-infections
-# | fig-cap: Latent infections
-out2 = hosp_model.plot_posterior(
-    var="all_latent_infections", ylab="Latent Infections"
-)
-```
-
 We can also look at credible intervals for the posterior distribution of latent infections:
 
 ```{python}
 # | label: fig-output-infections-distribution
 # | fig-cap: Posterior Latent Infections
-x_data = idata.posterior["all_latent_infections_dim_0"]
+x_data = (
+    idata.posterior["all_latent_infections_dim_0"] - n_initialization_points
+)
 y_data = idata.posterior["all_latent_infections"]
 
 fig, axes = plt.subplots(figsize=(6, 5))
