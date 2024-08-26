@@ -8,7 +8,6 @@ from abc import ABCMeta, abstractmethod
 from typing import NamedTuple, get_type_hints
 
 import jax
-import jax.numpy as jnp
 import jax.random as jr
 import matplotlib.pyplot as plt
 import numpy as np
@@ -120,38 +119,6 @@ def _assert_sample_and_rtype(
         )
 
     return None
-
-
-def compute_delay_ascertained_incidence(
-    incidence_to_observation_rate: ArrayLike,
-    latent_incidence: ArrayLike,
-    incidence_to_observation_delay_interval: ArrayLike,
-) -> ArrayLike:
-    """
-    Computes incidences observed according
-    to a given observation rate and based
-    on a delay interval.
-
-    Parameters
-    ----------
-    incidence_to_observation_rate: ArrayLike
-        The rate at which latent incidences are observed.
-    latent_incidence: ArrayLike
-        Incidence values based on the true underlying process.
-    incidence_to_observation_delay_interval: ArrayLike
-        Pmf of delay interval between incidence to observation.
-
-    Returns
-    --------
-    ArrayLike
-        The incidence after the observation delay.
-    """
-    delay_obs_incidence = jnp.convolve(
-        incidence_to_observation_rate * latent_incidence,
-        incidence_to_observation_delay_interval,
-        mode="valid",
-    )
-    return delay_obs_incidence
 
 
 class SampledValue(NamedTuple):
