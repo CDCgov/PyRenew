@@ -7,6 +7,7 @@ Reference
    model
    latent
    process
+   randomvariable
    observation
    datasets
    msei

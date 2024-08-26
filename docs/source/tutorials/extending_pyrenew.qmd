@@ -29,11 +29,8 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import InfectionsWithFeedback
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.process import RandomWalk
-from pyrenew.metaclass import (
-    RandomVariable,
-    DistributionalRV,
-    TransformedRandomVariable,
-)
+from pyrenew.metaclass import RandomVariable
+from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 from pyrenew.latent import (
     InfectionInitializationProcess,
     InitializeInfectionsExponentialGrowth,
@@ -53,7 +50,7 @@ feedback_strength = DeterministicVariable(name="feedback_strength", value=0.01)
 
 I0 = InfectionInitializationProcess(
     "I0_initialization",
-    DistributionalRV(name="I0", distribution=dist.LogNormal(0, 1)),
+    DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
     InitializeInfectionsExponentialGrowth(
         gen_int_array.size,
         DeterministicVariable(name="rate", value=0.05),
@@ -75,17 +72,17 @@ class MyRt(RandomVariable):
     def sample(self, n: int, **kwargs) -> tuple:
         sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
 
-        rt_rv = TransformedRandomVariable(
+        rt_rv = TransformedVariable(
             name="log_rt_random_walk",
             base_rv=RandomWalk(
                 name="log_rt",
-                step_rv=DistributionalRV(
+                step_rv=DistributionalVariable(
                     name="rw_step_rv", distribution=dist.Normal(0, 0.025)
                 ),
             ),
             transforms=t.ExpTransform(),
         )
-        rt_init_rv = DistributionalRV(
+        rt_init_rv = DistributionalVariable(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
         init_rt, *_ = rt_init_rv.sample()

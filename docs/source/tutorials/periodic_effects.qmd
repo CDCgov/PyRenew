@@ -65,7 +65,7 @@ The `PeriodicBroadcaster` class can also be used to repeat a sequence as a whole
 
 ```{python}
 import numpyro.distributions as dist
-from pyrenew import transformation, metaclass
+from pyrenew import transformation, randomvariable
 
 # Building the transformed prior: Dirichlet * 7
 mysimplex = dist.TransformedDistribution(
@@ -76,7 +76,7 @@ mysimplex = dist.TransformedDistribution(
 # Constructing the day of week effect
 dayofweek = process.DayOfWeekEffect(
     offset=0,
-    quantity_to_broadcast=metaclass.DistributionalRV(
+    quantity_to_broadcast=randomvariable.DistributionalVariable(
         name="simp", distribution=mysimplex
     ),
     t_start=0,

@@ -4,7 +4,8 @@
 import numpyro.distributions as dist
 from numpyro.contrib.control_flow import scan
 
-from pyrenew.metaclass import DistributionalRV, RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.randomvariable import DistributionalVariable
 
 
 class IIDRandomSequence(RandomVariable):
@@ -130,7 +131,7 @@ class StandardNormalSequence(IIDRandomSequence):
             see :class:`IIDRandomSequence`.
         element_rv_name: str
             Name for the internal element_rv, here a
-            DistributionalRV encoding a
+            DistributionalVariable encoding a
             standard Normal (mean = 0, sd = 1)
             distribution.
 
@@ -139,7 +140,7 @@ class StandardNormalSequence(IIDRandomSequence):
         None
         """
         super().__init__(
-            element_rv=DistributionalRV(
+            element_rv=DistributionalVariable(
                 name=element_rv_name, distribution=dist.Normal(0, 1)
             ),
         )

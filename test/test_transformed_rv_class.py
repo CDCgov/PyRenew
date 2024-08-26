@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Tests for TransformedRandomVariable class
+Tests for TransformedVariable class
 """
 
 from typing import NamedTuple
@@ -13,13 +13,8 @@ import pytest
 from numpy.testing import assert_almost_equal
 
 import pyrenew.transformation as t
-from pyrenew.metaclass import (
-    DistributionalRV,
-    Model,
-    RandomVariable,
-    SampledValue,
-    TransformedRandomVariable,
-)
+from pyrenew.metaclass import Model, RandomVariable, SampledValue
+from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 
 
 class LengthTwoRV(RandomVariable):
@@ -129,11 +124,11 @@ class MyModel(Model):
 
 def test_transform_rv_validation():
     """
-    Test that a TransformedRandomVariable validation
+    Test that a TransformedVariable validation
     works as expected.
     """
 
-    base_rv = DistributionalRV(
+    base_rv = DistributionalVariable(
         name="test_normal", distribution=dist.Normal(0, 1)
     )
     base_rv.sample_length = lambda: 1  # numpydoc ignore=GL08
@@ -143,41 +138,41 @@ def test_transform_rv_validation():
     test_transforms = [t.IdentityTransform(), t.ExpTransform()]
 
     for tr in test_transforms:
-        my_rv = TransformedRandomVariable("test_transformed_rv", base_rv, tr)
+        my_rv = TransformedVariable("test_transformed_rv", base_rv, tr)
         assert isinstance(my_rv.transforms, tuple)
         assert len(my_rv.transforms) == 1
         assert my_rv.sample_length() == 1
         not_callable_err = "All entries in self.transforms " "must be callable"
         sample_length_err = "There must be exactly as many transformations"
         with pytest.raises(ValueError, match=sample_length_err):
-            _ = TransformedRandomVariable(
+            _ = TransformedVariable(
                 "should_error_due_to_too_many_transforms", base_rv, (tr, tr)
             )
         with pytest.raises(ValueError, match=sample_length_err):
-            _ = TransformedRandomVariable(
+            _ = TransformedVariable(
                 "should_error_due_to_too_few_transforms", l2_rv, tr
             )
         with pytest.raises(ValueError, match=sample_length_err):
-            _ = TransformedRandomVariable(
+            _ = TransformedVariable(
                 "should_also_error_due_to_too_few_transforms", l2_rv, (tr,)
             )
         with pytest.raises(ValueError, match=not_callable_err):
-            _ = TransformedRandomVariable(
+            _ = TransformedVariable(
                 "should_error_due_to_not_callable", l2_rv, (1,)
             )
         with pytest.raises(ValueError, match=not_callable_err):
-            _ = TransformedRandomVariable(
+            _ = TransformedVariable(
                 "should_error_due_to_not_callable", base_rv, (1,)
             )
 
 
 def test_transforms_applied_at_sampling():
     """
-    Test that TransformedRandomVariable
+    Test that TransformedVariable
     instances correctly apply their specified
     transformations at sampling
     """
-    norm_rv = DistributionalRV(
+    norm_rv = DistributionalVariable(
         name="test_normal", distribution=dist.Normal(0, 1)
     )
     norm_rv.sample_length = lambda: 1
@@ -190,9 +185,9 @@ def test_transforms_applied_at_sampling():
         t.ExpTransform().inv,
         t.ScaledLogitTransform(5),
     ]:
-        tr_norm = TransformedRandomVariable("transformed_normal", norm_rv, tr)
+        tr_norm = TransformedVariable("transformed_normal", norm_rv, tr)
 
-        tr_l2 = TransformedRandomVariable(
+        tr_l2 = TransformedVariable(
             "transformed_length_2", l2_rv, (tr, t.ExpTransform())
         )
 
@@ -217,22 +212,24 @@ def test_transforms_applied_at_sampling():
 
 def test_transforms_variable_naming():
     """
-    Tests TransformedRandomVariable name
+    Tests TransformedVariable name
     recording is as expected.
     """
-    transformed_dist_named_base_rv = TransformedRandomVariable(
+    transformed_dist_named_base_rv = TransformedVariable(
         "transformed_rv",
         NamedBaseRV(),
         (t.ExpTransform(), t.IdentityTransform()),
     )
 
-    transformed_dist_unnamed_base_rv = TransformedRandomVariable(
+    transformed_dist_unnamed_base_rv = TransformedVariable(
         "transformed_rv",
-        DistributionalRV(name="my_normal", distribution=dist.Normal(0, 1)),
+        DistributionalVariable(
+            name="my_normal", distribution=dist.Normal(0, 1)
+        ),
         (t.ExpTransform(), t.IdentityTransform()),
     )
 
-    transformed_dist_unnamed_base_l2_rv = TransformedRandomVariable(
+    transformed_dist_unnamed_base_l2_rv = TransformedVariable(
         "transformed_rv",
         LengthTwoRV(),
         (t.ExpTransform(), t.IdentityTransform()),

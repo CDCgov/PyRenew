@@ -6,12 +6,12 @@ import numpyro.distributions as dist
 import pytest
 from scipy.stats import kstest
 
-from pyrenew.metaclass import (
-    DistributionalRV,
-    SampledValue,
-    StaticDistributionalRV,
-)
+from pyrenew.metaclass import SampledValue
 from pyrenew.process import IIDRandomSequence, StandardNormalSequence
+from pyrenew.randomvariable import (
+    DistributionalVariable,
+    StaticDistributionalVariable,
+)
 
 
 @pytest.mark.parametrize(
@@ -29,7 +29,7 @@ def test_iidrandomsequence_with_dist_rv(distribution, n):
     a distributional RV, including with array-valued
     distributions
     """
-    element_rv = DistributionalRV("el_rv", distribution=distribution)
+    element_rv = DistributionalVariable("el_rv", distribution=distribution)
     rseq = IIDRandomSequence(element_rv=element_rv)
     if distribution.batch_shape == () or distribution.batch_shape == (1,):
         expected_shape = (n,)
@@ -63,9 +63,9 @@ def test_standard_normal_sequence():
     """
     norm_seq = StandardNormalSequence("test_norm_elements")
 
-    # should be implemented with a DistributionalRV
+    # should be implemented with a DistributionalVariable
     # that is a standard normal
-    assert isinstance(norm_seq.element_rv, StaticDistributionalRV)
+    assert isinstance(norm_seq.element_rv, StaticDistributionalVariable)
     assert isinstance(norm_seq.element_rv.distribution, dist.Normal)
     assert norm_seq.element_rv.distribution.loc == 0.0
     assert norm_seq.element_rv.distribution.scale == 1.0

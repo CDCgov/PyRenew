@@ -10,12 +10,12 @@ import pytest
 from numpy.testing import assert_array_almost_equal
 
 from pyrenew.deterministic import DeterministicVariable, NullVariable
-from pyrenew.metaclass import DistributionalRV
 from pyrenew.process import (
     DifferencedProcess,
     IIDRandomSequence,
     StandardNormalSequence,
 )
+from pyrenew.randomvariable import DistributionalVariable
 
 
 @pytest.mark.parametrize(
@@ -155,7 +155,7 @@ def test_manual_integrator_correctness(diffs, inits, expected_solution):
     [
         [
             IIDRandomSequence(
-                DistributionalRV("element_dist", dist.Cauchy(0.02, 0.3)),
+                DistributionalVariable("element_dist", dist.Cauchy(0.02, 0.3)),
             ),
             3,
             jnp.array([0.25, 0.67, 5]),

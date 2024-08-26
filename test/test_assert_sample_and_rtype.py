@@ -9,11 +9,11 @@ from numpy.testing import assert_equal
 
 from pyrenew.deterministic import DeterministicVariable, NullObservation
 from pyrenew.metaclass import (
-    DistributionalRV,
     RandomVariable,
     SampledValue,
     _assert_sample_and_rtype,
 )
+from pyrenew.randomvariable import DistributionalVariable
 
 
 class RVreturnsTuple(RandomVariable):
@@ -93,7 +93,7 @@ def test_input_rv():  # numpydoc ignore=GL08
     valid_rv = [
         NullObservation(),
         DeterministicVariable(name="rv1", value=jnp.array([1, 2, 3, 4])),
-        DistributionalRV(name="rv2", distribution=dist.Normal(0, 1)),
+        DistributionalVariable(name="rv2", distribution=dist.Normal(0, 1)),
     ]
     not_rv = jnp.array([1])
 
