@@ -352,6 +352,9 @@ class Model(metaclass=ABCMeta):
         if nuts_args is None:
             nuts_args = dict()
 
+        if "find_heuristic_step_size" not in nuts_args:
+            nuts_args["find_heuristic_step_size"] = True
+
         if mcmc_args is None:
             mcmc_args = dict()
 
