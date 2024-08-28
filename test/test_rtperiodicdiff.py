@@ -17,7 +17,7 @@ def test_rtweeklydiff() -> None:
     params = {
         "name": "test",
         "offset": 0,
-        "log_rt_rv": DeterministicVariable(
+        "log_rt_init_rv": DeterministicVariable(
             name="log_rt", value=jnp.array([0.1, 0.2])
         ),
         "autoreg_rv": DeterministicVariable(
@@ -65,7 +65,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     params = {
         "name": "test",
         "offset": 0,
-        "log_rt_rv": DeterministicVariable(
+        "log_rt_init_rv": DeterministicVariable(
             name="log_rt", value=jnp.array([0.0, 0.0])
         ),
         # No autoregression!
@@ -109,7 +109,7 @@ def test_rtperiodicdiff_smallsample(inits):
     params = {
         "name": "test",
         "offset": 0,
-        "log_rt_rv": DeterministicVariable(
+        "log_rt_init_rv": DeterministicVariable(
             name="log_rt",
             value=inits,
         ),

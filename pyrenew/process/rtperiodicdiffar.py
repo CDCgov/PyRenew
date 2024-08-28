@@ -54,7 +54,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         name: str,
         offset: int,
         period_size: int,
-        log_rt_rv: RandomVariable,
+        log_rt_init_rv: RandomVariable,
         autoreg_rv: RandomVariable,
         periodic_diff_sd_rv: RandomVariable,
         ar_process_suffix: str = "_first_diff_ar_process_noise",
@@ -69,7 +69,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         offset : int
             Relative point at which data starts, must be between 0 and
             period_size - 1.
-        log_rt_rv : RandomVariable
+        log_rt_init_rv : RandomVariable
             Log Rt prior for the first two observations.
         autoreg_rv : RandomVariable
             Autoregressive parameter.
@@ -87,7 +87,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         """
 
         self.validate(
-            log_rt_rv=log_rt_rv,
+            log_rt_init_rv=log_rt_init_rv,
             autoreg_rv=autoreg_rv,
             periodic_diff_sd_rv=periodic_diff_sd_rv,
         )
@@ -95,7 +95,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         self.name = name
         self.period_size = period_size
         self.offset = offset
-        self.log_rt_rv = log_rt_rv
+        self.log_rt_init_rv = log_rt_init_rv
         self.autoreg_rv = autoreg_rv
         self.periodic_diff_sd_rv = periodic_diff_sd_rv
         self.ar_diff = DifferencedProcess(
@@ -109,7 +109,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
 
     @staticmethod
     def validate(
-        log_rt_rv: any,
+        log_rt_init_rv: any,
         autoreg_rv: any,
         periodic_diff_sd_rv: any,
     ) -> None:
@@ -118,7 +118,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
 
         Parameters
         ----------
-        log_rt_rv : any
+        log_rt_init_rv : any
             Log Rt prior for the first two observations.
         autoreg_rv : any
             Autoregressive parameter.
@@ -130,7 +130,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         None
         """
 
-        _assert_sample_and_rtype(log_rt_rv)
+        _assert_sample_and_rtype(log_rt_init_rv)
         _assert_sample_and_rtype(autoreg_rv)
         _assert_sample_and_rtype(periodic_diff_sd_rv)
 
@@ -159,9 +159,9 @@ class RtPeriodicDiffARProcess(RandomVariable):
         """
 
         # Initial sample
-        log_rt_rv = self.log_rt_rv.sample(**kwargs)[0].value
-        b = self.autoreg_rv.sample(**kwargs)[0].value
-        s_r = self.periodic_diff_sd_rv.sample(**kwargs)[0].value
+        log_rt_init = self.log_rt_init_rv.sample(**kwargs)[0].value
+        autoreg = self.autoreg_rv.sample(**kwargs)[0].value
+        noise_sd = self.periodic_diff_sd_rv.sample(**kwargs)[0].value
 
         # How many periods to sample?
         n_periods = (duration + self.period_size - 1) // self.period_size
@@ -170,11 +170,11 @@ class RtPeriodicDiffARProcess(RandomVariable):
 
         log_rt = self.ar_diff(
             n=n_periods,
-            init_vals=jnp.array([log_rt_rv[0]]),
-            autoreg=b,
-            noise_sd=s_r,
+            init_vals=jnp.array([log_rt_init[0]]),
+            autoreg=autoreg,
+            noise_sd=noise_sd,
             fundamental_process_init_vals=jnp.array(
-                [log_rt_rv[1] - log_rt_rv[0]]
+                [log_rt_init[1] - log_rt_init[0]]
             ),
         )[0]
 
@@ -201,7 +201,7 @@ class RtWeeklyDiffARProcess(RtPeriodicDiffARProcess):
         self,
         name: str,
         offset: int,
-        log_rt_rv: RandomVariable,
+        log_rt_init_rv: RandomVariable,
         autoreg_rv: RandomVariable,
         periodic_diff_sd_rv: RandomVariable,
     ) -> None:
@@ -214,7 +214,7 @@ class RtWeeklyDiffARProcess(RtPeriodicDiffARProcess):
             Name of the site.
         offset : int
             Relative point at which data starts, must be between 0 and 6.
-        log_rt_rv : RandomVariable
+        log_rt_init_rv : RandomVariable
             Log Rt prior for the first two observations.
         autoreg_rv : RandomVariable
             Autoregressive parameter.
@@ -230,7 +230,7 @@ class RtWeeklyDiffARProcess(RtPeriodicDiffARProcess):
             name=name,
             offset=offset,
             period_size=7,
-            log_rt_rv=log_rt_rv,
+            log_rt_init_rv=log_rt_init_rv,
             autoreg_rv=autoreg_rv,
             periodic_diff_sd_rv=periodic_diff_sd_rv,
         )

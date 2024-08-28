@@ -27,7 +27,7 @@ from pyrenew import process, deterministic
 rt_proc = process.RtWeeklyDiffARProcess(
     name="rt_weekly_diff",
     offset=0,
-    log_rt_rv=deterministic.DeterministicVariable(
+    log_rt_init_rv=deterministic.DeterministicVariable(
         name="log_rt", value=jnp.array([0.1, 0.2])
     ),
     autoreg_rv=deterministic.DeterministicVariable(
