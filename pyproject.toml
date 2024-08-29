@@ -13,11 +13,11 @@ exclude = [{path = "datasets/*.rds"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
-numpyro = ">=0.15.1"
 jax = ">=0.4.30"
 numpy = "^2.0.0"
 polars = "^1.2.1"
 matplotlib = "^3.8.3"
+numpyro = {git = "https://github.com/pyro-ppl/numpyro"}
 
 [tool.poetry.group.dev]
 optional = true
