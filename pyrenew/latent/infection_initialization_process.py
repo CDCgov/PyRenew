@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
