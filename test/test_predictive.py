@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Ensures that posterior predictive samples are not generated
 when no posterior samples are available.

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # numpydoc ignore=GL08
 
 from test.utils import SimpleRt

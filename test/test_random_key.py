@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Ensures that models created with the same or
 with different random keys behave appropriately.

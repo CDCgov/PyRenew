@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 Helper classes for regression problems
 """

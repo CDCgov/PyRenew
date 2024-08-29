@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # numpydoc ignore=GL08
 
 from pyrenew.process.ar import ARProcess
