@@ -66,11 +66,11 @@ class ARProcess(RandomVariable):
             With a single SampledValue containing an
             array of shape (n,).
         """
-        noise_sd_arr = jnp.atleast_1d(jnp.array(noise_sd))
+        noise_sd_arr = jnp.atleast_1d(noise_sd)
         if not noise_sd_arr.shape == (1,):
             raise ValueError("noise_sd must be a scalar. " f"Got {noise_sd}")
-        autoreg = jnp.atleast_1d(jnp.array(autoreg))
-        init_vals = jnp.atleast_1d(jnp.array(init_vals))
+        autoreg = jnp.atleast_1d(autoreg)
+        init_vals = jnp.atleast_1d(init_vals)
 
         if not autoreg.ndim == 1:
             raise ValueError(
