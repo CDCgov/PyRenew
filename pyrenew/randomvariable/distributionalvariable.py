@@ -136,7 +136,7 @@ class DynamicDistributionalVariable(RandomVariable):
     def expand_by(self, sample_shape) -> Self:
         """
         Expand the distribution by a given
-        shape_shape, if possible. Returns a
+        sample_shape, if possible. Returns a
         new DynamicDistributionalVariable whose underlying
         distribution will be expanded by the given shape
         at sample() time.
@@ -338,5 +338,5 @@ def DistributionalVariable(
             "(for instantiating a static DistributionalVariable) "
             "or a callable that returns a "
             "numpyro.distributions.Distribution (for "
-            "a dynamic DistributionalVariable"
+            "a dynamic DistributionalVariable)."
         )
