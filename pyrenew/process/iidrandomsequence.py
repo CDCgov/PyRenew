@@ -74,7 +74,7 @@ class IIDRandomSequence(RandomVariable):
             samples from `self.distribution`
         """
 
-        if vectorize and self.is_expandable():
+        if vectorize and hasattr(self.element_rv, "expand_by"):
             result, *_ = self.element_rv.expand_by((n,)).sample(
                 *args, **kwargs
             )
