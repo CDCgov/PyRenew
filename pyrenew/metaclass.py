@@ -11,14 +11,11 @@ import jax.random as jr
 import matplotlib.pyplot as plt
 import numpy as np
 import numpyro
+import numpyro.util
 import polars as pl
 from jax.typing import ArrayLike
 from numpyro.distributions import constraints
-from numpyro.distributions.util import (
-    is_prng_key,
-    promote_shapes,
-    validate_sample,
-)
+from numpyro.distributions.util import promote_shapes, validate_sample
 from numpyro.infer import MCMC, NUTS, Predictive
 
 from pyrenew.mcmcutils import plot_posterior, spread_draws
@@ -570,7 +567,7 @@ class CensoredNormal(numpyro.distributions.Distribution):
     """
     Censored normal distribution under which samples
     are truncated to lie within a specified interval.
-    This implementation is taken from
+    This implementation is adapted from
     https://github.com/dylanhmorris/host-viral-determinants/blob/main/src/distributions.py
     """
 
@@ -631,7 +628,7 @@ class CensoredNormal(numpyro.distributions.Distribution):
         Array
             Containing samples from the censored normal distribution.
         """
-        assert is_prng_key(key)
+        assert numpyro.util.is_prng_key(key)
         result = self.normal_.sample(key, sample_shape)
         return jnp.clip(result, min=self.lower_limit, max=self.upper_limit)
 
