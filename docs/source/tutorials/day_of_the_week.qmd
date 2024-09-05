@@ -284,8 +284,6 @@ As a result, we can see the posterior distribution of our novel day-of-the-week 
 out = hosp_model_dow.plot_posterior(
     var="dayofweek_effect", ylab="Day of the Week Effect", samples=500
 )
-
-sp = hosp_model_dow.spread_draws(["dayofweek_effect"])
 ```
 
 The new model with the day-of-the-week effect can be compared to the previous model without the effect. Finally, let's reproduce the figure without the day-of-the-week effect, and then plot the new model with the effect:
