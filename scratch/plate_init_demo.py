@@ -13,18 +13,18 @@ from numpyro.infer import MCMC, NUTS
 from pyrenew.latent import InitializeInfectionsExponentialGrowth
 from pyrenew.randomvariable import DistributionalVariable
 
-n_groups = 3  # works fine
-# n_groups = 4 # totally fails
-rates = 1 + jnp.pow(10.0, -(jnp.arange(n_groups) + 1))
-n_timepoints = jnp.arange(n_groups) + 10
-i0s = jnp.arange(n_groups) + 1
+groups = jnp.arange(4)
+min_timepoints = 10
+rates = 1 + (groups + 2) * 0.01
+n_timepoints = groups + min_timepoints
+i0s = 1 + (groups + 1) * 0.01
 
 
 input_data = pl.DataFrame(
     {
         "group": pl.Series(
             np.array(list(string.ascii_lowercase))[
-                np.repeat(np.arange(n_groups), n_timepoints)
+                np.repeat(groups, n_timepoints)
             ],
             dtype=pl.Categorical,
         ),
@@ -56,7 +56,7 @@ i0_rv = DistributionalVariable("i0", dist.HalfNormal())
 
 def my_model(y_group, y_time, y_obs):
     # numpydoc ignore=GL08
-    with numpyro.plate("group", n_groups):
+    with numpyro.plate("group", len(groups)):
         i0 = i0_rv()[0].value
         mean_infec = InitializeInfectionsExponentialGrowth(
             n_timepoints=y_time_max + 1, rate_rv=rate_rv, t_pre_init=0
