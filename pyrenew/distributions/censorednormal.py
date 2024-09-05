@@ -17,7 +17,13 @@ class CensoredNormal(numpyro.distributions.Distribution):
     """
 
     arg_constraints = {"loc": constraints.real, "scale": constraints.positive}
-    support = constraints.real
+    pytree_data_fields = (
+        "loc",
+        "scale",
+        "lower_limit",
+        "upper_limit",
+        "_support",
+    )
 
     def __init__(
         self,
@@ -63,6 +69,10 @@ class CensoredNormal(numpyro.distributions.Distribution):
             loc=loc, scale=scale, validate_args=validate_args
         )
         super().__init__(batch_shape=batch_shape, validate_args=validate_args)
+
+    @constraints.dependent_property(is_discrete=False, event_dim=0)
+    def support(self):  # numpydoc ignore=GL08
+        return self._support
 
     def sample(self, key, sample_shape=()):
         """
