@@ -6,7 +6,7 @@ import numpyro
 import pytest
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
-from pyrenew.metaclass import CensoredNormal
+from pyrenew.distributions import CensoredNormal
 
 
 @pytest.mark.parametrize(
