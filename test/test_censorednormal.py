@@ -15,7 +15,7 @@ from pyrenew.metaclass import CensoredNormal
         [0, 1, -1, 1, jnp.array([0, 0.5]), -2, 2],
     ],
 )
-def test_censored_normal_distribution(
+def test_interval_censored_normal_distribution(
     loc,
     scale,
     lower_limit,
@@ -62,7 +62,7 @@ def test_censored_normal_distribution(
         [0, 1, -5, jnp.array([-2, 1]), -6],
     ],
 )
-def test_lower_censored_normal_distribution(
+def test_left_censored_normal_distribution(
     loc,
     scale,
     lower_limit,
@@ -102,7 +102,7 @@ def test_lower_censored_normal_distribution(
         [0, 1, 3, jnp.array([1, 2]), 5],
     ],
 )
-def test_upper_censored_normal_distribution(
+def test_right_censored_normal_distribution(
     loc,
     scale,
     upper_limit,
