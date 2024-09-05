@@ -46,6 +46,11 @@ Install via pip with
 pip install git+https://github.com/CDCgov/PyRenew@main
 ```
 
+## Models Implemented With PyRenew
+
+- [CDCgov/pyrenew-covid-wastewaterpyrenew-covid-wastewater](https://github.com/CDCgov/pyrenew-covid-wastewater): _Models and infrastructure for forecasting COVID-19 hospitalizations using wastewater data with PyRenew._
+- [CDCgov/pyrenew-flu-light](https://github.com/CDCgov/pyrenew-flu-light/): _An instantiation in PyRenew of an influenza forecasting model used in the 2023-24 respiratory season._
+
 ## Resources
 
 * [The MSR Website](https://cdcgov.github.io/PyRenew/tutorials/index.html) provides general documentation and tutorials on using MSR.
