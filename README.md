@@ -52,7 +52,7 @@ At present, the following models, which exist in external repositories, are writ
 
 `pyrenew-covid-wastewater` (see [here](https://github.com/CDCgov/pyrenew-covid-wastewater)): _Models and infrastructure for forecasting COVID-19 hospitalizations using wastewater data with PyRenew._
 
-`pyrenew-flu-light` (see [here](https://github.com/CDCgov/pyrenew-flu-light/)): _An instantiation in PyRenew of an [Epidemia](https://imperialcollegelondon.github.io/epidemia/) influenza forecasting model used in the 2023-24 respiratory season._
+`pyrenew-flu-light` (see [here](https://github.com/CDCgov/pyrenew-flu-light/)): _An instantiation in PyRenew of an influenza forecasting model used in the 2023-24 respiratory season._
 
 ## Resources
 
