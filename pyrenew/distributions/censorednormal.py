@@ -1,3 +1,5 @@
+# numpydoc ignore=GL08
+
 import jax
 import jax.numpy as jnp
 import numpyro
@@ -54,7 +56,9 @@ class CensoredNormal(numpyro.distributions.Distribution):
         self.lower_limit = lower_limit
         self.upper_limit = upper_limit
 
-        batch_shape = jax.lax.broadcast_shapes(jnp.shape(loc), jnp.shape(scale))
+        batch_shape = jax.lax.broadcast_shapes(
+            jnp.shape(loc), jnp.shape(scale)
+        )
         self.normal_ = numpyro.distributions.Normal(
             loc=loc, scale=scale, validate_args=validate_args
         )
@@ -95,7 +99,9 @@ class CensoredNormal(numpyro.distributions.Distribution):
         # we exploit the fact that for the
         # standard normal, P(x > a) = P(-x < a)
         # to compute the log complementary CDF
-        inbounds = jnp.logical_and(value > self.lower_limit, value < self.upper_limit)
+        inbounds = jnp.logical_and(
+            value > self.lower_limit, value < self.upper_limit
+        )
         result = jnp.where(inbounds, self.normal_.log_prob(value), lim_val)
 
         return result
