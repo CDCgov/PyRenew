@@ -24,10 +24,10 @@ def test_initialize_infections_exponential():
     I_pre_init = I_pre_init.value
     rate = rate.value
     infections_default_t_pre_init = InitializeInfectionsExponentialGrowth(
-        n_timepoints, rate=rate_RV
+        n_timepoints, rate_rv=rate_RV
     ).initialize_infections(I_pre_init)
     infections_default_t_pre_init_manual = I_pre_init * np.exp(
-        rate * (np.arange(n_timepoints) - default_t_pre_init)
+        rate * (np.arange(n_timepoints)[:, np.newaxis] - default_t_pre_init)
     )
 
     testing.assert_array_almost_equal(
@@ -37,33 +37,13 @@ def test_initialize_infections_exponential():
     # assert that infections at default t_pre_init is I_pre_init
     assert infections_default_t_pre_init[default_t_pre_init] == I_pre_init
 
-    # test for failure with non-scalar rate or I_pre_init
-    rate_RV_2 = DeterministicVariable(
-        name="rate_RV", value=np.array([0.5, 0.5])
-    )
-    with pytest.raises(ValueError):
-        InitializeInfectionsExponentialGrowth(
-            n_timepoints, rate=rate_RV_2
-        ).initialize_infections(I_pre_init)
-
-    I_pre_init_RV_2 = DeterministicVariable(
-        name="I_pre_init_RV",
-        value=np.array([10.0, 10.0]),
-    )
-    (I_pre_init_2,) = I_pre_init_RV_2()
-
-    with pytest.raises(ValueError):
-        InitializeInfectionsExponentialGrowth(
-            n_timepoints, rate=rate_RV
-        ).initialize_infections(I_pre_init_2.value)
-
     # test non-default t_pre_init
     t_pre_init = 6
     infections_custom_t_pre_init = InitializeInfectionsExponentialGrowth(
-        n_timepoints, rate=rate_RV, t_pre_init=t_pre_init
+        n_timepoints, rate_rv=rate_RV, t_pre_init=t_pre_init
     ).initialize_infections(I_pre_init)
     infections_custom_t_pre_init_manual = I_pre_init * np.exp(
-        rate * (np.arange(n_timepoints) - t_pre_init)
+        rate * (np.arange(n_timepoints)[:, np.newaxis] - t_pre_init)
     )
     testing.assert_array_almost_equal(
         infections_custom_t_pre_init,
