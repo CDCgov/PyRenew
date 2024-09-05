@@ -46,13 +46,10 @@ Install via pip with
 pip install git+https://github.com/CDCgov/PyRenew@main
 ```
 
-## Existing Models
+## Models Implemented With PyRenew
 
-At present, the following models, which exist in external repositories, are written using PyRenew:
-
-`pyrenew-covid-wastewater` (see [here](https://github.com/CDCgov/pyrenew-covid-wastewater)): _Models and infrastructure for forecasting COVID-19 hospitalizations using wastewater data with PyRenew._
-
-`pyrenew-flu-light` (see [here](https://github.com/CDCgov/pyrenew-flu-light/)): _An instantiation in PyRenew of an influenza forecasting model used in the 2023-24 respiratory season._
+- [CDCgov/pyrenew-covid-wastewaterpyrenew-covid-wastewater](https://github.com/CDCgov/pyrenew-covid-wastewater): _Models and infrastructure for forecasting COVID-19 hospitalizations using wastewater data with PyRenew._
+- [CDCgov/pyrenew-flu-light](https://github.com/CDCgov/pyrenew-flu-light/): _An instantiation in PyRenew of an influenza forecasting model used in the 2023-24 respiratory season._
 
 ## Resources
 
