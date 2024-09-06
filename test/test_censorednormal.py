@@ -4,15 +4,17 @@ import jax
 import jax.numpy as jnp
 import numpyro
 import pytest
-from numpy.testing import assert_array_almost_equal, assert_array_equal
+from numpy.testing import assert_array_almost_equal, assert_array_equal, assert_equal
 
+from numpyro.distributions import constraints
 from pyrenew.distributions import CensoredNormal
 
 
 @pytest.mark.parametrize(
     ["loc", "scale", "lower_limit", "upper_limit", "in_val", "l_val", "h_val"],
     [
-        [0, 1, -1, 1, jnp.array([0, 0.5]), -2, 2],
+        [jnp.array([0]), jnp.array([2.0, 1.0]), -1, 1, jnp.array([0, 0.5]), -2, 2],
+        [jnp.array([0, 1]), jnp.array([1.0]), -1, 2, jnp.array([0, 0.5]), -2, 3],
     ],
 )
 def test_interval_censored_normal_distribution(
@@ -39,9 +41,7 @@ def test_interval_censored_normal_distribution(
     assert jnp.all(samp <= upper_limit)
 
     # test log prob of values within bounds
-    assert_array_equal(
-        censored_dist.log_prob(in_val), normal_dist.log_prob(in_val)
-    )
+    assert_array_equal(censored_dist.log_prob(in_val), normal_dist.log_prob(in_val))
 
     # test log prob of values lower than the limit
     assert_array_almost_equal(
@@ -54,6 +54,13 @@ def test_interval_censored_normal_distribution(
         censored_dist.log_prob(h_val),
         jax.scipy.special.log_ndtr(-(upper_limit - loc) / scale),
     )
+
+    # test_broadcasting
+    assert_equal(samp.shape[-1], max(loc.shape[0], scale.shape[0]))
+
+    # test support of the distribution
+    assert_equal(censored_dist.support.lower_bound, lower_limit)
+    assert_equal(censored_dist.support.upper_bound, upper_limit)
 
 
 @pytest.mark.parametrize(
@@ -85,15 +92,16 @@ def test_left_censored_normal_distribution(
     assert jnp.all(samp >= lower_limit)
 
     # test log prob of values within bounds
-    assert_array_equal(
-        censored_dist.log_prob(in_val), normal_dist.log_prob(in_val)
-    )
+    assert_array_equal(censored_dist.log_prob(in_val), normal_dist.log_prob(in_val))
 
     # test log prob of values lower than the limit
     assert_array_almost_equal(
         censored_dist.log_prob(l_val),
         jax.scipy.special.log_ndtr((lower_limit - loc) / scale),
     )
+
+    # test support of the distribution
+    assert_equal(censored_dist.support.lower_bound, lower_limit)
 
 
 @pytest.mark.parametrize(
@@ -113,9 +121,7 @@ def test_right_censored_normal_distribution(
     Tests the upper censored normal distribution samples
     within the limit and calculation of log probability
     """
-    censored_dist = CensoredNormal(
-        loc=loc, scale=scale, upper_limit=upper_limit
-    )
+    censored_dist = CensoredNormal(loc=loc, scale=scale, upper_limit=upper_limit)
     normal_dist = numpyro.distributions.Normal(loc=loc, scale=scale)
 
     # test samples within the bounds
@@ -123,12 +129,13 @@ def test_right_censored_normal_distribution(
     assert jnp.all(samp <= upper_limit)
 
     # test log prob of values within bounds
-    assert_array_equal(
-        censored_dist.log_prob(in_val), normal_dist.log_prob(in_val)
-    )
+    assert_array_equal(censored_dist.log_prob(in_val), normal_dist.log_prob(in_val))
 
     # test log prob of values higher than the limit
     assert_array_almost_equal(
         censored_dist.log_prob(h_val),
         jax.scipy.special.log_ndtr(-(upper_limit - loc) / scale),
     )
+
+    # test support of the distribution
+    assert_equal(censored_dist.support.upper_bound, upper_limit)
