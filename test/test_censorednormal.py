@@ -125,6 +125,7 @@ def test_left_censored_normal_distribution(
 
     # test support of the distribution
     assert_equal(censored_dist.support.lower_bound, lower_limit)
+    assert censored_dist.support.upper_bound == jnp.inf
 
 
 @pytest.mark.parametrize(
@@ -166,3 +167,4 @@ def test_right_censored_normal_distribution(
 
     # test support of the distribution
     assert_equal(censored_dist.support.upper_bound, upper_limit)
+    assert censored_dist.support.lower_bound == -jnp.inf
