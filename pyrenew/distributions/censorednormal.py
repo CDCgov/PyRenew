@@ -61,7 +61,7 @@ class CensoredNormal(numpyro.distributions.Distribution):
         self.loc, self.scale = promote_shapes(loc, scale)
         self.lower_limit = lower_limit
         self.upper_limit = upper_limit
-
+self._support = constraints.interval(self.lower_limit, self.upper_limit)
         batch_shape = jax.lax.broadcast_shapes(
             jnp.shape(loc), jnp.shape(scale)
         )
