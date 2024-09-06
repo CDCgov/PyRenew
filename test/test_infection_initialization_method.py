@@ -14,75 +14,116 @@ from pyrenew.latent import (
 def test_initialize_infections_exponential():
     """Check that the InitializeInfectionsExponentialGrowth class generates the correct number of infections at each time point."""
     n_timepoints = 10
-    rate_RV = DeterministicVariable(name="rate_RV", value=np.array([0.5, 0.1]))
-    I_pre_init_RV = DeterministicVariable(
-        name="I_pre_init_RV", value=np.array([5.0, 10.0])
-    )
     default_t_pre_init = n_timepoints - 1
+    t_pre_init = 6
 
-    I_pre_init = I_pre_init_RV()[0].value
+    rate_RV = DeterministicVariable(name="rate_RV", value=np.array([0.5, 0.1]))
+    rate_scalar_RV = DeterministicVariable(name="rate_RV", value=0.5)
+
     rate = rate_RV()[0].value
+    rate_scalar = rate_scalar_RV()[0].value
 
-    infections_default_t_pre_init = InitializeInfectionsExponentialGrowth(
+    I_pre_init = np.array([5.0, 10.0])
+    I_pre_init_scalar = 5.0
+
+    # both rate and I_pre_init are arrays with default t_pre_init
+    result = InitializeInfectionsExponentialGrowth(
         n_timepoints, rate_rv=rate_RV
     ).initialize_infections(I_pre_init)
 
-    infections_default_t_pre_init_manual_0 = I_pre_init[0] * np.exp(
-        rate[0] * (np.arange(n_timepoints) - default_t_pre_init)
-    )
-
-    infections_default_t_pre_init_manual_1 = I_pre_init[1] * np.exp(
-        rate[1] * (np.arange(n_timepoints) - default_t_pre_init)
-    )
-
-    infections_default_t_pre_init_manual = np.column_stack(
+    manual_result = np.column_stack(
         [
-            infections_default_t_pre_init_manual_0,
-            infections_default_t_pre_init_manual_1,
+            I_pre_init[0]
+            * np.exp(rate[0] * (np.arange(n_timepoints) - default_t_pre_init)),
+            I_pre_init[1]
+            * np.exp(rate[1] * (np.arange(n_timepoints) - default_t_pre_init)),
         ]
     )
 
-    testing.assert_array_almost_equal(
-        infections_default_t_pre_init, infections_default_t_pre_init_manual
-    )
+    ## check that the result is as expected
+    testing.assert_array_almost_equal(result, manual_result)
 
-    # test the one dimensional
+    ## check that infections at default t_pre_init is I_pre_init
+    testing.assert_array_equal(result[default_t_pre_init], I_pre_init)
 
-    # assert that infections at default t_pre_init is I_pre_init
-    testing.assert_array_equal(
-        infections_default_t_pre_init[default_t_pre_init], I_pre_init
-    )
-
-    # test non-default t_pre_init
-    t_pre_init = 6
-    infections_custom_t_pre_init = InitializeInfectionsExponentialGrowth(
+    # both rate and I_pre_init are arrays with custom t_pre_init
+    result = InitializeInfectionsExponentialGrowth(
         n_timepoints, rate_rv=rate_RV, t_pre_init=t_pre_init
     ).initialize_infections(I_pre_init)
 
-    infections_custom_t_pre_init_manual_0 = I_pre_init[0] * np.exp(
-        rate[0] * (np.arange(n_timepoints) - t_pre_init)
-    )
-
-    infections_custom_t_pre_init_manual_1 = I_pre_init[1] * np.exp(
-        rate[1] * (np.arange(n_timepoints) - t_pre_init)
-    )
-
-    infections_custom_t_pre_init_manual = np.column_stack(
+    manual_result = np.column_stack(
         [
-            infections_custom_t_pre_init_manual_0,
-            infections_custom_t_pre_init_manual_1,
+            I_pre_init[0]
+            * np.exp(rate[0] * (np.arange(n_timepoints) - t_pre_init)),
+            I_pre_init[1]
+            * np.exp(rate[1] * (np.arange(n_timepoints) - t_pre_init)),
         ]
     )
 
-    testing.assert_array_almost_equal(
-        infections_custom_t_pre_init,
-        infections_custom_t_pre_init_manual,
-        decimal=5,
+    ## check that the result is as expected
+    testing.assert_array_almost_equal(result, manual_result)
+
+    ## check that infections at t_pre_init is I_pre_init
+    testing.assert_array_equal(result[t_pre_init], I_pre_init)
+
+    # rate is array, I_pre_init is scalar with default t_pre_init
+    result = InitializeInfectionsExponentialGrowth(
+        n_timepoints, rate_rv=rate_RV
+    ).initialize_infections(I_pre_init_scalar)
+
+    manual_result = np.column_stack(
+        [
+            I_pre_init_scalar
+            * np.exp(rate[0] * (np.arange(n_timepoints) - default_t_pre_init)),
+            I_pre_init_scalar
+            * np.exp(rate[1] * (np.arange(n_timepoints) - default_t_pre_init)),
+        ]
     )
 
-    testing.assert_array_equal(
-        infections_custom_t_pre_init[t_pre_init], I_pre_init
+    ## check that the result is as expected
+    testing.assert_array_almost_equal(result, manual_result)
+
+    ## check that infections at default t_pre_init is I_pre_init
+    testing.assert_array_equal(result[default_t_pre_init], I_pre_init_scalar)
+
+    # rate is scalar, I_pre_init is array with default t_pre_init
+    result = InitializeInfectionsExponentialGrowth(
+        n_timepoints, rate_rv=rate_scalar_RV
+    ).initialize_infections(I_pre_init)
+
+    manual_result = np.column_stack(
+        [
+            I_pre_init[0]
+            * np.exp(
+                rate_scalar * (np.arange(n_timepoints) - default_t_pre_init)
+            ),
+            I_pre_init[1]
+            * np.exp(
+                rate_scalar * (np.arange(n_timepoints) - default_t_pre_init)
+            ),
+        ]
     )
+
+    ## check that the result is as expected
+    testing.assert_array_almost_equal(result, manual_result)
+
+    ## check that infections at default t_pre_init is I_pre_init
+    testing.assert_array_equal(result[default_t_pre_init], I_pre_init)
+
+    # both rate and I_pre_init are scalar with default t_pre_init
+    result = InitializeInfectionsExponentialGrowth(
+        n_timepoints, rate_rv=rate_scalar_RV
+    ).initialize_infections(I_pre_init_scalar)
+
+    manual_result = I_pre_init_scalar * np.exp(
+        rate_scalar * (np.arange(n_timepoints) - default_t_pre_init)
+    )
+
+    ## check that the result is as expected
+    testing.assert_array_almost_equal(result, manual_result)
+
+    ## check that infections at default t_pre_init is I_pre_init
+    testing.assert_array_equal(result[default_t_pre_init], I_pre_init_scalar)
 
 
 def test_initialize_infections_zero_pad():
