@@ -27,7 +27,7 @@ def test_initialize_infections_exponential():
         n_timepoints, rate_rv=rate_RV
     ).initialize_infections(I_pre_init)
     infections_default_t_pre_init_manual = I_pre_init * np.exp(
-        rate * (np.arange(n_timepoints)[:, np.newaxis] - default_t_pre_init)
+        rate * (np.arange(n_timepoints) - default_t_pre_init)
     )
 
     testing.assert_array_almost_equal(
@@ -43,7 +43,7 @@ def test_initialize_infections_exponential():
         n_timepoints, rate_rv=rate_RV, t_pre_init=t_pre_init
     ).initialize_infections(I_pre_init)
     infections_custom_t_pre_init_manual = I_pre_init * np.exp(
-        rate * (np.arange(n_timepoints)[:, np.newaxis] - t_pre_init)
+        rate * (np.arange(n_timepoints) - t_pre_init)
     )
     testing.assert_array_almost_equal(
         infections_custom_t_pre_init,

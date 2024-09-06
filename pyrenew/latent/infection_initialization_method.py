@@ -178,7 +178,8 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         """
         I_pre_init = jnp.array(I_pre_init)
         rate = jnp.array(self.rate_rv()[0].value)
-        return I_pre_init * jnp.exp(
+        initial_infections = I_pre_init * jnp.exp(
             rate
             * (jnp.arange(self.n_timepoints)[:, jnp.newaxis] - self.t_pre_init)
         )
+        return jnp.squeeze(initial_infections)
