@@ -184,7 +184,6 @@ class HospitalAdmissionsModel(Model):
             padding=padding,
             **kwargs,
         )
-
         # Sampling the latent hospital admissions
         (
             infection_hosp_rate,
@@ -194,11 +193,7 @@ class HospitalAdmissionsModel(Model):
             latent_infections=basic_model.latent_infections,
             **kwargs,
         )
-
-        (
-            observed_hosp_admissions,
-            *_,
-        ) = self.hosp_admission_obs_process_rv(
+        observed_hosp_admissions = self.hosp_admission_obs_process_rv(
             mu=latent_hosp_admissions[-n_datapoints:],
             obs=data_observed_hosp_admissions,
             **kwargs,

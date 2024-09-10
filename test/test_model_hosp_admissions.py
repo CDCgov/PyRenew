@@ -1,6 +1,5 @@
 # numpydoc ignore=GL08
 
-
 from test.utils import SimpleRt
 
 import jax.numpy as jnp
@@ -22,33 +21,9 @@ from pyrenew.latent import (
     Infections,
     InitializeInfectionsZeroPad,
 )
-from pyrenew.metaclass import RandomVariable
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
 from pyrenew.randomvariable import DistributionalVariable
-
-
-class UniformProbForTest(RandomVariable):  # numpydoc ignore=GL08
-    def __init__(
-        self,
-        size: int,
-        pname: str,
-    ):  # numpydoc ignore=GL08
-        self.size = size
-        self.name = pname
-
-        return None
-
-    @staticmethod
-    def validate(self):  # numpydoc ignore=GL08
-        return None
-
-    def sample(self, **kwargs):  # numpydoc ignore=GL08
-        return numpyro.sample(
-            name=self.name,
-            fn=dist.Uniform(high=0.99, low=0.01),
-            sample_shape=(self.size,),
-        )
 
 
 def test_model_hosp_no_timepoints_or_observations():
@@ -224,7 +199,6 @@ def test_model_hosp_no_obs_model():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -334,7 +308,6 @@ def test_model_hosp_with_obs_model():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -423,15 +396,16 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
-        t_unit=1,
     )
 
     latent_infections = Infections()
     Rt_process = SimpleRt()
     observed_admissions = PoissonObservation("poisson_rv")
 
-    hosp_report_prob_dist = UniformProbForTest(1, "hosp_report_prob_dist")
-    weekday = UniformProbForTest(7, "weekday")
+    hosp_report_prob_dist = DistributionalVariable(
+        "hosp_report_prob_dist", dist.Uniform()
+    )
+    weekday = DistributionalVariable("weekday", dist.Uniform()).expand_by((7,))
 
     latent_admissions = HospitalAdmissions(
         infection_to_admission_interval_rv=inf_hosp,
@@ -451,7 +425,7 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         hosp_admission_obs_process_rv=observed_admissions,
     )
 
-    # Sampling and fitting model 0 (with no obs for infections)
+    # Sampling and fitting model 0 (with no obs for admissions)
     with numpyro.handlers.seed(rng_seed=223):
         model1_samp = model1.sample(n_datapoints=30)
 
@@ -518,7 +492,6 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=n_initialization_points),
-        t_unit=1,
     )
 
     latent_infections = Infections()
