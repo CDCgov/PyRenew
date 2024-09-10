@@ -192,10 +192,10 @@ def test_transforms_applied_at_sampling():
         assert_almost_equal(tr(norm_base_sample), norm_transformed_sample)
         assert_almost_equal(
             (
-                tr(l2_base_sample),
+                tr(l2_base_sample[0]),
                 t.ExpTransform()(l2_base_sample[1]),
             ),
-            (l2_transformed_sample, l2_transformed_sample[1]),
+            (l2_transformed_sample[0], l2_transformed_sample[1]),
         )
 
 
@@ -227,8 +227,8 @@ def test_transforms_variable_naming():
     mymodel1 = MyModel(transformed_dist_named_base_rv)
     mymodel1.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(4))
 
-    assert "transformed_rv_rv1" in mymodel1.mcmc.get_samples()
-    assert "transformed_rv_rv2" in mymodel1.mcmc.get_samples()
+    assert "transformed_rv_0" in mymodel1.mcmc.get_samples()
+    assert "transformed_rv_1" in mymodel1.mcmc.get_samples()
 
     mymodel2 = MyModel(transformed_dist_unnamed_base_rv)
     mymodel2.run(num_samples=1, num_warmup=10, rng_key=jax.random.key(5))
