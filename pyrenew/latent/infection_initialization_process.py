@@ -73,7 +73,7 @@ class InfectionInitializationProcess(RandomVariable):
             the number of initialized infections at each time point.
         """
 
-        (I_pre_init,) = self.I_pre_init_rv()
+        I_pre_init = self.I_pre_init_rv()
 
         infection_initialization = self.infection_init_method(
             I_pre_init,
