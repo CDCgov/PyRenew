@@ -94,7 +94,7 @@ class ARProcess(RandomVariable):
                 f"order {order}"
             )
 
-        raw_noise, *_ = self.noise_rv_(n=n, **kwargs)
+        raw_noise = self.noise_rv_(n=n, **kwargs)
         noise = noise_sd_arr * raw_noise
 
         def transition(recent_vals, next_noise):  # numpydoc ignore=GL08
