@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import jax.numpy as jnp
+import numpyro
 from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
+from numpyro.infer.reparam import LocScaleReparam
 
 from pyrenew.metaclass import RandomVariable, SampledValue
-from pyrenew.process.iidrandomsequence import StandardNormalSequence
 
 
 class ARProcess(RandomVariable):
@@ -16,21 +17,9 @@ class ARProcess(RandomVariable):
     an AR(p) process.
     """
 
-    def __init__(self, noise_rv_name: str, *args, **kwargs) -> None:
-        """
-        Default constructor.
-
-        Parameters
-        ----------
-        noise_rv_name : str
-           A name for the internal RandomVariable
-           holding the process noise.
-        """
-        super().__init__(*args, **kwargs)
-        self.noise_rv_ = StandardNormalSequence(element_rv_name=noise_rv_name)
-
     def sample(
         self,
+        noise_name: str,
         n: int,
         autoreg: ArrayLike,
         init_vals: ArrayLike,
@@ -96,20 +85,29 @@ class ARProcess(RandomVariable):
                 f"order {order}"
             )
 
-        raw_noise, *_ = self.noise_rv_(n=n, **kwargs)
-        noise = noise_sd_arr * raw_noise.value
+        def transition(recent_vals, _):  # numpydoc ignore=GL08
+            with numpyro.handlers.reparam(
+                config={noise_name: LocScaleReparam(0)}
+            ):
+                next_noise = numpyro.sample(
+                    noise_name,
+                    numpyro.distributions.Normal(loc=0, scale=noise_sd_arr),
+                )
 
-        def transition(recent_vals, next_noise):  # numpydoc ignore=GL08
             new_term = jnp.dot(autoreg, recent_vals) + next_noise
-            new_recent_vals = jnp.hstack(
-                [new_term, recent_vals[: (order - 1)]]
+            new_recent_vals = jnp.concatenate(
+                [new_term, recent_vals[..., : (order - 1)]]
             )
             return new_recent_vals, new_term
 
-        last, ts = scan(transition, init_vals, noise)
+        last, ts = scan(f=transition, init=init_vals, xs=None, length=n)
         return (
             SampledValue(
-                jnp.hstack([init_vals, ts]),
+                jnp.squeeze(
+                    jnp.concatenate(
+                        [init_vals[::, jnp.newaxis], ts],
+                    )
+                ),
                 t_start=self.t_start,
                 t_unit=self.t_unit,
             ),

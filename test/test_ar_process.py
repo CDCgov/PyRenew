@@ -13,33 +13,37 @@ def test_ar_can_be_sampled():
     Check that an AR process
     can be initialized and sampled from
     """
-    ar1 = ARProcess(noise_rv_name="ar1process_noise")
+    ar1 = ARProcess()
     with numpyro.handlers.seed(rng_seed=62):
         # can sample
         ar1(
+            noise_name="ar1process_noise",
             n=3532,
             init_vals=jnp.array([50.0]),
             autoreg=jnp.array([0.95]),
             noise_sd=0.5,
         )
 
-    ar3 = ARProcess(noise_rv_name="ar3process_noise")
+    ar3 = ARProcess()
 
     with numpyro.handlers.seed(rng_seed=62):
         # can sample
         ar3(
+            noise_name="ar3process_noise",
             n=1230,
             init_vals=jnp.array([50.0, 49.9, 48.2]),
             autoreg=jnp.array([0.05, 0.025, 0.025]),
             noise_sd=0.5,
         )
         ar3(
+            noise_name="ar3process_noise",
             n=1230,
             init_vals=jnp.array([50.0, 49.9, 48.2]),
             autoreg=jnp.array([0.05, 0.025, 0.025]),
             noise_sd=[0.25],
         )
         ar3(
+            noise_name="ar3process_noise",
             n=1230,
             init_vals=jnp.array([50.0, 49.9, 48.2]),
             autoreg=jnp.array([0.05, 0.025, 0.025]),
@@ -50,6 +54,7 @@ def test_ar_can_be_sampled():
         # error
         with pytest.raises(ValueError, match="must be a scalar"):
             ar3(
+                noise_name="ar3process_noise",
                 n=1230,
                 init_vals=jnp.array([50.0, 49.9, 48.2]),
                 autoreg=jnp.array([0.05, 0.025, 0.025]),
@@ -57,6 +62,7 @@ def test_ar_can_be_sampled():
             )
         with pytest.raises(ValueError, match="must be a scalar"):
             ar3(
+                noise_name="ar3process_noise",
                 n=1230,
                 init_vals=jnp.array([50.0, 49.9, 48.2]),
                 autoreg=jnp.array([0.05, 0.025, 0.025]),
@@ -66,6 +72,7 @@ def test_ar_can_be_sampled():
         # bad dimensionality raises error
         with pytest.raises(ValueError, match="Array of autoregressive"):
             ar3(
+                noise_name="ar3process_noise",
                 n=1230,
                 init_vals=jnp.array([50.0, 49.9, 48.2]),
                 autoreg=jnp.array([[0.05, 0.025, 0.025]]),
@@ -73,6 +80,7 @@ def test_ar_can_be_sampled():
             )
         with pytest.raises(ValueError, match="Array of initial"):
             ar3(
+                noise_name="ar3process_noise",
                 n=1230,
                 init_vals=jnp.array([[50.0, 49.9, 48.2]]),
                 autoreg=jnp.array([0.05, 0.025, 0.025]),
@@ -80,6 +88,7 @@ def test_ar_can_be_sampled():
             )
         with pytest.raises(ValueError, match="same size as the order"):
             ar3(
+                noise_name="ar3process_noise",
                 n=1230,
                 init_vals=jnp.array([50.0, 49.9, 1, 1, 1]),
                 autoreg=jnp.array([0.05, 0.025, 0.025]),
@@ -94,11 +103,12 @@ def test_ar_samples_correctly_distributed():
     """
     noise_sd = jnp.array([0.5])
     ar_inits = jnp.array([25.0])
-    ar = ARProcess("arprocess")
+    ar = ARProcess()
     with numpyro.handlers.seed(rng_seed=62):
         # check it regresses to mean
         # when started away from it
         long_ts, *_ = ar(
+            noise_name="arprocess_noise",
             n=10000,
             init_vals=ar_inits,
             autoreg=jnp.array([0.75]),
