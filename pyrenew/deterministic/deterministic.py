@@ -89,4 +89,4 @@ class DeterministicVariable(RandomVariable):
         """
         if record:
             numpyro.deterministic(self.name, self)
-        return self
+        return self.value
