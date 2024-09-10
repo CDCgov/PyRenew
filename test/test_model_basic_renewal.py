@@ -37,7 +37,6 @@ def test_model_basicrenewal_no_timepoints_or_observations():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -73,7 +72,6 @@ def test_model_basicrenewal_both_timepoints_and_observations():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -116,7 +114,6 @@ def test_model_basicrenewal_no_obs_model():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -187,7 +184,6 @@ def test_model_basicrenewal_with_obs_model():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -241,7 +237,6 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()

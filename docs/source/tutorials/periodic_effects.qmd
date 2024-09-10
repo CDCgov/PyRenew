@@ -79,7 +79,6 @@ dayofweek = process.DayOfWeekEffect(
     quantity_to_broadcast=randomvariable.DistributionalVariable(
         name="simp", distribution=mysimplex
     ),
-    t_start=0,
 )
 ```
 

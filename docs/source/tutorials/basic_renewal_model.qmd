@@ -125,7 +125,6 @@ I0 = InfectionInitializationProcess(
     "I0_initialization",
     DistributionalVariable(name="I0", distribution=dist.LogNormal(2.5, 1)),
     InitializeInfectionsZeroPad(pmf_array.size),
-    t_unit=1,
 )
 
 

@@ -89,7 +89,6 @@ I0 = InfectionInitializationProcess(
         n_initialization_points,
         deterministic.DeterministicVariable(name="rate", value=0.05),
     ),
-    t_unit=1,
 )
 
 # Generation interval and Rt

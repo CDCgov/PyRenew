@@ -231,13 +231,7 @@ class HospitalAdmissions(RandomVariable):
                 f"Got {dow_effect_sampled.size} instead."
             )
 
-        # Identifying the offset
-        if latent_infections.t_start is None:
-            inf_offset = 0
-        else:
-            inf_offset = latent_infections.t_start
-
-        inf_offset = (inf_offset + self.obs_data_first_day_of_the_week) % 7
+        inf_offset = self.obs_data_first_day_of_the_week % 7
 
         # Replicating the day of the week effect to match the number of
         # timepoints

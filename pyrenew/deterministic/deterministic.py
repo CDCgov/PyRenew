@@ -18,8 +18,6 @@ class DeterministicVariable(RandomVariable):
         self,
         name: str,
         value: ArrayLike,
-        t_start: int | None = None,
-        t_unit: int | None = None,
     ) -> None:
         """Default constructor
 
@@ -29,10 +27,6 @@ class DeterministicVariable(RandomVariable):
             A name to assign to the variable.
         value : ArrayLike
             An ArrayLike object.
-        t_start : int, optional
-            The start time of the variable, if any.
-        t_unit : int, optional
-            The unit of time relative to the model's fundamental (smallest) time unit, if any
 
         Returns
         -------
@@ -41,7 +35,6 @@ class DeterministicVariable(RandomVariable):
         self.name = name
         self.validate(value)
         self = value
-        self.set_timeseries(t_start, t_unit)
 
         return None
 

@@ -29,7 +29,6 @@ def create_test_model():  # numpydoc ignore=GL08
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation("poisson_rv")

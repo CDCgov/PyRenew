@@ -18,8 +18,6 @@ class DeterministicPMF(RandomVariable):
         name: str,
         value: ArrayLike,
         tol: float = 1e-5,
-        t_start: int | None = None,
-        t_unit: int | None = None,
     ) -> None:
         """
         Default constructor
@@ -38,11 +36,6 @@ class DeterministicPMF(RandomVariable):
         tol : float, optional
             Passed to pyrenew.distutil.validate_discrete_dist_vector. Defaults
             to 1e-5.
-        t_start : int, optional
-            The start time of the process.
-        t_unit : int, optional
-            The unit of time relative to the model's fundamental (smallest)
-            time unit.
 
         Returns
         -------
@@ -56,8 +49,6 @@ class DeterministicPMF(RandomVariable):
         self.basevar = DeterministicVariable(
             name=name,
             value=value,
-            t_start=t_start,
-            t_unit=t_unit,
         )
 
         return None

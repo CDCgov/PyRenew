@@ -15,8 +15,6 @@ class InfectionInitializationProcess(RandomVariable):
         name,
         I_pre_init_rv: RandomVariable,
         infection_init_method: InfectionInitializationMethod,
-        t_unit: int,
-        t_start: int | None = None,
     ) -> None:
         """Default class constructor for InfectionInitializationProcess
 
@@ -28,14 +26,6 @@ class InfectionInitializationProcess(RandomVariable):
             A RandomVariable representing the number of infections that occur at some time before the renewal process begins. Each `infection_init_method` uses this random variable in different ways.
         infection_init_method : InfectionInitializationMethod
             An `InfectionInitializationMethod` that generates the initial infections for the renewal process.
-        t_unit : int
-            The unit of time for the time series passed to `RandomVariable.set_timeseries`.
-        t_start : int, optional
-            The relative starting time of the time series. If `None`, the relative starting time is set to `-infection_init_method.n_timepoints`.
-
-        Notes
-        -----
-        The relative starting time of the time series (`t_start`) is set to `-infection_init_method.n_timepoints`.
 
         Returns
         -------
@@ -48,13 +38,6 @@ class InfectionInitializationProcess(RandomVariable):
         self.I_pre_init_rv = I_pre_init_rv
         self.infection_init_method = infection_init_method
         self.name = name
-        if t_start is None:
-            t_start = -infection_init_method.n_timepoints
-
-        self.set_timeseries(
-            t_start=t_start,
-            t_unit=t_unit,
-        )
 
     @staticmethod
     def validate(
