@@ -90,6 +90,9 @@ class TransformedVariable(RandomVariable):
                 for suffix, tv in zip(suffixes, transformed_values):
                     numpyro.deterministic(f"{self.name}_{suffix}", tv)
 
+        if len(transformed_values) == 1:
+            transformed_values = transformed_values[0]
+
         return transformed_values
 
     def sample_length(self):
