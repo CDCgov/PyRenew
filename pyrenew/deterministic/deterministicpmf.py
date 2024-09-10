@@ -99,4 +99,4 @@ class DeterministicPMF(RandomVariable):
             The size of the PMF
         """
 
-        return self.basevar.size
+        return self.basevar.value.size

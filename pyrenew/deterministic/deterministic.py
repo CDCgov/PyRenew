@@ -34,7 +34,7 @@ class DeterministicVariable(RandomVariable):
         """
         self.name = name
         self.validate(value)
-        self = value
+        self.value = value
 
         return None
 
