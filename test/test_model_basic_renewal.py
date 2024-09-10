@@ -1,6 +1,5 @@
 # numpydoc ignore=GL08
 
-
 from test.utils import SimpleRt
 
 import jax.numpy as jnp

@@ -182,28 +182,27 @@ class RtInfectionsRenewalModel(Model):
             n_timepoints = n_datapoints + padding
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
-        Rt, *_ = self.Rt_process_rv(
+
+        Rt = self.Rt_process_rv(
             n=n_timepoints,
             **kwargs,
         )
 
         # Getting the generation interval
-        gen_int, *_ = self.gen_int_rv(**kwargs)
+        gen_int = self.gen_int_rv(**kwargs)
 
         # Sampling initial infections
-        I0, *_ = self.I0_rv(**kwargs)
+        I0 = self.I0_rv(**kwargs)
+
         # Sampling from the latent process
-        (
-            post_initialization_latent_infections,
-            *_,
-        ) = self.latent_infections_rv(
+        post_initialization_latent_infections = self.latent_infections_rv(
             Rt=Rt,
             gen_int=gen_int,
             I0=I0,
             **kwargs,
         )
 
-        observed_infections, *_ = self.infection_obs_process_rv(
+        observed_infections = self.infection_obs_process_rv(
             mu=post_initialization_latent_infections[padding:],
             obs=data_observed_infections,
             **kwargs,
