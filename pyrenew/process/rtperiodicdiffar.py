@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 import pyrenew.arrayutils as au
-from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import RandomVariable
 from pyrenew.process import ARProcess, DifferencedProcess
 
 
@@ -109,9 +109,9 @@ class RtPeriodicDiffARProcess(RandomVariable):
         None
         """
 
-        _assert_sample_and_rtype(log_rt_rv)
-        _assert_sample_and_rtype(autoreg_rv)
-        _assert_sample_and_rtype(periodic_diff_sd_rv)
+        assert isinstance(log_rt_rv, RandomVariable)
+        assert isinstance(autoreg_rv, RandomVariable)
+        assert isinstance(periodic_diff_sd_rv, RandomVariable)
 
         return None
 

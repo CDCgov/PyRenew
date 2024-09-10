@@ -3,7 +3,6 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import get_type_hints
 
 import jax
 import jax.random as jr
@@ -44,79 +43,6 @@ def _assert_type(arg_name: str, value, expected_type) -> None:
             f"{arg_name} must be an instance of {expected_type}. "
             f"Got {type(value)}"
         )
-
-
-def _assert_sample_and_rtype(
-    rp: "RandomVariable", skip_if_none: bool = True
-) -> None:
-    """
-    Return type-checking for RandomVariable's sample function
-
-    Objects passed as `RandomVariable` should (a) have a `sample()` method that
-    (b) returns either a tuple or a named tuple.
-
-    Parameters
-    ----------
-    rp : RandomVariable
-        Random variable to check.
-    skip_if_none : bool, optional
-        When `True` it returns if `rp` is None. Defaults to True.
-
-    Returns
-    -------
-    None
-
-    Raises
-    ------
-    Exception
-        If rp is not a RandomVariable, does not have a sample function, or
-        does not return a tuple. Also occurs if rettype does not initialized
-        properly.
-    """
-
-    # Addressing the None case
-    if (rp is None) and (not skip_if_none):
-        Exception(
-            "The passed object cannot be None. It should be RandomVariable"
-        )
-    elif skip_if_none and (rp is None):
-        return None
-
-    if not isinstance(rp, RandomVariable):
-        raise Exception(f"{rp} is not an instance of RandomVariable.")
-
-    # Otherwise, checking for the sample function (must have one)
-    # with a defined rtype.
-    try:
-        sfun = rp.sample
-    except Exception:
-        raise Exception(
-            f"The RandomVariable {rp} does not have a sample function."
-        )  # noqa: E722
-
-    # Getting the return annotation (if any)
-    rettype = get_type_hints(sfun).get("return", None)
-
-    if rettype is None:
-        raise Exception(
-            f"The RandomVariable {rp} does not have return type "
-            + "annotation."
-        )
-
-    try:
-        if not isinstance(rettype(), tuple):
-            raise Exception(
-                f"The RandomVariable {rp}'s return type annotation is not"
-                + "a tuple"
-            )
-    except Exception:
-        raise Exception(
-            f"There was a problem when trying to initialize {rettype}."
-            + "the rtype of the random variable should be a tuple or a namedtuple"
-            + " with default values."
-        )
-
-    return None
 
 
 class RandomVariable(metaclass=ABCMeta):

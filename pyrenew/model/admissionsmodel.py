@@ -7,7 +7,7 @@ from typing import NamedTuple
 from jax.typing import ArrayLike
 
 from pyrenew.deterministic import NullObservation
-from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import Model, RandomVariable
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
 
@@ -120,15 +120,11 @@ class HospitalAdmissionsModel(Model):
         Returns
         -------
         None
-
-        See Also
-        --------
-        _assert_sample_and_rtype : Perform type-checking and verify RV
         """
-        _assert_sample_and_rtype(latent_hosp_admissions_rv, skip_if_none=False)
-        _assert_sample_and_rtype(
-            hosp_admission_obs_process_rv, skip_if_none=True
-        )
+        assert isinstance(latent_hosp_admissions_rv, RandomVariable)
+        if hosp_admission_obs_process_rv is not None:
+            assert isinstance(hosp_admission_obs_process_rv, RandomVariable)
+
         return None
 
     def sample(

@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike
 
 import pyrenew.arrayutils as au
 import pyrenew.latent.infection_functions as inf
-from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import RandomVariable
 
 
 class InfectionsRtFeedbackSample(NamedTuple):
@@ -108,8 +108,8 @@ class InfectionsWithFeedback(RandomVariable):
         -------
         None
         """
-        _assert_sample_and_rtype(inf_feedback_strength)
-        _assert_sample_and_rtype(inf_feedback_pmf)
+        assert isinstance(inf_feedback_strength, RandomVariable)
+        assert isinstance(inf_feedback_pmf, RandomVariable)
 
         return None
 

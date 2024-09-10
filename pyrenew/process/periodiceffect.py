@@ -2,7 +2,7 @@
 
 
 import pyrenew.arrayutils as au
-from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import RandomVariable
 
 
 class PeriodicEffect(RandomVariable):
@@ -52,7 +52,7 @@ class PeriodicEffect(RandomVariable):
         None
         """
 
-        _assert_sample_and_rtype(quantity_to_broadcast)
+        assert isinstance(quantity_to_broadcast, RandomVariable)
 
         return None
 

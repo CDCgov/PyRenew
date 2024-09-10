@@ -9,7 +9,7 @@ import numpyro
 from numpy.typing import ArrayLike
 
 from pyrenew.deterministic import NullObservation
-from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
+from pyrenew.metaclass import Model, RandomVariable
 
 
 # Output class of the RtInfectionsRenewalModel
@@ -126,16 +126,12 @@ class RtInfectionsRenewalModel(Model):
         Returns
         -------
         None
-
-        See Also
-        --------
-        _assert_sample_and_rtype : Perform type-checking and verify RV
         """
-        _assert_sample_and_rtype(gen_int_rv, skip_if_none=False)
-        _assert_sample_and_rtype(I0_rv, skip_if_none=False)
-        _assert_sample_and_rtype(latent_infections_rv, skip_if_none=False)
-        _assert_sample_and_rtype(infection_obs_process_rv, skip_if_none=False)
-        _assert_sample_and_rtype(Rt_process_rv, skip_if_none=False)
+        assert isinstance(gen_int_rv, RandomVariable)
+        assert isinstance(I0_rv, RandomVariable)
+        assert isinstance(latent_infections_rv, RandomVariable)
+        assert isinstance(infection_obs_process_rv, RandomVariable)
+        assert isinstance(Rt_process_rv, RandomVariable)
         return None
 
     def sample(
