@@ -24,8 +24,6 @@ def test_negativebinom_deterministic_obs():
         sim_nb1 = negb(mu=rates, obs=rates)
         sim_nb2 = negb(mu=rates, obs=rates)
 
-    assert isinstance(sim_nb1, tuple)
-    assert isinstance(sim_nb2, tuple)
     assert isinstance(sim_nb1, ArrayLike)
     assert isinstance(sim_nb2, ArrayLike)
 
@@ -49,8 +47,7 @@ def test_negativebinom_random_obs():
     with numpyro.handlers.seed(rng_seed=223):
         sim_nb1 = negb(mu=rates)
         sim_nb2 = negb(mu=rates)
-    assert isinstance(sim_nb1, tuple)
-    assert isinstance(sim_nb2, tuple)
+
     assert isinstance(sim_nb1, ArrayLike)
     assert isinstance(sim_nb2, ArrayLike)
 
