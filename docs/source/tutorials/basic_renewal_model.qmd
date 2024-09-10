@@ -151,7 +151,7 @@ class MyRt(RandomVariable):
         rt_init_rv = DistributionalVariable(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
-        init_rt, *_ = rt_init_rv.sample()
+        init_rt = rt_init_rv.sample()
 
         return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 
