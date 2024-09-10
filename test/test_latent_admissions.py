@@ -69,11 +69,7 @@ def test_admissions_sample():
     )
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_1 = hosp1(
-            latent_infections=jnp.hstack(
-                [i0, inf_sampled1.post_initialization_infections]
-            )
-        )
+        sim_hosp_1 = hosp1(latent_infections=jnp.hstack([i0, inf_sampled1]))
 
     testing.assert_array_less(
         sim_hosp_1.latent_hospital_admissions[-n_steps:],

@@ -202,14 +202,11 @@ class HospitalAdmissions(RandomVariable):
         HospitalAdmissionsSample
         """
 
-        infection_hosp_rate, *_ = self.infection_hospitalization_ratio_rv(
-            **kwargs
-        )
+        infection_hosp_rate = self.infection_hospitalization_ratio_rv(**kwargs)
 
-        (
-            infection_to_admission_interval,
-            *_,
-        ) = self.infection_to_admission_interval_rv(**kwargs)
+        infection_to_admission_interval = (
+            self.infection_to_admission_interval_rv(**kwargs)
+        )
 
         latent_hospital_admissions = compute_delay_ascertained_incidence(
             latent_infections,
@@ -221,9 +218,7 @@ class HospitalAdmissions(RandomVariable):
         # 1. Get the day of the week effect
         # 2. Identify the offset of the latent_infections
         # 3. Apply the day of the week effect to the latent_hospital_admissions
-        dow_effect_sampled = self.day_of_week_effect_rv(**kwargs, record=True)[
-            0
-        ]
+        dow_effect_sampled = self.day_of_week_effect_rv(**kwargs, record=True)
 
         if dow_effect_sampled.size != 7:
             raise ValueError(
