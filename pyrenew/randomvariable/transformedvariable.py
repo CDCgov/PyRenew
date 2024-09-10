@@ -1,6 +1,5 @@
 # numpydoc ignore=GL08
 
-import jax.numpy as jnp
 import numpyro
 
 from pyrenew.metaclass import RandomVariable
@@ -70,7 +69,10 @@ class TransformedVariable(RandomVariable):
         self.base_rv.sample()
         """
 
-        untransformed_values = jnp.atleast_1d(self.base_rv.sample(**kwargs))
+        untransformed_values = self.base_rv.sample(**kwargs)
+
+        if not isinstance(untransformed_values, tuple):
+            untransformed_values = (untransformed_values,)
 
         transformed_values = tuple(
             t(uv) for t, uv in zip(self.transforms, untransformed_values)
