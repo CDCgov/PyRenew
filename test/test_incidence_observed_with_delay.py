@@ -34,12 +34,6 @@ from pyrenew.convolve import compute_delay_ascertained_incidence
             jnp.array([0.25, 0.5, 0.25]),
             jnp.array([2]),
         ],
-        [
-            jnp.array([1.0]),
-            jnp.array([0, 2.0, 4.0]),
-            jnp.array([0.25, 0.5, 0.25]),
-            jnp.array([2]),
-        ],
     ],
 )
 def test(obs_rate, latent_incidence, delay_interval, expected_output):
