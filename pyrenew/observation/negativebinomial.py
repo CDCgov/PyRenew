@@ -87,7 +87,7 @@ class NegativeBinomialObservation(RandomVariable):
         -------
         ArrayLike
         """
-        concentration, *_ = self.concentration_rv.sample()
+        concentration = self.concentration_rv.sample()
 
         negative_binomial_sample = numpyro.sample(
             name=self.name,
