@@ -195,7 +195,7 @@ class DifferencedProcess(RandomVariable):
 
         n_diffs = n - self.differencing_order
         if n_diffs > 0:
-            diff_samp, *_ = self.fundamental_process.sample(
+            diff_samp = self.fundamental_process.sample(
                 *args,
                 n=n_diffs,
                 init_vals=fundamental_process_init_vals,

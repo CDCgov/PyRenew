@@ -189,11 +189,11 @@ def test_differenced_process_sample(
     n_fail = -1
     n_fail_alt = 0
     with numpyro.handlers.seed(rng_seed=6723):
-        samp, *_ = proc.sample(n=n_long, init_vals=init_diff_vals)
-        samp_alt, *_ = proc.sample(n=n_long_alt, init_vals=init_diff_vals)
-        samp_one_diff, *_ = proc.sample(n=n_one_diff, init_vals=init_diff_vals)
-        samp_no_diffs, *_ = proc.sample(n=n_no_diffs, init_vals=init_diff_vals)
-        samp_no_diffs_alt, *_ = proc.sample(
+        samp = proc.sample(n=n_long, init_vals=init_diff_vals)
+        samp_alt = proc.sample(n=n_long_alt, init_vals=init_diff_vals)
+        samp_one_diff = proc.sample(n=n_one_diff, init_vals=init_diff_vals)
+        samp_no_diffs = proc.sample(n=n_no_diffs, init_vals=init_diff_vals)
+        samp_no_diffs_alt = proc.sample(
             n=n_no_diffs_alt, init_vals=init_diff_vals
         )
     assert samp.shape == (n_long,)
@@ -267,5 +267,5 @@ def test_manual_difference_process_sample(
         differencing_order=len(inits),
         fundamental_process=fundamental_process,
     )
-    result, *_ = proc.sample(n=n, init_vals=inits)
+    result = proc.sample(n=n, init_vals=inits)
     assert_array_almost_equal(result, expected_solution)
