@@ -32,6 +32,7 @@ class SimpleRt(RandomVariable):
         None
         """
         self.name = name
+        name = "Rt_rv"
         self.rt_rv_ = TransformedVariable(
             name=f"{name}_log_rt_random_walk",
             base_rv=RandomWalk(
@@ -54,7 +55,7 @@ class SimpleRt(RandomVariable):
         -------
         ArrayLike
         """
-        init_rt, *_ = self.rt_init_rv_.sample()
+        init_rt = self.rt_init_rv_()
         return self.rt_rv_(init_vals=init_rt, n=n)
 
     @staticmethod
