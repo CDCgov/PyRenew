@@ -11,6 +11,7 @@ that can be passed to
 :py:func:`jax.lax.scan` with an
 appropriate array to scan along.
 """
+
 from __future__ import annotations
 
 from typing import Callable
@@ -159,7 +160,9 @@ def new_double_convolve_scanner(
         m1, m2 = multipliers
         m_net1 = t1(m1 * jnp.dot(arr1, history_subset))
         new_val = t2(m2 * m_net1 * jnp.dot(arr2, history_subset))
-        latest = jnp.hstack([history_subset[1:], new_val])
+        latest = jnp.concatenate(
+            [history_subset[1:], jnp.expand_dims(new_val, axis=0)]
+        )
         return latest, (new_val, m_net1)
 
     return _new_scanner
