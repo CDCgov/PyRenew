@@ -24,7 +24,6 @@ class ARProcess(RandomVariable):
         autoreg: ArrayLike,
         init_vals: ArrayLike,
         noise_sd: float | ArrayLike,
-        **kwargs,
     ) -> tuple:
         """
         Sample from the AR process
@@ -42,18 +41,15 @@ class ARProcess(RandomVariable):
             Array of initial values. Must have the
             same first dimension size as the order.
         noise_sd : float | ArrayLike
-            Scalar giving the s.d. of the AR
+            Standard deviation of the AR
             process Normal noise, which by
             definition has mean 0.
-        **kwargs : dict, optional
-            Additional keyword arguments passed to
-            self.noise_rv_.sample()
 
         Returns
         -------
         tuple
             With a single SampledValue containing an
-            array of shape (n,).
+            array of shape (n,) + init_vals.shape.
         """
         noise_sd_arr = jnp.atleast_1d(noise_sd)
         if not noise_sd_arr.shape == (1,):
