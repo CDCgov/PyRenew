@@ -12,6 +12,9 @@ from pyrenew.randomvariable import (
     StaticDistributionalVariable,
 )
 
+distribution = dist.Cauchy(2, 325.0)
+n = 13532
+
 
 @pytest.mark.parametrize(
     ["distribution", "n"],
@@ -36,8 +39,8 @@ def test_iidrandomsequence_with_dist_rv(distribution, n):
         expected_shape = tuple([n] + [x for x in distribution.batch_shape])
 
     with numpyro.handlers.seed(rng_seed=62):
-        ans_vec, *_ = rseq.sample(n=n, vectorize=True)
-        ans_serial, *_ = rseq.sample(n=n, vectorize=False)
+        ans_vec = rseq.sample(n=n, vectorize=True)
+        ans_serial = rseq.sample(n=n, vectorize=False)
 
     # check that samples are the right type
     for ans in [ans_serial, ans_vec]:

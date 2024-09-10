@@ -75,15 +75,12 @@ class IIDRandomSequence(RandomVariable):
         """
 
         if vectorize and hasattr(self.element_rv, "expand_by"):
-            result, *_ = self.element_rv.expand_by((n,)).sample(
-                *args, **kwargs
-            )
-            result = result
+            result = self.element_rv.expand_by((n,)).sample(*args, **kwargs)
         else:
 
             def transition(_carry, _x):
                 # numpydoc ignore=GL08
-                el, *_ = self.element_rv.sample(*args, **kwargs)
+                el = self.element_rv.sample(*args, **kwargs)
                 return None, el
 
             _, result = scan(
