@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpyro
 from jax.typing import ArrayLike
 
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 
 
 class DeterministicVariable(RandomVariable):
@@ -40,7 +40,7 @@ class DeterministicVariable(RandomVariable):
         """
         self.name = name
         self.validate(value)
-        self.value = value
+        self = value
         self.set_timeseries(t_start, t_unit)
 
         return None
@@ -77,7 +77,7 @@ class DeterministicVariable(RandomVariable):
         self,
         record=False,
         **kwargs,
-    ) -> tuple:
+    ) -> ArrayLike:
         """
         Retrieve the value of the deterministic Rv
 
@@ -92,19 +92,8 @@ class DeterministicVariable(RandomVariable):
 
         Returns
         -------
-        tuple[SampledValue]
-            A length-one tuple whose single entry is a
-            :class:`SampledValue`
-            instance with `value=self.value`,
-            `t_start=self.t_start`, and
-            `t_unit=self.t_unit`.
+        ArrayLike
         """
         if record:
-            numpyro.deterministic(self.name, self.value)
-        return (
-            SampledValue(
-                value=self.value,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
+            numpyro.deterministic(self.name, self)
+        return self

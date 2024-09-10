@@ -104,5 +104,5 @@ def test_ar_samples_correctly_distributed():
             autoreg=jnp.array([0.75]),
             noise_sd=noise_sd,
         )
-        assert_almost_equal(long_ts.value[0], ar_inits)
-        assert jnp.abs(long_ts.value[-1]) < 4 * noise_sd
+        assert_almost_equal(long_ts[0], ar_inits)
+        assert jnp.abs(long_ts[-1]) < 4 * noise_sd

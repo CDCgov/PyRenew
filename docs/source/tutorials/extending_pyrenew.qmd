@@ -87,7 +87,7 @@ class MyRt(RandomVariable):
         )
         init_rt, *_ = rt_init_rv.sample()
 
-        return rt_rv.sample(n=n, init_vals=init_rt.value, **kwargs)
+        return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 ```
 
 With all the components defined, we can build the model:
@@ -118,7 +118,7 @@ with numpyro.handlers.seed(rng_seed=223):
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
-ax.plot(model0_samp.latent_infections.value)
+ax.plot(model0_samp.latent_infections)
 ax.set_xlabel("Time")
 ax.set_ylabel("Infections")
 plt.show()
@@ -223,7 +223,7 @@ class InfFeedback(RandomVariable):
             **kwargs,
         )
 
-        inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength.value)
+        inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength)
 
         inf_feedback_strength = au.pad_x_to_match_y(
             x=inf_feedback_strength,
@@ -233,7 +233,7 @@ class InfFeedback(RandomVariable):
 
         # Sampling inf feedback and adjusting the shape
         inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
-        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf.value)
+        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
         # Generating the infections with feedback
         all_infections, Rt_adj = compute_infections_from_rt_with_feedback(
@@ -293,8 +293,8 @@ Comparing `model0` with `model1`, these two should match:
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(ncols=2)
-ax[0].plot(model0_samp.latent_infections.value)
-ax[1].plot(model1_samp.latent_infections.value)
+ax[0].plot(model0_samp.latent_infections)
+ax[1].plot(model1_samp.latent_infections)
 ax[0].set_xlabel("Time (model 0)")
 ax[1].set_xlabel("Time (model 1)")
 ax[0].set_ylabel("Infections")

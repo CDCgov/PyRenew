@@ -2,7 +2,7 @@
 
 import numpyro
 
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 from pyrenew.transformation import Transform
 
 
@@ -71,17 +71,12 @@ class TransformedVariable(RandomVariable):
 
         untransformed_values = self.base_rv.sample(**kwargs)
         transformed_values = tuple(
-            SampledValue(
-                t(uv.value),
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            )
-            for t, uv in zip(self.transforms, untransformed_values)
+            t(uv) for t, uv in zip(self.transforms, untransformed_values)
         )
 
         if record:
             if len(untransformed_values) == 1:
-                numpyro.deterministic(self.name, transformed_values[0].value)
+                numpyro.deterministic(self.name, transformed_values)
             else:
                 suffixes = (
                     untransformed_values._fields
@@ -89,7 +84,7 @@ class TransformedVariable(RandomVariable):
                     else range(len(transformed_values))
                 )
                 for suffix, tv in zip(suffixes, transformed_values):
-                    numpyro.deterministic(f"{self.name}_{suffix}", tv.value)
+                    numpyro.deterministic(f"{self.name}_{suffix}", tv)
 
         return transformed_values
 

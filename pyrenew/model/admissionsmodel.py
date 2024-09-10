@@ -7,12 +7,7 @@ from typing import NamedTuple
 from jax.typing import ArrayLike
 
 from pyrenew.deterministic import NullObservation
-from pyrenew.metaclass import (
-    Model,
-    RandomVariable,
-    SampledValue,
-    _assert_sample_and_rtype,
-)
+from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
 
@@ -22,23 +17,23 @@ class HospModelSample(NamedTuple):
 
     Attributes
     ----------
-    Rt : SampledValue | None, optional
+    Rt : ArrayLike | None, optional
         The reproduction number over time. Defaults to None.
-    latent_infections : SampledValue | None, optional
+    latent_infections : ArrayLike | None, optional
         The estimated number of new infections over time. Defaults to None.
-    infection_hosp_rate : SampledValue | None, optional
+    infection_hosp_rate : ArrayLike | None, optional
         The infected hospitalization rate. Defaults to None.
-    latent_hosp_admissions : SampledValue | None, optional
+    latent_hosp_admissions : ArrayLike | None, optional
         The estimated latent hospitalizations. Defaults to None.
-    observed_hosp_admissions : SampledValue | None, optional
+    observed_hosp_admissions : ArrayLike | None, optional
         The sampled or observed hospital admissions. Defaults to None.
     """
 
-    Rt: SampledValue | None = None
-    latent_infections: SampledValue | None = None
-    infection_hosp_rate: SampledValue | None = None
-    latent_hosp_admissions: SampledValue | None = None
-    observed_hosp_admissions: SampledValue | None = None
+    Rt: ArrayLike | None = None
+    latent_infections: ArrayLike | None = None
+    infection_hosp_rate: ArrayLike | None = None
+    latent_hosp_admissions: ArrayLike | None = None
+    observed_hosp_admissions: ArrayLike | None = None
 
     def __repr__(self):
         return (
@@ -208,7 +203,7 @@ class HospitalAdmissionsModel(Model):
             observed_hosp_admissions,
             *_,
         ) = self.hosp_admission_obs_process_rv(
-            mu=latent_hosp_admissions.value[-n_datapoints:],
+            mu=latent_hosp_admissions[-n_datapoints:],
             obs=data_observed_hosp_admissions,
             **kwargs,
         )

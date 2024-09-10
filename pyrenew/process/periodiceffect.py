@@ -1,30 +1,8 @@
 # numpydoc ignore=GL08
 
-from typing import NamedTuple
 
 import pyrenew.arrayutils as au
-from pyrenew.metaclass import (
-    RandomVariable,
-    SampledValue,
-    _assert_sample_and_rtype,
-)
-
-
-class PeriodicEffectSample(NamedTuple):
-    """
-    A container for holding the output from
-    `process.PeriodicEffect()`.
-
-    Attributes
-    ----------
-    value: SampledValue
-        The sampled value.
-    """
-
-    value: SampledValue
-
-    def __repr__(self):
-        return f"PeriodicEffectSample(value={self.value})"
+from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
 
 
 class PeriodicEffect(RandomVariable):
@@ -102,19 +80,13 @@ class PeriodicEffect(RandomVariable):
 
         Returns
         -------
-        PeriodicEffectSample
+        ArrayLike
         """
 
-        return PeriodicEffectSample(
-            value=SampledValue(
-                au.tile_until_n(
-                    data=self.quantity_to_broadcast.sample(**kwargs)[0].value,
-                    n_timepoints=duration,
-                    offset=self.offset,
-                ),
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            )
+        return au.tile_until_n(
+            data=self.quantity_to_broadcast.sample(**kwargs),
+            n_timepoints=duration,
+            offset=self.offset,
         )
 
 

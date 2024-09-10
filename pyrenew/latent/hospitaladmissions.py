@@ -6,11 +6,12 @@ from typing import Any, NamedTuple
 
 import jax.numpy as jnp
 import numpyro
+from jax.typing import ArrayLike
 
 import pyrenew.arrayutils as au
 from pyrenew.convolve import compute_delay_ascertained_incidence
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 
 
 class HospitalAdmissionsSample(NamedTuple):
@@ -19,19 +20,19 @@ class HospitalAdmissionsSample(NamedTuple):
 
     Attributes
     ----------
-    infection_hosp_rate : SampledValue, optional
+    infection_hosp_rate : ArrayLike, optional
         The infection-to-hospitalization rate. Defaults to None.
-    latent_hospital_admissions : SampledValue or None
+    latent_hospital_admissions : ArrayLike or None
         The computed number of hospital admissions. Defaults to None.
-    multiplier : SampledValue or None
+    multiplier : ArrayLike or None
         The day of the week effect multiplier. Defaults to None. It
         should match the number of timepoints in the latent hospital
         admissions.
     """
 
-    infection_hosp_rate: SampledValue | None = None
-    latent_hospital_admissions: SampledValue | None = None
-    multiplier: SampledValue | None = None
+    infection_hosp_rate: ArrayLike | None = None
+    latent_hospital_admissions: ArrayLike | None = None
+    multiplier: ArrayLike | None = None
 
     def __repr__(self):
         return f"HospitalAdmissionsSample(infection_hosp_rate={self.infection_hosp_rate}, latent_hospital_admissions={self.latent_hospital_admissions}, multiplier={self.multiplier})"
@@ -86,7 +87,7 @@ class HospitalAdmissions(RandomVariable):
         infection_hospitalization_ratio_rv : RandomVariable
             Infection to hospitalization rate random variable.
         day_of_week_effect_rv : RandomVariable, optional
-            Day of the week effect. Should return a SampledValue with 7
+            Day of the week effect. Should return a ArrayLike with 7
             values. Defaults to a deterministic variable with
             jax.numpy.ones(7) (no effect).
         hospitalization_reporting_ratio_rv  : RandomVariable, optional
@@ -182,7 +183,7 @@ class HospitalAdmissions(RandomVariable):
 
     def sample(
         self,
-        latent_infections: SampledValue,
+        latent_infections: ArrayLike,
         **kwargs,
     ) -> HospitalAdmissionsSample:
         """
@@ -190,7 +191,7 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        latent_infections : SampledValue
+        latent_infections : ArrayLike
             Latent infections. Possibly the output of the `latent.Infections()`.
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal `sample()`
@@ -211,9 +212,9 @@ class HospitalAdmissions(RandomVariable):
         ) = self.infection_to_admission_interval_rv(**kwargs)
 
         latent_hospital_admissions = compute_delay_ascertained_incidence(
-            latent_infections.value,
-            infection_to_admission_interval.value,
-            infection_hosp_rate.value,
+            latent_infections,
+            infection_to_admission_interval,
+            infection_hosp_rate,
         )
 
         # Applying the day of the week effect. For this we need to:
@@ -224,10 +225,10 @@ class HospitalAdmissions(RandomVariable):
             0
         ]
 
-        if dow_effect_sampled.value.size != 7:
+        if dow_effect_sampled.size != 7:
             raise ValueError(
                 "Day of the week effect should have 7 values. "
-                f"Got {dow_effect_sampled.value.size} instead."
+                f"Got {dow_effect_sampled.size} instead."
             )
 
         # Identifying the offset
@@ -241,7 +242,7 @@ class HospitalAdmissions(RandomVariable):
         # Replicating the day of the week effect to match the number of
         # timepoints
         dow_effect = au.tile_until_n(
-            data=dow_effect_sampled.value,
+            data=dow_effect_sampled,
             n_timepoints=latent_hospital_admissions.size,
             offset=inf_offset,
         )
@@ -251,7 +252,7 @@ class HospitalAdmissions(RandomVariable):
         # Applying reporting probability
         latent_hospital_admissions = (
             latent_hospital_admissions
-            * self.hospitalization_reporting_ratio_rv(**kwargs)[0].value
+            * self.hospitalization_reporting_ratio_rv(**kwargs)
         )
 
         numpyro.deterministic(
@@ -260,14 +261,6 @@ class HospitalAdmissions(RandomVariable):
 
         return HospitalAdmissionsSample(
             infection_hosp_rate=infection_hosp_rate,
-            latent_hospital_admissions=SampledValue(
-                value=latent_hospital_admissions,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-            multiplier=SampledValue(
-                dow_effect,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
+            latent_hospital_admissions=latent_hospital_admissions,
+            multiplier=dow_effect,
         )

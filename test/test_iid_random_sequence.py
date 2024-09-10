@@ -6,7 +6,6 @@ import numpyro.distributions as dist
 import pytest
 from scipy.stats import kstest
 
-from pyrenew.metaclass import SampledValue
 from pyrenew.process import IIDRandomSequence, StandardNormalSequence
 from pyrenew.randomvariable import (
     DistributionalVariable,
@@ -42,17 +41,16 @@ def test_iidrandomsequence_with_dist_rv(distribution, n):
 
     # check that samples are the right type
     for ans in [ans_serial, ans_vec]:
-        assert isinstance(ans, SampledValue)
         # check that the samples are of the right shape
-        assert ans.value.shape == expected_shape
+        assert ans.shape == expected_shape
 
     # vectorized and unvectorized sampling should
     # not give the same answer
     # but they should give similar distributions
-    assert all(ans_serial.value.flatten() != ans_vec.value.flatten())
+    assert all(ans_serial.flatten() != ans_vec.flatten())
 
     if expected_shape == (n,):
-        kstest_out = kstest(ans_serial.value, ans_vec.value)
+        kstest_out = kstest(ans_serial, ans_vec)
         assert kstest_out.pvalue > 0.01
 
 
@@ -74,7 +72,6 @@ def test_standard_normal_sequence():
     with numpyro.handlers.seed(rng_seed=67):
         ans, *_ = norm_seq.sample(n=50000)
 
-    assert isinstance(ans, SampledValue)
     # samples should be approximately standard normal
-    kstest_out = kstest(ans.value, "norm", (0, 1))
+    kstest_out = kstest(ans, "norm", (0, 1))
     assert kstest_out.pvalue > 0.01

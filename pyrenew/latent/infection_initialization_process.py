@@ -1,8 +1,10 @@
 # numpydoc ignore=GL08
+from jax.typing import ArrayLike
+
 from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
 )
-from pyrenew.metaclass import RandomVariable, SampledValue, _assert_type
+from pyrenew.metaclass import RandomVariable, _assert_type
 
 
 class InfectionInitializationProcess(RandomVariable):
@@ -79,26 +81,19 @@ class InfectionInitializationProcess(RandomVariable):
             InfectionInitializationMethod,
         )
 
-    def sample(self) -> tuple:
+    def sample(self) -> ArrayLike:
         """Sample the Infection Initialization Process.
 
         Returns
         -------
-        tuple
-            a tuple where the only element is an array with
+        ArrayLike
             the number of initialized infections at each time point.
         """
 
         (I_pre_init,) = self.I_pre_init_rv()
 
         infection_initialization = self.infection_init_method(
-            I_pre_init.value,
+            I_pre_init,
         )
 
-        return (
-            SampledValue(
-                infection_initialization,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
+        return infection_initialization

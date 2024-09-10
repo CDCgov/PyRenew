@@ -7,12 +7,10 @@ from pyrenew.deterministic.nullrv import (
     NullProcess,
     NullVariable,
 )
-from pyrenew.deterministic.process import DeterministicProcess
 
 __all__ = [
     "DeterministicVariable",
     "DeterministicPMF",
-    "DeterministicProcess",
     "NullVariable",
     "NullProcess",
     "NullObservation",

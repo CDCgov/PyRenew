@@ -1,32 +1,11 @@
 # numpydoc ignore=GL08
-from typing import NamedTuple
 
 import jax.numpy as jnp
+from jax.typing import ArrayLike
 
 import pyrenew.arrayutils as au
-from pyrenew.metaclass import (
-    RandomVariable,
-    SampledValue,
-    _assert_sample_and_rtype,
-)
+from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
 from pyrenew.process import ARProcess, DifferencedProcess
-
-
-class RtPeriodicDiffARProcessSample(NamedTuple):
-    """
-    A container for holding the output from
-    `process.RtPeriodicDiffARProcess()`.
-
-    Attributes
-    ----------
-    rt : SampledValue, optional
-        The sampled Rt.
-    """
-
-    rt: SampledValue | None = None
-
-    def __repr__(self):
-        return f"RtPeriodicDiffARProcessSample(rt={self.rt})"
 
 
 class RtPeriodicDiffARProcess(RandomVariable):
@@ -140,7 +119,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         self,
         duration: int,
         **kwargs,
-    ) -> RtPeriodicDiffARProcessSample:
+    ) -> ArrayLike:
         """
         Samples the periodic Rt with autoregressive difference.
 
@@ -154,14 +133,14 @@ class RtPeriodicDiffARProcess(RandomVariable):
 
         Returns
         -------
-        RtPeriodicDiffARProcessSample
-            Named tuple with "rt".
+        ArrayLike
+            Sampled Rt values.
         """
 
         # Initial sample
-        log_rt_rv = self.log_rt_rv.sample(**kwargs)[0].value
-        b = self.autoreg_rv.sample(**kwargs)[0].value
-        s_r = self.periodic_diff_sd_rv.sample(**kwargs)[0].value
+        log_rt_rv = self.log_rt_rv.sample(**kwargs)
+        b = self.autoreg_rv.sample(**kwargs)
+        s_r = self.periodic_diff_sd_rv.sample(**kwargs)
 
         # How many periods to sample?
         n_periods = (duration + self.period_size - 1) // self.period_size
@@ -178,17 +157,11 @@ class RtPeriodicDiffARProcess(RandomVariable):
             ),
         )[0]
 
-        return RtPeriodicDiffARProcessSample(
-            rt=SampledValue(
-                au.repeat_until_n(
-                    data=jnp.exp(log_rt.value),
-                    n_timepoints=duration,
-                    offset=self.offset,
-                    period_size=self.period_size,
-                ),
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
+        return au.repeat_until_n(
+            data=jnp.exp(log_rt),
+            n_timepoints=duration,
+            offset=self.offset,
+            period_size=self.period_size,
         )
 
 

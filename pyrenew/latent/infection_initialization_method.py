@@ -177,7 +177,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
             An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
         I_pre_init = jnp.array(I_pre_init)
-        rate = jnp.array(self.rate_rv()[0].value)
+        rate = jnp.array(self.rate_rv())
         initial_infections = I_pre_init * jnp.exp(
             rate
             * (jnp.arange(self.n_timepoints)[:, jnp.newaxis] - self.t_pre_init)

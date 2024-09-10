@@ -37,7 +37,7 @@ def test_rw_can_be_sampled(element_rv, init_value):
     with numpyro.handlers.seed(rng_seed=62):
         # can sample with a fixed init
         # and with a random init
-        init_vals = init_rv()[0].value
+        init_vals = init_rv()
         ans_long = rw(n=5023, init_vals=init_vals)
         ans_short = rw(n=1, init_vals=init_vals)
 
@@ -46,16 +46,12 @@ def test_rw_can_be_sampled(element_rv, init_value):
         with pytest.raises(ValueError, match="differencing order"):
             rw(n=523, init_vals=jnp.hstack([init_vals, 0.25]))
     # check that the samples are of the right shape
-    assert ans_long[0].value.shape == (5023,)
-    assert ans_short[0].value.shape == (1,)
+    assert ans_long.shape == (5023,)
+    assert ans_short.shape == (1,)
     # check that the first n_inits samples are the inits
     n_inits = jnp.atleast_1d(init_vals).size
-    assert_array_almost_equal(
-        ans_long[0].value[0:n_inits], jnp.atleast_1d(init_vals)
-    )
-    assert_array_almost_equal(
-        ans_short[0].value, jnp.atleast_1d(init_vals)[:1]
-    )
+    assert_array_almost_equal(ans_long[0:n_inits], jnp.atleast_1d(init_vals))
+    assert_array_almost_equal(ans_short, jnp.atleast_1d(init_vals)[:1])
 
 
 @pytest.mark.parametrize(
@@ -90,7 +86,7 @@ def test_normal_rw_samples_correctly_distributed(step_mean, step_sd):
 
     with numpyro.handlers.seed(rng_seed=62):
         samples, *_ = rw_normal(n=n_samples, init_vals=rw_init_val)
-        samples = samples.value
+        samples = samples
 
         # Checking the shape
         assert samples.shape == (n_samples,)

@@ -9,7 +9,6 @@ from numpy.testing import assert_array_almost_equal
 
 import pyrenew.regression as r
 import pyrenew.transformation as t
-from pyrenew.metaclass import SampledValue
 
 
 def test_glm_prediction():
@@ -61,15 +60,12 @@ def test_glm_prediction():
 
     ## check prediction output
     ## is of expected type and shape
-    assert isinstance(preds.prediction, SampledValue)
-    assert preds.prediction.value.shape[0] == predictor_values.shape[0]
+    assert preds.prediction.shape[0] == predictor_values.shape[0]
 
     ## check coeffficients and intercept
-    assert isinstance(preds.coefficients, SampledValue)
-    assert isinstance(preds.intercept, SampledValue)
 
     # check results agree with manual calculation
     assert_array_almost_equal(
-        preds.prediction.value,
-        preds.intercept.value + predictor_values @ preds.coefficients.value,
+        preds.prediction,
+        preds.intercept + predictor_values @ preds.coefficients,
     )

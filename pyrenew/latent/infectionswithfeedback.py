@@ -7,11 +7,7 @@ from numpy.typing import ArrayLike
 
 import pyrenew.arrayutils as au
 import pyrenew.latent.infection_functions as inf
-from pyrenew.metaclass import (
-    RandomVariable,
-    SampledValue,
-    _assert_sample_and_rtype,
-)
+from pyrenew.metaclass import RandomVariable, _assert_sample_and_rtype
 
 
 class InfectionsRtFeedbackSample(NamedTuple):
@@ -20,14 +16,14 @@ class InfectionsRtFeedbackSample(NamedTuple):
 
     Attributes
     ----------
-    post_initialization_infections : SampledValue | None, optional
+    post_initialization_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
-    rt : SampledValue | None, optional
+    rt : ArrayLike | None, optional
         The adjusted reproduction number. Defaults to None.
     """
 
-    post_initialization_infections: SampledValue | None = None
-    rt: SampledValue | None = None
+    post_initialization_infections: ArrayLike | None = None
+    rt: ArrayLike | None = None
 
     def __repr__(self):
         return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections}, rt={self.rt})"
@@ -162,7 +158,7 @@ class InfectionsWithFeedback(RandomVariable):
         inf_feedback_strength = jnp.atleast_1d(
             self.infection_feedback_strength(
                 **kwargs,
-            )[0].value
+            )
         )
         # Making sure inf_feedback_strength spans the Rt length
         if inf_feedback_strength.size == 1:
@@ -182,7 +178,7 @@ class InfectionsWithFeedback(RandomVariable):
         # Sampling inf feedback pmf
         inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
 
-        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf.value)
+        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
         (
             post_initialization_infections,
@@ -196,10 +192,6 @@ class InfectionsWithFeedback(RandomVariable):
         )
 
         return InfectionsRtFeedbackSample(
-            post_initialization_infections=SampledValue(
-                value=post_initialization_infections,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-            rt=SampledValue(Rt_adj, t_start=self.t_start, t_unit=self.t_unit),
+            post_initialization_infections=post_initialization_infections,
+            rt=Rt_adj,
         )

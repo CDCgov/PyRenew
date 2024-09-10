@@ -1,9 +1,10 @@
 # numpydoc ignore=GL08
 
 import numpyro.distributions as dist
+from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
 
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 from pyrenew.randomvariable import DistributionalVariable
 
 
@@ -42,7 +43,7 @@ class IIDRandomSequence(RandomVariable):
 
     def sample(
         self, n: int, *args, vectorize: bool = False, **kwargs
-    ) -> tuple:
+    ) -> ArrayLike:
         """
         Sample an IID random sequence.
 
@@ -69,22 +70,21 @@ class IIDRandomSequence(RandomVariable):
 
         Returns
         -------
-        tuple[SampledValue]
-            Whose value is an array of `n`
-            samples from `self.distribution`
+        ArrayLike
+            `n` samples from `self.distribution`
         """
 
         if vectorize and hasattr(self.element_rv, "expand_by"):
             result, *_ = self.element_rv.expand_by((n,)).sample(
                 *args, **kwargs
             )
-            result = result.value
+            result = result
         else:
 
             def transition(_carry, _x):
                 # numpydoc ignore=GL08
                 el, *_ = self.element_rv.sample(*args, **kwargs)
-                return None, el.value
+                return None, el
 
             _, result = scan(
                 transition,
@@ -93,13 +93,7 @@ class IIDRandomSequence(RandomVariable):
                 length=n,
             )
 
-        return (
-            SampledValue(
-                result,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
+        return result
 
     @staticmethod
     def validate():

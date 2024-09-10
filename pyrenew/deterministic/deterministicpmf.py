@@ -33,7 +33,7 @@ class DeterministicPMF(RandomVariable):
         ----------
         name : str
             A name to assign to the variable.
-        value : tuple
+        value : ArrayLike
             An ArrayLike object.
         tol : float, optional
             Passed to pyrenew.distutil.validate_discrete_dist_vector. Defaults
@@ -81,7 +81,7 @@ class DeterministicPMF(RandomVariable):
     def sample(
         self,
         **kwargs,
-    ) -> tuple:
+    ) -> ArrayLike:
         """
         Retrieves the deterministic PMF
 
@@ -93,8 +93,7 @@ class DeterministicPMF(RandomVariable):
 
         Returns
         -------
-        tuple
-            Containing the stored values during construction wrapped in a SampledValue.
+        ArrayLike
         """
 
         return self.basevar.sample(**kwargs)
@@ -109,4 +108,4 @@ class DeterministicPMF(RandomVariable):
             The size of the PMF
         """
 
-        return self.basevar.value.size
+        return self.basevar.size

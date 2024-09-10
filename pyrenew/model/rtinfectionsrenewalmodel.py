@@ -9,12 +9,7 @@ import numpyro
 from numpy.typing import ArrayLike
 
 from pyrenew.deterministic import NullObservation
-from pyrenew.metaclass import (
-    Model,
-    RandomVariable,
-    SampledValue,
-    _assert_sample_and_rtype,
-)
+from pyrenew.metaclass import Model, RandomVariable, _assert_sample_and_rtype
 
 
 # Output class of the RtInfectionsRenewalModel
@@ -24,17 +19,17 @@ class RtInfectionsRenewalSample(NamedTuple):
 
     Attributes
     ----------
-    Rt : SampledValue | None, optional
+    Rt : ArrayLike | None, optional
         The reproduction number over time. Defaults to None.
-    latent_infections : SampledValue | None, optional
+    latent_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
-    observed_infections : SampledValue | None, optional
+    observed_infections : ArrayLike | None, optional
         The sampled infections. Defaults to None.
     """
 
-    Rt: SampledValue | None = None
-    latent_infections: SampledValue | None = None
-    observed_infections: SampledValue | None = None
+    Rt: ArrayLike | None = None
+    latent_infections: ArrayLike | None = None
+    observed_infections: ArrayLike | None = None
 
     def __repr__(self):
         return (
@@ -206,26 +201,24 @@ class RtInfectionsRenewalModel(Model):
             post_initialization_latent_infections,
             *_,
         ) = self.latent_infections_rv(
-            Rt=Rt.value,
-            gen_int=gen_int.value,
-            I0=I0.value,
+            Rt=Rt,
+            gen_int=gen_int,
+            I0=I0,
             **kwargs,
         )
 
         observed_infections, *_ = self.infection_obs_process_rv(
-            mu=post_initialization_latent_infections.value[padding:],
+            mu=post_initialization_latent_infections[padding:],
             obs=data_observed_infections,
             **kwargs,
         )
 
-        all_latent_infections = SampledValue(
-            jnp.hstack([I0.value, post_initialization_latent_infections.value])
+        all_latent_infections = jnp.hstack(
+            [I0, post_initialization_latent_infections]
         )
-        numpyro.deterministic(
-            "all_latent_infections", all_latent_infections.value
-        )
+        numpyro.deterministic("all_latent_infections", all_latent_infections)
 
-        numpyro.deterministic("Rt", Rt.value)
+        numpyro.deterministic("Rt", Rt)
 
         return RtInfectionsRenewalSample(
             Rt=Rt,

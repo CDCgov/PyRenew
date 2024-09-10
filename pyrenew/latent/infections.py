@@ -2,29 +2,11 @@
 
 from __future__ import annotations
 
-from typing import NamedTuple
-
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 import pyrenew.latent.infection_functions as inf
-from pyrenew.metaclass import RandomVariable, SampledValue
-
-
-class InfectionsSample(NamedTuple):
-    """
-    A container for holding the output from `latent.Infections()`.
-
-    Attributes
-    ----------
-    post_initialization_infections : SampledValue | None, optional
-        The estimated latent infections. Defaults to None.
-    """
-
-    post_initialization_infections: ArrayLike | None = None
-
-    def __repr__(self):
-        return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections})"
+from pyrenew.metaclass import RandomVariable
 
 
 class Infections(RandomVariable):
@@ -56,7 +38,7 @@ class Infections(RandomVariable):
         I0: ArrayLike,
         gen_int: ArrayLike,
         **kwargs,
-    ) -> InfectionsSample:
+    ) -> ArrayLike:
         """
         Samples infections given Rt, initial infections, and generation
         interval.
@@ -77,8 +59,7 @@ class Infections(RandomVariable):
 
         Returns
         -------
-        InfectionsSample
-            Named tuple with "infections".
+        ArrayLike
         """
         if I0.size < gen_int.size:
             raise ValueError(
@@ -97,10 +78,4 @@ class Infections(RandomVariable):
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        return InfectionsSample(
-            SampledValue(
-                post_initialization_infections,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            )
-        )
+        return post_initialization_infections

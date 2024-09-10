@@ -114,7 +114,7 @@ class MyRt(metaclass.RandomVariable):
 
         # Random walk step
         step_rv = randomvariable.DistributionalVariable(
-            name="rw_step_rv", distribution=dist.Normal(0, sd_rt.value)
+            name="rw_step_rv", distribution=dist.Normal(0, sd_rt)
         )
 
         rt_init_rv = randomvariable.DistributionalVariable(
@@ -135,7 +135,7 @@ class MyRt(metaclass.RandomVariable):
         )
         init_rt, *_ = rt_init_rv.sample()
 
-        return rt_rv.sample(n=n, init_vals=init_rt.value, **kwargs)
+        return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 
 
 rtproc = MyRt(

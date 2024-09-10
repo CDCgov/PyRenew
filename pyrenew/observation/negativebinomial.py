@@ -6,7 +6,7 @@ import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 
 
 class NegativeBinomialObservation(RandomVariable):
@@ -70,7 +70,7 @@ class NegativeBinomialObservation(RandomVariable):
         mu: ArrayLike,
         obs: ArrayLike | None = None,
         **kwargs,
-    ) -> tuple:
+    ) -> ArrayLike:
         """
         Sample from the negative binomial distribution
 
@@ -85,7 +85,7 @@ class NegativeBinomialObservation(RandomVariable):
 
         Returns
         -------
-        tuple
+        ArrayLike
         """
         concentration, *_ = self.concentration_rv.sample()
 
@@ -93,15 +93,9 @@ class NegativeBinomialObservation(RandomVariable):
             name=self.name,
             fn=dist.NegativeBinomial2(
                 mean=mu + self.eps,
-                concentration=concentration.value,
+                concentration=concentration,
             ),
             obs=obs,
         )
 
-        return (
-            SampledValue(
-                negative_binomial_sample,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
+        return negative_binomial_sample

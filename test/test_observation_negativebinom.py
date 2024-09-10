@@ -26,12 +26,12 @@ def test_negativebinom_deterministic_obs():
 
     assert isinstance(sim_nb1, tuple)
     assert isinstance(sim_nb2, tuple)
-    assert isinstance(sim_nb1[0].value, ArrayLike)
-    assert isinstance(sim_nb2[0].value, ArrayLike)
+    assert isinstance(sim_nb1, ArrayLike)
+    assert isinstance(sim_nb2, ArrayLike)
 
     testing.assert_array_equal(
-        sim_nb1[0].value,
-        sim_nb2[0].value,
+        sim_nb1,
+        sim_nb2,
     )
 
 
@@ -51,11 +51,11 @@ def test_negativebinom_random_obs():
         sim_nb2 = negb(mu=rates)
     assert isinstance(sim_nb1, tuple)
     assert isinstance(sim_nb2, tuple)
-    assert isinstance(sim_nb1[0].value, ArrayLike)
-    assert isinstance(sim_nb2[0].value, ArrayLike)
+    assert isinstance(sim_nb1, ArrayLike)
+    assert isinstance(sim_nb2, ArrayLike)
 
     testing.assert_array_almost_equal(
-        np.mean(sim_nb1[0].value),
-        np.mean(sim_nb2[0].value),
+        np.mean(sim_nb1),
+        np.mean(sim_nb2),
         decimal=1,
     )

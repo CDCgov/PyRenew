@@ -5,7 +5,6 @@ from __future__ import annotations
 from jax.typing import ArrayLike
 
 from pyrenew.deterministic.deterministic import DeterministicVariable
-from pyrenew.metaclass import SampledValue
 
 
 class NullVariable(DeterministicVariable):
@@ -37,7 +36,7 @@ class NullVariable(DeterministicVariable):
     def sample(
         self,
         **kwargs,
-    ) -> tuple:
+    ) -> None:
         """Retrieve the value of the Null (None)
 
         Parameters
@@ -47,11 +46,10 @@ class NullVariable(DeterministicVariable):
 
         Returns
         -------
-        tuple
-            Containing a SampledValue with None.
+        None
         """
 
-        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
+        return None
 
 
 class NullProcess(NullVariable):
@@ -84,7 +82,7 @@ class NullProcess(NullVariable):
         self,
         duration: int,
         **kwargs,
-    ) -> tuple:
+    ) -> None:
         """Retrieve the value of the Null (None)
 
         Parameters
@@ -96,11 +94,10 @@ class NullProcess(NullVariable):
 
         Returns
         -------
-        tuple
-            Containing a SampledValue with None.
+        None
         """
 
-        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
+        return None
 
 
 class NullObservation(NullVariable):
@@ -134,7 +131,7 @@ class NullObservation(NullVariable):
         mu: ArrayLike,
         obs: ArrayLike | None = None,
         **kwargs,
-    ) -> tuple:
+    ) -> None:
         """
         Retrieve the value of the Null (None)
 
@@ -149,8 +146,7 @@ class NullObservation(NullVariable):
 
         Returns
         -------
-        tuple
-            Containing a SampledValue with None.
+        None
         """
 
-        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
+        return None

@@ -196,11 +196,11 @@ def test_differenced_process_sample(
         samp_no_diffs_alt, *_ = proc.sample(
             n=n_no_diffs_alt, init_vals=init_diff_vals
         )
-    assert samp.value.shape == (n_long,)
-    assert samp_alt.value.shape == (n_long_alt,)
-    assert samp_one_diff.value.shape == (n_one_diff,)
-    assert samp_no_diffs.value.shape == (n_no_diffs,)
-    assert samp_no_diffs_alt.value.shape == (n_no_diffs_alt,)
+    assert samp.shape == (n_long,)
+    assert samp_alt.shape == (n_long_alt,)
+    assert samp_one_diff.shape == (n_one_diff,)
+    assert samp_no_diffs.shape == (n_no_diffs,)
+    assert samp_no_diffs_alt.shape == (n_no_diffs_alt,)
 
     with numpyro.handlers.seed(rng_seed=7834):
         with pytest.raises(ValueError, match="must be positive"):
@@ -268,4 +268,4 @@ def test_manual_difference_process_sample(
         fundamental_process=fundamental_process,
     )
     result, *_ = proc.sample(n=n, init_vals=inits)
-    assert_array_almost_equal(result.value, expected_solution)
+    assert_array_almost_equal(result, expected_solution)

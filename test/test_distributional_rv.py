@@ -156,4 +156,4 @@ def test_sampling_equivalent(dist, params):
         static_samp, *_ = static()
     with numpyro.handlers.seed(rng_seed=5):
         dynamic_samp, *_ = dynamic(**params)
-    assert_array_equal(static_samp.value, dynamic_samp.value)
+    assert_array_equal(static_samp, dynamic_samp)
