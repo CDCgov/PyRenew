@@ -153,7 +153,7 @@ def test_sampling_equivalent(dist, params):
     assert isinstance(static, StaticDistributionalVariable)
     assert isinstance(dynamic, DynamicDistributionalVariable)
     with numpyro.handlers.seed(rng_seed=5):
-        static_samp, *_ = static()
+        static_samp = static()
     with numpyro.handlers.seed(rng_seed=5):
-        dynamic_samp, *_ = dynamic(**params)
+        dynamic_samp = dynamic(**params)
     assert_array_equal(static_samp, dynamic_samp)
