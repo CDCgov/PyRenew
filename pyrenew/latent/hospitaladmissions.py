@@ -211,9 +211,9 @@ class HospitalAdmissions(RandomVariable):
         ) = self.infection_to_admission_interval_rv(**kwargs)
 
         latent_hospital_admissions = compute_delay_ascertained_incidence(
-            infection_hosp_rate.value,
             latent_infections.value,
             infection_to_admission_interval.value,
+            infection_hosp_rate.value,
         )
 
         # Applying the day of the week effect. For this we need to:
