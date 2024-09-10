@@ -97,7 +97,7 @@ def test_infectionsrtfeedback():
 
     assert_array_equal(
         samp1.post_initialization_infections,
-        samp2.post_initialization_infections,
+        samp2,
     )
     assert_array_equal(samp1.rt, Rt)
 
@@ -149,7 +149,7 @@ def test_infectionsrtfeedback_feedback():
 
     assert not jnp.array_equal(
         samp1.post_initialization_infections,
-        samp2.post_initialization_infections,
+        samp2,
     )
     assert_array_almost_equal(
         samp1.post_initialization_infections,

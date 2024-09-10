@@ -176,7 +176,7 @@ class InfectionsWithFeedback(RandomVariable):
             )
 
         # Sampling inf feedback pmf
-        inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
+        inf_feedback_pmf = self.infection_feedback_pmf(**kwargs)
 
         inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
