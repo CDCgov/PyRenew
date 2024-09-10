@@ -57,8 +57,7 @@ def test(obs_rate, latent_incidence, delay_interval, expected_output):
 
 def test_default_obs_rate():
     """
-    Tests for helper function to compute
-    incidence observed with a delay
+    Compute incidence observed with a delay and default observation rate
     """
     result = compute_delay_ascertained_incidence(
         jnp.array([1.0, 2.0, 3.0]),
