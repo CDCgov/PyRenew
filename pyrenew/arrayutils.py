@@ -8,6 +8,66 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 
+def pad_edges_to_match(
+    x: ArrayLike,
+    y: ArrayLike,
+    axis: int = 0,
+    pad_direction: str = "end",
+    fix_y: bool = False,
+) -> tuple[ArrayLike, ArrayLike]:
+    """
+    Pad the shorter array at the start or end using the
+    edge values to match the length of the longer array.
+
+    Parameters
+    ----------
+    x : ArrayLike
+        First array.
+    y : ArrayLike
+        Second array.
+    axis : int, optional
+        Axis along which to add padding, by default 0
+    pad_direction : str, optional
+        Direction to pad the shorter array, either "start" or "end", by default "end".
+    fix_y : bool, optional
+        If True, raise an error when `y` is shorter than `x`, by default False.
+
+    Returns
+    -------
+    tuple[ArrayLike, ArrayLike]
+        Tuple of the two arrays with the same length.
+    """
+    x = jnp.atleast_1d(x)
+    y = jnp.atleast_1d(y)
+    x_len = x.shape[axis]
+    y_len = y.shape[axis]
+    pad_size = abs(x_len - y_len)
+
+    pad_width = [(0, 0)] * x.ndim
+    pad_width[axis] = {"start": (pad_size, 0), "end": (0, pad_size)}.get(
+        pad_direction, None
+    )
+
+    if pad_direction not in ["start", "end"]:
+        raise ValueError(
+            "pad_direction must be either 'start' or 'end'."
+            f" Got {pad_direction}."
+        )
+
+    if x_len > y_len:
+        if fix_y:
+            raise ValueError(
+                "Cannot fix y when x is longer than y."
+                f" x_len: {x_len}, y_len: {y_len}."
+            )
+        y = jnp.pad(y, pad_width, mode="edge")
+
+    elif y_len > x_len:
+        x = jnp.pad(x, pad_width, mode="edge")
+
+    return x, y
+
+
 def pad_to_match(
     x: ArrayLike,
     y: ArrayLike,
