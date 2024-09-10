@@ -85,8 +85,7 @@ def test_normal_rw_samples_correctly_distributed(step_mean, step_sd):
         )
 
     with numpyro.handlers.seed(rng_seed=62):
-        samples, *_ = rw_normal(n=n_samples, init_vals=rw_init_val)
-        samples = samples
+        samples = rw_normal(n=n_samples, init_vals=rw_init_val)
 
         # Checking the shape
         assert samples.shape == (n_samples,)
