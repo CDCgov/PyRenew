@@ -206,7 +206,7 @@ class MyRt(metaclass.RandomVariable):
         rt_init_rv = randomvariable.DistributionalVariable(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
-        init_rt, *_ = rt_init_rv.sample()
+        init_rt = rt_init_rv.sample()
 
         return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 
@@ -254,7 +254,6 @@ Let's simulate from the prior predictive distribution to check that the model is
 import numpy as np
 
 timeframe = 120
-
 
 with numpyro.handlers.seed(rng_seed=223):
     simulated_data = hosp_model.sample(n_datapoints=timeframe)
@@ -482,7 +481,7 @@ def compute_eti(dataset, eti_prob):
     eti_bdry = dataset.quantile(
         ((1 - eti_prob) / 2, 1 / 2 + eti_prob / 2), dim=("chain", "draw")
     )
-    return eti_bdrys.T
+    return eti_bdry.T
 
 
 fig, axes = plt.subplots(figsize=(6, 5))
