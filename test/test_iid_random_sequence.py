@@ -86,6 +86,7 @@ def test_standard_normal_sequence(shape, n):
 
     # should be sampleable
     with numpyro.handlers.seed(rng_seed=67):
+        ans = norm_seq(n=n)
 
     # samples should have shape (n,) + the element_rv sample shape
     expected_sample_shape = (n,) + shape if shape is not None else (n,)

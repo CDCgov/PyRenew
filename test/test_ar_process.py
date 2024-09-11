@@ -109,7 +109,7 @@ def test_ar_samples_correctly_distributed():
         # check it regresses to mean
         # when started away from it
         long_ts = ar(
-          noise_name="arprocess_noise",
+            noise_name="arprocess_noise",
             n=10000,
             init_vals=ar_inits,
             autoreg=jnp.array([0.75]),

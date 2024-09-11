@@ -9,9 +9,7 @@ from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
 from numpyro.infer.reparam import LocScaleReparam
 
-
 from pyrenew.metaclass import RandomVariable
-from pyrenew.process.iidrandomsequence import StandardNormalSequence
 
 
 class ARProcess(RandomVariable):
@@ -26,7 +24,7 @@ class ARProcess(RandomVariable):
         n: int,
         autoreg: ArrayLike,
         init_vals: ArrayLike,
-        noise_sd: float | ArrayLike
+        noise_sd: float | ArrayLike,
     ) -> ArrayLike:
         """
         Sample from the AR process
