@@ -19,24 +19,30 @@ def test_infections_as_deterministic():
     rt = SimpleRt()
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt, *_ = rt(n=30)
+        sim_rt = rt(n=30)
 
     gen_int = jnp.array([0.25, 0.25, 0.25, 0.25])
 
     inf1 = Infections()
 
     obs = dict(
-        Rt=sim_rt.value,
+        Rt=sim_rt,
         I0=jnp.zeros(gen_int.size),
         gen_int=gen_int,
     )
     with numpyro.handlers.seed(rng_seed=223):
+        Infections()(
+            Rt=sim_rt,
+            I0=jnp.zeros(gen_int.size),
+            gen_int=gen_int,
+        )
+
         inf_sampled1 = inf1(**obs)
         inf_sampled2 = inf1(**obs)
 
     testing.assert_array_equal(
-        inf_sampled1.post_initialization_infections.value,
-        inf_sampled2.post_initialization_infections.value,
+        inf_sampled1,
+        inf_sampled2,
     )
 
     # Check that Initial infections vector must be at least as long as the generation interval.

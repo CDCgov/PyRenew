@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
 
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 from pyrenew.process.iidrandomsequence import StandardNormalSequence
 
 
@@ -36,7 +36,7 @@ class ARProcess(RandomVariable):
         init_vals: ArrayLike,
         noise_sd: float | ArrayLike,
         **kwargs,
-    ) -> tuple:
+    ) -> ArrayLike:
         """
         Sample from the AR process
 
@@ -62,9 +62,7 @@ class ARProcess(RandomVariable):
 
         Returns
         -------
-        tuple
-            With a single SampledValue containing an
-            array of shape (n,).
+        ArrayLike
         """
         noise_sd_arr = jnp.atleast_1d(noise_sd)
         if not noise_sd_arr.shape == (1,):
@@ -96,8 +94,8 @@ class ARProcess(RandomVariable):
                 f"order {order}"
             )
 
-        raw_noise, *_ = self.noise_rv_(n=n, **kwargs)
-        noise = noise_sd_arr * raw_noise.value
+        raw_noise = self.noise_rv_(n=n, **kwargs)
+        noise = noise_sd_arr * raw_noise
 
         def transition(recent_vals, next_noise):  # numpydoc ignore=GL08
             new_term = jnp.dot(autoreg, recent_vals) + next_noise
@@ -107,13 +105,7 @@ class ARProcess(RandomVariable):
             return new_recent_vals, new_term
 
         last, ts = scan(transition, init_vals, noise)
-        return (
-            SampledValue(
-                jnp.hstack([init_vals, ts]),
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
+        return jnp.hstack([init_vals, ts])
 
     @staticmethod
     def validate():  # numpydoc ignore=RT01

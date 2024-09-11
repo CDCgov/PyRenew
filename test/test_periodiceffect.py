@@ -19,8 +19,6 @@ def test_periodiceffect() -> None:
     params = {
         "offset": 0,
         "quantity_to_broadcast": rv,
-        "t_start": 0,
-        "t_unit": 1,
     }
 
     duration = 30
@@ -28,7 +26,7 @@ def test_periodiceffect() -> None:
     pe = PeriodicEffect(**params)
 
     with numpyro.handlers.seed(rng_seed=223):
-        ans = pe(duration=duration)[0].value
+        ans = pe(duration=duration)
 
     # Checking that the shape of the sampled Rt is correct
     assert ans.shape == (duration,)
@@ -42,9 +40,9 @@ def test_periodiceffect() -> None:
     params["offset"] = 5
     pe = PeriodicEffect(**params)
     with numpyro.handlers.seed(rng_seed=223):
-        ans2 = pe(duration=duration)[0].value
+        ans2 = pe(duration=duration)
 
-        ans2 = pe(duration=duration)[0].value
+        ans2 = pe(duration=duration)
     assert ans2.shape == (duration,)
 
     # This time series should be the same as the previous one, but shifted by
@@ -63,14 +61,11 @@ def test_weeklyeffect() -> None:
     params = {
         "offset": 2,
         "quantity_to_broadcast": rv,
-        "t_start": 0,
-        "t_unit": 1,
     }
 
     params2 = {
         "offset": 2,
         "quantity_to_broadcast": rv,
-        "t_start": 0,
     }
 
     duration = 30
@@ -78,8 +73,8 @@ def test_weeklyeffect() -> None:
     pe = PeriodicEffect(**params)
     pe2 = DayOfWeekEffect(**params2)
 
-    ans1 = pe(duration=duration)[0].value
-    ans2 = pe2(duration=duration)[0].value
+    ans1 = pe(duration=duration)
+    ans2 = pe2(duration=duration)
 
     assert_array_equal(ans1, ans2)
 

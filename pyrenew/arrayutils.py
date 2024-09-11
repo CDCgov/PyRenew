@@ -169,7 +169,7 @@ class PeriodicProcessSample(NamedTuple):
     value: ArrayLike | None = None
 
     def __repr__(self):
-        return f"PeriodicProcessSample(value={self.value})"
+        return f"PeriodicProcessSample(value={self})"
 
 
 def tile_until_n(

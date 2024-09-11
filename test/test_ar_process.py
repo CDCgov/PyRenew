@@ -98,11 +98,11 @@ def test_ar_samples_correctly_distributed():
     with numpyro.handlers.seed(rng_seed=62):
         # check it regresses to mean
         # when started away from it
-        long_ts, *_ = ar(
+        long_ts = ar(
             n=10000,
             init_vals=ar_inits,
             autoreg=jnp.array([0.75]),
             noise_sd=noise_sd,
         )
-        assert_almost_equal(long_ts.value[0], ar_inits)
-        assert jnp.abs(long_ts.value[-1]) < 4 * noise_sd
+        assert_almost_equal(long_ts[0], ar_inits)
+        assert jnp.abs(long_ts[-1]) < 4 * noise_sd

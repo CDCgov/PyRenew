@@ -1,30 +1,8 @@
 # numpydoc ignore=GL08
 
-from typing import NamedTuple
 
 import pyrenew.arrayutils as au
-from pyrenew.metaclass import (
-    RandomVariable,
-    SampledValue,
-    _assert_sample_and_rtype,
-)
-
-
-class PeriodicEffectSample(NamedTuple):
-    """
-    A container for holding the output from
-    `process.PeriodicEffect()`.
-
-    Attributes
-    ----------
-    value: SampledValue
-        The sampled value.
-    """
-
-    value: SampledValue
-
-    def __repr__(self):
-        return f"PeriodicEffectSample(value={self.value})"
+from pyrenew.metaclass import RandomVariable
 
 
 class PeriodicEffect(RandomVariable):
@@ -36,8 +14,6 @@ class PeriodicEffect(RandomVariable):
         self,
         offset: int,
         quantity_to_broadcast: RandomVariable,
-        t_start: int,
-        t_unit: int,
     ):
         """
         Default constructor for PeriodicEffect class.
@@ -49,10 +25,6 @@ class PeriodicEffect(RandomVariable):
             period_size - 1.
         quantity_to_broadcast : RandomVariable
             Values to be broadcasted (repeated or tiled).
-        t_start : int
-            Start time of the process.
-        t_unit : int
-            Unit of time relative to the model's fundamental (smallest) time unit.
 
         Returns
         -------
@@ -62,11 +34,6 @@ class PeriodicEffect(RandomVariable):
         PeriodicEffect.validate(quantity_to_broadcast)
 
         self.offset = offset
-
-        self.set_timeseries(
-            t_start=t_start,
-            t_unit=t_unit,
-        )
 
         self.quantity_to_broadcast = quantity_to_broadcast
 
@@ -85,7 +52,7 @@ class PeriodicEffect(RandomVariable):
         None
         """
 
-        _assert_sample_and_rtype(quantity_to_broadcast)
+        assert isinstance(quantity_to_broadcast, RandomVariable)
 
         return None
 
@@ -102,19 +69,13 @@ class PeriodicEffect(RandomVariable):
 
         Returns
         -------
-        PeriodicEffectSample
+        ArrayLike
         """
 
-        return PeriodicEffectSample(
-            value=SampledValue(
-                au.tile_until_n(
-                    data=self.quantity_to_broadcast.sample(**kwargs)[0].value,
-                    n_timepoints=duration,
-                    offset=self.offset,
-                ),
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            )
+        return au.tile_until_n(
+            data=self.quantity_to_broadcast.sample(**kwargs),
+            n_timepoints=duration,
+            offset=self.offset,
         )
 
 
@@ -127,7 +88,6 @@ class DayOfWeekEffect(PeriodicEffect):
         self,
         offset: int,
         quantity_to_broadcast: RandomVariable,
-        t_start: int,
     ):
         """
         Default constructor for DayOfWeekEffect class.
@@ -139,8 +99,6 @@ class DayOfWeekEffect(PeriodicEffect):
             6.
         quantity_to_broadcast : RandomVariable
             Values to be broadcasted (repeated or tiled).
-        t_start : int
-            Start time of the process.
 
         Returns
         -------
@@ -152,8 +110,6 @@ class DayOfWeekEffect(PeriodicEffect):
         super().__init__(
             offset=offset,
             quantity_to_broadcast=quantity_to_broadcast,
-            t_start=t_start,
-            t_unit=1,
         )
 
         return None

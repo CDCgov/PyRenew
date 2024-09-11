@@ -30,7 +30,6 @@ def test_forecast():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
     latent_infections = Infections()
     observed_infections = PoissonObservation(name="poisson_rv")
@@ -52,7 +51,7 @@ def test_forecast():
     model.run(
         num_warmup=5,
         num_samples=5,
-        data_observed_infections=model_sample.observed_infections.value,
+        data_observed_infections=model_sample.observed_infections,
         rng_key=jr.key(54),
     )
 

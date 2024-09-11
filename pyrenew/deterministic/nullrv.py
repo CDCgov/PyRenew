@@ -5,7 +5,6 @@ from __future__ import annotations
 from jax.typing import ArrayLike
 
 from pyrenew.deterministic.deterministic import DeterministicVariable
-from pyrenew.metaclass import SampledValue
 
 
 class NullVariable(DeterministicVariable):
@@ -37,7 +36,7 @@ class NullVariable(DeterministicVariable):
     def sample(
         self,
         **kwargs,
-    ) -> tuple:
+    ) -> None:
         """Retrieve the value of the Null (None)
 
         Parameters
@@ -47,60 +46,10 @@ class NullVariable(DeterministicVariable):
 
         Returns
         -------
-        tuple
-            Containing a SampledValue with None.
-        """
-
-        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
-
-
-class NullProcess(NullVariable):
-    """A null random variable. Sampling returns None."""
-
-    def __init__(self) -> None:
-        """Default constructor
-
-        Returns
-        -------
         None
         """
 
-        self.validate()
-
         return None
-
-    @staticmethod
-    def validate() -> None:
-        """
-        Not used
-
-        Returns
-        -------
-        None
-        """
-        return None
-
-    def sample(
-        self,
-        duration: int,
-        **kwargs,
-    ) -> tuple:
-        """Retrieve the value of the Null (None)
-
-        Parameters
-        ----------
-        duration : int
-            Number of timepoints to sample (ignored).
-        **kwargs : dict, optional
-            Ignored.
-
-        Returns
-        -------
-        tuple
-            Containing a SampledValue with None.
-        """
-
-        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
 
 
 class NullObservation(NullVariable):
@@ -134,7 +83,7 @@ class NullObservation(NullVariable):
         mu: ArrayLike,
         obs: ArrayLike | None = None,
         **kwargs,
-    ) -> tuple:
+    ) -> None:
         """
         Retrieve the value of the Null (None)
 
@@ -149,8 +98,7 @@ class NullObservation(NullVariable):
 
         Returns
         -------
-        tuple
-            Containing a SampledValue with None.
+        None
         """
 
-        return (SampledValue(None, t_start=self.t_start, t_unit=self.t_unit),)
+        return None

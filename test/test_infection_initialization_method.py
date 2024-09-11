@@ -20,8 +20,8 @@ def test_initialize_infections_exponential():
     rate_RV = DeterministicVariable(name="rate_RV", value=np.array([0.5, 0.1]))
     rate_scalar_RV = DeterministicVariable(name="rate_RV", value=0.5)
 
-    rate = rate_RV()[0].value
-    rate_scalar = rate_scalar_RV()[0].value
+    rate = rate_RV()
+    rate_scalar = rate_scalar_RV()
 
     I_pre_init = np.array([5.0, 10.0])
     I_pre_init_scalar = 5.0
@@ -131,8 +131,8 @@ def test_initialize_infections_zero_pad():
 
     n_timepoints = 10
     I_pre_init_RV = DeterministicVariable(name="I_pre_init_RV", value=10.0)
-    (I_pre_init,) = I_pre_init_RV()
-    I_pre_init = I_pre_init.value
+    I_pre_init = I_pre_init_RV()
+    I_pre_init = I_pre_init
 
     infections = InitializeInfectionsZeroPad(
         n_timepoints
@@ -149,8 +149,8 @@ def test_initialize_infections_zero_pad():
         name="I_pre_init_RV", value=np.array([10.0, 10.0])
     )
 
-    (I_pre_init_2,) = I_pre_init_RV_2()
-    I_pre_init_2 = I_pre_init_2.value
+    I_pre_init_2 = I_pre_init_RV_2()
+    I_pre_init_2 = I_pre_init_2
 
     infections_2 = InitializeInfectionsZeroPad(
         n_timepoints

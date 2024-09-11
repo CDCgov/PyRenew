@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
 
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 
 
 class DifferencedProcess(RandomVariable):
@@ -151,7 +151,7 @@ class DifferencedProcess(RandomVariable):
         *args,
         fundamental_process_init_vals: ArrayLike = None,
         **kwargs,
-    ) -> tuple:
+    ) -> ArrayLike:
         """
         Sample from the process
 
@@ -185,9 +185,8 @@ class DifferencedProcess(RandomVariable):
 
         Returns
         -------
-        SampledValue
-            Whose value entry is a single array representing the
-            undifferenced timeseries
+        ArrayLike
+            representing the undifferenced timeseries
         """
         if not isinstance(n, int):
             raise ValueError("n must be an integer. " f"Got {type(n)}")
@@ -196,23 +195,17 @@ class DifferencedProcess(RandomVariable):
 
         n_diffs = n - self.differencing_order
         if n_diffs > 0:
-            diff_samp, *_ = self.fundamental_process.sample(
+            diff_samp = self.fundamental_process.sample(
                 *args,
                 n=n_diffs,
                 init_vals=fundamental_process_init_vals,
                 **kwargs,
             )
-            diffs = diff_samp.value
+            diffs = diff_samp
         else:
             diffs = jnp.array([])
         integrated_ts = self.integrate(init_vals, diffs)[:n]
-        return (
-            SampledValue(
-                value=integrated_ts,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
+        return integrated_ts
 
     @staticmethod
     def validate():

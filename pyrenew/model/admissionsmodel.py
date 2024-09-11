@@ -7,12 +7,7 @@ from typing import NamedTuple
 from jax.typing import ArrayLike
 
 from pyrenew.deterministic import NullObservation
-from pyrenew.metaclass import (
-    Model,
-    RandomVariable,
-    SampledValue,
-    _assert_sample_and_rtype,
-)
+from pyrenew.metaclass import Model, RandomVariable
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
 
@@ -22,23 +17,23 @@ class HospModelSample(NamedTuple):
 
     Attributes
     ----------
-    Rt : SampledValue | None, optional
+    Rt : ArrayLike | None, optional
         The reproduction number over time. Defaults to None.
-    latent_infections : SampledValue | None, optional
+    latent_infections : ArrayLike | None, optional
         The estimated number of new infections over time. Defaults to None.
-    infection_hosp_rate : SampledValue | None, optional
+    infection_hosp_rate : ArrayLike | None, optional
         The infected hospitalization rate. Defaults to None.
-    latent_hosp_admissions : SampledValue | None, optional
+    latent_hosp_admissions : ArrayLike | None, optional
         The estimated latent hospitalizations. Defaults to None.
-    observed_hosp_admissions : SampledValue | None, optional
+    observed_hosp_admissions : ArrayLike | None, optional
         The sampled or observed hospital admissions. Defaults to None.
     """
 
-    Rt: SampledValue | None = None
-    latent_infections: SampledValue | None = None
-    infection_hosp_rate: SampledValue | None = None
-    latent_hosp_admissions: SampledValue | None = None
-    observed_hosp_admissions: SampledValue | None = None
+    Rt: ArrayLike | None = None
+    latent_infections: ArrayLike | None = None
+    infection_hosp_rate: ArrayLike | None = None
+    latent_hosp_admissions: ArrayLike | None = None
+    observed_hosp_admissions: ArrayLike | None = None
 
     def __repr__(self):
         return (
@@ -125,15 +120,11 @@ class HospitalAdmissionsModel(Model):
         Returns
         -------
         None
-
-        See Also
-        --------
-        _assert_sample_and_rtype : Perform type-checking and verify RV
         """
-        _assert_sample_and_rtype(latent_hosp_admissions_rv, skip_if_none=False)
-        _assert_sample_and_rtype(
-            hosp_admission_obs_process_rv, skip_if_none=True
-        )
+        assert isinstance(latent_hosp_admissions_rv, RandomVariable)
+        if hosp_admission_obs_process_rv is not None:
+            assert isinstance(hosp_admission_obs_process_rv, RandomVariable)
+
         return None
 
     def sample(
@@ -193,7 +184,6 @@ class HospitalAdmissionsModel(Model):
             padding=padding,
             **kwargs,
         )
-
         # Sampling the latent hospital admissions
         (
             infection_hosp_rate,
@@ -203,12 +193,8 @@ class HospitalAdmissionsModel(Model):
             latent_infections=basic_model.latent_infections,
             **kwargs,
         )
-
-        (
-            observed_hosp_admissions,
-            *_,
-        ) = self.hosp_admission_obs_process_rv(
-            mu=latent_hosp_admissions.value[-n_datapoints:],
+        observed_hosp_admissions = self.hosp_admission_obs_process_rv(
+            mu=latent_hosp_admissions[-n_datapoints:],
             obs=data_observed_hosp_admissions,
             **kwargs,
         )

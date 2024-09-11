@@ -12,7 +12,6 @@ import numpyro.distributions as dist
 from jax.typing import ArrayLike
 
 import pyrenew.transformation as t
-from pyrenew.metaclass import SampledValue
 
 
 class AbstractRegressionPrediction(metaclass=ABCMeta):  # numpydoc ignore=GL08
@@ -39,19 +38,19 @@ class GLMPredictionSample(NamedTuple):
 
     Attributes
     ----------
-    prediction : SampledValue | None, optional
+    prediction : ArrayLike | None, optional
         Transformed predictions. Defaults to None.
-    intercept : SampledValue | None, optional
+    intercept : ArrayLike | None, optional
         Sampled intercept from intercept priors.
         Defaults to None.
-    coefficients : SampledValue | None, optional
+    coefficients : ArrayLike | None, optional
         Prediction coefficients generated
         from coefficients priors. Defaults to None.
     """
 
-    prediction: SampledValue | None = None
-    intercept: SampledValue | None = None
-    coefficients: SampledValue | None = None
+    prediction: ArrayLike | None = None
+    intercept: ArrayLike | None = None
+    coefficients: ArrayLike | None = None
 
     def __repr__(self):
         return (
@@ -182,9 +181,9 @@ class GLMPrediction(AbstractRegressionPrediction):
         prediction = self.predict(intercept, coefficients, predictor_values)
 
         return GLMPredictionSample(
-            prediction=SampledValue(prediction),
-            intercept=SampledValue(intercept),
-            coefficients=SampledValue(coefficients),
+            prediction=prediction,
+            intercept=intercept,
+            coefficients=coefficients,
         )
 
     def __call__(self, *args, **kwargs):

@@ -9,7 +9,6 @@ import numpyro.distributions as dist
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HospitalAdmissions, Infections
-from pyrenew.metaclass import SampledValue
 from pyrenew.randomvariable import DistributionalVariable
 
 
@@ -25,7 +24,7 @@ def test_admissions_sample():
     n_steps = 30
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_rt = rt(n=n_steps)[0].value
+        sim_rt = rt(n=n_steps)
 
     gen_int = jnp.array([0.5, 0.1, 0.1, 0.2, 0.1])
     inf_hosp_int_array = jnp.array(
@@ -71,16 +70,14 @@ def test_admissions_sample():
 
     with numpyro.handlers.seed(rng_seed=223):
         sim_hosp_1 = hosp1(
-            latent_infections=SampledValue(
-                value=jnp.hstack(
-                    [i0, inf_sampled1.post_initialization_infections.value]
-                )
+            latent_infections=jnp.hstack(
+                [i0, inf_sampled1.post_initialization_infections]
             )
         )
 
     testing.assert_array_less(
-        sim_hosp_1.latent_hospital_admissions.value[-n_steps:],
-        inf_sampled1[0].value,
+        sim_hosp_1.latent_hospital_admissions[-n_steps:],
+        inf_sampled1.post_initialization_infections,
     )
     inf_hosp2 = jnp.ones(30)
     inf_hosp2 = DeterministicPMF("i2h", inf_hosp2 / sum(inf_hosp2))
@@ -116,17 +113,17 @@ def test_admissions_sample():
         obs_data_first_day_of_the_week=2,
     )
 
-    inf_sampled2 = SampledValue(jnp.ones(30))
+    inf_sampled2 = jnp.ones(30)
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_2a = hosp2a(latent_infections=inf_sampled2).multiplier.value
+        sim_hosp_2a = hosp2a(latent_infections=inf_sampled2).multiplier
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_2b = hosp2b(latent_infections=inf_sampled2).multiplier.value
+        sim_hosp_2b = hosp2b(latent_infections=inf_sampled2).multiplier
 
     with numpyro.handlers.seed(rng_seed=223):
         with testing.assert_raises(ValueError):
-            hosp3b(latent_infections=inf_sampled2).multiplier.value
+            hosp3b(latent_infections=inf_sampled2).multiplier
 
     testing.assert_array_equal(
         sim_hosp_2a[2 : (sim_hosp_2b.size - 2)],
