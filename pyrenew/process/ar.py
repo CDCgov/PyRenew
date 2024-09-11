@@ -96,15 +96,20 @@ class ARProcess(RandomVariable):
 
         last, ts = scan(
             f=transition,
-            init=init_vals[..., jnp.newaxis],
+            init=jnp.flip(init_vals, axis=0)[..., jnp.newaxis],
             xs=None,
             length=(n - order),
         )
         return (
             SampledValue(
                 jnp.squeeze(
-                    jnp.concatenate(
-                        [init_vals[::, jnp.newaxis], ts],
+                    jnp.vstack(
+                        [
+                            init_vals[..., jnp.newaxis].reshape(
+                                (order,) + ts.shape[1:]
+                            ),
+                            ts,
+                        ],
                     )
                 ),
                 t_start=self.t_start,

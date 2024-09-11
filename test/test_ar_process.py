@@ -47,10 +47,18 @@ def test_ar_can_be_sampled():
             autoreg=jnp.array([0.05, 0.025, 0.025]),
             noise_sd=jnp.array([0.25]),
         )
+        res4, *_ = ar(
+            noise_name="ar3process_noise",
+            n=1230,
+            init_vals=jnp.array([[[50.0, 49.9, 48.2]]]).reshape((3, -1)),
+            autoreg=jnp.array([[[0.05, 0.025, 0.025]]]).reshape((3, -1)),
+            noise_sd=jnp.array([0.25]),
+        )
 
         assert jnp.shape(res1.value) == jnp.shape(res2.value)
         assert jnp.shape(res2.value) == jnp.shape(res3.value)
-        assert jnp.shape(res3.value) == (1230,)
+        assert jnp.shape(res3.value) == jnp.shape(res4.value)
+        assert jnp.shape(res4.value) == (1230,)
 
 
 def test_ar_shape_validation():
