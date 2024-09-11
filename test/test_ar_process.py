@@ -17,8 +17,8 @@ from pyrenew.process import ARProcess
         [jnp.array([50.0]), jnp.array([0.95]), 0.5, 1],
         # AR1, multi-dim
         [
-            jnp.array([[43.1, -32.5, 3.2]]).reshape((1, 3)),
-            jnp.array([[0.50, 0.205, 0.232]]).reshape((1, 3)),
+            jnp.array([[43.1, -32.5, 3.2, -0.5]]).reshape((1, 4)),
+            jnp.array([[0.50, 0.205, 0.232, 0.25]]).reshape((1, 4)),
             0.73,
             5322,
         ],
@@ -41,7 +41,7 @@ def test_ar_can_be_sampled(init_vals, autoreg, noise_sd, n):
     with numpyro.handlers.seed(rng_seed=62):
         # can sample
 
-        res, *_ = ar(
+        res = ar(
             noise_name="ar3process_noise",
             n=n,
             init_vals=init_vals,
@@ -52,9 +52,9 @@ def test_ar_can_be_sampled(init_vals, autoreg, noise_sd, n):
         non_time_dims = jnp.shape(jnp.atleast_1d(autoreg))[1:]
         non_time_dims = tuple(x for x in non_time_dims if x != 1)
         expected_shape = (n,) + non_time_dims
-        assert jnp.shape(res.value) == expected_shape
+        assert jnp.shape(res) == expected_shape
         assert_array_almost_equal(
-            jnp.squeeze(res.value[0:order, ...]), jnp.squeeze(init_vals)
+            jnp.squeeze(res[0:order, ...]), jnp.squeeze(init_vals)
         )
 
 
@@ -64,7 +64,7 @@ def test_ar_can_be_sampled(init_vals, autoreg, noise_sd, n):
         # autoreg higher dim than init vals
         [
             jnp.array([50.0, 49.9, 48.2]),
-            jnp.array([0.05, 0.025, 0.025]),
+            jnp.array([[0.05, 0.025, 0.025]]),
             0.5,
             1230,
         ],

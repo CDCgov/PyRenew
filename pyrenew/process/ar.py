@@ -60,10 +60,6 @@ class ARProcess(RandomVariable):
         init_vals = jnp.atleast_1d(init_vals)
         order = autoreg.shape[0]
 
-        noise_shape = jax.lax.broadcast_shapes(
-            autoreg.shape[1:], noise_sd.shape
-        )
-
         if not init_vals.shape == autoreg.shape:
             raise ValueError(
                 "Initial values array and autoregressive "
@@ -74,6 +70,14 @@ class ARProcess(RandomVariable):
                 "a shape of {autoreg.shape} for the autoregressive "
                 "coefficients",
             )
+
+        noise_shape = jax.lax.broadcast_shapes(
+            autoreg.shape[1:], noise_sd.shape
+        )
+
+        term_shape = (1,) + noise_shape
+        history_shape = (order,) + noise_shape
+        subset_shape = (order - 1,) + noise_shape
 
         def transition(recent_vals, _):  # numpydoc ignore=GL08
             with numpyro.handlers.reparam(
@@ -88,42 +92,46 @@ class ARProcess(RandomVariable):
 
             dot_prod = jnp.einsum("i...,i...->...", autoreg, recent_vals)
 
-            print("dot product shape: ", dot_prod.shape)
-            print("next noise shape: ", next_noise.shape)
+            new_term = (dot_prod + next_noise)[jnp.newaxis, ...]
 
-            new_term = jnp.atleast_1d(dot_prod + next_noise)
+            assert jnp.shape(new_term) == term_shape
 
-            recent_to_concat = recent_vals[: (order - 1), ...]
-
-            print("new term shape: ", new_term.shape)
-            print("recent to concat shape: ", recent_to_concat.shape)
-            new_recent_vals = jnp.vstack([new_term, recent_to_concat])
+            if order > 1:
+                recent_to_concat = recent_vals[: (order - 1)]
+                assert jnp.shape(recent_to_concat) == subset_shape
+                new_recent_vals = jnp.concatenate(
+                    [new_term, recent_to_concat], axis=0
+                )
+            else:
+                new_recent_vals = new_term
 
             return new_recent_vals, new_term
 
-        inits_flipped = jnp.flip(init_vals, axis=0)
-
-        last, ts = scan(
-            f=transition,
-            init=inits_flipped,
-            xs=None,
-            length=(n - order),
+        inits_flipped = jnp.broadcast_to(
+            jnp.flip(init_vals, axis=0), history_shape
         )
 
-        result = jnp.atleast_1d(
-            jnp.squeeze(
-                jnp.vstack(
-                    [
-                        init_vals[..., jnp.newaxis].reshape(
-                            (order,) + ts.shape[1:]
-                        ),
-                        ts,
-                    ],
-                )[:n, ...]
+        assert jnp.shape(inits_flipped) == history_shape
+
+        if n - order > 0:
+            last, ts = scan(
+                f=transition,
+                init=inits_flipped,
+                xs=None,
+                length=(n - order),
             )
-        )
 
-        return result
+            ts_with_inits = jnp.concatenate(
+                [
+                    jnp.broadcast_to(init_vals, history_shape),
+                    ts.reshape((n - order, -1)),
+                ],
+                axis=0,
+            )
+        else:
+            ts_with_inits = init_vals
+
+        return jnp.atleast_1d(jnp.squeeze(ts_with_inits[:n]))
 
     @staticmethod
     def validate():  # numpydoc ignore=RT01
