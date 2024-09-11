@@ -109,7 +109,7 @@ class MyRt(metaclass.RandomVariable):
 
     def sample(self, n: int, **kwargs) -> tuple:
         # Standard deviation of the random walk
-        sd_rt, *_ = self.sd_rv()
+        sd_rt = self.sd_rv()
 
         # Random walk step
         step_rv = randomvariable.DistributionalVariable(
@@ -132,7 +132,7 @@ class MyRt(metaclass.RandomVariable):
             base_rv=base_rv,
             transforms=transformation.ExpTransform(),
         )
-        init_rt, *_ = rt_init_rv.sample()
+        init_rt = rt_init_rv.sample()
 
         return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 
@@ -167,7 +167,7 @@ obs = observation.NegativeBinomialObservation(
 )
 ```
 
-4. And finally, we built the model:
+4. And finally, we build the model:
 
 ```{python}
 # | label: init-model
@@ -281,10 +281,11 @@ As a result, we can see the posterior distribution of our novel day-of-the-week 
 # | label: fig-output-day-of-week
 # | fig-cap: Day of the week effect
 out = hosp_model_dow.plot_posterior(
-    var="dayofweek_effect", ylab="Day of the Week Effect", samples=500
+    var="dayofweek_effect_raw", ylab="Day of the Week Effect", samples=500
 )
 
-sp = hosp_model_dow.spread_draws(["dayofweek_effect"])
+sp = hosp_model_dow.spread_draws(["dayofweek_effect_raw"])
+# dayofweek_effect is not recorded
 ```
 
 The new model with the day-of-the-week effect can be compared to the previous model without the effect. Finally, let's reproduce the figure without the day-of-the-week effect, and then plot the new model with the effect:
