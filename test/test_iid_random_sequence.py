@@ -12,9 +12,6 @@ from pyrenew.randomvariable import (
     StaticDistributionalVariable,
 )
 
-distribution = dist.Cauchy(2, 325.0)
-n = 13532
-
 
 @pytest.mark.parametrize(
     ["distribution", "n"],
