@@ -42,17 +42,17 @@ def pad_edges_to_match(
     x_len = x.shape[axis]
     y_len = y.shape[axis]
     pad_size = abs(x_len - y_len)
-
     pad_width = [(0, 0)] * x.ndim
-    pad_width[axis] = {"start": (pad_size, 0), "end": (0, pad_size)}.get(
-        pad_direction, None
-    )
 
     if pad_direction not in ["start", "end"]:
         raise ValueError(
             "pad_direction must be either 'start' or 'end'."
             f" Got {pad_direction}."
         )
+
+    pad_width[axis] = {"start": (pad_size, 0), "end": (0, pad_size)}.get(
+        pad_direction, None
+    )
 
     if x_len > y_len:
         if fix_y:

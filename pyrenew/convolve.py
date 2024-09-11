@@ -80,7 +80,9 @@ def new_convolve_scanner(
         new_val = transform(
             multiplier * jnp.dot(array_to_convolve, history_subset)
         )
-        latest = jnp.hstack([history_subset[1:], new_val])
+        latest = jnp.concatenate(
+            [history_subset[1:], jnp.expand_dims(new_val, axis=0)]
+        )
         return latest, new_val
 
     return _new_scanner
