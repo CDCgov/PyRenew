@@ -69,11 +69,15 @@ def test_admissions_sample():
     )
 
     with numpyro.handlers.seed(rng_seed=223):
-        sim_hosp_1 = hosp1(latent_infections=jnp.hstack([i0, inf_sampled1]))
+        sim_hosp_1 = hosp1(
+            latent_infections=jnp.hstack(
+                [i0, inf_sampled1.post_initialization_infections]
+            )
+        )
 
     testing.assert_array_less(
         sim_hosp_1.latent_hospital_admissions[-n_steps:],
-        inf_sampled1,
+        inf_sampled1.post_initialization_infections,
     )
     inf_hosp2 = jnp.ones(30)
     inf_hosp2 = DeterministicPMF("i2h", inf_hosp2 / sum(inf_hosp2))

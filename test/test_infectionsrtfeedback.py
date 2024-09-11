@@ -97,7 +97,7 @@ def test_infectionsrtfeedback():
 
     assert_array_equal(
         samp1.post_initialization_infections,
-        samp2,
+        samp2.post_initialization_infections,
     )
     assert_array_equal(samp1.rt, Rt)
 
