@@ -96,10 +96,10 @@ def test_infectionsrtfeedback():
         )
 
     assert_array_equal(
-        samp1.post_initialization_infections.value,
-        samp2.post_initialization_infections.value,
+        samp1.post_initialization_infections,
+        samp2.post_initialization_infections,
     )
-    assert_array_equal(samp1.rt.value, Rt)
+    assert_array_equal(samp1.rt, Rt)
 
     return None
 
@@ -143,18 +143,18 @@ def test_infectionsrtfeedback_feedback():
         gen_int=gen_int,
         Rt=Rt,
         I0=I0,
-        inf_feedback_strength=inf_feed_strength()[0].value,
-        inf_feedback_pmf=inf_feedback_pmf()[0].value,
+        inf_feedback_strength=inf_feed_strength(),
+        inf_feedback_pmf=inf_feedback_pmf(),
     )
 
     assert not jnp.array_equal(
-        samp1.post_initialization_infections.value,
-        samp2.post_initialization_infections.value,
+        samp1.post_initialization_infections,
+        samp2,
     )
     assert_array_almost_equal(
-        samp1.post_initialization_infections.value,
+        samp1.post_initialization_infections,
         res["post_initialization_infections"],
     )
-    assert_array_almost_equal(samp1.rt.value, res["rt"])
+    assert_array_almost_equal(samp1.rt, res["rt"])
 
     return None

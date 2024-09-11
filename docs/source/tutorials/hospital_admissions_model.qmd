@@ -179,7 +179,6 @@ I0 = InfectionInitializationProcess(
         n_initialization_points,
         deterministic.DeterministicVariable(name="rate", value=0.05),
     ),
-    t_unit=1,
 )
 
 # Generation interval and Rt
@@ -207,9 +206,9 @@ class MyRt(metaclass.RandomVariable):
         rt_init_rv = randomvariable.DistributionalVariable(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
-        init_rt, *_ = rt_init_rv.sample()
+        init_rt = rt_init_rv.sample()
 
-        return rt_rv.sample(n=n, init_vals=init_rt.value, **kwargs)
+        return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 
 
 rtproc = MyRt()
@@ -256,7 +255,6 @@ import numpy as np
 
 timeframe = 120
 
-
 with numpyro.handlers.seed(rng_seed=223):
     simulated_data = hosp_model.sample(n_datapoints=timeframe)
 ```
@@ -269,11 +267,11 @@ import matplotlib.pyplot as plt
 fig, axs = plt.subplots(1, 2)
 
 # Rt plot
-axs[0].plot(simulated_data.Rt.value)
+axs[0].plot(simulated_data.Rt)
 axs[0].set_ylabel("Simulated Rt")
 
 # Admissions plot
-axs[1].plot(simulated_data.observed_hosp_admissions.value, "-o")
+axs[1].plot(simulated_data.observed_hosp_admissions, "-o")
 axs[1].set_ylabel("Simulated Admissions")
 
 fig.suptitle("Basic renewal model")
@@ -483,7 +481,7 @@ def compute_eti(dataset, eti_prob):
     eti_bdry = dataset.quantile(
         ((1 - eti_prob) / 2, 1 / 2 + eti_prob / 2), dim=("chain", "draw")
     )
-    return eti_bdry.values.T
+    return eti_bdry.T
 
 
 fig, axes = plt.subplots(figsize=(6, 5))

@@ -6,7 +6,7 @@ import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 
 
 class PoissonObservation(RandomVariable):
@@ -49,7 +49,7 @@ class PoissonObservation(RandomVariable):
         mu: ArrayLike,
         obs: ArrayLike | None = None,
         **kwargs,
-    ) -> tuple:
+    ) -> ArrayLike:
         """
         Sample from the Poisson process
 
@@ -64,7 +64,7 @@ class PoissonObservation(RandomVariable):
 
         Returns
         -------
-        tuple
+        ArrayLike
         """
 
         poisson_sample = numpyro.sample(
@@ -72,10 +72,4 @@ class PoissonObservation(RandomVariable):
             fn=dist.Poisson(rate=mu + self.eps),
             obs=obs,
         )
-        return (
-            SampledValue(
-                poisson_sample,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
+        return poisson_sample

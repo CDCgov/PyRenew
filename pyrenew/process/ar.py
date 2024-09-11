@@ -9,7 +9,9 @@ from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
 from numpyro.infer.reparam import LocScaleReparam
 
-from pyrenew.metaclass import RandomVariable, SampledValue
+
+from pyrenew.metaclass import RandomVariable
+from pyrenew.process.iidrandomsequence import StandardNormalSequence
 
 
 class ARProcess(RandomVariable):
@@ -24,8 +26,8 @@ class ARProcess(RandomVariable):
         n: int,
         autoreg: ArrayLike,
         init_vals: ArrayLike,
-        noise_sd: float | ArrayLike,
-    ) -> tuple:
+        noise_sd: float | ArrayLike
+    ) -> ArrayLike:
         """
         Sample from the AR process
 
@@ -52,9 +54,10 @@ class ARProcess(RandomVariable):
 
         Returns
         -------
-        tuple
-            With a single SampledValue containing an
-            array of shape (n,) + init_vals.shape.
+
+        ArrayLike
+            of shape (n,) + init_vals.shape.
+
         """
         noise_sd_arr = jnp.atleast_1d(noise_sd)
         if not noise_sd_arr.shape == (1,):
@@ -90,6 +93,7 @@ class ARProcess(RandomVariable):
                     ),
                 )
 
+
             new_term = (
                 jnp.tensordot(autoreg, recent_vals, axes=[0, 0]) + next_noise
             )
@@ -104,21 +108,15 @@ class ARProcess(RandomVariable):
             xs=None,
             length=(n - order),
         )
-        return (
-            SampledValue(
-                jnp.squeeze(
-                    jnp.vstack(
-                        [
-                            init_vals[..., jnp.newaxis].reshape(
-                                (order,) + ts.shape[1:]
-                            ),
-                            ts,
-                        ],
-                    )
-                ),
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
+        return jnp.squeeze(
+          jnp.vstack(
+            [
+              init_vals[..., jnp.newaxis].reshape(
+                (order,) + ts.shape[1:]
+              ),
+              ts,
+            ]
+          )
         )
 
     @staticmethod

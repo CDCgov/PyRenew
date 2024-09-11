@@ -143,7 +143,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
     def __init__(
         self,
         n_timepoints: int,
-        rate: RandomVariable,
+        rate_rv: RandomVariable,
         t_pre_init: int | None = None,
     ):
         """Default constructor for the ``InitializeInfectionsExponentialGrowth`` class.
@@ -152,13 +152,13 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         ----------
         n_timepoints : int
             the number of time points to generate initial infections for
-        rate : RandomVariable
+        rate_rv : RandomVariable
             A random variable representing the rate of exponential growth
         t_pre_init : int | None, optional
              The time point whose number of infections is described by ``I_pre_init``. Defaults to ``n_timepoints - 1``.
         """
         super().__init__(n_timepoints)
-        self.rate = rate
+        self.rate_rv = rate_rv
         if t_pre_init is None:
             t_pre_init = n_timepoints - 1
         self.t_pre_init = t_pre_init
@@ -177,15 +177,9 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
             An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
         I_pre_init = jnp.array(I_pre_init)
-        if I_pre_init.size != 1:
-            raise ValueError(
-                f"I_pre_init must be an array of size 1. Got size {I_pre_init.size}."
-            )
-        rate = jnp.array(self.rate()[0].value)
-        if rate.size != 1:
-            raise ValueError(
-                f"rate must be an array of size 1. Got size {rate.size}."
-            )
-        return I_pre_init * jnp.exp(
-            rate * (jnp.arange(self.n_timepoints) - self.t_pre_init)
+        rate = jnp.array(self.rate_rv())
+        initial_infections = I_pre_init * jnp.exp(
+            rate
+            * (jnp.arange(self.n_timepoints)[:, jnp.newaxis] - self.t_pre_init)
         )
+        return jnp.squeeze(initial_infections)

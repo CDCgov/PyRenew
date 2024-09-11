@@ -11,6 +11,7 @@ that can be passed to
 :py:func:`jax.lax.scan` with an
 appropriate array to scan along.
 """
+
 from __future__ import annotations
 
 from typing import Callable
@@ -166,9 +167,9 @@ def new_double_convolve_scanner(
 
 
 def compute_delay_ascertained_incidence(
-    p_observed_given_incident: ArrayLike,
     latent_incidence: ArrayLike,
     delay_incidence_to_observation_pmf: ArrayLike,
+    p_observed_given_incident: ArrayLike = 1,
 ) -> ArrayLike:
     """
     Computes incidences observed according

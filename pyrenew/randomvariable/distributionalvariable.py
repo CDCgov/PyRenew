@@ -7,7 +7,7 @@ import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from numpyro.infer.reparam import Reparam
 
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 
 
 class DynamicDistributionalVariable(RandomVariable):
@@ -97,7 +97,7 @@ class DynamicDistributionalVariable(RandomVariable):
         *args,
         obs: ArrayLike = None,
         **kwargs,
-    ) -> tuple:
+    ) -> ArrayLike:
         """
         Sample from the distributional rv.
 
@@ -113,8 +113,8 @@ class DynamicDistributionalVariable(RandomVariable):
 
         Returns
         -------
-        SampledValue
-           Containing a sample from the distribution.
+        ArrayLike
+           a sample from the distribution.
         """
         distribution = self.distribution_constructor(*args, **kwargs)
         if self.expand_by_shape is not None:
@@ -125,13 +125,7 @@ class DynamicDistributionalVariable(RandomVariable):
                 fn=distribution,
                 obs=obs,
             )
-        return (
-            SampledValue(
-                sample,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
+        return sample
 
     def expand_by(self, sample_shape) -> Self:
         """
@@ -224,7 +218,7 @@ class StaticDistributionalVariable(RandomVariable):
         self,
         obs: ArrayLike | None = None,
         **kwargs,
-    ) -> tuple:
+    ) -> ArrayLike:
         """
         Sample from the distribution.
 
@@ -239,7 +233,7 @@ class StaticDistributionalVariable(RandomVariable):
 
         Returns
         -------
-        SampledValue
+        ArrayLike
            Containing a sample from the distribution.
         """
         with numpyro.handlers.reparam(config=self.reparam_dict):
@@ -248,13 +242,7 @@ class StaticDistributionalVariable(RandomVariable):
                 fn=self.distribution,
                 obs=obs,
             )
-        return (
-            SampledValue(
-                sample,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            ),
-        )
+        return sample
 
     def expand_by(self, sample_shape) -> Self:
         """
