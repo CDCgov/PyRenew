@@ -32,7 +32,7 @@ def test_rtweeklydiff() -> None:
     rtwd = RtWeeklyDiffARProcess(**params)
 
     with numpyro.handlers.seed(rng_seed=223):
-        rt = rtwd(duration=duration).rt.value
+        rt = rtwd(duration=duration)
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (duration,)
@@ -47,7 +47,7 @@ def test_rtweeklydiff() -> None:
     rtwd = RtWeeklyDiffARProcess(**params)
 
     with numpyro.handlers.seed(rng_seed=223):
-        rt2 = rtwd(duration=duration).rt.value
+        rt2 = rtwd(duration=duration)
 
     # Checking that the shape of the sampled Rt is correct
     assert rt2.shape == (duration,)
@@ -83,7 +83,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     duration = 1000
 
     with numpyro.handlers.seed(rng_seed=323):
-        rt = rtwd(duration=duration).rt.value
+        rt = rtwd(duration=duration)
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (duration,)
@@ -125,7 +125,7 @@ def test_rtperiodicdiff_smallsample(inits):
     rtwd = RtWeeklyDiffARProcess(**params)
 
     with numpyro.handlers.seed(rng_seed=223):
-        rt = rtwd(duration=6).rt.value
+        rt = rtwd(duration=6)
 
     # Checking that the shape of the sampled Rt is correct
     assert rt.shape == (6,)

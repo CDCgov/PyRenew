@@ -2,18 +2,11 @@
 
 from pyrenew.deterministic.deterministic import DeterministicVariable
 from pyrenew.deterministic.deterministicpmf import DeterministicPMF
-from pyrenew.deterministic.nullrv import (
-    NullObservation,
-    NullProcess,
-    NullVariable,
-)
-from pyrenew.deterministic.process import DeterministicProcess
+from pyrenew.deterministic.nullrv import NullObservation, NullVariable
 
 __all__ = [
     "DeterministicVariable",
     "DeterministicPMF",
-    "DeterministicProcess",
     "NullVariable",
-    "NullProcess",
     "NullObservation",
 ]

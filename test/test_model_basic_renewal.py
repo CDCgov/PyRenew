@@ -1,6 +1,5 @@
 # numpydoc ignore=GL08
 
-
 from test.utils import SimpleRt
 
 import jax.numpy as jnp
@@ -37,7 +36,6 @@ def test_model_basicrenewal_no_timepoints_or_observations():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -73,7 +71,6 @@ def test_model_basicrenewal_both_timepoints_and_observations():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -116,7 +113,6 @@ def test_model_basicrenewal_no_obs_model():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -144,21 +140,21 @@ def test_model_basicrenewal_no_obs_model():
     with numpyro.handlers.seed(rng_seed=223):
         model1_samp = model0.sample(n_datapoints=30)
 
-    np.testing.assert_array_equal(model0_samp.Rt.value, model1_samp.Rt.value)
+    np.testing.assert_array_equal(model0_samp.Rt, model1_samp.Rt)
     np.testing.assert_array_equal(
-        model0_samp.latent_infections.value,
-        model1_samp.latent_infections.value,
+        model0_samp.latent_infections,
+        model1_samp.latent_infections,
     )
     np.testing.assert_array_equal(
-        model0_samp.observed_infections.value,
-        model1_samp.observed_infections.value,
+        model0_samp.observed_infections,
+        model1_samp.observed_infections,
     )
 
     model0.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(272),
-        data_observed_infections=model0_samp.latent_infections.value,
+        data_observed_infections=model0_samp.latent_infections,
     )
 
     inf = model0.spread_draws(["all_latent_infections"])
@@ -187,7 +183,6 @@ def test_model_basicrenewal_with_obs_model():
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -209,15 +204,15 @@ def test_model_basicrenewal_with_obs_model():
         model1_samp = model1.sample(n_datapoints=30)
 
     print(model1_samp)
-    print(model1_samp.Rt.value.size)
-    print(model1_samp.latent_infections.value.size)
-    print(model1_samp.observed_infections.value.size)
+    print(model1_samp.Rt.size)
+    print(model1_samp.latent_infections.size)
+    print(model1_samp.observed_infections.size)
 
     model1.run(
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
-        data_observed_infections=model1_samp.observed_infections.value,
+        data_observed_infections=model1_samp.observed_infections,
     )
 
     inf = model1.spread_draws(["all_latent_infections"])
@@ -241,7 +236,6 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         "I0_initialization",
         DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
         InitializeInfectionsZeroPad(n_timepoints=gen_int.size()),
-        t_unit=1,
     )
 
     latent_infections = Infections()
@@ -267,7 +261,7 @@ def test_model_basicrenewal_padding() -> None:  # numpydoc ignore=GL08
         num_warmup=500,
         num_samples=500,
         rng_key=jr.key(22),
-        data_observed_infections=model1_samp.observed_infections.value,
+        data_observed_infections=model1_samp.observed_infections,
         padding=pad_size,
     )
 

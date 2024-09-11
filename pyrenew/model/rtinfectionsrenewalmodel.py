@@ -9,12 +9,7 @@ import numpyro
 from numpy.typing import ArrayLike
 
 from pyrenew.deterministic import NullObservation
-from pyrenew.metaclass import (
-    Model,
-    RandomVariable,
-    SampledValue,
-    _assert_sample_and_rtype,
-)
+from pyrenew.metaclass import Model, RandomVariable
 
 
 # Output class of the RtInfectionsRenewalModel
@@ -24,17 +19,17 @@ class RtInfectionsRenewalSample(NamedTuple):
 
     Attributes
     ----------
-    Rt : SampledValue | None, optional
+    Rt : ArrayLike | None, optional
         The reproduction number over time. Defaults to None.
-    latent_infections : SampledValue | None, optional
+    latent_infections : ArrayLike | None, optional
         The estimated latent infections. Defaults to None.
-    observed_infections : SampledValue | None, optional
+    observed_infections : ArrayLike | None, optional
         The sampled infections. Defaults to None.
     """
 
-    Rt: SampledValue | None = None
-    latent_infections: SampledValue | None = None
-    observed_infections: SampledValue | None = None
+    Rt: ArrayLike | None = None
+    latent_infections: ArrayLike | None = None
+    observed_infections: ArrayLike | None = None
 
     def __repr__(self):
         return (
@@ -131,16 +126,12 @@ class RtInfectionsRenewalModel(Model):
         Returns
         -------
         None
-
-        See Also
-        --------
-        _assert_sample_and_rtype : Perform type-checking and verify RV
         """
-        _assert_sample_and_rtype(gen_int_rv, skip_if_none=False)
-        _assert_sample_and_rtype(I0_rv, skip_if_none=False)
-        _assert_sample_and_rtype(latent_infections_rv, skip_if_none=False)
-        _assert_sample_and_rtype(infection_obs_process_rv, skip_if_none=False)
-        _assert_sample_and_rtype(Rt_process_rv, skip_if_none=False)
+        assert isinstance(gen_int_rv, RandomVariable)
+        assert isinstance(I0_rv, RandomVariable)
+        assert isinstance(latent_infections_rv, RandomVariable)
+        assert isinstance(infection_obs_process_rv, RandomVariable)
+        assert isinstance(Rt_process_rv, RandomVariable)
         return None
 
     def sample(
@@ -191,41 +182,37 @@ class RtInfectionsRenewalModel(Model):
             n_timepoints = n_datapoints + padding
         # Sampling from Rt (possibly with a given Rt, depending on
         # the Rt_process (RandomVariable) object.)
-        Rt, *_ = self.Rt_process_rv(
+
+        Rt = self.Rt_process_rv(
             n=n_timepoints,
             **kwargs,
         )
 
         # Getting the generation interval
-        gen_int, *_ = self.gen_int_rv(**kwargs)
+        gen_int = self.gen_int_rv(**kwargs)
 
         # Sampling initial infections
-        I0, *_ = self.I0_rv(**kwargs)
-        # Sampling from the latent process
-        (
-            post_initialization_latent_infections,
-            *_,
-        ) = self.latent_infections_rv(
-            Rt=Rt.value,
-            gen_int=gen_int.value,
-            I0=I0.value,
-            **kwargs,
-        )
+        I0 = self.I0_rv(**kwargs)
 
-        observed_infections, *_ = self.infection_obs_process_rv(
-            mu=post_initialization_latent_infections.value[padding:],
+        # Sampling from the latent process
+        post_initialization_latent_infections = self.latent_infections_rv(
+            Rt=Rt,
+            gen_int=gen_int,
+            I0=I0,
+            **kwargs,
+        ).post_initialization_infections
+        observed_infections = self.infection_obs_process_rv(
+            mu=post_initialization_latent_infections[padding:],
             obs=data_observed_infections,
             **kwargs,
         )
 
-        all_latent_infections = SampledValue(
-            jnp.hstack([I0.value, post_initialization_latent_infections.value])
+        all_latent_infections = jnp.hstack(
+            [I0, post_initialization_latent_infections]
         )
-        numpyro.deterministic(
-            "all_latent_infections", all_latent_infections.value
-        )
+        numpyro.deterministic("all_latent_infections", all_latent_infections)
 
-        numpyro.deterministic("Rt", Rt.value)
+        numpyro.deterministic("Rt", Rt)
 
         return RtInfectionsRenewalSample(
             Rt=Rt,

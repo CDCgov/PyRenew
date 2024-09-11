@@ -55,7 +55,6 @@ I0 = InfectionInitializationProcess(
         gen_int_array.size,
         DeterministicVariable(name="rate", value=0.05),
     ),
-    t_unit=1,
 )
 
 latent_infections = InfectionsWithFeedback(
@@ -85,9 +84,9 @@ class MyRt(RandomVariable):
         rt_init_rv = DistributionalVariable(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
         )
-        init_rt, *_ = rt_init_rv.sample()
+        init_rt = rt_init_rv.sample()
 
-        return rt_rv.sample(n=n, init_vals=init_rt.value, **kwargs)
+        return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 ```
 
 With all the components defined, we can build the model:
@@ -118,7 +117,7 @@ with numpyro.handlers.seed(rng_seed=223):
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
-ax.plot(model0_samp.latent_infections.value)
+ax.plot(model0_samp.latent_infections)
 ax.set_xlabel("Time")
 ax.set_ylabel("Infections")
 plt.show()
@@ -164,7 +163,7 @@ from collections import namedtuple
 # Creating a tuple to store the output
 InfFeedbackSample = namedtuple(
     typename="InfFeedbackSample",
-    field_names=["infections", "rt"],
+    field_names=["post_initialization_infections", "rt"],
     defaults=(None, None),
 )
 ```
@@ -175,7 +174,7 @@ The next step is to create the actual class. The bulk of its implementation lies
 # | label: new-model-def
 # | code-line-numbers: true
 # Creating the class
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 from pyrenew.latent import compute_infections_from_rt_with_feedback
 from pyrenew import arrayutils as au
 from jax.typing import ArrayLike
@@ -219,11 +218,11 @@ class InfFeedback(RandomVariable):
         I0_vec = I0[-gen_int_rev.size :]
 
         # Sampling inf feedback strength and adjusting the shape
-        inf_feedback_strength, *_ = self.infection_feedback_strength(
+        inf_feedback_strength = self.infection_feedback_strength(
             **kwargs,
         )
 
-        inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength.value)
+        inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength)
 
         inf_feedback_strength = au.pad_x_to_match_y(
             x=inf_feedback_strength,
@@ -232,8 +231,8 @@ class InfFeedback(RandomVariable):
         )
 
         # Sampling inf feedback and adjusting the shape
-        inf_feedback_pmf, *_ = self.infection_feedback_pmf(**kwargs)
-        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf.value)
+        inf_feedback_pmf = self.infection_feedback_pmf(**kwargs)
+        inf_fb_pmf_rev = jnp.flip(inf_feedback_pmf)
 
         # Generating the infections with feedback
         all_infections, Rt_adj = compute_infections_from_rt_with_feedback(
@@ -250,8 +249,8 @@ class InfFeedback(RandomVariable):
         # Preparing theoutput
 
         return InfFeedbackSample(
-            infections=SampledValue(all_infections),
-            rt=SampledValue(Rt_adj),
+            post_initialization_infections=all_infections,
+            rt=Rt_adj,
         )
 ```
 
@@ -259,11 +258,9 @@ The core of the class is implemented in the `sample()` method. Things to highlig
 
 1. **Arguments of `sample`**: The `InfFeedback` class will be used within `RtInfectionsRenewalModel` to generate latent infections. During the sampling process, `InfFeedback()` will receive the reproduction number, the initial number of infections, and the generation interval. `RandomVariable()` calls are expected to include the `**kwargs` argument, even if unused.
 
-2. **Calls to `RandomVariable()`**: All calls to `RandomVariable()` are expected to return a tuple or named tuple. In our implementation, we capture the output of `infection_feedback_strength()` and `infection_feedback_pmf()` in the variables `inf_feedback_strength` and `inf_feedback_pmf`, respectively, disregarding the other outputs (i.e., using `*_`).
+2. **Saving computed quantities**: Since `Rt_adj` is not generated via `numpyro.sample()`, we use `numpyro.deterministic()` to record the quantity to a site; allowing us to access it later.
 
-3. **Saving computed quantities**: Since `Rt_adj` is not generated via `numpyro.sample()`, we use `numpyro.deterministic()` to record the quantity to a site; allowing us to access it later.
-
-4. **Return type of `InfFeedback()`**: As said before, the `sample()` method should return a tuple or named tuple. In our case, we return a named tuple `InfFeedbackSample` with two fields: `infections` and `rt`.
+3. **Return type of `InfFeedback()`**: As said before, the `sample()` method should return a tuple or named tuple. In our case, we return a named tuple `InfFeedbackSample` with two fields: `infections` and `rt`.
 
 ```{python}
 # | label: simulation2
@@ -293,8 +290,8 @@ Comparing `model0` with `model1`, these two should match:
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(ncols=2)
-ax[0].plot(model0_samp.latent_infections.value)
-ax[1].plot(model1_samp.latent_infections.value)
+ax[0].plot(model0_samp.latent_infections)
+ax[1].plot(model1_samp.latent_infections)
 ax[0].set_xlabel("Time (model 0)")
 ax[1].set_xlabel("Time (model 1)")
 ax[0].set_ylabel("Infections")

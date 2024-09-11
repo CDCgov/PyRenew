@@ -8,7 +8,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 import pyrenew.latent.infection_functions as inf
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 
 
 class InfectionsSample(NamedTuple):
@@ -97,10 +97,4 @@ class Infections(RandomVariable):
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        return InfectionsSample(
-            SampledValue(
-                post_initialization_infections,
-                t_start=self.t_start,
-                t_unit=self.t_unit,
-            )
-        )
+        return InfectionsSample(post_initialization_infections)
