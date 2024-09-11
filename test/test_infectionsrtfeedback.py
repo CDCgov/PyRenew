@@ -5,6 +5,7 @@ Test the InfectionsWithFeedback class
 import jax.numpy as jnp
 import numpy as np
 import numpyro
+import pytest
 from jax.typing import ArrayLike
 from numpy.testing import assert_array_almost_equal, assert_array_equal
 
@@ -39,32 +40,53 @@ def _infection_w_feedback_alt(
     tuple
     """
 
-    Rt = np.array(Rt)  # coerce from jax to use numpy-like operations
     T = len(Rt)
+    Rt = np.array(Rt).reshape(
+        T, -1
+    )  # coerce from jax to use numpy-like operations
     len_gen = len(gen_int)
-    I_vec = np.concatenate([I0, np.zeros(T)])
-    Rt_adj = np.zeros(T)
+    I_vec = np.concatenate([I0.reshape(T, -1), np.zeros(Rt.shape)])
+    Rt_adj = np.zeros(Rt.shape)
+    inf_feedback_strength = np.array(inf_feedback_strength).reshape(T, -1)
 
-    for t in range(T):
-        Rt_adj[t] = Rt[t] * np.exp(
-            inf_feedback_strength[t]
-            * np.dot(I_vec[t : t + len_gen], np.flip(inf_feedback_pmf))
-        )
+    for n in range(Rt.shape[1]):
+        for t in range(Rt.shape[0]):
+            Rt_adj[t, n] = Rt[t, n] * np.exp(
+                inf_feedback_strength[t, n]
+                * np.dot(I_vec[t : t + len_gen, n], np.flip(inf_feedback_pmf))
+            )
 
-        I_vec[t + len_gen] = Rt_adj[t] * np.dot(
-            I_vec[t : t + len_gen], np.flip(gen_int)
-        )
+            I_vec[t + len_gen, n] = Rt_adj[t, n] * np.dot(
+                I_vec[t : t + len_gen, n], np.flip(gen_int)
+            )
 
-    return {"post_initialization_infections": I_vec[I0.size :], "rt": Rt_adj}
+    return {
+        "post_initialization_infections": np.squeeze(I_vec[I0.shape[0] :]),
+        "rt": np.squeeze(Rt_adj),
+    }
 
 
-def test_infectionsrtfeedback():
+@pytest.mark.parametrize(
+    ["Rt", "I0"],
+    [
+        [
+            jnp.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25]),
+            jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
+        ],
+        [
+            jnp.array(
+                np.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25] * 3)
+            ).reshape((7, 3)),
+            jnp.array(
+                np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] * 3)
+            ).reshape((7, 3)),
+        ],
+    ],
+)
+def test_infectionsrtfeedback(Rt, I0):
     """
     Test the InfectionsWithFeedback matching the Infections class.
     """
-
-    Rt = jnp.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25])
-    I0 = jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
     gen_int = jnp.array([0.4, 0.25, 0.25, 0.1, 0.0, 0.0, 0.0])
 
     # By doing the infection feedback strength 0, Rt = Rt_adjusted
@@ -104,17 +126,31 @@ def test_infectionsrtfeedback():
     return None
 
 
-def test_infectionsrtfeedback_feedback():
+@pytest.mark.parametrize(
+    ["Rt", "I0"],
+    [
+        [
+            jnp.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25]),
+            jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
+        ],
+        [
+            jnp.array(
+                np.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25] * 3)
+            ).reshape((7, 3)),
+            jnp.array(
+                np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] * 3)
+            ).reshape((7, 3)),
+        ],
+    ],
+)
+def test_infectionsrtfeedback_feedback(Rt, I0):
     """
     Test the InfectionsWithFeedback with feedback
     """
-
-    Rt = jnp.array([0.5, 0.6, 1.5, 2.523, 0.7, 0.8])
-    I0 = jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
     gen_int = jnp.array([0.4, 0.25, 0.25, 0.1, 0.0, 0.0, 0.0])
 
     inf_feed_strength = DeterministicVariable(
-        name="inf_feed_strength", value=jnp.repeat(0.5, len(Rt))
+        name="inf_feed_strength", value=0.5 * jnp.ones_like(Rt)
     )
     inf_feedback_pmf = DeterministicPMF(name="inf_feedback_pmf", value=gen_int)
 

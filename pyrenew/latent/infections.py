@@ -80,11 +80,11 @@ class Infections(RandomVariable):
         InfectionsSample
             Named tuple with "infections".
         """
-        if I0.size < gen_int.size:
+        if I0.shape[0] < gen_int.size:
             raise ValueError(
                 "Initial infections vector must be at least as long as "
                 "the generation interval. "
-                f"Initial infections vector length: {I0.size}, "
+                f"Initial infections vector length: {I0.shape[0]}, "
                 f"generation interval length: {gen_int.size}."
             )
 
