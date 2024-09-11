@@ -70,7 +70,7 @@ def test_standard_normal_sequence():
 
     # should be sampleable
     with numpyro.handlers.seed(rng_seed=67):
-        ans, *_ = norm_seq.sample(n=50000)
+        ans = norm_seq.sample(n=50000)
 
     # samples should be approximately standard normal
     kstest_out = kstest(ans, "norm", (0, 1))
