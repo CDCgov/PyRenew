@@ -10,7 +10,6 @@ import pytest
 from pyrenew.deterministic import (
     DeterministicPMF,
     DeterministicVariable,
-    NullProcess,
     NullVariable,
 )
 
@@ -33,7 +32,6 @@ def test_deterministic():
         name="var2", value=jnp.array([0.25, 0.25, 0.2, 0.3])
     )
     var3 = NullVariable()
-    var4 = NullProcess()
 
     testing.assert_array_equal(
         var1(),
@@ -49,7 +47,6 @@ def test_deterministic():
     )
 
     testing.assert_equal(var3(), None)
-    testing.assert_equal(var4(duration=1), None)
 
 
 def test_deterministic_validation():

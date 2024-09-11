@@ -52,54 +52,6 @@ class NullVariable(DeterministicVariable):
         return None
 
 
-class NullProcess(NullVariable):
-    """A null random variable. Sampling returns None."""
-
-    def __init__(self) -> None:
-        """Default constructor
-
-        Returns
-        -------
-        None
-        """
-
-        self.validate()
-
-        return None
-
-    @staticmethod
-    def validate() -> None:
-        """
-        Not used
-
-        Returns
-        -------
-        None
-        """
-        return None
-
-    def sample(
-        self,
-        duration: int,
-        **kwargs,
-    ) -> None:
-        """Retrieve the value of the Null (None)
-
-        Parameters
-        ----------
-        duration : int
-            Number of timepoints to sample (ignored).
-        **kwargs : dict, optional
-            Ignored.
-
-        Returns
-        -------
-        None
-        """
-
-        return None
-
-
 class NullObservation(NullVariable):
     """A null observation random variable. Sampling returns None."""
 
