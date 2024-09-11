@@ -54,14 +54,9 @@ class ARProcess(RandomVariable):
 
         Returns
         -------
-
         ArrayLike
-            of shape (n,) + init_vals.shape.
-
+            of shape (n,) + init_vals.shape[1:].
         """
-        noise_sd_arr = jnp.atleast_1d(noise_sd)
-        if not noise_sd_arr.shape == (1,):
-            raise ValueError("noise_sd must be a scalar. " f"Got {noise_sd}")
         autoreg = jnp.atleast_1d(autoreg)
         noise_sd = jnp.atleast_1d(noise_sd)
         init_vals = jnp.atleast_1d(init_vals)
@@ -93,31 +88,44 @@ class ARProcess(RandomVariable):
                     ),
                 )
 
+            dot_prod = jnp.einsum("i...,i...->...", autoreg, recent_vals)
 
-            new_term = (
-                jnp.tensordot(autoreg, recent_vals, axes=[0, 0]) + next_noise
-            )
-            new_recent_vals = jnp.vstack(
-                [new_term, recent_vals[: (order - 1), ...]]
-            )
+            print("dot product shape: ", dot_prod.shape)
+            print("next noise shape: ", next_noise.shape)
+
+            new_term = jnp.atleast_1d(dot_prod + next_noise)
+
+            recent_to_concat = recent_vals[: (order - 1), ...]
+
+            print("new term shape: ", new_term.shape)
+            print("recent to concat shape: ", recent_to_concat.shape)
+            new_recent_vals = jnp.vstack([new_term, recent_to_concat])
+
             return new_recent_vals, new_term
+
+        inits_flipped = jnp.flip(init_vals, axis=0)
 
         last, ts = scan(
             f=transition,
-            init=jnp.flip(init_vals, axis=0)[..., jnp.newaxis],
+            init=inits_flipped,
             xs=None,
             length=(n - order),
         )
-        return jnp.squeeze(
-          jnp.vstack(
-            [
-              init_vals[..., jnp.newaxis].reshape(
-                (order,) + ts.shape[1:]
-              ),
-              ts,
-            ]
-          )
+
+        result = jnp.atleast_1d(
+            jnp.squeeze(
+                jnp.vstack(
+                    [
+                        init_vals[..., jnp.newaxis].reshape(
+                            (order,) + ts.shape[1:]
+                        ),
+                        ts,
+                    ],
+                )[:n, ...]
+            )
         )
+
+        return result
 
     @staticmethod
     def validate():  # numpydoc ignore=RT01
