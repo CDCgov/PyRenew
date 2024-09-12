@@ -54,24 +54,48 @@ def test_iidrandomsequence_with_dist_rv(distribution, n):
         assert kstest_out.pvalue > 0.01
 
 
-def test_standard_normal_sequence():
+@pytest.mark.parametrize(
+    ["shape", "n"],
+    [[None, 352], [(), 72352], [(5,), 5432], [(3, 23, 2), 10352]],
+)
+def test_standard_normal_sequence(shape, n):
     """
     Test the StandardNormalSequence RandomVariable
     class.
     """
-    norm_seq = StandardNormalSequence("test_norm_elements")
+    norm_seq = StandardNormalSequence(
+        "test_norm_elements", element_shape=shape
+    )
 
     # should be implemented with a DistributionalVariable
     # that is a standard normal
     assert isinstance(norm_seq.element_rv, StaticDistributionalVariable)
-    assert isinstance(norm_seq.element_rv.distribution, dist.Normal)
-    assert norm_seq.element_rv.distribution.loc == 0.0
-    assert norm_seq.element_rv.distribution.scale == 1.0
+    if shape is None or shape == ():
+        assert isinstance(norm_seq.element_rv.distribution, dist.Normal)
+        el_dist = norm_seq.element_rv.distribution
+    else:
+        assert isinstance(
+            norm_seq.element_rv.distribution, dist.ExpandedDistribution
+        )
+        assert isinstance(
+            norm_seq.element_rv.distribution.base_dist, dist.Normal
+        )
+        el_dist = norm_seq.element_rv.distribution.base_dist
+    assert el_dist.loc == 0.0
+    assert el_dist.scale == 1.0
 
     # should be sampleable
     with numpyro.handlers.seed(rng_seed=67):
+        ans = norm_seq(n=n)
+
+    # samples should have shape (n,) + the element_rv sample shape
+    expected_sample_shape = (n,) + shape if shape is not None else (n,)
+    assert jnp.shape(ans) == expected_sample_shape
+
+    with numpyro.handlers.seed(rng_seed=35):
         ans = norm_seq.sample(n=50000)
 
     # samples should be approximately standard normal
-    kstest_out = kstest(ans, "norm", (0, 1))
+    kstest_out = kstest(ans.flatten(), "norm", (0, 1))
+
     assert kstest_out.pvalue > 0.01

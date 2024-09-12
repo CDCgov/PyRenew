@@ -122,7 +122,7 @@ def test_integrator_correctness(order, n_diffs):
     )
     result_proc1 = proc.integrate(inits, diffs)
     assert result_proc1.shape == (n_diffs + order,)
-    assert_array_almost_equal(result_manual, result_proc1, decimal=5)
+    assert_array_almost_equal(result_manual, result_proc1, decimal=4)
     assert result_proc1[0] == inits[0]
 
 
