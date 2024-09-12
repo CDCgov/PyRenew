@@ -218,6 +218,8 @@ def test_infections_with_feedback_invalid_inputs():
         infection_feedback_pmf=inf_feedback_pmf,
     )
 
+    infections = latent.Infections()
+
     with numpyro.handlers.seed(rng_seed=0):
         with pytest.raises(
             ValueError,
@@ -231,9 +233,29 @@ def test_infections_with_feedback_invalid_inputs():
 
         with pytest.raises(
             ValueError,
+            match="Initial infections vector must be at least as long as the generation interval.",
+        ):
+            infections(
+                gen_int=gen_int,
+                Rt=Rt,
+                I0=I0_1d,
+            )
+
+        with pytest.raises(
+            ValueError,
             match="Initial infections and Rt must have the same dimensions.",
         ):
             InfectionsWithFeedback(
+                gen_int=gen_int,
+                Rt=Rt,
+                I0=I0_2d,
+            )
+
+        with pytest.raises(
+            ValueError,
+            match="Initial infections and Rt must have the same dimensions.",
+        ):
+            infections(
                 gen_int=gen_int,
                 Rt=Rt,
                 I0=I0_2d,
