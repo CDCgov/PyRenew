@@ -29,6 +29,39 @@ from pyrenew.process import ARProcess
             0.802,
             532,
         ],
+        # AR3, two sets of inits
+        # one set of AR coefficients
+        [
+            jnp.array([[43.1, -32.5, 0.52], [40.0, 0.3, -53.2]]).reshape(
+                (3, -1)
+            ),
+            jnp.array([0.50, 0.205, 0.25]),
+            0.802,
+            532,
+        ],
+        # AR3, twos set of (identical) inits and two
+        # sets of coefficients
+        [
+            jnp.array([[50.0, 49.9, 48.2], [50.0, 49.9, 48.2]]).reshape(
+                (3, -1)
+            ),
+            jnp.array([[0.05, 0.025], [0.25, 0.25], [0.1, 0.1]]),
+            0.5,
+            1230,
+        ],
+        # AR3, twos set of (identical) inits, two
+        # sets of coefficients, two s.ds
+        [
+            jnp.array(
+                [
+                    [50.0, 49.9, 48.2],
+                    [50.0, 49.9, 48.2],
+                ]
+            ).reshape((3, -1)),
+            jnp.array([[0.05, 0.025], [0.25, 0.25], [0.1, 0.1]]),
+            jnp.array([1, 0.25]),
+            1230,
+        ],
     ],
 )
 def test_ar_can_be_sampled(init_vals, autoreg, noise_sd, n):
@@ -49,35 +82,62 @@ def test_ar_can_be_sampled(init_vals, autoreg, noise_sd, n):
             noise_sd=noise_sd,
         )
         order = jnp.shape(autoreg)[0]
-        non_time_dims = jnp.shape(jnp.atleast_1d(autoreg))[1:]
+        non_time_dims = jnp.broadcast_shapes(
+            jnp.atleast_1d(autoreg).shape[1:],
+            jnp.atleast_1d(init_vals).shape[1:],
+            jnp.shape(noise_sd),
+        )
         non_time_dims = tuple(x for x in non_time_dims if x != 1)
         expected_shape = (n,) + non_time_dims
         assert jnp.shape(res) == expected_shape
         assert_array_almost_equal(
-            jnp.squeeze(res[0:order, ...]), jnp.squeeze(init_vals)
+            res[:order, ...],
+            jnp.broadcast_to(jnp.squeeze(init_vals), (order,) + non_time_dims)[
+                :n, ...
+            ],
         )
 
 
 @pytest.mark.parametrize(
-    ["init_vals", "autoreg", "noise_sd", "n"],
+    ["init_vals", "autoreg", "noise_sd", "n", "error_match"],
     [
         # autoreg higher dim than init vals
+        # and not reshaped appropriately
         [
             jnp.array([50.0, 49.9, 48.2]),
             jnp.array([[0.05, 0.025, 0.025]]),
             0.5,
             1230,
+            "Initial values array",
         ],
-        # init vals higher dim than autoreg
+        # initial vals higher dim than autoreg
+        # and not reshaped appropriately
         [
             jnp.array([[50.0, 49.9, 48.2]]),
             jnp.array([0.05, 0.025, 0.025]),
             0.5,
             1230,
+            "Initial values array",
+        ],
+        # not enough initial values
+        [
+            jnp.array([50.0, 49.9, 48.2]),
+            jnp.array([0.05, 0.025, 0.025, 0.25]),
+            0.5,
+            1230,
+            "Initial values array",
+        ],
+        # too many initial values
+        [
+            jnp.array([50.0, 49.9, 48.2, 0.035, 0.523]),
+            jnp.array([0.05, 0.025, 0.025, 0.25]),
+            0.5,
+            1230,
+            "Initial values array",
         ],
     ],
 )
-def test_ar_shape_validation(init_vals, autoreg, noise_sd, n):
+def test_ar_shape_validation(init_vals, autoreg, noise_sd, n, error_match):
     """
     Test that AR process sample() method validates
     the shapes of its inputs as expected.
@@ -87,7 +147,7 @@ def test_ar_shape_validation(init_vals, autoreg, noise_sd, n):
     ar = ARProcess()
 
     # bad dimensionality raises error
-    with pytest.raises(ValueError, match="Initial values array"):
+    with pytest.raises(ValueError, match=error_match):
         ar(
             noise_name="test_ar_noise",
             n=n,
@@ -116,4 +176,4 @@ def test_ar_samples_correctly_distributed():
             noise_sd=noise_sd,
         )
         assert_almost_equal(long_ts[0], ar_inits)
-        assert jnp.abs(long_ts[-1]) < 4 * noise_sd
+        assert jnp.abs(long_ts[-1]) < 3 * noise_sd
