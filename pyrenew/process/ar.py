@@ -67,7 +67,7 @@ class ARProcess(RandomVariable):
         with be of length `n` and represents time.
         Trailing dimensions follow standard numpy
         broadcasting rules and are determined from
-        the second through `n`th dimensions, if any,
+        the second through `n` th dimensions, if any,
         of `autoreg` and `init_vals`, as well as the
         all dimensions of `noise_sd` (i.e.
         :code:`jax.numpy.shape(autoreg)[1:]`,
