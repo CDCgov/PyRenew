@@ -88,9 +88,9 @@ class Infections(RandomVariable):
                 f"generation interval length: {gen_int.size}."
             )
 
-        if I0.shape != Rt.shape:
+        if I0.ndim != Rt.ndim:
             raise ValueError(
-                "Initial infections and Rt must have the same shape. "
+                "Initial infections and Rt must have the same dimensions. "
                 f"Got initial infections of shape {I0.shape} "
                 f"and Rt of shape {Rt.shape}."
             )
