@@ -147,7 +147,7 @@ class ARProcess(RandomVariable):
             return new_recent_vals, new_term
 
         if n > order:
-            last, ts = scan(
+            _, ts = scan(
                 f=transition,
                 init=inits_flipped,
                 xs=None,
