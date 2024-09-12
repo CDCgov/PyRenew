@@ -165,7 +165,7 @@ def test_ar_can_be_sampled(init_vals, autoreg, noise_sd, n):
             jnp.array([[0.05, 0.025], [0.025, 0.25]]),
             jnp.array([0.5, 0.25, 0.3]),
             1230,
-            "Incompatible shapes",
+            "Could not determine a valid shape",
         ],
         [
             jnp.array([50.0, 49.9]),

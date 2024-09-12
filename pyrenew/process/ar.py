@@ -63,11 +63,21 @@ class ARProcess(RandomVariable):
         init_vals = jnp.atleast_1d(init_vals)
         order = autoreg.shape[0]
         n_inits = init_vals.shape[0]
-        noise_shape = jax.lax.broadcast_shapes(
-            init_vals.shape[1:],
-            autoreg.shape[1:],
-            noise_sd.shape,
-        )
+
+        try:
+            noise_shape = jax.lax.broadcast_shapes(
+                init_vals.shape[1:],
+                autoreg.shape[1:],
+                noise_sd.shape,
+            )
+        except Exception as e:
+            raise ValueError(
+                "Could not determine a "
+                "valid shape for the AR process noise "
+                "from the shapes of the init_vals, "
+                "autoreg, and noise_sd arrays. "
+                "See ARProcess documentation for details."
+            ) from e
 
         if not n_inits == order:
             raise ValueError(
