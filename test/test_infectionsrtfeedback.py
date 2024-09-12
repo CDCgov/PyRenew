@@ -39,58 +39,25 @@ def _infection_w_feedback_alt(
     -------
     tuple
     """
-
     T = len(Rt)
     Rt = np.array(Rt).reshape(
         T, -1
     )  # coerce from jax to use numpy-like operations
     len_gen = len(gen_int)
-    infs = np.concatenate([I0.reshape(T, -1), np.zeros(Rt.shape)])
+    infs = np.pad(I0.reshape(T, -1), ((0, Rt.shape[0]), (0, 0)))
     Rt_adj = np.zeros(Rt.shape)
     inf_feedback_strength = np.array(inf_feedback_strength).reshape(T, -1)
 
-    def compute_Rt_adj(
-        Rt, inf_feedback_strength, infs, inf_feedback_pmf, len_gen, t, n
-    ):  # numpydoc ignore=GL08
-        return Rt[t, n] * np.exp(
-            inf_feedback_strength[t, n]
-            * np.dot(infs[t : t + len_gen, n], np.flip(inf_feedback_pmf))
-        )
+    for n in range(Rt.shape[1]):
+        for t in range(Rt.shape[0]):
+            Rt_adj[t, n] = Rt[t, n] * np.exp(
+                inf_feedback_strength[t, n]
+                * np.dot(infs[t : t + len_gen, n], np.flip(inf_feedback_pmf))
+            )
 
-    Rt_adj = np.array(
-        [
-            [
-                compute_Rt_adj(
-                    Rt,
-                    inf_feedback_strength,
-                    infs,
-                    inf_feedback_pmf,
-                    len_gen,
-                    t,
-                    n,
-                )
-                for n in range(Rt.shape[1])
-            ]
-            for t in range(Rt.shape[0])
-        ]
-    )
-
-    def compute_infections(
-        Rt_adj, infs, len_gen, gen_int, t, n
-    ):  # numpydoc ignore=GL08
-        return Rt_adj[t, n] * np.dot(
-            infs[t : t + len_gen, n], np.flip(gen_int)
-        )
-
-    infs[len_gen : T + len_gen] = np.array(
-        [
-            [
-                compute_infections(Rt_adj, infs, len_gen, gen_int, t, n)
-                for n in range(Rt.shape[1])
-            ]
-            for t in range(Rt.shape[0])
-        ]
-    )
+            infs[t + len_gen, n] = Rt_adj[t, n] * np.dot(
+                infs[t : t + len_gen, n], np.flip(gen_int)
+            )
 
     return {
         "post_initialization_infections": np.squeeze(infs[I0.shape[0] :]),
