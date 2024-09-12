@@ -96,6 +96,6 @@ def test_standard_normal_sequence(shape, n):
         ans = norm_seq.sample(n=50000)
 
     # samples should be approximately standard normal
-    kstest_out = kstest(ans, "norm", (0, 1))
+    kstest_out = kstest(ans.flatten(), "norm", (0, 1))
 
     assert kstest_out.pvalue > 0.01
