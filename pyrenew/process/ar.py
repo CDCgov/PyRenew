@@ -113,7 +113,6 @@ class ARProcess(RandomVariable):
             ) from e
 
         inits_flipped = jnp.flip(inits_broadcast, axis=0)
-        assert jnp.shape(inits_flipped) == history_shape
 
         def transition(recent_vals, _):  # numpydoc ignore=GL08
             with numpyro.handlers.reparam(
@@ -125,14 +124,9 @@ class ARProcess(RandomVariable):
                         loc=jnp.zeros(noise_shape), scale=noise_sd
                     ),
                 )
-                assert jnp.shape(next_noise) == noise_shape
 
             dot_prod = jnp.einsum("i...,i...->...", autoreg, recent_vals)
-
             new_term = dot_prod + next_noise
-
-            assert new_term.shape == noise_shape
-
             new_recent_vals = jnp.concatenate(
                 [
                     new_term[jnp.newaxis, ...],
@@ -143,7 +137,6 @@ class ARProcess(RandomVariable):
                 axis=0,
             )[:order]
 
-            assert new_recent_vals.shape == history_shape
             return new_recent_vals, new_term
 
         if n > order:
