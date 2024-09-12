@@ -61,7 +61,7 @@ class ARProcess(RandomVariable):
         noise_shape = jax.lax.broadcast_shapes(
             autoreg.shape[1:], noise_sd.shape
         )
-        n_inits = jnp.shape(jnp.atleast_1d(init_vals))[0]
+        n_inits = jnp.atleast_1d(init_vals).shape[0]
 
         if not n_inits == order:
             raise ValueError(
