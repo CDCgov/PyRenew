@@ -79,9 +79,22 @@ class ARProcess(RandomVariable):
                 f"value array with first dimension {n_inits} for "
                 f"a process of order {order}"
             )
+
         history_shape = (order,) + noise_shape
 
-        inits_broadcast = jnp.broadcast_to(init_vals, history_shape)
+        try:
+            inits_broadcast = jnp.broadcast_to(init_vals, history_shape)
+        except Exception as e:
+            raise ValueError(
+                "Could not broadcast init_vals "
+                f"(shape {init_vals.shape}) "
+                "to the expected shape of the process "
+                f"history (shape {history_shape}). "
+                "History shape is determined by the "
+                "shapes of the init_vals, autoreg, and "
+                "noise_sd arrays. See ARProcess "
+                "documentation for details"
+            ) from e
 
         inits_flipped = jnp.flip(inits_broadcast, axis=0)
         assert jnp.shape(inits_flipped) == history_shape

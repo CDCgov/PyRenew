@@ -3,7 +3,7 @@
 import jax.numpy as jnp
 import numpyro
 import pytest
-from numpy.testing import assert_almost_equal, assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal
 
 from pyrenew.process import ARProcess
 
@@ -19,14 +19,14 @@ from pyrenew.process import ARProcess
         [
             jnp.array([[43.1, -32.5, 3.2, -0.5]]).reshape((1, 4)),
             jnp.array([[0.50, 0.205, 0.232, 0.25]]).reshape((1, 4)),
-            0.73,
+            jnp.array([0.73]),
             5322,
         ],
         # AR3, one dim
         [
             jnp.array([43.1, -32.5, 0.52]),
             jnp.array([0.50, 0.205, 0.25]),
-            0.802,
+            jnp.array(0.802),
             6432,
         ],
         # AR3, one dim but unsqueezed
@@ -167,6 +167,13 @@ def test_ar_can_be_sampled(init_vals, autoreg, noise_sd, n):
             1230,
             "Incompatible shapes",
         ],
+        [
+            jnp.array([50.0, 49.9]),
+            jnp.array([0.05, 0.025]),
+            jnp.array([0.5]),
+            1230,
+            "Could not broadcast init_vals",
+        ],
         # unbroadcastable shapes:
         # sd versus AR mismatch
         [
@@ -174,7 +181,7 @@ def test_ar_can_be_sampled(init_vals, autoreg, noise_sd, n):
             jnp.array([[0.05, 0.025], [0.025, 0.25], [0.01, 0.1]]),
             jnp.array([0.25, 0.25]),
             1230,
-            "Incompatible shapes",
+            "Could not broadcast init_vals",
         ],
     ],
 )
@@ -199,23 +206,53 @@ def test_ar_shape_validation(init_vals, autoreg, noise_sd, n, error_match):
             )
 
 
-def test_ar_samples_correctly_distributed():
+@pytest.mark.parametrize(
+    ["ar_inits", "autoreg", "noise_sd", "n"],
+    [
+        [
+            jnp.array([25.0]),
+            jnp.array([0.75]),
+            jnp.array([0.5]),
+            10000,
+        ],
+        [
+            jnp.array([-500, -499.0]),
+            jnp.array([0.5, 0.45]),
+            jnp.array(1.25),
+            10001,
+        ],
+    ],
+)
+def test_ar_process_asymptotics(ar_inits, autoreg, noise_sd, n):
     """
-    Check that AR processes have correctly-
-    distributed steps.
+    Check that AR processes can
+    start away from the stationary
+    distribution and converge to it.
     """
-    noise_sd = jnp.array([0.5])
-    ar_inits = jnp.array([25.0])
     ar = ARProcess()
+    order = jnp.shape(ar_inits)[0]
+    non_time_dims = jnp.broadcast_shapes(
+        jnp.atleast_1d(autoreg).shape[1:],
+        jnp.atleast_1d(ar_inits).shape[1:],
+        jnp.shape(noise_sd),
+    )
+
+    first_entries_broadcast_shape = (order,) + non_time_dims
+
+    expected_first_entries = jnp.broadcast_to(
+        ar_inits, first_entries_broadcast_shape
+    )[:n]
+
     with numpyro.handlers.seed(rng_seed=62):
         # check it regresses to mean
         # when started away from it
         long_ts = ar(
             noise_name="arprocess_noise",
-            n=10000,
+            n=n,
             init_vals=ar_inits,
-            autoreg=jnp.array([0.75]),
+            autoreg=autoreg,
             noise_sd=noise_sd,
         )
-        assert_almost_equal(long_ts[0], ar_inits)
+        assert_array_almost_equal(long_ts[:order], expected_first_entries)
+
         assert jnp.abs(long_ts[-1]) < 3 * noise_sd
