@@ -59,8 +59,14 @@ class ARProcess(RandomVariable):
             of shape (n,) + init_vals.shape[1:].
         """
         autoreg = jnp.atleast_1d(autoreg)
-        noise_sd = jnp.array(noise_sd)
         init_vals = jnp.atleast_1d(init_vals)
+        noise_sd = jnp.array(noise_sd)
+        # noise_sd can be a scalar, but
+        # autoreg and init_vals must have a
+        # a first dimension (time),
+        # as the order of the process is
+        # inferred from that first dimension
+
         order = autoreg.shape[0]
         n_inits = init_vals.shape[0]
 
