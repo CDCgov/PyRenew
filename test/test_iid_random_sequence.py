@@ -92,7 +92,8 @@ def test_standard_normal_sequence(shape, n):
     expected_sample_shape = (n,) + shape if shape is not None else (n,)
     assert jnp.shape(ans) == expected_sample_shape
 
-    ans = norm_seq.sample(n=50000)
+    with numpyro.handlers.seed(rng_seed=35):
+        ans = norm_seq.sample(n=50000)
 
     # samples should be approximately standard normal
     kstest_out = kstest(ans, "norm", (0, 1))
