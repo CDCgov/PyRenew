@@ -1,4 +1,7 @@
-# numpydoc ignore=GL08
+"""
+This file defines a RandomVariable subclass for
+autoregressive (AR) processes
+"""
 
 from __future__ import annotations
 
@@ -76,7 +79,6 @@ class ARProcess(RandomVariable):
                 f"value array with first dimension {n_inits} for "
                 f"a process of order {order}"
             )
-        term_shape = (1,) + noise_shape
         history_shape = (order,) + noise_shape
 
         inits_broadcast = jnp.broadcast_to(init_vals, history_shape)
@@ -98,30 +100,38 @@ class ARProcess(RandomVariable):
 
             dot_prod = jnp.einsum("i...,i...->...", autoreg, recent_vals)
 
-            new_term = (dot_prod + next_noise)[jnp.newaxis]
+            new_term = dot_prod + next_noise
 
-            assert jnp.shape(new_term) == term_shape
+            assert new_term.shape == noise_shape
 
-            new_recent_vals = jnp.concatenate([new_term, recent_vals], axis=0)[
-                :order
-            ]
+            new_recent_vals = jnp.concatenate(
+                [
+                    new_term[jnp.newaxis, ...],
+                    # concatenate as (1 time unit,) + noise_shape
+                    # array
+                    recent_vals,
+                ],
+                axis=0,
+            )[:order]
 
-            assert jnp.shape(new_recent_vals) == history_shape
+            assert new_recent_vals.shape == history_shape
             return new_recent_vals, new_term
 
-        last, ts = scan(
-            f=transition,
-            init=inits_flipped,
-            xs=None,
-            length=(n - order),
-        )
+        if n > order:
+            last, ts = scan(
+                f=transition,
+                init=inits_flipped,
+                xs=None,
+                length=(n - order),
+            )
 
-        ts_with_inits = jnp.concatenate(
-            [inits_broadcast[::, jnp.newaxis, ...], ts],
-            axis=0,
-        )
-
-        return jnp.atleast_1d(jnp.squeeze(ts_with_inits[:n]))
+            ts_with_inits = jnp.concatenate(
+                [inits_broadcast, ts],
+                axis=0,
+            )
+        else:
+            ts_with_inits = inits_broadcast
+        return ts_with_inits[:n]
 
     @staticmethod
     def validate():  # numpydoc ignore=RT01
