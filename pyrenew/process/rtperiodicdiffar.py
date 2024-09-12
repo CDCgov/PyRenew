@@ -138,9 +138,9 @@ class RtPeriodicDiffARProcess(RandomVariable):
         """
 
         # Initial sample
-        log_rt_rv = self.log_rt_rv.sample(**kwargs)
-        b = self.autoreg_rv.sample(**kwargs)
-        s_r = self.periodic_diff_sd_rv.sample(**kwargs)
+        log_rt_rv = self.log_rt_rv.sample(**kwargs).squeeze()
+        b = self.autoreg_rv.sample(**kwargs).squeeze()
+        s_r = self.periodic_diff_sd_rv.sample(**kwargs).squeeze()
 
         # How many periods to sample?
         n_periods = (duration + self.period_size - 1) // self.period_size
@@ -150,11 +150,11 @@ class RtPeriodicDiffARProcess(RandomVariable):
         log_rt = self.ar_diff(
             noise_name=f"{self.name}{self.ar_process_suffix}",
             n=n_periods,
-            init_vals=jnp.array([log_rt_rv[0]]),
+            init_vals=jnp.array(log_rt_rv[0]),
             autoreg=b,
             noise_sd=s_r,
             fundamental_process_init_vals=jnp.array(
-                [log_rt_rv[1] - log_rt_rv[0]]
+                log_rt_rv[1] - log_rt_rv[0]
             ),
         )
 
