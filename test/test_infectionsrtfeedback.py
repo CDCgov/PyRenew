@@ -208,7 +208,7 @@ def test_infections_with_feedback_invalid_inputs():
     gen_int = jnp.array([0.4, 0.25, 0.25, 0.1, 0.0, 0.0, 0.0])
 
     inf_feed_strength = DeterministicVariable(
-        name="inf_feed_strength", value=jnp.zeros_like(Rt)
+        name="inf_feed_strength", value=0.5
     )
     inf_feedback_pmf = DeterministicPMF(name="inf_feedback_pmf", value=gen_int)
 
