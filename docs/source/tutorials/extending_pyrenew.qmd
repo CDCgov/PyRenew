@@ -168,7 +168,7 @@ InfFeedbackSample = namedtuple(
 )
 ```
 
-The next step is to create the actual class. The bulk of its implementation lies in the function `pyrenew.latent.compute_infections_from_rt_with_feedback()`. We will also use the `pyrenew.arrayutils.pad_x_to_match_y()` function to ensure the passed vectors match their lengths. The following code-chunk shows most of the implementation of the `InfectionsWithFeedback` class:
+The next step is to create the actual class. The bulk of its implementation lies in the function `pyrenew.latent.compute_infections_from_rt_with_feedback()`. We will also use the `pyrenew.arrayutils.pad_edges_to_match()` function to ensure the passed vectors match their lengths. The following code-chunk shows most of the implementation of the `InfectionsWithFeedback` class:
 
 ```{python}
 # | label: new-model-def
@@ -224,11 +224,10 @@ class InfFeedback(RandomVariable):
 
         inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength)
 
-        inf_feedback_strength = au.pad_x_to_match_y(
+        inf_feedback_strength = au.pad_edges_to_match(
             x=inf_feedback_strength,
             y=Rt,
-            fill_value=inf_feedback_strength[0],
-        )
+        )[0]
 
         # Sampling inf feedback and adjusting the shape
         inf_feedback_pmf = self.infection_feedback_pmf(**kwargs)
