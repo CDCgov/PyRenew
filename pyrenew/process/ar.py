@@ -36,7 +36,7 @@ class ARProcess(RandomVariable):
         ----------
         noise_name: str
             A name for the sample site holding the
-            Normal(0, noise_sd) noise for the AR process.
+            Normal(`0`, `noise_sd`) noise for the AR process.
             Passed to :func:`numpyro.sample`.
         n: int
             Length of the sequence.
@@ -56,7 +56,31 @@ class ARProcess(RandomVariable):
         Returns
         -------
         ArrayLike
-            of shape (n,) + init_vals.shape[1:].
+            with first dimension of length `n`
+            and additional dimensions as inferred
+            from the shapes of `autoreg`,
+            `init_vals`, and `noise_sd`.
+
+        Notes
+        -----
+        The first dimension of the return value
+        with be of length `n` and represents time.
+        Trailing dimensions follow standard numpy
+        broadcasting rules and are determined from
+        the second through `n`th dimensions, if any,
+        of `autoreg` and `init_vals`, as well as the
+        all dimensions of `noise_sd` (i.e.
+        :code:`jax.numpy.shape(autoreg)[1:]`,
+        :code:`jax.numpy.shape(init_vals)[1:]`
+        and :code:`jax.numpy.shape(noise_sd)`
+
+        Those shapes must be
+        broadcastable together via
+        :func:`jax.lax.broadcast_shapes`. This can
+        be used to produce multiple AR processes of the
+        same order but with either shared or different initial
+        values, AR coefficient vectors, and/or
+        and noise standard deviation values.
         """
         autoreg = jnp.atleast_1d(autoreg)
         init_vals = jnp.atleast_1d(init_vals)
@@ -82,7 +106,8 @@ class ARProcess(RandomVariable):
                 "valid shape for the AR process noise "
                 "from the shapes of the init_vals, "
                 "autoreg, and noise_sd arrays. "
-                "See ARProcess documentation for details."
+                "See ARProcess.sample() documentation "
+                "for details."
             ) from e
 
         if not n_inits == order:
