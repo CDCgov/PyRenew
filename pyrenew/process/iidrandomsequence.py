@@ -110,6 +110,7 @@ class StandardNormalSequence(IIDRandomSequence):
     def __init__(
         self,
         element_rv_name: str,
+        element_shape: tuple = None,
         **kwargs,
     ):
         """
@@ -124,13 +125,19 @@ class StandardNormalSequence(IIDRandomSequence):
             DistributionalVariable encoding a
             standard Normal (mean = 0, sd = 1)
             distribution.
+        element_shape : tuple
+            Shape for each element in the sequence.
+            If None, elements are scalars. Default
+            None.
 
         Returns
         -------
         None
         """
+        if element_shape is None:
+            element_shape = ()
         super().__init__(
             element_rv=DistributionalVariable(
                 name=element_rv_name, distribution=dist.Normal(0, 1)
-            ),
+            ).expand_by(element_shape)
         )
