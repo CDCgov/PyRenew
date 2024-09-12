@@ -138,9 +138,9 @@ class RtPeriodicDiffARProcess(RandomVariable):
         """
 
         # Initial sample
-        log_rt_rv = self.log_rt_rv.sample(**kwargs).squeeze()
-        b = self.autoreg_rv.sample(**kwargs).squeeze()
-        s_r = self.periodic_diff_sd_rv.sample(**kwargs).squeeze()
+        log_rt_rv = self.log_rt_rv(**kwargs).squeeze()
+        b = self.autoreg_rv(**kwargs).squeeze()
+        s_r = self.periodic_diff_sd_rv(**kwargs).squeeze()
 
         # How many periods to sample?
         n_periods = (duration + self.period_size - 1) // self.period_size
