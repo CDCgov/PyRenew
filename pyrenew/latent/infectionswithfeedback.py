@@ -146,8 +146,15 @@ class InfectionsWithFeedback(RandomVariable):
         if I0.shape[0] < gen_int.size:
             raise ValueError(
                 "Initial infections must be at least as long as the "
-                f"generation interval. Got {I0.shape[0]} initial infections "
-                f"and {gen_int.size} generation interval."
+                f"generation interval. Got initial infections length {I0.shape[0]}"
+                f"and generation interval length {gen_int.size}."
+            )
+
+        if I0.shape != Rt.shape:
+            raise ValueError(
+                "Initial infections and Rt must have the same shape. "
+                f"Got initial infections of shape {I0.shape} "
+                f"and Rt of shape {Rt.shape}."
             )
 
         gen_int_rev = jnp.flip(gen_int)

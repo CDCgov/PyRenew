@@ -88,6 +88,13 @@ class Infections(RandomVariable):
                 f"generation interval length: {gen_int.size}."
             )
 
+        if I0.shape != Rt.shape:
+            raise ValueError(
+                "Initial infections and Rt must have the same shape. "
+                f"Got initial infections of shape {I0.shape} "
+                f"and Rt of shape {Rt.shape}."
+            )
+
         gen_int_rev = jnp.flip(gen_int)
         recent_I0 = I0[-gen_int_rev.size :]
 
