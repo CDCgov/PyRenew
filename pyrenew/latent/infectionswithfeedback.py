@@ -152,7 +152,7 @@ class InfectionsWithFeedback(RandomVariable):
 
         if I0.ndim != Rt.ndim:
             raise ValueError(
-                "Initial infections and Rt must have the dimensions. "
+                "Initial infections and Rt must have the same dimensions. "
                 f"Got initial infections of shape {I0.shape} "
                 f"and Rt of shape {Rt.shape}."
             )

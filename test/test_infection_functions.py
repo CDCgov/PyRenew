@@ -88,7 +88,7 @@ def test_compute_infections_from_rt_with_feedback_2d(
     ) = inf.compute_infections_from_rt_with_feedback(
         I0, Rt_raw, jnp.zeros_like(Rt_raw), gen_int, inf_pmf
     )
-    print(inf.compute_infections_from_rt(I0, Rt_raw, gen_int))
+
     assert_array_equal(
         inf.compute_infections_from_rt(I0, Rt_raw, gen_int),
         infs_feedback,
