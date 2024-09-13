@@ -43,7 +43,7 @@ PyRenew Principles
 
 -  Multidimensional array conventions
 
-   -  In a multidimensional array of timeseries, time is always the first dimension. By default, `numpyro.scan` builds by augmenting the first dimension, and variables are often scanned over time, thus this convention makes default output of scan over time sensible.
+   -  In a multidimensional array of timeseries, time is always the first dimension. By default, ``numpyro.scan`` builds by augmenting the first dimension, and variables are often scanned over time, making default output of scan over time sensible.
 
 Adding Documentation to Sphinx
 ------------------------------
