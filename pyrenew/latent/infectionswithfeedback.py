@@ -167,6 +167,10 @@ class InfectionsWithFeedback(RandomVariable):
                 **kwargs,
             )
         )
+
+        if inf_feedback_strength.ndim < Rt.ndim:
+            inf_feedback_strength = jnp.expand_dims(inf_feedback_strength, 0)
+
         # Making sure inf_feedback_strength spans the Rt length
         if inf_feedback_strength.shape[0] == 1:
             inf_feedback_strength = au.pad_edges_to_match(
