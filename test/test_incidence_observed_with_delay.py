@@ -42,8 +42,19 @@ def test(obs_rate, latent_incidence, delay_interval, expected_output):
     incidence observed with a delay
     """
     result = compute_delay_ascertained_incidence(
-        obs_rate,
         latent_incidence,
         delay_interval,
+        obs_rate,
     )
     assert_array_equal(result, expected_output)
+
+
+def test_default_obs_rate():
+    """
+    Compute incidence observed with a delay and default observation rate
+    """
+    result = compute_delay_ascertained_incidence(
+        jnp.array([1.0, 2.0, 3.0]),
+        jnp.array([1.0]),
+    )
+    assert_array_equal(result, jnp.array([1.0, 2.0, 3.0]))

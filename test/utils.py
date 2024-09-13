@@ -3,9 +3,10 @@ test utilities
 """
 
 import numpyro.distributions as dist
+from jax.typing import ArrayLike
 
 import pyrenew.transformation as t
-from pyrenew.metaclass import RandomVariable, SampledValue
+from pyrenew.metaclass import RandomVariable
 from pyrenew.process import RandomWalk
 from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 
@@ -31,6 +32,7 @@ class SimpleRt(RandomVariable):
         None
         """
         self.name = name
+        name = "Rt_rv"
         self.rt_rv_ = TransformedVariable(
             name=f"{name}_log_rt_random_walk",
             base_rv=RandomWalk(
@@ -45,16 +47,16 @@ class SimpleRt(RandomVariable):
             name=f"{name}_init_log_rt", distribution=dist.Normal(0, 0.2)
         )
 
-    def sample(self, n=None, **kwargs) -> SampledValue:
+    def sample(self, n=None, **kwargs) -> ArrayLike:
         """
         Sample method
 
         Returns
         -------
-        SampledValue
+        ArrayLike
         """
-        init_rt, *_ = self.rt_init_rv_.sample()
-        return self.rt_rv_(init_vals=init_rt.value, n=n)
+        init_rt = self.rt_init_rv_()
+        return self.rt_rv_(init_vals=init_rt, n=n)
 
     @staticmethod
     def validate(self):

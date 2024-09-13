@@ -8,10 +8,11 @@ import jax
 import numpyro
 import numpyro.distributions as dist
 import pytest
+from jax.typing import ArrayLike
 from numpy.testing import assert_almost_equal
 
 import pyrenew.transformation as t
-from pyrenew.metaclass import Model, RandomVariable, SampledValue
+from pyrenew.metaclass import Model, RandomVariable
 from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 
 
@@ -29,14 +30,10 @@ class LengthTwoRV(RandomVariable):
         Returns
         -------
         tuple
-           (SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
-            SampledValue(val, t_start=self.t_start, t_unit=self.t_unit))
+           (val, val)
         """
         val = numpyro.sample("my_normal", dist.Normal(0, 1))
-        return (
-            SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
-            SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
-        )
+        return (val, val)
 
     def sample_length(self):
         """
@@ -65,8 +62,8 @@ class RVSamples(NamedTuple):
     A container to hold the output of `NamedBaseRV()`.
     """
 
-    rv1: SampledValue | None = None
-    rv2: SampledValue | None = None
+    rv1: ArrayLike | None = None
+    rv2: ArrayLike | None = None
 
     def __repr__(self):
         return f"RVSamples(rv1={self.rv1},rv2={self.rv2})"
@@ -85,14 +82,10 @@ class NamedBaseRV(RandomVariable):
         Returns
         -------
         tuple
-           (rv1= SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
-            rv2= SampledValue(val, t_start=self.t_start, t_unit=self.t_unit))
+           (rv1=val, rv2=val)
         """
         val = numpyro.sample("my_normal", dist.Normal(0, 1))
-        return RVSamples(
-            rv1=SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
-            rv2=SampledValue(val, t_start=self.t_start, t_unit=self.t_unit),
-        )
+        return RVSamples(rv1=val, rv2=val)
 
     def validate(self):
         """
@@ -196,15 +189,13 @@ def test_transforms_applied_at_sampling():
             norm_transformed_sample = tr_norm.sample()
             l2_transformed_sample = tr_l2.sample()
 
-        assert_almost_equal(
-            tr(norm_base_sample[0].value), norm_transformed_sample[0].value
-        )
+        assert_almost_equal(tr(norm_base_sample), norm_transformed_sample)
         assert_almost_equal(
             (
-                tr(l2_base_sample[0].value),
-                t.ExpTransform()(l2_base_sample[1].value),
+                tr(l2_base_sample[0]),
+                t.ExpTransform()(l2_base_sample[1]),
             ),
-            (l2_transformed_sample[0].value, l2_transformed_sample[1].value),
+            l2_transformed_sample,
         )
 
 

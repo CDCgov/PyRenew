@@ -3,7 +3,6 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import NamedTuple, get_type_hints
 
 import jax.random as jr
 import numpy as np
@@ -41,192 +40,16 @@ def _assert_type(arg_name: str, value, expected_type) -> None:
         )
 
 
-def _assert_sample_and_rtype(
-    rp: "RandomVariable", skip_if_none: bool = True
-) -> None:
-    """
-    Return type-checking for RandomVariable's sample function
-
-    Objects passed as `RandomVariable` should (a) have a `sample()` method that
-    (b) returns either a tuple or a named tuple.
-
-    Parameters
-    ----------
-    rp : RandomVariable
-        Random variable to check.
-    skip_if_none : bool, optional
-        When `True` it returns if `rp` is None. Defaults to True.
-
-    Returns
-    -------
-    None
-
-    Raises
-    ------
-    Exception
-        If rp is not a RandomVariable, does not have a sample function, or
-        does not return a tuple. Also occurs if rettype does not initialized
-        properly.
-    """
-
-    # Addressing the None case
-    if (rp is None) and (not skip_if_none):
-        Exception(
-            "The passed object cannot be None. It should be RandomVariable"
-        )
-    elif skip_if_none and (rp is None):
-        return None
-
-    if not isinstance(rp, RandomVariable):
-        raise Exception(f"{rp} is not an instance of RandomVariable.")
-
-    # Otherwise, checking for the sample function (must have one)
-    # with a defined rtype.
-    try:
-        sfun = rp.sample
-    except Exception:
-        raise Exception(
-            f"The RandomVariable {rp} does not have a sample function."
-        )  # noqa: E722
-
-    # Getting the return annotation (if any)
-    rettype = get_type_hints(sfun).get("return", None)
-
-    if rettype is None:
-        raise Exception(
-            f"The RandomVariable {rp} does not have return type "
-            + "annotation."
-        )
-
-    try:
-        if not isinstance(rettype(), tuple):
-            raise Exception(
-                f"The RandomVariable {rp}'s return type annotation is not"
-                + "a tuple"
-            )
-    except Exception:
-        raise Exception(
-            f"There was a problem when trying to initialize {rettype}."
-            + "the rtype of the random variable should be a tuple or a namedtuple"
-            + " with default values."
-        )
-
-    return None
-
-
-class SampledValue(NamedTuple):
-    """
-    A container for a value sampled from a RandomVariable.
-
-    Attributes
-    ----------
-    value : ArrayLike, optional
-        The sampled value.
-    t_start : int, optional
-        The start time of the value.
-    t_unit : int, optional
-        The unit of time relative to the model's fundamental
-        (smallest) time unit.
-    """
-
-    value: ArrayLike | None = None
-    t_start: int | None = None
-    t_unit: int | None = None
-
-    def __repr__(self):
-        return f"SampledValue(value={self.value}, t_start={self.t_start}, t_unit={self.t_unit})"
-
-
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
-
-    Notes
-    -----
-    RandomVariables in pyrenew can be time-aware, meaning that they can
-    have a t_start and t_unit attribute. These attributes
-    are expected to be used internally mostly for tasks including padding,
-    alignment of time series, and other time-aware operations.
-
-    Both attributes give information about the output of the `sample()` method,
-    in other words, the relative time units of the returning value.
-
-    Attributes
-    ----------
-    t_start : int
-        The start of the time series.
-    t_unit : int
-        The unit of the time series relative to the model's fundamental
-        (smallest) time unit. e.g. if the fundamental unit is days,
-        then 1 corresponds to units of days and 7 to units of weeks.
     """
-
-    t_start: int = None
-    t_unit: int = None
 
     def __init__(self, **kwargs):
         """
         Default constructor
         """
         pass
-
-    def set_timeseries(
-        self,
-        t_start: int,
-        t_unit: int,
-    ) -> None:
-        """
-        Set the time series start and unit
-
-        Parameters
-        ----------
-        t_start : int
-            The start of the time series relative to the
-            model time. It could be negative, indicating
-            that the `sample()` method returns timepoints
-            that occur prior to the model t = 0.
-        t_unit : int
-            The unit of the time series relative
-            to the model's fundamental (smallest)
-            time unit. e.g. if the fundamental unit
-            is days, then 1 corresponds to units of
-            days and 7 to units of weeks.
-
-        Returns
-        -------
-        None
-        """
-
-        # Either both values are None or both are not None
-        assert (t_unit is not None and t_start is not None) or (
-            t_unit is None and t_start is None
-        ), (
-            "Both t_start and t_unit should be None or not None. "
-            "Currently, t_start is {t_start} and t_unit is {t_unit}."
-        )
-
-        if t_unit is None and t_start is None:
-            return None
-
-        # Timeseries unit should be a positive integer
-        assert isinstance(
-            t_unit, int
-        ), f"t_unit should be an integer. It is {type(t_unit)}."
-
-        # Timeseries unit should be a positive integer
-        assert (
-            t_unit > 0
-        ), f"t_unit should be a positive integer. It is {t_unit}."
-
-        # Data starts should be a positive integer
-        assert isinstance(
-            t_start, int
-        ), f"t_start should be an integer. It is {type(t_start)}."
-
-        self.t_start = t_start
-        self.t_unit = t_unit
-
-        return None
 
     @abstractmethod
     def sample(

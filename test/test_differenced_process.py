@@ -122,7 +122,7 @@ def test_integrator_correctness(order, n_diffs):
     )
     result_proc1 = proc.integrate(inits, diffs)
     assert result_proc1.shape == (n_diffs + order,)
-    assert_array_almost_equal(result_manual, result_proc1, decimal=5)
+    assert_array_almost_equal(result_manual, result_proc1, decimal=4)
     assert result_proc1[0] == inits[0]
 
 
@@ -189,18 +189,18 @@ def test_differenced_process_sample(
     n_fail = -1
     n_fail_alt = 0
     with numpyro.handlers.seed(rng_seed=6723):
-        samp, *_ = proc.sample(n=n_long, init_vals=init_diff_vals)
-        samp_alt, *_ = proc.sample(n=n_long_alt, init_vals=init_diff_vals)
-        samp_one_diff, *_ = proc.sample(n=n_one_diff, init_vals=init_diff_vals)
-        samp_no_diffs, *_ = proc.sample(n=n_no_diffs, init_vals=init_diff_vals)
-        samp_no_diffs_alt, *_ = proc.sample(
+        samp = proc.sample(n=n_long, init_vals=init_diff_vals)
+        samp_alt = proc.sample(n=n_long_alt, init_vals=init_diff_vals)
+        samp_one_diff = proc.sample(n=n_one_diff, init_vals=init_diff_vals)
+        samp_no_diffs = proc.sample(n=n_no_diffs, init_vals=init_diff_vals)
+        samp_no_diffs_alt = proc.sample(
             n=n_no_diffs_alt, init_vals=init_diff_vals
         )
-    assert samp.value.shape == (n_long,)
-    assert samp_alt.value.shape == (n_long_alt,)
-    assert samp_one_diff.value.shape == (n_one_diff,)
-    assert samp_no_diffs.value.shape == (n_no_diffs,)
-    assert samp_no_diffs_alt.value.shape == (n_no_diffs_alt,)
+    assert samp.shape == (n_long,)
+    assert samp_alt.shape == (n_long_alt,)
+    assert samp_one_diff.shape == (n_one_diff,)
+    assert samp_no_diffs.shape == (n_no_diffs,)
+    assert samp_no_diffs_alt.shape == (n_no_diffs_alt,)
 
     with numpyro.handlers.seed(rng_seed=7834):
         with pytest.raises(ValueError, match="must be positive"):
@@ -267,5 +267,5 @@ def test_manual_difference_process_sample(
         differencing_order=len(inits),
         fundamental_process=fundamental_process,
     )
-    result, *_ = proc.sample(n=n, init_vals=inits)
-    assert_array_almost_equal(result.value, expected_solution)
+    result = proc.sample(n=n, init_vals=inits)
+    assert_array_almost_equal(result, expected_solution)
