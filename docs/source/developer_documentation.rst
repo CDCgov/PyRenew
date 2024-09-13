@@ -41,6 +41,10 @@ PyRenew Principles
    -  Using default site names in a ``RandomVariable`` is discouraged. Only use default site names at the ``Model`` level.
    -  Use ``DeterministicVariable``\ s instead of constants within a model.
 
+-  Multidimensional array conventions
+
+   -  In a multidimensional array of timeseries, time is always the first dimension. By default, `numpyro.scan` builds by augmenting the first dimension, and variables are often scanned over time, thus this convention makes default output of scan over time sensible.
+
 Adding Documentation to Sphinx
 ------------------------------
 
