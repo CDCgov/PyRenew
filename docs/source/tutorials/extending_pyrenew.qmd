@@ -224,10 +224,10 @@ class InfFeedback(RandomVariable):
 
         inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength)
 
-        inf_feedback_strength = au.pad_edges_to_match(
+        inf_feedback_strength, _ = au.pad_edges_to_match(
             x=inf_feedback_strength,
             y=Rt,
-        )[0]
+        )
 
         # Sampling inf feedback and adjusting the shape
         inf_feedback_pmf = self.infection_feedback_pmf(**kwargs)
