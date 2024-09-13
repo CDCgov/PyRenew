@@ -52,27 +52,11 @@ def test_double_scanner_reduces_to_single(inits, to_scan_a, multipliers):
         """
         return 4 * x + 0.025
 
-    def transform_ones_like(x: any):
-        """
-        Generate an array of ones with the same shape as the input array.
-
-        Parameters
-        ----------
-        x : any
-            Input value
-
-        Returns
-        -------
-        ArrayLike
-            An array of ones with the same shape as the input value `x`.
-        """
-        return jnp.ones_like(x)
-
     scanner_a = pc.new_convolve_scanner(to_scan_a, transform_a)
 
     double_scanner_a = pc.new_double_convolve_scanner(
         (jnp.array([523, 2, -0.5233]), to_scan_a),
-        (transform_ones_like, transform_a),
+        (jnp.ones_like, transform_a),
     )
 
     _, result_a = jax.lax.scan(f=scanner_a, init=inits, xs=multipliers)

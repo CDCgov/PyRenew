@@ -66,11 +66,14 @@ def _infection_w_feedback_alt(
 
 
 @pytest.mark.parametrize(
-    ["Rt", "I0"],
+    ["Rt", "I0", "inf_feed_strength"],
     [
         [
             jnp.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25]),
             jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
+            DeterministicVariable(
+                name="inf_feed_strength", value=jnp.array(0)
+            ),
         ],
         [
             jnp.array(
@@ -79,10 +82,13 @@ def _infection_w_feedback_alt(
             jnp.array(
                 np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] * 3)
             ).reshape((7, 3)),
+            DeterministicVariable(
+                name="inf_feed_strength", value=jnp.zeros(3)
+            ),
         ],
     ],
 )
-def test_infectionsrtfeedback(Rt, I0):
+def test_infectionsrtfeedback(Rt, I0, inf_feed_strength):
     """
     Test the InfectionsWithFeedback matching the Infections class.
     """
@@ -90,9 +96,7 @@ def test_infectionsrtfeedback(Rt, I0):
 
     # By doing the infection feedback strength 0, Rt = Rt_adjusted
     # So infection should be equal in both
-    inf_feed_strength = DeterministicVariable(
-        name="inf_feed_strength", value=jnp.array(0)
-    )
+
     inf_feedback_pmf = DeterministicPMF(name="inf_feedback_pmf", value=gen_int)
 
     # Test the InfectionsWithFeedback class

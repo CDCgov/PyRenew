@@ -168,7 +168,7 @@ class InfectionsWithFeedback(RandomVariable):
             )
         )
 
-        if inf_feedback_strength.ndim < Rt.ndim:
+        if inf_feedback_strength.ndim == Rt.ndim - 1:
             inf_feedback_strength = jnp.expand_dims(inf_feedback_strength, 0)
 
         # Making sure inf_feedback_strength spans the Rt length
@@ -178,7 +178,7 @@ class InfectionsWithFeedback(RandomVariable):
                 y=Rt,
                 axis=0,
             )[0]
-        elif inf_feedback_strength.shape != Rt.shape:
+        if inf_feedback_strength.shape != Rt.shape:
             raise ValueError(
                 "Infection feedback strength must be of length 1 "
                 "or the same length as the reproduction number array. "
