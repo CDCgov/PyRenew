@@ -1,12 +1,12 @@
 """
 Helper functions for doing analytical
-and/or numerical calculations about
-a given renewal process.
+and/or numerical calculations.
 """
 
 from __future__ import annotations
 
 import jax.numpy as jnp
+from jax.lax import scan
 from jax.typing import ArrayLike
 
 from pyrenew.distutil import validate_discrete_dist_vector
@@ -172,3 +172,108 @@ def get_asymptotic_growth_rate(
     return get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf)[
         0
     ]
+
+
+def integrate_discrete(
+    init_diff_vals: ArrayLike, highest_order_diff_vals: ArrayLike
+) -> ArrayLike:
+    """
+    Integrate (de-difference) the differenced process,
+    obtaining the process values :math:`X(t=0), X(t=1), ... X(t)`
+    from the :math:`n^{th}` differences and a set of
+    initial process / difference values
+    :math:`X(t=0), X^1(t=1), X^2(t=2), ... X^{(n-1)}(t=n-1)`,
+    where :math:`X^k(t)` is the value of the :math:`n^{th}`
+    difference at index :math:`t` of the process,
+    obtaining a sequence of length equal to the length of
+    the provided `highest_order_diff_vals` vector plus
+    the order of the process.
+
+    Parameters
+    ----------
+    init_diff_vals : ArrayLike
+        Values of
+        :math:`X(t=0), X^1(t=1), X^2(t=2) ... X^{(n-1)}(t=n-1)`.
+
+    highest_order_diff_vals : ArrayLike
+        Array of differences at the highest order of
+        differencing, i.e. the order of the overall process,
+        starting with :math:`X^{n}(t=n)`
+
+    Returns
+    -------
+    ArrayLike
+        The integrated (de-differenced) sequence of values,
+        of length n_diffs + order, where n_diffs is the
+        number of highest_order_diff_vals and order is the
+        order of the process.
+    """
+    order_level_init_vals = jnp.atleast_1d(init_diff_vals)
+    order = order_level_init_vals.shape[0]
+
+    if not (
+        highest_order_diff_vals.shape[1:] == order_level_init_vals.shape[1:]
+    ):
+        raise ValueError(
+            "highest_order_diff_vals must have the same "
+            "non-time dimension batch shape (i.e. shape after "
+            "the first dimension) as the order_level_init_vals. "
+            "Got highest_order_diff_vals of batch shape "
+            f"{highest_order_diff_vals.shape[1:]} and "
+            "order_level_init_vals of batch shape "
+            f"{order_level_init_vals.shape[1:]}"
+        )
+
+    highest_diffs = jnp.concatenate(
+        [
+            jnp.zeros_like(order_level_init_vals),
+            jnp.atleast_1d(highest_order_diff_vals),
+        ],
+        axis=0,
+    )
+
+    def _integrate_one_step(
+        current_diffs: ArrayLike,
+        next_order_and_init: tuple[int, ArrayLike],
+    ) -> tuple[ArrayLike, None]:
+        """
+        Perform one step of integration
+        (de-differencing) of the process.
+
+        Parameters
+        ----------
+        current_diffs: ArrayLike
+            Array of differences at the current
+            de-differencing order
+
+        next_order_and_init: tuple
+            Tuple containing with two entries.
+            First entry: the next order of de-differencing
+            (the current order - 1) as an integer.
+            Second entry: the initial value at
+            that the next order of de-differencing
+            as an ArrayLike of appropriate shape.
+
+        Returns
+        -------
+        tuple[ArrayLike, None]
+            A tuple whose first entry contains the
+            values at the next order of (de)-differencing
+            and whose second entry is None.
+        """
+        next_order, next_init = next_order_and_init
+        next_diffs = jnp.cumsum(
+            current_diffs.at[next_order, ...].set(next_init)
+        )
+        return next_diffs, None
+
+    scan_arrays = (
+        jnp.arange(start=order - 1, stop=-1, step=-1),
+        jnp.flip(order_level_init_vals, axis=0),
+    )
+
+    integrated, _ = scan(
+        f=_integrate_one_step, init=highest_diffs, xs=scan_arrays
+    )
+
+    return integrated
