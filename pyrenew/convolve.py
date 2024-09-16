@@ -82,7 +82,7 @@ def new_convolve_scanner(
             * jnp.einsum("i...,i...->...", array_to_convolve, history_subset)
         )
         latest = jnp.concatenate(
-            [history_subset[1:], jnp.expand_dims(new_val, axis=0)], axis=0
+            [history_subset[1:], new_val[jnp.newaxis]], axis=0
         )
         return latest, new_val
 
@@ -166,7 +166,7 @@ def new_double_convolve_scanner(
             m2 * m_net1 * jnp.einsum("i...,i...->...", arr2, history_subset)
         )
         latest = jnp.concatenate(
-            [history_subset[1:], jnp.expand_dims(new_val, axis=0)], axis=0
+            [history_subset[1:], new_val[jnp.newaxis]], axis=0
         )
         return latest, (new_val, m_net1)
 

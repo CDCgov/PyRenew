@@ -88,11 +88,11 @@ class Infections(RandomVariable):
                 f"generation interval length: {gen_int.size}."
             )
 
-        if I0.ndim != Rt.ndim:
+        if I0.shape[1:] != Rt.shape[1:]:
             raise ValueError(
-                "Initial infections and Rt must have the same dimensions. "
-                f"Got initial infections of shape {I0.shape} "
-                f"and Rt of shape {Rt.shape}."
+                "Initial infections and Rt must have the same batch shapes. "
+                f"Got initial infections of batch shape {I0.shape[1:]} "
+                f"and Rt of batch shape {Rt.shape[1:]}."
             )
 
         gen_int_rev = jnp.flip(gen_int)

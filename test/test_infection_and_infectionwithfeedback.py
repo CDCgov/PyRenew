@@ -60,7 +60,7 @@ def test_infections_with_feedback_invalid_inputs():
 
         with pytest.raises(
             ValueError,
-            match="Initial infections and Rt must have the same dimensions.",
+            match="Initial infections and Rt must have the same batch shapes.",
         ):
             InfectionsWithFeedback(
                 gen_int=gen_int,
@@ -70,7 +70,7 @@ def test_infections_with_feedback_invalid_inputs():
 
         with pytest.raises(
             ValueError,
-            match="Initial infections and Rt must have the same dimensions.",
+            match="Initial infections and Rt must have the same batch shapes.",
         ):
             infections(
                 gen_int=gen_int,
