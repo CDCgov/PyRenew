@@ -78,9 +78,12 @@ def new_convolve_scanner(
         history_subset: ArrayLike, multiplier: float
     ) -> tuple[ArrayLike, float]:  # numpydoc ignore=GL08
         new_val = transform(
-            multiplier * jnp.dot(array_to_convolve, history_subset)
+            multiplier
+            * jnp.einsum("i...,i...->...", array_to_convolve, history_subset)
         )
-        latest = jnp.hstack([history_subset[1:], new_val])
+        latest = jnp.concatenate(
+            [history_subset[1:], new_val[jnp.newaxis]], axis=0
+        )
         return latest, new_val
 
     return _new_scanner
@@ -158,9 +161,13 @@ def new_double_convolve_scanner(
         multipliers: tuple[float, float],
     ) -> tuple[ArrayLike, tuple[float, float]]:  # numpydoc ignore=GL08
         m1, m2 = multipliers
-        m_net1 = t1(m1 * jnp.dot(arr1, history_subset))
-        new_val = t2(m2 * m_net1 * jnp.dot(arr2, history_subset))
-        latest = jnp.hstack([history_subset[1:], new_val])
+        m_net1 = t1(m1 * jnp.einsum("i...,i...->...", arr1, history_subset))
+        new_val = t2(
+            m2 * m_net1 * jnp.einsum("i...,i...->...", arr2, history_subset)
+        )
+        latest = jnp.concatenate(
+            [history_subset[1:], new_val[jnp.newaxis]], axis=0
+        )
         return latest, (new_val, m_net1)
 
     return _new_scanner
