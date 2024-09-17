@@ -72,3 +72,29 @@ def test_manual_integrator_correctness(diffs, inits, expected_solution):
     """
     result = integrate_discrete(inits, diffs)
     assert_array_almost_equal(result, expected_solution)
+
+
+@pytest.mark.parametrize(
+    ["diff_shape", "init_shape"],
+    [
+        [(50, 3), (2, 2)],
+        [(12, 5, 10), (4, 5, 11)],
+        [
+            (
+                36,
+                12,
+            ),
+            (2, 12, 3),
+        ],
+    ],
+)
+def test_integrator_shape_validation(diff_shape, init_shape):
+    """
+    Test that appropriate ValueErrors
+    are raised when input shapes to integrate_discrete
+    are incompatible
+    """
+    diffs = jnp.zeros(diff_shape)
+    inits = jnp.zeros(init_shape)
+    with pytest.raises(ValueError, match="Non-time dimensions"):
+        integrate_discrete(inits, diffs)

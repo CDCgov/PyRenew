@@ -217,7 +217,6 @@ def integrate_discrete(
         batch_shape = broadcast_shapes(
             highest_diffs.shape[1:], inits_by_order.shape[1:]
         )
-        print(batch_shape)
     except Exception as e:
         raise ValueError(
             "Non-time dimensions "
