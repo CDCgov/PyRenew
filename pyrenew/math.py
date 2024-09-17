@@ -6,7 +6,7 @@ and/or numerical calculations.
 from __future__ import annotations
 
 import jax.numpy as jnp
-from jax.lax import scan
+from jax.lax import broadcast_shapes, scan
 from jax.typing import ArrayLike
 
 from pyrenew.distutil import validate_discrete_dist_vector
@@ -208,68 +208,39 @@ def integrate_discrete(
         number of highest_order_diff_vals and order is the
         order of the process.
     """
-    order_level_init_vals = jnp.atleast_1d(init_diff_vals)
-    order = order_level_init_vals.shape[0]
+    inits_by_order = jnp.atleast_1d(init_diff_vals)
+    highest_diffs = jnp.atleast_1d(highest_order_diff_vals)
+    order = inits_by_order.shape[0]
+    n_diffs = highest_diffs.shape[0]
 
-    if not (
-        highest_order_diff_vals.shape[1:] == order_level_init_vals.shape[1:]
-    ):
-        raise ValueError(
-            "highest_order_diff_vals must have the same "
-            "non-time dimension batch shape (i.e. shape after "
-            "the first dimension) as the order_level_init_vals. "
-            "Got highest_order_diff_vals of batch shape "
-            f"{highest_order_diff_vals.shape[1:]} and "
-            "order_level_init_vals of batch shape "
-            f"{order_level_init_vals.shape[1:]}"
+    try:
+        batch_shape = broadcast_shapes(
+            highest_diffs.shape[1:], inits_by_order.shape[1:]
         )
+        print(batch_shape)
+    except Exception as e:
+        raise ValueError(
+            "Non-time dimensions "
+            "(i.e. dimensions after the first) "
+            "for highest_order_diff_vals and init_diff_vals "
+            "must be broadcastable together. "
+            "Got highest_order_diff_vals of shape "
+            f"{highest_diffs.shape} and "
+            "init_diff_vals of shape "
+            f"{inits_by_order.shape}"
+        ) from e
+
+    highest_diffs = jnp.broadcast_to(highest_diffs, (n_diffs,) + batch_shape)
+    inits_by_order = jnp.broadcast_to(inits_by_order, (order,) + batch_shape)
 
     highest_diffs = jnp.concatenate(
-        [
-            jnp.zeros_like(order_level_init_vals),
-            jnp.atleast_1d(highest_order_diff_vals),
-        ],
+        [jnp.zeros_like(inits_by_order), highest_diffs],
         axis=0,
     )
 
-    def _integrate_one_step(
-        current_diffs: ArrayLike,
-        next_order_and_init: tuple[int, ArrayLike],
-    ) -> tuple[ArrayLike, None]:
-        """
-        Perform one step of integration
-        (de-differencing) of the process.
-
-        Parameters
-        ----------
-        current_diffs: ArrayLike
-            Array of differences at the current
-            de-differencing order
-
-        next_order_and_init: tuple
-            Tuple containing with two entries.
-            First entry: the next order of de-differencing
-            (the current order - 1) as an integer.
-            Second entry: the initial value at
-            that the next order of de-differencing
-            as an ArrayLike of appropriate shape.
-
-        Returns
-        -------
-        tuple[ArrayLike, None]
-            A tuple whose first entry contains the
-            values at the next order of (de)-differencing
-            and whose second entry is None.
-        """
-        next_order, next_init = next_order_and_init
-        next_diffs = jnp.cumsum(
-            current_diffs.at[next_order, ...].set(next_init), axis=0
-        )
-        return next_diffs, None
-
     scan_arrays = (
         jnp.arange(start=order - 1, stop=-1, step=-1),
-        jnp.flip(order_level_init_vals, axis=0),
+        jnp.flip(inits_by_order, axis=0),
     )
 
     integrated, _ = scan(
@@ -277,3 +248,41 @@ def integrate_discrete(
     )
 
     return integrated
+
+
+def _integrate_one_step(
+    current_diffs: ArrayLike,
+    next_order_and_init: tuple[int, ArrayLike],
+) -> tuple[ArrayLike, None]:
+    """
+    Perform one step of integration
+    (de-differencing) for integrate_discrete().
+
+    Helper function passed to :func:`jax.lax.scan()`.
+
+    Parameters
+    ----------
+    current_diffs: ArrayLike
+        Array of differences at the current
+        de-differencing order
+
+    next_order_and_init: tuple
+        Tuple containing with two entries.
+        First entry: the next order of de-differencing
+        (the current order - 1) as an integer.
+        Second entry: the initial value at
+        that the next order of de-differencing
+        as an ArrayLike of appropriate shape.
+
+    Returns
+    -------
+    tuple[ArrayLike, None]
+        A tuple whose first entry contains the
+        values at the next order of (de)-differencing
+        and whose second entry is None.
+    """
+    next_order, next_init = next_order_and_init
+    next_diffs = jnp.cumsum(
+        current_diffs.at[next_order, ...].set(next_init), axis=0
+    )
+    return next_diffs, None

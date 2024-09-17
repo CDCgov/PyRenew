@@ -22,9 +22,9 @@ from pyrenew.math import integrate_discrete
 )
 def test_integrator_correctness(order, diff_shape):
     """
-    Test that the scan-based integrate function built in
-    to DifferencedProcess works equivalently
-    to a manual implementation.
+    Test that the scan-based integrate_discrete() function
+    in pyrenew.math works equivalently to a manual
+    implementation using a for-loop.
     """
     n_diffs = diff_shape[0]
     batch_shape = diff_shape[1:]
@@ -53,6 +53,16 @@ def test_integrator_correctness(order, diff_shape):
             jnp.array([0, 0.25, 0.75, 1.25]),
         ],
         [jnp.array([1, 1, 1]), jnp.array([0, 2]), jnp.array([0, 2, 5, 9, 14])],
+        [
+            jnp.array([[1, 0], [1, 1], [1, 1]]),
+            0.1,
+            jnp.array([[0.1, 0.1], [1.1, 0.1], [2.1, 1.1], [3.1, 2.1]]),
+        ],
+        [
+            jnp.array([[1, 0], [1, 1], [1, 1]]),
+            jnp.array([[0.1, 0.2]]),
+            jnp.array([[0.1, 0.2], [1.1, 0.2], [2.1, 1.2], [3.1, 2.2]]),
+        ],
     ],
 )
 def test_manual_integrator_correctness(diffs, inits, expected_solution):
