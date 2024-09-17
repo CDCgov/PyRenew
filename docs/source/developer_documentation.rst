@@ -41,8 +41,8 @@ PyRenew Principles
    -  Using default site names in a ``RandomVariable`` is discouraged. Only use default site names at the ``Model`` level.
    -  Use ``DeterministicVariable``\ s instead of constants within a model.
 
-- ``scan`` conventions
-   
+-  ``scan`` conventions
+
    - Use ``jax.lax.scan`` for any scan whose iterations are deterministic, i.e. iterations contain no internal calls to ``RandomVariable.sample()`` or ``numpyro.sample()``.
    - Use ``numpyro.scan`` for any scan whose the iterations are stochastic, i.e. the iterations potentially include calls to ``RandomVariable.sample()`` or ``numpyro.sample()``.
 
