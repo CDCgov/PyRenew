@@ -263,7 +263,7 @@ def integrate_discrete(
         """
         next_order, next_init = next_order_and_init
         next_diffs = jnp.cumsum(
-            current_diffs.at[next_order, ...].set(next_init)
+            current_diffs.at[next_order, ...].set(next_init), axis=0
         )
         return next_diffs, None
 
