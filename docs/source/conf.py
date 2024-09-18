@@ -35,6 +35,7 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinxcontrib.mermaid",
     "sphinx_autodoc_typehints",
+    "myst_parser",
 ]
 
 # Simplifies printing of type hints
