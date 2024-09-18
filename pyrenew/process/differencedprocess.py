@@ -130,7 +130,7 @@ class DifferencedProcess(RandomVariable):
                 "et cetera. "
                 f"Got {n_inits} values "
                 "for a process of order "
-                f"{self.differencing_order}"
+                f"{self.differencing_order}."
             )
         n_diffs = n - self.differencing_order
 
