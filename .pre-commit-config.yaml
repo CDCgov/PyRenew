@@ -14,12 +14,12 @@ repos:
   # Python
   - repo: local
     hooks:
-      - id: generate-rst-placeholders
-        name: Tutorials .rst placeholders
-        entry: ./hook_scripts/pre-commit-rst-placeholder.sh
+      - id: generate-md-placeholders
+        name: Tutorials .md placeholders
+        entry: ./hook_scripts/pre-commit-md-placeholder.sh
         language: script
         always_run: true
-        files: "docs/source/tutorials/.*(qmd|rst)$"
+        files: "docs/source/tutorials/.*(qmd|md)$"
   - repo: https://github.com/psf/black
     rev: 23.10.0
     hooks:
