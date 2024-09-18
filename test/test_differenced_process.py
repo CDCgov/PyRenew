@@ -8,13 +8,63 @@ import numpyro.distributions as dist
 import pytest
 from numpy.testing import assert_array_almost_equal
 
-from pyrenew.deterministic import DeterministicVariable
+from pyrenew.deterministic import DeterministicVariable, NullVariable
 from pyrenew.process import (
     DifferencedProcess,
     IIDRandomSequence,
     StandardNormalSequence,
 )
 from pyrenew.randomvariable import DistributionalVariable
+
+
+@pytest.mark.parametrize(
+    "wrong_type_order", ["test", jnp.array([5.2]), 1.0, NullVariable()]
+)
+def test_differencing_order_type_validation(wrong_type_order):
+    """
+    Test that passing something other than an
+    integer as the differencing_order raises
+    an error via the dedicated assertion function,
+    that valid types do pass validation, and
+    that this function is correctly used for
+    type validation at object instantiation.
+    """
+    err_match = "must be an integer"
+    with pytest.raises(ValueError, match=err_match):
+        DifferencedProcess.assert_valid_differencing_order(wrong_type_order)
+    with pytest.raises(ValueError, match=err_match):
+        _ = DifferencedProcess(
+            fundamental_process=None,
+            differencing_order=wrong_type_order,
+        )
+    DifferencedProcess.assert_valid_differencing_order(1)
+    _ = DifferencedProcess(fundamental_process=None, differencing_order=1)
+
+
+@pytest.mark.parametrize(
+    ["wrong_value", "right_value"], [[0, 1], [-5, 5], [-10325235, 300]]
+)
+def test_differencing_order_value_validation(wrong_value, right_value):
+    """
+    Test that passing an integer that is less than 1
+    as the differencing_order raises a ValueError via
+    the dedicated assertion function, that valid
+    values do pass, and that the validation function
+    is correctly used for value validation at
+    object instantiation.
+    """
+    with pytest.raises(ValueError, match="greater than or equal to 1"):
+        DifferencedProcess.assert_valid_differencing_order(wrong_value)
+        _ = DifferencedProcess(
+            fundamental_process=None,
+            differencing_order=wrong_value,
+        )
+
+    DifferencedProcess.assert_valid_differencing_order(right_value)
+    _ = DifferencedProcess(
+        fundamental_process=None,
+        differencing_order=right_value,
+    )
 
 
 @pytest.mark.parametrize(

@@ -59,9 +59,38 @@ class DifferencedProcess(RandomVariable):
         -------
         None
         """
+        self.assert_valid_differencing_order(differencing_order)
         self.fundamental_process = fundamental_process
         self.differencing_order = differencing_order
         super().__init__(**kwargs)
+
+    @staticmethod
+    def assert_valid_differencing_order(differencing_order: any):
+        """
+        To be valid, a differencing order must
+        be an integer and must be strictly positive.
+        This function raises a value error if its
+        argument is not a valid differencing order.
+        Parameter
+        ---------
+        differcing_order : any
+            Potential differencing order to validate.
+        Returns
+        -------
+        None or raises a ValueError
+        """
+        if not isinstance(differencing_order, int):
+            raise ValueError(
+                "differencing_order must be an integer. "
+                f"got type {type(differencing_order)} "
+                f"and value {differencing_order}"
+            )
+        if not differencing_order >= 1:
+            raise ValueError(
+                "differencing_order must be an integer "
+                "greater than or equal to 1. Got "
+                f"{differencing_order}"
+            )
 
     def validate(self):
         """
