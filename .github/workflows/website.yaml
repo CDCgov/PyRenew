@@ -52,6 +52,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    outputs:
+      page_artifact_id: ${{ steps.upload.outputs.artifact_id }}
     steps:
     - uses: actions/checkout@v4
     - uses: quarto-dev/quarto-actions/setup@v2
@@ -91,6 +93,7 @@ jobs:
     # Upload
     - name: Upload artifacts
       uses: actions/upload-pages-artifact@v3
+      id: upload
       with:
         name: github-pages
         path: docs/build/html/
@@ -115,3 +118,21 @@ jobs:
       with:
         artifact_name: github-pages
         preview: true
+
+  post-page-artifact:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+        contents: read
+        pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Post comment preview
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          gh pr comment ${{ github.event.number }} --body \
+            "Thank you for your contribution @${{ github.triggering_actor }}:rocket:! Your page is ready to preview :point_right: [here](https://github.com/${{github.repository}}/actions/runs/${{ github.run_id }}/artifacts/${{ needs.build.outputs.page_artifact_id }}) :point_left:!"
