@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import polars as pl
 from jax.typing import ArrayLike
-from numpyro.infer import MCMC, NUTS, Predictive
+from numpyro.infer import MCMC, NUTS, Predictive, init_to_sample
 
 from pyrenew.mcmcutils import plot_posterior, spread_draws
 
@@ -175,6 +175,9 @@ class Model(metaclass=ABCMeta):
 
         if "find_heuristic_step_size" not in nuts_args:
             nuts_args["find_heuristic_step_size"] = True
+
+        if "init_strategy" not in nuts_args:
+            nuts_args["init_strategy"] = init_to_sample
 
         if mcmc_args is None:
             mcmc_args = dict()
