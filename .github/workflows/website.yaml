@@ -38,7 +38,7 @@ jobs:
         run: |
             cd docs/source/tutorials
             poetry run make tutorials_clean
-            poetry run make tutorials_rst
+            poetry run make tutorials_md
 
       # Upload
       - name: Upload artifacts
@@ -73,9 +73,7 @@ jobs:
 
     - name: Render documentation index from README
       run: |
-        poetry run quarto render README.md --to rst -o index.rst
-        mv index.rst docs/source
-        poetry run python docs/post_process_rst.py docs/source/index.rst
+        cp README.md docs/source/index.md
 
     # Download the rendered tutorials
     - name: Download artifacts
