@@ -9,17 +9,12 @@ help:
 	@echo "  tutorials_py    : Convert the Jupyter notebooks to Python scripts"
 	@echo ""
 
-.PHONY: help tutorials tutorials_md tutorials_rst tutorials_ipynb tutorials_py tutorials_clean
+.PHONY: help tutorials tutorials_md tutorials_ipynb tutorials_py tutorials_clean
 
 
-# Pattern rule to build a markdown file from a qmd file
+# Pattern rule to build a Github flavored markdown file from a qmd file
 %.md: %.qmd
-	quarto render $<
-
-# Pattern rule to build a reStructuredText file from a qmd file
-%.rst: %.qmd
-	quarto render $< --to rst
-	python ../../post_process_rst.py $@
+	quarto render $< --to gfm
 
 # Pattern rule to build a notebook file from a qmd file
 %.ipynb: %.qmd
@@ -37,9 +32,6 @@ QMD_FILES := $(wildcard *.qmd)
 # Derive the corresponding markdown files
 MD_FILES := $(QMD_FILES:.qmd=.md)
 
-# Derive the corresponding restructured text files
-RST_FILES := $(QMD_FILES:.qmd=.rst)
-
 # Derive the corresponding notebook files
 IPYNB_FILES := $(QMD_FILES:.qmd=.ipynb)
 
@@ -47,13 +39,10 @@ IPYNB_FILES := $(QMD_FILES:.qmd=.ipynb)
 PY_FILES := $(IPYNB_FILES:.ipynb=.py)
 
 # Target to build all docs
-tutorials: tutorials_md tutorials_ipynb tutorials_py tutorials_rst
+tutorials: tutorials_md tutorials_ipynb tutorials_py
 
 # Target to build all markdown files
 tutorials_md: $(MD_FILES)
-
-# Target to build all reStructuredText files
-tutorials_rst: $(RST_FILES)
 
 # Target to build all notebook files
 tutorials_ipynb: $(IPYNB_FILES)
@@ -63,4 +52,4 @@ tutorials_py: $(PY_FILES)
 
 tutorials_clean:
 	rm -rf ./*_files/
-	rm -f $(MD_FILES) $(IPYNB_FILES) $(PY_FILES) $(RST_FILES)
+	rm -f $(MD_FILES) $(IPYNB_FILES) $(PY_FILES)
