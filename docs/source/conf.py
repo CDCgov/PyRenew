@@ -1,5 +1,8 @@
 # numpydoc ignore=GL08
 
+import os
+import sys
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -14,6 +17,9 @@ author = "CDC Center for Forecasting Analytics"
 release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
+
+sys.path.insert(0, os.path.abspath("../../pyrenew"))
+
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
