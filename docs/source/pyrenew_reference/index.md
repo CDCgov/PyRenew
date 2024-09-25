@@ -8,8 +8,9 @@ latent
 process
 randomvariable
 observation
+distributions
 datasets
-msei
+additional
 ```
 
 ```{eval-rst}

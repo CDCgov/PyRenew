@@ -10,6 +10,5 @@ basic_renewal_model
 hospital_admissions_model
 extending_pyrenew
 periodic_effects
-time
 day_of_the_week
 ```
