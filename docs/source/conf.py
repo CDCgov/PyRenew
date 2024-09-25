@@ -27,7 +27,7 @@ extensions = [
     "sphinx.ext.inheritance_diagram",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
-    "sphinx.ext.mathjax",
+    "sphinxcontrib.katex",
     "sphinxcontrib.mermaid",
     "sphinx_autodoc_typehints",
     "myst_parser",
@@ -67,7 +67,7 @@ html_theme_options = {
 }
 
 html_static_path = ["_static"]
-html_css_files = ["msei.css"]
+html_css_files = ["pyrenew.css"]
 
 html_sidebars = {
     "**": [
@@ -78,3 +78,6 @@ html_sidebars = {
 }
 
 master_doc = "general/ctoc"
+
+myst_fence_as_directive = ["mermaid"]
+myst_enable_extensions = ["amsmath", "dollarmath"]
