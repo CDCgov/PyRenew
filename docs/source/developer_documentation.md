@@ -77,12 +77,13 @@ To make the new tutorial available in the website, developers should follow thes
 1. Create a new `quarto` file in the `./docs/source/tutorials` directory. For instance, the `example_with_datasets.qmd` file was added to the repository.
 2. Add an entry in the `./docs/source/tutorials/index.md`, for example:
 
-```RST
+````markdown
 ```{toctree}
 :maxdepth: 2
 getting_started
 example_with_datasets
 ```
+````
 
 3. Add an `md` entry with the same basename as the `quarto` file in the `./docs/source/tutorials` directory. For instance, the `example_with_datasets.md` file was added to the repository. This last step can be done running the bash script [./hook_scripts/pre-commit-md-placeholder.sh](https://github.com/CDCgov/PyRenew/blob/main/hook_scripts/pre-commit-md-placeholder.sh). Note the script should be executed by `pre-commit`.
 
