@@ -36,7 +36,7 @@ jobs:
       # which is then uploaded as an artifact.
       - name: Render documents
         run: |
-            cd docs/source/tutorials
+            cd docs
             poetry run make tutorials_clean
             poetry run make tutorials_md
 
@@ -84,7 +84,9 @@ jobs:
 
     # Building
     - name: Build HTML using Poetry
-      run: poetry run sphinx-build -M html docs/source/ docs/build/
+      run: |
+        cd docs
+        poetry run make html
 
     # Upload
     - name: Upload artifacts
