@@ -9,6 +9,7 @@ process
 randomvariable
 observation
 distributions
+deterministic
 datasets
 additional
 ```
