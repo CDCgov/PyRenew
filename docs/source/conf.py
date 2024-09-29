@@ -1,24 +1,25 @@
 # numpydoc ignore=GL08
 
+import os
+import sys
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
 # https://www.sphinx-doc.org/en/master/usage/configuration.html
-import os
-import sys
-
-sys.path.insert(0, os.path.abspath("../.."))
-
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "Multisignal Renewal Models for Epi Inference"
 copyright = "2024, CDC CFA"
-author = "CDC's Center for Forecasting Analytics"
+author = "CDC Center for Forecasting Analytics"
 release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
+
+sys.path.insert(0, os.path.abspath("../../pyrenew"))
+
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
@@ -32,9 +33,10 @@ extensions = [
     "sphinx.ext.inheritance_diagram",
     "sphinx.ext.todo",
     "sphinx.ext.viewcode",
-    "sphinx.ext.mathjax",
+    "sphinxcontrib.katex",
     "sphinxcontrib.mermaid",
     "sphinx_autodoc_typehints",
+    "myst_parser",
 ]
 
 # Simplifies printing of type hints
@@ -71,7 +73,7 @@ html_theme_options = {
 }
 
 html_static_path = ["_static"]
-html_css_files = ["msei.css"]
+html_css_files = ["pyrenew.css"]
 
 html_sidebars = {
     "**": [
@@ -80,4 +82,8 @@ html_sidebars = {
         "sbt-sidebar-nav.html",
     ]
 }
+
 master_doc = "general/ctoc"
+
+myst_fence_as_directive = ["mermaid"]
+myst_enable_extensions = ["amsmath", "dollarmath"]
