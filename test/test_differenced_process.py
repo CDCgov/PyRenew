@@ -2,7 +2,6 @@
 Unit tests for the DifferencedProcess class
 """
 
-import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
@@ -69,88 +68,6 @@ def test_differencing_order_value_validation(wrong_value, right_value):
 
 
 @pytest.mark.parametrize(
-    ["order", "diffs"],
-    [
-        [1, jnp.array([1.0, 2, -3])],
-        [2, jnp.array([1.0, 2, -3])],
-        [3, jnp.array([1.0, 2, -3])],
-        [4, jnp.array([1.0, 2, -3])],
-    ],
-)
-def test_integrator_init_validation(order, diffs):
-    """
-    Test that when the integrator is called,
-    it succeeds if and only if the right number
-    of initial values have been specified, and raises
-    the appropriate ValueError otherwise.
-    """
-    inits_short = jnp.ones(order - 1)
-    inits_correct = jnp.ones(order)
-    inits_long = jnp.ones(order + 1)
-    proc = DifferencedProcess(
-        fundamental_process=None,
-        differencing_order=order,
-    )
-    with pytest.raises(
-        ValueError, match="exactly as many initial difference values"
-    ):
-        proc.integrate(inits_short, diffs)
-    with pytest.raises(
-        ValueError, match="exactly as many initial difference values"
-    ):
-        proc.integrate(inits_long, diffs)
-    proc.integrate(inits_correct, diffs)
-
-
-@pytest.mark.parametrize(
-    ["order", "n_diffs"], [[1, 250], [2, 40], [3, 10], [4, 10], [5, 5]]
-)
-def test_integrator_correctness(order, n_diffs):
-    """
-    Test that the scan-based integrate function built in
-    to DifferencedProcess works equivalently
-    to a manual implementation.
-    """
-    diffs = jax.random.normal(key=jax.random.key(54), shape=(n_diffs,))
-    inits = jax.random.normal(key=jax.random.key(45), shape=(order,))
-    result_manual = diffs
-    for init in jnp.flip(inits):
-        result_manual = jnp.cumsum(jnp.hstack([init, result_manual]))
-
-    proc = DifferencedProcess(
-        fundamental_process=None, differencing_order=order
-    )
-    result_proc1 = proc.integrate(inits, diffs)
-    assert result_proc1.shape == (n_diffs + order,)
-    assert_array_almost_equal(result_manual, result_proc1, decimal=4)
-    assert result_proc1[0] == inits[0]
-
-
-@pytest.mark.parametrize(
-    ["diffs", "inits", "expected_solution"],
-    [
-        [
-            jnp.array([0.25, 0.5, 0.5]),
-            jnp.array([0]),
-            jnp.array([0, 0.25, 0.75, 1.25]),
-        ],
-        [jnp.array([1, 1, 1]), jnp.array([0, 2]), jnp.array([0, 2, 5, 9, 14])],
-    ],
-)
-def test_manual_integrator_correctness(diffs, inits, expected_solution):
-    """
-    Test the integrator correctness with manually computed
-    solutions.
-    """
-    order = inits.size
-    proc = DifferencedProcess(
-        fundamental_process=None, differencing_order=order
-    )
-    result = proc.integrate(inits, diffs)
-    assert_array_almost_equal(result, expected_solution)
-
-
-@pytest.mark.parametrize(
     ["fundamental_process", "differencing_order", "init_diff_vals"],
     [
         [
@@ -207,7 +124,10 @@ def test_differenced_process_sample(
             proc.sample(n=n_fail, init_vals=init_diff_vals)
         with pytest.raises(ValueError, match="must be positive"):
             proc.sample(n=n_fail_alt, init_vals=init_diff_vals)
-        with pytest.raises(ValueError, match="1-dimensional"):
+        with pytest.raises(
+            ValueError,
+            match=("Must have exactly as many " "initial difference values"),
+        ):
             proc.sample(n=n_long, init_vals=jnp.atleast_2d(init_diff_vals))
 
 

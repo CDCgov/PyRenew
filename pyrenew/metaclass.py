@@ -7,7 +7,7 @@ from abc import ABCMeta, abstractmethod
 import jax.random as jr
 import numpy as np
 from jax.typing import ArrayLike
-from numpyro.infer import MCMC, NUTS, Predictive
+from numpyro.infer import MCMC, NUTS, Predictive, init_to_sample
 
 
 def _assert_type(arg_name: str, value, expected_type) -> None:
@@ -170,6 +170,9 @@ class Model(metaclass=ABCMeta):
 
         if "find_heuristic_step_size" not in nuts_args:
             nuts_args["find_heuristic_step_size"] = True
+
+        if "init_strategy" not in nuts_args:
+            nuts_args["init_strategy"] = init_to_sample
 
         if mcmc_args is None:
             mcmc_args = dict()

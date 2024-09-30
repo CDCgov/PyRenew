@@ -143,11 +143,18 @@ class InfectionsWithFeedback(RandomVariable):
         InfectionsWithFeedback
             Named tuple with "infections".
         """
-        if I0.size < gen_int.size:
+        if I0.shape[0] < gen_int.size:
             raise ValueError(
                 "Initial infections must be at least as long as the "
-                f"generation interval. Got {I0.size} initial infections "
-                f"and {gen_int.size} generation interval."
+                f"generation interval. Got initial infections length {I0.shape[0]}"
+                f"and generation interval length {gen_int.size}."
+            )
+
+        if I0.shape[1:] != Rt.shape[1:]:
+            raise ValueError(
+                "Initial infections and Rt must have the same batch shapes. "
+                f"Got initial infections of batch shape {I0.shape[1:]} "
+                f"and Rt of batch shape {Rt.shape[1:]}."
             )
 
         gen_int_rev = jnp.flip(gen_int)
@@ -160,19 +167,23 @@ class InfectionsWithFeedback(RandomVariable):
                 **kwargs,
             )
         )
+
+        if inf_feedback_strength.ndim == Rt.ndim - 1:
+            inf_feedback_strength = inf_feedback_strength[jnp.newaxis]
+
         # Making sure inf_feedback_strength spans the Rt length
-        if inf_feedback_strength.size == 1:
-            inf_feedback_strength = au.pad_x_to_match_y(
+        if inf_feedback_strength.shape[0] == 1:
+            inf_feedback_strength = au.pad_edges_to_match(
                 x=inf_feedback_strength,
                 y=Rt,
-                fill_value=inf_feedback_strength[0],
-            )
-        elif inf_feedback_strength.size != Rt.size:
+                axis=0,
+            )[0]
+        if inf_feedback_strength.shape != Rt.shape:
             raise ValueError(
-                "Infection feedback strength must be of size 1 "
-                "or the same size as the reproduction number array. "
-                f"Got {inf_feedback_strength.size} "
-                f"and {Rt.size} respectively."
+                "Infection feedback strength must be of length 1 "
+                "or the same length as the reproduction number array. "
+                f"Got {inf_feedback_strength.shape} "
+                f"and {Rt.shape} respectively."
             )
 
         # Sampling inf feedback pmf

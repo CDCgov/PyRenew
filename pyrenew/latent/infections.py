@@ -80,12 +80,19 @@ class Infections(RandomVariable):
         InfectionsSample
             Named tuple with "infections".
         """
-        if I0.size < gen_int.size:
+        if I0.shape[0] < gen_int.size:
             raise ValueError(
                 "Initial infections vector must be at least as long as "
                 "the generation interval. "
-                f"Initial infections vector length: {I0.size}, "
+                f"Initial infections vector length: {I0.shape[0]}, "
                 f"generation interval length: {gen_int.size}."
+            )
+
+        if I0.shape[1:] != Rt.shape[1:]:
+            raise ValueError(
+                "Initial infections and Rt must have the same batch shapes. "
+                f"Got initial infections of batch shape {I0.shape[1:]} "
+                f"and Rt of batch shape {Rt.shape[1:]}."
             )
 
         gen_int_rev = jnp.flip(gen_int)

@@ -41,9 +41,14 @@ PyRenew Principles
    -  Using default site names in a ``RandomVariable`` is discouraged. Only use default site names at the ``Model`` level.
    -  Use ``DeterministicVariable``\ s instead of constants within a model.
 
+-  ``scan`` conventions
+
+   - Use ``jax.lax.scan`` for any scan whose iterations are deterministic, i.e. iterations contain no internal calls to ``RandomVariable.sample()`` or ``numpyro.sample()``.
+   - Use ``numpyro.scan`` for any scan whose the iterations are stochastic, i.e. the iterations potentially include calls to ``RandomVariable.sample()`` or ``numpyro.sample()``.
+
 -  Multidimensional array conventions
 
-   -  In a multidimensional array of timeseries, time is always the first dimension. By default, ``numpyro.scan`` builds by augmenting the first dimension, and variables are often scanned over time, making default output of scan over time sensible.
+   -  In a multidimensional array of timeseries, time is always the first dimension. By default, ``jax.lax.scan()`` and ``numpyro.contrib.control_flow.scan()`` build output arrays by augmenting the first dimension, and variables are often scanned over time, making default output of scan over time sensible.
 
 Adding Documentation to Sphinx
 ------------------------------
