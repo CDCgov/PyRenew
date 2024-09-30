@@ -8,8 +8,9 @@ of times-to-event using
 :py:func:`jax.lax.scan`.
 Factories generate functions
 that can be passed to
-:py:func:`jax.lax.scan` with an
-appropriate array to scan along.
+:func:`jax.lax.scan` or
+:func:`numpyro.contrib.control_flow.scan`
+with an appropriate array to scan along.
 """
 
 from __future__ import annotations
@@ -26,7 +27,8 @@ def new_convolve_scanner(
 ) -> Callable:
     r"""
     Factory function to create a "scanner" function
-    that can be used with :py:func:`jax.lax.scan` to
+    that can be used with :func:`jax.lax.scan` or
+    :func:`numpyro.contrib.control_flow.scan` to
     construct an array via backward-looking iterative
     convolution.
 
@@ -44,7 +46,9 @@ def new_convolve_scanner(
     -------
     Callable
         A scanner function that can be used with
-        :py:func:`jax.lax.scan` for convolution.
+        :func:`jax.lax.scan` or
+        :func:`numpyro.contrib.control_flow.scan`
+        for convolution.
         This function takes a history subset array and
         a scalar, computes the dot product of
         the supplied convolution array with the history

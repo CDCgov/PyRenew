@@ -71,10 +71,12 @@ class DifferencedProcess(RandomVariable):
         be an integer and must be strictly positive.
         This function raises a value error if its
         argument is not a valid differencing order.
-        Parameter
-        ---------
+
+        Parameters
+        ----------
         differcing_order : any
             Potential differencing order to validate.
+
         Returns
         -------
         None or raises a ValueError
@@ -114,8 +116,8 @@ class DifferencedProcess(RandomVariable):
         init_vals : ArrayLike
             initial values for the :math:`0^{th}` through
             :math:`(n-1)^{st}` differences, passed as the
-            ``init_diff_vals`` argument to
-            :func:`integrate_discrete()`
+            :code:`init_diff_vals` argument to
+            :func:`~pyrenew.math.integrate_discrete()`
 
         n : int
             Number of values to sample. Will sample
@@ -126,12 +128,12 @@ class DifferencedProcess(RandomVariable):
 
         *args :
            Additional positional arguments passed to
-           :meth:`self.fundamental_process.sample()`
+           :meth:`self.fundamental_process.sample`
 
         fundamental_process_init_vals : ArrayLike
            Initial values for the fundamental process.
-           Passed as the :arg:`init_vals` keyword argument
-           to :meth:`self.fundamental_process.sample()`.
+           Passed as the :code:`init_vals` keyword argument
+           to :meth:`self.fundamental_process.sample`.
 
         **kwargs : dict, optional
             Keyword arguments passed to
