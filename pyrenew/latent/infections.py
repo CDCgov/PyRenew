@@ -91,7 +91,8 @@ class Infections(RandomVariable):
 
         if I0.shape[1:] != Rt.shape[1:]:
             raise ValueError(
-                "Initial infections and Rt must have the same batch shapes. "
+                "Initial infections and Rt must have the "
+                "same batch shapes. "
                 f"Got initial infections of batch shape {I0.shape[1:]} "
                 f"and Rt of batch shape {Rt.shape[1:]}."
             )
