@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
@@ -65,7 +67,7 @@ class DifferencedProcess(RandomVariable):
         super().__init__(**kwargs)
 
     @staticmethod
-    def assert_valid_differencing_order(differencing_order: any):
+    def assert_valid_differencing_order(differencing_order: Any):
         """
         To be valid, a differencing order must
         be an integer and must be strictly positive.
@@ -74,12 +76,13 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
-        differcing_order : any
+        differencing_order : Any
             Potential differencing order to validate.
 
         Returns
         -------
-        None or raises a ValueError
+        None
+            or raises a :class:`ValueError`
         """
         if not isinstance(differencing_order, int):
             raise ValueError(
@@ -107,7 +110,7 @@ class DifferencedProcess(RandomVariable):
         *args,
         fundamental_process_init_vals: ArrayLike = None,
         **kwargs,
-    ) -> ArrayLike:
+    ) -> jnp.ndarray:
         """
         Sample from the process
 
@@ -130,10 +133,11 @@ class DifferencedProcess(RandomVariable):
            Additional positional arguments passed to
            :meth:`self.fundamental_process.sample`
 
-        fundamental_process_init_vals : ArrayLike
+        fundamental_process_init_vals : ArrayLike, optional
            Initial values for the fundamental process.
            Passed as the :code:`init_vals` keyword argument
            to :meth:`self.fundamental_process.sample`.
+           Default :obj:`None`.
 
         **kwargs : dict, optional
             Keyword arguments passed to
@@ -141,8 +145,8 @@ class DifferencedProcess(RandomVariable):
 
         Returns
         -------
-        ArrayLike
-            representing the undifferenced timeseries
+        jnp.ndarray
+            An array representing the undifferenced timeseries
         """
         if not isinstance(n, int):
             raise ValueError("n must be an integer. " f"Got {type(n)}")
