@@ -215,61 +215,36 @@ idata = az.from_numpyro(
     posterior=hosp_model.mcmc,
     posterior_predictive=ppc_samples,
 )
+
+# convert hospital admissions from discrete to continuous
 idata.posterior_predictive["negbinom_rv"] = idata.posterior_predictive[
     "negbinom_rv"
 ].astype(float)
-fig, ax = plt.subplots(figsize=(8, 6))
-az.plot_ppc(idata, kind="kde", ax=ax)
-ax.legend()
-plt.show()
-```
 
-```{python}
-posterior_predictive_samples = idata.posterior_predictive["negbinom_rv"]
-time = idata.posterior_predictive["negbinom_rv_dim_0"].values
-hdi_data = az.hdi(posterior_predictive_samples, hdi_prob=0.94)
-fig, ax = plt.subplots(figsize=(10, 6))
-az.plot_hdi(
-    time, posterior_predictive_samples, ax=ax, hdi_prob=0.94, color="lightblue"
+# use a time series plot (plot_ts) from arviz for plotting
+axes = az.plot_ts(
+    idata,
+    y="negbinom_rv",
+    y_hat="negbinom_rv",
+    num_samples=150,
+    y_kwargs={"color": "red", "linewidth": 2.5},
+    y_hat_plot_kwargs={"color": "gray"},
+    y_mean_plot_kwargs={"color": "black", "linestyle": "--", "linewidth": 2.5},
+    backend_kwargs={"figsize": (8, 6)},
+    textsize=15.0,
 )
-ax.plot(
-    time, daily_hosp_admits, color="black", label="Observed Data", linewidth=2
-)
-posterior_mean = posterior_predictive_samples.mean(dim=["chain", "draw"])
-ax.plot(
-    time,
-    posterior_mean,
-    color="orange",
-    linestyle="--",
-    label="Posterior Predictive Mean",
-)
-ax.set_xlabel("Time (negbinom_rv_dim_0)")
-ax.set_ylabel("Value")
-ax.set_xlim(1, daily_hosp_admits.size)
-ax.legend()
+ax = axes[0][0]
+ax.set_xlabel("Time", fontsize=20)
+ax.set_ylabel("Hospital Admissions", fontsize=20)
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(handles, ["Observed", "Posterior Predictive", "Samples"], loc="best")
 plt.show()
 ```
 
 
-```{python}
-# other example that works but doesn't use arviz to plot in the way we desire
-posterior_predictive_samples = idata.posterior_predictive["negbinom_rv"]
-time = idata.posterior_predictive["negbinom_rv_dim_0"].values
-fig, ax = plt.subplots(figsize=(10, 6))
-num_pp_samples = 100
-for i in range(num_pp_samples):
-    ax.plot(
-        time, posterior_predictive_samples[0, i, :], color="blue", alpha=0.1
-    )
-ax.plot(
-    time, daily_hosp_admits, color="black", label="Observed Data", linewidth=2
-)
-ax.set_xlabel("Time (negbinom_rv_dim_0)")
-ax.set_ylabel("Value")
-ax.set_xlim(1, daily_hosp_admits.size)
-ax.legend()
-plt.show()
-```
+
+
+
 ## Round 2: Incorporating day-of-the-week effects
 
 We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect. To do this, we will add two additional arguments to the latent hospital admissions random variable: `day_of_the_week_rv` (a `RandomVariable`) and `obs_data_first_day_of_the_week` (an `int` mapping days of the week from 0:6, zero being Monday). The `day_of_the_week_rv`'s sample method should return a vector of length seven; those values are then broadcasted to match the length of the dataset. Moreover, since the observed data may start in a weekday other than Monday, the `obs_data_first_day_of_the_week` argument is used to offset the day-of-the-week effect.
@@ -343,9 +318,34 @@ As a result, we can see the posterior distribution of our novel day-of-the-week 
 ```{python}
 # | label: fig-output-day-of-week
 # | fig-cap: Day of the week effect
-out = hosp_model_dow.plot_posterior(
-    var="dayofweek_effect_raw", ylab="Day of the Week Effect", samples=500
+# out = hosp_model_dow.plot_posterior(
+#     var="dayofweek_effect_raw", ylab="Day of the Week Effect", samples=500
+# )
+
+# retrieve the prior predictive samples from hosp_model_dow
+ppc_samples_dow = hosp_model_dow.posterior_predictive(
+    n_datapoints=daily_hosp_admits.size,
+    numpyro_predictive_args={"num_samples": 500},
 )
+# create an InferenceData object from hosp_model_dow
+dow_idata = az.from_numpyro(
+    posterior=hosp_model_dow.mcmc,
+    posterior_predictive=ppc_samples_dow,
+)
+print(dow_idata.posterior_predictive)
+# use a time series plot (plot_ts) from arviz for plotting
+# axes = az.plot_ts(
+#     dow_idata.prior["dayofweek_effect_raw"],
+#     y=dow_idata.prior["dayofweek_effect_raw"],
+#     num_samples=500,
+#     backend_kwargs={"figsize": (8, 6)},
+#     textsize=15.0,
+# )
+
+
+# ax = axes[0][0]
+# ax.set_ylabel("Day Of the Week Effect", fontsize=20)
+# plt.show()
 ```
 
 The new model with the day-of-the-week effect can be compared to the previous model without the effect. Finally, let's reproduce the figure without the day-of-the-week effect, and then plot the new model with the effect:
