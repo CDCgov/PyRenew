@@ -13,24 +13,29 @@ from pyrenew.metaclass import RandomVariable
 
 class InfectionsSample(NamedTuple):
     """
-    A container for holding the output from `latent.Infections()`.
+    A container for holding the output from
+    :meth:`Infections.sample()
+    <pyrenew.latent.infections.Infections.sample>`.
 
     Attributes
     ----------
-    post_initialization_infections : SampledValue | None, optional
-        The estimated latent infections. Defaults to None.
+    post_initialization_infections:
+        The estimated latent infections. Default :obj:`None`.
     """
 
     post_initialization_infections: ArrayLike | None = None
 
     def __repr__(self):
-        return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections})"
+        return (
+            "InfectionsSample(post_initialization_infections"
+            f"={self.post_initialization_infections})"
+        )
 
 
 class Infections(RandomVariable):
     r"""Latent infections
 
-    This class samples infections given Rt,
+    This class samples infections given :math:`\mathcal{R}(t)`,
     initial infections, and generation interval.
 
     Notes
@@ -58,8 +63,8 @@ class Infections(RandomVariable):
         **kwargs,
     ) -> InfectionsSample:
         """
-        Samples infections given Rt, initial infections, and generation
-        interval.
+        Sample infections given :math:`\mathcal{R}(t)`,
+        initial infections, and generation interval.
 
         Parameters
         ----------
@@ -78,7 +83,8 @@ class Infections(RandomVariable):
         Returns
         -------
         InfectionsSample
-            Named tuple with "infections".
+            A named tuple with a
+            ``post_initialization_infections`` field.
         """
         if I0.shape[0] < gen_int.size:
             raise ValueError(

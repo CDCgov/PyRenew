@@ -1,4 +1,6 @@
 # numpydoc ignore=GL08
+from __future__ import annotations
+
 from jax.typing import ArrayLike
 
 from pyrenew.latent.infection_initialization_method import (

@@ -99,9 +99,11 @@ intersphinx_mapping = {
 }
 
 napoleon_preprocess_types = True
-autodoc_typehints = "signature"
+autodoc_typehints = "description"
 autodoc_typehints_format = "short"
 autodoc_type_aliases = {
     "ArrayLike": ":obj:`ArrayLike <jax.typing.ArrayLike>`",
+    "RandomVariable": ":class:`RandomVariable <pyrenew.metaclass.52RandomVariable>`",
+    "Any": ":obj:`Any <typing.Any>`",
 }
 napoleon_type_aliases = autodoc_type_aliases
