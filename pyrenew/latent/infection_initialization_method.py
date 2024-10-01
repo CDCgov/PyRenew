@@ -11,12 +11,14 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
     """Method for initializing infections in a renewal process."""
 
     def __init__(self, n_timepoints: int):
-        """Default constructor for the ``InfectionInitializationMethod`` class.
+        """Default constructor for
+        :class:`InfectionInitializationMethod`.
 
         Parameters
         ----------
         n_timepoints : int
-            the number of time points to generate initial infections for
+            the number of time points for which to
+            generate initial infections
 
         Returns
         -------
@@ -27,7 +29,10 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
     @staticmethod
     def validate(n_timepoints: int) -> None:
-        """Validate inputs for the ``InfectionInitializationMethod`` class constructor
+        """
+        Validate inputs to the
+        :class:`InfectionInitializationMethod`
+        constructor.
 
         Parameters
         ----------
@@ -99,7 +104,7 @@ class InitializeInfectionsZeroPad(InfectionInitializationMethod):
 class InitializeInfectionsFromVec(InfectionInitializationMethod):
     """Create initial infections from a vector of infections."""
 
-    def initialize_infections(self, I_pre_init: ArrayLike):
+    def initialize_infections(self, I_pre_init: ArrayLike) -> ArrayLike:
         """Create initial infections from a vector of infections.
 
         Parameters
@@ -112,7 +117,7 @@ class InitializeInfectionsFromVec(InfectionInitializationMethod):
         -------
         ArrayLike
             An array of length ``n_timepoints`` with the number of
-        initialized infections at each time point.
+            initialized infections at each time point.
         """
         I_pre_init = jnp.array(I_pre_init)
         if I_pre_init.size != self.n_timepoints:

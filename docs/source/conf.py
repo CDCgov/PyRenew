@@ -26,6 +26,7 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.autosummary",
+    "sphinx.ext.intersphinx",
     "sphinx.ext.doctest",
     "sphinx.ext.napoleon",  # numpydoc
     "sphinx.ext.duration",
@@ -87,3 +88,22 @@ master_doc = "general/ctoc"
 
 myst_fence_as_directive = ["mermaid"]
 myst_enable_extensions = ["amsmath", "dollarmath"]
+
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3/", None),
+    "matplotlib": ("https://matplotlib.org/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "numpyro": ("https://num.pyro.ai/en/latest/", None),
+    "jax": ("https://jax.readthedocs.io/en/latest/", None),
+    "polars": ("https://docs.pola.rs/api/python/stable/", None),
+}
+
+napoleon_preprocess_types = True
+autodoc_typehints = "description"
+autodoc_typehints_format = "short"
+autodoc_type_aliases = {
+    "ArrayLike": ":obj:`ArrayLike <jax.typing.ArrayLike>`",
+    "RandomVariable": ":class:`RandomVariable <pyrenew.metaclass.52RandomVariable>`",
+    "Any": ":obj:`Any <typing.Any>`",
+}
+napoleon_type_aliases = autodoc_type_aliases

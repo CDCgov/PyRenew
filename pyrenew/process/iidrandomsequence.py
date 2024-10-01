@@ -57,21 +57,23 @@ class IIDRandomSequence(RandomVariable):
             to self.element_rv.sample()
 
         vectorize: bool
-            Sample vectorized? If True, use
-            :meth:`RandomVariable.expand_by()`,
-            whenever available, and fall back on
-            :meth:`numpyro.contrib.control_flow.scan`.
-            If False, always use :meth:`scan()`.
+            Sample vectorized? If True, use the
+            :class:`~pyrenew.metaclass.RandomVariable`'s
+            :meth:`expand_by()` method, if available,
+            and fall back on :func:`numpyro.contrib.control_flow.scan`
+            otherwise.
+            If False, always use
+            :func:`~numpyro.contrib.control_flow.scan`.
             Default False.
 
         **kwargs:
             Additional keyword arguments passed to
-            self.element_rv.sample().
+            :meth:`self.element_rv.sample`.
 
         Returns
         -------
         ArrayLike
-            `n` samples from `self.distribution`
+            `n` samples from :code:`self.distribution`.
         """
 
         if vectorize and hasattr(self.element_rv, "expand_by"):

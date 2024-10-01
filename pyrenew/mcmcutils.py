@@ -24,16 +24,18 @@ def spread_draws(
     Parameters
     ----------
     posteriors: dict
-        A dictionary of posteriors with variable names as keys and numpy
-        ndarrays as values (with the first axis corresponding to the posterior
-        draw number.
+        A dictionary of posteriors with variable names
+        as keys and numpy ndarrays as values (with the
+        first axis corresponding to the posterior
+        draw number).
     variables_names: list[str] | list[tuple]
-        list of strings or of tuples identifying which variables to retrieve.
+        list of strings or of tuples identifying which
+        variables to retrieve.
 
     Returns
     -------
     pl.DataFrame
-        A dataframe of draw-indexed
+        A polars dataframe of draw-indexed posterior samples.
     """
 
     for i_var, v in enumerate(variables_names):
