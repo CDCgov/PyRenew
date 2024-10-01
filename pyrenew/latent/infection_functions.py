@@ -14,11 +14,11 @@ def compute_infections_from_rt(
     I0: ArrayLike,
     Rt: ArrayLike,
     reversed_generation_interval_pmf: ArrayLike,
-) -> jnp.array:
+) -> jnp.ndarray:
     """
     Generate infections according to a
     renewal process with a time-varying
-    reproduction number :math:`\mathcal{R}(t)`
+    reproduction number :math:`\\mathcal{R}(t)`
 
     Parameters
     ----------
@@ -27,7 +27,7 @@ def compute_infections_from_rt(
         same length as the generation interval
         pmf vector.
     Rt : ArrayLike
-        Timeseries of :math:`\mathcal{R}(t)` values
+        Timeseries of :math:`\\mathcal{R}(t)` values
     reversed_generation_interval_pmf : ArrayLike
         discrete probability mass vector
         representing the generation interval
@@ -38,7 +38,7 @@ def compute_infections_from_rt(
 
     Returns
     -------
-    jnp.array
+    jnp.ndarray
         The timeseries of infections.
     """
     incidence_func = new_convolve_scanner(
