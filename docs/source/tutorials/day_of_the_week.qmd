@@ -171,6 +171,7 @@ obs = observation.NegativeBinomialObservation(
 
 ```{python}
 # | label: init-model
+# | code-fold: true
 hosp_model = model.HospitalAdmissionsModel(
     latent_infections_rv=latent_inf,
     latent_hosp_admissions_rv=latent_hosp,
@@ -186,6 +187,7 @@ Here is what the model looks like without the day-of-the-week effect:
 ```{python}
 # | label: fig-output-admissions-padding-and-weekday
 # | fig-cap: Hospital Admissions posterior distribution without weekday effect
+# | code-fold: true
 import jax
 import numpy as np
 
@@ -200,39 +202,52 @@ hosp_model.run(
 ```
 
 ```{python}
+# | code-fold: true
 import arviz as az
 import matplotlib.pyplot as plt
 
+# retrieve the posterior samples from the model
 ppc_samples = hosp_model.posterior_predictive(
     n_datapoints=daily_hosp_admits.size
 )
+# create an InferenceData object from model
 idata = az.from_numpyro(
     posterior=hosp_model.mcmc,
     posterior_predictive=ppc_samples,
-    constant_data={"daily_hosp_admits": daily_hosp_admits},
-    coords={"time": np.arange(daily_hosp_admits.size)},
-    dims={
-        "daily_hosp_admits": ["time"],
-        "latent_hospital_admissions": ["time"],
-    },
 )
-print(idata.observed_data)
+idata.posterior_predictive["negbinom_rv"] = idata.posterior_predictive[
+    "negbinom_rv"
+].astype(float)
 fig, ax = plt.subplots(figsize=(8, 6))
-az.plot_ppc(data=idata, kind="kde", ax=ax, num_pp_samples=100)
-# ax.plot(np.arange(daily_hosp_admits.size), daily_hosp_admits.astype(float), color="black", label="Observed signal")
-
+az.plot_ppc(idata, kind="kde", ax=ax)
 ax.legend()
-plt.xlabel("Time")
-plt.ylabel("Hospital Admissions")
 plt.show()
+```
 
-
-# # Plotting the posterior
-# out = hosp_model.plot_posterior(
-#     var="latent_hospital_admissions",
-#     ylab="Hospital Admissions",
-#     obs_signal=daily_hosp_admits.astype(float),
-# )
+```{python}
+posterior_predictive_samples = idata.posterior_predictive["negbinom_rv"]
+time = idata.posterior_predictive["negbinom_rv_dim_0"].values
+hdi_data = az.hdi(posterior_predictive_samples, hdi_prob=0.94)
+fig, ax = plt.subplots(figsize=(10, 6))
+az.plot_hdi(
+    time, posterior_predictive_samples, ax=ax, hdi_prob=0.94, color="lightblue"
+)
+ax.plot(
+    time, daily_hosp_admits, color="black", label="Observed Data", linewidth=2
+)
+posterior_mean = posterior_predictive_samples.mean(dim=["chain", "draw"])
+ax.plot(
+    time,
+    posterior_mean,
+    color="orange",
+    linestyle="--",
+    label="Posterior Predictive Mean",
+)
+ax.set_xlabel("Time (negbinom_rv_dim_0)")
+ax.set_ylabel("Value")
+ax.set_xlim(1, daily_hosp_admits.size)
+ax.legend()
+plt.show()
 ```
 
 
