@@ -25,12 +25,6 @@ class InfectionsSample(NamedTuple):
 
     post_initialization_infections: ArrayLike | None = None
 
-    def __repr__(self):
-        return (
-            "InfectionsSample(post_initialization_infections"
-            f"={self.post_initialization_infections})"
-        )
-
 
 class Infections(RandomVariable):
     r"""Latent infections
@@ -62,9 +56,10 @@ class Infections(RandomVariable):
         gen_int: ArrayLike,
         **kwargs,
     ) -> InfectionsSample:
-        """
-        Sample infections given :math:`\mathcal{R}(t)`,
-        initial infections, and generation interval.
+        r"""
+        Sample infections given
+        :math:`\mathcal{R}(t)`, initial infections,
+        and generation interval.
 
         Parameters
         ----------
