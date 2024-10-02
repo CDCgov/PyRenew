@@ -14,41 +14,7 @@ permissions:
   id-token: write
 
 jobs:
-  render-docs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: quarto-dev/quarto-actions/setup@v2
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: install poetry
-        run: pip install poetry
-
-      - name: install package
-        run: poetry install --with docs
-
-      # This section renders the quarto documents (and the README file)
-      # and moves them to the docs/source/_compiled_qmd directory
-      # which is then uploaded as an artifact.
-      - name: Render documents
-        run: |
-            cd docs
-            poetry run make tutorials_clean
-            poetry run make tutorials_md
-
-      # Upload
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: tutorials
-          path: docs/source/tutorials
-
   build:
-    needs: render-docs
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -74,13 +40,6 @@ jobs:
     - name: Render documentation index from README
       run: |
         cp README.md docs/source/index.md
-
-    # Download the rendered tutorials
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: tutorials
-        path: docs/source/tutorials/
 
     # Building
     - name: Build HTML using Poetry
