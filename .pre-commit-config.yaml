@@ -20,17 +20,17 @@ repos:
         language: script
         always_run: true
         files: "docs/source/tutorials/.*(qmd|md)$"
-- repo: https://github.com/astral-sh/ruff-pre-commit
-  rev: v0.6.8
-  hooks:
-    # Sort imports
-    - id: ruff
-      args: ['check', '--select', 'I', '--fix']
-    # Run the linter
-    - id: ruff
-    # Run the formatter
-    - id: ruff-format
-      args: ['--line-length', '79']
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.6.8
+    hooks:
+      # Sort imports
+      - id: ruff
+        args: ['check', '--select', 'I', '--fix']
+      # Run the linter
+      - id: ruff
+      # Run the formatter
+      - id: ruff-format
+        args: ['--line-length', '79']
   - repo: https://github.com/numpy/numpydoc
     rev: v1.7.0
     hooks:
