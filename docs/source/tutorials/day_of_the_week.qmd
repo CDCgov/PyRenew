@@ -239,7 +239,9 @@ ax = axes[0][0]
 ax.set_xlabel("Time", fontsize=20)
 ax.set_ylabel("Hospital Admissions", fontsize=20)
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles, ["Observed", "Posterior Predictive", "Samples"], loc="best")
+ax.legend(
+    handles, ["Observed", "Sample Mean", "Posterior Samples"], loc="best"
+)
 plt.show()
 ```
 
@@ -320,11 +322,6 @@ As a result, we can see the posterior distribution of our novel day-of-the-week 
 ```{python}
 # | label: fig-output-day-of-week
 # | fig-cap: Day of the week effect
-# out = hosp_model_dow.plot_posterior(
-#     var="dayofweek_effect_raw", ylab="Day of the Week Effect", samples=500
-# )
-import xarray as xr
-
 # Create an InferenceData object from hosp_model_dow
 dow_idata = az.from_numpyro(
     posterior=hosp_model_dow.mcmc,
@@ -343,13 +340,16 @@ ax.plot(
     color="gray",
     alpha=0.25,
 )
+ax.plot([], [], color="gray", alpha=0.25, label="DOW Posterior Samples")
 ax.plot(
     np.arange(dow_effect_raw.shape[0]),
     dow_plot_samples.mean(dim="draw"),
     color="red",
     linewidth=2.0,
     linestyle="--",
+    label="Sample Mean",
 )
+ax.legend(loc="best")
 ax.set_ylabel("Effect", fontsize=20)
 ax.set_xlabel("Day Of Week", fontsize=20)
 plt.show()

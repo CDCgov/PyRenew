@@ -297,18 +297,44 @@ hosp_model.run(
 )
 ```
 
-We can use the `Model` object's `plot_posterior` method to visualize the model fit. Here, we plot the observed values against the inferred latent values (i.e. the mean of the negative binomial observation process)[^capture]:
+We can use `arviz` to visualize the model fit. Here, we plot the observed values against the inferred latent values (i.e. the mean of the negative binomial observation process)[^capture]:
 
 [^capture]: The output is captured to avoid `quarto` from displaying the output twice.
 
 ```{python}
 # | label: fig-output-hospital-admissions
-# | fig-cap: Latent hospital admissions posterior samples (blue) and observed admissions timeseries (black).
-out = hosp_model.plot_posterior(
-    var="latent_hospital_admissions",
-    ylab="Hospital Admissions",
-    obs_signal=daily_hosp_admits.astype(float),
+# | fig-cap: Latent hospital admissions posterior samples (gray) and observed admissions timeseries (red).
+import arviz as az
+
+ppc_samples = hosp_model.posterior_predictive(
+    n_datapoints=daily_hosp_admits.size
 )
+idata = az.from_numpyro(
+    posterior=hosp_model.mcmc,
+    posterior_predictive=ppc_samples,
+)
+idata.posterior_predictive["negbinom_rv"] = idata.posterior_predictive[
+    "negbinom_rv"
+].astype(float)
+axes = az.plot_ts(
+    idata,
+    y="negbinom_rv",
+    y_hat="negbinom_rv",
+    num_samples=200,
+    y_kwargs={"color": "red", "linewidth": 2.5},
+    y_hat_plot_kwargs={"color": "gray"},
+    y_mean_plot_kwargs={"color": "black", "linestyle": "--", "linewidth": 2.5},
+    backend_kwargs={"figsize": (8, 6)},
+    textsize=15.0,
+)
+ax = axes[0][0]
+ax.set_xlabel("Time", fontsize=20)
+ax.set_ylabel("Hospital Admissions", fontsize=20)
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(
+    handles, ["Observed", "Sample Mean", "Posterior Samples"], loc="best"
+)
+plt.show()
 ```
 
 ## Results exploration and MCMC diagnostics

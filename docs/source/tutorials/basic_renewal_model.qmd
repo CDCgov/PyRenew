@@ -252,7 +252,38 @@ Now, let's investigate the output, particularly the posterior distribution of th
 ```{python}
 # | label: fig-output-rt
 # | fig-cap: Rt posterior distribution
-out = model1.plot_posterior(var="Rt")
+import arviz as az
+
+idata = az.from_numpyro(
+    posterior=model1.mcmc,
+)
+
+# Extract Rt signal
+rt = idata.posterior["Rt"]
+rt = rt.mean(dim="chain")
+rt = rt.T
+indices = np.random.choice(rt.shape[1], size=200, replace=False)
+rt_samples = rt[:, indices]
+fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+ax.plot(
+    np.arange(rt.shape[0]),
+    rt_samples,
+    color="gray",
+    alpha=0.25,
+)
+ax.plot([], [], color="gray", alpha=0.25, label="Rt Posterior Samples")
+ax.plot(
+    np.arange(rt.shape[0]),
+    rt_samples.mean(dim="draw"),
+    color="red",
+    linewidth=2.0,
+    linestyle="--",
+    label="Sample Mean",
+)
+ax.legend(loc="best")
+ax.set_ylabel(r"$\mathscr{R}_t$ Signal", fontsize=20)
+ax.set_xlabel("Days", fontsize=20)
+plt.show()
 ```
 We can use the `get_samples` method to extract samples from the model
 ```{python}
