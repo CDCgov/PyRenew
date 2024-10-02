@@ -1,7 +1,5 @@
 # numpydoc ignore=GL08
 
-from test.utils import SimpleRt
-
 import jax.numpy as jnp
 import jax.random as jr
 import numpy as np
@@ -24,6 +22,7 @@ from pyrenew.latent import (
 from pyrenew.model import HospitalAdmissionsModel
 from pyrenew.observation import PoissonObservation
 from pyrenew.randomvariable import DistributionalVariable
+from test.utils import SimpleRt
 
 
 def test_model_hosp_no_timepoints_or_observations():

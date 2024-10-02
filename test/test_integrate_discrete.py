@@ -2,6 +2,7 @@
 Test the integrate_discrete function
 used in DifferencedProcess and elsewhere
 """
+
 import jax
 import jax.numpy as jnp
 import pytest

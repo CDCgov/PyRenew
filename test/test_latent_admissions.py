@@ -1,7 +1,5 @@
 # numpydoc ignore=GL08
 
-from test.utils import SimpleRt
-
 import jax.numpy as jnp
 import numpy.testing as testing
 import numpyro
@@ -10,6 +8,7 @@ import numpyro.distributions as dist
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HospitalAdmissions, Infections
 from pyrenew.randomvariable import DistributionalVariable
+from test.utils import SimpleRt
 
 
 def test_admissions_sample():
