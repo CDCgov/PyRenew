@@ -19,7 +19,8 @@ def get_leslie_matrix(
     Create the Leslie matrix
     corresponding to a basic
     renewal process with the
-    given R value and discrete
+    given :math:`\\mathcal{R}`
+    value and discrete
     generation interval pmf
     vector.
 
@@ -79,7 +80,8 @@ def get_asymptotic_growth_rate_and_age_dist(
     Raises
     ------
     ValueError
-        If an age distribution vector with non-zero imaginary part is produced.
+        If an age distribution vector with non-zero
+        imaginary part is produced.
     """
     L = get_leslie_matrix(R, generation_interval_pmf)
     eigenvals, eigenvecs = jnp.linalg.eig(L)
@@ -148,8 +150,8 @@ def get_asymptotic_growth_rate(
     """
     Get the asymptotic per timestep growth rate
     for a renewal process with a given value of
-    R and a given discrete generation interval
-    probability mass vector.
+    :math:`\\mathcal{R}` and a given discrete
+    generation interval probability mass vector.
 
     This function computes that growth rate
     finding the dominant eigenvalue of the

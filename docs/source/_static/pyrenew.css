@@ -1,0 +1,11 @@
+/* @import url('https://your-font-hosting-url.com/path/to/iosevka.css');
+
+body {
+    font-family: 'Iosevka', monospace;
+} */
+
+/* center equations by default
+   when using KaTeX rendering,
+   see https://github.com/KaTeX/KaTeX/discussions/3923
+*/
+div.math { justify-content: center }

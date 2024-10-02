@@ -14,11 +14,11 @@ def compute_infections_from_rt(
     I0: ArrayLike,
     Rt: ArrayLike,
     reversed_generation_interval_pmf: ArrayLike,
-) -> ArrayLike:
+) -> jnp.ndarray:
     """
     Generate infections according to a
     renewal process with a time-varying
-    reproduction number R(t)
+    reproduction number :math:`\\mathcal{R}(t)`
 
     Parameters
     ----------
@@ -27,7 +27,7 @@ def compute_infections_from_rt(
         same length as the generation interval
         pmf vector.
     Rt : ArrayLike
-        Timeseries of R(t) values
+        Timeseries of :math:`\\mathcal{R}(t)` values
     reversed_generation_interval_pmf : ArrayLike
         discrete probability mass vector
         representing the generation interval
@@ -38,8 +38,8 @@ def compute_infections_from_rt(
 
     Returns
     -------
-    ArrayLike
-        The timeseries of infections, as a JAX array
+    jnp.ndarray
+        The timeseries of infections.
     """
     incidence_func = new_convolve_scanner(
         reversed_generation_interval_pmf, IdentityTransform()
@@ -58,8 +58,9 @@ def logistic_susceptibility_adjustment(
     """
     Apply the logistic susceptibility
     adjustment to a potential new
-    incidence I_unadjusted proposed in
-    equation 6 of Bhatt et al 2023 [1]_
+    incidence ``I_raw_t`` proposed in
+    equation 6 of `Bhatt et al 2023
+    <https://doi.org/10.1093/jrsssa/qnad030>`_.
 
     Parameters
     ----------
@@ -76,16 +77,7 @@ def logistic_susceptibility_adjustment(
     Returns
     -------
     float
-        The adjusted value of I(t)
-
-    References
-    ----------
-    .. [1] Bhatt, Samir, et al.
-    "Semi-mechanistic Bayesian modelling of
-    COVID-19 with renewal processes."
-    Journal of the Royal Statistical Society
-    Series A: Statistics in Society 186.4 (2023): 601-615.
-    https://doi.org/10.1093/jrsssa/qnad030
+        The adjusted value of :math:`I(t)`.
     """
     approx_frac_infected = 1 - jnp.exp(-I_raw_t / n_population)
     return n_population * frac_susceptible * approx_frac_infected
@@ -101,8 +93,8 @@ def compute_infections_from_rt_with_feedback(
     r"""
     Generate infections according to
     a renewal process with infection
-    feedback (generalizing Asher 2018:
-    https://doi.org/10.1016/j.epidem.2017.02.009)
+    feedback (generalizing `Asher 2018
+    <https://doi.org/10.1016/j.epidem.2017.02.009>`_).
 
     Parameters
     ----------
@@ -111,7 +103,7 @@ def compute_infections_from_rt_with_feedback(
         same length as the generation interval
         pmf vector.
     Rt_raw : ArrayLike
-        Timeseries of raw R(t) values not
+        Timeseries of raw :math:`\mathcal{R}(t)` values not
         adjusted by infection feedback
     infection_feedback_strength : ArrayLike
         Strength of the infection feedback.
@@ -139,21 +131,21 @@ def compute_infections_from_rt_with_feedback(
     Returns
     -------
     tuple
-        A tuple `(infections, Rt_adjusted)`,
-        where `Rt_adjusted` is the infection-feedback-adjusted
-        timeseries of the reproduction number R(t) and
-        infections is the incident infection timeseries.
+        A tuple ``(infections, Rt_adjusted)``,
+        where ``Rt_adjusted`` is the infection-feedback-adjusted
+        timeseries of the reproduction number :math:`\mathcal{R}(t)`
+        and ``infections`` is the incident infection timeseries.
 
     Notes
     -----
     This function implements the following renewal process:
 
     .. math::
-
-        I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
-
+        \begin{aligned}
+        I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau) \\
         \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(\gamma(t)\
             \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+        \end{aligned}
 
     where :math:`\mathcal{R}(t)` is the reproductive number,
     :math:`\gamma(t)` is the infection feedback strength,
@@ -166,7 +158,7 @@ def compute_infections_from_rt_with_feedback(
     that recent incident infections reduce :math:`\mathcal{R}(t)`
     below its raw value in the absence of feedback, while
     positive :math:`\gamma` implies that recent incident infections
-    _increase_ :math:`\mathcal{R}(t)` above its raw value, and
+    *increase* :math:`\mathcal{R}(t)` above its raw value, and
     :math:`\gamma(t)=0` implies no feedback.
 
     In general, negative :math:`\gamma` is the more common modeling

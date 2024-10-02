@@ -121,20 +121,21 @@ class RtPeriodicDiffARProcess(RandomVariable):
         **kwargs,
     ) -> ArrayLike:
         """
-        Samples the periodic Rt with autoregressive difference.
+        Samples the periodic :math:`\\mathcal{R}(t)`
+        with autoregressive first differences.
 
         Parameters
         ----------
         duration : int
             Duration of the sequence.
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal sample()
-            calls, should there be any.
+            Additional keyword arguments passed through to
+            internal :meth:`sample` calls, should there be any.
 
         Returns
         -------
         ArrayLike
-            Sampled Rt values.
+            Sampled :math:`\\mathcal{R}(t)` values.
         """
 
         # Initial sample

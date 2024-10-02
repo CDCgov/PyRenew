@@ -16,7 +16,8 @@ from pyrenew.metaclass import RandomVariable
 
 class HospitalAdmissionsSample(NamedTuple):
     """
-    A container to hold the output of `latent.HospAdmissions()`.
+    A container to hold the output of
+    :meth:`HospitalAdmissions.sample`.
 
     Attributes
     ----------
@@ -192,10 +193,12 @@ class HospitalAdmissions(RandomVariable):
         Parameters
         ----------
         latent_infections : ArrayLike
-            Latent infections. Possibly the output of the `latent.Infections()`.
+            Latent infections.
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal `sample()`
-            calls, should there be any.
+            Additional keyword arguments passed through to
+            internal :meth:`sample()
+            <pyrenew.metaclass.RandomVariable.sample>` calls,
+            should there be any.
 
         Returns
         -------
@@ -217,7 +220,8 @@ class HospitalAdmissions(RandomVariable):
         # Applying the day of the week effect. For this we need to:
         # 1. Get the day of the week effect
         # 2. Identify the offset of the latent_infections
-        # 3. Apply the day of the week effect to the latent_hospital_admissions
+        # 3. Apply the day of the week effect to the
+        # latent_hospital_admissions
         dow_effect_sampled = self.day_of_week_effect_rv(**kwargs)
 
         if dow_effect_sampled.size != 7:
