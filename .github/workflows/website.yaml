@@ -45,6 +45,7 @@ jobs:
     - name: Build HTML using Poetry
       run: |
         cd docs
+        poetry run make tutorials_clean
         poetry run make html
 
     # Upload
