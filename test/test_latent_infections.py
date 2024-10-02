@@ -1,13 +1,12 @@
 # numpydoc ignore=GL08
 
-from test.utils import SimpleRt
-
 import jax.numpy as jnp
 import numpy.testing as testing
 import numpyro
 import pytest
 
 from pyrenew.latent import Infections
+from test.utils import SimpleRt
 
 
 def test_infections_as_deterministic():

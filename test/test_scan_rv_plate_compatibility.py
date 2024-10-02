@@ -3,6 +3,7 @@ Test that key :class:`RandomVariable`
 classes behave as expected in a
 :func:`numpyro.plate` context.
 """
+
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
