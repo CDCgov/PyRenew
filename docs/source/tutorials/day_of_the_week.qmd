@@ -328,9 +328,7 @@ dow_idata = az.from_numpyro(
 )
 
 # Extract day of week effect (DOW)
-dow_effect_raw = dow_idata.posterior["dayofweek_effect_raw"]
-dow_effect_raw = dow_effect_raw.squeeze()
-dow_effect_raw = dow_effect_raw.T
+dow_effect_raw = dow_idata.posterior["dayofweek_effect_raw"].squeeze().T
 indices = np.random.choice(dow_effect_raw.shape[1], size=200, replace=False)
 dow_plot_samples = dow_effect_raw[:, indices]
 fig, ax = plt.subplots(1, 1, figsize=(8, 6))
