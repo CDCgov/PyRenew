@@ -3,8 +3,6 @@ Ensures that posterior predictive samples are not generated
 when no posterior samples are available.
 """
 
-from test.utils import SimpleRt
-
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import pytest
@@ -18,6 +16,7 @@ from pyrenew.latent import (
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
 from pyrenew.randomvariable import DistributionalVariable
+from test.utils import SimpleRt
 
 pmf_array = jnp.array([0.25, 0.1, 0.2, 0.45])
 gen_int = DeterministicPMF(name="gen_int", value=pmf_array)
