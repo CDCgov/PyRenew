@@ -3,8 +3,6 @@ Ensures that models created with the same or
 with different random keys behave appropriately.
 """
 
-from test.utils import SimpleRt
-
 import jax.numpy as jnp
 import jax.random as jr
 import numpyro
@@ -20,6 +18,7 @@ from pyrenew.latent import (
 from pyrenew.model import RtInfectionsRenewalModel
 from pyrenew.observation import PoissonObservation
 from pyrenew.randomvariable import DistributionalVariable
+from test.utils import SimpleRt
 
 
 def create_test_model():  # numpydoc ignore=GL08
