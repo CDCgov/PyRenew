@@ -335,14 +335,14 @@ fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 ax.plot(
     np.arange(dow_effect_raw.shape[0]),
     dow_plot_samples,
-    color="gray",
-    alpha=0.25,
+    color="skyblue",
+    alpha=0.10,
 )
-ax.plot([], [], color="gray", alpha=0.25, label="DOW Posterior Samples")
+ax.plot([], [], color="skyblue", alpha=0.10, label="DOW Posterior Samples")
 ax.plot(
     np.arange(dow_effect_raw.shape[0]),
     dow_plot_samples.mean(dim="draw"),
-    color="red",
+    color="black",
     linewidth=2.0,
     linestyle="--",
     label="Sample Mean",
