@@ -4,15 +4,10 @@ pyrenew helper classes
 
 from abc import ABCMeta, abstractmethod
 
-import jax
 import jax.random as jr
-import matplotlib.pyplot as plt
 import numpy as np
-import polars as pl
 from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_sample
-
-from pyrenew.mcmcutils import plot_posterior, spread_draws
 
 
 def _assert_type(arg_name: str, value, expected_type) -> None:
@@ -265,46 +260,6 @@ class Model(metaclass=ABCMeta):
         None
         """
         return self.mcmc.print_summary(prob, exclude_deterministic)
-
-    def spread_draws(self, variables_names: list) -> pl.DataFrame:
-        """
-        A wrapper of :func:`pyrenew.mcmcutils.spread_draws`
-
-        Parameters
-        ----------
-        variables_names : list
-            A list of variable names to create a table of samples.
-
-        Returns
-        -------
-        pl.DataFrame
-        """
-
-        return spread_draws(self.mcmc.get_samples(), variables_names)
-
-    def plot_posterior(
-        self,
-        var: list,
-        obs_signal: jax.typing.ArrayLike = None,
-        xlab: str = None,
-        ylab: str = "Signal",
-        samples: int = 50,
-        figsize: list = [4, 5],
-        draws_col: str = "darkblue",
-        obs_col: str = "black",
-    ) -> plt.Figure:  # numpydoc ignore=RT01
-        """A wrapper of pyrenew.mcmcutils.plot_posterior"""
-        return plot_posterior(
-            var=var,
-            draws=self.spread_draws([(var, "time")]),
-            xlab=xlab,
-            ylab=ylab,
-            samples=samples,
-            obs_signal=obs_signal,
-            figsize=figsize,
-            draws_col=draws_col,
-            obs_col=obs_col,
-        )
 
     def posterior_predictive(
         self,

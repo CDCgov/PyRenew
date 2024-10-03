@@ -5,7 +5,6 @@ import jax.random as jr
 import numpy as np
 import numpyro
 import numpyro.distributions as dist
-import polars as pl
 import pytest
 
 from pyrenew.deterministic import (
@@ -254,17 +253,6 @@ def test_model_hosp_no_obs_model():
         data_observed_hosp_admissions=model0_samp.latent_hosp_admissions,
     )
 
-    inf = model0.spread_draws(["latent_hospital_admissions"])
-    inf_mean = (
-        inf.group_by("draw")
-        .agg(pl.col("latent_hospital_admissions").mean())
-        .sort(pl.col("draw"))
-    )
-
-    # For now the assertion is only about the expected number of rows
-    # It should be about the MCMC inference.
-    assert inf_mean.to_numpy().shape[0] == 500
-
 
 def test_model_hosp_with_obs_model():
     """
@@ -340,17 +328,6 @@ def test_model_hosp_with_obs_model():
         rng_key=jr.key(272),
         data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
     )
-
-    inf = model1.spread_draws(["latent_hospital_admissions"])
-    inf_mean = (
-        inf.group_by("draw")
-        .agg(pl.col("latent_hospital_admissions").mean())
-        .sort(pl.col("draw"))
-    )
-
-    # For now the assertion is only about the expected number of rows
-    # It should be about the MCMC inference.
-    assert inf_mean.to_numpy().shape[0] == 500
 
 
 def test_model_hosp_with_obs_model_weekday_phosp_2():
@@ -434,17 +411,6 @@ def test_model_hosp_with_obs_model_weekday_phosp_2():
         rng_key=jr.key(272),
         data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
     )
-
-    inf = model1.spread_draws(["latent_hospital_admissions"])
-    inf_mean = (
-        inf.group_by("draw")
-        .agg(pl.col("latent_hospital_admissions").mean())
-        .sort(pl.col("draw"))
-    )
-
-    # For now the assertion is only about the expected number of rows
-    # It should be about the MCMC inference.
-    assert inf_mean.to_numpy().shape[0] == 500
 
 
 def test_model_hosp_with_obs_model_weekday_phosp():
@@ -557,14 +523,3 @@ def test_model_hosp_with_obs_model_weekday_phosp():
         data_observed_hosp_admissions=model1_samp.observed_hosp_admissions,
         padding=pad_size,
     )
-
-    inf = model1.spread_draws(["latent_hospital_admissions"])
-    inf_mean = (
-        inf.group_by("draw")
-        .agg(pl.col("latent_hospital_admissions").mean())
-        .sort(pl.col("draw"))
-    )
-
-    # For now the assertion is only about the expected number of rows
-    # It should be about the MCMC inference.
-    assert inf_mean.to_numpy().shape[0] == 500
