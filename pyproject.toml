@@ -86,3 +86,10 @@ known_first_party = ["pyrenew", "test"]
 
 [tool.deptry.per_rule_ignores]
 DEP004 = ["pytest", "scipy"]
+
+[tool.ruff]
+fix = true
+line-length = 79
+
+[tool.ruff.lint]
+select = ["I"]
