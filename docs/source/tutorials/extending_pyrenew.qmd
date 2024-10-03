@@ -64,7 +64,6 @@ latent_infections = InfectionsWithFeedback(
 
 
 class MyRt(RandomVariable):
-
     def validate(self):
         pass
 

@@ -131,7 +131,6 @@ I0 = InfectionInitializationProcess(
 # (3) The random walk on log Rt, with an inferred s.d. Here, we
 # construct a custom RandomVariable.
 class MyRt(RandomVariable):
-
     def validate(self):
         pass
 

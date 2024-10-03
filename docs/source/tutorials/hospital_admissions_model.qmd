@@ -186,7 +186,6 @@ gen_int = deterministic.DeterministicPMF(name="gen_int", value=gen_int)
 
 
 class MyRt(metaclass.RandomVariable):
-
     def validate(self):
         pass
 
