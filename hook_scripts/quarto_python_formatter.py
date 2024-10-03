@@ -9,11 +9,11 @@ from typing import List, Match
 
 
 def format_python_code(
-    code: str, black_args: List[str]
+    code: str, ruff_args: List[str]
 ) -> str:  # numpydoc ignore=RT01
-    """Format Python code using Black with custom arguments."""
+    """Format Python code using Ruff with custom arguments."""
     try:
-        cmd = ["black", "-"] + black_args
+        cmd = ["ruff", "format", "-"] + ruff_args
         result = subprocess.run(
             cmd,
             input=code,
@@ -24,20 +24,20 @@ def format_python_code(
         return result.stdout
     except subprocess.CalledProcessError:
         print(
-            "Error: Failed to format Python code with Black.", file=sys.stderr
+            "Error: Failed to format Python code with Ruff.", file=sys.stderr
         )
         return code
 
 
 def replace_code_block(
-    match: Match[str], black_args: List[str]
+    match: Match[str], ruff_args: List[str]
 ) -> str:  # numpydoc ignore=RT01
     """Replace code block with formatted version."""
-    return f"{match.group(1)}\n{format_python_code(match.group(2), black_args)}{match.group(3)}"
+    return f"{match.group(1)}\n{format_python_code(match.group(2), ruff_args)}{match.group(3)}"
 
 
 def process_file(
-    filepath: Path, black_args: List[str]
+    filepath: Path, ruff_args: List[str]
 ) -> None:  # numpydoc ignore=RT01
     """Process the given file, formatting Python code blocks."""
     python_code_block_pattern = r"(```\{python\})(.*?)(```)"
@@ -45,7 +45,7 @@ def process_file(
         content = filepath.read_text()
         formatted_content = re.sub(
             python_code_block_pattern,
-            lambda m: replace_code_block(m, black_args),
+            lambda m: replace_code_block(m, ruff_args),
             content,
             flags=re.DOTALL,
         )
@@ -63,11 +63,11 @@ def process_file(
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print(
-            'Usage: python hook_scripts/quarto_python_formatter.py "BLACK_ARGS" <filename1.qmd> [filename2.qmd ...]'
+            'Usage: python hook_scripts/quarto_python_formatter.py "RUFF_ARGS" <filename1.qmd> [filename2.qmd ...]'
         )
         sys.exit(1)
 
-    black_args = sys.argv[1].split()
+    ruff_args = sys.argv[1].split()
 
     missing_files = [file for file in sys.argv[2:] if not Path(file).exists()]
     if missing_files:
@@ -76,4 +76,4 @@ if __name__ == "__main__":
         )
     for filepath in sys.argv[2:]:
         path = Path(filepath)
-        process_file(path, black_args)
+        process_file(path, ruff_args)

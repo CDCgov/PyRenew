@@ -25,12 +25,12 @@ repos:
     hooks:
       # Sort imports
       - id: ruff
-        args: ['check', '--select', 'I', '--fix']
+        args: ["check", "--select", "I", "--fix"]
       # Run the linter
       - id: ruff
       # Run the formatter
       - id: ruff-format
-        args: ['--line-length', '79']
+        args: ["--line-length", "79"]
   - repo: https://github.com/numpy/numpydoc
     rev: v1.7.0
     hooks:
@@ -44,18 +44,14 @@ repos:
         entry: python hook_scripts/quarto_python_formatter.py "-q --line-length 79"
         language: python
         files: \.qmd$
-        additional_dependencies: [black]
+        additional_dependencies: [ruff]
   #####
   # Secrets
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
       - id: detect-secrets
-        args:
-          [
-            "--baseline",
-            ".secrets.baseline",
-          ]
+        args: ["--baseline", ".secrets.baseline"]
         exclude: package.lock.json
   ####
   # Typos
