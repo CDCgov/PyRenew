@@ -218,17 +218,19 @@ idata = az.from_numpyro(
     posterior_predictive=ppc_samples,
 )
 
-# Convert hospital admissions from discrete to continuous
-
-
 # Use a time series plot (plot_ts) from arviz for plotting
 axes = az.plot_ts(
     idata,
     y="negbinom_rv",
     y_hat="negbinom_rv",
-    num_samples=150,
-    y_kwargs={"color": "red", "linewidth": 2.5},
-    y_hat_plot_kwargs={"color": "gray"},
+    num_samples=200,
+    y_kwargs={
+        "color": "blue",
+        "linewidth": 1.0,
+        "marker": "o",
+        "linestyle": "solid",
+    },
+    y_hat_plot_kwargs={"color": "skyblue", "alpha": 0.05},
     y_mean_plot_kwargs={"color": "black", "linestyle": "--", "linewidth": 2.5},
     backend_kwargs={"figsize": (8, 6)},
     textsize=15.0,
@@ -361,9 +363,14 @@ axes = az.plot_ts(
     idata,
     y="negbinom_rv",
     y_hat="negbinom_rv",
-    num_samples=150,
-    y_kwargs={"color": "red", "linewidth": 2.5},
-    y_hat_plot_kwargs={"color": "gray"},
+    num_samples=200,
+    y_kwargs={
+        "color": "blue",
+        "linewidth": 1.0,
+        "marker": "o",
+        "linestyle": "solid",
+    },
+    y_hat_plot_kwargs={"color": "skyblue", "alpha": 0.05},
     y_mean_plot_kwargs={"color": "black", "linestyle": "--", "linewidth": 2.5},
     backend_kwargs={"figsize": (8, 6)},
     textsize=15.0,
@@ -396,9 +403,14 @@ axes = az.plot_ts(
     idata,
     y="negbinom_rv",
     y_hat="negbinom_rv",
-    num_samples=150,
-    y_kwargs={"color": "red", "linewidth": 2.5},
-    y_hat_plot_kwargs={"color": "gray"},
+    num_samples=200,
+    y_kwargs={
+        "color": "blue",
+        "linewidth": 1.0,
+        "marker": "o",
+        "linestyle": "solid",
+    },
+    y_hat_plot_kwargs={"color": "skyblue", "alpha": 0.05},
     y_mean_plot_kwargs={"color": "black", "linestyle": "--", "linewidth": 2.5},
     backend_kwargs={"figsize": (8, 6)},
     textsize=15.0,

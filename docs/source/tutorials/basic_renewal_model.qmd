@@ -254,34 +254,28 @@ Now, let's investigate the output, particularly the posterior distribution of th
 # | fig-cap: Rt posterior distribution
 import arviz as az
 
-az.style.use("arviz-doc")
-
+# Create arviz inference data object
 idata = az.from_numpyro(
     posterior=model1.mcmc,
 )
-idata = az.extract(idata, num_samples=100)
 
-# Extract Rt signal
+# Extract Rt signal samples across chains
+rt = az.extract(idata.posterior["Rt"], num_samples=100)["Rt"].values
 
-rt = (
-    az.extract(idata.posterior["Rt"], num_samples=100)
-    .to_dataarray()
-    .squeeze()
-    .T
-)
+
+# Plot Rt signal
 fig, ax = plt.subplots(1, 1, figsize=(8, 6))
-print(rt)
 ax.plot(
-    np.arange(100),
+    np.arange(rt.shape[0]),
     rt,
-    color="gray",
-    alpha=0.25,
+    color="skyblue",
+    alpha=0.10,
 )
-ax.plot([], [], color="gray", alpha=0.25, label="Rt Posterior Samples")
+ax.plot([], [], color="skyblue", alpha=0.05, label="Rt Posterior Samples")
 ax.plot(
-    np.arange(100),
-    rt.mean(dim="Rt_dim_0"),
-    color="red",
+    np.arange(rt.shape[0]),
+    rt.mean(axis=1),
+    color="black",
     linewidth=2.0,
     linestyle="--",
     label="Sample Mean",
