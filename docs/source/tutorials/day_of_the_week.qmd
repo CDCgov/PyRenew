@@ -219,9 +219,7 @@ idata = az.from_numpyro(
 )
 
 # Convert hospital admissions from discrete to continuous
-idata.posterior_predictive["negbinom_rv"] = idata.posterior_predictive[
-    "negbinom_rv"
-].astype(float)
+
 
 # Use a time series plot (plot_ts) from arviz for plotting
 axes = az.plot_ts(
@@ -393,9 +391,7 @@ idata = az.from_numpyro(
     posterior=hosp_model_dow.mcmc,
     posterior_predictive=ppc_samples,
 )
-idata.posterior_predictive["negbinom_rv"] = idata.posterior_predictive[
-    "negbinom_rv"
-].astype(float)
+
 axes = az.plot_ts(
     idata,
     y="negbinom_rv",
