@@ -56,6 +56,7 @@ jobs:
       id: upload
       with:
         name: github-pages
+        retention-days: 7
         path: docs/build/html/
 
   deploy:
@@ -80,6 +81,7 @@ jobs:
         preview: true
 
   post-page-artifact:
+    if: ${{ github.event_name == 'pull_request' }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -92,7 +94,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Post comment preview
-        if: ${{ github.event_name == 'pull_request' }}
-        run: |
-          gh pr comment ${{ github.event.number }} --body \
-            "Thank you for your contribution @${{ github.triggering_actor }}:rocket:! Your page is ready to preview :point_right: [here](https://github.com/${{github.repository}}/actions/runs/${{ github.run_id }}/artifacts/${{ needs.build.outputs.page_artifact_id }}) :point_left:!"
+        uses: CDCgov/cfa-actions/post-artifact@v1.0.0
+        with:
+          artifact-name: github-pages
+          gh-token: ${{ secrets.GITHUB_TOKEN}}
