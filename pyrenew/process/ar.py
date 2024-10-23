@@ -37,13 +37,14 @@ class ARProcess(RandomVariable):
         noise_name: str
             A name for the sample site holding the
             Normal(`0`, `noise_sd`) noise for the AR process.
-            Passed to :func:`numpyro.sample`.
+            Passed to :func:`numpyro.sample()
+            <numpyro.primitives.sample>`.
         n: int
             Length of the sequence.
         autoreg: ArrayLike
             Autoregressive coefficients.
             The length of the array's first
-            dimension determines the order :math`p`
+            dimension determines the order :math:`p`
             of the AR process.
         init_vals : ArrayLike
             Array of initial values. Must have the

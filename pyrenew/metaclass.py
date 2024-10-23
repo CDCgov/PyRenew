@@ -4,15 +4,10 @@ pyrenew helper classes
 
 from abc import ABCMeta, abstractmethod
 
-import jax
 import jax.random as jr
-import matplotlib.pyplot as plt
 import numpy as np
-import polars as pl
 from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_sample
-
-from pyrenew.mcmcutils import plot_posterior, spread_draws
 
 
 def _assert_type(arg_name: str, value, expected_type) -> None:
@@ -69,8 +64,8 @@ class RandomVariable(metaclass=ABCMeta):
         Parameters
         ----------
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal `sample()`
-            calls, should there be any.
+            Additional keyword arguments passed through to internal
+            :meth:`sample` calls, should there be any.
 
         Returns
         -------
@@ -88,7 +83,7 @@ class RandomVariable(metaclass=ABCMeta):
 
     def __call__(self, **kwargs):
         """
-        Alias for `sample()`.
+        Alias for :meth:`sample`.
         """
         return self.sample(**kwargs)
 
@@ -123,7 +118,7 @@ class Model(metaclass=ABCMeta):
         ----------
         **kwargs : dict, optional
             Additional keyword arguments passed through to internal
-            `sample()` calls, should there be any.
+            :meth:`sample` calls, should there be any.
 
         Returns
         -------
@@ -138,8 +133,8 @@ class Model(metaclass=ABCMeta):
         Parameters
         ----------
         **kwargs : dict, optional
-            Additional keyword arguments passed through to internal `sample()`
-            calls, should there be any.
+            Additional keyword arguments passed through to
+            internal :meth:`sample` calls, should there be any.
 
         Returns
         -------
@@ -160,10 +155,13 @@ class Model(metaclass=ABCMeta):
         Parameters
         ----------
         nuts_args : dict, optional
-            Dictionary of arguments passed to NUTS. Defaults to None.
+            Dictionary of arguments passed to the
+            :class:`numpyro.infer.hmc.NUTS` constructor.
+            Default None.
         mcmc_args : dict, optional
-            Dictionary of arguments passed to the MCMC sampler. Defaults to
-            None.
+            Dictionary of arguments passed to the
+            :class:`numpyro.infer.mcmc.MCMC` constructor.
+            Default None.
 
         Returns
         -------
@@ -211,12 +209,12 @@ class Model(metaclass=ABCMeta):
         Parameters
         ----------
         nuts_args : dict, optional
-            Dictionary of arguments passed to the
-            :class:`numpyro.infer.NUTS` kernel.
+            Dictionary of arguments passed to the kernel
+            (:class:`numpyro.infer.hmc.NUTS`) constructor.
             Defaults to None.
         mcmc_args : dict, optional
-            Dictionary of arguments passed to the
-            :class:`numpyro.infer.MCMC` constructor.
+            Dictionary of arguments passed to the MCMC runner
+            (:class:`numpyro.infer.mcmc.MCMC`) constructor.
             Defaults to None.
 
         Returns
@@ -246,7 +244,8 @@ class Model(metaclass=ABCMeta):
         exclude_deterministic: bool = True,
     ) -> None:
         """
-        A wrapper of :meth:`numpyro.infer.MCMC.print_summary`
+        A wrapper of :meth:`MCMC.print_summary()
+        <numpyro.infer.mcmc.MCMC.print_summary>`.
 
         Parameters
         ----------
@@ -262,46 +261,6 @@ class Model(metaclass=ABCMeta):
         """
         return self.mcmc.print_summary(prob, exclude_deterministic)
 
-    def spread_draws(self, variables_names: list) -> pl.DataFrame:
-        """
-        A wrapper of mcmcutils.spread_draws
-
-        Parameters
-        ----------
-        variables_names : list
-            A list of variable names to create a table of samples.
-
-        Returns
-        -------
-        pl.DataFrame
-        """
-
-        return spread_draws(self.mcmc.get_samples(), variables_names)
-
-    def plot_posterior(
-        self,
-        var: list,
-        obs_signal: jax.typing.ArrayLike = None,
-        xlab: str = None,
-        ylab: str = "Signal",
-        samples: int = 50,
-        figsize: list = [4, 5],
-        draws_col: str = "darkblue",
-        obs_col: str = "black",
-    ) -> plt.Figure:  # numpydoc ignore=RT01
-        """A wrapper of pyrenew.mcmcutils.plot_posterior"""
-        return plot_posterior(
-            var=var,
-            draws=self.spread_draws([(var, "time")]),
-            xlab=xlab,
-            ylab=ylab,
-            samples=samples,
-            obs_signal=obs_signal,
-            figsize=figsize,
-            draws_col=draws_col,
-            obs_col=obs_col,
-        )
-
     def posterior_predictive(
         self,
         rng_key: ArrayLike | None = None,
@@ -309,7 +268,7 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> dict:
         """
-        A wrapper for :class:`numpyro.infer.Predictive` to generate
+        A wrapper of :class:`numpyro.infer.util.Predictive` to generate
         posterior predictive samples.
 
         Parameters
@@ -318,10 +277,11 @@ class Model(metaclass=ABCMeta):
             Random key for the Predictive function call. Defaults to None.
         numpyro_predictive_args : dict, optional
             Dictionary of arguments to be passed to the
-            :class:`numpyro.infer.Predictive` constructor.
+            :class:`numpyro.infer.util.Predictive` constructor.
         **kwargs
             Additional named arguments passed to the
-            `__call__()` method of :class:`numpyro.infer.Predictive`
+            :meth:`__call__()` method of
+            :class:`numpyro.infer.util.Predictive`.
 
         Returns
         -------
@@ -353,16 +313,22 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> dict:
         """
-        A wrapper for numpyro.infer.Predictive to generate prior predictive samples.
+        A wrapper for :class:`numpyro.infer.util.Predictive`
+        to generate prior predictive samples.
 
         Parameters
         ----------
         rng_key : ArrayLike, optional
-            Random key for the Predictive function call. Defaults to None.
+            Random key for the Predictive function call.
+            Default None.
         numpyro_predictive_args : dict, optional
-            Dictionary of arguments to be passed to the numpyro.infer.Predictive constructor.
+            Dictionary of arguments to be passed to
+            the :class:`numpyro.infer.util.Predictive`
+            constructor. Default None.
         **kwargs
-            Additional named arguments passed to the `__call__()` method of numpyro.infer.Predictive
+            Additional named arguments passed to the
+            :meth:`__call__()` method of
+            :class:`numpyro.infer.util.Predictive`.
 
         Returns
         -------

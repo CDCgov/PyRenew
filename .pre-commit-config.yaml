@@ -14,26 +14,23 @@ repos:
   # Python
   - repo: local
     hooks:
-      - id: generate-rst-placeholders
-        name: Tutorials .rst placeholders
-        entry: ./hook_scripts/pre-commit-rst-placeholder.sh
+      - id: generate-md-placeholders
+        name: Tutorials .md placeholders
+        entry: ./hook_scripts/pre-commit-md-placeholder.sh
         language: script
         always_run: true
-        files: "docs/source/tutorials/.*(qmd|rst)$"
-  - repo: https://github.com/psf/black
-    rev: 23.10.0
-    hooks:
-      - id: black
-        args: ["--line-length", "79"]
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-        args: ["--profile", "black", "--line-length", "79"]
+        files: "docs/source/tutorials/.*(qmd|md)$"
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.1.0
+    rev: v0.6.8
     hooks:
+      # Sort imports
       - id: ruff
+        args: ["check", "--select", "I", "--fix"]
+      # Run the linter
+      - id: ruff
+      # Run the formatter
+      - id: ruff-format
+        args: ["--line-length", "79"]
   - repo: https://github.com/numpy/numpydoc
     rev: v1.7.0
     hooks:
@@ -47,18 +44,14 @@ repos:
         entry: python hook_scripts/quarto_python_formatter.py "-q --line-length 79"
         language: python
         files: \.qmd$
-        additional_dependencies: [black]
+        additional_dependencies: [ruff]
   #####
   # Secrets
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.4.0
     hooks:
       - id: detect-secrets
-        args:
-          [
-            "--baseline",
-            ".secrets.baseline",
-          ]
+        args: ["--baseline", ".secrets.baseline"]
         exclude: package.lock.json
   ####
   # Typos

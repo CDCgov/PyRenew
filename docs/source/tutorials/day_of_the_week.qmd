@@ -171,6 +171,7 @@ obs = observation.NegativeBinomialObservation(
 
 ```{python}
 # | label: init-model
+# | code-fold: true
 hosp_model = model.HospitalAdmissionsModel(
     latent_infections_rv=latent_inf,
     latent_hosp_admissions_rv=latent_hosp,
@@ -186,6 +187,7 @@ Here is what the model looks like without the day-of-the-week effect:
 ```{python}
 # | label: fig-output-admissions-padding-and-weekday
 # | fig-cap: Hospital Admissions posterior distribution without weekday effect
+# | code-fold: true
 import jax
 import numpy as np
 
@@ -197,14 +199,54 @@ hosp_model.run(
     rng_key=jax.random.key(54),
     mcmc_args=dict(progress_bar=False),
 )
-
-# Plotting the posterior
-out = hosp_model.plot_posterior(
-    var="latent_hospital_admissions",
-    ylab="Hospital Admissions",
-    obs_signal=daily_hosp_admits.astype(float),
-)
 ```
+
+```{python}
+# | code-fold: true
+import arviz as az
+import matplotlib.pyplot as plt
+
+
+# Retrieve the posterior samples from the model
+ppc_samples = hosp_model.posterior_predictive(
+    n_datapoints=daily_hosp_admits.size
+)
+
+# Create an InferenceData object from model
+idata = az.from_numpyro(
+    posterior=hosp_model.mcmc,
+    posterior_predictive=ppc_samples,
+)
+
+# Use a time series plot (plot_ts) from arviz for plotting
+axes = az.plot_ts(
+    idata,
+    y="negbinom_rv",
+    y_hat="negbinom_rv",
+    num_samples=200,
+    y_kwargs={
+        "color": "blue",
+        "linewidth": 1.0,
+        "marker": "o",
+        "linestyle": "solid",
+    },
+    y_hat_plot_kwargs={"color": "skyblue", "alpha": 0.05},
+    y_mean_plot_kwargs={"color": "black", "linestyle": "--", "linewidth": 2.5},
+    backend_kwargs={"figsize": (8, 6)},
+    textsize=15.0,
+)
+ax = axes[0][0]
+ax.set_xlabel("Time", fontsize=20)
+ax.set_ylabel("Hospital Admissions", fontsize=20)
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(
+    handles, ["Observed", "Sample Mean", "Posterior Samples"], loc="best"
+)
+plt.show()
+```
+
+
+
 
 
 ## Round 2: Incorporating day-of-the-week effects
@@ -213,7 +255,7 @@ We will re-use the infection to admission interval and infection to hospitalizat
 
 For this example, the effect will be passed as a scaled Dirichlet distribution. It will consist of a `TransformedVariable` that samples an array of length seven from numpyro's `distributions.Dirichlet` and applies a `transformation.AffineTransform` to scale it by seven. [^note-other-examples]:
 
-[^note-other-examples]: A similar weekday effect is implemented in its own module, with example code [here](periodic_effects.html).
+[^note-other-examples]: A similar weekday effect is implemented in its own module, with example code here: {doc}`periodic_effects`
 
 ```{python}
 # | label: weekly-effect
@@ -280,12 +322,35 @@ As a result, we can see the posterior distribution of our novel day-of-the-week 
 ```{python}
 # | label: fig-output-day-of-week
 # | fig-cap: Day of the week effect
-out = hosp_model_dow.plot_posterior(
-    var="dayofweek_effect_raw", ylab="Day of the Week Effect", samples=500
+# Create an InferenceData object from hosp_model_dow
+dow_idata = az.from_numpyro(
+    posterior=hosp_model_dow.mcmc,
 )
 
-sp = hosp_model_dow.spread_draws(["dayofweek_effect_raw"])
-# dayofweek_effect is not recorded
+# Extract day of week effect (DOW)
+dow_effect_raw = dow_idata.posterior["dayofweek_effect_raw"].squeeze().T
+indices = np.random.choice(dow_effect_raw.shape[1], size=200, replace=False)
+dow_plot_samples = dow_effect_raw[:, indices]
+fig, ax = plt.subplots(1, 1, figsize=(8, 6))
+ax.plot(
+    np.arange(dow_effect_raw.shape[0]),
+    dow_plot_samples,
+    color="skyblue",
+    alpha=0.10,
+)
+ax.plot([], [], color="skyblue", alpha=0.10, label="DOW Posterior Samples")
+ax.plot(
+    np.arange(dow_effect_raw.shape[0]),
+    dow_plot_samples.mean(dim="draw"),
+    color="black",
+    linewidth=2.0,
+    linestyle="--",
+    label="Sample Mean",
+)
+ax.legend(loc="best")
+ax.set_ylabel("Effect", fontsize=20)
+ax.set_xlabel("Day Of Week", fontsize=20)
+plt.show()
 ```
 
 The new model with the day-of-the-week effect can be compared to the previous model without the effect. Finally, let's reproduce the figure without the day-of-the-week effect, and then plot the new model with the effect:
@@ -293,21 +358,69 @@ The new model with the day-of-the-week effect can be compared to the previous mo
 ```{python}
 # | label: fig-output-admissions-original
 # | fig-cap: Hospital Admissions posterior distribution without weekday effect
-# Figure without weekday effect
-out = hosp_model.plot_posterior(
-    var="latent_hospital_admissions",
-    ylab="Hospital Admissions",
-    obs_signal=daily_hosp_admits.astype(float),
+# Without weekday effect (from earlier)
+axes = az.plot_ts(
+    idata,
+    y="negbinom_rv",
+    y_hat="negbinom_rv",
+    num_samples=200,
+    y_kwargs={
+        "color": "blue",
+        "linewidth": 1.0,
+        "marker": "o",
+        "linestyle": "solid",
+    },
+    y_hat_plot_kwargs={"color": "skyblue", "alpha": 0.05},
+    y_mean_plot_kwargs={"color": "black", "linestyle": "--", "linewidth": 2.5},
+    backend_kwargs={"figsize": (8, 6)},
+    textsize=15.0,
 )
+ax = axes[0][0]
+ax.set_xlabel("Time", fontsize=20)
+ax.set_ylabel("Hospital Admissions", fontsize=20)
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(
+    handles,
+    ["Observed", "Posterior Predictive", "Samples wo/ WDE"],
+    loc="best",
+)
+plt.show()
 ```
 
 ```{python}
 # | label: fig-output-admissions-wof
 # | fig-cap: Hospital Admissions posterior distribution with weekday effect
 # Figure with weekday effect
-out_dow = hosp_model_dow.plot_posterior(
-    var="latent_hospital_admissions",
-    ylab="Hospital Admissions",
-    obs_signal=daily_hosp_admits.astype(float),
+ppc_samples = hosp_model_dow.posterior_predictive(
+    n_datapoints=daily_hosp_admits.size
 )
+idata = az.from_numpyro(
+    posterior=hosp_model_dow.mcmc,
+    posterior_predictive=ppc_samples,
+)
+
+axes = az.plot_ts(
+    idata,
+    y="negbinom_rv",
+    y_hat="negbinom_rv",
+    num_samples=200,
+    y_kwargs={
+        "color": "blue",
+        "linewidth": 1.0,
+        "marker": "o",
+        "linestyle": "solid",
+    },
+    y_hat_plot_kwargs={"color": "skyblue", "alpha": 0.05},
+    y_mean_plot_kwargs={"color": "black", "linestyle": "--", "linewidth": 2.5},
+    backend_kwargs={"figsize": (8, 6)},
+    textsize=15.0,
+)
+ax = axes[0][0]
+ax.set_xlabel("Time", fontsize=20)
+ax.set_ylabel("Hospital Admissions", fontsize=20)
+handles, labels = ax.get_legend_handles_labels()
+ax.legend(
+    handles, ["Observed", "Posterior Predictive", "Samples w/ WDE"], loc="best"
+)
+plt.show()
 ```

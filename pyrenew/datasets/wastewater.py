@@ -4,7 +4,6 @@
 This module loads the package dataset named 'wastewater' and provides functions to manipulate the data. It uses the 'polars' library.
 """
 
-
 from importlib.resources import files
 
 import polars as pl
