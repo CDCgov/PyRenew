@@ -217,3 +217,45 @@ def compute_delay_ascertained_incidence(
         mode="valid",
     )
     return delay_obs_incidence
+
+
+def daily_to_epiweekly(
+    daily_value: ArrayLike,
+    first_dow: int = 0,
+):
+    """
+    Aggregate daily values (e.g.
+    hospitalizations) into epiweekly total values.
+
+    Parameters
+    ----------
+    daily_value : ArrayLike
+        Daily infections or hospitalization values.
+    first_dow : int
+        First day of the week, values between 0-6.
+        (0 for Monday, 6 for Sunday).
+        If first_dow is not 0, the incomplete first
+        epiweek is ignored and epiweekly values
+        starting from second week is returned.
+        Defaults to 0.
+
+    Returns
+    -------
+    ArrayLike
+        Data converted to epiweekly values starting
+        with the first full epiweek available.
+    """
+    if first_dow < 0 or first_dow > 6:
+        raise ValueError("First day of the week must be between 0 and 6")
+
+    if first_dow > 0:
+        daily_value = daily_value[7 - first_dow :]
+
+    if len(daily_value) < 7:
+        raise ValueError("No complete epiweekly values available")
+
+    epiweekly_values = jnp.convolve(daily_value, jnp.ones(7), mode="valid")[
+        ::7
+    ]
+
+    return epiweekly_values
