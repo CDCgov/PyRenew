@@ -223,7 +223,7 @@ def daily_to_weekly(
     daily_values: ArrayLike,
     input_data_first_dow: int = 0,
     week_start_dow: int = 0,
-):
+) -> ArrayLike:
     """
     Aggregate daily values (e.g.
     incident hospital admissions) into weekly total values.
@@ -271,7 +271,7 @@ def daily_to_weekly(
 
 def daily_to_mmwr_epiweekly(
     daily_values: ArrayLike, input_data_first_dow: int = 0
-):
+) -> ArrayLike:
     """
     Convert daily values to MMWR epidemiological weeks.
 
