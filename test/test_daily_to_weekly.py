@@ -3,7 +3,7 @@
 import jax.numpy as jnp
 import pytest
 
-from pyrenew.convolve import daily_to_weekly, daily_to_mmwr_epiweekly
+from pyrenew.convolve import daily_to_mmwr_epiweekly, daily_to_weekly
 
 
 def test_daily_to_weekly_no_offset():
@@ -36,7 +36,9 @@ def test_daily_to_weekly_with_different_week_start():
     differs from the input data start.
     """
     daily_values = jnp.arange(1, 15)
-    result = daily_to_weekly(daily_values, input_data_first_dow=2, week_start_dow=5)
+    result = daily_to_weekly(
+        daily_values, input_data_first_dow=2, week_start_dow=5
+    )
     expected = jnp.array([49])
     assert jnp.array_equal(result, expected)
 
@@ -49,7 +51,9 @@ def test_daily_to_weekly_incomplete_week():
     form a complete week.
     """
     daily_values = jnp.arange(1, 5)
-    with pytest.raises(ValueError, match="No complete weekly values available"):
+    with pytest.raises(
+        ValueError, match="No complete weekly values available"
+    ):
         daily_to_weekly(daily_values, input_data_first_dow=0)
 
 
@@ -80,7 +84,8 @@ def test_daily_to_weekly_invalid_offset():
         daily_to_weekly(daily_values, input_data_first_dow=-1)
 
     with pytest.raises(
-        ValueError, match="First day of aggregated data must be between 0 and 6."
+        ValueError,
+        match="First day of aggregated data must be between 0 and 6.",
     ):
         daily_to_weekly(daily_values, week_start_dow=7)
 
