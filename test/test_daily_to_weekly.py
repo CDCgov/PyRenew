@@ -79,13 +79,14 @@ def test_daily_to_weekly_invalid_offset():
     """
     daily_values = jnp.arange(1, 15)
     with pytest.raises(
-        ValueError, match="First day of the week must be between 0 and 6."
+        ValueError,
+        match="First day of the week for input timeseries must be between 0 and 6.",
     ):
         daily_to_weekly(daily_values, input_data_first_dow=-1)
 
     with pytest.raises(
         ValueError,
-        match="First day of aggregated data must be between 0 and 6.",
+        match="Week start date for output aggregated values must be between 0 and 6.",
     ):
         daily_to_weekly(daily_values, week_start_dow=7)
 

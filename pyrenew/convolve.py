@@ -249,16 +249,17 @@ def daily_to_weekly(
         with the first full week available.
     """
     if input_data_first_dow < 0 or input_data_first_dow > 6:
-        raise ValueError("First day of the week for input timeseries must be between 0 and 6.")
+        raise ValueError(
+            "First day of the week for input timeseries must be between 0 and 6."
+        )
 
     if week_start_dow < 0 or week_start_dow > 6:
         raise ValueError(
             "Week start date for output aggregated values must be between 0 and 6."
         )
 
-    if input_data_first_dow != week_start_dow:
-        offset = (week_start_dow - input_data_first_dow) % 7
-        daily_values = daily_values[offset:]
+    offset = (week_start_dow - input_data_first_dow) % 7
+    daily_values = daily_values[offset:]
 
     if len(daily_values) < 7:
         raise ValueError("No complete weekly values available")
