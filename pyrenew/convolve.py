@@ -225,14 +225,14 @@ def daily_to_epiweekly(
 ):
     """
     Aggregate daily values (e.g.
-    hospitalizations) into epiweekly total values.
+    incident hospital admissions) into weekly total values.
 
     Parameters
     ----------
     daily_value : ArrayLike
-        Daily infections or hospitalization values.
+        Daily timeseries values (e.g. incident infections or incident ed visits).
     first_dow : int
-        First day of the week, values between 0-6.
+        First day of the week in the input timeseries `daily_values`. An integer between 0 and 6, inclusive.
         (0 for Monday, 6 for Sunday).
         If first_dow is not 0, the incomplete first
         epiweek is ignored and epiweekly values
