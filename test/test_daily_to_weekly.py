@@ -63,7 +63,7 @@ def test_daily_to_weekly_missing_daily_values():
     aggregates the available daily values
     into weekly values when there are
     fewer daily values than required for
-    complete weekly totals.
+    complete weekly totals in the final week.
     """
     daily_values = jnp.arange(1, 10)
     result = daily_to_weekly(daily_values, input_data_first_dow=0)

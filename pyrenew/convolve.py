@@ -235,9 +235,9 @@ def daily_to_weekly(
     input_data_first_dow : int
         First day of the week in the input timeseries `daily_values`.
         An integer between 0 and 6, inclusive (0 for Monday, 6 for Sunday).
-        If first_dow is not 0, the incomplete first
+        If `input_data_first_dow` does not match `week_start_dow`, the incomplete first
         week is ignored and weekly values starting
-        from second week is returned. Defaults to 0.
+        from the second week are returned. Defaults to 0.
     week_start_dow : int
         The desired starting day of the week for the output weekly aggregation.
         An integer between 0 and 6, inclusive. Defaults to 0 (Monday).
@@ -249,11 +249,11 @@ def daily_to_weekly(
         with the first full week available.
     """
     if input_data_first_dow < 0 or input_data_first_dow > 6:
-        raise ValueError("First day of the week must be between 0 and 6.")
+        raise ValueError("First day of the week for input timeseries must be between 0 and 6.")
 
     if week_start_dow < 0 or week_start_dow > 6:
         raise ValueError(
-            "First day of aggregated data must be between 0 and 6."
+            "Week start date for output aggregated values must be between 0 and 6."
         )
 
     if input_data_first_dow != week_start_dow:
