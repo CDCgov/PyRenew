@@ -219,9 +219,10 @@ def compute_delay_ascertained_incidence(
     return delay_obs_incidence
 
 
-def daily_to_epiweekly(
-    daily_value: ArrayLike,
-    first_dow: int = 0,
+def daily_to_weekly(
+    daily_values: ArrayLike,
+    input_data_first_dow: int = 0,
+    week_start_dow: int = 0,
 ):
     """
     Aggregate daily values (e.g.
@@ -229,33 +230,63 @@ def daily_to_epiweekly(
 
     Parameters
     ----------
-    daily_value : ArrayLike
+    daily_values : ArrayLike
         Daily timeseries values (e.g. incident infections or incident ed visits).
-    first_dow : int
-        First day of the week in the input timeseries `daily_values`. An integer between 0 and 6, inclusive.
-        (0 for Monday, 6 for Sunday).
+    input_data_first_dow : int
+        First day of the week in the input timeseries `daily_values`.
+        An integer between 0 and 6, inclusive (0 for Monday, 6 for Sunday).
         If first_dow is not 0, the incomplete first
-        epiweek is ignored and epiweekly values
-        starting from second week is returned.
-        Defaults to 0.
+        week is ignored and weekly values starting
+        from second week is returned. Defaults to 0.
+    week_start_dow : int
+        The desired starting day of the week for the output weekly aggregation.
+        An integer between 0 and 6, inclusive. Defaults to 0 (Monday).
 
     Returns
     -------
     ArrayLike
-        Data converted to epiweekly values starting
-        with the first full epiweek available.
+        Data converted to weekly values starting
+        with the first full week available.
     """
-    if first_dow < 0 or first_dow > 6:
-        raise ValueError("First day of the week must be between 0 and 6")
+    if input_data_first_dow < 0 or input_data_first_dow > 6:
+        raise ValueError("First day of the week must be between 0 and 6.")
 
-    if first_dow > 0:
-        daily_value = daily_value[7 - first_dow :]
+    if week_start_dow < 0 or week_start_dow > 6:
+        raise ValueError(
+            "First day of aggregated data must be between 0 and 6."
+        )
 
-    if len(daily_value) < 7:
-        raise ValueError("No complete epiweekly values available")
+    if input_data_first_dow != week_start_dow:
+        offset = (week_start_dow - input_data_first_dow) % 7
+        daily_values = daily_values[offset:]
 
-    epiweekly_values = jnp.convolve(daily_value, jnp.ones(7), mode="valid")[
-        ::7
-    ]
+    if len(daily_values) < 7:
+        raise ValueError("No complete weekly values available")
 
-    return epiweekly_values
+    weekly_values = jnp.convolve(daily_values, jnp.ones(7), mode="valid")[::7]
+
+    return weekly_values
+
+
+def daily_to_mmwr_epiweekly(
+    daily_values: ArrayLike, input_data_first_dow: int = 0
+):
+    """
+    Convert daily values to MMWR epidemiological weeks.
+
+    Parameters
+    ----------
+    daily_values : ArrayLike
+        Daily timeseries values.
+    input_data_first_dow : int
+        First day of the week in the input timeseries `daily_values`.
+        Defaults to 0 (Monday).
+
+    Returns
+    -------
+    ArrayLike
+        Data converted to epiweekly values.
+    """
+    return daily_to_weekly(
+        daily_values, input_data_first_dow, week_start_dow=6
+    )
