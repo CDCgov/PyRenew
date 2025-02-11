@@ -1,5 +1,8 @@
 """
 Helper functions for handling timeseries in Pyrenew
+
+Days of the week in pyrenew are 0-indexed and follow
+ISO standards, so 0 is Monday at 6 is Sunday.
 """
 
 
@@ -78,7 +81,9 @@ def daily_to_mmwr_epiweekly(
 
 
 def weekly_to_daily(
-    weekly_ts: ArrayLike, first_day_dow: int = 0, week_start_dow: int = 0
+    weekly_values: ArrayLike,
+    output_data_first_dow: int = 0,
+    week_start_dow: int = 0,
 ) -> ArrayLike:
     """
     Convert a weekly timeseries to a daily
@@ -86,27 +91,56 @@ def weekly_to_daily(
 
     Parameters
     ----------
-    weekly_ts: ArrayLike
+    weekly_values: ArrayLike
         Timeseries of weekly values, where
         (discrete) time is the first dimension of
         the array (following Pyrenew convention).
 
-    first_day_dow: int
-        First day of the week in the daily timeseries.
-        0-indexed. Default 0.
+    output_data_first_dow: int
+        First day of the week in the output daily timeseries.
+        0-indexed. Default 0 (Monday).
 
     week_start_dow: int
         Starting day of the week for ``weekly_ts``,
-        0-indexed. Default 0.
+        0-indexed. Default 0 (Monday).
 
     Returns
     -------
     ArrayLike
         The daily timeseries.
     """
-    first_ind = (first_day_dow - week_start_dow) % 7
+    first_ind = (output_data_first_dow - week_start_dow) % 7
     return jnp.repeat(
-        weekly_ts,
+        weekly_values,
         repeats=7,
         axis=0,
     )[first_ind:]
+
+
+def mmwr_epiweekly_to_daily(
+    weekly_values: ArrayLike,
+    output_data_first_dow: int = 0,
+) -> ArrayLike:
+    """
+    Convert an MMWR epiweekly timeseries to a daily
+    timeseries using :func:`weekly_to_daily`.
+
+    Parameters
+    ----------
+    weekly_values: ArrayLike
+        Timeseries of weekly values, where
+        (discrete) time is the first dimension of
+        the array (following Pyrenew convention).
+
+    output_data_first_dow: int
+        First day of the week in the output daily timeseries.
+        0-indexed. Default 0 (Monday).
+
+    Returns
+    -------
+    ArrayLike
+        The daily timeseries.
+    """
+    return weekly_to_daily(
+        weekly_values, output_data_first_dow, week_start_dow=6
+    )
