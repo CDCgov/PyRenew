@@ -5,6 +5,29 @@ Days of the week in pyrenew are 0-indexed and follow
 ISO standards, so 0 is Monday at 6 is Sunday.
 """
 
+import jax.numpy as jnp
+from jax.typing import ArrayLike
+
+
+def _validate_dow(
+    day_of_week: int, variable_name: str
+) -> None:  # numpydoc ignore=GL08
+    if not isinstance(day_of_week, int):
+        raise ValueError(
+            "Day-of-week indices must be a integers "
+            "between 0 and 6, inclusive. "
+            f"Got {day_of_week} for {variable_name}, "
+            "which is a "
+            f"{type(day_of_week)}"
+        )
+    if day_of_week < 0 or day_of_week > 6:
+        raise ValueError(
+            "Day-of-week indices must be a integers "
+            "between 0 and 6, inclusive. "
+            f"Got {day_of_week} for {variable_name}."
+        )
+    return None
+
 
 def daily_to_weekly(
     daily_values: ArrayLike,
@@ -35,15 +58,9 @@ def daily_to_weekly(
         Data converted to weekly values starting
         with the first full week available.
     """
-    if input_data_first_dow < 0 or input_data_first_dow > 6:
-        raise ValueError(
-            "First day of the week for input timeseries must be between 0 and 6."
-        )
 
-    if week_start_dow < 0 or week_start_dow > 6:
-        raise ValueError(
-            "Week start date for output aggregated values must be between 0 and 6."
-        )
+    _validate_dow(input_data_first_dow, "input_data_first_dow")
+    _validate_dow(week_start_dow, "week_start_dow")
 
     offset = (week_start_dow - input_data_first_dow) % 7
     daily_values = daily_values[offset:]
@@ -109,12 +126,15 @@ def weekly_to_daily(
     ArrayLike
         The daily timeseries.
     """
-    first_ind = (output_data_first_dow - week_start_dow) % 7
+    _validate_dow(output_data_first_dow, "output_data_first_dow")
+    _validate_dow(week_start_dow, "week_start_dow")
+
+    offset = (output_data_first_dow - week_start_dow) % 7
     return jnp.repeat(
         weekly_values,
         repeats=7,
         axis=0,
-    )[first_ind:]
+    )[offset:]
 
 
 def mmwr_epiweekly_to_daily(
