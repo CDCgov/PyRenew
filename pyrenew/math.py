@@ -6,10 +6,108 @@ and/or numerical calculations.
 from __future__ import annotations
 
 import jax.numpy as jnp
-from jax.lax import broadcast_shapes, scan
+from jax.lax import broadcast_shapes, fori_loop, scan
 from jax.typing import ArrayLike
 
 from pyrenew.distutil import validate_discrete_dist_vector
+
+
+def _arange_like(vec: ArrayLike) -> jnp.ndarray:
+    """
+    Given an array of size n, return the array
+    [1, ... n].
+
+    Parameters
+    ----------
+    vec: ArrayLike
+        The template array
+
+    Returns
+    -------
+    jnp.ndarray
+        The resulting array.
+    """
+    return jnp.arange(1, jnp.size(vec) + 1)
+
+
+def _neg_MGF(r: float, w: ArrayLike) -> float:
+    """
+    Compute the negative moment generating function (MGF)
+    for a given rate ``r`` and weights ``w``.
+
+    Parameters
+    ----------
+    r: float
+       The rate parameter.
+
+    w: ArrayLike
+       An array of weights.
+
+    Returns
+    -------
+    float
+        The value of the negative MGF evaluated at ``r``
+        and ``w``.
+    """
+    return jnp.sum(w * jnp.exp(-r * _arange_like(w)))
+
+
+def _neg_MGF_del_r(r: float, w: ArrayLike) -> float:
+    """
+    Compute the partial deriative of :func:`_neg_MGF`
+    with respect to ``r``, evaluated at a particular
+    ``r`` and ``w`` pair.
+
+    Parameters
+    ----------
+    r: float
+       The rate parameter.
+
+    w: ArrayLike
+       An array of weights.
+
+    Returns
+    -------
+    float
+        The value of the partial derivative evaluated at ``r``
+        and ``w``.
+    """
+    t_vec = _arange_like(w)
+    return -jnp.sum(w * t_vec * jnp.exp(-r * t_vec))
+
+
+def r_approx_from_R(R: float, G: ArrayLike, n_newton_steps: int) -> ArrayLike:
+    """
+    Get the approximate asymptotic geometric growth rate ``r``
+    for a renewal process with a fixed reproduction number ``R``
+    and discrete generation interval PMF ``G``.
+
+    Uses Newton's method with a fixed number of steps.
+
+    Parameters
+    ----------
+    R: float
+        The reproduction number
+
+    G: ArrayLike
+        The probability mass function of the generation
+        interval.
+
+    n_newton_steps: int
+        Number of steps to take when performing Newton's method.
+
+    Returns
+    -------
+    float
+        The approximate value of ``r``.
+    """
+    mean_gi = jnp.dot(G, _arange_like(G))
+    init_r = (R - 1) / (R * mean_gi)
+
+    def _r_next(_iter, r):  # numpydoc ignore=GL08
+        return r - ((R * _neg_MGF(r, G) - 1) / (R * _neg_MGF_del_r(r, G)))
+
+    return fori_loop(1, n_newton_steps, _r_next, init_r)
 
 
 def get_leslie_matrix(
