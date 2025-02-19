@@ -2,14 +2,36 @@
 Unit tests for the pyrenew.math module.
 """
 
+import jax.numpy as jnp
 import numpy as np
 import pytest
 from numpy.random import RandomState
-from numpy.testing import assert_almost_equal, assert_array_almost_equal
+from numpy.testing import (
+    assert_almost_equal,
+    assert_array_almost_equal,
+    assert_array_equal,
+)
 
 import pyrenew.math as pmath
 
 rng = RandomState(5)
+
+
+@pytest.mark.parametrize(
+    "arr, arr_len",
+    [
+        ([3, 1, 2], 3),
+        (np.ones(50), 50),
+        ((jnp.nan * jnp.ones(250)).reshape((50, -1)), 250),
+    ],
+)
+def test_positive_ints_like(arr, arr_len):
+    """
+    Test the _positive_ints_like helper function.
+    """
+    result = pmath._positive_ints_like(arr)
+    expected = jnp.arange(1, arr_len + 1)
+    assert_array_equal(result, expected)
 
 
 @pytest.mark.parametrize(

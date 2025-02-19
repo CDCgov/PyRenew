@@ -12,10 +12,10 @@ from jax.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
 
 
-def _arange_like(vec: ArrayLike) -> jnp.ndarray:
+def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
     """
-    Given an array of size n, return the array
-    [1, ... n].
+    Given an array of size n, return the 1D Jax array
+    ``[1, ... n]``.
 
     Parameters
     ----------
@@ -25,7 +25,7 @@ def _arange_like(vec: ArrayLike) -> jnp.ndarray:
     Returns
     -------
     jnp.ndarray
-        The resulting array.
+        The resulting array ``[1, ..., n]``.
     """
     return jnp.arange(1, jnp.size(vec) + 1)
 
@@ -49,7 +49,7 @@ def _neg_MGF(r: float, w: ArrayLike) -> float:
         The value of the negative MGF evaluated at ``r``
         and ``w``.
     """
-    return jnp.sum(w * jnp.exp(-r * _arange_like(w)))
+    return jnp.sum(w * jnp.exp(-r * _positive_ints_like(w)))
 
 
 def _neg_MGF_del_r(r: float, w: ArrayLike) -> float:
@@ -72,7 +72,7 @@ def _neg_MGF_del_r(r: float, w: ArrayLike) -> float:
         The value of the partial derivative evaluated at ``r``
         and ``w``.
     """
-    t_vec = _arange_like(w)
+    t_vec = _positive_ints_like(w)
     return -jnp.sum(w * t_vec * jnp.exp(-r * t_vec))
 
 
@@ -101,7 +101,7 @@ def r_approx_from_R(R: float, G: ArrayLike, n_newton_steps: int) -> ArrayLike:
     float
         The approximate value of ``r``.
     """
-    mean_gi = jnp.dot(G, _arange_like(G))
+    mean_gi = jnp.dot(G, _positive_ints_like(G))
     init_r = (R - 1) / (R * mean_gi)
 
     def _r_next(_iter, r):  # numpydoc ignore=GL08
