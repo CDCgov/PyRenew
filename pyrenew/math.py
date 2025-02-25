@@ -30,7 +30,7 @@ def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
     return jnp.arange(1, jnp.size(vec) + 1)
 
 
-def _neg_MGF(r: float, w: ArrayLike) -> float:
+def neg_MGF(r: float, w: ArrayLike) -> float:
     """
     Compute the negative moment generating function (MGF)
     for a given rate ``r`` and weights ``w``.
@@ -48,15 +48,29 @@ def _neg_MGF(r: float, w: ArrayLike) -> float:
     float
         The value of the negative MGF evaluated at ``r``
         and ``w``.
+
+    Notes
+    -----
+    For a finite discrete random variable :math:`X` supported on
+    the first :math:`n` positive integers (:math:`\\{1, 2, ..., n \\}`),
+    the moment generating function (MGF) :math:`M_+(r)` is defined
+    as the expected value of :math:`\\exp(rX)`. Similarly, the negative
+    moment generating function :math:`M_-(r)` is the expected value of
+    :math:`\\exp(-rX)`. So if we represent the PMF of :math:`X` as a
+    "weights" vector :math:`w` of length :math:`n`, the negative MGF
+    :math:`M_-(r)` is given by:
+
+    .. math::
+        M_-(r) = \\sum_{t = 1}^{n} w_i \\exp(-rt)
     """
     return jnp.sum(w * jnp.exp(-r * _positive_ints_like(w)))
 
 
-def _neg_MGF_del_r(r: float, w: ArrayLike) -> float:
+def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
     """
-    Compute the partial deriative of :func:`_neg_MGF`
-    with respect to ``r``, evaluated at a particular
-    ``r`` and ``w`` pair.
+    Compute the value of the partial deriative of
+    :func:`neg_MGF` with respect to ``r``
+    evaluated at a particular ``r`` and ``w`` pair.
 
     Parameters
     ----------
@@ -76,11 +90,11 @@ def _neg_MGF_del_r(r: float, w: ArrayLike) -> float:
     return -jnp.sum(w * t_vec * jnp.exp(-r * t_vec))
 
 
-def r_approx_from_R(R: float, G: ArrayLike, n_newton_steps: int) -> ArrayLike:
+def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     """
     Get the approximate asymptotic geometric growth rate ``r``
     for a renewal process with a fixed reproduction number ``R``
-    and discrete generation interval PMF ``G``.
+    and discrete generation interval PMF ``g``.
 
     Uses Newton's method with a fixed number of steps.
 
@@ -89,7 +103,7 @@ def r_approx_from_R(R: float, G: ArrayLike, n_newton_steps: int) -> ArrayLike:
     R: float
         The reproduction number
 
-    G: ArrayLike
+    g: ArrayLike
         The probability mass function of the generation
         interval.
 
@@ -100,12 +114,36 @@ def r_approx_from_R(R: float, G: ArrayLike, n_newton_steps: int) -> ArrayLike:
     -------
     float
         The approximate value of ``r``.
+
+    Notes
+    -----
+    For a fixed value of :math:`\\mathcal{R}`, a renewal process
+    has an asymptotic geometric growth rate :math:`r` that satisfies
+
+    .. math::
+        M_{-}(r) - \\frac{1}{\\mathcal{R}} = 0
+
+    where :math:`M_-(r)` is the negative moment generating function
+    for a random variable :math:`\\tau` representing the (discrete)
+    generation interval. See :func:`neg_MGF` for details.
+
+    We obtain a value for :math:`r` via approximate numerical solution
+    of this implicit equation.
+
+    We first make an initial guess based on the mean generation interval
+    :math:`\\bar{\\tau} = \\mathbb{E}(\\tau)`:
+
+    .. math::
+        r \\approx \\frac{\\mathcal{R} - 1}{\\mathcal{R} \\bar{\\tau}}
+
+    We then refine this approximation by applying Newton's method for
+    a fixed number of steps.
     """
-    mean_gi = jnp.dot(G, _positive_ints_like(G))
+    mean_gi = jnp.dot(g, _positive_ints_like(g))
     init_r = (R - 1) / (R * mean_gi)
 
     def _r_next(_iter, r):  # numpydoc ignore=GL08
-        return r - ((R * _neg_MGF(r, G) - 1) / (R * _neg_MGF_del_r(r, G)))
+        return r - ((R * neg_MGF(r, g) - 1) / (R * neg_MGF_del_r(r, g)))
 
     return fori_loop(1, n_newton_steps, _r_next, init_r)
 
