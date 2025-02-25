@@ -12,6 +12,146 @@ from jax.typing import ArrayLike
 from pyrenew.distutil import validate_discrete_dist_vector
 
 
+def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
+    """
+    Given an array of size n, return the 1D Jax array
+    ``[1, ... n]``.
+
+    Parameters
+    ----------
+    vec: ArrayLike
+        The template array
+
+    Returns
+    -------
+    jnp.ndarray
+        The resulting array ``[1, ..., n]``.
+    """
+    return jnp.arange(1, jnp.size(vec) + 1)
+
+
+def neg_MGF(r: float, w: ArrayLike) -> float:
+    """
+    Compute the negative moment generating function (MGF)
+    for a given rate ``r`` and weights ``w``.
+
+    Parameters
+    ----------
+    r: float
+       The rate parameter.
+
+    w: ArrayLike
+       An array of weights.
+
+    Returns
+    -------
+    float
+        The value of the negative MGF evaluated at ``r``
+        and ``w``.
+
+    Notes
+    -----
+    For a finite discrete random variable :math:`X` supported on
+    the first :math:`n` positive integers (:math:`\\{1, 2, ..., n \\}`),
+    the moment generating function (MGF) :math:`M_+(r)` is defined
+    as the expected value of :math:`\\exp(rX)`. Similarly, the negative
+    moment generating function :math:`M_-(r)` is the expected value of
+    :math:`\\exp(-rX)`. So if we represent the PMF of :math:`X` as a
+    "weights" vector :math:`w` of length :math:`n`, the negative MGF
+    :math:`M_-(r)` is given by:
+
+    .. math::
+        M_-(r) = \\sum_{t = 1}^{n} w_i \\exp(-rt)
+    """
+    return jnp.sum(w * jnp.exp(-r * _positive_ints_like(w)))
+
+
+def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
+    """
+    Compute the value of the partial deriative of
+    :func:`neg_MGF` with respect to ``r``
+    evaluated at a particular ``r`` and ``w`` pair.
+
+    Parameters
+    ----------
+    r: float
+       The rate parameter.
+
+    w: ArrayLike
+       An array of weights.
+
+    Returns
+    -------
+    float
+        The value of the partial derivative evaluated at ``r``
+        and ``w``.
+    """
+    t_vec = _positive_ints_like(w)
+    return -jnp.sum(w * t_vec * jnp.exp(-r * t_vec))
+
+
+def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
+    """
+    Get the approximate asymptotic geometric growth rate ``r``
+    for a renewal process with a fixed reproduction number ``R``
+    and discrete generation interval PMF ``g``.
+
+    Uses Newton's method with a fixed number of steps.
+
+    Parameters
+    ----------
+    R: float
+        The reproduction number
+
+    g: ArrayLike
+        The probability mass function of the generation
+        interval.
+
+    n_newton_steps: int
+        Number of steps to take when performing Newton's method.
+
+    Returns
+    -------
+    float
+        The approximate value of ``r``.
+
+    Notes
+    -----
+    For a fixed value of :math:`\\mathcal{R}`, a renewal process
+    has an asymptotic geometric growth rate :math:`r` that satisfies
+
+    .. math::
+        M_{-}(r) - \\frac{1}{\\mathcal{R}} = 0
+
+    where :math:`M_-(r)` is the negative moment generating function
+    for a random variable :math:`\\tau` representing the (discrete)
+    generation interval. See :func:`neg_MGF` for details.
+
+    We obtain a value for :math:`r` via approximate numerical solution
+    of this implicit equation.
+
+    We first make an initial guess based on the mean generation interval
+    :math:`\\bar{\\tau} = \\mathbb{E}(\\tau)`:
+
+    .. math::
+        r \\approx \\frac{\\mathcal{R} - 1}{\\mathcal{R} \\bar{\\tau}}
+
+    We then refine this approximation by applying Newton's method for
+    a fixed number of steps.
+    """
+    mean_gi = jnp.dot(g, _positive_ints_like(g))
+    init_r = (R - 1) / (R * mean_gi)
+
+    def _r_next(r, _) -> tuple[ArrayLike, None]:  # numpydoc ignore=GL08
+        return (
+            r - ((R * neg_MGF(r, g) - 1) / (R * neg_MGF_del_r(r, g))),
+            None,
+        )
+
+    result, _ = scan(f=_r_next, init=init_r, xs=None, length=n_newton_steps)
+    return result
+
+
 def get_leslie_matrix(
     R: float, generation_interval_pmf: ArrayLike
 ) -> ArrayLike:
