@@ -9,9 +9,30 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 
-def _validate_dow(
-    day_of_week: int, variable_name: str
-) -> None:  # numpydoc ignore=GL08
+def validate_dow(day_of_week: int, variable_name: str) -> None:
+    """
+    Confirm that an integer is a valid Pyrenew day of the week
+    index, with informative error messages on failure.
+
+    Parameters
+    ----------
+    day_of_week: int
+       Integer to validate.
+
+    variable_name: str
+       Name of the variable being validated, to increase
+       the informativeness of the error message.
+
+    Returns
+    -------
+    None
+       If validation passes.
+
+    Raises
+    ------
+    ValueError
+       If validation fails.
+    """
     if not isinstance(day_of_week, int):
         raise ValueError(
             "Day-of-week indices must be a integers "
@@ -59,8 +80,8 @@ def daily_to_weekly(
         with the first full week available.
     """
 
-    _validate_dow(input_data_first_dow, "input_data_first_dow")
-    _validate_dow(week_start_dow, "week_start_dow")
+    validate_dow(input_data_first_dow, "input_data_first_dow")
+    validate_dow(week_start_dow, "week_start_dow")
 
     offset = (week_start_dow - input_data_first_dow) % 7
     daily_values = daily_values[offset:]
@@ -126,8 +147,8 @@ def weekly_to_daily(
     ArrayLike
         The daily timeseries.
     """
-    _validate_dow(output_data_first_dow, "output_data_first_dow")
-    _validate_dow(week_start_dow, "week_start_dow")
+    validate_dow(output_data_first_dow, "output_data_first_dow")
+    validate_dow(week_start_dow, "week_start_dow")
 
     offset = (output_data_first_dow - week_start_dow) % 7
     return jnp.repeat(
