@@ -6,7 +6,7 @@ and/or numerical calculations.
 from __future__ import annotations
 
 import jax.numpy as jnp
-from jax.lax import broadcast_shapes, fori_loop, scan
+from jax.lax import broadcast_shapes, scan
 from jax.typing import ArrayLike
 
 from pyrenew.distutil import validate_discrete_dist_vector
@@ -142,10 +142,14 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     mean_gi = jnp.dot(g, _positive_ints_like(g))
     init_r = (R - 1) / (R * mean_gi)
 
-    def _r_next(_iter, r):  # numpydoc ignore=GL08
-        return r - ((R * neg_MGF(r, g) - 1) / (R * neg_MGF_del_r(r, g)))
+    def _r_next(r, _) -> tuple[ArrayLike, None]:  # numpydoc ignore=GL08
+        return (
+            r - ((R * neg_MGF(r, g) - 1) / (R * neg_MGF_del_r(r, g))),
+            None,
+        )
 
-    return fori_loop(1, n_newton_steps, _r_next, init_r)
+    result, _ = scan(f=_r_next, init=init_r, xs=None, length=n_newton_steps)
+    return result
 
 
 def get_leslie_matrix(
