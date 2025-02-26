@@ -8,6 +8,20 @@ import pytest
 import pyrenew.time as ptime
 
 
+def test_validate_dow() -> None:
+    """
+    Test that validate_dow raises appropriate
+    errors and succeeds on valid values.
+    """
+    with pytest.raises(ValueError, match="which is a"):
+        ptime.validate_dow("a string", "var")
+    with pytest.raises(ValueError, match="Got -1 for var"):
+        ptime.validate_dow(-1, "var")
+    with pytest.raises(ValueError, match="Got 7 for other_var"):
+        ptime.validate_dow(7, "other_var")
+    assert [ptime.validate_dow(x, "valid") for x in range(7)] == [None] * 7
+
+
 def test_daily_to_weekly_no_offset():
     """
     Tests that the function correctly aggregates

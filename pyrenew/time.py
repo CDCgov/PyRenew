@@ -35,7 +35,7 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
     """
     if not isinstance(day_of_week, int):
         raise ValueError(
-            "Day-of-week indices must be a integers "
+            "Day-of-week indices must be integers "
             "between 0 and 6, inclusive. "
             f"Got {day_of_week} for {variable_name}, "
             "which is a "
