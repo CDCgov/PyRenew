@@ -116,8 +116,21 @@ def test_daily_to_mmwr_epiweekly():
     """
     daily_values = jnp.arange(1, 15)
     result = ptime.daily_to_mmwr_epiweekly(daily_values)
-    expected = jnp.array([70])
+    expected = jnp.array([28, 77])
     assert jnp.array_equal(result, expected)
+    # for any starting day of the week in the input data
+    # except Sunday (6), the result should throw out partial
+    # first and last weeks
+    for dow in range(6):
+        first_sunday_ind = (6 - dow) % 7
+        minus_last_sunday_ind = (dow - 6) % 7
+        expected_partial = 1.0 * jnp.atleast_1d(
+            jnp.sum(daily_values[first_sunday_ind:-minus_last_sunday_ind])
+        )
+        result_partial = ptime.daily_to_mmwr_epiweekly(
+            daily_values, input_data_first_dow=dow
+        )
+        assert jnp.array_equal(result_partial, expected_partial)
 
 
 @pytest.mark.parametrize(

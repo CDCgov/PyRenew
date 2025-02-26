@@ -57,27 +57,49 @@ def daily_to_weekly(
 ) -> ArrayLike:
     """
     Aggregate daily values (e.g.
-    incident hospital admissions) into weekly total values.
+    incident hospital admissions)
+    to weekly total values.
 
     Parameters
     ----------
     daily_values : ArrayLike
-        Daily timeseries values (e.g. incident infections or incident ed visits).
+        Daily timeseries values (e.g. incident infections or
+        incident ed visits).
     input_data_first_dow : int
         First day of the week in the input timeseries `daily_values`.
-        An integer between 0 and 6, inclusive (0 for Monday, 6 for Sunday).
-        If `input_data_first_dow` does not match `week_start_dow`, the incomplete first
-        week is ignored and weekly values starting
+        An integer between 0 and 6, inclusive (0 for Monday, 1 for Tuesday,
+        ..., 6 for Sunday).
+        If `input_data_first_dow` does not match `week_start_dow`, the
+        incomplete first week is ignored and weekly values starting
         from the second week are returned. Defaults to 0.
     week_start_dow : int
-        The desired starting day of the week for the output weekly aggregation.
-        An integer between 0 and 6, inclusive. Defaults to 0 (Monday).
+        Day of the week on which weeks are considered to
+        start in the output timeseries of weekly values
+        (e.g. ISO weeks start on Mondays and end on Sundays;
+        MMWR epiweeks start on Sundays and end on Saturdays).
+        An integer between 0 and 6, inclusive (0 for Monday,
+        1 for Tuesday, ..., 6 for Sunday).
+        Default 0 (i.e. ISO weeks, starting on Mondays).
 
     Returns
     -------
     ArrayLike
         Data converted to weekly values starting
         with the first full week available.
+
+    Raises
+    ------
+    ValueError
+        If the specified days of the week fail validation.
+
+    Notes
+    -----
+    This is _not_ a simple inverse of :func:`weekly_to_daily`.
+    This function aggregates (by summing) daily values to
+    create a timeseries of weekly total values.
+    :func:`weekly_to_daily` broadcasts a _single shared value_
+    for a given week as the (repeated) daily value for each day
+    of that week.
     """
 
     validate_dow(input_data_first_dow, "input_data_first_dow")
@@ -95,10 +117,14 @@ def daily_to_weekly(
 
 
 def daily_to_mmwr_epiweekly(
-    daily_values: ArrayLike, input_data_first_dow: int = 0
+    daily_values: ArrayLike,
+    input_data_first_dow: int = 6,
 ) -> ArrayLike:
     """
-    Convert daily values to MMWR epidemiological weeks.
+    Aggregate daily values to weekly values
+    using :func:`daily_to_weekly` with
+    MMWR epidemiological weeks (begin on Sundays,
+    end on Saturdays).
 
     Parameters
     ----------
@@ -106,7 +132,12 @@ def daily_to_mmwr_epiweekly(
         Daily timeseries values.
     input_data_first_dow : int
         First day of the week in the input timeseries `daily_values`.
-        Defaults to 0 (Monday).
+        An integer between 0 and 6, inclusive (0 for Monday, 1 for
+        Tuesday, ..., 6 for Sunday).
+        If `input_data_first_dow` is _not_ the MMWR epiweek start day
+        (6, Sunday), the incomplete first week is ignored and
+        weekly values starting from the second week are returned.
+        Defaults to 6 (Sunday).
 
     Returns
     -------
@@ -120,12 +151,14 @@ def daily_to_mmwr_epiweekly(
 
 def weekly_to_daily(
     weekly_values: ArrayLike,
-    output_data_first_dow: int = 0,
     week_start_dow: int = 0,
+    output_data_first_dow: int = None,
 ) -> ArrayLike:
     """
-    Convert a weekly timeseries to a daily
-    timeseries using :func:`jnp.repeat`.
+    Broadcast a weekly timeseries to a daily
+    timeseries. The value for the week will be used
+    as the value each day in that week, via
+    :func:`jnp.repeat`.
 
     Parameters
     ----------
@@ -134,21 +167,50 @@ def weekly_to_daily(
         (discrete) time is the first dimension of
         the array (following Pyrenew convention).
 
-    output_data_first_dow: int
-        First day of the week in the output daily timeseries.
-        0-indexed. Default 0 (Monday).
-
     week_start_dow: int
-        Starting day of the week for ``weekly_ts``,
-        0-indexed. Default 0 (Monday).
+        Day of the week on which weeks are considered to
+        start in the input ``weekly_values`` timeseries
+        (e.g. ISO weeks start on Mondays and end on Sundays;
+        MMWR epiweeks start on Sundays and end on Saturdays).
+        An integer between 0 and 6, inclusive (0 for Monday,
+        1 for Tuesday, ..., 6 for Sunday).
+        Default 0 (i.e. ISO weeks, starting on Mondays).
+
+    output_data_first_dow: int
+        Day of the week on which to start the output timeseries.
+        An integer between 0 and 6, inclusive (0 for Monday,
+        1 for Tuesday, ..., 6 for Sunday). Defaults to the week
+        start date as specified by ``week_start_dow``.
+        If ``output_data_first_dow`` is _not_ equal to ``week_start_dow``,
+        the first weekly value will be partial (i.e. represented by
+        between 1 and 6 entries in the output timeseries) and
+        all subsequent weeks will be complete (represented by 7
+        values each).
 
     Returns
     -------
     ArrayLike
         The daily timeseries.
+
+    Raises
+    ------
+    ValueError
+        If the specified days of the week fail validation.
+
+    Notes
+    -----
+    This is _not_ a simple inverse of :func:`daily_to_weekly`.
+    :func:`daily_to_weekly` aggregates (by summing) daily values to
+    create a timeseries of weekly total values.
+    This function broadcasts a _single shared value_
+    for a given week as the (repeated) daily value for each day
+    of that week.
     """
-    validate_dow(output_data_first_dow, "output_data_first_dow")
+
     validate_dow(week_start_dow, "week_start_dow")
+    if output_data_first_dow is None:
+        output_data_first_dow = week_start_dow
+    validate_dow(output_data_first_dow, "output_data_first_dow")
 
     offset = (output_data_first_dow - week_start_dow) % 7
     return jnp.repeat(
@@ -160,7 +222,7 @@ def weekly_to_daily(
 
 def mmwr_epiweekly_to_daily(
     weekly_values: ArrayLike,
-    output_data_first_dow: int = 0,
+    output_data_first_dow: int = 6,
 ) -> ArrayLike:
     """
     Convert an MMWR epiweekly timeseries to a daily
@@ -174,8 +236,15 @@ def mmwr_epiweekly_to_daily(
         the array (following Pyrenew convention).
 
     output_data_first_dow: int
-        First day of the week in the output daily timeseries.
-        0-indexed. Default 0 (Monday).
+        Day of the week on which to start the output timeseries.
+        An integer between 0 and 6, inclusive (0 for Monday,
+        1 for Tuesday, ..., 6 for Sunday). Defaults to the MMWR
+        epiweek start day (6, Sunday).
+        If ``output_data_first_dow`` is _not_ equal to 6 (Sunday,
+        the start of an MMWR epiweek), the first weekly value will
+        be partial (i.e. represented by between 1 and 6 entries
+        in the output timeseries) and all subsequent weeks will be
+        complete (represented by 7 values each).
 
     Returns
     -------
@@ -183,5 +252,7 @@ def mmwr_epiweekly_to_daily(
         The daily timeseries.
     """
     return weekly_to_daily(
-        weekly_values, output_data_first_dow, week_start_dow=6
+        weekly_values,
+        output_data_first_dow=output_data_first_dow,
+        week_start_dow=6,
     )
