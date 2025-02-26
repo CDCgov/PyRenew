@@ -2,8 +2,11 @@
 Tests for the pyrenew.time module.
 """
 
+import itertools
+
 import jax.numpy as jnp
 import pytest
+from numpy.testing import assert_array_equal
 
 import pyrenew.time as ptime
 
@@ -115,3 +118,85 @@ def test_daily_to_mmwr_epiweekly():
     result = ptime.daily_to_mmwr_epiweekly(daily_values)
     expected = jnp.array([70])
     assert jnp.array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "weekly_values, expected_output",
+    [
+        (
+            jnp.array([7, -8, 501]),
+            jnp.array(
+                [
+                    7,
+                    7,
+                    7,
+                    7,
+                    7,
+                    7,
+                    7,
+                    -8,
+                    -8,
+                    -8,
+                    -8,
+                    -8,
+                    -8,
+                    -8,
+                    501,
+                    501,
+                    501,
+                    501,
+                    501,
+                    501,
+                    501,
+                ]
+            ),
+        ),
+        (
+            jnp.array([[7, 80], [14, 15]]),
+            jnp.array(
+                [
+                    [7, 80],
+                    [7, 80],
+                    [7, 80],
+                    [7, 80],
+                    [7, 80],
+                    [7, 80],
+                    [7, 80],
+                    [14, 15],
+                    [14, 15],
+                    [14, 15],
+                    [14, 15],
+                    [14, 15],
+                    [14, 15],
+                    [14, 15],
+                ]
+            ),
+        ),
+    ],
+)
+def test_weekly_to_daily_output(weekly_values, expected_output):
+    """
+    Test that weekly_to_daily works as expected with full
+    and with partial weeks, and that mmwr_epiweekly_to_daily
+    is equivalent to weekly_to_daily with week_start_dow=6.
+    """
+    assert_array_equal(ptime.weekly_to_daily(weekly_values), expected_output)
+    for out_first_dow, input_start_dow in itertools.product(
+        range(7), range(7)
+    ):
+        expected_offset = (out_first_dow - input_start_dow) % 7
+        assert_array_equal(
+            ptime.weekly_to_daily(
+                weekly_values,
+                output_data_first_dow=out_first_dow,
+                week_start_dow=input_start_dow,
+            ),
+            expected_output[expected_offset:],
+        )
+        if input_start_dow == 6:
+            assert_array_equal(
+                ptime.mmwr_epiweekly_to_daily(
+                    weekly_values, output_data_first_dow=out_first_dow
+                ),
+                expected_output[expected_offset:],
+            )
