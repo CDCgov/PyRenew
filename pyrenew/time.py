@@ -111,7 +111,9 @@ def daily_to_weekly(
     if len(daily_values) < 7:
         raise ValueError("No complete weekly values available")
 
-    weekly_values = jnp.convolve(daily_values, jnp.ones(7), mode="valid")[::7]
+    n_weeks = daily_values.shape[0] // 7
+    trimmed = daily_values[:n_weeks * 7] 
+    weekly_values = trimmed.reshape(n_weeks, 7, *daily_values.shape[1:]).sum(axis=1)
 
     return weekly_values
 
