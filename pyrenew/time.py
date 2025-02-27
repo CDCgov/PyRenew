@@ -112,8 +112,10 @@ def daily_to_weekly(
         raise ValueError("No complete weekly values available")
 
     n_weeks = daily_values.shape[0] // 7
-    trimmed = daily_values[:n_weeks * 7] 
-    weekly_values = trimmed.reshape(n_weeks, 7, *daily_values.shape[1:]).sum(axis=1)
+    trimmed = daily_values[: n_weeks * 7]
+    weekly_values = trimmed.reshape(n_weeks, 7, *daily_values.shape[1:]).sum(
+        axis=1
+    )
 
     return weekly_values
 
