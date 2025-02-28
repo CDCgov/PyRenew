@@ -213,3 +213,43 @@ def test_weekly_to_daily_output(weekly_values, expected_output):
                 ),
                 expected_output[expected_offset:],
             )
+
+
+def test_daily_to_weekly_2d_values_with_offset():
+    """
+    Tests that the function correctly aggregates
+    2D daily values into weekly totals with dow
+    offset in the input data.
+    """
+    daily_values_to_broadcast = jnp.arange(1, 4)
+    desired_weeks = 3
+    provided_days = desired_weeks * 7 + 4
+    t_zeros = 2
+
+    daily_values = jnp.broadcast_to(
+        daily_values_to_broadcast,
+        (provided_days, daily_values_to_broadcast.size),
+    )
+
+    daily_values_with_leading_zeros = jnp.concatenate(
+        [jnp.zeros((t_zeros, daily_values_to_broadcast.size)), daily_values],
+        axis=0,
+    )
+
+    result = ptime.daily_to_weekly(daily_values)
+    result_leading_zero_no_offeset = ptime.daily_to_weekly(
+        daily_values_with_leading_zeros
+    )
+    result_leading_zero_offeset = ptime.daily_to_weekly(
+        daily_values_with_leading_zeros, input_data_first_dow=t_zeros
+    )
+    expected = jnp.repeat(
+        7 * daily_values_to_broadcast[jnp.newaxis, :], desired_weeks, axis=0
+    )
+    expected_leading_zero = jnp.array([[5, 10, 15], [7, 14, 21], [7, 14, 21]])
+
+    assert jnp.array_equal(result, expected)
+    assert jnp.array_equal(result_leading_zero_offeset, expected)
+    assert jnp.array_equal(
+        result_leading_zero_no_offeset, expected_leading_zero
+    )

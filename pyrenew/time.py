@@ -108,7 +108,7 @@ def daily_to_weekly(
     offset = (week_start_dow - input_data_first_dow) % 7
     daily_values = daily_values[offset:]
 
-    if len(daily_values) < 7:
+    if daily_values.shape[0] < 7:
         raise ValueError("No complete weekly values available")
 
     n_weeks = daily_values.shape[0] // 7
