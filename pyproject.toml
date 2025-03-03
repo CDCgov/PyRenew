@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "PyRenew"
-version = "0.1.3"
+version = "0.1.4"
 description = "PyRenew, a Python package for multi-signal Bayesian renewal modeling with JAX and NumPyro."
 authors = ["CFA"]
 license = "Apache 2.0"
