@@ -230,7 +230,7 @@ def compute_delay_ascertained_incidence(
     )
 
     if return_offset:
-        offset = jnp.shape(delay_incidence_to_observation_pmf)[0]
+        offset = jnp.shape(delay_incidence_to_observation_pmf)[0] - 1
         result = (delay_obs_incidence, offset)
     else:
         result = delay_obs_incidence
