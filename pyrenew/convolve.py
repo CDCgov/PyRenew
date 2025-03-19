@@ -191,14 +191,16 @@ def compute_delay_ascertained_incidence(
     Parameters
     ----------
     p_observed_given_incident: ArrayLike
-        The rate at which latent incident counts translate into observed counts.
-        For example, setting ``p_observed_given_incident=0.001``
-        when the incident counts are infections and the observed counts are
-        reported hospital admissions could be used to model disease and population
-        for which the probability of a latent infection leading to a reported
-        hospital admission is 0.001.
+        The rate at which latent incident counts translate into observed
+        counts. For example, setting ``p_observed_given_incident=0.001``
+        when the incident counts are infections and the observed counts
+        are reported hospital admissions could be used to model disease
+        and population for which the probability of a latent infection
+        leading to a reported hospital admission is 0.001.
+
     latent_incidence: ArrayLike
         Incidence values based on the true underlying process.
+
     delay_incidence_to_observation_pmf: ArrayLike
         Probability mass function of delay interval from incidence to
         observation with support on the interval 0 to the length of the
@@ -210,13 +212,19 @@ def compute_delay_ascertained_incidence(
         ``delay_incidence_to_observation_pmf[1]`` represents the fraction
         that are delayed 1 time units, et cetera.
 
+    return_padded: bool
+        Return an output array that has been nan-padded so that its
+        first entry represents the same timepoint as the first timepoint
+        of the input `latent_incidence` array? Boolean, default ``False``.
+
     return_offset: bool
         In addition to the output array, return the offset between
         (number of time units) separating the first entry of the
         the input ``latent_incidence`` array and the output
         array? If ``True``, return a tuple of the output array
         and the offset. If ``False`` return just the output array.
-        Boolean, default ``False``.
+        Boolean, default ``False``. Note that if ``return_padded``
+        is ``True``, the offset will be `0`.
 
     Returns
     --------
@@ -229,8 +237,17 @@ def compute_delay_ascertained_incidence(
         mode="valid",
     )
 
+    offset = jnp.shape(delay_incidence_to_observation_pmf)[0] - 1
+
+    if return_padded:
+        delay_obs_incidence = jnp.pad(
+            delay_obs_incidence,
+            (offset, 0),
+            mode="constant",
+            constant_values=jnp.nan,
+        )
+        offset = 0
     if return_offset:
-        offset = jnp.shape(delay_incidence_to_observation_pmf)[0] - 1
         result = (delay_obs_incidence, offset)
     else:
         result = delay_obs_incidence
