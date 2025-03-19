@@ -181,6 +181,7 @@ def compute_delay_ascertained_incidence(
     latent_incidence: ArrayLike,
     delay_incidence_to_observation_pmf: ArrayLike,
     p_observed_given_incident: ArrayLike = 1,
+    return_padded: bool = False,
     return_offset: bool = False,
 ) -> ArrayLike | tuple[ArrayLike, int]:
     """
@@ -241,7 +242,8 @@ def compute_delay_ascertained_incidence(
 
     if return_padded:
         delay_obs_incidence = jnp.pad(
-            delay_obs_incidence,
+            1.0 * delay_obs_incidence,  # ensure float since
+            # nans pad as zeros for ints
             (offset, 0),
             mode="constant",
             constant_values=jnp.nan,

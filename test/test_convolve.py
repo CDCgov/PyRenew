@@ -271,6 +271,22 @@ def test_compute_delay_ascertained_incidence(
     assert_array_equal(result, expected_output)
     assert offset == expected_offset
 
+    # Test return_padded=True
+    result, offset = pc.compute_delay_ascertained_incidence(
+        latent_incidence,
+        delay_incidence_to_observation_pmf,
+        p_observed_given_incident,
+        return_padded=True,
+        return_offset=True,
+    )
+    assert_array_equal(
+        result,
+        jnp.pad(
+            expected_output, (expected_offset, 0), constant_values=jnp.nan
+        ),
+    )
+    assert offset == 0
+
 
 @pytest.mark.parametrize(
     [
@@ -337,7 +353,7 @@ def test_compute_delay_ascertained_incidence_err(
             jnp.array([10, 20, 30, 40, 50, 60, 70, 80]),
             0,
             jnp.array([0.1, 0.2, 0.3, 0.4]),
-            jnp.zeros_like(5),
+            jnp.zeros(5),
             3,
         ],
         [
@@ -372,7 +388,7 @@ def test_compute_delay_ascertained_incidence_manual(
 ):
     """
     Calculate some simple or reductive cases
-    (0 p obs) manually.
+    (e.g. p_obs = 0) manually.
     """
     # Test return_offset=True
     result, offset = pc.compute_delay_ascertained_incidence(
@@ -383,3 +399,20 @@ def test_compute_delay_ascertained_incidence_manual(
     )
     assert_array_equal(result, manual_expected_arr)
     assert offset == manual_expected_offset
+    result_padded, offset_padded = pc.compute_delay_ascertained_incidence(
+        latent_incidence,
+        delay_incidence_to_observation_pmf,
+        p_observed_given_incident,
+        return_padded=True,
+        return_offset=True,
+    )
+    expected_padded = jnp.pad(
+        1.0 * manual_expected_arr,  # ensure float
+        pad_width=(manual_expected_offset, 0),
+        mode="constant",
+        constant_values=jnp.nan,
+    )
+    print(manual_expected_arr)
+    print(expected_padded)
+    assert offset_padded == 0
+    assert_array_equal(result_padded, expected_padded)
