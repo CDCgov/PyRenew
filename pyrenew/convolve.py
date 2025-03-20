@@ -205,7 +205,7 @@ def compute_delay_ascertained_incidence(
     delay_incidence_to_observation_pmf: ArrayLike
         Probability mass function of delay interval from incidence to
         observation with support on the interval 0 to the length of the
-        array's first dimensino. The :math:`i`\th entry represents the
+        array's first dimension. The :math:`i`\th entry represents the
         probability mass for a delay
         of :math:`i` time units, i.e
         ``delay_incidence_to_observation_pmf[0]`` represents
