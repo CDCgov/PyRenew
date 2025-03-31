@@ -252,32 +252,20 @@ def test_compute_delay_ascertained_incidence(
     )
     expected_offset = len(delay_incidence_to_observation_pmf) - 1
 
-    # Test return_offset=False
-    result = pc.compute_delay_ascertained_incidence(
-        latent_incidence,
-        delay_incidence_to_observation_pmf,
-        p_observed_given_incident,
-        return_offset=False,
-    )
-    assert_array_equal(result, expected_output)
-
-    # Test return_offset=True
     result, offset = pc.compute_delay_ascertained_incidence(
         latent_incidence,
         delay_incidence_to_observation_pmf,
         p_observed_given_incident,
-        return_offset=True,
     )
     assert_array_equal(result, expected_output)
     assert offset == expected_offset
 
-    # Test return_padded=True
+    # Test pad=True
     result, offset = pc.compute_delay_ascertained_incidence(
         latent_incidence,
         delay_incidence_to_observation_pmf,
         p_observed_given_incident,
-        return_padded=True,
-        return_offset=True,
+        pad=True,
     )
     assert_array_equal(
         result,
@@ -336,7 +324,6 @@ def test_compute_delay_ascertained_incidence_err(
             latent_incidence,
             delay_incidence_to_observation_pmf,
             p_observed_given_incident,
-            return_offset=True,
         )
 
 
@@ -390,12 +377,10 @@ def test_compute_delay_ascertained_incidence_manual(
     Calculate some simple or reductive cases
     (e.g. p_obs = 0) manually.
     """
-    # Test return_offset=True
     result, offset = pc.compute_delay_ascertained_incidence(
         latent_incidence,
         delay_incidence_to_observation_pmf,
         p_observed_given_incident,
-        return_offset=True,
     )
     assert_array_equal(result, manual_expected_arr)
     assert offset == manual_expected_offset
@@ -403,8 +388,7 @@ def test_compute_delay_ascertained_incidence_manual(
         latent_incidence,
         delay_incidence_to_observation_pmf,
         p_observed_given_incident,
-        return_padded=True,
-        return_offset=True,
+        pad=True,
     )
     expected_padded = jnp.pad(
         1.0 * manual_expected_arr,  # ensure float

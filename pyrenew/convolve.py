@@ -181,13 +181,19 @@ def compute_delay_ascertained_incidence(
     latent_incidence: ArrayLike,
     delay_incidence_to_observation_pmf: ArrayLike,
     p_observed_given_incident: ArrayLike = 1,
-    return_padded: bool = False,
-    return_offset: bool = False,
-) -> ArrayLike | tuple[ArrayLike, int]:
+    pad: bool = False,
+) -> tuple[ArrayLike, int]:
     """
     Computes incidences observed according
     to a given observation rate and based
     on a delay interval.
+
+    In addition to the output array, returns the offset
+    (number of time units) separating the first entry of the
+    the input ``latent_incidence`` array from the first entry
+    of the output (delay ascertained incidence) array.
+    Note that if the ``pad`` keyword argument is ``True``,
+    the offset will be always `0`.
 
     Parameters
     ----------
@@ -213,24 +219,16 @@ def compute_delay_ascertained_incidence(
         ``delay_incidence_to_observation_pmf[1]`` represents the fraction
         that are delayed 1 time units, et cetera.
 
-    return_padded: bool
+    pad: bool
         Return an output array that has been nan-padded so that its
         first entry represents the same timepoint as the first timepoint
         of the input `latent_incidence` array? Boolean, default ``False``.
 
-    return_offset: bool
-        In addition to the output array, return the offset between
-        (number of time units) separating the first entry of the
-        the input ``latent_incidence`` array and the output
-        array? If ``True``, return a tuple of the output array
-        and the offset. If ``False`` return just the output array.
-        Boolean, default ``False``. Note that if ``return_padded``
-        is ``True``, the offset will be `0`.
-
     Returns
     --------
-    ArrayLike
-        The predicted timeseries of delayed observations.
+    tuple[ArrayLike, int]
+        Tuple whose first entry is the predicted timeseries of
+        delayed observations and whose second entry is the offset.
     """
     delay_obs_incidence = jnp.convolve(
         p_observed_given_incident * latent_incidence,
@@ -240,7 +238,7 @@ def compute_delay_ascertained_incidence(
 
     offset = jnp.shape(delay_incidence_to_observation_pmf)[0] - 1
 
-    if return_padded:
+    if pad:
         delay_obs_incidence = jnp.pad(
             1.0 * delay_obs_incidence,  # ensure float since
             # nans pad as zeros for ints
@@ -249,8 +247,4 @@ def compute_delay_ascertained_incidence(
             constant_values=jnp.nan,
         )
         offset = 0
-    if return_offset:
-        result = (delay_obs_incidence, offset)
-    else:
-        result = delay_obs_incidence
-    return result
+    return (delay_obs_incidence, offset)
