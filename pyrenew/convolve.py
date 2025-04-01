@@ -20,6 +20,8 @@ from typing import Callable
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
+from pyrenew.distutil import validate_discrete_dist_vector
+
 
 def new_convolve_scanner(
     array_to_convolve: ArrayLike,
@@ -181,39 +183,70 @@ def compute_delay_ascertained_incidence(
     latent_incidence: ArrayLike,
     delay_incidence_to_observation_pmf: ArrayLike,
     p_observed_given_incident: ArrayLike = 1,
-) -> ArrayLike:
+    pad: bool = False,
+) -> tuple[ArrayLike, int]:
     """
     Computes incidences observed according
     to a given observation rate and based
     on a delay interval.
 
+    In addition to the output array, returns the offset
+    (number of time units) separating the first entry of the
+    the input ``latent_incidence`` array from the first entry
+    of the output (delay ascertained incidence) array.
+    Note that if the ``pad`` keyword argument is ``True``,
+    the offset will be always `0`.
+
     Parameters
     ----------
     p_observed_given_incident: ArrayLike
-        The rate at which latent incident counts translate into observed counts.
-        For example, setting ``p_observed_given_incident=0.001``
-        when the incident counts are infections and the observed counts are
-        reported hospital admissions could be used to model disease and population
-        for which the probability of a latent infection leading to a reported
-        hospital admission is 0.001.
+        The rate at which latent incident counts translate into observed
+        counts. For example, setting ``p_observed_given_incident=0.001``
+        when the incident counts are infections and the observed counts
+        are reported hospital admissions could be used to model disease
+        and population for which the probability of a latent infection
+        leading to a reported hospital admission is 0.001.
+
     latent_incidence: ArrayLike
         Incidence values based on the true underlying process.
+
     delay_incidence_to_observation_pmf: ArrayLike
-        Probability mass function of delay interval from incidence to observation,
-        where the :math:`i`\th entry represents a delay of :math:`i`
-        time units, i.e. ``delay_incidence_to_observation_pmf[0]`` represents
+        Probability mass function of delay interval from incidence to
+        observation with support on the interval 0 to the length of the
+        array's first dimension. The :math:`i`\th entry represents the
+        probability mass for a delay
+        of :math:`i` time units, i.e
+        ``delay_incidence_to_observation_pmf[0]`` represents
         the fraction of observations that are delayed 0 time unit,
         ``delay_incidence_to_observation_pmf[1]`` represents the fraction
         that are delayed 1 time units, et cetera.
 
+    pad: bool
+        Return an output array that has been nan-padded so that its
+        first entry represents the same timepoint as the first timepoint
+        of the input `latent_incidence` array? Boolean, default ``False``.
+
     Returns
     --------
-    ArrayLike
-        The predicted timeseries of delayed observations.
+    tuple[ArrayLike, int]
+        Tuple whose first entry is the predicted timeseries of
+        delayed observations and whose second entry is the offset.
     """
     delay_obs_incidence = jnp.convolve(
         p_observed_given_incident * latent_incidence,
         delay_incidence_to_observation_pmf,
         mode="valid",
     )
-    return delay_obs_incidence
+
+    offset = jnp.shape(delay_incidence_to_observation_pmf)[0] - 1
+
+    if pad:
+        delay_obs_incidence = jnp.pad(
+            1.0 * delay_obs_incidence,  # ensure float since
+            # nans pad as zeros for ints
+            (offset, 0),
+            mode="constant",
+            constant_values=jnp.nan,
+        )
+        offset = 0
+    return (delay_obs_incidence, offset)

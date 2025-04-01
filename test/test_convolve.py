@@ -1,6 +1,5 @@
 """
-Unit tests for the iterative convolution
-scanner function factories found in pyrenew.convolve
+Unit tests for the pyrenew.convolve module
 """
 
 import jax
@@ -11,6 +10,8 @@ from numpy.testing import assert_array_equal
 
 import pyrenew.convolve as pc
 import pyrenew.transformation as t
+
+prng = np.random.RandomState(5)
 
 
 @pytest.mark.parametrize(
@@ -212,3 +213,203 @@ def test_double_convolve_scanner(arr1, arr2, history, m1, m2, transforms):
     assert jnp.array_equal(
         new_val, transforms[1](m2 * m_net * jnp.dot(arr2, history))
     )
+
+
+@pytest.mark.parametrize(
+    [
+        "latent_incidence",
+        "p_observed_given_incident",
+        "unnormed_pmf",
+    ],
+    [
+        [prng.random(size=100), 0.1, prng.random(size=25)],
+        [prng.random(size=5), 0.1, prng.random(size=50)],
+    ],
+)
+def test_compute_delay_ascertained_incidence(
+    latent_incidence,
+    p_observed_given_incident,
+    unnormed_pmf,
+):
+    """
+    Basic test that compute_delay_ascertained_incidence
+    agrees with a manual reimplementation.
+    """
+    delay_incidence_to_observation_pmf = unnormed_pmf / np.sum(unnormed_pmf)
+    # Expected results
+    expected_output = jnp.convolve(
+        p_observed_given_incident * latent_incidence,
+        delay_incidence_to_observation_pmf,
+        mode="valid",
+    )
+    expected_offset = len(delay_incidence_to_observation_pmf) - 1
+
+    result, offset = pc.compute_delay_ascertained_incidence(
+        latent_incidence,
+        delay_incidence_to_observation_pmf,
+        p_observed_given_incident,
+    )
+    assert_array_equal(result, expected_output)
+    assert offset == expected_offset
+
+    # Test pad=True
+    result, offset = pc.compute_delay_ascertained_incidence(
+        latent_incidence,
+        delay_incidence_to_observation_pmf,
+        p_observed_given_incident,
+        pad=True,
+    )
+    assert_array_equal(
+        result,
+        jnp.pad(
+            expected_output, (expected_offset, 0), constant_values=jnp.nan
+        ),
+    )
+    assert offset == 0
+
+
+@pytest.mark.parametrize(
+    [
+        "latent_incidence",
+        "p_observed_given_incident",
+        "delay_incidence_to_observation_pmf",
+        "error_type",
+        "error_match",
+    ],
+    [
+        [
+            jnp.array([10, 20, 30, 40, 50, 60, 70, 80]),
+            jnp.array([]),
+            jnp.array([0.1, 0.2, 0.3, 0.5]),
+            TypeError,
+            "incompatible shapes",
+        ],
+        [
+            jnp.array([]),
+            0.25,
+            jnp.array([1.0]),
+            ValueError,
+            "inputs cannot",
+        ],
+    ],
+)
+def test_compute_delay_ascertained_incidence_err(
+    latent_incidence,
+    p_observed_given_incident,
+    delay_incidence_to_observation_pmf,
+    error_type,
+    error_match,
+):
+    """
+    Test that compute_delay_ascertained_incidence
+    errors as expected.
+    """
+    with pytest.raises(error_type, match=error_match):
+        pc.compute_delay_ascertained_incidence(
+            latent_incidence,
+            delay_incidence_to_observation_pmf,
+            p_observed_given_incident,
+        )
+
+
+@pytest.mark.parametrize(
+    [
+        "latent_incidence",
+        "p_observed_given_incident",
+        "delay_incidence_to_observation_pmf",
+        "manual_expected_arr",
+        "manual_expected_offset",
+    ],
+    [
+        [
+            jnp.array([10, 20, 30, 40, 50, 60, 70, 80]),
+            0,
+            jnp.array([0.1, 0.2, 0.3, 0.4]),
+            jnp.zeros(5),
+            3,
+        ],
+        [
+            jnp.array([30]),
+            1,
+            jnp.array([0, 0, 0, 0, 1]),
+            jnp.array([0, 0, 0, 0, 30]),
+            4,
+        ],
+        [
+            jnp.array([30, 40, 50, 60]),
+            0,
+            jnp.array([1]),
+            jnp.array([0, 0, 0, 0]),
+            0,
+        ],
+        [
+            jnp.array([30, 40, 50, 60]),
+            1,
+            jnp.array([0, 1]),
+            jnp.array([30, 40, 50]),
+            1,
+        ],
+        [
+            jnp.array([1.0, 2.0, 3.0]),
+            jnp.array([1.0]),
+            jnp.array([1.0]),
+            jnp.array([1.0, 2.0, 3.0]),
+            0,
+        ],
+        [
+            jnp.array([1.0, 2.0, 3.0]),
+            jnp.array([1.0, 0.1, 1.0]),
+            jnp.array([1.0]),
+            jnp.array([1.0, 0.2, 3.0]),
+            0,
+        ],
+        [
+            jnp.array([1.0, 2.0, 3.0]),
+            jnp.array([1.0]),
+            jnp.array([0.5, 0.5]),
+            jnp.array([1.5, 2.5]),
+            1,
+        ],
+        [
+            jnp.array([0, 2.0, 4.0]),
+            jnp.array([1.0]),
+            jnp.array([0.25, 0.5, 0.25]),
+            jnp.array([2]),
+            2,
+        ],
+    ],
+)
+def test_compute_delay_ascertained_incidence_manual(
+    latent_incidence,
+    p_observed_given_incident,
+    delay_incidence_to_observation_pmf,
+    manual_expected_arr,
+    manual_expected_offset,
+):
+    """
+    Calculate some simple or reductive cases
+    (e.g. p_obs = 0) manually.
+    """
+    result, offset = pc.compute_delay_ascertained_incidence(
+        latent_incidence,
+        delay_incidence_to_observation_pmf,
+        p_observed_given_incident,
+    )
+    assert_array_equal(result, manual_expected_arr)
+    assert offset == manual_expected_offset
+    result_padded, offset_padded = pc.compute_delay_ascertained_incidence(
+        latent_incidence,
+        delay_incidence_to_observation_pmf,
+        p_observed_given_incident,
+        pad=True,
+    )
+    expected_padded = jnp.pad(
+        1.0 * manual_expected_arr,  # ensure float
+        pad_width=(manual_expected_offset, 0),
+        mode="constant",
+        constant_values=jnp.nan,
+    )
+    print(manual_expected_arr)
+    print(expected_padded)
+    assert offset_padded == 0
+    assert_array_equal(result_padded, expected_padded)

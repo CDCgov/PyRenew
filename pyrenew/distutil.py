@@ -10,6 +10,7 @@ such as discrete time-to-event distributions
 from __future__ import annotations
 
 import jax.numpy as jnp
+import numpy as np
 from jax.typing import ArrayLike
 
 
@@ -43,7 +44,7 @@ def validate_discrete_dist_vector(
         distribution does not equal 1 within the specified tolerance.
     """
     discrete_dist = discrete_dist.flatten()
-    if not jnp.all(discrete_dist >= 0):
+    if not np.all(discrete_dist >= 0):
         raise ValueError(
             "Discrete distribution "
             "vector must have "
@@ -51,8 +52,8 @@ def validate_discrete_dist_vector(
             "entries; got {}"
             "".format(discrete_dist)
         )
-    dist_norm = jnp.sum(discrete_dist)
-    if not jnp.abs(dist_norm - 1) < tol:
+    dist_norm = np.sum(discrete_dist)
+    if not np.abs(dist_norm - 1) < tol:
         raise ValueError(
             "Discrete generation interval "
             "distributions must sum to 1 "
