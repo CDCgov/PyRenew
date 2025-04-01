@@ -11,6 +11,8 @@ from numpy.testing import assert_array_equal
 import pyrenew.convolve as pc
 import pyrenew.transformation as t
 
+prng = np.random.RandomState(5)
+
 
 @pytest.mark.parametrize(
     ["inits", "to_scan_a", "multipliers"],
@@ -217,33 +219,24 @@ def test_double_convolve_scanner(arr1, arr2, history, m1, m2, transforms):
     [
         "latent_incidence",
         "p_observed_given_incident",
-        "delay_incidence_to_observation_pmf",
+        "unnormed_pmf",
     ],
     [
-        [
-            jnp.array([10, 20, 30, 40, 50, 60, 70, 80]),
-            0.25,
-            jnp.array([0.1, 0.2, 0.3, 0.4]),
-            # does not enforce normed PMF
-        ],
-        [
-            jnp.array([10, 0, 0, 0, 0]),
-            2,  # does not actually force p_obs to be proper
-            jnp.array([0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
-        ],
-        [np.random.random(size=100), 0.1, np.random.random(size=50)],
+        [prng.random(size=100), 0.1, prng.random(size=25)],
+        [prng.random(size=5), 0.1, prng.random(size=50)],
     ],
 )
 def test_compute_delay_ascertained_incidence(
     latent_incidence,
     p_observed_given_incident,
-    delay_incidence_to_observation_pmf,
+    unnormed_pmf,
 ):
     """
     Basic test that compute_delay_ascertained_incidence
     agrees with a manual reimplementation and returns
     the offset if and only if it is asked to.
     """
+    delay_incidence_to_observation_pmf = unnormed_pmf / np.sum(unnormed_pmf)
     # Expected results
     expected_output = jnp.convolve(
         p_observed_given_incident * latent_incidence,
@@ -286,9 +279,23 @@ def test_compute_delay_ascertained_incidence(
     ],
     [
         [
+            jnp.array([10, 20, 30, 40, 50, 60, 70, 80]),
+            0.25,
+            jnp.array([0.1, 0.2, 0.3, 0.5]),
+            ValueError,
+            "must sum to 1",
+        ],
+        [
+            jnp.array([10, 0, 0, 0, 0]),
+            2,
+            jnp.array([0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
+            AssertionError,
+            "argument must",
+        ],
+        [
             jnp.array([]),
             0.25,
-            jnp.array([0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.9, 1.0]),
+            jnp.array([1.0]),
             ValueError,
             "inputs cannot be empty",
         ],
@@ -304,7 +311,7 @@ def test_compute_delay_ascertained_incidence(
             0.25,
             jnp.array([]),
             ValueError,
-            "inputs cannot be empty",
+            "must sum to",
         ],
     ],
 )
@@ -345,15 +352,15 @@ def test_compute_delay_ascertained_incidence_err(
         ],
         [
             jnp.array([30]),
-            2,
+            1,
             jnp.array([0, 0, 0, 0, 1]),
-            jnp.array([0, 0, 0, 0, 60]),
+            jnp.array([0, 0, 0, 0, 30]),
             4,
         ],
         [
             jnp.array([30, 40, 50, 60]),
-            2,
-            jnp.array([0]),
+            0,
+            jnp.array([1]),
             jnp.array([0, 0, 0, 0]),
             0,
         ],

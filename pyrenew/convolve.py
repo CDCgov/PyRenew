@@ -17,8 +17,11 @@ from __future__ import annotations
 
 from typing import Callable
 
+import chex
 import jax.numpy as jnp
 from jax.typing import ArrayLike
+
+from pyrenew.distutil import validate_discrete_dist_vector
 
 
 def new_convolve_scanner(
@@ -182,6 +185,7 @@ def compute_delay_ascertained_incidence(
     delay_incidence_to_observation_pmf: ArrayLike,
     p_observed_given_incident: ArrayLike = 1,
     pad: bool = False,
+    tol: float = 1e-5,
 ) -> tuple[ArrayLike, int]:
     """
     Computes incidences observed according
@@ -224,12 +228,19 @@ def compute_delay_ascertained_incidence(
         first entry represents the same timepoint as the first timepoint
         of the input `latent_incidence` array? Boolean, default ``False``.
 
+    tol : float, optional
+        Passed to pyrenew.distutil.validate_discrete_dist_vector
+        when validating that ``delay_incidence_to_observation_pmf``
+        is a proper probability distribution. Default ``1e-5``.
+
     Returns
     --------
     tuple[ArrayLike, int]
         Tuple whose first entry is the predicted timeseries of
         delayed observations and whose second entry is the offset.
     """
+    validate_discrete_dist_vector(delay_incidence_to_observation_pmf, tol=tol)
+    chex.assert_scalar_in(p_observed_given_incident, 0, 1)
     delay_obs_incidence = jnp.convolve(
         p_observed_given_incident * latent_incidence,
         delay_incidence_to_observation_pmf,
