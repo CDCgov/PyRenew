@@ -371,6 +371,34 @@ def test_compute_delay_ascertained_incidence_err(
             jnp.array([30, 40, 50]),
             1,
         ],
+        [
+            jnp.array([1.0, 2.0, 3.0]),
+            jnp.array([1.0]),
+            jnp.array([1.0]),
+            jnp.array([1.0, 2.0, 3.0]),
+            0,
+        ],
+        [
+            jnp.array([1.0, 2.0, 3.0]),
+            jnp.array([1.0, 0.1, 1.0]),
+            jnp.array([1.0]),
+            jnp.array([1.0, 0.2, 3.0]),
+            0,
+        ],
+        [
+            jnp.array([1.0, 2.0, 3.0]),
+            jnp.array([1.0]),
+            jnp.array([0.5, 0.5]),
+            jnp.array([1.5, 2.5]),
+            1,
+        ],
+        [
+            jnp.array([0, 2.0, 4.0]),
+            jnp.array([1.0]),
+            jnp.array([0.25, 0.5, 0.25]),
+            jnp.array([2]),
+            2,
+        ],
     ],
 )
 def test_compute_delay_ascertained_incidence_manual(

@@ -211,7 +211,7 @@ class HospitalAdmissions(RandomVariable):
             self.infection_to_admission_interval_rv(**kwargs)
         )
 
-        latent_hospital_admissions = compute_delay_ascertained_incidence(
+        latent_hospital_admissions, _ = compute_delay_ascertained_incidence(
             latent_infections,
             infection_to_admission_interval,
             infection_hosp_rate,
