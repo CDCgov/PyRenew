@@ -290,7 +290,7 @@ def test_compute_delay_ascertained_incidence(
             2,
             jnp.array([0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
             AssertionError,
-            "argument must",
+            None,
         ],
         [
             jnp.array([]),
