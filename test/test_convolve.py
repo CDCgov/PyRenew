@@ -233,8 +233,7 @@ def test_compute_delay_ascertained_incidence(
 ):
     """
     Basic test that compute_delay_ascertained_incidence
-    agrees with a manual reimplementation and returns
-    the offset if and only if it is asked to.
+    agrees with a manual reimplementation.
     """
     delay_incidence_to_observation_pmf = unnormed_pmf / np.sum(unnormed_pmf)
     # Expected results
@@ -303,7 +302,7 @@ def test_compute_delay_ascertained_incidence_err(
 ):
     """
     Test that compute_delay_ascertained_incidence
-    errors as expected should.
+    errors as expected.
     """
     with pytest.raises(error_type, match=error_match):
         pc.compute_delay_ascertained_incidence(
