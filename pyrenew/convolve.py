@@ -17,7 +17,6 @@ from __future__ import annotations
 
 from typing import Callable
 
-import chex
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
@@ -240,7 +239,9 @@ def compute_delay_ascertained_incidence(
         delayed observations and whose second entry is the offset.
     """
     validate_discrete_dist_vector(delay_incidence_to_observation_pmf, tol=tol)
-    chex.assert_scalar_in(p_observed_given_incident, 0, 1)
+    assert jnp.all(
+        (p_observed_given_incident >= 0) & (p_observed_given_incident <= 1)
+    )
     delay_obs_incidence = jnp.convolve(
         p_observed_given_incident * latent_incidence,
         delay_incidence_to_observation_pmf,
