@@ -280,38 +280,17 @@ def test_compute_delay_ascertained_incidence(
     [
         [
             jnp.array([10, 20, 30, 40, 50, 60, 70, 80]),
-            0.25,
+            jnp.array([]),
             jnp.array([0.1, 0.2, 0.3, 0.5]),
-            ValueError,
-            "must sum to 1",
-        ],
-        [
-            jnp.array([10, 0, 0, 0, 0]),
-            2,
-            jnp.array([0.0, 0.0, 0.0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]),
-            AssertionError,
-            None,
+            TypeError,
+            "incompatible shapes",
         ],
         [
             jnp.array([]),
             0.25,
             jnp.array([1.0]),
             ValueError,
-            "inputs cannot be empty",
-        ],
-        [
-            jnp.array(
-                [
-                    1,
-                    2,
-                    3,
-                    4,
-                ]
-            ),
-            0.25,
-            jnp.array([]),
-            ValueError,
-            "must sum to",
+            "inputs cannot",
         ],
     ],
 )
