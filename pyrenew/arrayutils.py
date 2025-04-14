@@ -116,9 +116,9 @@ def tile_until_n(
     """
 
     # Data starts should be a positive integer
-    assert isinstance(
-        offset, int
-    ), f"offset should be an integer. It is {type(offset)}."
+    assert isinstance(offset, int), (
+        f"offset should be an integer. It is {type(offset)}."
+    )
 
     assert 0 <= offset, f"offset should be a positive integer. It is {offset}."
 
@@ -170,20 +170,20 @@ def repeat_until_n(
     """
 
     # Data starts should be a positive integer
-    assert isinstance(
-        offset, int
-    ), f"offset should be an integer. It is {type(offset)}."
+    assert isinstance(offset, int), (
+        f"offset should be an integer. It is {type(offset)}."
+    )
 
     assert 0 <= offset, f"offset should be a positive integer. It is {offset}."
 
     # Period size should be a positive integer
-    assert isinstance(
-        period_size, int
-    ), f"period_size should be an integer. It is {type(period_size)}."
+    assert isinstance(period_size, int), (
+        f"period_size should be an integer. It is {type(period_size)}."
+    )
 
-    assert (
-        period_size > 0
-    ), f"period_size should be a positive integer. It is {period_size}."
+    assert period_size > 0, (
+        f"period_size should be a positive integer. It is {period_size}."
+    )
 
     assert offset <= period_size - 1, (
         "offset should be less than or equal to period_size - 1."

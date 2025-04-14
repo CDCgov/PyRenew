@@ -149,9 +149,9 @@ class DifferencedProcess(RandomVariable):
             An array representing the undifferenced timeseries
         """
         if not isinstance(n, int):
-            raise ValueError("n must be an integer. " f"Got {type(n)}")
+            raise ValueError(f"n must be an integer. Got {type(n)}")
         if n < 1:
-            raise ValueError("n must be positive. " f"Got {n}")
+            raise ValueError(f"n must be positive. Got {n}")
 
         init_vals = jnp.atleast_1d(init_vals)
         n_inits = init_vals.shape[0]

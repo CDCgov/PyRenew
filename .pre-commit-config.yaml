@@ -2,7 +2,7 @@ repos:
   #####
   # Basic file cleanliness
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.5.0
+    rev: v5.0.0
     hooks:
       - id: check-added-large-files
       - id: check-yaml
@@ -21,7 +21,7 @@ repos:
         always_run: true
         files: "docs/source/tutorials/.*(qmd|md)$"
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.8
+    rev: v0.11.5
     hooks:
       # Sort imports
       - id: ruff
@@ -32,7 +32,7 @@ repos:
       - id: ruff-format
         args: ["--line-length", "79"]
   - repo: https://github.com/numpy/numpydoc
-    rev: v1.7.0
+    rev: v1.8.0
     hooks:
       - id: numpydoc-validation
   #####
@@ -48,7 +48,7 @@ repos:
   #####
   # Secrets
   - repo: https://github.com/Yelp/detect-secrets
-    rev: v1.4.0
+    rev: v1.5.0
     hooks:
       - id: detect-secrets
         args: ["--baseline", ".secrets.baseline"]
@@ -56,7 +56,7 @@ repos:
   ####
   # Typos
   - repo: https://github.com/crate-ci/typos
-    rev: v1.20.0
+    rev: v1
     hooks:
       - id: typos
         args: ["--force-exclude"]

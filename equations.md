@@ -34,7 +34,7 @@ $$ \log \mathcal{R}(t) = \log \mathcal{R}^\mathrm{u}(t) - \gamma \sum_{\tau = 1}
 
 ### Latent processes for reproductive number
 
-For the wastewater model $t_1,t_2,t_3$ represent different weeks, but in principle can represent other time scales. We will look to model the diffences in log-reproductive number between two time points, $t_2$ and $t_3$.
+For the wastewater model $t_1,t_2,t_3$ represent different weeks, but in principle can represent other time scales. We will look to model the differences in log-reproductive number between two time points, $t_2$ and $t_3$.
 
 - _Differenced autoregressive_ (from from <a href="https://github.com/cdcent/cfa-forecast-renewal-ww/blob/main/model_definition.md#reproductive-number">the wastewater model</a>). This is likely to be the "go-to" model for the latent process of the reproductive numberm and includes _random walk_ as a special case.
 

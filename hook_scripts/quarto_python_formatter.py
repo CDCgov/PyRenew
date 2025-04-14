@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # numpydoc ignore=GL08
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -54,7 +55,7 @@ def process_file(
             temp_file.write(formatted_content)
             temp_filepath = Path(temp_file.name)
 
-        temp_filepath.replace(filepath)
+        shutil.move(str(temp_filepath), str(filepath))
     except IOError as e:
         print(f"Error processing file {filepath}: {e}", file=sys.stderr)
         sys.exit(1)
