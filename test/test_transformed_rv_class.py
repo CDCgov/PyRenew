@@ -133,7 +133,7 @@ def test_transform_rv_validation():
         assert isinstance(my_rv.transforms, tuple)
         assert len(my_rv.transforms) == 1
         assert my_rv.sample_length() == 1
-        not_callable_err = "All entries in self.transforms " "must be callable"
+        not_callable_err = "All entries in self.transforms must be callable"
         sample_length_err = "There must be exactly as many transformations"
         with pytest.raises(ValueError, match=sample_length_err):
             _ = TransformedVariable(

@@ -126,7 +126,7 @@ def test_differenced_process_sample(
             proc.sample(n=n_fail_alt, init_vals=init_diff_vals)
         with pytest.raises(
             ValueError,
-            match=("Must have exactly as many " "initial difference values"),
+            match=("Must have exactly as many initial difference values"),
         ):
             proc.sample(n=n_long, init_vals=jnp.atleast_2d(init_diff_vals))
 
