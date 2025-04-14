@@ -75,7 +75,7 @@ def new_convolve_scanner(
 
     Given :math:`\mathbf{d}`, and optionally :math:`f`,
     this factory function returns a new function that
-    peforms one step of this process while scanning along
+    performs one step of this process while scanning along
     an array of  multipliers (i.e. an array
     giving the values of :math:`m(t)`) using :py:func:`jax.lax.scan`.
     """
