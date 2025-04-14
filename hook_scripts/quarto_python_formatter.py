@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # numpydoc ignore=GL08
 import re
+import shutil
 import subprocess
 import sys
-import shutil
 import tempfile
 from pathlib import Path
 from typing import List, Match
