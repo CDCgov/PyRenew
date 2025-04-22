@@ -89,7 +89,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Post comment preview
-        uses: CDCgov/cfa-actions/post-artifact@v1.0.0
+        uses: CDCgov/cfa-actions/post-artifact@v1.3.0
         with:
           artifact-name: github-pages
           gh-token: ${{ secrets.GITHUB_TOKEN}}
