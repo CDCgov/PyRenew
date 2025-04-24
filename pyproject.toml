@@ -1,10 +1,12 @@
-[tool.poetry]
+[project]
 name = "PyRenew"
 version = "0.1.4"
 description = "PyRenew, a Python package for multi-signal Bayesian renewal modeling with JAX and NumPyro."
-authors = ["CFA"]
-license = "Apache 2.0"
 readme = "README.md"
+license = "Apache 2.0"
+authors = ["CFA"]
+
+[tool.poetry]
 packages = [
     {include = "pyrenew"},
 ]
@@ -24,6 +26,7 @@ optional = true
 [tool.poetry.group.dev.dependencies]
 nbconvert = "^7.16.4"
 deptry = "^0.17.0"
+ipykernel = "^6.29.5"
 
 [tool.poetry.group.docs]
 optional = true
