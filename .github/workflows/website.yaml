@@ -26,27 +26,29 @@ jobs:
     - name: Setup Pages
       uses: actions/configure-pages@v5
 
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.12'
+        python-version-file: "pyproject.toml"
 
-    - name: Install Poetry
-      run: pip install poetry
-
-    - name: Install dependencies with Poetry
-      run: poetry install --with docs
+    - name: Install the project
+      run: uv sync --all-extras
 
     - name: Render documentation index from README
       run: |
         cp README.md docs/source/index.md
 
     # Building
-    - name: Build HTML using Poetry
+    - name: Build HTML using uv
       run: |
         cd docs
-        poetry run make tutorials_clean
-        poetry run make html
+        uv run make tutorials_clean
+        uv run make html
 
     # Upload
     - name: Upload artifacts

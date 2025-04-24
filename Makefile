@@ -7,10 +7,10 @@ help:
 	@echo "  test           : Run the tests"
 
 install:
-	poetry install
+	uv pip install -r pyproject.toml --extra dev
 
 test:
-	poetry run pytest --mpl --mpl-default-tolerance=10
+	uv run pytest --mpl --mpl-default-tolerance=10
 
 
 .PHONY: install test

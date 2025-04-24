@@ -11,22 +11,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          enable-cache: true
 
-      - name: cache poetry
-        uses: actions/cache@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          path: ~/.local
-          key: ${{ runner.os }}-poetry
+            python-version-file: "pyproject.toml"
 
-      - name: install poetry
-        run: pip install poetry
-
-      - name: install package
-        run: poetry install --with dev
+      - name: Install the project
+        run: uv sync --extra dev
 
       - name: run deptry
         run: |
-          poetry run deptry .
+          uv run deptry .
