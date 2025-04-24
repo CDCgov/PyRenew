@@ -17,10 +17,10 @@ This tutorial assumes some pre-existing knowledge of infectious disease dynamics
 
 ## Installing pyrenew
 
-You’ll need to install `pyrenew` using either uv or pip. To install `pyrenew` using uv, run the following command from within the directory containing the `pyrenew` project:
+You’ll need to install `pyrenew` using either uv or pip. To install `pyrenew` using `uv`, run the following command from within the directory containing the `pyrenew` project:
 
 ```bash
-uv pip install -r pyproject.toml
+uv sync
 ```
 
 To install `pyrenew` using pip, run the following command:
