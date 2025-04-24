@@ -80,6 +80,7 @@ exclude = [  # don't report on objects that match any of these regex
 
 [tool.deptry]
 known_first_party = ["pyrenew", "test"]
+pep621_dev_dependency_groups = ["dev", "test", "docs"]
 
 [tool.deptry.per_rule_ignores]
 DEP004 = ["pytest", "scipy"]
