@@ -11,24 +11,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: "3.12"
+          enable-cache: true
 
-      - name: cache poetry
-        uses: actions/cache@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          path: ~/.local
-          key: ${{ runner.os }}-poetry
-      - name: install poetry
-        run: pip install poetry
+            python-version-file: "pyproject.toml"
 
-      - name: install package
-        run: poetry install --with test
+      - name: Install the project
+        run: uv sync --all-extras test
 
       - name: run tests
         run: |
-          poetry run pytest \
+          uv run pytest \
             --mpl --mpl-default-tolerance=10 \
             --cov=pyrenew --cov-report term --cov-report xml .
 
