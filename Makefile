@@ -7,7 +7,7 @@ help:
 	@echo "  test           : Run the tests"
 
 install:
-	uv pip install -r pyproject.toml --extra dev
+	uv sync --extra dev
 
 test:
 	uv run pytest --mpl --mpl-default-tolerance=10

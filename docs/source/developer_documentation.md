@@ -13,7 +13,7 @@
 
 ## Installation for Developers
 
-- `uv pip install -r pyproject.toml --extra dev`
+- `uv sync --extra dev`
 - `pre-commit install`
 
 ## Coding Conventions
