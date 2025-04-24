@@ -13,7 +13,7 @@
 
 ## Installation for Developers
 
-- `poetry install --with dev`
+- `uv pip install -r pyproject.toml --extra dev`
 - `pre-commit install`
 
 ## Coding Conventions
