@@ -48,7 +48,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
-include = ["datasets/*.tsv"]
+include = ["pyrenew", "datasets/*.tsv"]
 exclude = ["datasets/*.rds"]
 
 [tool.numpydoc_validation]
