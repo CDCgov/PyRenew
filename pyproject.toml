@@ -5,6 +5,7 @@ description = "PyRenew, a Python package for multi-signal Bayesian renewal model
 readme = "README.md"
 license = "Apache 2.0"
 authors = [{name = "CFA"}]
+requires-python = ">= 3.13"
 dependencies = [
     "jax>=0.4.30",
     "numpy>=2.0.0",
@@ -32,7 +33,8 @@ docs = [
     "sphinx-book-theme>=1.1.2",
     "ipywidgets>=8.1.3",
     "jupyter>=1.0.0",
-    "myst-parser"
+    "myst-parser>=4.0.0",
+    "sphinxcontrib-katex>=0.9.10"
 ]
 test = [
     "pytest>=8.3.2",
