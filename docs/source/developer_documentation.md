@@ -2,7 +2,7 @@
 
 **Note: this document is a work in progress. Contrbitions to all sections are welcome.**
 
-## Github Workflow
+## GitHub Workflow
 
 - You should request reviews for pull requests from `PyRenew-devs`, unless you have a good reason to request reviews from a smaller group.
 - Reviews from all of `PyRenew-devs` are  encouraged, but an approving review from a [codeowner](https://github.com/CDCgov/PyRenew/blob/main/.github/CODEOWNERS) ([@dylanhmorris](https://github.com/dylanhmorris) or [@damonbayer](https://github.com/damonbayer) is required before a pull request can be merged to `main`.
