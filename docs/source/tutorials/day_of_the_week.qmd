@@ -8,7 +8,7 @@ This document illustrates how to leverage the time-aware arrays to create a a da
 
 ## Recap: Hospital Admissions Model
 
-In the ["Fitting a hospital admissions-only model" tutorial](https://cdcgov.github.io/multisignal-epi-inference/tutorials/hospital_admissions_model.html){target="_blank"}, we built a fairly complicated model that included pre-defined random variables as well as a custom random variable representing the reproductive number. In this tutorial, we will focus on adding a new component: the day-of-the-week effect. We start by reproducing the model without the day-of-the-week effect:
+In the ["Fitting a hospital admissions-only model" tutorial](https://cdcgov.github.io/PyRenew/tutorials/hospital_admissions_model.html){target="_blank"}, we built a fairly complicated model that included pre-defined random variables as well as a custom random variable representing the reproductive number. In this tutorial, we will focus on adding a new component: the day-of-the-week effect. We start by reproducing the model without the day-of-the-week effect:
 
 1. We load the data:
 
