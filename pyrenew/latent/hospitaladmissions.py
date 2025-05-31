@@ -48,7 +48,7 @@ class HospitalAdmissions(RandomVariable):
     Notes
     -----
     The following text was directly extracted from the wastewater model
-    documentation (`link <https://github.com/cdcent/cfa-forecast-renewal-ww/blob/a17efc090b2ffbc7bc11bdd9eec5198d6bcf7322/model_definition.md#hospital-admissions-component>`_).
+    documentation (`link <https://github.com/CDCgov/ww-inference-model/blob/main/model_definition.md#hospital-admissions-component>`_).
 
     Following other semi-mechanistic renewal frameworks, we model the *expected*
     hospital admissions per capita :math:`H(t)` as a convolution of the
