@@ -40,7 +40,7 @@ class NullVariable(DeterministicVariable):
         """Retrieve the value of the Null (None)
 
         Parameters
-        ----------.
+        ----------
         **kwargs : dict, optional
             Ignored.
 
