@@ -127,7 +127,7 @@ class DifferencedProcess(RandomVariable):
             :code:`n - differencing_order` values from
             :meth:`self.fundamental_process` to ensure
             that the de-differenced output is of length
-            :code`n`.
+            :code:`n`.
 
         *args :
            Additional positional arguments passed to
