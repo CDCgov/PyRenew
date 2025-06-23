@@ -13,7 +13,7 @@ from pyrenew.metaclass import RandomVariable
 
 class DifferencedProcess(RandomVariable):
     """
-    Class for differenced stochastic process X(t),
+    Class for differenced stochastic process :math:`X(t)`,
     constructed by placing a fundamental stochastic
     process on the :math:`n^{th}` differences
     (rates of change). See
@@ -127,7 +127,7 @@ class DifferencedProcess(RandomVariable):
             :code:`n - differencing_order` values from
             :meth:`self.fundamental_process` to ensure
             that the de-differenced output is of length
-            :code`n`.
+            :code:`n`.
 
         *args :
            Additional positional arguments passed to

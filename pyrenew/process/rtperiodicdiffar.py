@@ -14,9 +14,9 @@ class RtPeriodicDiffARProcess(RandomVariable):
 
     Notes
     -----
-    This class samples a periodic reproduction number R(t)
+    This class samples a periodic reproduction number :math:`\mathcal{R}(t)`
     by placing an AR(1) process
-    on the first differences in log[R(t)]. Formally:
+    on the first differences in :math:`\log[\mathcal{R}(t)]`. Formally:
 
     .. math::
         \log[\mathcal{R}^\mathrm{u}(t_3)] \sim \mathrm{Normal}\left(\log[\mathcal{R}^\mathrm{u}(t_2)] \
