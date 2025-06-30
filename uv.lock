@@ -2018,14 +2018,14 @@ wheels = [
 
 [[package]]
 name = "sphinxcontrib-katex"
-version = "0.9.10"
+version = "0.9.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "sphinx" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/15/fd/013b6953fa1467cc09487d28c85dc1f9c85e82556b7cbe67c248d89ad4fa/sphinxcontrib_katex-0.9.10.tar.gz", hash = "sha256:309a92dae245dbc584ff7ea5fb6549727bae95e4e52008b74d259d2fd1ad0dec", size = 100194, upload-time = "2024-05-16T13:04:49.48Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9a/cd/71d3c7fc1a4e40a03048ce68787e4e4b6f612dc6b95acc89f5010d4cda7a/sphinxcontrib_katex-0.9.11.tar.gz", hash = "sha256:2d32b210d20bbee451a51d19645f6fef5f5568b9a54e2813affb96efa661238a", size = 100476, upload-time = "2025-06-27T12:04:12.703Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/1d/ce/7ebd59dd506f0ab327d8f779473ef80f6236a7a01c64925d20f59c275952/sphinxcontrib_katex-0.9.10-py3-none-any.whl", hash = "sha256:4e5f0b18761cd2cd058a1b2392f42a7edea4cc5beaa504a44aaee07d17ace9b7", size = 97789, upload-time = "2024-05-16T13:04:47.561Z" },
+    { url = "https://files.pythonhosted.org/packages/33/14/c62d4553dbf27156b6549ceed1a9768f801c979237a2cf0c3d074e16272f/sphinxcontrib_katex-0.9.11-py3-none-any.whl", hash = "sha256:b0a318d86b8f43314ccdd481ce0db90283ac51f51afd9479969f36a0c291f44e", size = 97956, upload-time = "2025-06-27T12:04:11.478Z" },
 ]
 
 [[package]]
