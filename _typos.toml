@@ -15,6 +15,7 @@ lod = "lod"
 LOD = "LOD"
 ans = "ans"
 arange = "arange"
+setp = "setp
 
 [files]
 extend-exclude = [
