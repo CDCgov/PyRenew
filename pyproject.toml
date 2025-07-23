@@ -7,7 +7,7 @@ license = "Apache-2.0"
 authors = [{name = "CFA"}]
 requires-python = ">= 3.13"
 dependencies = [
-    "jax>=0.4.30",
+    "jax<0.7.0",
     "numpy>=2.0.0",
     "polars>=1.2.1",
     "numpyro>=0.15.3"
