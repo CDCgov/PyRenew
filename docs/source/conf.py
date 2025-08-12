@@ -40,6 +40,15 @@ extensions = [
     "myst_parser",
 ]
 
+# Mock heavy / optional dependencies so docs can build in minimal envs (CI, RTD)
+autodoc_mock_imports = [
+    "jax",
+    "jaxlib",
+    "numpyro",
+    "polars",
+    "arviz",
+]
+
 # Simplifies printing of type hints
 set_type_checking_flag = True
 typehints_fully_qualified = False

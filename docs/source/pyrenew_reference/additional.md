@@ -46,15 +46,6 @@
 
 ```
 
-## MCMC Utilities Module
-
-```{eval-rst}
-.. automodule:: pyrenew.mcmcutils
-   :members:
-   :undoc-members:
-   :show-inheritance:
-```
-
 ## Distributions Utility Module
 
 ```{eval-rst}
