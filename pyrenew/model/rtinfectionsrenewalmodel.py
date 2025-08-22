@@ -169,8 +169,7 @@ class RtInfectionsRenewalModel(Model):
 
         if n_datapoints is None and data_observed_infections is None:
             raise ValueError(
-                "Either n_datapoints or data_observed_infections "
-                "must be passed."
+                "Either n_datapoints or data_observed_infections must be passed."
             )
         elif n_datapoints is not None and data_observed_infections is not None:
             raise ValueError(
@@ -207,9 +206,7 @@ class RtInfectionsRenewalModel(Model):
             **kwargs,
         )
 
-        all_latent_infections = jnp.hstack(
-            [I0, post_initialization_latent_infections]
-        )
+        all_latent_infections = jnp.hstack([I0, post_initialization_latent_infections])
         numpyro.deterministic("all_latent_infections", all_latent_infections)
 
         numpyro.deterministic("Rt", Rt)

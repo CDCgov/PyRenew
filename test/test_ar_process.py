@@ -239,9 +239,9 @@ def test_ar_process_asymptotics(ar_inits, autoreg, noise_sd, n):
 
     first_entries_broadcast_shape = (order,) + non_time_dims
 
-    expected_first_entries = jnp.broadcast_to(
-        ar_inits, first_entries_broadcast_shape
-    )[:n]
+    expected_first_entries = jnp.broadcast_to(ar_inits, first_entries_broadcast_shape)[
+        :n
+    ]
 
     with numpyro.handlers.seed(rng_seed=62):
         # check it regresses to mean

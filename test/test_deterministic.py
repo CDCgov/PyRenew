@@ -28,9 +28,7 @@ def test_deterministic():
             ]
         ),
     )
-    var2 = DeterministicPMF(
-        name="var2", value=jnp.array([0.25, 0.25, 0.2, 0.3])
-    )
+    var2 = DeterministicPMF(name="var2", value=jnp.array([0.25, 0.25, 0.2, 0.3]))
     var3 = NullVariable()
 
     testing.assert_array_equal(
@@ -85,9 +83,7 @@ def test_deterministic_validation():
 
         with pytest.raises(ValueError, match=matchval):
             # validation should fail on constructor call
-            DeterministicVariable(
-                value=non_arraylike_val, name="invalid_variable"
-            )
+            DeterministicVariable(value=non_arraylike_val, name="invalid_variable")
 
     # validation should succeed with ArrayLike
     for arraylike_val in some_array_likes:

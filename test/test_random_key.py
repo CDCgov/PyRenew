@@ -42,9 +42,7 @@ def create_test_model():  # numpydoc ignore=GL08
     return model
 
 
-def run_test_model(
-    test_model, observed_infections, rng_key
-):  # numpydoc ignore=GL08
+def run_test_model(test_model, observed_infections, rng_key):  # numpydoc ignore=GL08
     test_model.run(
         num_warmup=50,
         num_samples=50,
@@ -108,9 +106,7 @@ def test_rng_keys_produce_correct_samples():
 
     posterior_predictive_list = [
         posterior_predictive_test_model(*elt)
-        for elt in list(
-            zip(models, n_timepoints_posterior_predictive, rng_keys)
-        )
+        for elt in list(zip(models, n_timepoints_posterior_predictive, rng_keys))
     ]
     # using same rng_key should get same run samples
     assert_array_equal(

@@ -126,9 +126,7 @@ def test_convolve_scanner_using_scan(arr, history, multipliers, transform):
         ],
     ],
 )
-def test_double_convolve_scanner_using_scan(
-    arr1, arr2, history, m1, m2, transform
-):
+def test_double_convolve_scanner_using_scan(arr1, arr2, history, m1, m2, transform):
     """
     Tests the output of new convolve double scanner function
     used with `jax.lax.scan` against values calculated
@@ -176,9 +174,7 @@ def test_convolve_scanner(arr, history, multiplier, transform):
     """
     scanner = pc.new_convolve_scanner(arr, transform)
     latest, new_val = scanner(history, multiplier)
-    assert jnp.array_equal(
-        new_val, transform(multiplier * jnp.dot(arr, history))
-    )
+    assert jnp.array_equal(new_val, transform(multiplier * jnp.dot(arr, history)))
 
 
 @pytest.mark.parametrize(
@@ -210,9 +206,7 @@ def test_double_convolve_scanner(arr1, arr2, history, m1, m2, transforms):
     latest, (new_val, m_net) = double_scanner(history, (m1, m2))
 
     assert jnp.array_equal(m_net, transforms[0](m1 * jnp.dot(arr1, history)))
-    assert jnp.array_equal(
-        new_val, transforms[1](m2 * m_net * jnp.dot(arr2, history))
-    )
+    assert jnp.array_equal(new_val, transforms[1](m2 * m_net * jnp.dot(arr2, history)))
 
 
 @pytest.mark.parametrize(
@@ -261,9 +255,7 @@ def test_compute_delay_ascertained_incidence(
     )
     assert_array_equal(
         result,
-        jnp.pad(
-            expected_output, (expected_offset, 0), constant_values=jnp.nan
-        ),
+        jnp.pad(expected_output, (expected_offset, 0), constant_values=jnp.nan),
     )
     assert offset == 0
 

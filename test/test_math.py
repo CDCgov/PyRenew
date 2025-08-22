@@ -82,12 +82,8 @@ def test_asymptotic_properties():
         rat_x = np.sum(x_new) / np.sum(x)
         x = x_new
 
-    assert_almost_equal(
-        rat_x, pmath.get_asymptotic_growth_rate(R, gi), decimal=5
-    )
-    assert_array_almost_equal(
-        x / np.sum(x), pmath.get_stable_age_distribution(R, gi)
-    )
+    assert_almost_equal(rat_x, pmath.get_asymptotic_growth_rate(R, gi), decimal=5)
+    assert_array_almost_equal(x / np.sum(x), pmath.get_stable_age_distribution(R, gi))
 
     # check via backward-looking convolution
     y = np.array([1, 0, 0, 0, 0, 0, 0, 0])
@@ -95,12 +91,8 @@ def test_asymptotic_properties():
         new_pop = np.dot(y, R * gi)
         rat_y = new_pop / y[0]
         y = np.hstack([new_pop, y[:-1]])
-    assert_almost_equal(
-        rat_y, pmath.get_asymptotic_growth_rate(R, gi), decimal=5
-    )
-    assert_array_almost_equal(
-        y / np.sum(x), pmath.get_stable_age_distribution(R, gi)
-    )
+    assert_almost_equal(rat_y, pmath.get_asymptotic_growth_rate(R, gi), decimal=5)
+    assert_array_almost_equal(y / np.sum(x), pmath.get_stable_age_distribution(R, gi))
 
 
 @pytest.mark.parametrize(

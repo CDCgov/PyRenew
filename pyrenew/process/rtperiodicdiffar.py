@@ -154,9 +154,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
             init_vals=jnp.array(log_rt_rv[0]),
             autoreg=b,
             noise_sd=s_r,
-            fundamental_process_init_vals=jnp.array(
-                log_rt_rv[1] - log_rt_rv[0]
-            ),
+            fundamental_process_init_vals=jnp.array(log_rt_rv[1] - log_rt_rv[0]),
         )
 
         return au.repeat_until_n(

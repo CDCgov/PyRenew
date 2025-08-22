@@ -60,9 +60,7 @@ def test_interval_censored_normal_distribution(
     assert jnp.all(samp <= upper_limit)
 
     # test log prob of values within bounds
-    assert_array_equal(
-        censored_dist.log_prob(in_val), normal_dist.log_prob(in_val)
-    )
+    assert_array_equal(censored_dist.log_prob(in_val), normal_dist.log_prob(in_val))
 
     # test log prob of values lower than the limit
     assert_array_almost_equal(
@@ -113,9 +111,7 @@ def test_left_censored_normal_distribution(
     assert jnp.all(samp >= lower_limit)
 
     # test log prob of values within bounds
-    assert_array_equal(
-        censored_dist.log_prob(in_val), normal_dist.log_prob(in_val)
-    )
+    assert_array_equal(censored_dist.log_prob(in_val), normal_dist.log_prob(in_val))
 
     # test log prob of values lower than the limit
     assert_array_almost_equal(
@@ -145,9 +141,7 @@ def test_right_censored_normal_distribution(
     Tests the upper censored normal distribution samples
     within the limit and calculation of log probability
     """
-    censored_dist = CensoredNormal(
-        loc=loc, scale=scale, upper_limit=upper_limit
-    )
+    censored_dist = CensoredNormal(loc=loc, scale=scale, upper_limit=upper_limit)
     normal_dist = numpyro.distributions.Normal(loc=loc, scale=scale)
 
     # test samples within the bounds
@@ -155,9 +149,7 @@ def test_right_censored_normal_distribution(
     assert jnp.all(samp <= upper_limit)
 
     # test log prob of values within bounds
-    assert_array_equal(
-        censored_dist.log_prob(in_val), normal_dist.log_prob(in_val)
-    )
+    assert_array_equal(censored_dist.log_prob(in_val), normal_dist.log_prob(in_val))
 
     # test log prob of values higher than the limit
     assert_array_almost_equal(

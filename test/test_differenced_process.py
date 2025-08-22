@@ -110,9 +110,7 @@ def test_differenced_process_sample(
         samp_alt = proc.sample(n=n_long_alt, init_vals=init_diff_vals)
         samp_one_diff = proc.sample(n=n_one_diff, init_vals=init_diff_vals)
         samp_no_diffs = proc.sample(n=n_no_diffs, init_vals=init_diff_vals)
-        samp_no_diffs_alt = proc.sample(
-            n=n_no_diffs_alt, init_vals=init_diff_vals
-        )
+        samp_no_diffs_alt = proc.sample(n=n_no_diffs_alt, init_vals=init_diff_vals)
     assert samp.shape == (n_long,)
     assert samp_alt.shape == (n_long_alt,)
     assert samp_one_diff.shape == (n_one_diff,)
