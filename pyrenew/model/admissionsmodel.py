@@ -104,9 +104,7 @@ class HospitalAdmissionsModel(Model):
         self.hosp_admission_obs_process_rv = hosp_admission_obs_process_rv
 
     @staticmethod
-    def validate(
-        latent_hosp_admissions_rv, hosp_admission_obs_process_rv
-    ) -> None:
+    def validate(latent_hosp_admissions_rv, hosp_admission_obs_process_rv) -> None:
         """
         Verifies types and status (RV) of latent and observed hospital admissions
 
@@ -162,13 +160,9 @@ class HospitalAdmissionsModel(Model):
         """
         if n_datapoints is None and data_observed_hosp_admissions is None:
             raise ValueError(
-                "Either n_datapoints or data_observed_hosp_admissions "
-                "must be passed."
+                "Either n_datapoints or data_observed_hosp_admissions must be passed."
             )
-        elif (
-            n_datapoints is not None
-            and data_observed_hosp_admissions is not None
-        ):
+        elif n_datapoints is not None and data_observed_hosp_admissions is not None:
             raise ValueError(
                 "Cannot pass both n_datapoints and data_observed_hosp_admissions."
             )

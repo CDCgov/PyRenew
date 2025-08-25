@@ -119,9 +119,7 @@ def test_transform_rv_validation():
     works as expected.
     """
 
-    base_rv = DistributionalVariable(
-        name="test_normal", distribution=dist.Normal(0, 1)
-    )
+    base_rv = DistributionalVariable(name="test_normal", distribution=dist.Normal(0, 1))
     base_rv.sample_length = lambda: 1  # numpydoc ignore=GL08
 
     l2_rv = LengthTwoRV()
@@ -140,21 +138,15 @@ def test_transform_rv_validation():
                 "should_error_due_to_too_many_transforms", base_rv, (tr, tr)
             )
         with pytest.raises(ValueError, match=sample_length_err):
-            _ = TransformedVariable(
-                "should_error_due_to_too_few_transforms", l2_rv, tr
-            )
+            _ = TransformedVariable("should_error_due_to_too_few_transforms", l2_rv, tr)
         with pytest.raises(ValueError, match=sample_length_err):
             _ = TransformedVariable(
                 "should_also_error_due_to_too_few_transforms", l2_rv, (tr,)
             )
         with pytest.raises(ValueError, match=not_callable_err):
-            _ = TransformedVariable(
-                "should_error_due_to_not_callable", l2_rv, (1,)
-            )
+            _ = TransformedVariable("should_error_due_to_not_callable", l2_rv, (1,))
         with pytest.raises(ValueError, match=not_callable_err):
-            _ = TransformedVariable(
-                "should_error_due_to_not_callable", base_rv, (1,)
-            )
+            _ = TransformedVariable("should_error_due_to_not_callable", base_rv, (1,))
 
 
 def test_transforms_applied_at_sampling():
@@ -163,9 +155,7 @@ def test_transforms_applied_at_sampling():
     instances correctly apply their specified
     transformations at sampling
     """
-    norm_rv = DistributionalVariable(
-        name="test_normal", distribution=dist.Normal(0, 1)
-    )
+    norm_rv = DistributionalVariable(name="test_normal", distribution=dist.Normal(0, 1))
     norm_rv.sample_length = lambda: 1
 
     l2_rv = LengthTwoRV()
@@ -212,9 +202,7 @@ def test_transforms_variable_naming():
 
     transformed_dist_unnamed_base_rv = TransformedVariable(
         "transformed_rv",
-        DistributionalVariable(
-            name="my_normal", distribution=dist.Normal(0, 1)
-        ),
+        DistributionalVariable(name="my_normal", distribution=dist.Normal(0, 1)),
         (t.ExpTransform(), t.IdentityTransform()),
     )
 

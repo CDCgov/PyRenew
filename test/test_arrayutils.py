@@ -50,9 +50,7 @@ def test_pad_edges_to_match():
     assert jnp.array_equal(x_pad, x)
 
     # Verify that the function raises an error when `fix_y` is True
-    with pytest.raises(
-        ValueError, match="Cannot fix y when x is longer than y"
-    ):
+    with pytest.raises(ValueError, match="Cannot fix y when x is longer than y"):
         x_pad, y_pad = au.pad_edges_to_match(x, y, fix_y=True)
 
     # Verify function raises an error when pad_direction is not "start" or "end"

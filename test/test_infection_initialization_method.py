@@ -53,10 +53,8 @@ def test_initialize_infections_exponential():
 
     manual_result = np.column_stack(
         [
-            I_pre_init[0]
-            * np.exp(rate[0] * (np.arange(n_timepoints) - t_pre_init)),
-            I_pre_init[1]
-            * np.exp(rate[1] * (np.arange(n_timepoints) - t_pre_init)),
+            I_pre_init[0] * np.exp(rate[0] * (np.arange(n_timepoints) - t_pre_init)),
+            I_pre_init[1] * np.exp(rate[1] * (np.arange(n_timepoints) - t_pre_init)),
         ]
     )
 
@@ -94,13 +92,9 @@ def test_initialize_infections_exponential():
     manual_result = np.column_stack(
         [
             I_pre_init[0]
-            * np.exp(
-                rate_scalar * (np.arange(n_timepoints) - default_t_pre_init)
-            ),
+            * np.exp(rate_scalar * (np.arange(n_timepoints) - default_t_pre_init)),
             I_pre_init[1]
-            * np.exp(
-                rate_scalar * (np.arange(n_timepoints) - default_t_pre_init)
-            ),
+            * np.exp(rate_scalar * (np.arange(n_timepoints) - default_t_pre_init)),
         ]
     )
 
@@ -134,9 +128,9 @@ def test_initialize_infections_zero_pad():
     I_pre_init = I_pre_init_RV()
     I_pre_init = I_pre_init
 
-    infections = InitializeInfectionsZeroPad(
-        n_timepoints
-    ).initialize_infections(I_pre_init)
+    infections = InitializeInfectionsZeroPad(n_timepoints).initialize_infections(
+        I_pre_init
+    )
 
     manual_infections = np.pad(
         np.atleast_1d(I_pre_init),
@@ -152,9 +146,9 @@ def test_initialize_infections_zero_pad():
     I_pre_init_2 = I_pre_init_RV_2()
     I_pre_init_2 = I_pre_init_2
 
-    infections_2 = InitializeInfectionsZeroPad(
-        n_timepoints
-    ).initialize_infections(I_pre_init_2)
+    infections_2 = InitializeInfectionsZeroPad(n_timepoints).initialize_infections(
+        I_pre_init_2
+    )
     testing.assert_array_equal(
         infections_2,
         np.pad(I_pre_init_2, (n_timepoints - I_pre_init_2.size, 0)),
@@ -170,16 +164,14 @@ def test_initialize_infections_from_vec():
     n_timepoints = 10
     I_pre_init = np.arange(n_timepoints)
 
-    infections = InitializeInfectionsFromVec(
-        n_timepoints
-    ).initialize_infections(I_pre_init)
+    infections = InitializeInfectionsFromVec(n_timepoints).initialize_infections(
+        I_pre_init
+    )
     testing.assert_array_equal(infections, I_pre_init)
 
     I_pre_init_2 = np.arange(n_timepoints - 1)
     with pytest.raises(ValueError):
-        InitializeInfectionsFromVec(n_timepoints).initialize_infections(
-            I_pre_init_2
-        )
+        InitializeInfectionsFromVec(n_timepoints).initialize_infections(I_pre_init_2)
 
     n_timepoints_float = 10.0
     with pytest.raises(TypeError):
@@ -189,6 +181,4 @@ def test_initialize_infections_from_vec():
 
     n_timepoints_neg = -10
     with pytest.raises(ValueError):
-        InitializeInfectionsFromVec(n_timepoints_neg).initialize_infections(
-            I_pre_init
-        )
+        InitializeInfectionsFromVec(n_timepoints_neg).initialize_infections(I_pre_init)

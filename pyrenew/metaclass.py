@@ -35,8 +35,7 @@ def _assert_type(arg_name: str, value, expected_type) -> None:
 
     if not isinstance(value, expected_type):
         raise TypeError(
-            f"{arg_name} must be an instance of {expected_type}. "
-            f"Got {type(value)}"
+            f"{arg_name} must be an instance of {expected_type}. Got {type(value)}"
         )
 
 
@@ -229,9 +228,7 @@ class Model(metaclass=ABCMeta):
             mcmc_args=mcmc_args,
         )
         if rng_key is None:
-            rand_int = np.random.randint(
-                np.iinfo(np.int64).min, np.iinfo(np.int64).max
-            )
+            rand_int = np.random.randint(np.iinfo(np.int64).min, np.iinfo(np.int64).max)
             rng_key = jr.key(rand_int)
 
         self.mcmc.run(rng_key=rng_key, **kwargs)
@@ -293,9 +290,7 @@ class Model(metaclass=ABCMeta):
             )
 
         if rng_key is None:
-            rand_int = np.random.randint(
-                np.iinfo(np.int64).min, np.iinfo(np.int64).max
-            )
+            rand_int = np.random.randint(np.iinfo(np.int64).min, np.iinfo(np.int64).max)
             rng_key = jr.key(rand_int)
 
         predictive = Predictive(
@@ -336,9 +331,7 @@ class Model(metaclass=ABCMeta):
         """
 
         if rng_key is None:
-            rand_int = np.random.randint(
-                np.iinfo(np.int64).min, np.iinfo(np.int64).max
-            )
+            rand_int = np.random.randint(np.iinfo(np.int64).min, np.iinfo(np.int64).max)
             rng_key = jr.key(rand_int)
 
         predictive = Predictive(

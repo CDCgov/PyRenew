@@ -68,7 +68,5 @@ def test_forecast():
     # are the same as the posterior Rt
     assert_array_equal(
         model.mcmc.get_samples()["Rt"][0],
-        posterior_predictive_samples["Rt"][0][
-            : len(model.mcmc.get_samples()["Rt"][0])
-        ],
+        posterior_predictive_samples["Rt"][0][: len(model.mcmc.get_samples()["Rt"][0])],
     )

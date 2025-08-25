@@ -40,14 +40,11 @@ def test_invalid_constructor_args(not_a_dist):
     with pytest.raises(
         ValueError, match="distribution argument to DistributionalVariable"
     ):
-        DistributionalVariable(
-            name="this should fail", distribution=not_a_dist
-        )
+        DistributionalVariable(name="this should fail", distribution=not_a_dist)
     with pytest.raises(
         ValueError,
         match=(
-            "distribution should be an instance of "
-            "numpyro.distributions.Distribution"
+            "distribution should be an instance of numpyro.distributions.Distribution"
         ),
     ):
         StaticDistributionalVariable.validate(not_a_dist)
@@ -110,10 +107,7 @@ def test_expand_by(dist, params, expand_by_shape):
     assert isinstance(expanded_dynamic.expand_by_shape, tuple)
     assert expanded_dynamic.expand_by_shape == expand_by_shape
     assert dynamic.reparam_dict == expanded_dynamic.reparam_dict
-    assert (
-        dynamic.distribution_constructor
-        == expanded_dynamic.distribution_constructor
-    )
+    assert dynamic.distribution_constructor == expanded_dynamic.distribution_constructor
 
     assert isinstance(expanded_static, StaticDistributionalVariable)
     assert isinstance(expanded_static.distribution, ExpandedDistribution)

@@ -8,9 +8,7 @@ from numpy.testing import assert_array_almost_equal
 import pyrenew.transformation as t
 
 
-def generic_inversion_test(
-    transform, test_vals, decimal=1e-8, **kwargs
-) -> None:
+def generic_inversion_test(transform, test_vals, decimal=1e-8, **kwargs) -> None:
     """
     Generic test for inverting a
     pyrenew transform, confirming

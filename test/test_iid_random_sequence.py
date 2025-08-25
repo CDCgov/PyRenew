@@ -63,9 +63,7 @@ def test_standard_normal_sequence(shape, n):
     Test the StandardNormalSequence RandomVariable
     class.
     """
-    norm_seq = StandardNormalSequence(
-        "test_norm_elements", element_shape=shape
-    )
+    norm_seq = StandardNormalSequence("test_norm_elements", element_shape=shape)
 
     # should be implemented with a DistributionalVariable
     # that is a standard normal
@@ -74,12 +72,8 @@ def test_standard_normal_sequence(shape, n):
         assert isinstance(norm_seq.element_rv.distribution, dist.Normal)
         el_dist = norm_seq.element_rv.distribution
     else:
-        assert isinstance(
-            norm_seq.element_rv.distribution, dist.ExpandedDistribution
-        )
-        assert isinstance(
-            norm_seq.element_rv.distribution.base_dist, dist.Normal
-        )
+        assert isinstance(norm_seq.element_rv.distribution, dist.ExpandedDistribution)
+        assert isinstance(norm_seq.element_rv.distribution.base_dist, dist.Normal)
         el_dist = norm_seq.element_rv.distribution.base_dist
     assert el_dist.loc == 0.0
     assert el_dist.scale == 1.0

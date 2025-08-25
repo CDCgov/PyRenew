@@ -113,9 +113,7 @@ def daily_to_weekly(
 
     n_weeks = daily_values.shape[0] // 7
     trimmed = daily_values[: n_weeks * 7]
-    weekly_values = trimmed.reshape(n_weeks, 7, *daily_values.shape[1:]).sum(
-        axis=1
-    )
+    weekly_values = trimmed.reshape(n_weeks, 7, *daily_values.shape[1:]).sum(axis=1)
 
     return weekly_values
 
@@ -148,9 +146,7 @@ def daily_to_mmwr_epiweekly(
     ArrayLike
         Data converted to epiweekly values.
     """
-    return daily_to_weekly(
-        daily_values, input_data_first_dow, week_start_dow=6
-    )
+    return daily_to_weekly(daily_values, input_data_first_dow, week_start_dow=6)
 
 
 def weekly_to_daily(

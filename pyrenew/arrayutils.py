@@ -46,8 +46,7 @@ def pad_edges_to_match(
 
     if pad_direction not in ["start", "end"]:
         raise ValueError(
-            "pad_direction must be either 'start' or 'end'."
-            f" Got {pad_direction}."
+            f"pad_direction must be either 'start' or 'end'. Got {pad_direction}."
         )
 
     pad_width[axis] = {"start": (pad_size, 0), "end": (0, pad_size)}.get(
@@ -57,8 +56,7 @@ def pad_edges_to_match(
     if x_len > y_len:
         if fix_y:
             raise ValueError(
-                "Cannot fix y when x is longer than y."
-                f" x_len: {x_len}, y_len: {y_len}."
+                f"Cannot fix y when x is longer than y. x_len: {x_len}, y_len: {y_len}."
             )
         y = jnp.pad(y, pad_width, mode="edge")
 

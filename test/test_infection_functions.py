@@ -75,9 +75,7 @@ def test_compute_infections_from_rt_with_feedback():
         ],
     ],
 )
-def test_compute_infections_from_rt_with_feedback_2d(
-    I0, gen_int, inf_pmf, Rt_raw
-):
+def test_compute_infections_from_rt_with_feedback_2d(I0, gen_int, inf_pmf, Rt_raw):
     """
     Test implementation of infection feedback
     when I0 and Rt are 2d arrays.

@@ -141,9 +141,7 @@ class ARProcess(RandomVariable):
         inits_flipped = jnp.flip(inits_broadcast, axis=0)
 
         def transition(recent_vals, _):  # numpydoc ignore=GL08
-            with numpyro.handlers.reparam(
-                config={noise_name: LocScaleReparam(0)}
-            ):
+            with numpyro.handlers.reparam(config={noise_name: LocScaleReparam(0)}):
                 next_noise = numpyro.sample(
                     noise_name,
                     numpyro.distributions.Normal(

@@ -152,9 +152,7 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     return result
 
 
-def get_leslie_matrix(
-    R: float, generation_interval_pmf: ArrayLike
-) -> ArrayLike:
+def get_leslie_matrix(R: float, generation_interval_pmf: ArrayLike) -> ArrayLike:
     """
     Create the Leslie matrix
     corresponding to a basic
@@ -279,14 +277,10 @@ def get_stable_age_distribution(
         the same shape as the generation interval
         probability vector.
     """
-    return get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf)[
-        1
-    ]
+    return get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf)[1]
 
 
-def get_asymptotic_growth_rate(
-    R: float, generation_interval_pmf: ArrayLike
-) -> float:
+def get_asymptotic_growth_rate(R: float, generation_interval_pmf: ArrayLike) -> float:
     """
     Get the asymptotic per timestep growth rate
     for a renewal process with a given value of
@@ -311,9 +305,7 @@ def get_asymptotic_growth_rate(
         The asymptotic growth rate of the renewal process,
         as a jax float.
     """
-    return get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf)[
-        0
-    ]
+    return get_asymptotic_growth_rate_and_age_dist(R, generation_interval_pmf)[0]
 
 
 def integrate_discrete(
@@ -384,9 +376,7 @@ def integrate_discrete(
         jnp.flip(inits_by_order, axis=0),
     )
 
-    integrated, _ = scan(
-        f=_integrate_one_step, init=highest_diffs, xs=scan_arrays
-    )
+    integrated, _ = scan(f=_integrate_one_step, init=highest_diffs, xs=scan_arrays)
 
     return integrated
 
@@ -423,7 +413,5 @@ def _integrate_one_step(
         and whose second entry is None.
     """
     next_order, next_init = next_order_and_init
-    next_diffs = jnp.cumsum(
-        current_diffs.at[next_order, ...].set(next_init), axis=0
-    )
+    next_diffs = jnp.cumsum(current_diffs.at[next_order, ...].set(next_init), axis=0)
     return next_diffs, None

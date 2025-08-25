@@ -37,9 +37,7 @@ def test_glm_prediction():
     fixed_pred_coeff = jnp.array([1, 35235, -5232.2532, 0])
     fixed_pred_intercept = jnp.array([5.2])
     assert_array_almost_equal(
-        glm_pred.predict(
-            fixed_pred_intercept, fixed_pred_coeff, predictor_values
-        ),
+        glm_pred.predict(fixed_pred_intercept, fixed_pred_coeff, predictor_values),
         fixed_pred_intercept + predictor_values @ fixed_pred_coeff,
     )
 

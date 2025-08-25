@@ -70,9 +70,7 @@ def test_daily_to_weekly_incomplete_week():
     form a complete week.
     """
     daily_values = jnp.arange(1, 5)
-    with pytest.raises(
-        ValueError, match="No complete weekly values available"
-    ):
+    with pytest.raises(ValueError, match="No complete weekly values available"):
         ptime.daily_to_weekly(daily_values, input_data_first_dow=0)
 
 
@@ -194,9 +192,7 @@ def test_weekly_to_daily_output(weekly_values, expected_output):
     is equivalent to weekly_to_daily with week_start_dow=6.
     """
     assert_array_equal(ptime.weekly_to_daily(weekly_values), expected_output)
-    for out_first_dow, input_start_dow in itertools.product(
-        range(7), range(7)
-    ):
+    for out_first_dow, input_start_dow in itertools.product(range(7), range(7)):
         expected_offset = (out_first_dow - input_start_dow) % 7
         assert_array_equal(
             ptime.weekly_to_daily(
@@ -250,6 +246,4 @@ def test_daily_to_weekly_2d_values_with_offset():
 
     assert jnp.array_equal(result, expected)
     assert jnp.array_equal(result_leading_zero_offeset, expected)
-    assert jnp.array_equal(
-        result_leading_zero_no_offeset, expected_leading_zero
-    )
+    assert jnp.array_equal(result_leading_zero_no_offeset, expected_leading_zero)

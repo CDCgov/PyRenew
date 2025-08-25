@@ -87,7 +87,6 @@ DEP004 = ["pytest", "scipy"]
 
 [tool.ruff]
 fix = true
-line-length = 79
 
 [tool.ruff.lint]
-select = ["I"]
+select = ["I", "E4", "E7", "E9", "F"]

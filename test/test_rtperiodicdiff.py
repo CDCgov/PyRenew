@@ -17,12 +17,8 @@ def test_rtweeklydiff() -> None:
     params = {
         "name": "test",
         "offset": 0,
-        "log_rt_rv": DeterministicVariable(
-            name="log_rt", value=jnp.array([0.1, 0.2])
-        ),
-        "autoreg_rv": DeterministicVariable(
-            name="autoreg_rv", value=jnp.array([0.7])
-        ),
+        "log_rt_rv": DeterministicVariable(name="log_rt", value=jnp.array([0.1, 0.2])),
+        "autoreg_rv": DeterministicVariable(name="autoreg_rv", value=jnp.array([0.7])),
         "periodic_diff_sd_rv": DeterministicVariable(
             name="periodic_diff_sd_rv", value=jnp.array([0.1])
         ),
@@ -65,13 +61,9 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     params = {
         "name": "test",
         "offset": 0,
-        "log_rt_rv": DeterministicVariable(
-            name="log_rt", value=jnp.array([0.0, 0.0])
-        ),
+        "log_rt_rv": DeterministicVariable(name="log_rt", value=jnp.array([0.0, 0.0])),
         # No autoregression!
-        "autoreg_rv": DeterministicVariable(
-            name="autoreg_rv", value=jnp.array([0.0])
-        ),
+        "autoreg_rv": DeterministicVariable(name="autoreg_rv", value=jnp.array([0.0])),
         "periodic_diff_sd_rv": DeterministicVariable(
             name="periodic_diff_sd_rv",
             value=jnp.array([0.1]),
@@ -100,9 +92,7 @@ def test_rtweeklydiff_no_autoregressive() -> None:
     return None
 
 
-@pytest.mark.parametrize(
-    "inits", [jnp.array([0.1, 0.2]), jnp.array([0.5, 0.7])]
-)
+@pytest.mark.parametrize("inits", [jnp.array([0.1, 0.2]), jnp.array([0.5, 0.7])])
 def test_rtperiodicdiff_smallsample(inits):
     """Checks basic functionality of the process with a small sample size."""
 
@@ -113,9 +103,7 @@ def test_rtperiodicdiff_smallsample(inits):
             name="log_rt",
             value=inits,
         ),
-        "autoreg_rv": DeterministicVariable(
-            name="autoreg_rv", value=jnp.array([0.7])
-        ),
+        "autoreg_rv": DeterministicVariable(name="autoreg_rv", value=jnp.array([0.7])),
         "periodic_diff_sd_rv": DeterministicVariable(
             name="periodic_diff_sd_rv",
             value=jnp.array([0.1]),

@@ -37,6 +37,4 @@ def test_infection_admission_interval():
     assert len(df) > 0
     assert df.shape == (55, 2)
 
-    testing.assert_approx_equal(
-        df["probability_mass"].mean(), 0.01818181818, 3
-    )
+    testing.assert_approx_equal(df["probability_mass"].mean(), 0.01818181818, 3)

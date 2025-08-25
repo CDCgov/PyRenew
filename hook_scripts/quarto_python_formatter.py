@@ -9,9 +9,7 @@ from pathlib import Path
 from typing import List, Match
 
 
-def format_python_code(
-    code: str, ruff_args: List[str]
-) -> str:  # numpydoc ignore=RT01
+def format_python_code(code: str, ruff_args: List[str]) -> str:  # numpydoc ignore=RT01
     """Format Python code using Ruff with custom arguments."""
     try:
         cmd = ["ruff", "format", "-"] + ruff_args
@@ -24,9 +22,7 @@ def format_python_code(
         )
         return result.stdout
     except subprocess.CalledProcessError:
-        print(
-            "Error: Failed to format Python code with Ruff.", file=sys.stderr
-        )
+        print("Error: Failed to format Python code with Ruff.", file=sys.stderr)
         return code
 
 
@@ -37,9 +33,7 @@ def replace_code_block(
     return f"{match.group(1)}\n{format_python_code(match.group(2), ruff_args)}{match.group(3)}"
 
 
-def process_file(
-    filepath: Path, ruff_args: List[str]
-) -> None:  # numpydoc ignore=RT01
+def process_file(filepath: Path, ruff_args: List[str]) -> None:  # numpydoc ignore=RT01
     """Process the given file, formatting Python code blocks."""
     python_code_block_pattern = r"(```\{python\})(.*?)(```)"
     try:

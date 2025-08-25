@@ -41,9 +41,7 @@ class IIDRandomSequence(RandomVariable):
         super().__init__(**kwargs)
         self.element_rv = element_rv
 
-    def sample(
-        self, n: int, *args, vectorize: bool = False, **kwargs
-    ) -> ArrayLike:
+    def sample(self, n: int, *args, vectorize: bool = False, **kwargs) -> ArrayLike:
         """
         Sample an IID random sequence.
 

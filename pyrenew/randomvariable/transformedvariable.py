@@ -125,9 +125,7 @@ class TransformedVariable(RandomVariable):
         """
         for t in self.transforms:
             if not callable(t):
-                raise ValueError(
-                    "All entries in self.transforms must be callable"
-                )
+                raise ValueError("All entries in self.transforms must be callable")
         if hasattr(self.base_rv, "sample_length"):
             n_transforms = len(self.transforms)
             n_entries = self.base_rv.sample_length()

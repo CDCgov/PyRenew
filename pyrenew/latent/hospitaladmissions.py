@@ -121,16 +121,10 @@ class HospitalAdmissions(RandomVariable):
             obs_data_first_day_of_the_week,
         )
 
-        self.infection_to_admission_interval_rv = (
-            infection_to_admission_interval_rv
-        )
-        self.infection_hospitalization_ratio_rv = (
-            infection_hospitalization_ratio_rv
-        )
+        self.infection_to_admission_interval_rv = infection_to_admission_interval_rv
+        self.infection_hospitalization_ratio_rv = infection_hospitalization_ratio_rv
         self.day_of_week_effect_rv = day_of_week_effect_rv
-        self.hospitalization_reporting_ratio_rv = (
-            hospitalization_reporting_ratio_rv
-        )
+        self.hospitalization_reporting_ratio_rv = hospitalization_reporting_ratio_rv
         self.obs_data_first_day_of_the_week = obs_data_first_day_of_the_week
 
     @staticmethod
@@ -207,8 +201,8 @@ class HospitalAdmissions(RandomVariable):
 
         infection_hosp_rate = self.infection_hospitalization_ratio_rv(**kwargs)
 
-        infection_to_admission_interval = (
-            self.infection_to_admission_interval_rv(**kwargs)
+        infection_to_admission_interval = self.infection_to_admission_interval_rv(
+            **kwargs
         )
 
         latent_hospital_admissions, _ = compute_delay_ascertained_incidence(
@@ -248,9 +242,7 @@ class HospitalAdmissions(RandomVariable):
             * self.hospitalization_reporting_ratio_rv(**kwargs)
         )
 
-        numpyro.deterministic(
-            "latent_hospital_admissions", latent_hospital_admissions
-        )
+        numpyro.deterministic("latent_hospital_admissions", latent_hospital_admissions)
 
         return HospitalAdmissionsSample(
             infection_hosp_rate=infection_hosp_rate,

@@ -40,9 +40,7 @@ def _infection_w_feedback_alt(
     tuple
     """
     T = len(Rt)
-    Rt = np.array(Rt).reshape(
-        T, -1
-    )  # coerce from jax to use numpy-like operations
+    Rt = np.array(Rt).reshape(T, -1)  # coerce from jax to use numpy-like operations
     len_gen = len(gen_int)
     infs = np.pad(I0.reshape(T, -1), ((0, Rt.shape[0]), (0, 0)))
     Rt_adj = np.zeros(Rt.shape)
@@ -71,20 +69,14 @@ def _infection_w_feedback_alt(
         [
             jnp.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25]),
             jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
-            DeterministicVariable(
-                name="inf_feed_strength", value=jnp.array(0)
-            ),
+            DeterministicVariable(name="inf_feed_strength", value=jnp.array(0)),
         ],
         [
-            jnp.array(
-                np.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25] * 3)
-            ).reshape((7, 3)),
-            jnp.array(
-                np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] * 3)
-            ).reshape((7, 3)),
-            DeterministicVariable(
-                name="inf_feed_strength", value=jnp.zeros(3)
+            jnp.array(np.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25] * 3)).reshape((7, 3)),
+            jnp.array(np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] * 3)).reshape(
+                (7, 3)
             ),
+            DeterministicVariable(name="inf_feed_strength", value=jnp.zeros(3)),
         ],
     ],
 )
@@ -137,12 +129,10 @@ def test_infectionsrtfeedback(Rt, I0, inf_feed_strength):
             jnp.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0]),
         ],
         [
-            jnp.array(
-                np.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25] * 3)
-            ).reshape((7, 3)),
-            jnp.array(
-                np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] * 3)
-            ).reshape((7, 3)),
+            jnp.array(np.array([0.5, 0.6, 0.7, 0.8, 2, 0.5, 2.25] * 3)).reshape((7, 3)),
+            jnp.array(np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] * 3)).reshape(
+                (7, 3)
+            ),
         ],
     ],
 )
@@ -205,15 +195,13 @@ def test_infections_with_feedback_invalid_inputs():
     be sampled when Rt and I0 have invalid input shapes
     """
     I0_1d = jnp.array([0.5, 0.6, 0.7, 0.8])
-    I0_2d = jnp.array(
-        np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] * 3)
-    ).reshape((7, -1))
+    I0_2d = jnp.array(np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0] * 3)).reshape(
+        (7, -1)
+    )
     Rt = jnp.ones(10)
     gen_int = jnp.array([0.4, 0.25, 0.25, 0.1, 0.0, 0.0, 0.0])
 
-    inf_feed_strength = DeterministicVariable(
-        name="inf_feed_strength", value=0.5
-    )
+    inf_feed_strength = DeterministicVariable(name="inf_feed_strength", value=0.5)
     inf_feedback_pmf = DeterministicPMF(name="inf_feedback_pmf", value=gen_int)
 
     # Test the InfectionsWithFeedback class

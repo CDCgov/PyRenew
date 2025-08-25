@@ -503,9 +503,7 @@ def test_model_hosp_with_obs_model_weekday_phosp():
 
     # Sampling and fitting model 0 (with no obs for infections)
     with numpyro.handlers.seed(rng_seed=223):
-        model1_samp = model1.sample(
-            n_datapoints=n_obs_to_generate, padding=pad_size
-        )
+        model1_samp = model1.sample(n_datapoints=n_obs_to_generate, padding=pad_size)
 
     # Showed during merge conflict, but unsure if it will be needed
     #  pad_size = 5
