@@ -24,7 +24,7 @@ repos:
     rev: v0.12.9
     hooks:
       # Run the linter
-      - id: ruff
+      - id: ruff-check
       # Run the formatter
       - id: ruff-format
   - repo: https://github.com/numpy/numpydoc
