@@ -313,10 +313,10 @@ def integrate_discrete(
 ) -> ArrayLike:
     """
     Integrate (de-difference) the differenced process,
-    obtaining the process values :math:`X(t=0), X(t=1), ... X(t)`
+    obtaining the process values :math:`X(t=0), X(t=1), ... , X(t)`
     from the :math:`n^{th}` differences and a set of
     initial process / difference values
-    :math:`X(t=0), X^1(t=1), X^2(t=2), ... X^{(n-1)}(t=n-1)`,
+    :math:`X(t=0), X^1(t=1), X^2(t=2), ..., X^{(n-1)}(t=n-1)`,
     where :math:`X^k(t)` is the value of the :math:`n^{th}`
     difference at index :math:`t` of the process,
     obtaining a sequence of length equal to the length of
@@ -327,7 +327,7 @@ def integrate_discrete(
     ----------
     init_diff_vals : ArrayLike
         Values of
-        :math:`X(t=0), X^1(t=1), X^2(t=2) ... X^{(n-1)}(t=n-1)`.
+        :math:`X(t=0), X^1(t=1), X^2(t=2) ..., X^{(n-1)}(t=n-1)`.
 
     highest_order_diff_vals : ArrayLike
         Array of differences at the highest order of
