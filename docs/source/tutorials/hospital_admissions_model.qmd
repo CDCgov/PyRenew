@@ -28,12 +28,12 @@ $$
 \begin{align*}
 h(t) & \sim \mathrm{NegativeBinomial}\left(\mathrm{mean} = H(t), \mathrm{concentration} = k\right) \\
 H(t) & = p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau) \\
-\log[p_\mathrm{hosp}(t)] & \sim \mathrm{Normal}(\mu=\log(0.05), \sigma=\log(1.1) \\
+\log[p_\mathrm{hosp}(t)] & \sim \mathrm{Normal}(\mu=\log(0.05), \sigma=\log(1.1)) \\
 \log(k) & \sim \mathrm{Normal}(\mu=\log(1), \sigma=\log(10))
 \end{align*}
 $$
 
-Were $d(\tau)$ is the infection to hospital admission interval, $I(t)$ is the number of latent infections at time $t$, $p_\mathrm{hosp}(t)$ is the infection to admission rate.
+Where $d(\tau)$ is the infection to hospital admission interval, $I(t)$ is the number of latent infections at time $t$, and $p_\mathrm{hosp}(t)$ is the infection to admission rate.
 
 The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to admission rate. The latent infections are modeled as a renewal process:
 
