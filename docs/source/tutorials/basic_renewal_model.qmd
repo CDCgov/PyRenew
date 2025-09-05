@@ -142,7 +142,7 @@ class MyRt(RandomVariable):
             base_rv=RandomWalk(
                 name="log_rt",
                 step_rv=DistributionalVariable(
-                    name="rw_step_rv", distribution=dist.Normal(0, 0.025)
+                    name="rw_step_rv", distribution=dist.Normal(0, sd_rt)
                 ),
             ),
             transforms=t.ExpTransform(),
