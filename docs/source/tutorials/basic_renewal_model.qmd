@@ -270,7 +270,7 @@ model1.run(
 )
 ```
 
-We can use the [ArviZ](https://www.arviz.org/) package and convert the fitted model to an [InferenceData object](https://python.arviz.org/en/latest/getting_started/WorkingWithInferenceData.html#) so that we can extract samples, calculate statistics, create model-fit diagnostics and visualizations.
+We can use the [ArviZ](https://www.arviz.org/) package to convert the fitted model to an [InferenceData object](https://python.arviz.org/en/latest/getting_started/WorkingWithInferenceData.html) so that we can extract samples, calculate statistics and model-fit diagnostics, and create visualizations.
 
 ```{python}
 # | label: convert-inference-data
