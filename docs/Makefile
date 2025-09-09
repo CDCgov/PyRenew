@@ -68,8 +68,8 @@ tutorials_clean:
 
 .PHONY: html
 html: $(TUTORIALS_MD)
-	@$(MKDOCSBUILD) build
+	@cd .. && $(MKDOCSBUILD) build
 
 .PHONY: serve
 serve: $(TUTORIALS_MD)
-	@$(MKDOCSBUILD) serve
+	@cd .. && $(MKDOCSBUILD) serve
