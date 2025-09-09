@@ -102,7 +102,7 @@ nav:
     # ... other reference pages
   - Tutorials:
     - tutorials/index.md
-    # ... other tutorial pages  
+    # ... other tutorial pages
   - Developer Documentation: developer_documentation.md
 ````
 

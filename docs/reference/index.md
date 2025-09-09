@@ -5,7 +5,7 @@ This section provides detailed documentation for all classes, functions, and mod
 ## Modules
 
 - [Model](model.md) - Core renewal model implementations
-- [Latent](latent.md) - Latent variable components  
+- [Latent](latent.md) - Latent variable components
 - [Process](process.md) - Stochastic process implementations
 - [Random Variable](randomvariable.md) - Random variable abstractions
 - [Observation](observation.md) - Observation model components

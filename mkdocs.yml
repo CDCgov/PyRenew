@@ -8,24 +8,24 @@ edit_uri: "edit/main/docs/"
 nav:
   - Home: index.md
   - API Reference:
-    - reference/index.md
-    - Model: reference/model.md
-    - Latent: reference/latent.md
-    - Process: reference/process.md
-    - Random Variable: reference/randomvariable.md
-    - Observation: reference/observation.md
-    - Distributions: reference/distributions.md
-    - Deterministic: reference/deterministic.md
-    - Datasets: reference/datasets.md
-    - Additional: reference/additional.md
+      - reference/index.md
+      - Model: reference/model.md
+      - Latent: reference/latent.md
+      - Process: reference/process.md
+      - Random Variable: reference/randomvariable.md
+      - Observation: reference/observation.md
+      - Distributions: reference/distributions.md
+      - Deterministic: reference/deterministic.md
+      - Datasets: reference/datasets.md
+      - Additional: reference/additional.md
   - Tutorials:
-    - tutorials/index.md
-    - Getting Started: tutorials/getting_started.md
-    - Basic Renewal Model: tutorials/basic_renewal_model.md
-    - Day of the Week Effects: tutorials/day_of_the_week.md
-    - Extending PyRenew: tutorials/extending_pyrenew.md
-    - Hospital Admissions Model: tutorials/hospital_admissions_model.md
-    - Periodic Effects: tutorials/periodic_effects.md
+      - tutorials/index.md
+      - Getting Started: tutorials/getting_started.md
+      - Basic Renewal Model: tutorials/basic_renewal_model.md
+      - Day of the Week Effects: tutorials/day_of_the_week.md
+      - Extending PyRenew: tutorials/extending_pyrenew.md
+      - Hospital Admissions Model: tutorials/hospital_admissions_model.md
+      - Periodic Effects: tutorials/periodic_effects.md
   - Developer Documentation: developer_documentation.md
 
 theme:
@@ -82,7 +82,6 @@ markdown_extensions:
       custom_fences:
         - name: mermaid
           class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
