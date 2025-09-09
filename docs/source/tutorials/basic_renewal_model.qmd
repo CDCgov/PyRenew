@@ -278,7 +278,7 @@ idata = az.from_numpyro(model1.mcmc)
 idata
 ```
 
-Here, we show diagnostic summary for the effective reproduction number $(\mathcal{R}(t))$ at the first 10 time steps. 
+Here, we show diagnostic summary for the effective reproduction number $(\mathcal{R}(t))$ at the first 10 time steps.
 
 ```{python}
 # | label: diagnostics
