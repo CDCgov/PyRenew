@@ -272,16 +272,12 @@ model1.run(
 
 We can use the [ArviZ](https://www.arviz.org/) package to convert the fitted model to an [InferenceData object](https://python.arviz.org/en/latest/getting_started/WorkingWithInferenceData.html) so that we can extract samples, calculate statistics and model-fit diagnostics, and create visualizations.
 
+We create the object `idata` and show diagnostic summary for the effective reproduction number $(\mathcal{R}(t))$ at the first 10 time steps.
+
 ```{python}
 # | label: convert-inference-data
 idata = az.from_numpyro(model1.mcmc)
-idata
-```
 
-Here, we show diagnostic summary for the effective reproduction number $(\mathcal{R}(t))$ at the first 10 time steps.
-
-```{python}
-# | label: diagnostics
 diagnostic_stats_summary = az.summary(
     idata.posterior["Rt"][::, ::, 4:],  # ignore nan padding
     kind="diagnostics",
@@ -289,7 +285,7 @@ diagnostic_stats_summary = az.summary(
 print(diagnostic_stats_summary.head(10))
 ```
 
-Now, let's investigate the output, particularly the posterior distribution of the $\mathcal{R}(t)$ estimates:
+Now, let's investigate the samples from the posterior, starting with the distribution of the $\mathcal{R}(t)$ estimates:
 
 ```{python}
 # | label: fig-output-rt
