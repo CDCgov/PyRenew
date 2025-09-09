@@ -39,16 +39,12 @@ jobs:
     - name: Install the project
       run: uv sync --all-extras
 
-    - name: Render documentation index from README
-      run: |
-        cp README.md docs/index.md
-
     # Building
     - name: Build HTML using uv
       run: |
         cp README.md docs/index.md
         cd docs && uv run make tutorials_clean
-        uv run mkdocs build
+        cd .. && uv run mkdocs build
 
     # Upload
     - name: Upload artifacts
