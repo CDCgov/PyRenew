@@ -266,7 +266,7 @@ model1.run(
     num_samples=1000,
     data_observed_infections=sim_data.observed_infections,
     rng_key=jax.random.key(54),
-    mcmc_args=dict(progress_bar=False, num_chains=4),
+    mcmc_args=dict(progress_bar=False, num_chains=2),
 )
 ```
 
@@ -292,7 +292,7 @@ Now, let's investigate the samples from the posterior, starting with the distrib
 # | fig-cap: Rt posterior distribution
 
 # Extract Rt signal samples across chains
-rt = az.extract(idata.posterior["Rt"], num_samples=400)["Rt"].values
+rt = az.extract(idata.posterior["Rt"], num_samples=200)["Rt"].values
 
 
 # Plot Rt signal
