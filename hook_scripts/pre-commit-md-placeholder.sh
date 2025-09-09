@@ -1,9 +1,9 @@
 #!/usr/bin/env sh
 
-TUTORIALS_DIR=docs/source/tutorials
+TUTORIALS_DIR=docs/tutorials
 
-# For each *qmd file in docs/source/tutorials, create a
-# corresponding md file under docs/source/tutorials
+# For each *qmd file in docs/tutorials, create a
+# corresponding md file under docs/tutorials
 COUNTER=0
 
 # Removing everything under docs/source/tutorials/*.md with

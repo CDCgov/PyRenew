@@ -1,0 +1,35 @@
+/* Custom styles for PyRenew documentation */
+
+/* Code block styling */
+.highlight {
+    background-color: var(--md-code-bg-color);
+    border-radius: 0.2rem;
+}
+
+/* Table styling */
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+table th,
+table td {
+    border: 1px solid var(--md-default-fg-color--lighter);
+    padding: 0.5rem;
+    text-align: left;
+}
+
+table th {
+    background-color: var(--md-default-bg-color--light);
+    font-weight: bold;
+}
+
+/* Admonition styling adjustments */
+.admonition {
+    margin: 1rem 0;
+}
+
+/* MathJax styling */
+.MathJax {
+    font-size: 1em !important;
+}

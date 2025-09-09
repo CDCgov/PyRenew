@@ -1,0 +1,110 @@
+site_name: "Multisignal Renewal Models for Epi Inference"
+site_description: "PyRenew, a Python package for multi-signal Bayesian renewal modeling with JAX and NumPyro."
+site_url: "https://cdcgov.github.io/PyRenew/"
+repo_url: "https://github.com/CDCgov/PyRenew"
+repo_name: "CDCgov/PyRenew"
+edit_uri: "edit/main/docs/"
+
+nav:
+  - Home: index.md
+  - API Reference:
+    - reference/index.md
+    - Model: reference/model.md
+    - Latent: reference/latent.md
+    - Process: reference/process.md
+    - Random Variable: reference/randomvariable.md
+    - Observation: reference/observation.md
+    - Distributions: reference/distributions.md
+    - Deterministic: reference/deterministic.md
+    - Datasets: reference/datasets.md
+    - Additional: reference/additional.md
+  - Tutorials:
+    - tutorials/index.md
+    - Getting Started: tutorials/getting_started.md
+    - Basic Renewal Model: tutorials/basic_renewal_model.md
+    - Day of the Week Effects: tutorials/day_of_the_week.md
+    - Extending PyRenew: tutorials/extending_pyrenew.md
+    - Hospital Admissions Model: tutorials/hospital_admissions_model.md
+    - Periodic Effects: tutorials/periodic_effects.md
+  - Developer Documentation: developer_documentation.md
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - search.suggest
+    - content.code.copy
+    - content.action.edit
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Palette toggle for dark mode
+    - scheme: slate
+      primary: blue
+      accent: blue
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            docstring_style: numpy
+            show_source: true
+            show_root_heading: true
+            show_root_full_path: false
+            show_object_full_path: false
+            show_category_heading: true
+            show_if_no_docstring: false
+            annotations_path: brief
+            line_length: 80
+            show_signature_annotations: true
+            separate_signature: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+  - pymdownx.arithmatex:
+      generic: true
+
+extra_javascript:
+  - javascripts/mathjax.js
+  - https://polyfill.io/v3/polyfill.min.js?features=es6
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
+
+extra_css:
+  - stylesheets/extra.css
+
+watch:
+  - pyrenew/

@@ -1,20 +1,26 @@
-# Minimal makefile for Sphinx documentation
+# Makefile for MkDocs documentation
 #
 
 # You can set these variables from the command line, and also
 # from the environment for the first two.
-SPHINXOPTS    ?=
-SPHINXBUILD   ?= sphinx-build
-SOURCEDIR     = source
-BUILDDIR      = build
+MKDOCSBUILD   ?= mkdocs
+SOURCEDIR     = .
+BUILDDIR      = site
 
 # Put it first so that "make" without argument is like "make help".
 help:
-	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@echo "Please use 'make <target>' where <target> is one of"
+	@echo "  html       to make standalone HTML files"
+	@echo "  serve      to serve the documentation locally"
+	@echo "  tutorials  to build all tutorial formats"
+	@echo "  tutorials_md     to build tutorial markdown files"
+	@echo "  tutorials_ipynb  to build tutorial notebook files"
+	@echo "  tutorials_py     to build tutorial Python files"
+	@echo "  tutorials_clean  to clean tutorial build artifacts"
 
-.PHONY: help Makefile
+.PHONY: help html serve Makefile
 
-TUTORIALSDIR = $(SOURCEDIR)/tutorials
+TUTORIALSDIR = tutorials
 
 .PHONY: tutorials tutorials_md tutorials_ipynb tutorials_py tutorials_clean echo_tutorial_source
 
@@ -23,11 +29,11 @@ $(TUTORIALSDIR)/%.md: $(TUTORIALSDIR)/%.qmd
 	quarto render $< --to gfm
 
 # Pattern rule to build a notebook file from a qmd file
-$(TUTORIALS_DIR)/%.ipynb: $(TUTORIALS_DIR)/%.qmd
+$(TUTORIALSDIR)/%.ipynb: $(TUTORIALSDIR)/%.qmd
 	quarto convert $< --output $@
 
 # Pattern rule to build a Python file from a notebook file
-$(TUTORIALS_DIR)/%.py: $(TUTORIALS_DIR)/%.ipynb
+$(TUTORIALSDIR)/%.py: $(TUTORIALSDIR)/%.ipynb
 	sed -i.bak 's/"cell_type": "raw"/"cell_type": "markdown"/g' $<
 	jupyter nbconvert --to python $<
 	rm $<.bak
@@ -62,9 +68,8 @@ tutorials_clean:
 
 .PHONY: html
 html: $(TUTORIALS_MD)
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@$(MKDOCSBUILD) build
 
-# Catch-all target: route all unknown targets to Sphinx using the new
-# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
-.DEFAULT: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+.PHONY: serve
+serve: $(TUTORIALS_MD)
+	@$(MKDOCSBUILD) serve
