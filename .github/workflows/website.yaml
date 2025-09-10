@@ -43,8 +43,7 @@ jobs:
     - name: Build HTML using uv
       run: |
         cp README.md docs/index.md
-        cd docs && uv run make tutorials_clean
-        cd .. && uv run mkdocs build
+        cd docs && uv run make html
 
     # Upload
     - name: Upload artifacts
