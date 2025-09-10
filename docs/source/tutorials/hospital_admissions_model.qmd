@@ -1,5 +1,5 @@
 ---
-title: Fitting a hospital admissions-only model
+title: "Fitting a hospital admissions-only model"
 format: gfm
 engine: jupyter
 ---
@@ -8,34 +8,44 @@ This document illustrates how a hospital admissions-only model can be fitted usi
 
 We begin by loading `numpyro` and configuring the device count to 2 to enable running MCMC chains in parallel. By default, XLA (which is used by JAX for compilation) considers all CPU cores as one device. Depending on your system's configuration, we recommend using numpyro's [set_host_device_count()](https://num.pyro.ai/en/stable/utilities.html#set-host-device-count) function to set the number of devices available for parallel computing.
 
+
 ```{python}
 # | label: numpyro setup
 import numpyro
 
 numpyro.set_host_device_count(2)
 ```
+
 ## Model definition
 
-In this section, we provide the formal definition of the model. The hospital admissions model is a semi-mechanistic model that describes the number of observed hospital admissions as a function of a set of latent variables. Mainly, the observed number of hospital admissions is discretely distributed with location at the number of latent hospital admissions:
+In this section, we provide the formal definition of the model. The hospital admissions model is a semi-mechanistic model that describes the number of observed hospital admissions, a positive integer, as a discretely distributed variable whose location is the number of latent hospital admissions.
 
 $$
 h(t) \sim \text{HospDist}\left(H(t)\right)
 $$
 
-Where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$. The distribution $\text{HospDist}$ is discrete. For this example, we will use a negative binomial distribution with an inferred concentration.
+Where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$. For this example $\text{HospDist}$ is a negative binomial distribution with an inferred concentration $k$.
+$$
+h(t) \sim \mathrm{NegativeBinomial}\left(\mathrm{mean} = H(t), \mathrm{concentration} = k\right)
+$$
+
+The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to admission rate.
 
 $$
+H(t) = p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
+$$
+Where $d(\tau)$ is the infection to hospital admission interval, $I(t)$ is the number of latent infections at time $t$, and $p_\mathrm{hosp}(t)$ is the infection to admission rate.
+
+The priors on $p_\mathrm{hosp}(t)$ and $k$ reflect our knowledge, or lack thereof, of these variables.
+$$
 \begin{align*}
-h(t) & \sim \mathrm{NegativeBinomial}\left(\mathrm{mean} = H(t), \mathrm{concentration} = k\right) \\
-H(t) & = p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau) \\
 \log[p_\mathrm{hosp}(t)] & \sim \mathrm{Normal}(\mu=\log(0.05), \sigma=\log(1.1)) \\
 \log(k) & \sim \mathrm{Normal}(\mu=\log(1), \sigma=\log(10))
 \end{align*}
 $$
+Without much information, the prior on $k$ allows for any amount of overdispersion.
 
-Where $d(\tau)$ is the infection to hospital admission interval, $I(t)$ is the number of latent infections at time $t$, and $p_\mathrm{hosp}(t)$ is the infection to admission rate.
-
-The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to admission rate. The latent infections are modeled as a renewal process:
+The latent infections are modeled as a renewal process:
 
 $$
 \begin{align*}
@@ -65,7 +75,7 @@ import polars as pl
 from pyrenew import datasets
 
 dat = datasets.load_wastewater()
-dat.head(5)
+dat[["date", "site", "daily_hosp_admits"]].head(5)
 ```
 
 The data shows one entry per site, but the way it was simulated, the number of admissions is the same across sites. Thus, we will only keep the first observation per day.
@@ -110,8 +120,7 @@ plt.show()
 First, we will extract two datasets we will use as deterministic quantities: the generation interval and the infection to hospital admission interval.
 
 ```{python}
-# | label: fig-data-extract
-# | fig-cap: Generation interval and infection to hospital admission interval
+# | label: data-extract-intervals
 gen_int = datasets.load_generation_interval()
 inf_hosp_int = datasets.load_infection_admission_interval()
 
@@ -121,19 +130,26 @@ gen_int = gen_int_array
 inf_hosp_int_array = inf_hosp_int["probability_mass"].to_numpy()
 
 # Taking a peek at the first 5 elements of each
-gen_int[:5], inf_hosp_int_array[:5]
+print("Generation interval\n", gen_int[:5])
+print("Hospital admission interval\n", inf_hosp_int_array[:5])
+```
 
-# Visualizing both quantities side by side
+We plot the full distribution curves side-by-side.
+
+```{python}
+# | label: fig-data-plot
+# | fig-cap: Generation interval and infection to hospital admission interval
 fig, axs = plt.subplots(1, 2)
 
 axs[0].plot(gen_int)
 axs[0].set_title("Generation interval")
 axs[1].plot(inf_hosp_int_array)
 axs[1].set_title("Infection to hospital admission interval")
+fig.supxlabel("Days")
 plt.show()
 ```
 
-With these two in hand, we can start building the model. First, we will define the latent hospital admissions:
+With these arrays in hand, we can start building the model. First, we will define the latent hospital admissions:
 
 ```{python}
 # | label: latent-hosp
@@ -164,7 +180,6 @@ from pyrenew.latent import (
     InfectionInitializationProcess,
     InitializeInfectionsExponentialGrowth,
 )
-
 
 # Infection process
 latent_inf = latent.Infections()
@@ -212,27 +227,21 @@ class MyRt(metaclass.RandomVariable):
 
 rtproc = MyRt()
 
-# The observation model
-
-# we place a log-Normal prior on the concentration
-# parameter of the negative binomial.
-nb_conc_rv = randomvariable.TransformedVariable(
+# Put a log-Normal prior on the concentration parameter
+# of the negative binomial.
+nb_conc_rv = randomvariable.DistributionalVariable(
     "concentration",
-    randomvariable.DistributionalVariable(
-        name="concentration_raw",
-        distribution=dist.TruncatedNormal(loc=0, scale=1, low=0.01),
-    ),
-    transformation.PowerTransform(-2),
+    distribution=dist.LogNormal(loc=0.0, scale=jnp.log(10.0)),
 )
 
-# now we define the observation process
+# The observation process
 obs = observation.NegativeBinomialObservation(
     "negbinom_rv",
     concentration_rv=nb_conc_rv,
 )
 ```
 
-Notice all the components are `RandomVariable` instances. We can now build the model:
+We can now build the model:
 
 ```{python}
 # | label: init-model
@@ -296,9 +305,7 @@ hosp_model.run(
 )
 ```
 
-We can use `arviz` to visualize the model fit. Here, we plot the observed values against the inferred latent values (i.e. the mean of the negative binomial observation process)[^capture]:
-
-[^capture]: The output is captured to avoid `quarto` from displaying the output twice.
+We can use `arviz` to visualize the model fit. Here, we plot the observed values against the inferred latent values (i.e. the mean of the negative binomial observation process).
 
 ```{python}
 # | label: fig-output-hospital-admissions
@@ -440,7 +447,6 @@ axes.plot(x_data, median_ts, color="C0", label="Median")
 axes.legend()
 ```
 
-
 ## Predictive checks and forecasting
 We can use the `Model`'s `posterior_predictive` and `prior_predictive` methods to generate posterior and prior predictive samples for observed admissions.
 
@@ -479,7 +485,6 @@ ax.set_ylabel("Hospital Admissions")
 ax.set_xlabel("Days")
 plt.show()
 ```
-
 
 By increasing `n_datapoints`, we can perform forecasting using the posterior predictive distribution.
 
@@ -543,6 +548,7 @@ plt.show()
 ```
 
 And now we plot the posterior predictive distributions with a `{python} n_forecast_points`-day-ahead forecast:
+
 ```{python}
 # | label: fig-output-posterior-predictive-forecast
 # | fig-cap: Posterior predictive admissions, including a forecast.
