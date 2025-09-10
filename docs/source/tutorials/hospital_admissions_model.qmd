@@ -29,7 +29,7 @@ $$
 h(t) \sim \mathrm{NegativeBinomial}\left(\mathrm{mean} = H(t), \mathrm{concentration} = k\right)
 $$
 
-The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to admission rate. 
+The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to admission rate.
 
 $$
 H(t) = p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
@@ -75,7 +75,7 @@ import polars as pl
 from pyrenew import datasets
 
 dat = datasets.load_wastewater()
-dat[['date', 'site', 'daily_hosp_admits']].head(5)
+dat[["date", "site", "daily_hosp_admits"]].head(5)
 ```
 
 The data shows one entry per site, but the way it was simulated, the number of admissions is the same across sites. Thus, we will only keep the first observation per day.
@@ -198,6 +198,7 @@ I0 = InfectionInitializationProcess(
 
 # Generation interval and Rt
 gen_int = deterministic.DeterministicPMF(name="gen_int", value=gen_int)
+
 
 class MyRt(metaclass.RandomVariable):
     def validate(self):
@@ -594,5 +595,3 @@ axes.set_xlabel("Time", fontsize=10)
 axes.set_ylabel("Hospital Admissions", fontsize=10)
 plt.show()
 ```
-
-
