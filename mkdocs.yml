@@ -59,6 +59,7 @@ theme:
 
 plugins:
   - search
+  - offline
   - mkdocstrings:
       handlers:
         python:
