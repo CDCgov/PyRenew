@@ -125,7 +125,7 @@ Our basic renewal process model defines five components:
 
 (5) Observed infections, a subset of underlying true infections that are reported, perhaps via hospital admissions, physician's office visits, or routine biosurveillance.
 
-In order to provide a simple, computationally tractable example, we initialize these five components within the renewal modeling framework we specify each component as follows.
+In order to provide a simple, computationally tractable example, we initialize these five components within the renewal modeling framework. We specify each component as follows.
 
 (1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
