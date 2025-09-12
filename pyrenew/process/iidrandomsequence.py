@@ -26,10 +26,6 @@ class IIDRandomSequence(RandomVariable):
 
         Parameters
         ----------
-        name : str
-            A name for the random variable, used to
-            name sites within it in :meth:`numpyro.sample()`
-            calls.
         element_rv : RandomVariable
             RandomVariable representing a single element
             in the sequence.
@@ -118,8 +114,6 @@ class StandardNormalSequence(IIDRandomSequence):
 
         Parameters
         ----------
-        name : str
-            see :class:`IIDRandomSequence`.
         element_rv_name: str
             Name for the internal element_rv, here a
             DistributionalVariable encoding a

@@ -27,11 +27,6 @@ class RandomWalk(DifferencedProcess):
 
         Parameters
         ----------
-        name : str
-            A name for the random variable, used to
-            name sites within it in :meth:`numpyro.sample()`
-            calls.
-
         step_rv : RandomVariable
             RandomVariable representing a single step
             (difference) in the random walk.

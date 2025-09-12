@@ -130,14 +130,14 @@ class DifferencedProcess(RandomVariable):
             :code:`n`.
 
         *args :
-           Additional positional arguments passed to
-           :meth:`self.fundamental_process.sample`
+            Additional positional arguments passed to
+            :meth:`self.fundamental_process.sample`
 
         fundamental_process_init_vals : ArrayLike, optional
-           Initial values for the fundamental process.
-           Passed as the :code:`init_vals` keyword argument
-           to :meth:`self.fundamental_process.sample`.
-           Default :obj:`None`.
+            Initial values for the fundamental process.
+            Passed as the :code:`init_vals` keyword argument
+            to :meth:`self.fundamental_process.sample`.
+            Default :obj:`None`.
 
         **kwargs : dict, optional
             Keyword arguments passed to

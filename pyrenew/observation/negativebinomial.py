@@ -25,7 +25,7 @@ class NegativeBinomialObservation(RandomVariable):
         ----------
         name : str
             Name for the numpyro variable.
-        concentration : RandomVariable
+        concentration_rv : RandomVariable
             Random variable from which to sample the positive concentration
             parameter of the negative binomial. This parameter is sometimes
             called k, phi, or the "dispersion" or "overdispersion" parameter,

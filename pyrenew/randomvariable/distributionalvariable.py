@@ -114,7 +114,7 @@ class DynamicDistributionalVariable(RandomVariable):
         Returns
         -------
         ArrayLike
-           a sample from the distribution.
+            a sample from the distribution.
         """
         distribution = self.distribution_constructor(*args, **kwargs)
         if self.expand_by_shape is not None:
@@ -234,7 +234,7 @@ class StaticDistributionalVariable(RandomVariable):
         Returns
         -------
         ArrayLike
-           Containing a sample from the distribution.
+            Containing a sample from the distribution.
         """
         with numpyro.handlers.reparam(config=self.reparam_dict):
             sample = numpyro.sample(
