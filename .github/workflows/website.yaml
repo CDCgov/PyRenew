@@ -46,9 +46,7 @@ jobs:
     # Building
     - name: Build HTML using uv
       run: |
-        cd docs
-        uv run make tutorials_clean
-        uv run make html
+        uv run make docs
 
     # Upload
     - name: Upload artifacts
@@ -56,7 +54,7 @@ jobs:
       with:
         name: github-pages
         retention-days: 7
-        path: docs/build/html/
+        path: site/
 
   deploy:
     # Deploy to the github-pages environment

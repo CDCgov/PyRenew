@@ -7,10 +7,13 @@ help:
 	@echo "  test           : Run the tests"
 
 install:
-	uv sync --extra dev
+	uv sync --all-groups
 
 test:
 	uv run pytest --mpl --mpl-default-tolerance=10
 
+docs:
+	quarto render docs/tutorials/*.qmd --to commonmark
+	uv run mkdocs build
 
-.PHONY: install test
+.PHONY: install test docs
