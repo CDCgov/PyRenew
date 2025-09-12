@@ -38,10 +38,10 @@ def neg_MGF(r: float, w: ArrayLike) -> float:
     Parameters
     ----------
     r: float
-       The rate parameter.
+        The rate parameter.
 
     w: ArrayLike
-       An array of weights.
+        An array of weights.
 
     Returns
     -------
@@ -75,10 +75,10 @@ def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
     Parameters
     ----------
     r: float
-       The rate parameter.
+        The rate parameter.
 
     w: ArrayLike
-       An array of weights.
+        An array of weights.
 
     Returns
     -------
@@ -165,10 +165,10 @@ def get_leslie_matrix(R: float, generation_interval_pmf: ArrayLike) -> ArrayLike
     Parameters
     ----------
     R : float
-       The reproduction number of the renewal process
+        The reproduction number of the renewal process
     generation_interval_pmf: ArrayLike
-       The discrete generation interval probability
-       mass vector of the renewal process
+        The discrete generation interval probability
+        mass vector of the renewal process
 
     Returns
     -------
@@ -202,10 +202,10 @@ def get_asymptotic_growth_rate_and_age_dist(
     Parameters
     ----------
     R : float
-       The reproduction number of the renewal process
+        The reproduction number of the renewal process
     generation_interval_pmf: ArrayLike
-       The discrete generation interval probability
-       mass vector of the renewal process
+        The discrete generation interval probability
+        mass vector of the renewal process
 
     Returns
     -------
@@ -264,10 +264,10 @@ def get_stable_age_distribution(
     Parameters
     ----------
     R : float
-       The reproduction number of the renewal process
-    generation_interval_pmf: ArrayLike
-       The discrete generation interval probability
-       mass vector of the renewal process
+        The reproduction number of the renewal process
+        generation_interval_pmf: ArrayLike
+        The discrete generation interval probability
+        mass vector of the renewal process
 
     Returns
     -------
@@ -294,10 +294,10 @@ def get_asymptotic_growth_rate(R: float, generation_interval_pmf: ArrayLike) -> 
     Parameters
     ----------
     R : float
-       The reproduction number of the renewal process
+        The reproduction number of the renewal process
     generation_interval_pmf: ArrayLike
-       The discrete generation interval probability
-       mass vector of the renewal process
+        The discrete generation interval probability
+        mass vector of the renewal process
 
     Returns
     -------
