@@ -17,21 +17,20 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
     Parameters
     ----------
     day_of_week: int
-       Integer to validate.
+        Integer to validate.
 
     variable_name: str
-       Name of the variable being validated, to increase
-       the informativeness of the error message.
+        Name of the variable being validated, to increase the informativeness of the error message.
 
     Returns
     -------
     None
-       If validation passes.
+        If validation passes.
 
     Raises
     ------
     ValueError
-       If validation fails.
+        If validation fails.
     """
     if not isinstance(day_of_week, int):
         raise ValueError(

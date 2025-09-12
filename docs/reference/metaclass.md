@@ -1,0 +1,3 @@
+# Metaclass
+
+::: pyrenew.metaclass

@@ -6,20 +6,13 @@ repos:
     hooks:
       - id: check-added-large-files
       - id: check-yaml
+        args: [--unsafe]
       - id: check-toml
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
   #####
   # Python
-  - repo: local
-    hooks:
-      - id: generate-md-placeholders
-        name: Tutorials .md placeholders
-        entry: ./hook_scripts/pre-commit-md-placeholder.sh
-        language: script
-        always_run: true
-        files: "docs/source/tutorials/.*(qmd|md)$"
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.12.12
     hooks:

@@ -105,7 +105,7 @@ class TransformedVariable(RandomVariable):
         Returns
         -------
         int
-           Equal to the length self.transforms
+            Equal to the length self.transforms
         """
         return len(self.transforms)
 
@@ -121,7 +121,7 @@ class TransformedVariable(RandomVariable):
         Returns
         -------
         None
-           on successful validation, or raise a ValueError
+            on successful validation, or raise a ValueError
         """
         for t in self.transforms:
             if not callable(t):
