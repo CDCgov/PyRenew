@@ -39,10 +39,6 @@ jobs:
     - name: Install the project
       run: uv sync --all-extras
 
-    - name: Render documentation index from README
-      run: |
-        cp README.md docs/source/index.md
-
     # Building
     - name: Build HTML using uv
       run: |
