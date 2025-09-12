@@ -749,6 +749,18 @@ wheels = [
 ]
 
 [[package]]
+name = "markdown-callouts"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/87/73/ae5aa379f6f7fea9d0bf4cba888f9a31d451d90f80033ae60ae3045770d5/markdown_callouts-0.4.0.tar.gz", hash = "sha256:7ed2c90486967058a73a547781121983839522d67041ae52c4979616f1b2b746", size = 9768, upload-time = "2024-01-22T23:18:18.513Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1d/b5/7b0a0a52c82bfccd830af2a8cc8add1c5bc932e0204922434954a631dd51/markdown_callouts-0.4.0-py3-none-any.whl", hash = "sha256:ed0da38f29158d93116a0d0c6ecaf9df90b37e0d989b5337d678ee6e6d6550b7", size = 7108, upload-time = "2024-01-22T23:18:17.465Z" },
+]
+
+[[package]]
 name = "markupsafe"
 version = "3.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -966,19 +978,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/95/ae/58ab2bfbee2792e92a98b97e872f7c003deb903071f75d8d83aa55db28fa/mkdocstrings_python-1.18.2.tar.gz", hash = "sha256:4ad536920a07b6336f50d4c6d5603316fafb1172c5c882370cbbc954770ad323", size = 207972, upload-time = "2025-08-28T16:11:19.847Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d5/8f/ce008599d9adebf33ed144e7736914385e8537f5fc686fdb7cceb8c22431/mkdocstrings_python-1.18.2-py3-none-any.whl", hash = "sha256:944fe6deb8f08f33fa936d538233c4036e9f53e840994f6146e8e94eb71b600d", size = 138215, upload-time = "2025-08-28T16:11:18.176Z" },
-]
-
-[[package]]
-name = "mkquartodocs"
-version = "0.6.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "mkdocs" },
-    { name = "pymdown-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/81/ba/6e7281d8db03d44362193e4dc260fbeffbd39d97db2c9634d39aac67ac8d/mkquartodocs-0.6.0.tar.gz", hash = "sha256:b6596c1e3cdde78afe129fc1cf1cb187fa74c621940567dc225e7e38d7508d68", size = 1052465, upload-time = "2025-03-21T09:43:13.597Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/01/12/3b28c6e32a36a4e30b24436c18ead574f30db20c23fc97f4c2df2fdb94d8/mkquartodocs-0.6.0-py3-none-any.whl", hash = "sha256:9b73ea91a8d9631601d68b4385e180f5ed789704d948b5c83ed3f7ef99bb3ebe", size = 16403, upload-time = "2025-03-21T09:43:11.527Z" },
 ]
 
 [[package]]
@@ -1430,11 +1429,11 @@ dev = [
     { name = "arviz" },
     { name = "deptry" },
     { name = "ipykernel" },
+    { name = "markdown-callouts" },
     { name = "mkdocs" },
     { name = "mkdocs-material" },
     { name = "mkdocstrings" },
     { name = "mkdocstrings-python" },
-    { name = "mkquartodocs" },
     { name = "nbconvert" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1456,11 +1455,11 @@ dev = [
     { name = "arviz", specifier = ">=0.22.0" },
     { name = "deptry", specifier = ">=0.23.1" },
     { name = "ipykernel", specifier = ">=6.30.1" },
+    { name = "markdown-callouts", specifier = ">=0.4.0" },
     { name = "mkdocs", specifier = ">=1.6.1" },
     { name = "mkdocs-material", specifier = ">=9.6.19" },
     { name = "mkdocstrings", specifier = ">=0.30.0" },
     { name = "mkdocstrings-python", specifier = ">=1.18.2" },
-    { name = "mkquartodocs", specifier = ">=0.6.0" },
     { name = "nbconvert", specifier = ">=7.16.6" },
     { name = "pytest", specifier = ">=8.4.2" },
     { name = "pytest-cov", specifier = ">=6.3.0" },
