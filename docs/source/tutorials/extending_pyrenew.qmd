@@ -1,22 +1,30 @@
 ---
-title: Extending pyrenew
+title: Defining Custom PyRenew RandomVariables
 format: gfm
 ---
 
-This tutorial illustrates how to extend `pyrenew` with custom `RandomVariable` classes. We will use the `InfectionsWithFeedback` class as an example. The `InfectionsWithFeedback` class is a `RandomVariable` that models the number of infections at time $t$ as a function of the number of infections at time $t - \tau$ and the reproduction number at time $t$. The reproduction number at time $t$ is a function of the *unadjusted* reproduction number at time $t - \tau$ and the number of infections at time $t - \tau$:
 
-$$
-\begin{align*}
-I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau) \\
-\mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
-\end{align*}
-$$
+This tutorial illustrates how define new `RandomVariable` classes in order to extend existing models and build new ones, according to [PyRenew principles](https://cdcgov.github.io/PyRenew/developer_documentation.html#pyrenew-principles).
 
-Where $\mathcal{R}^u(t)$ is the unadjusted reproduction number, $g(t)$ is the generation interval, $\gamma(t)$ is the infection feedback strength, and $f(t)$ is the infection feedback pmf.
+An example of a custom `RandomVariable` class is the `InfectionsWithFeedback` class which models
+the number of infections at time $t$ as a function of the number of infections at time $t - \tau$
 
-## The expected outcome
+$$I(t) = \mathcal{R}(t) \sum_{\tau = 1}^{T_g} I(t-\tau) g(\tau)$$
 
-Before we start, let's simulate the model with the original `InfectionsWithFeedback` class. To keep it simple, we will simulate the model with no observation process, in other words, only with latent infections. The following code-chunk loads the required libraries and defines the model components:
+where $\mathcal{R}(t)$ is the reproduction number at time $t$,
+and $g(\tau)$
+is the distribution of times from incident infection to secondary infection, i.e., the infectiousness profile.
+
+The reproduction number at time $t$ is a function of the unadjusted reproduction number at time $t$
+$\mathcal{R}^\mathrm{u}(t)$ and a damping factor which provides feedback from recent transmission
+
+$$\mathcal{R}(t) = \mathcal{R}^u(t)\exp\left(-\gamma(t)\sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)$$
+
+where $\gamma \geq 0$ scales the feedback strength 
+and the function $f(\tau)$ is the time-scale over which past infections influence
+the current time-varying reproductive number $\mathcal{R}(t)$.
+Because $\gamma$ is constrained to be positive, this provides a negative feedback mechanism.
+
 
 ```{python}
 # | label: setup
@@ -38,16 +46,33 @@ from pyrenew.latent import (
 import pyrenew.transformation as t
 ```
 
-The following code-chunk defines the model components. Notice that for both the generation interval and the infection feedback, we use a deterministic PMF with equal probabilities:
+## Expected Behavior of the Feedback Mechanism
+
+This section demonstrates how to use the `InfectionsWithFeedback` class to model the number of infections
+by running a baseline simulation.
+We simulate the model without an observation process which
+lets us see how the feedback mechanism affects the reproduction number and subsequent infections over time.
+
+The following code-chunks define the model components in the following order.
+
+* We define a deterministic PMF `gen_int_array`, the discretized fraction of infectiousness per day.
+For this example, we have a 4-day PMF of equal probabilities with feedback strength ($\gamma$)
+set to 0.01 to create moderate damping.
+
+* We specify the `InfectionInitializationProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1.
+
+* We specify the `InfectionsWithFeedback` component using the same distribution as the generation interval.
+
+* The latent random variable $\mathcal{R}^\mathrm{u}(t)$ is estimated via random walk 
+on $log(\mathcal{R}^\mathrm{u}(t))$, (as in the basic renewal model).
 
 ```{python}
 # | label: model-components
-gen_int_array = jnp.array([0.25, 0.5, 0.15, 0.1])
-
+gen_int_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(name="gen_int", value=gen_int_array)
 feedback_strength = DeterministicVariable(name="feedback_strength", value=0.01)
 
-
+# | label: model-components
 I0 = InfectionInitializationProcess(
     "I0_initialization",
     DistributionalVariable(name="I0", distribution=dist.LogNormal(0, 1)),
@@ -62,7 +87,6 @@ latent_infections = InfectionsWithFeedback(
     infection_feedback_pmf=gen_int,
 )
 
-
 class MyRt(RandomVariable):
     def validate(self):
         pass
@@ -75,7 +99,7 @@ class MyRt(RandomVariable):
             base_rv=RandomWalk(
                 name="log_rt",
                 step_rv=DistributionalVariable(
-                    name="rw_step_rv", distribution=dist.Normal(0, 0.025)
+                    name="rw_step_rv", distribution=dist.Normal(0, sd_rt)
                 ),
             ),
             transforms=t.ExpTransform(),
@@ -88,7 +112,7 @@ class MyRt(RandomVariable):
         return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 ```
 
-With all the components defined, we can build the model:
+We build the model from these components and then simulate data from it without observed infections.
 
 ```{python}
 # | label: build1
@@ -97,11 +121,9 @@ model0 = RtInfectionsRenewalModel(
     I0_rv=I0,
     latent_infections_rv=latent_infections,
     Rt_process_rv=MyRt(),
-    infection_obs_process_rv=None,
+    infection_obs_process_rv=None,  # no observed infections
 )
 ```
-
-And simulate from it:
 
 ```{python}
 # | label: simulate1
@@ -122,7 +144,12 @@ ax.set_ylabel("Infections")
 plt.show()
 ```
 
-## Pyrenew's random variable class
+With feedback strength $\gamma = 0.01$, we see:
+
+* Initial exponential-like growth when infection history is minimal
+* Damping effects becoming visible as infections accumulate
+
+## PyRenew's `RandomVariable` class
 
 ### Fundamentals
 
@@ -149,9 +176,12 @@ class MyNormal(RandomVariable):
         return (dist.Normal(loc=self.loc, scale=self.scale),)
 ```
 
-The `@staticmethod` decorator exposes the `validate` function to be used outside the class. Next, we show how to build a more complex `RandomVariable` class; the `InfectionsWithFeedback` class.
+The `@staticmethod` decorator exposes the `validate` function to be used outside the class.
 
-### The `InfectionsWithFeedback` class
+## Essential elements of class `InfectionsWithFeedback`
+
+As an exercise we define a new class `InfFeedback`, which exactly follows the `InfectionsWithFeedback` class,
+but omits the tedious checks on its inputs.
 
 Although returning namedtuples is not strictly required, they are the recommended return type, as they make the code more readable. The following code-chunk shows how to create a named tuple for the `InfectionsWithFeedback` class:
 
@@ -244,7 +274,7 @@ class InfFeedback(RandomVariable):
         # Storing adjusted Rt for future use
         numpyro.deterministic("Rt_adjusted", Rt_adj)
 
-        # Preparing theoutput
+        # Preparing the output
 
         return InfFeedbackSample(
             post_initialization_infections=all_infections,
@@ -259,6 +289,8 @@ The core of the class is implemented in the `sample()` method. Things to highlig
 2. **Saving computed quantities**: Since `Rt_adj` is not generated via `numpyro.sample()`, we use `numpyro.deterministic()` to record the quantity to a site; allowing us to access it later.
 
 3. **Return type of `InfFeedback()`**: As said before, the `sample()` method should return a tuple or named tuple. In our case, we return a named tuple `InfFeedbackSample` with two fields: `infections` and `rt`.
+
+To check our work, we build a second model using our new class `InfFeedback` and compare it to our first model, which uses the built-in `InfectionsWithFeedback` class.
 
 ```{python}
 # | label: simulation2
@@ -295,3 +327,4 @@ ax[1].set_xlabel("Time (model 1)")
 ax[0].set_ylabel("Infections")
 plt.show()
 ```
+
