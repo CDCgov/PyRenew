@@ -5,9 +5,10 @@ help:
 	@echo "  help           : Show this help message"
 	@echo "  install        : Install the project dependencies"
 	@echo "  test           : Run the tests"
+	@echo "  docs           : Build the documentation"
 
 install:
-	uv sync --all-groups
+	uv sync
 
 test:
 	uv run pytest --mpl --mpl-default-tolerance=10
