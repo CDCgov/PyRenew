@@ -38,8 +38,11 @@ plugins:
           paths: ["."]
           inventories:
             - url: "https://docs.python.org/3/objects.inv"
-            - url: "https://docs.pola.rs/api/python/stable/objects.inv"
-              # but see https://github.com/pola-rs/polars/issues/7027
             - url: "https://numpy.org/doc/stable/objects.inv"
             - url: "https://python.arviz.org/en/stable/objects.inv"
+            - url: "https://num.pyro.ai/en/stable/objects.inv"
+            - url: "https://docs.jax.dev/en/latest/objects.inv"
       enable_inventory: true
+
+markdown_extensions:
+  - pymdownx.snippets
