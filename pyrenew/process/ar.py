@@ -43,7 +43,7 @@ class ARProcess(RandomVariable):
         autoreg: ArrayLike
             Autoregressive coefficients.
             The length of the array's first
-            dimension determines the order :math:`p`
+            dimension determines the order $p$
             of the AR process.
         init_vals : ArrayLike
             Array of initial values. Must have the

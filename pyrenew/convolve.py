@@ -67,19 +67,24 @@ def new_convolve_scanner(
     The following iterative operation is found often
     in renewal processes:
 
-    .. math::
-        X(t) = f\left(m(t) \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
-        \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d} \right)
+    ```math
+    X(t) = f\left(m(t) \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
+    \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d} \right)
+    ```
 
-    Where :math:`\mathbf{d}` is a vector of length :math:`n`,
-    :math:`m(t)` is a scalar for each value of time :math:`t`,
-    and :math:`f` is a scalar-valued function.
+    ```math
+    a + b = c^2
+    ```
 
-    Given :math:`\mathbf{d}`, and optionally :math:`f`,
+    Where $\mathbf{d}$ is a vector of length $n$,
+    $m(t)$ is a scalar for each value of time $t$,
+    and $f$ is a scalar-valued function.
+
+    Given $\mathbf{d}$, and optionally $f$,
     this factory function returns a new function that
     performs one step of this process while scanning along
     an array of  multipliers (i.e. an array
-    giving the values of :math:`m(t)`) using [jax.lax.scan][].
+    giving the values of $m(t)$) using [jax.lax.scan][].
     """
 
     def _new_scanner(
@@ -153,9 +158,9 @@ def new_double_convolve_scanner(
         \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d}_2 \right)
         \end{aligned}
 
-    Where :math:`\mathbf{d}_1` and :math:`\mathbf{d}_2` are vectors of
-    length :math:`n`, :math:`m_1(t)` and :math:`m_2(t)` are scalars
-    for each value of time :math:`t`, and :math:`f_1` and :math:`f_2`
+    Where $\mathbf{d}_1$ and $\mathbf{d}_2$ are vectors of
+    length $n$, $m_1(t)$ and $m_2(t)$ are scalars
+    for each value of time $t$, and $f_1$ and $f_2$
     are scalar-valued functions.
     """
     arr1, arr2 = arrays_to_convolve
@@ -208,9 +213,9 @@ def compute_delay_ascertained_incidence(
     delay_incidence_to_observation_pmf: ArrayLike
         Probability mass function of delay interval from incidence to
         observation with support on the interval 0 to the length of the
-        array's first dimension. The :math:`i`\th entry represents the
+        array's first dimension. The $i$\th entry represents the
         probability mass for a delay
-        of :math:`i` time units, i.e
+        of $i$ time units, i.e
         ``delay_incidence_to_observation_pmf[0]`` represents
         the fraction of observations that are delayed 0 time unit,
         ``delay_incidence_to_observation_pmf[1]`` represents the fraction

@@ -136,8 +136,8 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
 
     .. math:: I(t) = I_p \exp \left( r (t - t_p) \right)
 
-    Where :math:`I_p` is ``I_pre_init``, :math:`r` is ``rate``, and :math:`t_p` is ``t_pre_init``.
-    This ensures that :math:`I(t_p) = I_p`.
+    Where $I_p$ is ``I_pre_init``, $r$ is ``rate``, and $t_p$ is ``t_pre_init``.
+    This ensures that $I(t_p) = I_p$.
     We default to ``t_pre_init = n_timepoints - 1``, so that
     ``I_pre_init`` represents the number of incident infections immediately
     before the renewal process begins.

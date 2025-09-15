@@ -51,21 +51,21 @@ class HospitalAdmissions(RandomVariable):
     documentation (`link <https://github.com/CDCgov/ww-inference-model/blob/main/model_definition.md#hospital-admissions-component>`_).
 
     Following other semi-mechanistic renewal frameworks, we model the *expected*
-    hospital admissions per capita :math:`H(t)` as a convolution of the
-    *expected* latent incident infections per capita :math:`I(t)`, and a
-    discrete infection to hospitalization distribution :math:`d(\tau)`, scaled
-    by the probability of being hospitalized :math:`p_\mathrm{hosp}(t)`.
+    hospital admissions per capita $H(t)$ as a convolution of the
+    *expected* latent incident infections per capita $I(t)$, and a
+    discrete infection to hospitalization distribution $d(\tau)$, scaled
+    by the probability of being hospitalized $p_\mathrm{hosp}(t)$.
 
     To account for day-of-week effects in hospital reporting, we use an
-    estimated *day of the week effect* :math:`\omega(t)`. If :math:`t` and :math:`t'`
-    are the same day of the week, :math:`\omega(t) = \omega(t')`. The seven
-    values that :math:`\omega(t)` takes on are constrained to have mean 1.
+    estimated *day of the week effect* $\omega(t)$. If $t$ and $t'$
+    are the same day of the week, $\omega(t) = \omega(t')$. The seven
+    values that $\omega(t)$ takes on are constrained to have mean 1.
 
     .. math::
 
         H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
 
-    Where :math:`T_d` is the maximum delay from infection to hospitalization
+    Where $T_d$ is the maximum delay from infection to hospitalization
     that we consider.
     """
 

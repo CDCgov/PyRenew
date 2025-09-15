@@ -54,10 +54,10 @@ class InfectionsWithFeedback(RandomVariable):
         \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
             \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
 
-    where :math:`\mathcal{R}(t)` is the reproductive number, :math:`\gamma(t)`
-    is the infection feedback strength, :math:`T_g` is the max-length of the
-    generation interval, :math:`\mathcal{R}^u(t)` is the raw reproduction
-    number, :math:`f(t)` is the infection feedback pmf, and :math:`T_f`
+    where $\mathcal{R}(t)$ is the reproductive number, $\gamma(t)$
+    is the infection feedback strength, $T_g$ is the max-length of the
+    generation interval, $\mathcal{R}^u(t)$ is the raw reproduction
+    number, $f(t)$ is the infection feedback pmf, and $T_f$
     is the max-length of the infection feedback pmf.
     """
 

@@ -14,18 +14,18 @@ class RtPeriodicDiffARProcess(RandomVariable):
 
     Notes
     -----
-    This class samples a periodic reproduction number :math:`\mathcal{R}(t)`
+    This class samples a periodic reproduction number $\mathcal{R}(t)$
     by placing an AR(1) process
-    on the first differences in :math:`\log[\mathcal{R}(t)]`. Formally:
+    on the first differences in $\log[\mathcal{R}(t)]$. Formally:
 
     .. math::
         \log[\mathcal{R}^\mathrm{u}(t_3)] \sim \mathrm{Normal}\left(\log[\mathcal{R}^\mathrm{u}(t_2)] \
             + \beta \left(\log[\mathcal{R}^\mathrm{u}(t_2)] - \
              \log[\mathcal{R}^\mathrm{u}(t_1)]\right), \sigma_r \right)
 
-    where :math:`\mathcal{R}^\mathrm{u}(t)` is the periodic reproduction number
-    at time :math:`t`, :math:`\beta` is the autoregressive parameter, and
-    :math:`\sigma_r` is the standard deviation of the noise.
+    where $\mathcal{R}^\mathrm{u}(t)$ is the periodic reproduction number
+    at time $t$, $\beta$ is the autoregressive parameter, and
+    $\sigma_r$ is the standard deviation of the noise.
     """
 
     def __init__(
@@ -121,7 +121,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         **kwargs,
     ) -> ArrayLike:
         """
-        Samples the periodic :math:`\\mathcal{R}(t)`
+        Samples the periodic $\\mathcal{R}(t)$
         with autoregressive first differences.
 
         Parameters
@@ -135,7 +135,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
         Returns
         -------
         ArrayLike
-            Sampled :math:`\\mathcal{R}(t)` values.
+            Sampled $\\mathcal{R}(t)$ values.
         """
 
         # Initial sample

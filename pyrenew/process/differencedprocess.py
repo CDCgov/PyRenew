@@ -13,9 +13,9 @@ from pyrenew.metaclass import RandomVariable
 
 class DifferencedProcess(RandomVariable):
     """
-    Class for differenced stochastic process :math:`X(t)`,
+    Class for differenced stochastic process $X(t)$,
     constructed by placing a fundamental stochastic
-    process on the :math:`n^{th}` differences
+    process on the $n^{th}$ differences
     (rates of change). See
     https://otexts.com/fpp3/stationarity.html
     for a discussion of differencing in the
@@ -117,8 +117,8 @@ class DifferencedProcess(RandomVariable):
         Parameters
         ----------
         init_vals : ArrayLike
-            initial values for the :math:`0^{th}` through
-            :math:`(n-1)^{st}` differences, passed as the
+            initial values for the $0^{th}$ through
+            $(n-1)^{st}$ differences, passed as the
             :code:`init_diff_vals` argument to
             [pyrenew.math.integrate_discrete]
 
@@ -161,7 +161,7 @@ class DifferencedProcess(RandomVariable):
                 "Must have exactly as many "
                 "initial difference values as "
                 "the differencing order, given "
-                "in the sequence :math:`X(t=0), X^1(t=1),` "
+                "in the sequence $X(t=0), X^1(t=1),$ "
                 "et cetera. "
                 f"Got {n_inits} values "
                 "for a process of order "

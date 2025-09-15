@@ -28,7 +28,7 @@ class InfectionsSample(NamedTuple):
 class Infections(RandomVariable):
     r"""Latent infections
 
-    This class samples infections given :math:`\mathcal{R}(t)`,
+    This class samples infections given $\mathcal{R}(t)$,
     initial infections, and generation interval.
 
     Notes
@@ -39,9 +39,9 @@ class Infections(RandomVariable):
 
             I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t-\tau)
 
-    where :math:`I(t)` is the number of infections at time :math:`t`,
-    :math:`R(t)` is the reproduction number at time :math:`t`, and
-    :math:`g(t-\tau)` is the generation interval.
+    where $I(t)$ is the number of infections at time $t$,
+    $R(t)$ is the reproduction number at time $t$, and
+    $g(t-\tau)$ is the generation interval.
     """
 
     @staticmethod
@@ -57,7 +57,7 @@ class Infections(RandomVariable):
     ) -> InfectionsSample:
         r"""
         Sample infections given
-        :math:`\mathcal{R}(t)`, initial infections,
+        $\mathcal{R}(t)$, initial infections,
         and generation interval.
 
         Parameters
