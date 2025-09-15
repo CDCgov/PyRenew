@@ -208,7 +208,9 @@ import matplotlib.pyplot as plt
 
 
 # Retrieve the posterior samples from the model
-ppc_samples = hosp_model.posterior_predictive(n_datapoints=daily_hosp_admits.size)
+ppc_samples = hosp_model.posterior_predictive(
+    n_datapoints=daily_hosp_admits.size
+)
 
 # Create an InferenceData object from model
 idata = az.from_numpyro(
@@ -237,7 +239,9 @@ ax = axes[0][0]
 ax.set_xlabel("Time", fontsize=20)
 ax.set_ylabel("Hospital Admissions", fontsize=20)
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles, ["Observed", "Sample Mean", "Posterior Samples"], loc="best")
+ax.legend(
+    handles, ["Observed", "Sample Mean", "Posterior Samples"], loc="best"
+)
 plt.show()
 ```
 
@@ -262,7 +266,9 @@ dayofweek_effect = randomvariable.TransformedVariable(
         name="dayofweek_effect_raw",
         distribution=dist.Dirichlet(jnp.ones(7)),
     ),
-    transforms=transformation.AffineTransform(loc=0, scale=7, domain=jnp.array([0, 1])),
+    transforms=transformation.AffineTransform(
+        loc=0, scale=7, domain=jnp.array([0, 1])
+    ),
 )
 ```
 
@@ -385,7 +391,9 @@ plt.show()
 # | label: fig-output-admissions-wof
 # | fig-cap: Hospital Admissions posterior distribution with weekday effect
 # Figure with weekday effect
-ppc_samples = hosp_model_dow.posterior_predictive(n_datapoints=daily_hosp_admits.size)
+ppc_samples = hosp_model_dow.posterior_predictive(
+    n_datapoints=daily_hosp_admits.size
+)
 idata = az.from_numpyro(
     posterior=hosp_model_dow.mcmc,
     posterior_predictive=ppc_samples,
@@ -411,6 +419,8 @@ ax = axes[0][0]
 ax.set_xlabel("Time", fontsize=20)
 ax.set_ylabel("Hospital Admissions", fontsize=20)
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(handles, ["Observed", "Posterior Predictive", "Samples w/ WDE"], loc="best")
+ax.legend(
+    handles, ["Observed", "Posterior Predictive", "Samples w/ WDE"], loc="best"
+)
 plt.show()
 ```
