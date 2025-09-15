@@ -7,5 +7,4 @@ _compiled
 
 *.ipynb
 *.py
-!*.rst
 *.md
