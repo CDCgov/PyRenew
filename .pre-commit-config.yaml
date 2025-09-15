@@ -30,7 +30,7 @@ repos:
     hooks:
       - id: format-qmd-python
         name: Format Python in QMD
-        entry: python docs_scripts/quarto_python_formatter.py "-q"
+        entry: python docs_scripts/quarto_python_formatter.py "-q --line-length 79"
         language: python
         files: \.qmd$
         additional_dependencies: [ruff]
