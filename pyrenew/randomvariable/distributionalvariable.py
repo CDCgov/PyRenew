@@ -13,7 +13,7 @@ from pyrenew.metaclass import RandomVariable
 class DynamicDistributionalVariable(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single `numpyro.distributions.Distribution`
+    from a single `numpyro.distributions.distribution`
     that is parameterized / instantiated at `sample()` time
     (rather than at RandomVariable instantiation time).
     """
@@ -40,7 +40,7 @@ class DynamicDistributionalVariable(RandomVariable):
             from the distribution according to the
             given numpyro reparameterizer
         expand_by_shape : tuple, optional
-            If not None, call [numpyro.distributions.expand_by][] on the
+            If not None, call [[numpyro.distributions.distribution.Distribution.expand_by][] on the
             underlying distribution once it is instantiated
             with the given `expand_by_shape`.
             Default None.
@@ -140,7 +140,7 @@ class DynamicDistributionalVariable(RandomVariable):
         sample_shape : tuple
             Sample shape by which to expand the distribution.
             Passed to the expand_by() method of
-            :class:`numpyro.distributions.Distribution`
+            [[numpyro.distributions.distribution.Distribution][]
             after the distribution is instantiated.
 
         Returns
@@ -160,7 +160,7 @@ class DynamicDistributionalVariable(RandomVariable):
 class StaticDistributionalVariable(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single :class:`numpyro.distributions.Distribution`
+    from a single [[numpyro.distributions.distribution.Distribution][]
     that is parameterized / instantiated at RandomVariable
     instantiation time (rather than at `sample()`-ing time).
     """
@@ -257,7 +257,7 @@ class StaticDistributionalVariable(RandomVariable):
         sample_shape : tuple
             Sample shape for the expansion. Passed to the
             :meth:`expand_by()` method of
-            :class:`numpyro.distributions.Distribution`.
+            [[numpyro.distributions.distribution.Distribution][].
 
         Returns
         -------
