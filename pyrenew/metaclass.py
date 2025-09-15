@@ -155,11 +155,11 @@ class Model(metaclass=ABCMeta):
         ----------
         nuts_args : dict, optional
             Dictionary of arguments passed to the
-            `numpyro.infer.hmc.NUTS` constructor.
+            [numpyro.infer.hmc.NUTS][] constructor.
             Default None.
         mcmc_args : dict, optional
             Dictionary of arguments passed to the
-            `numpyro.infer.mcmc.MCMC` constructor.
+            [numpyro.infer.mcmc.MCMC][] constructor.
             Default None.
 
         Returns
@@ -209,11 +209,11 @@ class Model(metaclass=ABCMeta):
         ----------
         nuts_args : dict, optional
             Dictionary of arguments passed to the kernel
-            (`numpyro.infer.hmc.NUTS`) constructor.
+            [numpyro.infer.hmc.NUTS][] constructor.
             Defaults to None.
         mcmc_args : dict, optional
             Dictionary of arguments passed to the MCMC runner
-            (`numpyro.infer.mcmc.MCMC`) constructor.
+            [numpyro.infer.mcmc.MCMC][] constructor.
             Defaults to None.
 
         Returns
@@ -264,7 +264,7 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> dict:
         """
-        A wrapper of `numpyro.infer.util.Predictive` to generate
+        A wrapper of [numpyro.infer.util.Predictive][] to generate
         posterior predictive samples.
 
         Parameters
@@ -273,11 +273,11 @@ class Model(metaclass=ABCMeta):
             Random key for the Predictive function call. Defaults to None.
         numpyro_predictive_args : dict, optional
             Dictionary of arguments to be passed to the
-            `numpyro.infer.util.Predictive` constructor.
+            [numpyro.infer.util.Predictive][] constructor.
         **kwargs
             Additional named arguments passed to the
             `__call__()` method of
-            `numpyro.infer.util.Predictive`.
+            [numpyro.infer.util.Predictive][].
 
         Returns
         -------
@@ -307,7 +307,7 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> dict:
         """
-        A wrapper for `numpyro.infer.util.Predictive`
+        A wrapper for [numpyro.infer.util.Predictive][]
         to generate prior predictive samples.
 
         Parameters
@@ -317,12 +317,12 @@ class Model(metaclass=ABCMeta):
             Default None.
         numpyro_predictive_args : dict, optional
             Dictionary of arguments to be passed to
-            the `numpyro.infer.util.Predictive`
+            the [numpyro.infer.util.Predictive][]
             constructor. Default None.
         **kwargs
             Additional named arguments passed to the
             `__call__()` method of
-            `numpyro.infer.util.Predictive`.
+            [numpyro.infer.util.Predictive][].
 
         Returns
         -------

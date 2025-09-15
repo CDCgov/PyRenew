@@ -1,5 +1,5 @@
 """
-Built-in pyrenew transformations created using `numpyro.distributions.transforms`.
+Built-in pyrenew transformations created using [numpyro.distributions.transforms.Transform][].
 """
 
 import numpyro.distributions.transforms as nt

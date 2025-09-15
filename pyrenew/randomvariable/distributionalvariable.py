@@ -13,7 +13,7 @@ from pyrenew.metaclass import RandomVariable
 class DynamicDistributionalVariable(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single `numpyro.distributions.distribution`
+    from a single `numpyro.distributions.distribution.Distribution`
     that is parameterized / instantiated at `sample()` time
     (rather than at RandomVariable instantiation time).
     """
