@@ -14,7 +14,7 @@ test:
 	uv run pytest --mpl --mpl-default-tolerance=10
 
 docs:
-	quarto render docs/tutorials/*.qmd --to commonmark
+	quarto render docs/tutorials
 	uv run mkdocs build
 
 .PHONY: install test docs

@@ -1,0 +1,6 @@
+project:
+  title: "PyRenew Tutorials"
+  post-render: uv run ../../docs_scripts/add_markdown_to_divs.py .
+
+format: gfm
+engine: jupyter

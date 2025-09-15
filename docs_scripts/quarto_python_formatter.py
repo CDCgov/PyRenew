@@ -58,7 +58,7 @@ def process_file(filepath: Path, ruff_args: List[str]) -> None:  # numpydoc igno
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print(
-            'Usage: python hook_scripts/quarto_python_formatter.py "RUFF_ARGS" <filename1.qmd> [filename2.qmd ...]'
+            'Usage: python docs_scripts/quarto_python_formatter.py "RUFF_ARGS" <filename1.qmd> [filename2.qmd ...]'
         )
         sys.exit(1)
 
