@@ -178,6 +178,6 @@ class DifferencedProcess(RandomVariable):
             )
             diffs = diff_samp
         else:
-            diffs = jnp.array()
+            diffs = jnp.array([])
         integrated_ts = integrate_discrete(init_vals, diffs)[:n]
         return integrated_ts
