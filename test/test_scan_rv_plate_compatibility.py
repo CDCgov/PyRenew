@@ -1,7 +1,7 @@
 """
-Test that key :class:`RandomVariable`
+Test that key [pyrenew.metaclass.RandomVariable][]
 classes behave as expected in a
-:func:`numpyro.plate` context.
+[numpyro.plate][] context.
 """
 
 import jax.numpy as jnp

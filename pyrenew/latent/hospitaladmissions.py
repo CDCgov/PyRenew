@@ -17,7 +17,7 @@ from pyrenew.metaclass import RandomVariable
 class HospitalAdmissionsSample(NamedTuple):
     """
     A container to hold the output of
-    :meth:`HospitalAdmissions.sample`.
+    [HospitalAdmissions.sample][].
 
     Attributes
     ----------
@@ -190,8 +190,7 @@ class HospitalAdmissions(RandomVariable):
             Latent infections.
         **kwargs : dict, optional
             Additional keyword arguments passed through to
-            internal :meth:`sample()
-            <pyrenew.metaclass.RandomVariable.sample>` calls,
+            internal `sample()` calls,
             should there be any.
 
         Returns

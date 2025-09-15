@@ -82,7 +82,7 @@ class DifferencedProcess(RandomVariable):
         Returns
         -------
         None
-            or raises a :class:`ValueError`
+            or raises a [ValueError][]
         """
         if not isinstance(differencing_order, int):
             raise ValueError(
@@ -120,28 +120,28 @@ class DifferencedProcess(RandomVariable):
             initial values for the :math:`0^{th}` through
             :math:`(n-1)^{st}` differences, passed as the
             :code:`init_diff_vals` argument to
-            :func:`~pyrenew.math.integrate_discrete()`
+            [pyrenew.math.integrate_discrete]
 
         n : int
             Number of values to sample. Will sample
             :code:`n - differencing_order` values from
-            :meth:`self.fundamental_process` to ensure
+            `self.fundamental_process` to ensure
             that the de-differenced output is of length
             :code:`n`.
 
         *args :
             Additional positional arguments passed to
-            :meth:`self.fundamental_process.sample`
+            `self.fundamental_process.sample`
 
         fundamental_process_init_vals : ArrayLike, optional
             Initial values for the fundamental process.
             Passed as the :code:`init_vals` keyword argument
-            to :meth:`self.fundamental_process.sample`.
+            to `self.fundamental_process.sample`.
             Default :obj:`None`.
 
         **kwargs : dict, optional
             Keyword arguments passed to
-            :meth:`self.fundamental_process.sample()`.
+            `self.fundamental_process.sample()`.
 
         Returns
         -------
@@ -178,6 +178,6 @@ class DifferencedProcess(RandomVariable):
             )
             diffs = diff_samp
         else:
-            diffs = jnp.array([])
+            diffs = jnp.array()
         integrated_ts = integrate_discrete(init_vals, diffs)[:n]
         return integrated_ts

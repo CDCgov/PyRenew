@@ -55,8 +55,8 @@ class RtPeriodicDiffARProcess(RandomVariable):
         periodic_diff_sd_rv : RandomVariable
             Standard deviation of the noise.
         ar_process_suffix : str
-            Suffix to append to the :class:`RandomVariable`'s ``name``
-            when naming the :class:`RandomVariable` that represents
+            Suffix to append to the [pyrenew.metaclass.RandomVariable][]'s ``name``
+            when naming the [pyrenew.metaclass.RandomVariable][] that represents
             the underlying AR process noise.
             Default "_first_diff_ar_process_noise".
 
@@ -130,7 +130,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
             Duration of the sequence.
         **kwargs : dict, optional
             Additional keyword arguments passed through to
-            internal :meth:`sample` calls, should there be any.
+            internal `sample` calls, should there be any.
 
         Returns
         -------

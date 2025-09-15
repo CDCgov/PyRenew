@@ -13,7 +13,7 @@ from pyrenew.metaclass import RandomVariable
 class DynamicDistributionalVariable(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single :class:`numpyro.distributions.Distribution`
+    from a single `numpyro.distributions.Distribution`
     that is parameterized / instantiated at `sample()` time
     (rather than at RandomVariable instantiation time).
     """
@@ -40,8 +40,8 @@ class DynamicDistributionalVariable(RandomVariable):
             from the distribution according to the
             given numpyro reparameterizer
         expand_by_shape : tuple, optional
-            If not None, call :meth:`expand_by()` on the
-            underlying distribution once it is instianted
+            If not None, call [numpyro.distributions.expand_by][] on the
+            underlying distribution once it is instantiated
             with the given `expand_by_shape`.
             Default None.
 

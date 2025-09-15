@@ -69,7 +69,7 @@ def neg_MGF(r: float, w: ArrayLike) -> float:
 def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
     """
     Compute the value of the partial deriative of
-    :func:`neg_MGF` with respect to ``r``
+    [pyrenew.math.neg_MGF][][] with respect to ``r``
     evaluated at a particular ``r`` and ``w`` pair.
 
     Parameters
@@ -125,7 +125,7 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
 
     where :math:`M_-(r)` is the negative moment generating function
     for a random variable :math:`\\tau` representing the (discrete)
-    generation interval. See :func:`neg_MGF` for details.
+    generation interval. See [pyrenew.math.neg_MGF][][] for details.
 
     We obtain a value for :math:`r` via approximate numerical solution
     of this implicit equation.
@@ -389,7 +389,7 @@ def _integrate_one_step(
     Perform one step of integration
     (de-differencing) for integrate_discrete().
 
-    Helper function passed to :func:`jax.lax.scan()`.
+    Helper function passed to [jax.lax.scan][].
 
     Parameters
     ----------

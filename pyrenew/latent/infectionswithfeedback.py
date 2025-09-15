@@ -45,7 +45,7 @@ class InfectionsWithFeedback(RandomVariable):
     Notes
     -----
     This function implements the following renewal process (reproduced from
-    :func:`pyrenew.latent.infection_functions.sample_infections_with_feedback`):
+    [pyrenew.latent.infection_functions.compute_infections_from_rt_with_feedback][]):
 
     .. math::
 

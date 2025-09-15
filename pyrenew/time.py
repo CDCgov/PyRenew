@@ -93,10 +93,10 @@ def daily_to_weekly(
 
     Notes
     -----
-    This is _not_ a simple inverse of :func:`weekly_to_daily`.
+    This is _not_ a simple inverse of [pyrenew.time.weekly_to_daily][].
     This function aggregates (by summing) daily values to
     create a timeseries of weekly total values.
-    :func:`weekly_to_daily` broadcasts a _single shared value_
+    [pyrenew.time.weekly_to_daily][] broadcasts a _single shared value_
     for a given week as the (repeated) daily value for each day
     of that week.
     """
@@ -123,7 +123,7 @@ def daily_to_mmwr_epiweekly(
 ) -> ArrayLike:
     """
     Aggregate daily values to weekly values
-    using :func:`daily_to_weekly` with
+    using [pyrenew.time.daily_to_weekly][] with
     MMWR epidemiological weeks (begin on Sundays,
     end on Saturdays).
 
@@ -157,7 +157,7 @@ def weekly_to_daily(
     Broadcast a weekly timeseries to a daily
     timeseries. The value for the week will be used
     as the value each day in that week, via
-    :func:`jnp.repeat`.
+    [jax.numpy.repeat][].
 
     Parameters
     ----------
@@ -198,8 +198,8 @@ def weekly_to_daily(
 
     Notes
     -----
-    This is _not_ a simple inverse of :func:`daily_to_weekly`.
-    :func:`daily_to_weekly` aggregates (by summing) daily values to
+    This is _not_ a simple inverse of [pyrenew.time.daily_to_weekly][].
+    [pyrenew.time.daily_to_weekly][] aggregates (by summing) daily values to
     create a timeseries of weekly total values.
     This function broadcasts a _single shared value_
     for a given week as the (repeated) daily value for each day
@@ -225,7 +225,7 @@ def mmwr_epiweekly_to_daily(
 ) -> ArrayLike:
     """
     Convert an MMWR epiweekly timeseries to a daily
-    timeseries using :func:`weekly_to_daily`.
+    timeseries using [pyrenew.time.weekly_to_daily][].
 
     Parameters
     ----------

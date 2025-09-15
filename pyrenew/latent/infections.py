@@ -14,8 +14,7 @@ from pyrenew.metaclass import RandomVariable
 class InfectionsSample(NamedTuple):
     """
     A container for holding the output from
-    :meth:`Infections.sample()
-    <pyrenew.latent.infections.Infections.sample>`.
+    [Infections.sample][].
 
     Attributes
     ----------

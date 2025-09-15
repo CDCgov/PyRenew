@@ -37,8 +37,7 @@ class ARProcess(RandomVariable):
         noise_name: str
             A name for the sample site holding the
             Normal(`0`, `noise_sd`) noise for the AR process.
-            Passed to :func:`numpyro.sample()
-            <numpyro.primitives.sample>`.
+            Passed to [numpyro.sample].
         n: int
             Length of the sequence.
         autoreg: ArrayLike
@@ -77,7 +76,7 @@ class ARProcess(RandomVariable):
 
         Those shapes must be
         broadcastable together via
-        :func:`jax.lax.broadcast_shapes`. This can
+        [jax.lax.broadcast_shapes][]. This can
         be used to produce multiple AR processes of the
         same order but with either shared or different initial
         values, AR coefficient vectors, and/or

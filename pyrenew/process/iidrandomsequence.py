@@ -52,17 +52,17 @@ class IIDRandomSequence(RandomVariable):
 
         vectorize: bool
             Sample vectorized? If True, use the
-            :class:`~pyrenew.metaclass.RandomVariable`'s
-            :meth:`expand_by()` method, if available,
-            and fall back on :func:`numpyro.contrib.control_flow.scan`
+            [pyrenew.metaclass.RandomVariable][]'s
+            `expand_by()` method, if available,
+            and fall back on [numpyro.contrib.control_flow.scan][]
             otherwise.
             If False, always use
-            :func:`~numpyro.contrib.control_flow.scan`.
+            [numpyro.contrib.control_flow.scan][].
             Default False.
 
         **kwargs:
             Additional keyword arguments passed to
-            :meth:`self.element_rv.sample`.
+            `self.element_rv.sample`.
 
         Returns
         -------

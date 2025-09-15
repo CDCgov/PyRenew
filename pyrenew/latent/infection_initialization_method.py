@@ -12,7 +12,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
     def __init__(self, n_timepoints: int):
         """Default constructor for
-        :class:`InfectionInitializationMethod`.
+        [pyrenew.latent.infection_initialization_method.InfectionInitializationMethod].
 
         Parameters
         ----------
@@ -31,7 +31,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
     def validate(n_timepoints: int) -> None:
         """
         Validate inputs to the
-        :class:`InfectionInitializationMethod`
+        [pyrenew.latent.infection_initialization_method.InfectionInitializationMethod]
         constructor.
 
         Parameters
