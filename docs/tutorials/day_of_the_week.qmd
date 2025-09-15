@@ -255,7 +255,7 @@ We will re-use the infection to admission interval and infection to hospitalizat
 
 For this example, the effect will be passed as a scaled Dirichlet distribution. It will consist of a `TransformedVariable` that samples an array of length seven from numpyro's `distributions.Dirichlet` and applies a `transformation.AffineTransform` to scale it by seven. [^note-other-examples]:
 
-[^note-other-examples]: A similar weekday effect is implemented in its own module, with example code in the [Periodic Effects](periodic_effects.qmd) tutorial.
+[^note-other-examples]: A similar weekday effect is implemented in its own module, with example code in the [Periodic Effects](periodic_effects.md) tutorial.
 
 ```{python}
 # | label: weekly-effect
