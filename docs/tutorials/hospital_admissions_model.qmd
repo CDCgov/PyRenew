@@ -305,9 +305,7 @@ We can use `arviz` to visualize the model fit. Here, we plot the observed values
 # | fig-cap: Latent hospital admissions posterior samples (gray) and observed admissions timeseries (red).
 import arviz as az
 
-ppc_samples = hosp_model.posterior_predictive(
-    n_datapoints=daily_hosp_admits.size
-)
+ppc_samples = hosp_model.posterior_predictive(n_datapoints=daily_hosp_admits.size)
 idata = az.from_numpyro(
     posterior=hosp_model.mcmc,
     posterior_predictive=ppc_samples,
@@ -333,9 +331,7 @@ ax = axes[0][0]
 ax.set_xlabel("Time", fontsize=20)
 ax.set_ylabel("Hospital Admissions", fontsize=20)
 handles, labels = ax.get_legend_handles_labels()
-ax.legend(
-    handles, ["Observed", "Sample Mean", "Posterior Samples"], loc="best"
-)
+ax.legend(handles, ["Observed", "Sample Mean", "Posterior Samples"], loc="best")
 plt.show()
 ```
 
@@ -408,9 +404,7 @@ We can also look at credible intervals for the posterior distribution of latent 
 ```{python}
 # | label: fig-output-infections-distribution
 # | fig-cap: Posterior Latent Infections
-x_data = (
-    idata.posterior["all_latent_infections_dim_0"] - n_initialization_points
-)
+x_data = idata.posterior["all_latent_infections_dim_0"] - n_initialization_points
 y_data = idata.posterior["all_latent_infections"]
 
 fig, axes = plt.subplots(figsize=(6, 5))
@@ -582,9 +576,7 @@ plt.scatter(
     color="black",
 )
 axes.legend()
-axes.set_title(
-    "Posterior Predictive Admissions, including a forecast", fontsize=10
-)
+axes.set_title("Posterior Predictive Admissions, including a forecast", fontsize=10)
 axes.set_xlabel("Time", fontsize=10)
 axes.set_ylabel("Hospital Admissions", fontsize=10)
 plt.show()
