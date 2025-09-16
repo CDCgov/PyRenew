@@ -57,12 +57,12 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
         Parameters
         ----------
         I_pre_init : ArrayLike
-            An array representing some number of latent infections to be used with the specified ``InfectionInitializationMethod``.
+            An array representing some number of latent infections to be used with the specified `InfectionInitializationMethod`.
 
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
+            An array of length `n_timepoints` with the number of initialized infections at each time point.
         """
 
     def __call__(self, I_pre_init: ArrayLike):
@@ -87,7 +87,7 @@ class InitializeInfectionsZeroPad(InfectionInitializationMethod):
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
+            An array of length `n_timepoints` with the number of initialized infections at each time point.
         """
         I_pre_init = jnp.atleast_1d(I_pre_init)
         if self.n_timepoints < I_pre_init.size:
@@ -108,13 +108,13 @@ class InitializeInfectionsFromVec(InfectionInitializationMethod):
         Parameters
         ----------
         I_pre_init : ArrayLike
-            An array with the same length as ``n_timepoints`` to be
+            An array with the same length as `n_timepoints` to be
             used as the initial infections.
 
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of
+            An array of length `n_timepoints` with the number of
             initialized infections at each time point.
         """
         I_pre_init = jnp.array(I_pre_init)
@@ -138,10 +138,10 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
     I(t) = I_p \exp \left( r (t - t_p) \right)
     ```
 
-    Where $I_p$ is ``I_pre_init``, $r$ is ``rate``, and $t_p$ is ``t_pre_init``.
+    Where $I_p$ is `I_pre_init`, $r$ is `rate`, and $t_p$ is `t_pre_init`.
     This ensures that $I(t_p) = I_p$.
     We default to ``t_pre_init = n_timepoints - 1``, so that
-    ``I_pre_init`` represents the number of incident infections immediately
+    `I_pre_init` represents the number of incident infections immediately
     before the renewal process begins.
     """
 
@@ -151,7 +151,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         rate_rv: RandomVariable,
         t_pre_init: int | None = None,
     ):
-        """Default constructor for the ``InitializeInfectionsExponentialGrowth`` class.
+        """Default constructor for the `InitializeInfectionsExponentialGrowth` class.
 
         Parameters
         ----------
@@ -160,7 +160,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         rate_rv : RandomVariable
             A random variable representing the rate of exponential growth
         t_pre_init : int | None, optional
-             The time point whose number of infections is described by ``I_pre_init``. Defaults to ``n_timepoints - 1``.
+             The time point whose number of infections is described by `I_pre_init`. Defaults to ``n_timepoints - 1``.
         """
         super().__init__(n_timepoints)
         self.rate_rv = rate_rv
@@ -174,12 +174,12 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         Parameters
         ----------
         I_pre_init : ArrayLike
-            An array of size 1 representing the number of infections at time ``t_pre_init``.
+            An array of size 1 representing the number of infections at time `t_pre_init`.
 
         Returns
         -------
         ArrayLike
-            An array of length ``n_timepoints`` with the number of initialized infections at each time point.
+            An array of length `n_timepoints` with the number of initialized infections at each time point.
         """
         I_pre_init = jnp.array(I_pre_init)
         rate = jnp.array(self.rate_rv())

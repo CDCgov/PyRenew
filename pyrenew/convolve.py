@@ -187,9 +187,9 @@ def compute_delay_ascertained_incidence(
 
     In addition to the output array, returns the offset
     (number of time units) separating the first entry of the
-    the input ``latent_incidence`` array from the first entry
+    the input `latent_incidence` array from the first entry
     of the output (delay ascertained incidence) array.
-    Note that if the ``pad`` keyword argument is ``True``,
+    Note that if the `pad` keyword argument is `True`,
     the offset will be always `0`.
 
     Parameters
@@ -219,7 +219,7 @@ def compute_delay_ascertained_incidence(
     pad: bool
         Return an output array that has been nan-padded so that its
         first entry represents the same timepoint as the first timepoint
-        of the input `latent_incidence` array? Boolean, default ``False``.
+        of the input `latent_incidence` array? Boolean, default `False`.
 
     Returns
     --------

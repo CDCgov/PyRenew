@@ -37,7 +37,7 @@ class ARProcess(RandomVariable):
         noise_name: str
             A name for the sample site holding the
             Normal(`0`, `noise_sd`) noise for the AR process.
-            Passed to [numpyro.sample].
+            Passed to [`numpyro.primitives.sample`][].
         n: int
             Length of the sequence.
         autoreg: ArrayLike

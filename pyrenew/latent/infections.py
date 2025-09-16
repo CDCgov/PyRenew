@@ -78,7 +78,7 @@ class Infections(RandomVariable):
         -------
         InfectionsSample
             A named tuple with a
-            ``post_initialization_infections`` field.
+            `post_initialization_infections` field.
         """
         if I0.shape[0] < gen_int.size:
             raise ValueError(

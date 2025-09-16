@@ -33,7 +33,7 @@ def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
 def neg_MGF(r: float, w: ArrayLike) -> float:
     """
     Compute the negative moment generating function (MGF)
-    for a given rate ``r`` and weights ``w``.
+    for a given rate `r` and weights `w`.
 
     Parameters
     ----------
@@ -46,8 +46,8 @@ def neg_MGF(r: float, w: ArrayLike) -> float:
     Returns
     -------
     float
-        The value of the negative MGF evaluated at ``r``
-        and ``w``.
+        The value of the negative MGF evaluated at `r`
+        and `w`.
 
     Notes
     -----
@@ -85,8 +85,8 @@ def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
     Returns
     -------
     float
-        The value of the partial derivative evaluated at ``r``
-        and ``w``.
+        The value of the partial derivative evaluated at `r`
+        and `w`.
     """
     t_vec = _positive_ints_like(w)
     return -jnp.sum(w * t_vec * jnp.exp(-r * t_vec))
@@ -94,9 +94,9 @@ def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
 
 def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     """
-    Get the approximate asymptotic geometric growth rate ``r``
-    for a renewal process with a fixed reproduction number ``R``
-    and discrete generation interval PMF ``g``.
+    Get the approximate asymptotic geometric growth rate `r`
+    for a renewal process with a fixed reproduction number `R`
+    and discrete generation interval PMF `g`.
 
     Uses Newton's method with a fixed number of steps.
 
@@ -115,7 +115,7 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     Returns
     -------
     float
-        The approximate value of ``r``.
+        The approximate value of `r`.
 
     Notes
     -----

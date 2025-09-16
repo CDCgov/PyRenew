@@ -168,7 +168,7 @@ def weekly_to_daily(
 
     week_start_dow: int
         Day of the week on which weeks are considered to
-        start in the input ``weekly_values`` timeseries
+        start in the input `weekly_values` timeseries
         (e.g. ISO weeks start on Mondays and end on Sundays;
         MMWR epiweeks start on Sundays and end on Saturdays).
         An integer between 0 and 6, inclusive (0 for Monday,
@@ -179,8 +179,8 @@ def weekly_to_daily(
         Day of the week on which to start the output timeseries.
         An integer between 0 and 6, inclusive (0 for Monday,
         1 for Tuesday, ..., 6 for Sunday). Defaults to the week
-        start date as specified by ``week_start_dow``.
-        If ``output_data_first_dow`` is _not_ equal to ``week_start_dow``,
+        start date as specified by `week_start_dow`.
+        If `output_data_first_dow` is _not_ equal to `week_start_dow`,
         the first weekly value will be partial (i.e. represented by
         between 1 and 6 entries in the output timeseries) and
         all subsequent weeks will be complete (represented by 7
@@ -239,7 +239,7 @@ def mmwr_epiweekly_to_daily(
         An integer between 0 and 6, inclusive (0 for Monday,
         1 for Tuesday, ..., 6 for Sunday). Defaults to the MMWR
         epiweek start day (6, Sunday).
-        If ``output_data_first_dow`` is _not_ equal to 6 (Sunday,
+        If `output_data_first_dow` is _not_ equal to 6 (Sunday,
         the start of an MMWR epiweek), the first weekly value will
         be partial (i.e. represented by between 1 and 6 entries
         in the output timeseries) and all subsequent weeks will be

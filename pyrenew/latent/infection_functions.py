@@ -58,7 +58,7 @@ def logistic_susceptibility_adjustment(
     """
     Apply the logistic susceptibility
     adjustment to a potential new
-    incidence ``I_raw_t`` proposed in
+    incidence `I_raw_t` proposed in
     equation 6 of `Bhatt et al 2023
     <https://doi.org/10.1093/jrsssa/qnad030>`_.
 
@@ -132,9 +132,9 @@ def compute_infections_from_rt_with_feedback(
     -------
     tuple
         A tuple ``(infections, Rt_adjusted)``,
-        where ``Rt_adjusted`` is the infection-feedback-adjusted
+        where `Rt_adjusted` is the infection-feedback-adjusted
         timeseries of the reproduction number $\mathcal{R}(t)$
-        and ``infections`` is the incident infection timeseries.
+        and `infections` is the incident infection timeseries.
 
     Notes
     -----
