@@ -272,7 +272,7 @@ def get_stable_age_distribution(
     R : float
         The reproduction number of the renewal process
 
-        generation_interval_pmf: ArrayLike
+    generation_interval_pmf: ArrayLike
         The discrete generation interval probability
         mass vector of the renewal process
 
