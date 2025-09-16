@@ -63,9 +63,9 @@ def neg_MGF(r: float, w: ArrayLike) -> float:
     ```math
     M_-(r) = \\sum_{t = 1}^{n} w_i \\exp(-rt)
     ```
+    """
 
     return jnp.sum(w * jnp.exp(-r * _positive_ints_like(w)))
-    """
 
 
 def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
