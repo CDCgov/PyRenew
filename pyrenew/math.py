@@ -170,6 +170,7 @@ def get_leslie_matrix(R: float, generation_interval_pmf: ArrayLike) -> ArrayLike
     ----------
     R : float
         The reproduction number of the renewal process
+
     generation_interval_pmf: ArrayLike
         The discrete generation interval probability
         mass vector of the renewal process
@@ -207,6 +208,7 @@ def get_asymptotic_growth_rate_and_age_dist(
     ----------
     R : float
         The reproduction number of the renewal process
+
     generation_interval_pmf: ArrayLike
         The discrete generation interval probability
         mass vector of the renewal process
@@ -269,6 +271,7 @@ def get_stable_age_distribution(
     ----------
     R : float
         The reproduction number of the renewal process
+
         generation_interval_pmf: ArrayLike
         The discrete generation interval probability
         mass vector of the renewal process
@@ -299,6 +302,7 @@ def get_asymptotic_growth_rate(R: float, generation_interval_pmf: ArrayLike) -> 
     ----------
     R : float
         The reproduction number of the renewal process
+
     generation_interval_pmf: ArrayLike
         The discrete generation interval probability
         mass vector of the renewal process
