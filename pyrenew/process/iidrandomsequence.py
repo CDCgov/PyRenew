@@ -26,7 +26,7 @@ class IIDRandomSequence(RandomVariable):
 
         Parameters
         ----------
-        element_rv : RandomVariable
+        element_rv
             RandomVariable representing a single element
             in the sequence.
 
@@ -43,14 +43,14 @@ class IIDRandomSequence(RandomVariable):
 
         Parameters
         ----------
-        n : int
+        n
             Length of the sequence to sample.
 
-        *args :
+        *args
             Additional positional arguments passed
             to self.element_rv.sample()
 
-        vectorize: bool
+        vectorize
             Sample vectorized? If True, use the
             [`pyrenew.metaclass.RandomVariable`][]'s
             `expand_by()` method, if available,
@@ -60,7 +60,7 @@ class IIDRandomSequence(RandomVariable):
             [`numpyro.contrib.control_flow.scan`][].
             Default False.
 
-        **kwargs:
+        **kwargs
             Additional keyword arguments passed to
             `self.element_rv.sample`.
 
@@ -114,12 +114,12 @@ class StandardNormalSequence(IIDRandomSequence):
 
         Parameters
         ----------
-        element_rv_name: str
+        element_rv_name
             Name for the internal element_rv, here a
             DistributionalVariable encoding a
             standard Normal (mean = 0, sd = 1)
             distribution.
-        element_shape : tuple
+        element_shape
             Shape for each element in the sequence.
             If None, elements are scalars. Default
             None.

@@ -42,12 +42,12 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
-        fundamental_process : RandomVariable
+        fundamental_process
             Stochastic process for the
             differences. Must accept an
             `n` argument specifying the number
             of samples to draw.
-        differencing_order : int
+        differencing_order
             How many fold-differencing the
             the process represents. Must be
             an integer greater than or
@@ -76,7 +76,7 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
-        differencing_order : Any
+        differencing_order
             Potential differencing order to validate.
 
         Returns
@@ -116,30 +116,30 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
-        init_vals : ArrayLike
+        init_vals
             initial values for the $0^{th}$ through
             $(n-1)^{st}$ differences, passed as the
             `init_diff_vals` argument to
             [`pyrenew.math.integrate_discrete`][].
 
-        n : int
+        n
             Number of values to sample. Will sample
             `n - differencing_order` values from
             `self.fundamental_process` to ensure
             that the de-differenced output is of length
             `n`.
 
-        *args :
+        *args
             Additional positional arguments passed to
             `self.fundamental_process.sample`
 
-        fundamental_process_init_vals : ArrayLike, optional
+        fundamental_process_init_vals
             Initial values for the fundamental process.
             Passed as the `init_vals` keyword argument
             to `self.fundamental_process.sample`.
             Default `None`.
 
-        **kwargs : dict, optional
+        **kwargs
             Keyword arguments passed to
             `self.fundamental_process.sample()`.
 

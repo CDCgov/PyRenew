@@ -82,19 +82,19 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        infection_to_admission_interval_rv : RandomVariable
+        infection_to_admission_interval_rv
             pmf for reporting (informing) hospital admissions (see
             pyrenew.observations.Deterministic).
-        infection_hospitalization_ratio_rv : RandomVariable
+        infection_hospitalization_ratio_rv
             Infection to hospitalization rate random variable.
-        day_of_week_effect_rv : RandomVariable, optional
+        day_of_week_effect_rv
             Day of the week effect. Should return a ArrayLike with 7
             values. Defaults to a deterministic variable with
             jax.numpy.ones(7) (no effect).
-        hospitalization_reporting_ratio_rv  : RandomVariable, optional
+        hospitalization_reporting_ratio_rv
             Random variable for the hospital admission reporting
             probability. Defaults to 1 (full reporting).
-        obs_data_first_day_of_the_week : int, optional
+        obs_data_first_day_of_the_week
             The day of the week that the first day of the observation data
             corresponds to. Valid values are 0-6, where 0 is Monday and 6 is
             Sunday. Defaults to 0.
@@ -142,17 +142,17 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        infection_to_admission_interval_rv : Any
+        infection_to_admission_interval_rv
             Possibly incorrect input for the infection to hospitalization
             interval distribution.
-        infection_hospitalization_ratio_rv : Any
+        infection_hospitalization_ratio_rv
             Possibly incorrect input for infection to hospitalization rate distribution.
-        day_of_week_effect_rv : Any
+        day_of_week_effect_rv
             Possibly incorrect input for day of the week effect.
-        hospitalization_reporting_ratio_rv : Any
+        hospitalization_reporting_ratio_rv
             Possibly incorrect input for distribution or fixed value for the
             hospital admission reporting probability.
-        obs_data_first_day_of_the_week : Any
+        obs_data_first_day_of_the_week
             Possibly incorrect input for the day of the week that the first day
             of the observation data corresponds to. Valid values are 0-6, where
             0 is Monday and 6 is Sunday.
@@ -186,9 +186,9 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        latent_infections : ArrayLike
+        latent_infections
             Latent infections.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to
             internal `sample()` calls,
             should there be any.

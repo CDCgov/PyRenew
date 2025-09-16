@@ -16,7 +16,7 @@ def ScaledLogitTransform(
 
     Parameters
     ----------
-    x_max: float
+    x_max
         Maximum value of the untransformed scale (will be transformed to
         +infinity).
 

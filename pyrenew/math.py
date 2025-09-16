@@ -19,7 +19,7 @@ def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
 
     Parameters
     ----------
-    vec: ArrayLike
+    vec
         The template array
 
     Returns
@@ -37,10 +37,10 @@ def neg_MGF(r: float, w: ArrayLike) -> float:
 
     Parameters
     ----------
-    r: float
+    r
         The rate parameter.
 
-    w: ArrayLike
+    w
         An array of weights.
 
     Returns
@@ -76,10 +76,10 @@ def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
 
     Parameters
     ----------
-    r: float
+    r
         The rate parameter.
 
-    w: ArrayLike
+    w
         An array of weights.
 
     Returns
@@ -102,14 +102,14 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
 
     Parameters
     ----------
-    R: float
+    R
         The reproduction number
 
-    g: ArrayLike
+    g
         The probability mass function of the generation
         interval.
 
-    n_newton_steps: int
+    n_newton_steps
         Number of steps to take when performing Newton's method.
 
     Returns
@@ -168,10 +168,10 @@ def get_leslie_matrix(R: float, generation_interval_pmf: ArrayLike) -> ArrayLike
 
     Parameters
     ----------
-    R : float
+    R
         The reproduction number of the renewal process
 
-    generation_interval_pmf: ArrayLike
+    generation_interval_pmf
         The discrete generation interval probability
         mass vector of the renewal process
 
@@ -206,10 +206,10 @@ def get_asymptotic_growth_rate_and_age_dist(
 
     Parameters
     ----------
-    R : float
+    R
         The reproduction number of the renewal process
 
-    generation_interval_pmf: ArrayLike
+    generation_interval_pmf
         The discrete generation interval probability
         mass vector of the renewal process
 
@@ -269,10 +269,10 @@ def get_stable_age_distribution(
 
     Parameters
     ----------
-    R : float
+    R
         The reproduction number of the renewal process
 
-    generation_interval_pmf: ArrayLike
+    generation_interval_pmf
         The discrete generation interval probability
         mass vector of the renewal process
 
@@ -300,10 +300,10 @@ def get_asymptotic_growth_rate(R: float, generation_interval_pmf: ArrayLike) -> 
 
     Parameters
     ----------
-    R : float
+    R
         The reproduction number of the renewal process
 
-    generation_interval_pmf: ArrayLike
+    generation_interval_pmf
         The discrete generation interval probability
         mass vector of the renewal process
 
@@ -333,11 +333,11 @@ def integrate_discrete(
 
     Parameters
     ----------
-    init_diff_vals : ArrayLike
+    init_diff_vals
         Values of
         $X(t=0), X^1(t=1), X^2(t=2), ..., X^{(n-1)}(t=n-1)$.
 
-    highest_order_diff_vals : ArrayLike
+    highest_order_diff_vals
         Array of differences at the highest order of
         differencing, i.e. the order of the overall process,
         starting with $X^{n}(t=n)$
@@ -401,11 +401,11 @@ def _integrate_one_step(
 
     Parameters
     ----------
-    current_diffs: ArrayLike
+    current_diffs
         Array of differences at the current
         de-differencing order
 
-    next_order_and_init: tuple
+    next_order_and_init
         Tuple containing with two entries.
         First entry: the next order of de-differencing
         (the current order - 1) as an integer.

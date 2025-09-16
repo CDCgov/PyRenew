@@ -62,15 +62,15 @@ class Infections(RandomVariable):
 
         Parameters
         ----------
-        Rt : ArrayLike
+        Rt
             Reproduction number.
-        I0 : ArrayLike
+        I0
             Initial infections vector
             of the same length as the
             generation interval.
-        gen_int : ArrayLike
+        gen_int
             Generation interval pmf vector.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
 

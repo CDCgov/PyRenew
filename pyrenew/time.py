@@ -16,10 +16,10 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
 
     Parameters
     ----------
-    day_of_week: int
+    day_of_week
         Integer to validate.
 
-    variable_name: str
+    variable_name
         Name of the variable being validated, to increase the informativeness of the error message.
 
     Returns
@@ -61,17 +61,17 @@ def daily_to_weekly(
 
     Parameters
     ----------
-    daily_values : ArrayLike
+    daily_values
         Daily timeseries values (e.g. incident infections or
         incident ed visits).
-    input_data_first_dow : int
+    input_data_first_dow
         First day of the week in the input timeseries `daily_values`.
         An integer between 0 and 6, inclusive (0 for Monday, 1 for Tuesday,
         ..., 6 for Sunday).
         If `input_data_first_dow` does not match `week_start_dow`, the
         incomplete first week is ignored and weekly values starting
         from the second week are returned. Defaults to 0.
-    week_start_dow : int
+    week_start_dow
         Day of the week on which weeks are considered to
         start in the output timeseries of weekly values
         (e.g. ISO weeks start on Mondays and end on Sundays;
@@ -129,9 +129,9 @@ def daily_to_mmwr_epiweekly(
 
     Parameters
     ----------
-    daily_values : ArrayLike
+    daily_values
         Daily timeseries values.
-    input_data_first_dow : int
+    input_data_first_dow
         First day of the week in the input timeseries `daily_values`.
         An integer between 0 and 6, inclusive (0 for Monday, 1 for
         Tuesday, ..., 6 for Sunday).
@@ -161,12 +161,12 @@ def weekly_to_daily(
 
     Parameters
     ----------
-    weekly_values: ArrayLike
+    weekly_values
         Timeseries of weekly values, where
         (discrete) time is the first dimension of
         the array (following Pyrenew convention).
 
-    week_start_dow: int
+    week_start_dow
         Day of the week on which weeks are considered to
         start in the input `weekly_values` timeseries
         (e.g. ISO weeks start on Mondays and end on Sundays;
@@ -175,7 +175,7 @@ def weekly_to_daily(
         1 for Tuesday, ..., 6 for Sunday).
         Default 0 (i.e. ISO weeks, starting on Mondays).
 
-    output_data_first_dow: int
+    output_data_first_dow
         Day of the week on which to start the output timeseries.
         An integer between 0 and 6, inclusive (0 for Monday,
         1 for Tuesday, ..., 6 for Sunday). Defaults to the week
@@ -229,12 +229,12 @@ def mmwr_epiweekly_to_daily(
 
     Parameters
     ----------
-    weekly_values: ArrayLike
+    weekly_values
         Timeseries of weekly values, where
         (discrete) time is the first dimension of
         the array (following Pyrenew convention).
 
-    output_data_first_dow: int
+    output_data_first_dow
         Day of the week on which to start the output timeseries.
         An integer between 0 and 6, inclusive (0 for Monday,
         1 for Tuesday, ..., 6 for Sunday). Defaults to the MMWR

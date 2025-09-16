@@ -22,11 +22,11 @@ class InfectionInitializationProcess(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name to assign to the RandomVariable.
-        I_pre_init_rv : RandomVariable
+        I_pre_init_rv
             A RandomVariable representing the number of infections that occur at some time before the renewal process begins. Each `infection_init_method` uses this random variable in different ways.
-        infection_init_method : InfectionInitializationMethod
+        infection_init_method
             An [`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][] that generates the initial infections for the renewal process.
 
         Returns
@@ -48,9 +48,9 @@ class InfectionInitializationProcess(RandomVariable):
 
         Parameters
         ----------
-        I_pre_init_rv : RandomVariable
+        I_pre_init_rv
             A random variable representing the number of infections that occur at some time before the renewal process begins.
-        infection_init_method : InfectionInitializationMethod
+        infection_init_method
             An method to generate the initial infections.
 
         Returns

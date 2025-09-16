@@ -43,18 +43,18 @@ class RtPeriodicDiffARProcess(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Name of the site.
-        offset : int
+        offset
             Relative point at which data starts, must be between 0 and
             period_size - 1.
-        log_rt_rv : RandomVariable
+        log_rt_rv
             Log Rt prior for the first two observations.
-        autoreg_rv : RandomVariable
+        autoreg_rv
             Autoregressive parameter.
-        periodic_diff_sd_rv : RandomVariable
+        periodic_diff_sd_rv
             Standard deviation of the noise.
-        ar_process_suffix : str
+        ar_process_suffix
             Suffix to append to the [`pyrenew.metaclass.RandomVariable`][]'s `name`
             when naming the [`pyrenew.metaclass.RandomVariable`][] that represents
             the underlying AR process noise.
@@ -97,11 +97,11 @@ class RtPeriodicDiffARProcess(RandomVariable):
 
         Parameters
         ----------
-        log_rt_rv : any
+        log_rt_rv
             Log Rt prior for the first two observations.
-        autoreg_rv : any
+        autoreg_rv
             Autoregressive parameter.
-        periodic_diff_sd_rv : any
+        periodic_diff_sd_rv
             Standard deviation of the noise.
 
         Returns
@@ -126,9 +126,9 @@ class RtPeriodicDiffARProcess(RandomVariable):
 
         Parameters
         ----------
-        duration : int
+        duration
             Duration of the sequence.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to
             internal `sample` calls, should there be any.
 
@@ -183,15 +183,15 @@ class RtWeeklyDiffARProcess(RtPeriodicDiffARProcess):
 
         Parameters
         ----------
-        name : str
+        name
             Name of the site.
-        offset : int
+        offset
             Relative point at which data starts, must be between 0 and 6.
-        log_rt_rv : RandomVariable
+        log_rt_rv
             Log Rt prior for the first two observations.
-        autoreg_rv : RandomVariable
+        autoreg_rv
             Autoregressive parameter.
-        periodic_diff_sd_rv : RandomVariable
+        periodic_diff_sd_rv
             Standard deviation of the noise.
 
         Returns
