@@ -241,7 +241,7 @@ class Model(metaclass=ABCMeta):
         exclude_deterministic: bool = True,
     ) -> None:
         """
-        A wrapper of `MCMC.print_summary()`.
+        A wrapper of [`numpyro.infer.mcmc.MCMC.print_summary`][].
 
         Parameters
         ----------
