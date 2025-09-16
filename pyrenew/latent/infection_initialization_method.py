@@ -57,7 +57,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
         Parameters
         ----------
         I_pre_init : ArrayLike
-            An array representing some number of latent infections to be used with the specified ``InfectionInitializationMethod``.
+            An array representing some number of latent infections to be used with the specified `[`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][]`.
 
         Returns
         -------
