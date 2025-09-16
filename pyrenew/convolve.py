@@ -194,14 +194,6 @@ def compute_delay_ascertained_incidence(
 
     Parameters
     ----------
-    p_observed_given_incident
-        The rate at which latent incident counts translate into observed
-        counts. For example, setting ``p_observed_given_incident=0.001``
-        when the incident counts are infections and the observed counts
-        are reported hospital admissions could be used to model disease
-        and population for which the probability of a latent infection
-        leading to a reported hospital admission is 0.001.
-
     latent_incidence
         Incidence values based on the true underlying process.
 
@@ -216,13 +208,21 @@ def compute_delay_ascertained_incidence(
         ``delay_incidence_to_observation_pmf[1]`` represents the fraction
         that are delayed 1 time units, et cetera.
 
+    p_observed_given_incident
+        The rate at which latent incident counts translate into observed
+        counts. For example, setting ``p_observed_given_incident=0.001``
+        when the incident counts are infections and the observed counts
+        are reported hospital admissions could be used to model disease
+        and population for which the probability of a latent infection
+        leading to a reported hospital admission is 0.001. Default `1`.
+
     pad
         Return an output array that has been nan-padded so that its
         first entry represents the same timepoint as the first timepoint
         of the input `latent_incidence` array? Boolean, default `False`.
 
     Returns
-    --------
+    -------
     tuple[ArrayLike, int]
         Tuple whose first entry is the predicted timeseries of
         delayed observations and whose second entry is the offset.

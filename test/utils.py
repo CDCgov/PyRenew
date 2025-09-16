@@ -22,7 +22,7 @@ class SimpleRt(RandomVariable):
         Default constructor
 
         Parameters
-        -----------
+        ----------
         name
            Name assigned to the RandomVariable.
            If None, then defaults to "Rt_rv"

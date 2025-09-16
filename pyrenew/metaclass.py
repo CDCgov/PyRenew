@@ -24,7 +24,7 @@ def _assert_type(arg_name: str, value, expected_type) -> None:
         The expected object type
 
     Raises
-    -------
+    ------
     TypeError
         If `value` is not an instance of `expected_type`.
 
