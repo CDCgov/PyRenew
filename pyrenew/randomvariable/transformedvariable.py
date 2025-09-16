@@ -105,7 +105,7 @@ class TransformedVariable(RandomVariable):
         Returns
         -------
         int
-            Equal to the length self.transforms
+            Equal to the length of `self.transforms`
         """
         return len(self.transforms)
 
