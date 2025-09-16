@@ -1,10 +1,4 @@
-"""Factory functions for
-calculating convolutions of timeseries
-with discrete distributions
-of times-to-event using
-[jax.lax.scan][].
-Factories generate functionslve
-
+"""
 Factory functions for
 calculating convolutions of timeseries
 with discrete distributions
