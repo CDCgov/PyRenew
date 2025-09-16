@@ -71,8 +71,7 @@ exclude = [  # don't report on objects that match any of these regex
 known_first_party = ["pyrenew", "test"]
 
 [tool.deptry.per_rule_ignores]
-DEP001 = ["bs4"]
-DEP004 = ["pytest", "scipy"]
+DEP004 = ["pytest", "scipy", "bs4"]
 
 [tool.ruff]
 fix = true
