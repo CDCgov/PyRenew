@@ -35,9 +35,9 @@ class Infections(RandomVariable):
     -----
     The mathematical model is given by:
 
-    .. math::
-
-            I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t-\tau)
+    ```math
+    I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t-\tau)
+    ```
 
     where $I(t)$ is the number of infections at time $t$,
     $R(t)$ is the reproduction number at time $t$, and

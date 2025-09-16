@@ -60,17 +60,19 @@ def neg_MGF(r: float, w: ArrayLike) -> float:
     "weights" vector $w$ of length $n$, the negative MGF
     $M_-(r)$ is given by:
 
-    .. math::
-        M_-(r) = \\sum_{t = 1}^{n} w_i \\exp(-rt)
-    """
+    ```math
+    M_-(r) = \\sum_{t = 1}^{n} w_i \\exp(-rt)
+    ```
+
     return jnp.sum(w * jnp.exp(-r * _positive_ints_like(w)))
+    """
 
 
 def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
     """
     Compute the value of the partial deriative of
-    [`pyrenew.math.neg_MGF`][] with respect to ``r``
-    evaluated at a particular ``r`` and ``w`` pair.
+    [`pyrenew.math.neg_MGF`][] with respect to `r`
+    evaluated at a particular `r` and `w` pair.
 
     Parameters
     ----------
@@ -120,8 +122,9 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     For a fixed value of $\\mathcal{R}$, a renewal process
     has an asymptotic geometric growth rate $r$ that satisfies
 
-    .. math::
-        M_{-}(r) - \\frac{1}{\\mathcal{R}} = 0
+    ```math
+    M_{-}(r) - \\frac{1}{\\mathcal{R}} = 0
+    ```
 
     where $M_-(r)$ is the negative moment generating function
     for a random variable $\\tau$ representing the (discrete)
@@ -133,8 +136,9 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     We first make an initial guess based on the mean generation interval
     $\\bar{\\tau} = \\mathbb{E}(\\tau)$:
 
-    .. math::
-        r \\approx \\frac{\\mathcal{R} - 1}{\\mathcal{R} \\bar{\\tau}}
+    ```math
+    r \\approx \\frac{\\mathcal{R} - 1}{\\mathcal{R} \\bar{\\tau}}
+    ```
 
     We then refine this approximation by applying Newton's method for
     a fixed number of steps.

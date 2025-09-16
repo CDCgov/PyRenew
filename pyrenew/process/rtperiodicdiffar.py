@@ -18,11 +18,11 @@ class RtPeriodicDiffARProcess(RandomVariable):
     by placing an AR(1) process
     on the first differences in $\log[\mathcal{R}(t)]$. Formally:
 
-    .. math::
-        \log[\mathcal{R}^\mathrm{u}(t_3)] \sim \mathrm{Normal}\left(\log[\mathcal{R}^\mathrm{u}(t_2)] \
-            + \beta \left(\log[\mathcal{R}^\mathrm{u}(t_2)] - \
-             \log[\mathcal{R}^\mathrm{u}(t_1)]\right), \sigma_r \right)
-
+    ```math
+    \log[\mathcal{R}^\mathrm{u}(t_3)] \sim \mathrm{Normal}\left(\log[\mathcal{R}^\mathrm{u}(t_2)] \
+        + \beta \left(\log[\mathcal{R}^\mathrm{u}(t_2)] - \
+            \log[\mathcal{R}^\mathrm{u}(t_1)]\right), \sigma_r \right)
+    ```
     where $\mathcal{R}^\mathrm{u}(t)$ is the periodic reproduction number
     at time $t$, $\beta$ is the autoregressive parameter, and
     $\sigma_r$ is the standard deviation of the noise.

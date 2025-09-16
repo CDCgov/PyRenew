@@ -140,12 +140,13 @@ def compute_infections_from_rt_with_feedback(
     -----
     This function implements the following renewal process:
 
-    .. math::
-        \begin{aligned}
-        I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau) \\
-        \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(\gamma(t)\
-            \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
-        \end{aligned}
+    ```math
+    \begin{aligned}
+    I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau) \\
+    \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(\gamma(t)\
+        \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+    \end{aligned}
+    ```
 
     where $\mathcal{R}(t)$ is the reproductive number,
     $\gamma(t)$ is the infection feedback strength,

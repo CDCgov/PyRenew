@@ -137,20 +137,21 @@ def new_double_convolve_scanner(
     [`pyrenew.convolve.new_convolve_scanner`][], this function aids in
     applying the iterative operation:
 
-    .. math::
-        \begin{aligned}
-        Y(t) &= f_1 \left(m_1(t)
-           \begin{bmatrix}
-                X(t - n) \\
-                X(t - n + 1) \\
-                \vdots{} \\
-                X(t - 1)
-        \end{bmatrix} \cdot{} \mathbf{d}_1 \right) \\ \\
-        X(t) &= f_2 \left(
-           m_2(t) Y(t)
-        \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
-        \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d}_2 \right)
-        \end{aligned}
+    ```math
+    \begin{aligned}
+    Y(t) &= f_1 \left(m_1(t)
+        \begin{bmatrix}
+            X(t - n) \\
+            X(t - n + 1) \\
+            \vdots{} \\
+            X(t - 1)
+    \end{bmatrix} \cdot{} \mathbf{d}_1 \right) \\ \\
+    X(t) &= f_2 \left(
+        m_2(t) Y(t)
+    \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
+    \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d}_2 \right)
+    \end{aligned}
+    ```
 
     Where $\mathbf{d}_1$ and $\mathbf{d}_2$ are vectors of
     length $n$, $m_1(t)$ and $m_2(t)$ are scalars

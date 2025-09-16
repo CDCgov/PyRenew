@@ -61,9 +61,9 @@ class HospitalAdmissions(RandomVariable):
     are the same day of the week, $\omega(t) = \omega(t')$. The seven
     values that $\omega(t)$ takes on are constrained to have mean 1.
 
-    .. math::
-
-        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
+    ```math
+    H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
+    ```
 
     Where $T_d$ is the maximum delay from infection to hospitalization
     that we consider.

@@ -47,12 +47,12 @@ class InfectionsWithFeedback(RandomVariable):
     This function implements the following renewal process (reproduced from
     [`pyrenew.latent.infection_functions.compute_infections_from_rt_with_feedback`][]):
 
-    .. math::
+    ```math
+    I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
 
-        I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
-
-        \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
-            \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+    \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
+    \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+    ```
 
     where $\mathcal{R}(t)$ is the reproductive number, $\gamma(t)$
     is the infection feedback strength, $T_g$ is the max-length of the
