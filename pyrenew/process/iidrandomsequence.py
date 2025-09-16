@@ -67,7 +67,7 @@ class IIDRandomSequence(RandomVariable):
         Returns
         -------
         ArrayLike
-            `n` samples from :code:`self.distribution`.
+            `n` samples from self.distribution`.
         """
 
         if vectorize and hasattr(self.element_rv, "expand_by"):

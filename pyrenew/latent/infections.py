@@ -19,7 +19,7 @@ class InfectionsSample(NamedTuple):
     Attributes
     ----------
     post_initialization_infections:
-        The estimated latent infections. Default :obj:`None`.
+        The estimated latent infections. Default `None`.
     """
 
     post_initialization_infections: ArrayLike | None = None

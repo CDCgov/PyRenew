@@ -70,9 +70,9 @@ class ARProcess(RandomVariable):
         the second through `n` th dimensions, if any,
         of `autoreg` and `init_vals`, as well as the
         all dimensions of `noise_sd` (i.e.
-        :code:`jax.numpy.shape(autoreg)[1:]`,
-        :code:`jax.numpy.shape(init_vals)[1:]`
-        and :code:`jax.numpy.shape(noise_sd)`
+        `jax.numpy.shape(autoreg)[1:]`,
+        `jax.numpy.shape(init_vals)[1:]`
+        and `jax.numpy.shape(noise_sd)`
 
         Those shapes must be
         broadcastable together via

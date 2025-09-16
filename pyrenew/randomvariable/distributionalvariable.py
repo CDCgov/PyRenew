@@ -107,7 +107,7 @@ class DynamicDistributionalVariable(RandomVariable):
             Positional arguments passed to self.distribution_constructor
         obs : ArrayLike, optional
             Observations passed as the `obs` argument to
-            :meth:`numpyro.sample()`. Default `None`.
+            [`numpyro.primitives.sample`][]. Default `None`.
         **kwargs : dict, optional
             Keyword arguments passed to self.distribution_constructor
 
@@ -226,7 +226,7 @@ class StaticDistributionalVariable(RandomVariable):
         ----------
         obs : ArrayLike, optional
             Observations passed as the `obs` argument to
-            :meth:`numpyro.sample()`. Default `None`.
+            [`numpyro.primitives.sample`][]. Default `None`.
         **kwargs : dict, optional
             Additional keyword arguments passed through
             to internal sample calls, should there be any.
@@ -250,14 +250,13 @@ class StaticDistributionalVariable(RandomVariable):
         if possible. Returns a new StaticDistributionalVariable
         whose underlying distribution has been expanded by
         the given sample_shape via
-        :meth:`~numpyro.distributions.Distribution.expand_by()`
+        [`numpyro.distributions.distribution.Distribution.expand_by`][].
 
         Parameters
         ----------
         sample_shape : tuple
-            Sample shape for the expansion. Passed to the
-            :meth:`expand_by()` method of
-            [`numpyro.distributions.distribution.Distribution`][].
+            Sample shape for the expansion. Passed to
+            [`numpyro.distributions.distribution.Distribution.expand_by`][].
 
         Returns
         -------

@@ -166,12 +166,13 @@ class GLMPrediction(AbstractRegressionPrediction):
             Do not include values of 1 for the intercept;
             these will be added automatically. Passed as the
             `predictor_values` argument to
-            :meth:`GLMPrediction.predict()`
+            [`pyrenew.regression.GLMPrediction.predict`][].
 
         Returns
         -------
         GLMPredictionSample
         """
+
         intercept = numpyro.sample(
             self.name + self.intercept_suffix, self.intercept_prior
         )

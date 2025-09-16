@@ -119,15 +119,15 @@ class DifferencedProcess(RandomVariable):
         init_vals : ArrayLike
             initial values for the $0^{th}$ through
             $(n-1)^{st}$ differences, passed as the
-            :code:`init_diff_vals` argument to
-            [pyrenew.math.integrate_discrete]
+            `init_diff_vals` argument to
+            [`pyrenew.math.integrate_discrete`][].
 
         n : int
             Number of values to sample. Will sample
-            :code:`n - differencing_order` values from
+            `n - differencing_order` values from
             `self.fundamental_process` to ensure
             that the de-differenced output is of length
-            :code:`n`.
+            `n`.
 
         *args :
             Additional positional arguments passed to
@@ -135,9 +135,9 @@ class DifferencedProcess(RandomVariable):
 
         fundamental_process_init_vals : ArrayLike, optional
             Initial values for the fundamental process.
-            Passed as the :code:`init_vals` keyword argument
+            Passed as the `init_vals` keyword argument
             to `self.fundamental_process.sample`.
-            Default :obj:`None`.
+            Default `None`.
 
         **kwargs : dict, optional
             Keyword arguments passed to
