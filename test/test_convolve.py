@@ -43,7 +43,7 @@ def test_double_scanner_reduces_to_single(inits, to_scan_a, multipliers):
 
         Parameters
         ----------
-        x: any
+        x
             input value
 
         Returns

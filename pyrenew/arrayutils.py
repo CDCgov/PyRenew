@@ -21,15 +21,15 @@ def pad_edges_to_match(
 
     Parameters
     ----------
-    x : ArrayLike
+    x
         First array.
-    y : ArrayLike
+    y
         Second array.
-    axis : int, optional
+    axis
         Axis along which to add padding, by default 0
-    pad_direction : str, optional
+    pad_direction
         Direction to pad the shorter array, either "start" or "end", by default "end".
-    fix_y : bool, optional
+    fix_y
         If True, raise an error when `y` is shorter than `x`, by default False.
 
     Returns
@@ -92,11 +92,11 @@ def tile_until_n(
 
     Parameters
     ----------
-    data : ArrayLike
+    data
         Data to broadcast.
-    n_timepoints : int
+    n_timepoints
         Duration of the sequence.
-    offset : int
+    offset
         Relative point at which data starts, must be a non-negative integer.
         Default is zero, i.e., no offset.
 
@@ -151,13 +151,13 @@ def repeat_until_n(
 
     Parameters
     ----------
-    data : ArrayLike
+    data
         Data to broadcast.
-    period_size : int
+    period_size
         Size of the period for the repeat broadcast.
-    n_timepoints : int
+    n_timepoints
         Duration of the sequence.
-    offset : int, optional
+    offset
         Relative point at which data starts, must be between 0 and
         period_size - 1. By default 0, i.e., no offset.
 

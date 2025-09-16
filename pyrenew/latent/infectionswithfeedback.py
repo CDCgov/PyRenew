@@ -37,9 +37,9 @@ class InfectionsWithFeedback(RandomVariable):
 
     Parameters
     ----------
-    infection_feedback_strength : RandomVariable
+    infection_feedback_strength
         Infection feedback strength.
-    infection_feedback_pmf : RandomVariable
+    infection_feedback_pmf
         Infection feedback pmf.
 
     Notes
@@ -71,9 +71,9 @@ class InfectionsWithFeedback(RandomVariable):
 
         Parameters
         ----------
-        infection_feedback_strength : RandomVariable
+        infection_feedback_strength
             Infection feedback strength.
-        infection_feedback_pmf : RandomVariable
+        infection_feedback_pmf
             Infection feedback pmf.
 
         Returns
@@ -98,9 +98,9 @@ class InfectionsWithFeedback(RandomVariable):
 
         Parameters
         ----------
-        inf_feedback_strength : RandomVariable
+        inf_feedback_strength
             Infection feedback strength.
-        inf_feedback_pmf : RandomVariable
+        inf_feedback_pmf
             Infection feedback pmf.
 
         Returns
@@ -125,15 +125,15 @@ class InfectionsWithFeedback(RandomVariable):
 
         Parameters
         ----------
-        Rt : ArrayLike
+        Rt
             Reproduction number.
-        I0 : ArrayLike
+        I0
             Initial infections, as an array
             at least as long as the generation
             interval PMF.
-        gen_int : ArrayLike
+        gen_int
             Generation interval PMF.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
 

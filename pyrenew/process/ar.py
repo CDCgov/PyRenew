@@ -34,21 +34,21 @@ class ARProcess(RandomVariable):
 
         Parameters
         ----------
-        noise_name: str
+        noise_name
             A name for the sample site holding the
             Normal(`0`, `noise_sd`) noise for the AR process.
             Passed to [`numpyro.primitives.sample`][].
-        n: int
+        n
             Length of the sequence.
-        autoreg: ArrayLike
+        autoreg
             Autoregressive coefficients.
             The length of the array's first
             dimension determines the order $p$
             of the AR process.
-        init_vals : ArrayLike
+        init_vals
             Array of initial values. Must have the
             same first dimension size as the order.
-        noise_sd : ArrayLike
+        noise_sd
             Standard deviation of the AR
             process Normal noise, which by
             definition has mean 0.

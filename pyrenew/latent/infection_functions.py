@@ -22,13 +22,13 @@ def compute_infections_from_rt(
 
     Parameters
     ----------
-    I0 : ArrayLike
+    I0
         Array of initial infections of the
         same length as the generation interval
         pmf vector.
-    Rt : ArrayLike
+    Rt
         Timeseries of $\\mathcal{R}(t)$ values
-    reversed_generation_interval_pmf : ArrayLike
+    reversed_generation_interval_pmf
         discrete probability mass vector
         representing the generation interval
         of the infection process, where the final
@@ -64,14 +64,14 @@ def logistic_susceptibility_adjustment(
 
     Parameters
     ----------
-    I_raw_t : float
+    I_raw_t
         The "unadjusted" incidence at time t,
         i.e. the incidence given an infinite
         number of available susceptible individuals.
-    frac_susceptible : float
+    frac_susceptible
         fraction of remaining susceptible individuals
         in the population
-    n_population : float
+    n_population
         Total size of the population.
 
     Returns
@@ -98,27 +98,27 @@ def compute_infections_from_rt_with_feedback(
 
     Parameters
     ----------
-    I0 : ArrayLike
+    I0
         Array of initial infections of the
         same length as the generation interval
         pmf vector.
-    Rt_raw : ArrayLike
+    Rt_raw
         Timeseries of raw $\mathcal{R}(t)$ values not
         adjusted by infection feedback
-    infection_feedback_strength : ArrayLike
+    infection_feedback_strength
         Strength of the infection feedback.
         Either a scalar (constant feedback
         strength in time) or a vector representing
         the infection feedback strength at a
         given point in time.
-    reversed_generation_interval_pmf : ArrayLike
+    reversed_generation_interval_pmf
         discrete probability mass vector
         representing the generation interval
         of the infection process, where the final
         entry represents an infection 1 time unit in the
         past, the second-to-last entry represents
         an infection two time units in the past, etc.
-    reversed_infection_feedback_pmf : ArrayLike
+    reversed_infection_feedback_pmf
         discrete probability mass vector
         representing the infection feedback
         process, where the final entry represents

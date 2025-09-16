@@ -17,19 +17,19 @@ def generic_inversion_test(transform, test_vals, decimal=1e-8, **kwargs) -> None
 
     Parameters
     ----------
-    transform : numpyro.distributions.transforms.Transform
+    transform
         Uninstantiated transformation to instantiate
         and test
 
-    test_vals : ArrayLike
+    test_vals
         Array of test values on which to test
         applying and then inverting the transform
 
-    decimal : float
+    decimal
         Decimal tolerance, passed to
         numpy.testing.assert_array_almost_equal()
 
-    **kwargs :
+    **kwargs
         Additional keyword arguments passed
         to the transform constructor
     """

@@ -27,11 +27,11 @@ class RandomWalk(DifferencedProcess):
 
         Parameters
         ----------
-        step_rv : RandomVariable
+        step_rv
             RandomVariable representing a single step
             (difference) in the random walk.
 
-        **kwargs :
+        **kwargs
             Additional keyword arguments passed to the parent
             class constructor.
 
@@ -63,11 +63,11 @@ class StandardNormalRandomWalk(RandomWalk):
         Default constructor
         Parameters
         ----------
-        step_rv_name :
+        step_rv_name
             Name for the DistributionalVariable
             from which the Normal(0, 1)
             steps are sampled.
-        **kwargs:
+        **kwargs
             Additional keyword arguments passed
             to the parent class constructor.
         Return

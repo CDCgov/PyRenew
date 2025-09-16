@@ -16,7 +16,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             the number of time points for which to
             generate initial infections
 
@@ -36,7 +36,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             the number of time points to generate initial infections for
 
         Returns
@@ -56,7 +56,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
         Parameters
         ----------
-        I_pre_init : ArrayLike
+        I_pre_init
             An array representing some number of latent infections to be used with the specified `[`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][]`.
 
         Returns
@@ -81,7 +81,7 @@ class InitializeInfectionsZeroPad(InfectionInitializationMethod):
 
         Parameters
         ----------
-        I_pre_init : ArrayLike
+        I_pre_init
             An array with initialized infections to be padded with zeros.
 
         Returns
@@ -107,7 +107,7 @@ class InitializeInfectionsFromVec(InfectionInitializationMethod):
 
         Parameters
         ----------
-        I_pre_init : ArrayLike
+        I_pre_init
             An array with the same length as ``n_timepoints`` to be
             used as the initial infections.
 
@@ -155,11 +155,11 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             the number of time points to generate initial infections for
-        rate_rv : RandomVariable
+        rate_rv
             A random variable representing the rate of exponential growth
-        t_pre_init : int | None, optional
+        t_pre_init
              The time point whose number of infections is described by ``I_pre_init``. Defaults to ``n_timepoints - 1``.
         """
         super().__init__(n_timepoints)
@@ -173,7 +173,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
 
         Parameters
         ----------
-        I_pre_init : ArrayLike
+        I_pre_init
             An array of size 1 representing the number of infections at time ``t_pre_init``.
 
         Returns

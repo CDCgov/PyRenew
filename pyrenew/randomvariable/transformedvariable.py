@@ -26,11 +26,11 @@ class TransformedVariable(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name for the random variable instance.
-        base_rv : RandomVariable
+        base_rv
             The underlying (untransformed) RandomVariable.
-        transforms : Transform
+        transforms
             Transformation or tuple of transformations
             to apply to the output of
             `base_rv.sample()`; single values will be coerced to
@@ -57,10 +57,10 @@ class TransformedVariable(RandomVariable):
 
         Parameters
         ----------
-        record : bool, optional
+        record
             Whether to record the value of the deterministic
             RandomVariable. Defaults to False.
-        **kwargs :
+        **kwargs
             Keyword arguments passed to self.base_rv.sample()
 
         Returns

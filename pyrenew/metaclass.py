@@ -16,11 +16,11 @@ def _assert_type(arg_name: str, value, expected_type) -> None:
 
     Parameters
     ----------
-    arg_name : str
+    arg_name
         Name of the argument
-    value : object
+    value
         The object to be validated
-    expected_type : type
+    expected_type
         The expected object type
 
     Raises
@@ -62,7 +62,7 @@ class RandomVariable(metaclass=ABCMeta):
 
         Parameters
         ----------
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal
             `sample` calls, should there be any.
 
@@ -115,7 +115,7 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal
             `sample` calls, should there be any.
 
@@ -131,7 +131,7 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to
             internal `sample` calls, should there be any.
 
@@ -153,11 +153,11 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        nuts_args : dict, optional
+        nuts_args
             Dictionary of arguments passed to the
             [`numpyro.infer.hmc.NUTS`][] constructor.
             Default None.
-        mcmc_args : dict, optional
+        mcmc_args
             Dictionary of arguments passed to the
             [`numpyro.infer.mcmc.MCMC`][] constructor.
             Default None.
@@ -207,11 +207,11 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        nuts_args : dict, optional
+        nuts_args
             Dictionary of arguments passed to the kernel
             [`numpyro.infer.hmc.NUTS`][] constructor.
             Defaults to None.
-        mcmc_args : dict, optional
+        mcmc_args
             Dictionary of arguments passed to the MCMC runner
             [`numpyro.infer.mcmc.MCMC`][] constructor.
             Defaults to None.
@@ -245,9 +245,9 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        prob : float, optional
+        prob
             The width of the credible interval to show. Default 0.9
-        exclude_deterministic : bool, optional
+        exclude_deterministic
             Whether to print deterministic sites in the summary.
             Defaults to True.
 
@@ -269,9 +269,9 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        rng_key : ArrayLike, optional
+        rng_key
             Random key for the Predictive function call. Defaults to None.
-        numpyro_predictive_args : dict, optional
+        numpyro_predictive_args
             Dictionary of arguments to be passed to the
             [`numpyro.infer.util.Predictive`][] constructor.
         **kwargs
@@ -312,10 +312,10 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        rng_key : ArrayLike, optional
+        rng_key
             Random key for the Predictive function call.
             Default None.
-        numpyro_predictive_args : dict, optional
+        numpyro_predictive_args
             Dictionary of arguments to be passed to
             the [`numpyro.infer.util.Predictive`][]
             constructor. Default None.

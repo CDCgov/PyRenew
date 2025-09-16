@@ -30,16 +30,16 @@ class DynamicDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Name of the random variable.
-        distribution_constructor : Callable
+        distribution_constructor
             Callable that returns a concrete parametrized
             numpyro.Distributions.distribution instance.
-        reparam : numpyro.infer.reparam.Reparam
+        reparam
             If not None, reparameterize sampling
             from the distribution according to the
             given numpyro reparameterizer
-        expand_by_shape : tuple, optional
+        expand_by_shape
             If not None, call [`numpyro.distributions.distribution.Distribution.expand_by`][] on the
             underlying distribution once it is instantiated
             with the given `expand_by_shape`.
@@ -74,7 +74,7 @@ class DynamicDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        distribution_constructor : any
+        distribution_constructor
             Putative distribution_constructor to validate.
 
         Returns
@@ -103,12 +103,12 @@ class DynamicDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        *args :
+        *args
             Positional arguments passed to self.distribution_constructor
-        obs : ArrayLike, optional
+        obs
             Observations passed as the `obs` argument to
             [`numpyro.primitives.sample`][]. Default `None`.
-        **kwargs : dict, optional
+        **kwargs
             Keyword arguments passed to self.distribution_constructor
 
         Returns
@@ -137,7 +137,7 @@ class DynamicDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        sample_shape : tuple
+        sample_shape
             Sample shape by which to expand the distribution.
             Passed to the expand_by() method of
             [`numpyro.distributions.distribution.Distribution`][]
@@ -176,11 +176,11 @@ class StaticDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Name of the random variable.
-        distribution : numpyro.distributions.Distribution
+        distribution
             Distribution of the random variable.
-        reparam : numpyro.infer.reparam.Reparam
+        reparam
             If not None, reparameterize sampling
             from the distribution according to the
             given numpyro reparameterizer
@@ -224,10 +224,10 @@ class StaticDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        obs : ArrayLike, optional
+        obs
             Observations passed as the `obs` argument to
             [`numpyro.primitives.sample`][]. Default `None`.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through
             to internal sample calls, should there be any.
 
@@ -254,7 +254,7 @@ class StaticDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        sample_shape : tuple
+        sample_shape
             Sample shape for the expansion. Passed to
             [`numpyro.distributions.distribution.Distribution.expand_by`][].
 
@@ -288,10 +288,10 @@ def DistributionalVariable(
 
     Parameters
     ----------
-    name : str
+    name
         Name of the random variable.
 
-    distribution: numpyro.distributions.Distribution | Callable
+    distribution
         Either numpyro.distributions.Distribution instance
         given the static distribution of the random variable or
         a callable that returns a parameterized
@@ -300,7 +300,7 @@ def DistributionalVariable(
         e.g. a Normal distribution with an inferred location and
         scale.
 
-    reparam : numpyro.infer.reparam.Reparam
+    reparam
         If not None, reparameterize sampling
         from the distribution according to the
         given numpyro reparameterizer

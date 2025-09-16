@@ -32,11 +32,11 @@ def new_convolve_scanner(
 
     Parameters
     ----------
-    array_to_convolve : ArrayLike
+    array_to_convolve
         A 1D jax array to convolve with subsets of the
         iteratively constructed history array.
 
-    transform : Callable
+    transform
         A transformation to apply to the result
         of the dot product and multiplication.
 
@@ -107,7 +107,7 @@ def new_double_convolve_scanner(
 
     Parameters
     ----------
-    arrays_to_convolve : tuple[ArrayLike, ArrayLike]
+    arrays_to_convolve
         A tuple of two 1D jax arrays, one for
         each of the two stages of convolution.
         The first entry in the arrays_to_convolve
@@ -115,7 +115,7 @@ def new_double_convolve_scanner(
         current history subset array first, the
         the second entry will be convolved with
         it second.
-    transforms : tuple[Callable, Callable]
+    transforms
         A tuple of two functions, each transforming the
         output of the dot product at each
         convolution stage. The first entry in the transforms
@@ -194,7 +194,7 @@ def compute_delay_ascertained_incidence(
 
     Parameters
     ----------
-    p_observed_given_incident: ArrayLike
+    p_observed_given_incident
         The rate at which latent incident counts translate into observed
         counts. For example, setting ``p_observed_given_incident=0.001``
         when the incident counts are infections and the observed counts
@@ -202,10 +202,10 @@ def compute_delay_ascertained_incidence(
         and population for which the probability of a latent infection
         leading to a reported hospital admission is 0.001.
 
-    latent_incidence: ArrayLike
+    latent_incidence
         Incidence values based on the true underlying process.
 
-    delay_incidence_to_observation_pmf: ArrayLike
+    delay_incidence_to_observation_pmf
         Probability mass function of delay interval from incidence to
         observation with support on the interval 0 to the length of the
         array's first dimension. The $i$\th entry represents the
@@ -216,7 +216,7 @@ def compute_delay_ascertained_incidence(
         ``delay_incidence_to_observation_pmf[1]`` represents the fraction
         that are delayed 1 time units, et cetera.
 
-    pad: bool
+    pad
         Return an output array that has been nan-padded so that its
         first entry represents the same timepoint as the first timepoint
         of the input `latent_incidence` array? Boolean, default `False`.

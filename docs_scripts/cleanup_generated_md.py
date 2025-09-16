@@ -20,9 +20,9 @@ def cleanup_generated_md(directory: Path, dry_run: bool = False) -> None:
 
     Parameters
     ----------
-    directory : Path
+    directory
         The directory to search recursively for qmd files
-    dry_run : bool, default False
+    dry_run
         If True, only print what would be deleted without actually deleting
     """
     if not directory.exists():
