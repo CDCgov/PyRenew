@@ -62,6 +62,7 @@ checks = [
     "RT01"
 ]
 ignore = [
+    "PR04",
     "ES01",
     "SA01",
     "EX01",
