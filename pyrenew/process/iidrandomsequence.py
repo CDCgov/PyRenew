@@ -26,10 +26,6 @@ class IIDRandomSequence(RandomVariable):
 
         Parameters
         ----------
-        name : str
-            A name for the random variable, used to
-            name sites within it in :meth:`numpyro.sample()`
-            calls.
         element_rv : RandomVariable
             RandomVariable representing a single element
             in the sequence.
@@ -56,22 +52,22 @@ class IIDRandomSequence(RandomVariable):
 
         vectorize: bool
             Sample vectorized? If True, use the
-            :class:`~pyrenew.metaclass.RandomVariable`'s
-            :meth:`expand_by()` method, if available,
-            and fall back on :func:`numpyro.contrib.control_flow.scan`
+            [`pyrenew.metaclass.RandomVariable`][]'s
+            `expand_by()` method, if available,
+            and fall back on [`numpyro.contrib.control_flow.scan`][]
             otherwise.
             If False, always use
-            :func:`~numpyro.contrib.control_flow.scan`.
+            [`numpyro.contrib.control_flow.scan`][].
             Default False.
 
         **kwargs:
             Additional keyword arguments passed to
-            :meth:`self.element_rv.sample`.
+            `self.element_rv.sample`.
 
         Returns
         -------
         ArrayLike
-            `n` samples from :code:`self.distribution`.
+            `n` samples from self.distribution`.
         """
 
         if vectorize and hasattr(self.element_rv, "expand_by"):
@@ -118,8 +114,6 @@ class StandardNormalSequence(IIDRandomSequence):
 
         Parameters
         ----------
-        name : str
-            see :class:`IIDRandomSequence`.
         element_rv_name: str
             Name for the internal element_rv, here a
             DistributionalVariable encoding a

@@ -13,7 +13,7 @@ from pyrenew.metaclass import RandomVariable
 class DynamicDistributionalVariable(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single :class:`numpyro.distributions.Distribution`
+    from a single `numpyro.distributions.distribution.Distribution`
     that is parameterized / instantiated at `sample()` time
     (rather than at RandomVariable instantiation time).
     """
@@ -40,8 +40,8 @@ class DynamicDistributionalVariable(RandomVariable):
             from the distribution according to the
             given numpyro reparameterizer
         expand_by_shape : tuple, optional
-            If not None, call :meth:`expand_by()` on the
-            underlying distribution once it is instianted
+            If not None, call [`numpyro.distributions.distribution.Distribution.expand_by`][] on the
+            underlying distribution once it is instantiated
             with the given `expand_by_shape`.
             Default None.
 
@@ -107,14 +107,14 @@ class DynamicDistributionalVariable(RandomVariable):
             Positional arguments passed to self.distribution_constructor
         obs : ArrayLike, optional
             Observations passed as the `obs` argument to
-            :meth:`numpyro.sample()`. Default `None`.
+            [`numpyro.primitives.sample`][]. Default `None`.
         **kwargs : dict, optional
             Keyword arguments passed to self.distribution_constructor
 
         Returns
         -------
         ArrayLike
-           a sample from the distribution.
+            a sample from the distribution.
         """
         distribution = self.distribution_constructor(*args, **kwargs)
         if self.expand_by_shape is not None:
@@ -140,7 +140,7 @@ class DynamicDistributionalVariable(RandomVariable):
         sample_shape : tuple
             Sample shape by which to expand the distribution.
             Passed to the expand_by() method of
-            :class:`numpyro.distributions.Distribution`
+            [`numpyro.distributions.distribution.Distribution`][]
             after the distribution is instantiated.
 
         Returns
@@ -160,7 +160,7 @@ class DynamicDistributionalVariable(RandomVariable):
 class StaticDistributionalVariable(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single :class:`numpyro.distributions.Distribution`
+    from a single [`numpyro.distributions.distribution.Distribution`][]
     that is parameterized / instantiated at RandomVariable
     instantiation time (rather than at `sample()`-ing time).
     """
@@ -226,7 +226,7 @@ class StaticDistributionalVariable(RandomVariable):
         ----------
         obs : ArrayLike, optional
             Observations passed as the `obs` argument to
-            :meth:`numpyro.sample()`. Default `None`.
+            [`numpyro.primitives.sample`][]. Default `None`.
         **kwargs : dict, optional
             Additional keyword arguments passed through
             to internal sample calls, should there be any.
@@ -234,7 +234,7 @@ class StaticDistributionalVariable(RandomVariable):
         Returns
         -------
         ArrayLike
-           Containing a sample from the distribution.
+            Containing a sample from the distribution.
         """
         with numpyro.handlers.reparam(config=self.reparam_dict):
             sample = numpyro.sample(
@@ -250,14 +250,13 @@ class StaticDistributionalVariable(RandomVariable):
         if possible. Returns a new StaticDistributionalVariable
         whose underlying distribution has been expanded by
         the given sample_shape via
-        :meth:`~numpyro.distributions.Distribution.expand_by()`
+        [`numpyro.distributions.distribution.Distribution.expand_by`][].
 
         Parameters
         ----------
         sample_shape : tuple
-            Sample shape for the expansion. Passed to the
-            :meth:`expand_by()` method of
-            :class:`numpyro.distributions.Distribution`.
+            Sample shape for the expansion. Passed to
+            [`numpyro.distributions.distribution.Distribution.expand_by`][].
 
         Returns
         -------

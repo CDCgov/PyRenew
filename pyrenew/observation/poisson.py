@@ -25,7 +25,7 @@ class PoissonObservation(RandomVariable):
         Parameters
         ----------
         name : str
-            Passed to numpyro.sample.
+            Passed to [`numpyro.primitives.sample`][].
         eps : float, optional
             Small value added to the rate parameter to avoid zero values.
             Defaults to 1e-8.

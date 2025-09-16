@@ -45,19 +45,19 @@ class InfectionsWithFeedback(RandomVariable):
     Notes
     -----
     This function implements the following renewal process (reproduced from
-    :func:`pyrenew.latent.infection_functions.sample_infections_with_feedback`):
+    [`pyrenew.latent.infection_functions.compute_infections_from_rt_with_feedback`][]):
 
-    .. math::
+    ```math
+    I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
 
-        I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
+    \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
+    \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+    ```
 
-        \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
-            \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
-
-    where :math:`\mathcal{R}(t)` is the reproductive number, :math:`\gamma(t)`
-    is the infection feedback strength, :math:`T_g` is the max-length of the
-    generation interval, :math:`\mathcal{R}^u(t)` is the raw reproduction
-    number, :math:`f(t)` is the infection feedback pmf, and :math:`T_f`
+    where $\mathcal{R}(t)$ is the reproductive number, $\gamma(t)$
+    is the infection feedback strength, $T_g$ is the max-length of the
+    generation interval, $\mathcal{R}^u(t)$ is the raw reproduction
+    number, $f(t)$ is the infection feedback pmf, and $T_f$
     is the max-length of the infection feedback pmf.
     """
 

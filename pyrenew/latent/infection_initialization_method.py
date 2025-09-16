@@ -12,7 +12,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
     def __init__(self, n_timepoints: int):
         """Default constructor for
-        :class:`InfectionInitializationMethod`.
+        [`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][].
 
         Parameters
         ----------
@@ -31,7 +31,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
     def validate(n_timepoints: int) -> None:
         """
         Validate inputs to the
-        :class:`InfectionInitializationMethod`
+        [`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][]
         constructor.
 
         Parameters
@@ -57,7 +57,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
         Parameters
         ----------
         I_pre_init : ArrayLike
-            An array representing some number of latent infections to be used with the specified ``InfectionInitializationMethod``.
+            An array representing some number of latent infections to be used with the specified `[`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][]`.
 
         Returns
         -------
@@ -134,10 +134,12 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
     -----
     The number of incident infections at time `t` is given by:
 
-    .. math:: I(t) = I_p \exp \left( r (t - t_p) \right)
+    ```math
+    I(t) = I_p \exp \left( r (t - t_p) \right)
+    ```
 
-    Where :math:`I_p` is ``I_pre_init``, :math:`r` is ``rate``, and :math:`t_p` is ``t_pre_init``.
-    This ensures that :math:`I(t_p) = I_p`.
+    Where $I_p$ is ``I_pre_init``, $r$ is ``rate``, and $t_p$ is ``t_pre_init``.
+    This ensures that $I(t_p) = I_p$.
     We default to ``t_pre_init = n_timepoints - 1``, so that
     ``I_pre_init`` represents the number of incident infections immediately
     before the renewal process begins.
@@ -149,7 +151,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         rate_rv: RandomVariable,
         t_pre_init: int | None = None,
     ):
-        """Default constructor for the ``InitializeInfectionsExponentialGrowth`` class.
+        """Default constructor for the [`pyrenew.latent.infection_initialization_method.InitializeInfectionsExponentialGrowth`][] class.
 
         Parameters
         ----------

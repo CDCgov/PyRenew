@@ -84,9 +84,9 @@ class GLMPrediction(AbstractRegressionPrediction):
         name : str
             The name of the prediction process,
             which will be used to name the constituent
-            sampled parameters in calls to `numpyro.sample`
+            sampled parameters in calls to [`numpyro.primitives.sample`][]
 
-        intercept_prior : numypro.distributions.Distribution
+        intercept_prior : numpyro.distributions.Distribution
             Prior distribution for the regression intercept
             value
 
@@ -166,12 +166,13 @@ class GLMPrediction(AbstractRegressionPrediction):
             Do not include values of 1 for the intercept;
             these will be added automatically. Passed as the
             `predictor_values` argument to
-            :meth:`GLMPrediction.predict()`
+            [`pyrenew.regression.GLMPrediction.predict`][].
 
         Returns
         -------
         GLMPredictionSample
         """
+
         intercept = numpyro.sample(
             self.name + self.intercept_suffix, self.intercept_prior
         )

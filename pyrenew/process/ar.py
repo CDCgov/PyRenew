@@ -37,14 +37,13 @@ class ARProcess(RandomVariable):
         noise_name: str
             A name for the sample site holding the
             Normal(`0`, `noise_sd`) noise for the AR process.
-            Passed to :func:`numpyro.sample()
-            <numpyro.primitives.sample>`.
+            Passed to [`numpyro.primitives.sample`][].
         n: int
             Length of the sequence.
         autoreg: ArrayLike
             Autoregressive coefficients.
             The length of the array's first
-            dimension determines the order :math:`p`
+            dimension determines the order $p$
             of the AR process.
         init_vals : ArrayLike
             Array of initial values. Must have the
@@ -71,13 +70,13 @@ class ARProcess(RandomVariable):
         the second through `n` th dimensions, if any,
         of `autoreg` and `init_vals`, as well as the
         all dimensions of `noise_sd` (i.e.
-        :code:`jax.numpy.shape(autoreg)[1:]`,
-        :code:`jax.numpy.shape(init_vals)[1:]`
-        and :code:`jax.numpy.shape(noise_sd)`
+        `jax.numpy.shape(autoreg)[1:]`,
+        `jax.numpy.shape(init_vals)[1:]`
+        and `jax.numpy.shape(noise_sd)`
 
         Those shapes must be
         broadcastable together via
-        :func:`jax.lax.broadcast_shapes`. This can
+        [`jax.lax.broadcast_shapes`][]. This can
         be used to produce multiple AR processes of the
         same order but with either shared or different initial
         values, AR coefficient vectors, and/or

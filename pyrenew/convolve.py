@@ -1,15 +1,13 @@
 """
-convolve
-
 Factory functions for
 calculating convolutions of timeseries
 with discrete distributions
 of times-to-event using
-:py:func:`jax.lax.scan`.
+[`jax.lax.scan`][].
 Factories generate functions
 that can be passed to
-:func:`jax.lax.scan` or
-:func:`numpyro.contrib.control_flow.scan`
+[`jax.lax.scan`][] or
+[`numpyro.contrib.control_flow.scan`][]
 with an appropriate array to scan along.
 """
 
@@ -27,8 +25,8 @@ def new_convolve_scanner(
 ) -> Callable:
     r"""
     Factory function to create a "scanner" function
-    that can be used with :func:`jax.lax.scan` or
-    :func:`numpyro.contrib.control_flow.scan` to
+    that can be used with [`jax.lax.scan`][] or
+    [`numpyro.contrib.control_flow.scan`][] to
     construct an array via backward-looking iterative
     convolution.
 
@@ -46,8 +44,8 @@ def new_convolve_scanner(
     -------
     Callable
         A scanner function that can be used with
-        :func:`jax.lax.scan` or
-        :func:`numpyro.contrib.control_flow.scan`
+        [`jax.lax.scan`][] or
+        [`numpyro.contrib.control_flow.scan`][]
         for convolution.
         This function takes a history subset array and
         a scalar, computes the dot product of
@@ -63,19 +61,24 @@ def new_convolve_scanner(
     The following iterative operation is found often
     in renewal processes:
 
-    .. math::
-        X(t) = f\left(m(t) \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
-        \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d} \right)
+    ```math
+    X(t) = f\left(m(t) \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
+    \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d} \right)
+    ```
 
-    Where :math:`\mathbf{d}` is a vector of length :math:`n`,
-    :math:`m(t)` is a scalar for each value of time :math:`t`,
-    and :math:`f` is a scalar-valued function.
+    ```math
+    a + b = c^2
+    ```
 
-    Given :math:`\mathbf{d}`, and optionally :math:`f`,
+    Where $\mathbf{d}$ is a vector of length $n$,
+    $m(t)$ is a scalar for each value of time $t$,
+    and $f$ is a scalar-valued function.
+
+    Given $\mathbf{d}$, and optionally $f$,
     this factory function returns a new function that
     performs one step of this process while scanning along
     an array of  multipliers (i.e. an array
-    giving the values of :math:`m(t)`) using :py:func:`jax.lax.scan`.
+    giving the values of $m(t)$) using [`jax.lax.scan`][].
     """
 
     def _new_scanner(
@@ -131,27 +134,28 @@ def new_double_convolve_scanner(
     Notes
     -----
     Using the same notation as in the documentation for
-    :func:`new_convolve_scanner`, this function aids in
+    [`pyrenew.convolve.new_convolve_scanner`][], this function aids in
     applying the iterative operation:
 
-    .. math::
-        \begin{aligned}
-        Y(t) &= f_1 \left(m_1(t)
-           \begin{bmatrix}
-                X(t - n) \\
-                X(t - n + 1) \\
-                \vdots{} \\
-                X(t - 1)
-        \end{bmatrix} \cdot{} \mathbf{d}_1 \right) \\ \\
-        X(t) &= f_2 \left(
-           m_2(t) Y(t)
-        \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
-        \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d}_2 \right)
-        \end{aligned}
+    ```math
+    \begin{aligned}
+    Y(t) &= f_1 \left(m_1(t)
+        \begin{bmatrix}
+            X(t - n) \\
+            X(t - n + 1) \\
+            \vdots{} \\
+            X(t - 1)
+    \end{bmatrix} \cdot{} \mathbf{d}_1 \right) \\ \\
+    X(t) &= f_2 \left(
+        m_2(t) Y(t)
+    \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
+    \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d}_2 \right)
+    \end{aligned}
+    ```
 
-    Where :math:`\mathbf{d}_1` and :math:`\mathbf{d}_2` are vectors of
-    length :math:`n`, :math:`m_1(t)` and :math:`m_2(t)` are scalars
-    for each value of time :math:`t`, and :math:`f_1` and :math:`f_2`
+    Where $\mathbf{d}_1$ and $\mathbf{d}_2$ are vectors of
+    length $n$, $m_1(t)$ and $m_2(t)$ are scalars
+    for each value of time $t$, and $f_1$ and $f_2$
     are scalar-valued functions.
     """
     arr1, arr2 = arrays_to_convolve
@@ -183,9 +187,9 @@ def compute_delay_ascertained_incidence(
 
     In addition to the output array, returns the offset
     (number of time units) separating the first entry of the
-    the input ``latent_incidence`` array from the first entry
+    the input `latent_incidence` array from the first entry
     of the output (delay ascertained incidence) array.
-    Note that if the ``pad`` keyword argument is ``True``,
+    Note that if the `pad` keyword argument is `True`,
     the offset will be always `0`.
 
     Parameters
@@ -204,9 +208,9 @@ def compute_delay_ascertained_incidence(
     delay_incidence_to_observation_pmf: ArrayLike
         Probability mass function of delay interval from incidence to
         observation with support on the interval 0 to the length of the
-        array's first dimension. The :math:`i`\th entry represents the
+        array's first dimension. The $i$\th entry represents the
         probability mass for a delay
-        of :math:`i` time units, i.e
+        of $i$ time units, i.e
         ``delay_incidence_to_observation_pmf[0]`` represents
         the fraction of observations that are delayed 0 time unit,
         ``delay_incidence_to_observation_pmf[1]`` represents the fraction
@@ -215,7 +219,7 @@ def compute_delay_ascertained_incidence(
     pad: bool
         Return an output array that has been nan-padded so that its
         first entry represents the same timepoint as the first timepoint
-        of the input `latent_incidence` array? Boolean, default ``False``.
+        of the input `latent_incidence` array? Boolean, default `False`.
 
     Returns
     --------

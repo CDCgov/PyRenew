@@ -17,21 +17,20 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
     Parameters
     ----------
     day_of_week: int
-       Integer to validate.
+        Integer to validate.
 
     variable_name: str
-       Name of the variable being validated, to increase
-       the informativeness of the error message.
+        Name of the variable being validated, to increase the informativeness of the error message.
 
     Returns
     -------
     None
-       If validation passes.
+        If validation passes.
 
     Raises
     ------
     ValueError
-       If validation fails.
+        If validation fails.
     """
     if not isinstance(day_of_week, int):
         raise ValueError(
@@ -94,10 +93,10 @@ def daily_to_weekly(
 
     Notes
     -----
-    This is _not_ a simple inverse of :func:`weekly_to_daily`.
+    This is _not_ a simple inverse of [`pyrenew.time.weekly_to_daily`][].
     This function aggregates (by summing) daily values to
     create a timeseries of weekly total values.
-    :func:`weekly_to_daily` broadcasts a _single shared value_
+    [`pyrenew.time.weekly_to_daily`][] broadcasts a _single shared value_
     for a given week as the (repeated) daily value for each day
     of that week.
     """
@@ -124,7 +123,7 @@ def daily_to_mmwr_epiweekly(
 ) -> ArrayLike:
     """
     Aggregate daily values to weekly values
-    using :func:`daily_to_weekly` with
+    using [`pyrenew.time.daily_to_weekly`][] with
     MMWR epidemiological weeks (begin on Sundays,
     end on Saturdays).
 
@@ -158,7 +157,7 @@ def weekly_to_daily(
     Broadcast a weekly timeseries to a daily
     timeseries. The value for the week will be used
     as the value each day in that week, via
-    :func:`jnp.repeat`.
+    [`jax.numpy.repeat`][].
 
     Parameters
     ----------
@@ -169,7 +168,7 @@ def weekly_to_daily(
 
     week_start_dow: int
         Day of the week on which weeks are considered to
-        start in the input ``weekly_values`` timeseries
+        start in the input `weekly_values` timeseries
         (e.g. ISO weeks start on Mondays and end on Sundays;
         MMWR epiweeks start on Sundays and end on Saturdays).
         An integer between 0 and 6, inclusive (0 for Monday,
@@ -180,8 +179,8 @@ def weekly_to_daily(
         Day of the week on which to start the output timeseries.
         An integer between 0 and 6, inclusive (0 for Monday,
         1 for Tuesday, ..., 6 for Sunday). Defaults to the week
-        start date as specified by ``week_start_dow``.
-        If ``output_data_first_dow`` is _not_ equal to ``week_start_dow``,
+        start date as specified by `week_start_dow`.
+        If `output_data_first_dow` is _not_ equal to `week_start_dow`,
         the first weekly value will be partial (i.e. represented by
         between 1 and 6 entries in the output timeseries) and
         all subsequent weeks will be complete (represented by 7
@@ -199,8 +198,8 @@ def weekly_to_daily(
 
     Notes
     -----
-    This is _not_ a simple inverse of :func:`daily_to_weekly`.
-    :func:`daily_to_weekly` aggregates (by summing) daily values to
+    This is _not_ a simple inverse of [`pyrenew.time.daily_to_weekly`][].
+    [`pyrenew.time.daily_to_weekly`][] aggregates (by summing) daily values to
     create a timeseries of weekly total values.
     This function broadcasts a _single shared value_
     for a given week as the (repeated) daily value for each day
@@ -226,7 +225,7 @@ def mmwr_epiweekly_to_daily(
 ) -> ArrayLike:
     """
     Convert an MMWR epiweekly timeseries to a daily
-    timeseries using :func:`weekly_to_daily`.
+    timeseries using [`pyrenew.time.weekly_to_daily`][].
 
     Parameters
     ----------
@@ -240,7 +239,7 @@ def mmwr_epiweekly_to_daily(
         An integer between 0 and 6, inclusive (0 for Monday,
         1 for Tuesday, ..., 6 for Sunday). Defaults to the MMWR
         epiweek start day (6, Sunday).
-        If ``output_data_first_dow`` is _not_ equal to 6 (Sunday,
+        If `output_data_first_dow` is _not_ equal to 6 (Sunday,
         the start of an MMWR epiweek), the first weekly value will
         be partial (i.e. represented by between 1 and 6 entries
         in the output timeseries) and all subsequent weeks will be
