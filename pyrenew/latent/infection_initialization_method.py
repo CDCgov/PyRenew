@@ -151,7 +151,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         rate_rv: RandomVariable,
         t_pre_init: int | None = None,
     ):
-        """Default constructor for the ``InitializeInfectionsExponentialGrowth`` class.
+        """Default constructor for the [`pyrenew.latent.infection_initialization_method.InitializeInfectionsExponentialGrowth`][] class.
 
         Parameters
         ----------
