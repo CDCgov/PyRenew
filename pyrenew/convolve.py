@@ -134,7 +134,7 @@ def new_double_convolve_scanner(
     Notes
     -----
     Using the same notation as in the documentation for
-    [new_convolve_scanner], this function aids in
+    [`pyrenew.convolve.new_convolve_scanner`][], this function aids in
     applying the iterative operation:
 
     .. math::
