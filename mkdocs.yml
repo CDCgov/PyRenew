@@ -28,7 +28,6 @@ plugins:
           options:
             annotations_path: "brief"
             docstring_style: "numpy"
-            scoped_crossrefs: true
             line_length: 80
             separate_signature: true
             show_signature_annotations: true
