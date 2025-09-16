@@ -82,7 +82,7 @@ class DifferencedProcess(RandomVariable):
         Returns
         -------
         None
-            or raises a [ValueError][]
+            or raises a [`ValueError`][]
         """
         if not isinstance(differencing_order, int):
             raise ValueError(

@@ -84,7 +84,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         name : str
             The name of the prediction process,
             which will be used to name the constituent
-            sampled parameters in calls to [numpyro.primitives.sample][]
+            sampled parameters in calls to [`numpyro.primitives.sample`][]
 
         intercept_prior : numpyro.distributions.Distribution
             Prior distribution for the regression intercept

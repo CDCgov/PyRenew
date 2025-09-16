@@ -76,7 +76,7 @@ class ARProcess(RandomVariable):
 
         Those shapes must be
         broadcastable together via
-        [jax.lax.broadcast_shapes][]. This can
+        [`jax.lax.broadcast_shapes`][]. This can
         be used to produce multiple AR processes of the
         same order but with either shared or different initial
         values, AR coefficient vectors, and/or

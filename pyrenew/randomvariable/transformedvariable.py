@@ -12,7 +12,7 @@ class TransformedVariable(RandomVariable):
     by taking the output of another RV's
     :meth:`RandomVariable.sample()` method
     and transforming it by a given transformation
-    (typically a [numpyro.distributions.transforms.Transform][])
+    (typically a [`numpyro.distributions.transforms.Transform`][])
     """
 
     def __init__(

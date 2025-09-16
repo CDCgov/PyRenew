@@ -90,7 +90,7 @@ def test_double_scanner_reduces_to_single(inits, to_scan_a, multipliers):
 def test_convolve_scanner_using_scan(arr, history, multipliers, transform):
     """
     Tests the output of new convolve scanner function
-    used with [jax.lax.scan][] against values calculated
+    used with [`jax.lax.scan`][] against values calculated
     using a for loop
     """
     scanner = pc.new_convolve_scanner(arr, transform)
@@ -129,7 +129,7 @@ def test_convolve_scanner_using_scan(arr, history, multipliers, transform):
 def test_double_convolve_scanner_using_scan(arr1, arr2, history, m1, m2, transform):
     """
     Tests the output of new convolve double scanner function
-    used with [jax.lax.scan][] against values calculated
+    used with [`jax.lax.scan`][] against values calculated
     using a for loop
     """
     arr1 = jnp.array([1.0, 2.0])

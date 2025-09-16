@@ -52,12 +52,12 @@ class IIDRandomSequence(RandomVariable):
 
         vectorize: bool
             Sample vectorized? If True, use the
-            [pyrenew.metaclass.RandomVariable][]'s
+            [`pyrenew.metaclass.RandomVariable`][]'s
             `expand_by()` method, if available,
-            and fall back on [numpyro.contrib.control_flow.scan][]
+            and fall back on [`numpyro.contrib.control_flow.scan`][]
             otherwise.
             If False, always use
-            [numpyro.contrib.control_flow.scan][].
+            [`numpyro.contrib.control_flow.scan`][].
             Default False.
 
         **kwargs:

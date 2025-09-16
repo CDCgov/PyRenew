@@ -14,7 +14,7 @@ from pyrenew.metaclass import RandomVariable
 class InfectionsSample(NamedTuple):
     """
     A container for holding the output from
-    [Infections.sample][].
+    [`Infections.sample`][].
 
     Attributes
     ----------

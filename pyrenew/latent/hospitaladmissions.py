@@ -17,7 +17,7 @@ from pyrenew.metaclass import RandomVariable
 class HospitalAdmissionsSample(NamedTuple):
     """
     A container to hold the output of
-    [HospitalAdmissions.sample][].
+    [`HospitalAdmissions.sample`][].
 
     Attributes
     ----------

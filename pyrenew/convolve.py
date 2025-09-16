@@ -3,11 +3,11 @@ Factory functions for
 calculating convolutions of timeseries
 with discrete distributions
 of times-to-event using
-[jax.lax.scan][].
+[`jax.lax.scan`][].
 Factories generate functions
 that can be passed to
-[jax.lax.scan][] or
-[numpyro.contrib.control_flow.scan][]
+[`jax.lax.scan`][] or
+[`numpyro.contrib.control_flow.scan`][]
 with an appropriate array to scan along.
 """
 
@@ -25,8 +25,8 @@ def new_convolve_scanner(
 ) -> Callable:
     r"""
     Factory function to create a "scanner" function
-    that can be used with [jax.lax.scan][] or
-    [numpyro.contrib.control_flow.scan][] to
+    that can be used with [`jax.lax.scan`][] or
+    [`numpyro.contrib.control_flow.scan`][] to
     construct an array via backward-looking iterative
     convolution.
 
@@ -44,8 +44,8 @@ def new_convolve_scanner(
     -------
     Callable
         A scanner function that can be used with
-        [jax.lax.scan][] or
-        [numpyro.contrib.control_flow.scan][]
+        [`jax.lax.scan`][] or
+        [`numpyro.contrib.control_flow.scan`][]
         for convolution.
         This function takes a history subset array and
         a scalar, computes the dot product of
@@ -78,7 +78,7 @@ def new_convolve_scanner(
     this factory function returns a new function that
     performs one step of this process while scanning along
     an array of  multipliers (i.e. an array
-    giving the values of $m(t)$) using [jax.lax.scan][].
+    giving the values of $m(t)$) using [`jax.lax.scan`][].
     """
 
     def _new_scanner(
