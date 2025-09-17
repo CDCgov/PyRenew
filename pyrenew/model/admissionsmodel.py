@@ -68,17 +68,17 @@ class HospitalAdmissionsModel(Model):
 
         Parameters
         ----------
-        latent_hosp_admissions_rv : RandomVariable
+        latent_hosp_admissions_rv
             Latent process for the hospital admissions.
-        latent_infections_rv : RandomVariable
+        latent_infections_rv
             The infections latent process (passed to RtInfectionsRenewalModel).
-        gen_int_rv : RandomVariable
+        gen_int_rv
             Generation time (passed to RtInfectionsRenewalModel)
-        I0_rv : RandomVariable
+        I0_rv
             Initial infections (passed to RtInfectionsRenewalModel)
-        Rt_process_rv : RandomVariable
+        Rt_process_rv
             Rt process  (passed to RtInfectionsRenewalModel).
-        hosp_admission_obs_process_rv : RandomVariable, optional
+        hosp_admission_obs_process_rv
             Observation process for the hospital admissions.
 
         Returns
@@ -110,9 +110,9 @@ class HospitalAdmissionsModel(Model):
 
         Parameters
         ----------
-        latent_hosp_admissions_rv : RandomVariable
+        latent_hosp_admissions_rv
             The latent process for the hospital admissions.
-        hosp_admission_obs_process_rv : RandomVariable
+        hosp_admission_obs_process_rv
             The observed hospital admissions.
 
         Returns
@@ -137,15 +137,15 @@ class HospitalAdmissionsModel(Model):
 
         Parameters
         ----------
-        n_datapoints : int, optional
+        n_datapoints
             Number of timepoints to sample (passed to the basic renewal model).
-        data_observed_hosp_admissions : ArrayLike, optional
+        data_observed_hosp_admissions
             The observed hospitalization data (passed to the basic renewal
             model). Defaults to None (simulation, rather than fit).
-        padding : int, optional
+        padding
             Number of padding timepoints to add to the beginning of the
             simulation. Defaults to 0.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal sample()
             calls, should there be any.
 

@@ -13,7 +13,7 @@ from pyrenew.metaclass import RandomVariable
 class DynamicDistributionalVariable(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single :class:`numpyro.distributions.Distribution`
+    from a single `numpyro.distributions.distribution.Distribution`
     that is parameterized / instantiated at `sample()` time
     (rather than at RandomVariable instantiation time).
     """
@@ -30,18 +30,18 @@ class DynamicDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Name of the random variable.
-        distribution_constructor : Callable
+        distribution_constructor
             Callable that returns a concrete parametrized
             numpyro.Distributions.distribution instance.
-        reparam : numpyro.infer.reparam.Reparam
+        reparam
             If not None, reparameterize sampling
             from the distribution according to the
             given numpyro reparameterizer
-        expand_by_shape : tuple, optional
-            If not None, call :meth:`expand_by()` on the
-            underlying distribution once it is instianted
+        expand_by_shape
+            If not None, call [`numpyro.distributions.distribution.Distribution.expand_by`][] on the
+            underlying distribution once it is instantiated
             with the given `expand_by_shape`.
             Default None.
 
@@ -74,7 +74,7 @@ class DynamicDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        distribution_constructor : any
+        distribution_constructor
             Putative distribution_constructor to validate.
 
         Returns
@@ -103,18 +103,18 @@ class DynamicDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        *args :
+        *args
             Positional arguments passed to self.distribution_constructor
-        obs : ArrayLike, optional
+        obs
             Observations passed as the `obs` argument to
-            :meth:`numpyro.sample()`. Default `None`.
-        **kwargs : dict, optional
+            [`numpyro.primitives.sample`][]. Default `None`.
+        **kwargs
             Keyword arguments passed to self.distribution_constructor
 
         Returns
         -------
         ArrayLike
-           a sample from the distribution.
+            a sample from the distribution.
         """
         distribution = self.distribution_constructor(*args, **kwargs)
         if self.expand_by_shape is not None:
@@ -137,10 +137,10 @@ class DynamicDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        sample_shape : tuple
+        sample_shape
             Sample shape by which to expand the distribution.
             Passed to the expand_by() method of
-            :class:`numpyro.distributions.Distribution`
+            [`numpyro.distributions.distribution.Distribution`][]
             after the distribution is instantiated.
 
         Returns
@@ -160,7 +160,7 @@ class DynamicDistributionalVariable(RandomVariable):
 class StaticDistributionalVariable(RandomVariable):
     """
     Wrapper class for random variables that sample
-    from a single :class:`numpyro.distributions.Distribution`
+    from a single [`numpyro.distributions.distribution.Distribution`][]
     that is parameterized / instantiated at RandomVariable
     instantiation time (rather than at `sample()`-ing time).
     """
@@ -176,11 +176,11 @@ class StaticDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Name of the random variable.
-        distribution : numpyro.distributions.Distribution
+        distribution
             Distribution of the random variable.
-        reparam : numpyro.infer.reparam.Reparam
+        reparam
             If not None, reparameterize sampling
             from the distribution according to the
             given numpyro reparameterizer
@@ -224,17 +224,17 @@ class StaticDistributionalVariable(RandomVariable):
 
         Parameters
         ----------
-        obs : ArrayLike, optional
+        obs
             Observations passed as the `obs` argument to
-            :meth:`numpyro.sample()`. Default `None`.
-        **kwargs : dict, optional
+            [`numpyro.primitives.sample`][]. Default `None`.
+        **kwargs
             Additional keyword arguments passed through
             to internal sample calls, should there be any.
 
         Returns
         -------
         ArrayLike
-           Containing a sample from the distribution.
+            Containing a sample from the distribution.
         """
         with numpyro.handlers.reparam(config=self.reparam_dict):
             sample = numpyro.sample(
@@ -250,14 +250,13 @@ class StaticDistributionalVariable(RandomVariable):
         if possible. Returns a new StaticDistributionalVariable
         whose underlying distribution has been expanded by
         the given sample_shape via
-        :meth:`~numpyro.distributions.Distribution.expand_by()`
+        [`numpyro.distributions.distribution.Distribution.expand_by`][].
 
         Parameters
         ----------
-        sample_shape : tuple
-            Sample shape for the expansion. Passed to the
-            :meth:`expand_by()` method of
-            :class:`numpyro.distributions.Distribution`.
+        sample_shape
+            Sample shape for the expansion. Passed to
+            [`numpyro.distributions.distribution.Distribution.expand_by`][].
 
         Returns
         -------
@@ -289,10 +288,10 @@ def DistributionalVariable(
 
     Parameters
     ----------
-    name : str
+    name
         Name of the random variable.
 
-    distribution: numpyro.distributions.Distribution | Callable
+    distribution
         Either numpyro.distributions.Distribution instance
         given the static distribution of the random variable or
         a callable that returns a parameterized
@@ -301,7 +300,7 @@ def DistributionalVariable(
         e.g. a Normal distribution with an inferred location and
         scale.
 
-    reparam : numpyro.infer.reparam.Reparam
+    reparam
         If not None, reparameterize sampling
         from the distribution according to the
         given numpyro reparameterizer

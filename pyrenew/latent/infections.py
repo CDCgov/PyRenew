@@ -14,13 +14,12 @@ from pyrenew.metaclass import RandomVariable
 class InfectionsSample(NamedTuple):
     """
     A container for holding the output from
-    :meth:`Infections.sample()
-    <pyrenew.latent.infections.Infections.sample>`.
+    [`Infections.sample`][].
 
     Attributes
     ----------
     post_initialization_infections:
-        The estimated latent infections. Default :obj:`None`.
+        The estimated latent infections. Default `None`.
     """
 
     post_initialization_infections: ArrayLike | None = None
@@ -29,20 +28,20 @@ class InfectionsSample(NamedTuple):
 class Infections(RandomVariable):
     r"""Latent infections
 
-    This class samples infections given :math:`\mathcal{R}(t)`,
+    This class samples infections given $\mathcal{R}(t)$,
     initial infections, and generation interval.
 
     Notes
     -----
     The mathematical model is given by:
 
-    .. math::
+    ```math
+    I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t-\tau)
+    ```
 
-            I(t) = R(t) \times \sum_{\tau < t} I(\tau) g(t-\tau)
-
-    where :math:`I(t)` is the number of infections at time :math:`t`,
-    :math:`R(t)` is the reproduction number at time :math:`t`, and
-    :math:`g(t-\tau)` is the generation interval.
+    where $I(t)$ is the number of infections at time $t$,
+    $R(t)$ is the reproduction number at time $t$, and
+    $g(t-\tau)$ is the generation interval.
     """
 
     @staticmethod
@@ -58,20 +57,20 @@ class Infections(RandomVariable):
     ) -> InfectionsSample:
         r"""
         Sample infections given
-        :math:`\mathcal{R}(t)`, initial infections,
+        $\mathcal{R}(t)$, initial infections,
         and generation interval.
 
         Parameters
         ----------
-        Rt : ArrayLike
+        Rt
             Reproduction number.
-        I0 : ArrayLike
+        I0
             Initial infections vector
             of the same length as the
             generation interval.
-        gen_int : ArrayLike
+        gen_int
             Generation interval pmf vector.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
 
@@ -79,7 +78,7 @@ class Infections(RandomVariable):
         -------
         InfectionsSample
             A named tuple with a
-            ``post_initialization_infections`` field.
+            `post_initialization_infections` field.
         """
         if I0.shape[0] < gen_int.size:
             raise ValueError(
