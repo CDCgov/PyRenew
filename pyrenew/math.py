@@ -261,7 +261,7 @@ def get_stable_age_distribution(
     R and a given discrete generation
     interval probability mass vector.
 
-    This function computes that stable age
+    This function computes the stable age
     distribution by finding and then normalizing
     an eigenvector associated to the dominant
     eigenvalue of the renewal process's
@@ -294,7 +294,7 @@ def get_asymptotic_growth_rate(R: float, generation_interval_pmf: ArrayLike) -> 
     $\\mathcal{R}$ and a given discrete
     generation interval probability mass vector.
 
-    This function computes that growth rate
+    This function computes the growth rate
     finding the dominant eigenvalue of the
     renewal process's Leslie matrix.
 

@@ -10,7 +10,7 @@ This document demonstrates how to use these functions and classes to model perio
 
 ## Repeated units
 
-The `RtPeriodicDiff` and `RtWeeklyDiff` classes use `PeriodicBroadcaster` to repeat each vector element to represent Rt values held constant within a period. Let's show it's usage with a basic renewal model. We will use the same model structure shown in the `getting_started` tutorial:
+The `RtPeriodicDiff` and `RtWeeklyDiff` classes use `PeriodicBroadcaster` to repeat each vector element to represent Rt values held constant within a period. Let's show its usage with a basic renewal model. We will use the same model structure shown in the `getting_started` tutorial:
 
 ```{python}
 # | label: loading-pkgs
