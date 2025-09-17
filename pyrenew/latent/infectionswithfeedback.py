@@ -37,27 +37,27 @@ class InfectionsWithFeedback(RandomVariable):
 
     Parameters
     ----------
-    infection_feedback_strength : RandomVariable
+    infection_feedback_strength
         Infection feedback strength.
-    infection_feedback_pmf : RandomVariable
+    infection_feedback_pmf
         Infection feedback pmf.
 
     Notes
     -----
     This function implements the following renewal process (reproduced from
-    :func:`pyrenew.latent.infection_functions.sample_infections_with_feedback`):
+    [`pyrenew.latent.infection_functions.compute_infections_from_rt_with_feedback`][]):
 
-    .. math::
+    ```math
+    I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
 
-        I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
+    \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
+    \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+    ```
 
-        \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
-            \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
-
-    where :math:`\mathcal{R}(t)` is the reproductive number, :math:`\gamma(t)`
-    is the infection feedback strength, :math:`T_g` is the max-length of the
-    generation interval, :math:`\mathcal{R}^u(t)` is the raw reproduction
-    number, :math:`f(t)` is the infection feedback pmf, and :math:`T_f`
+    where $\mathcal{R}(t)$ is the reproductive number, $\gamma(t)$
+    is the infection feedback strength, $T_g$ is the max-length of the
+    generation interval, $\mathcal{R}^u(t)$ is the raw reproduction
+    number, $f(t)$ is the infection feedback pmf, and $T_f$
     is the max-length of the infection feedback pmf.
     """
 
@@ -71,9 +71,9 @@ class InfectionsWithFeedback(RandomVariable):
 
         Parameters
         ----------
-        infection_feedback_strength : RandomVariable
+        infection_feedback_strength
             Infection feedback strength.
-        infection_feedback_pmf : RandomVariable
+        infection_feedback_pmf
             Infection feedback pmf.
 
         Returns
@@ -98,9 +98,9 @@ class InfectionsWithFeedback(RandomVariable):
 
         Parameters
         ----------
-        inf_feedback_strength : RandomVariable
+        inf_feedback_strength
             Infection feedback strength.
-        inf_feedback_pmf : RandomVariable
+        inf_feedback_pmf
             Infection feedback pmf.
 
         Returns
@@ -125,15 +125,15 @@ class InfectionsWithFeedback(RandomVariable):
 
         Parameters
         ----------
-        Rt : ArrayLike
+        Rt
             Reproduction number.
-        I0 : ArrayLike
+        I0
             Initial infections, as an array
             at least as long as the generation
             interval PMF.
-        gen_int : ArrayLike
+        gen_int
             Generation interval PMF.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
 

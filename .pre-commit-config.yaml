@@ -6,22 +6,15 @@ repos:
     hooks:
       - id: check-added-large-files
       - id: check-yaml
+        args: [--unsafe]
       - id: check-toml
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
   #####
   # Python
-  - repo: local
-    hooks:
-      - id: generate-md-placeholders
-        name: Tutorials .md placeholders
-        entry: ./hook_scripts/pre-commit-md-placeholder.sh
-        language: script
-        always_run: true
-        files: "docs/source/tutorials/.*(qmd|md)$"
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.12.12
+    rev: v0.13.0
     hooks:
       # Run the linter
       - id: ruff-check
@@ -37,7 +30,7 @@ repos:
     hooks:
       - id: format-qmd-python
         name: Format Python in QMD
-        entry: python hook_scripts/quarto_python_formatter.py "-q --line-length 79"
+        entry: python docs_scripts/quarto_python_formatter.py "-q --line-length 79"
         language: python
         files: \.qmd$
         additional_dependencies: [ruff]

@@ -17,7 +17,7 @@ from pyrenew.metaclass import RandomVariable
 class HospitalAdmissionsSample(NamedTuple):
     """
     A container to hold the output of
-    :meth:`HospitalAdmissions.sample`.
+    [`HospitalAdmissions.sample`][].
 
     Attributes
     ----------
@@ -51,21 +51,21 @@ class HospitalAdmissions(RandomVariable):
     documentation (`link <https://github.com/CDCgov/ww-inference-model/blob/main/model_definition.md#hospital-admissions-component>`_).
 
     Following other semi-mechanistic renewal frameworks, we model the *expected*
-    hospital admissions per capita :math:`H(t)` as a convolution of the
-    *expected* latent incident infections per capita :math:`I(t)`, and a
-    discrete infection to hospitalization distribution :math:`d(\tau)`, scaled
-    by the probability of being hospitalized :math:`p_\mathrm{hosp}(t)`.
+    hospital admissions per capita $H(t)$ as a convolution of the
+    *expected* latent incident infections per capita $I(t)$, and a
+    discrete infection to hospitalization distribution $d(\tau)$, scaled
+    by the probability of being hospitalized $p_\mathrm{hosp}(t)$.
 
     To account for day-of-week effects in hospital reporting, we use an
-    estimated *day of the week effect* :math:`\omega(t)`. If :math:`t` and :math:`t'`
-    are the same day of the week, :math:`\omega(t) = \omega(t')`. The seven
-    values that :math:`\omega(t)` takes on are constrained to have mean 1.
+    estimated *day of the week effect* $\omega(t)$. If $t$ and $t'$
+    are the same day of the week, $\omega(t) = \omega(t')$. The seven
+    values that $\omega(t)$ takes on are constrained to have mean 1.
 
-    .. math::
+    ```math
+    H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
+    ```
 
-        H(t) = \omega(t) p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
-
-    Where :math:`T_d` is the maximum delay from infection to hospitalization
+    Where $T_d$ is the maximum delay from infection to hospitalization
     that we consider.
     """
 
@@ -82,19 +82,19 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        infection_to_admission_interval_rv : RandomVariable
+        infection_to_admission_interval_rv
             pmf for reporting (informing) hospital admissions (see
             pyrenew.observations.Deterministic).
-        infection_hospitalization_ratio_rv : RandomVariable
+        infection_hospitalization_ratio_rv
             Infection to hospitalization rate random variable.
-        day_of_week_effect_rv : RandomVariable, optional
+        day_of_week_effect_rv
             Day of the week effect. Should return a ArrayLike with 7
             values. Defaults to a deterministic variable with
             jax.numpy.ones(7) (no effect).
-        hospitalization_reporting_ratio_rv  : RandomVariable, optional
+        hospitalization_reporting_ratio_rv
             Random variable for the hospital admission reporting
             probability. Defaults to 1 (full reporting).
-        obs_data_first_day_of_the_week : int, optional
+        obs_data_first_day_of_the_week
             The day of the week that the first day of the observation data
             corresponds to. Valid values are 0-6, where 0 is Monday and 6 is
             Sunday. Defaults to 0.
@@ -142,17 +142,17 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        infection_to_admission_interval_rv : Any
+        infection_to_admission_interval_rv
             Possibly incorrect input for the infection to hospitalization
             interval distribution.
-        infection_hospitalization_ratio_rv : Any
+        infection_hospitalization_ratio_rv
             Possibly incorrect input for infection to hospitalization rate distribution.
-        day_of_week_effect_rv : Any
+        day_of_week_effect_rv
             Possibly incorrect input for day of the week effect.
-        hospitalization_reporting_ratio_rv : Any
+        hospitalization_reporting_ratio_rv
             Possibly incorrect input for distribution or fixed value for the
             hospital admission reporting probability.
-        obs_data_first_day_of_the_week : Any
+        obs_data_first_day_of_the_week
             Possibly incorrect input for the day of the week that the first day
             of the observation data corresponds to. Valid values are 0-6, where
             0 is Monday and 6 is Sunday.
@@ -186,12 +186,11 @@ class HospitalAdmissions(RandomVariable):
 
         Parameters
         ----------
-        latent_infections : ArrayLike
+        latent_infections
             Latent infections.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to
-            internal :meth:`sample()
-            <pyrenew.metaclass.RandomVariable.sample>` calls,
+            internal `sample()` calls,
             should there be any.
 
         Returns

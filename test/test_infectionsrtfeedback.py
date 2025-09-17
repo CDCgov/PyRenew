@@ -24,15 +24,15 @@ def _infection_w_feedback_alt(
     Calculate the infections with feedback.
     Parameters
     ----------
-    gen_int : ArrayLike
+    gen_int
         Generation interval.
-    Rt : ArrayLike
+    Rt
         Reproduction number.
-    I0 : ArrayLike
+    I0
         Initial infections.
-    inf_feedback_strength : ArrayLike
+    inf_feedback_strength
         Infection feedback strength.
-    inf_feedback_pmf : ArrayLike
+    inf_feedback_pmf
         Infection feedback pmf.
 
     Returns

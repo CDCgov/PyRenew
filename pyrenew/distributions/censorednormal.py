@@ -38,19 +38,19 @@ class CensoredNormal(numpyro.distributions.Distribution):
 
         Parameters
         ----------
-        loc : ArrayLike or float, optional
+        loc
             The mean of the normal distribution.
             Defaults to 0.
-        scale : ArrayLike or float, optional
+        scale
             The standard deviation of the normal
             distribution. Must be positive. Defaults to 1.
-        lower_limit : float, optional
+        lower_limit
             The lower bound of the interval for censoring.
             Defaults to -inf (no lower bound).
-        upper_limit : float, optional
+        upper_limit
             The upper bound of the interval for censoring.
             Defaults to inf (no upper bound).
-        validate_args : bool, optional
+        validate_args
             If True, checks if parameters are valid.
             Defaults to None.
 

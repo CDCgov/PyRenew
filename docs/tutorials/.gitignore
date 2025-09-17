@@ -1,0 +1,10 @@
+*.png
+*_files/
+!README.md
+
+/.quarto/
+_compiled
+
+*.ipynb
+*.py
+*.md

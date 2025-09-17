@@ -81,30 +81,30 @@ class GLMPrediction(AbstractRegressionPrediction):
 
         Parameters
         ----------
-        name : str
+        name
             The name of the prediction process,
             which will be used to name the constituent
-            sampled parameters in calls to `numpyro.sample`
+            sampled parameters in calls to [`numpyro.primitives.sample`][]
 
-        intercept_prior : numypro.distributions.Distribution
+        intercept_prior
             Prior distribution for the regression intercept
             value
 
-        coefficient_priors : numpyro.distributions.Distribution
+        coefficient_priors
             Vectorized prior distribution for the regression
             coefficient values
 
-        transform : numpyro.distributions.transforms.Transform, optional
+        transform
             Transform linking the scale of the
             regression to the scale of the observation.
             If `None`, use an identity transform. Default
             `None`.
 
-        intercept_suffix : str, optional
+        intercept_suffix
             Suffix for naming the intercept random variable in
             class to numpyro.sample(). Default `"_intercept"`.
 
-        coefficient_suffix : str, optional
+        coefficient_suffix
             Suffix for naming the regression coefficient
             random variables in calls to numpyro.sample().
             Default `"_coefficients"`.
@@ -131,12 +131,12 @@ class GLMPrediction(AbstractRegressionPrediction):
 
         Parameters
         ----------
-        intercept : ArrayLike
+        intercept
             Sampled numpyro distribution generated from intercept priors.
-        coefficients : ArrayLike
+        coefficients
             Sampled prediction coefficients distribution generated
             from coefficients priors.
-        predictor_values : ArrayLike(n_predictors, n_observations)
+        predictor_values
             Matrix of predictor variables (covariates) for the
             regression problem. Each row should represent the
             predictor values corresponding to an observation;
@@ -158,7 +158,7 @@ class GLMPrediction(AbstractRegressionPrediction):
 
         Parameters
         -----------
-        predictor_values : ArrayLike(n_predictors, n_observations)
+        predictor_values
             Matrix of predictor variables (covariates) for the
             regression problem. Each row should represent the
             predictor values corresponding to an observation;
@@ -166,12 +166,13 @@ class GLMPrediction(AbstractRegressionPrediction):
             Do not include values of 1 for the intercept;
             these will be added automatically. Passed as the
             `predictor_values` argument to
-            :meth:`GLMPrediction.predict()`
+            [`pyrenew.regression.GLMPrediction.predict`][].
 
         Returns
         -------
         GLMPredictionSample
         """
+
         intercept = numpyro.sample(
             self.name + self.intercept_suffix, self.intercept_prior
         )

@@ -5,12 +5,16 @@ help:
 	@echo "  help           : Show this help message"
 	@echo "  install        : Install the project dependencies"
 	@echo "  test           : Run the tests"
+	@echo "  docs           : Build the documentation"
 
 install:
-	uv sync --extra dev
+	uv sync
 
 test:
 	uv run pytest --mpl --mpl-default-tolerance=10
 
+docs:
+	quarto render docs/tutorials
+	uv run mkdocs build
 
-.PHONY: install test
+.PHONY: install test docs

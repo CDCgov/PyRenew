@@ -16,15 +16,15 @@ def _assert_type(arg_name: str, value, expected_type) -> None:
 
     Parameters
     ----------
-    arg_name : str
+    arg_name
         Name of the argument
-    value : object
+    value
         The object to be validated
-    expected_type : type
+    expected_type
         The expected object type
 
     Raises
-    -------
+    ------
     TypeError
         If `value` is not an instance of `expected_type`.
 
@@ -62,9 +62,9 @@ class RandomVariable(metaclass=ABCMeta):
 
         Parameters
         ----------
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal
-            :meth:`sample` calls, should there be any.
+            `sample` calls, should there be any.
 
         Returns
         -------
@@ -82,7 +82,7 @@ class RandomVariable(metaclass=ABCMeta):
 
     def __call__(self, **kwargs):
         """
-        Alias for :meth:`sample`.
+        Alias for `sample`.
         """
         return self.sample(**kwargs)
 
@@ -115,9 +115,9 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal
-            :meth:`sample` calls, should there be any.
+            `sample` calls, should there be any.
 
         Returns
         -------
@@ -131,9 +131,9 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to
-            internal :meth:`sample` calls, should there be any.
+            internal `sample` calls, should there be any.
 
         Returns
         -------
@@ -153,13 +153,13 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        nuts_args : dict, optional
+        nuts_args
             Dictionary of arguments passed to the
-            :class:`numpyro.infer.hmc.NUTS` constructor.
+            [`numpyro.infer.hmc.NUTS`][] constructor.
             Default None.
-        mcmc_args : dict, optional
+        mcmc_args
             Dictionary of arguments passed to the
-            :class:`numpyro.infer.mcmc.MCMC` constructor.
+            [`numpyro.infer.mcmc.MCMC`][] constructor.
             Default None.
 
         Returns
@@ -207,13 +207,13 @@ class Model(metaclass=ABCMeta):
 
         Parameters
         ----------
-        nuts_args : dict, optional
+        nuts_args
             Dictionary of arguments passed to the kernel
-            (:class:`numpyro.infer.hmc.NUTS`) constructor.
+            [`numpyro.infer.hmc.NUTS`][] constructor.
             Defaults to None.
-        mcmc_args : dict, optional
+        mcmc_args
             Dictionary of arguments passed to the MCMC runner
-            (:class:`numpyro.infer.mcmc.MCMC`) constructor.
+            [`numpyro.infer.mcmc.MCMC`][] constructor.
             Defaults to None.
 
         Returns
@@ -241,14 +241,13 @@ class Model(metaclass=ABCMeta):
         exclude_deterministic: bool = True,
     ) -> None:
         """
-        A wrapper of :meth:`MCMC.print_summary()
-        <numpyro.infer.mcmc.MCMC.print_summary>`.
+        A wrapper of [`numpyro.infer.mcmc.MCMC.print_summary`][].
 
         Parameters
         ----------
-        prob : float, optional
+        prob
             The width of the credible interval to show. Default 0.9
-        exclude_deterministic : bool, optional
+        exclude_deterministic
             Whether to print deterministic sites in the summary.
             Defaults to True.
 
@@ -265,20 +264,20 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> dict:
         """
-        A wrapper of :class:`numpyro.infer.util.Predictive` to generate
+        A wrapper of [`numpyro.infer.util.Predictive`][] to generate
         posterior predictive samples.
 
         Parameters
         ----------
-        rng_key : ArrayLike, optional
+        rng_key
             Random key for the Predictive function call. Defaults to None.
-        numpyro_predictive_args : dict, optional
+        numpyro_predictive_args
             Dictionary of arguments to be passed to the
-            :class:`numpyro.infer.util.Predictive` constructor.
+            [`numpyro.infer.util.Predictive`][] constructor.
         **kwargs
             Additional named arguments passed to the
-            :meth:`__call__()` method of
-            :class:`numpyro.infer.util.Predictive`.
+            `__call__()` method of
+            [`numpyro.infer.util.Predictive`][].
 
         Returns
         -------
@@ -308,22 +307,22 @@ class Model(metaclass=ABCMeta):
         **kwargs,
     ) -> dict:
         """
-        A wrapper for :class:`numpyro.infer.util.Predictive`
+        A wrapper for [`numpyro.infer.util.Predictive`][]
         to generate prior predictive samples.
 
         Parameters
         ----------
-        rng_key : ArrayLike, optional
+        rng_key
             Random key for the Predictive function call.
             Default None.
-        numpyro_predictive_args : dict, optional
+        numpyro_predictive_args
             Dictionary of arguments to be passed to
-            the :class:`numpyro.infer.util.Predictive`
+            the [`numpyro.infer.util.Predictive`][]
             constructor. Default None.
         **kwargs
             Additional named arguments passed to the
-            :meth:`__call__()` method of
-            :class:`numpyro.infer.util.Predictive`.
+            `__call__()` method of
+            [`numpyro.infer.util.Predictive`][].
 
         Returns
         -------
