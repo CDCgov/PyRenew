@@ -20,7 +20,7 @@ $\mathcal{R}^\mathrm{u}(t)$ and a damping factor which provides feedback from re
 
 $$\mathcal{R}(t) = \mathcal{R}^u(t)\exp\left(-\gamma(t)\sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)$$
 
-where $\gamma \geq 0$ scales the feedback strength 
+where $\gamma \geq 0$ scales the feedback strength
 and the function $f(\tau)$ is the time-scale over which past infections influence
 the current time-varying reproductive number $\mathcal{R}(t)$.
 Because $\gamma$ is constrained to be positive, this provides a negative feedback mechanism.
@@ -63,7 +63,7 @@ set to 0.01 to create moderate damping.
 
 * We specify the `InfectionsWithFeedback` component using the same distribution as the generation interval.
 
-* The latent random variable $\mathcal{R}^\mathrm{u}(t)$ is estimated via random walk 
+* The latent random variable $\mathcal{R}^\mathrm{u}(t)$ is estimated via random walk
 on $log(\mathcal{R}^\mathrm{u}(t))$, (as in the basic renewal model).
 
 ```{python}
@@ -86,6 +86,7 @@ latent_infections = InfectionsWithFeedback(
     infection_feedback_strength=feedback_strength,
     infection_feedback_pmf=gen_int,
 )
+
 
 class MyRt(RandomVariable):
     def validate(self):
@@ -327,4 +328,3 @@ ax[1].set_xlabel("Time (model 1)")
 ax[0].set_ylabel("Infections")
 plt.show()
 ```
-
