@@ -13,9 +13,9 @@ from pyrenew.metaclass import RandomVariable
 
 class DifferencedProcess(RandomVariable):
     """
-    Class for differenced stochastic process :math:`X(t)`,
+    Class for differenced stochastic process $X(t)$,
     constructed by placing a fundamental stochastic
-    process on the :math:`n^{th}` differences
+    process on the $n^{th}$ differences
     (rates of change). See
     https://otexts.com/fpp3/stationarity.html
     for a discussion of differencing in the
@@ -42,12 +42,12 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
-        fundamental_process : RandomVariable
+        fundamental_process
             Stochastic process for the
             differences. Must accept an
             `n` argument specifying the number
             of samples to draw.
-        differencing_order : int
+        differencing_order
             How many fold-differencing the
             the process represents. Must be
             an integer greater than or
@@ -76,13 +76,13 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
-        differencing_order : Any
+        differencing_order
             Potential differencing order to validate.
 
         Returns
         -------
         None
-            or raises a :class:`ValueError`
+            or raises a [`ValueError`][]
         """
         if not isinstance(differencing_order, int):
             raise ValueError(
@@ -116,32 +116,32 @@ class DifferencedProcess(RandomVariable):
 
         Parameters
         ----------
-        init_vals : ArrayLike
-            initial values for the :math:`0^{th}` through
-            :math:`(n-1)^{st}` differences, passed as the
-            :code:`init_diff_vals` argument to
-            :func:`~pyrenew.math.integrate_discrete()`
+        init_vals
+            initial values for the $0^{th}$ through
+            $(n-1)^{st}$ differences, passed as the
+            `init_diff_vals` argument to
+            [`pyrenew.math.integrate_discrete`][].
 
-        n : int
+        n
             Number of values to sample. Will sample
-            :code:`n - differencing_order` values from
-            :meth:`self.fundamental_process` to ensure
+            `n - differencing_order` values from
+            `self.fundamental_process` to ensure
             that the de-differenced output is of length
-            :code:`n`.
+            `n`.
 
-        *args :
-           Additional positional arguments passed to
-           :meth:`self.fundamental_process.sample`
+        *args
+            Additional positional arguments passed to
+            `self.fundamental_process.sample`
 
-        fundamental_process_init_vals : ArrayLike, optional
-           Initial values for the fundamental process.
-           Passed as the :code:`init_vals` keyword argument
-           to :meth:`self.fundamental_process.sample`.
-           Default :obj:`None`.
+        fundamental_process_init_vals
+            Initial values for the fundamental process.
+            Passed as the `init_vals` keyword argument
+            to `self.fundamental_process.sample`.
+            Default `None`.
 
-        **kwargs : dict, optional
+        **kwargs
             Keyword arguments passed to
-            :meth:`self.fundamental_process.sample()`.
+            `self.fundamental_process.sample()`.
 
         Returns
         -------
@@ -161,7 +161,7 @@ class DifferencedProcess(RandomVariable):
                 "Must have exactly as many "
                 "initial difference values as "
                 "the differencing order, given "
-                "in the sequence :math:`X(t=0), X^1(t=1),` "
+                "in the sequence $X(t=0), X^1(t=1),$ "
                 "et cetera. "
                 f"Got {n_inits} values "
                 "for a process of order "

@@ -29,11 +29,11 @@ class DeterministicPMF(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name to assign to the variable.
-        value : ArrayLike
+        value
             An ArrayLike object.
-        tol : float, optional
+        tol
             Passed to pyrenew.distutil.validate_discrete_dist_vector. Defaults
             to 1e-5.
 
@@ -60,7 +60,7 @@ class DeterministicPMF(RandomVariable):
 
         Parameters
         ----------
-        value : ArrayLike
+        value
             An ArrayLike object.
 
         Returns
@@ -78,7 +78,7 @@ class DeterministicPMF(RandomVariable):
 
         Parameters
         ----------
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal `sample()`
             calls, if any
 

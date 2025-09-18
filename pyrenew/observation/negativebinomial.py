@@ -23,16 +23,16 @@ class NegativeBinomialObservation(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Name for the numpyro variable.
-        concentration : RandomVariable
+        concentration_rv
             Random variable from which to sample the positive concentration
             parameter of the negative binomial. This parameter is sometimes
             called k, phi, or the "dispersion" or "overdispersion" parameter,
             despite the fact that larger values imply that the distribution
             becomes more Poissonian, while smaller ones imply a greater degree
             of dispersion.
-        eps : float, optional
+        eps
             Small value to add to the predicted mean to prevent numerical
             instability. Defaults to 1e-10.
 
@@ -54,7 +54,7 @@ class NegativeBinomialObservation(RandomVariable):
 
         Parameters
         ----------
-        concentration_rv : any
+        concentration_rv
             RandomVariable from which to sample the positive concentration
             parameter of the negative binomial.
 
@@ -76,11 +76,11 @@ class NegativeBinomialObservation(RandomVariable):
 
         Parameters
         ----------
-        mu : ArrayLike
+        mu
             Mean parameter of the negative binomial distribution.
-        obs : ArrayLike, optional
+        obs
             Observed data, by default None.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal sample calls, should there be any.
 
         Returns

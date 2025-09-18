@@ -19,7 +19,7 @@ def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
 
     Parameters
     ----------
-    vec: ArrayLike
+    vec
         The template array
 
     Returns
@@ -33,58 +33,60 @@ def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
 def neg_MGF(r: float, w: ArrayLike) -> float:
     """
     Compute the negative moment generating function (MGF)
-    for a given rate ``r`` and weights ``w``.
+    for a given rate `r` and weights `w`.
 
     Parameters
     ----------
-    r: float
-       The rate parameter.
+    r
+        The rate parameter.
 
-    w: ArrayLike
-       An array of weights.
+    w
+        An array of weights.
 
     Returns
     -------
     float
-        The value of the negative MGF evaluated at ``r``
-        and ``w``.
+        The value of the negative MGF evaluated at `r`
+        and `w`.
 
     Notes
     -----
-    For a finite discrete random variable :math:`X` supported on
-    the first :math:`n` positive integers (:math:`\\{1, 2, ..., n \\}`),
-    the moment generating function (MGF) :math:`M_+(r)` is defined
-    as the expected value of :math:`\\exp(rX)`. Similarly, the negative
-    moment generating function :math:`M_-(r)` is the expected value of
-    :math:`\\exp(-rX)`. So if we represent the PMF of :math:`X` as a
-    "weights" vector :math:`w` of length :math:`n`, the negative MGF
-    :math:`M_-(r)` is given by:
+    For a finite discrete random variable $X$ supported on
+    the first $n$ positive integers ($\\{1, 2, ..., n \\}$),
+    the moment generating function (MGF) $M_+(r)$ is defined
+    as the expected value of $\\exp(rX)$. Similarly, the negative
+    moment generating function $M_-(r)$ is the expected value of
+    $\\exp(-rX)$. So if we represent the PMF of $X$ as a
+    "weights" vector $w$ of length $n$, the negative MGF
+    $M_-(r)$ is given by:
 
-    .. math::
-        M_-(r) = \\sum_{t = 1}^{n} w_i \\exp(-rt)
+    ```math
+    M_-(r) = \\sum_{t = 1}^{n} w_i \\exp(-rt)
+    ```
     """
+
     return jnp.sum(w * jnp.exp(-r * _positive_ints_like(w)))
 
 
 def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
     """
     Compute the value of the partial deriative of
-    :func:`neg_MGF` with respect to ``r``
-    evaluated at a particular ``r`` and ``w`` pair.
+    [`pyrenew.math.neg_MGF`][] with respect to `r`
+    evaluated at a particular `r` and `w` pair.
 
     Parameters
     ----------
-    r: float
-       The rate parameter.
+    r
+        The rate parameter.
 
-    w: ArrayLike
-       An array of weights.
+    w
+        An array of weights.
 
     Returns
     -------
     float
-        The value of the partial derivative evaluated at ``r``
-        and ``w``.
+        The value of the partial derivative evaluated at `r`
+        and `w`.
     """
     t_vec = _positive_ints_like(w)
     return -jnp.sum(w * t_vec * jnp.exp(-r * t_vec))
@@ -92,49 +94,51 @@ def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
 
 def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     """
-    Get the approximate asymptotic geometric growth rate ``r``
-    for a renewal process with a fixed reproduction number ``R``
-    and discrete generation interval PMF ``g``.
+    Get the approximate asymptotic geometric growth rate `r`
+    for a renewal process with a fixed reproduction number `R`
+    and discrete generation interval PMF `g`.
 
     Uses Newton's method with a fixed number of steps.
 
     Parameters
     ----------
-    R: float
+    R
         The reproduction number
 
-    g: ArrayLike
+    g
         The probability mass function of the generation
         interval.
 
-    n_newton_steps: int
+    n_newton_steps
         Number of steps to take when performing Newton's method.
 
     Returns
     -------
     float
-        The approximate value of ``r``.
+        The approximate value of `r`.
 
     Notes
     -----
-    For a fixed value of :math:`\\mathcal{R}`, a renewal process
-    has an asymptotic geometric growth rate :math:`r` that satisfies
+    For a fixed value of $\\mathcal{R}$, a renewal process
+    has an asymptotic geometric growth rate $r$ that satisfies
 
-    .. math::
-        M_{-}(r) - \\frac{1}{\\mathcal{R}} = 0
+    ```math
+    M_{-}(r) - \\frac{1}{\\mathcal{R}} = 0
+    ```
 
-    where :math:`M_-(r)` is the negative moment generating function
-    for a random variable :math:`\\tau` representing the (discrete)
-    generation interval. See :func:`neg_MGF` for details.
+    where $M_-(r)$ is the negative moment generating function
+    for a random variable $\\tau$ representing the (discrete)
+    generation interval. See [`pyrenew.math.neg_MGF`][] for details.
 
-    We obtain a value for :math:`r` via approximate numerical solution
+    We obtain a value for $r$ via approximate numerical solution
     of this implicit equation.
 
     We first make an initial guess based on the mean generation interval
-    :math:`\\bar{\\tau} = \\mathbb{E}(\\tau)`:
+    $\\bar{\\tau} = \\mathbb{E}(\\tau)$:
 
-    .. math::
-        r \\approx \\frac{\\mathcal{R} - 1}{\\mathcal{R} \\bar{\\tau}}
+    ```math
+    r \\approx \\frac{\\mathcal{R} - 1}{\\mathcal{R} \\bar{\\tau}}
+    ```
 
     We then refine this approximation by applying Newton's method for
     a fixed number of steps.
@@ -157,18 +161,19 @@ def get_leslie_matrix(R: float, generation_interval_pmf: ArrayLike) -> ArrayLike
     Create the Leslie matrix
     corresponding to a basic
     renewal process with the
-    given :math:`\\mathcal{R}`
+    given $\\mathcal{R}$
     value and discrete
     generation interval pmf
     vector.
 
     Parameters
     ----------
-    R : float
-       The reproduction number of the renewal process
-    generation_interval_pmf: ArrayLike
-       The discrete generation interval probability
-       mass vector of the renewal process
+    R
+        The reproduction number of the renewal process
+
+    generation_interval_pmf
+        The discrete generation interval probability
+        mass vector of the renewal process
 
     Returns
     -------
@@ -201,11 +206,12 @@ def get_asymptotic_growth_rate_and_age_dist(
 
     Parameters
     ----------
-    R : float
-       The reproduction number of the renewal process
-    generation_interval_pmf: ArrayLike
-       The discrete generation interval probability
-       mass vector of the renewal process
+    R
+        The reproduction number of the renewal process
+
+    generation_interval_pmf
+        The discrete generation interval probability
+        mass vector of the renewal process
 
     Returns
     -------
@@ -255,7 +261,7 @@ def get_stable_age_distribution(
     R and a given discrete generation
     interval probability mass vector.
 
-    This function computes that stable age
+    This function computes the stable age
     distribution by finding and then normalizing
     an eigenvector associated to the dominant
     eigenvalue of the renewal process's
@@ -263,11 +269,12 @@ def get_stable_age_distribution(
 
     Parameters
     ----------
-    R : float
-       The reproduction number of the renewal process
-    generation_interval_pmf: ArrayLike
-       The discrete generation interval probability
-       mass vector of the renewal process
+    R
+        The reproduction number of the renewal process
+
+    generation_interval_pmf
+        The discrete generation interval probability
+        mass vector of the renewal process
 
     Returns
     -------
@@ -284,20 +291,21 @@ def get_asymptotic_growth_rate(R: float, generation_interval_pmf: ArrayLike) -> 
     """
     Get the asymptotic per timestep growth rate
     for a renewal process with a given value of
-    :math:`\\mathcal{R}` and a given discrete
+    $\\mathcal{R}$ and a given discrete
     generation interval probability mass vector.
 
-    This function computes that growth rate
+    This function computes the growth rate
     finding the dominant eigenvalue of the
     renewal process's Leslie matrix.
 
     Parameters
     ----------
-    R : float
-       The reproduction number of the renewal process
-    generation_interval_pmf: ArrayLike
-       The discrete generation interval probability
-       mass vector of the renewal process
+    R
+        The reproduction number of the renewal process
+
+    generation_interval_pmf
+        The discrete generation interval probability
+        mass vector of the renewal process
 
     Returns
     -------
@@ -313,26 +321,26 @@ def integrate_discrete(
 ) -> ArrayLike:
     """
     Integrate (de-difference) the differenced process,
-    obtaining the process values :math:`X(t=0), X(t=1), ..., X(t)`
-    from the :math:`n^{th}` differences and a set of
+    obtaining the process values $X(t=0), X(t=1), ..., X(t)$
+    from the $n^{th}$ differences and a set of
     initial process / difference values
-    :math:`X(t=0), X^1(t=1), X^2(t=2), ..., X^{(n-1)}(t=n-1)`,
-    where :math:`X^k(t)` is the value of the :math:`n^{th}`
-    difference at index :math:`t` of the process,
+    $X(t=0), X^1(t=1), X^2(t=2), ..., X^{(n-1)}(t=n-1)$,
+    where $X^k(t)$ is the value of the $n^{th}$
+    difference at index $t$ of the process,
     obtaining a sequence of length equal to the length of
     the provided `highest_order_diff_vals` vector plus
     the order of the process.
 
     Parameters
     ----------
-    init_diff_vals : ArrayLike
+    init_diff_vals
         Values of
-        :math:`X(t=0), X^1(t=1), X^2(t=2), ..., X^{(n-1)}(t=n-1)`.
+        $X(t=0), X^1(t=1), X^2(t=2), ..., X^{(n-1)}(t=n-1)$.
 
-    highest_order_diff_vals : ArrayLike
+    highest_order_diff_vals
         Array of differences at the highest order of
         differencing, i.e. the order of the overall process,
-        starting with :math:`X^{n}(t=n)`
+        starting with $X^{n}(t=n)$
 
     Returns
     -------
@@ -389,15 +397,15 @@ def _integrate_one_step(
     Perform one step of integration
     (de-differencing) for integrate_discrete().
 
-    Helper function passed to :func:`jax.lax.scan()`.
+    Helper function passed to [`jax.lax.scan`][].
 
     Parameters
     ----------
-    current_diffs: ArrayLike
+    current_diffs
         Array of differences at the current
         de-differencing order
 
-    next_order_and_init: tuple
+    next_order_and_init
         Tuple containing with two entries.
         First entry: the next order of de-differencing
         (the current order - 1) as an integer.

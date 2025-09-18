@@ -12,11 +12,11 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
     def __init__(self, n_timepoints: int):
         """Default constructor for
-        :class:`InfectionInitializationMethod`.
+        [`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][].
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             the number of time points for which to
             generate initial infections
 
@@ -31,12 +31,12 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
     def validate(n_timepoints: int) -> None:
         """
         Validate inputs to the
-        :class:`InfectionInitializationMethod`
+        [`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][]
         constructor.
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             the number of time points to generate initial infections for
 
         Returns
@@ -56,8 +56,8 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
 
         Parameters
         ----------
-        I_pre_init : ArrayLike
-            An array representing some number of latent infections to be used with the specified ``InfectionInitializationMethod``.
+        I_pre_init
+            An array representing some number of latent infections to be used with the specified `[`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][]`.
 
         Returns
         -------
@@ -81,7 +81,7 @@ class InitializeInfectionsZeroPad(InfectionInitializationMethod):
 
         Parameters
         ----------
-        I_pre_init : ArrayLike
+        I_pre_init
             An array with initialized infections to be padded with zeros.
 
         Returns
@@ -107,7 +107,7 @@ class InitializeInfectionsFromVec(InfectionInitializationMethod):
 
         Parameters
         ----------
-        I_pre_init : ArrayLike
+        I_pre_init
             An array with the same length as ``n_timepoints`` to be
             used as the initial infections.
 
@@ -134,10 +134,12 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
     -----
     The number of incident infections at time `t` is given by:
 
-    .. math:: I(t) = I_p \exp \left( r (t - t_p) \right)
+    ```math
+    I(t) = I_p \exp \left( r (t - t_p) \right)
+    ```
 
-    Where :math:`I_p` is ``I_pre_init``, :math:`r` is ``rate``, and :math:`t_p` is ``t_pre_init``.
-    This ensures that :math:`I(t_p) = I_p`.
+    Where $I_p$ is ``I_pre_init``, $r$ is ``rate``, and $t_p$ is ``t_pre_init``.
+    This ensures that $I(t_p) = I_p$.
     We default to ``t_pre_init = n_timepoints - 1``, so that
     ``I_pre_init`` represents the number of incident infections immediately
     before the renewal process begins.
@@ -149,15 +151,15 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         rate_rv: RandomVariable,
         t_pre_init: int | None = None,
     ):
-        """Default constructor for the ``InitializeInfectionsExponentialGrowth`` class.
+        """Default constructor for the [`pyrenew.latent.infection_initialization_method.InitializeInfectionsExponentialGrowth`][] class.
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             the number of time points to generate initial infections for
-        rate_rv : RandomVariable
+        rate_rv
             A random variable representing the rate of exponential growth
-        t_pre_init : int | None, optional
+        t_pre_init
              The time point whose number of infections is described by ``I_pre_init``. Defaults to ``n_timepoints - 1``.
         """
         super().__init__(n_timepoints)
@@ -171,7 +173,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
 
         Parameters
         ----------
-        I_pre_init : ArrayLike
+        I_pre_init
             An array of size 1 representing the number of infections at time ``t_pre_init``.
 
         Returns

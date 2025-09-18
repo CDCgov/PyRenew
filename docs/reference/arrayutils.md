@@ -1,0 +1,3 @@
+# Arrayutils
+
+::: pyrenew.arrayutils

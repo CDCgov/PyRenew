@@ -1,0 +1,3 @@
+# Random Variable
+
+::: pyrenew.randomvariable

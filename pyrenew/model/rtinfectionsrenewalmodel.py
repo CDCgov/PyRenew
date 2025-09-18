@@ -61,17 +61,17 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        latent_infections_rv : RandomVariable
+        latent_infections_rv
             Infections latent process (e.g.,
             pyrenew.latent.Infections.).
-        gen_int_rv : RandomVariable
+        gen_int_rv
             The generation interval.
-        I0_rv : RandomVariable
+        I0_rv
             The initial infections.
-        Rt_process_rv : RandomVariable
+        Rt_process_rv
             The sample function of the process should return a tuple where the
             first element is the drawn Rt.
-        infection_obs_process_rv : RandomVariable
+        infection_obs_process_rv
             Infections observation process (e.g.,
             pyrenew.observations.Poisson.).
 
@@ -111,15 +111,15 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        gen_int_rv : any
+        gen_int_rv
             The generation interval. Expects RandomVariable.
-        I0_rv : any
+        I0_rv
             The initial infections. Expects RandomVariable.
-        latent_infections_rv : any
+        latent_infections_rv
             Infections latent process. Expects RandomVariable.
-        infection_obs_process_rv : any
+        infection_obs_process_rv
             Infections observation process. Expects RandomVariable.
-        Rt_process_rv : any
+        Rt_process_rv
             The sample function of the process should return a tuple where the
             first element is the drawn Rt. Expects RandomVariable.
 
@@ -146,14 +146,14 @@ class RtInfectionsRenewalModel(Model):
 
         Parameters
         ----------
-        n_datapoints : int, optional
+        n_datapoints
             Number of timepoints to sample.
-        data_observed_infections : ArrayLike | None, optional
+        data_observed_infections
             Observed infections. Defaults to None.
-        padding : int, optional
+        padding
             Number of padding timepoints to add to the beginning of the
             simulation. Defaults to 0.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal sample()
             calls, if any
 

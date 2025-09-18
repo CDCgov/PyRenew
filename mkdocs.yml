@@ -1,0 +1,71 @@
+site_name: "PyRenew"
+repo_url: "https://github.com/CDCgov/PyRenew"
+
+theme:
+  name: "material"
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - content.tooltips
+    - content.footnote.tooltips
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+  - offline
+  - autorefs
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            annotations_path: "brief"
+            docstring_style: "numpy"
+            line_length: 80
+            separate_signature: true
+            show_signature_annotations: true
+            signature_crossrefs: true
+            merge_init_into_class: true
+
+          paths: ["."]
+          inventories:
+            - url: "https://docs.python.org/3/objects.inv"
+            - url: "https://numpy.org/doc/stable/objects.inv"
+            - url: "https://python.arviz.org/en/stable/objects.inv"
+            - url: "https://num.pyro.ai/en/stable/objects.inv"
+            - url: "https://docs.jax.dev/en/latest/objects.inv"
+      enable_inventory: true
+
+markdown_extensions:
+  - footnotes
+  - md_in_html
+  - pymdownx.snippets
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+        - name: math
+          class: arithmatex
+          format:
+            !!python/object/apply:pymdownx.arithmatex.arithmatex_fenced_format {
+              kwds: { mode: generic, tag: div },
+            }
+  - callouts
+
+extra_javascript:
+  - javascripts/katex.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css
