@@ -115,7 +115,7 @@ The pyrenew package models the real-time reproductive number $\mathcal{R}(t)$, t
 
 Our basic renewal process model defines five components:
 
-(1) Generation time distribution g(t), the probability distribution of the time between infection of a primary case and infections in secondary cases.
+(1) Generation time distribution $g(t)$, the probability distribution of the time between infection of a primary case and infections in secondary cases.
 
 (2) Initial infections, the initial "seed" infections needed to start the renewal process; occurring at time $t \leq 0$.
 
