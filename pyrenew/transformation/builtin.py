@@ -1,5 +1,5 @@
 """
-Built-in pyrenew transformations created using `numpyro.distributions.transforms`.
+Built-in pyrenew transformations created using [`numpyro.distributions.transforms.Transform`][].
 """
 
 import numpyro.distributions.transforms as nt
@@ -16,7 +16,7 @@ def ScaledLogitTransform(
 
     Parameters
     ----------
-    x_max: float
+    x_max
         Maximum value of the untransformed scale (will be transformed to
         +infinity).
 

@@ -10,9 +10,9 @@ class TransformedVariable(RandomVariable):
     """
     Class to represent RandomVariables defined
     by taking the output of another RV's
-    :meth:`RandomVariable.sample()` method
+    [`pyrenew.metaclass.RandomVariable.sample`][] method
     and transforming it by a given transformation
-    (typically a :class:`Transform`)
+    (typically a [`numpyro.distributions.transforms.Transform`][])
     """
 
     def __init__(
@@ -26,11 +26,11 @@ class TransformedVariable(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name for the random variable instance.
-        base_rv : RandomVariable
+        base_rv
             The underlying (untransformed) RandomVariable.
-        transforms : Transform
+        transforms
             Transformation or tuple of transformations
             to apply to the output of
             `base_rv.sample()`; single values will be coerced to
@@ -57,10 +57,10 @@ class TransformedVariable(RandomVariable):
 
         Parameters
         ----------
-        record : bool, optional
+        record
             Whether to record the value of the deterministic
             RandomVariable. Defaults to False.
-        **kwargs :
+        **kwargs
             Keyword arguments passed to self.base_rv.sample()
 
         Returns
@@ -105,7 +105,7 @@ class TransformedVariable(RandomVariable):
         Returns
         -------
         int
-           Equal to the length self.transforms
+            Equal to the length of `self.transforms`
         """
         return len(self.transforms)
 
@@ -121,7 +121,7 @@ class TransformedVariable(RandomVariable):
         Returns
         -------
         None
-           on successful validation, or raise a ValueError
+            on successful validation, or raise a [`ValueError`][]
         """
         for t in self.transforms:
             if not callable(t):

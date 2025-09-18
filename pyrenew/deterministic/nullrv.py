@@ -41,7 +41,7 @@ class NullVariable(DeterministicVariable):
 
         Parameters
         ----------
-        **kwargs : dict, optional
+        **kwargs
             Ignored.
 
         Returns
@@ -89,11 +89,11 @@ class NullObservation(NullVariable):
 
         Parameters
         ----------
-        mu : ArrayLike
+        mu
             Unused parameter, represents mean of non-null distributions
-        obs : ArrayLike, optional
+        obs
             Observed data. Defaults to None.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal sample calls, should there be any.
 
         Returns

@@ -18,17 +18,17 @@ def compute_infections_from_rt(
     """
     Generate infections according to a
     renewal process with a time-varying
-    reproduction number :math:`\\mathcal{R}(t)`
+    reproduction number $\\mathcal{R}(t)$
 
     Parameters
     ----------
-    I0 : ArrayLike
+    I0
         Array of initial infections of the
         same length as the generation interval
         pmf vector.
-    Rt : ArrayLike
-        Timeseries of :math:`\\mathcal{R}(t)` values
-    reversed_generation_interval_pmf : ArrayLike
+    Rt
+        Timeseries of $\\mathcal{R}(t)$ values
+    reversed_generation_interval_pmf
         discrete probability mass vector
         representing the generation interval
         of the infection process, where the final
@@ -58,26 +58,26 @@ def logistic_susceptibility_adjustment(
     """
     Apply the logistic susceptibility
     adjustment to a potential new
-    incidence ``I_raw_t`` proposed in
+    incidence `I_raw_t` proposed in
     equation 6 of `Bhatt et al 2023
     <https://doi.org/10.1093/jrsssa/qnad030>`_.
 
     Parameters
     ----------
-    I_raw_t : float
+    I_raw_t
         The "unadjusted" incidence at time t,
         i.e. the incidence given an infinite
         number of available susceptible individuals.
-    frac_susceptible : float
+    frac_susceptible
         fraction of remaining susceptible individuals
         in the population
-    n_population : float
+    n_population
         Total size of the population.
 
     Returns
     -------
     float
-        The adjusted value of :math:`I(t)`.
+        The adjusted value of $I(t)$.
     """
     approx_frac_infected = 1 - jnp.exp(-I_raw_t / n_population)
     return n_population * frac_susceptible * approx_frac_infected
@@ -98,27 +98,27 @@ def compute_infections_from_rt_with_feedback(
 
     Parameters
     ----------
-    I0 : ArrayLike
+    I0
         Array of initial infections of the
         same length as the generation interval
         pmf vector.
-    Rt_raw : ArrayLike
-        Timeseries of raw :math:`\mathcal{R}(t)` values not
+    Rt_raw
+        Timeseries of raw $\mathcal{R}(t)$ values not
         adjusted by infection feedback
-    infection_feedback_strength : ArrayLike
+    infection_feedback_strength
         Strength of the infection feedback.
         Either a scalar (constant feedback
         strength in time) or a vector representing
         the infection feedback strength at a
         given point in time.
-    reversed_generation_interval_pmf : ArrayLike
+    reversed_generation_interval_pmf
         discrete probability mass vector
         representing the generation interval
         of the infection process, where the final
         entry represents an infection 1 time unit in the
         past, the second-to-last entry represents
         an infection two time units in the past, etc.
-    reversed_infection_feedback_pmf : ArrayLike
+    reversed_infection_feedback_pmf
         discrete probability mass vector
         representing the infection feedback
         process, where the final entry represents
@@ -132,36 +132,37 @@ def compute_infections_from_rt_with_feedback(
     -------
     tuple
         A tuple ``(infections, Rt_adjusted)``,
-        where ``Rt_adjusted`` is the infection-feedback-adjusted
-        timeseries of the reproduction number :math:`\mathcal{R}(t)`
-        and ``infections`` is the incident infection timeseries.
+        where `Rt_adjusted` is the infection-feedback-adjusted
+        timeseries of the reproduction number $\mathcal{R}(t)$
+        and `infections` is the incident infection timeseries.
 
     Notes
     -----
     This function implements the following renewal process:
 
-    .. math::
-        \begin{aligned}
-        I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau) \\
-        \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(\gamma(t)\
-            \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
-        \end{aligned}
+    ```math
+    \begin{aligned}
+    I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau) \\
+    \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(\gamma(t)\
+        \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+    \end{aligned}
+    ```
 
-    where :math:`\mathcal{R}(t)` is the reproductive number,
-    :math:`\gamma(t)` is the infection feedback strength,
-    :math:`T_g` is the max-length of the
-    generation interval, :math:`\mathcal{R}^u(t)` is the raw reproduction
-    number, :math:`f(t)` is the infection feedback pmf, and :math:`T_f`
+    where $\mathcal{R}(t)$ is the reproductive number,
+    $\gamma(t)$ is the infection feedback strength,
+    $T_g$ is the max-length of the
+    generation interval, $\mathcal{R}^u(t)$ is the raw reproduction
+    number, $f(t)$ is the infection feedback pmf, and $T_f$
     is the max-length of the infection feedback pmf.
 
-    Note that negative :math:`\gamma(t)` implies
-    that recent incident infections reduce :math:`\mathcal{R}(t)`
+    Note that negative $\gamma(t)$ implies
+    that recent incident infections reduce $\mathcal{R}(t)$
     below its raw value in the absence of feedback, while
-    positive :math:`\gamma` implies that recent incident infections
-    *increase* :math:`\mathcal{R}(t)` above its raw value, and
-    :math:`\gamma(t)=0` implies no feedback.
+    positive $\gamma$ implies that recent incident infections
+    *increase* $\mathcal{R}(t)$ above its raw value, and
+    $\gamma(t)=0$ implies no feedback.
 
-    In general, negative :math:`\gamma` is the more common modeling
+    In general, negative $\gamma$ is the more common modeling
     choice, as it can be used to model susceptible depletion,
     reductions in contact rate due to awareness of high incidence,
     et cetera.

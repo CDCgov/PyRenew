@@ -20,10 +20,10 @@ class PeriodicEffect(RandomVariable):
 
         Parameters
         ----------
-        offset : int
+        offset
             Relative point at which data starts, must be between 0 and
             period_size - 1.
-        quantity_to_broadcast : RandomVariable
+        quantity_to_broadcast
             Values to be broadcasted (repeated or tiled).
 
         Returns
@@ -44,7 +44,7 @@ class PeriodicEffect(RandomVariable):
 
         Parameters
         ----------
-        quantity_to_broadcast : RandomVariable
+        quantity_to_broadcast
             Values to be broadcasted (repeated or tiled).
 
         Returns
@@ -62,9 +62,9 @@ class PeriodicEffect(RandomVariable):
 
         Parameters
         ----------
-        duration : int
+        duration
             Number of timepoints to sample.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to the `quantity_to_broadcast`.
 
         Returns
@@ -94,10 +94,10 @@ class DayOfWeekEffect(PeriodicEffect):
 
         Parameters
         ----------
-        offset : int
+        offset
             Relative point at which data starts, must be between 0 and
             6.
-        quantity_to_broadcast : RandomVariable
+        quantity_to_broadcast
             Values to be broadcasted (repeated or tiled).
 
         Returns
@@ -123,7 +123,7 @@ class DayOfWeekEffect(PeriodicEffect):
 
         Parameters
         ----------
-        offset : int
+        offset
             Relative point at which data starts, must be between 0 and 6.
 
         Returns

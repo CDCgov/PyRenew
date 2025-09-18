@@ -23,9 +23,9 @@ class DeterministicVariable(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name to assign to the variable.
-        value : ArrayLike
+        value
             An ArrayLike object.
 
         Returns
@@ -45,7 +45,7 @@ class DeterministicVariable(RandomVariable):
 
         Parameters
         ----------
-        value : ArrayLike
+        value
             An ArrayLike object.
 
         Returns
@@ -76,10 +76,10 @@ class DeterministicVariable(RandomVariable):
 
         Parameters
         ----------
-        record : bool, optional
+        record
             Whether to record the value of the deterministic
             RandomVariable. Defaults to False.
-        **kwargs : dict, optional
+        **kwargs
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
 

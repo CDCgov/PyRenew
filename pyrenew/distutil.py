@@ -24,11 +24,11 @@ def validate_discrete_dist_vector(
 
     Parameters
     ----------
-    discrete_dist : ArrayLike
+    discrete_dist
         An jax array containing non-negative values that
         represent a discrete probability distribution. The values
         must sum to 1 within the specified tolerance.
-    tol : float, optional
+    tol
         The tolerance within which the sum of the distribution must
         be 1. Defaults to 1e-5.
 
@@ -71,7 +71,7 @@ def reverse_discrete_dist_vector(dist: ArrayLike) -> ArrayLike:
 
     Parameters
     ----------
-    dist : ArrayLike
+    dist
         A discrete distribution vector (likely discrete time-to-event distribution)
 
     Returns
