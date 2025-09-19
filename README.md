@@ -10,18 +10,18 @@ The following diagram illustrates the composition of the `HospitalAdmissionsMode
 flowchart LR
 
   %% Elements
-  rt_proc["Random Walk Rt\nProcess (latent)"];
+  rt_proc["Random Walk Rt Process (latent)"];
   latent_inf["Latent Infections"]
-  latent_ihr["Infection to Hosp.\nrate (latent)"]
-  neg_binom["Observation process\n(hospitalizations)"]
+  latent_ihr["Infection to Hosp. rate (latent)"]
+  neg_binom["Observation process (hospitalizations)"]
   latent_hosp["Latent Hospitalizations"];
-  i0["Initial infections\n(latent)"];
-  gen_int["Generation\ninterval (fixed)"];
-  hosp_int["Hospitalization\ninterval (fixed)"];
+  i0["Initial infections (latent)"];
+  gen_int["Generation interval (fixed)"];
+  hosp_int["Hospitalization interval (fixed)"];
 
   %% Models
-  basic_model(("Infections\nModel"));
-  admin_model(("Hospital Admissions\nModel"));
+  basic_model(("Infections Model"));
+  admin_model(("Hospital Admissions Model"));
 
   %% Latent infections
   rt_proc --> latent_inf;

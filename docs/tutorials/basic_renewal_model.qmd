@@ -1,7 +1,5 @@
 ---
 title: "Fitting a basic renewal model"
-format: gfm
-engine: jupyter
 ---
 
 This document will show the steps to build a simple renewal model featuring a latent infection process, a random walk Rt process, and an observation process for the reported infections.
@@ -49,31 +47,30 @@ numpyro.set_host_device_count(2)
 The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`. The following diagram shows a detailed view of how metaclasses, modules, and classes interact to create the `RtInfectionsRenewalModel` instantiated in the next section:
 
 ```mermaid
-%%| label: overview-of-RtInfectionsRenewalModel
-%%| include: true
 flowchart LR
-    rand((RandomVariable\nmetaclass))
-    models((Model\nmetaclass))
 
-    subgraph observations[Observations module]
-        obs["infection_obs_process_rv\n(PoissonObservation)"]
+    rand("(RandomVariable metaclass)")
+    models("(Model metaclass)")
+
+    subgraph observations["Observations module"]
+        obs["infection_obs_process_rv (PoissonObservation)"]
     end
 
-    subgraph latent[Latent module]
-        inf["latent_infections_rv\n(Infections)"]
-        i0["I0_rv\n(DistributionalVariable)"]
+    subgraph latent["Latent module"]
+        inf["latent_infections_rv (Infections)"]
+        i0["I0_rv (DistributionalVariable)"]
     end
 
-    subgraph process[Process module]
-        rt["Rt_process_rv\n(Custom class built using RandomWalk)"]
+    subgraph process["Process module"]
+        rt["Rt_process_rv (Custom class built using RandomWalk)"]
     end
 
-    subgraph deterministic[Deterministic module]
-        detpmf["gen_int_rv\n(DeterministicPMF)"]
+    subgraph deterministic["Deterministic module"]
+        detpmf["gen_int_rv (DeterministicPMF)"]
     end
 
     subgraph model[Model module]
-        model1["model1\n(RtInfectionsRenewalModel)"]
+        model1["model1 (RtInfectionsRenewalModel)"]
     end
 
     rand-->|Inherited by|observations
@@ -175,27 +172,6 @@ model1 = RtInfectionsRenewalModel(
     latent_infections_rv=latent_infections,
     infection_obs_process_rv=observation_process,
 )
-```
-
-The following diagram summarizes how the modules interact via composition; notably, `gen_int`, `I0`, `rt_proc`, `latent_infections`, and `observed_infections` are instances of `RandomVariable`, which means these can be easily replaced to generate a different instance of the `RtInfectionsRenewalModel` class:
-
-```mermaid
-%%| label: overview-of-RtInfectionsRenewalModel-2
-%%| include: true
-flowchart TB
-    genint["(1) gen_int\n(DetermnisticPMF)"]
-    i0["(2) I0\n(InfectionInitializationProcess)"]
-    rt["(3) rt_proc\n(MyRt, the custom RV defined above)"]
-    inf["(4) latent_infections\n(Infections)"]
-    obs["(5) observation_process\n(PoissonObservation)"]
-
-    model1["model1\n(RtInfectionsRenewalModel)"]
-
-    i0-->|Composes|model1
-    genint-->|Composes|model1
-    rt-->|Composes|model1
-    obs-->|Composes|model1
-    inf-->|Composes|model1
 ```
 
 Using `numpyro`, we can simulate data using the `sample()` member function of `RtInfectionsRenewalModel`. The `sample()` method of the `RtInfectionsRenewalModel` class returns a list composed of the `Rt` and `infections` sequences, called `sim_data`:
