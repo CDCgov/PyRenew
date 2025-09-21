@@ -22,6 +22,7 @@ plugins:
   - search
   - offline
   - autorefs
+  - awesome-pages
   - mkdocstrings:
       handlers:
         python:
@@ -69,3 +70,4 @@ extra_javascript:
 
 extra_css:
   - https://unpkg.com/katex@0/dist/katex.min.css
+
