@@ -83,7 +83,13 @@ The data shows one entry per site.  In this simulated dataset, all sites have th
 ```{python}
 # | label: aggregation
 # Keeping the first observation of each date, sort by date, first 90 days only
-dat = dat.group_by("date").first().select(["date", "daily_hosp_admits"]).sort("date").head(90)
+dat = (
+    dat.group_by("date")
+    .first()
+    .select(["date", "daily_hosp_admits"])
+    .sort("date")
+    .head(90)
+)
 dat.head(5)
 ```
 
@@ -143,7 +149,14 @@ fig.supxlabel("Days")
 plt.show()
 ```
 
-With these arrays in hand, we can start building the model. First, we will define the latent hospital admissions:
+With these arrays in hand, we define the necessary components of the model.
+
+* `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospital admission interval as input.
+
+* `hosp_rate` is a `DistributionalVariable` object that takes a numpyro distribution to represent the infection to hospital admission rate
+
+* `latent_hosp` is an instance of the `HospitalAdmissions` class.  It is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospital admission rate.
+
 
 ```{python}
 # | label: latent-hosp
@@ -165,7 +178,7 @@ latent_hosp = latent.HospitalAdmissions(
 )
 ```
 
-The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospital admission interval as input. The `hosp_rate` is a `DistributionalVariable` object that takes a numpyro distribution to represent the infection to hospital admission rate. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospital admission rate. Now, we can define the rest of the other components:
+Next we define infection process `IO` and generation interval `gen_int`.
 
 ```{python}
 # | label: initializing-rest-of-model
@@ -190,8 +203,13 @@ I0 = InfectionInitializationProcess(
     ),
 )
 
-# Generation interval and Rt
+# Generation interval
 gen_int = deterministic.DeterministicPMF(name="gen_int", value=gen_int)
+```
+
+Then we define the $\mathcal{R}(t)$ random walk process `rtproc`.
+
+```{python}
 
 
 class MyRt(metaclass.RandomVariable):
@@ -220,6 +238,11 @@ class MyRt(metaclass.RandomVariable):
 
 
 rtproc = MyRt()
+```
+
+The final model component is the observation process `obs`.
+
+```{python}
 
 # Put a log-Normal prior on the concentration parameter
 # of the negative binomial.
@@ -235,7 +258,7 @@ obs = observation.NegativeBinomialObservation(
 )
 ```
 
-We can now build the model:
+We can now build the model.
 
 ```{python}
 # | label: init-model
