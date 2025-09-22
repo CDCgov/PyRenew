@@ -78,19 +78,12 @@ dat = datasets.load_wastewater()
 dat[["date", "site", "daily_hosp_admits"]].head(5)
 ```
 
-The data shows one entry per site, but the way it was simulated, the number of admissions is the same across sites. Thus, we will only keep the first observation per day.
+The data shows one entry per site.  In this simulated dataset, all sites have the same number of admissions each day, therefore, we only use the first observation per day, keeping the date and number of admissions.  Furthermore, we only use the first 90 days' worth of data.
 
 ```{python}
 # | label: aggregation
-# Keeping the first observation of each date
-dat = dat.group_by("date").first().select(["date", "daily_hosp_admits"])
-
-# Now, sorting by date
-dat = dat.sort("date")
-
-# Keeping the first 90 days
-dat = dat.head(90)
-
+# Keeping the first observation of each date, sort by date, first 90 days only
+dat = dat.group_by("date").first().select(["date", "daily_hosp_admits"]).sort("date").head(90)
 dat.head(5)
 ```
 
@@ -117,7 +110,8 @@ plt.show()
 
 ## Building the model
 
-First, we will extract two datasets we will use as deterministic quantities: the generation interval and the infection to hospital admission interval.
+The generation interval and the infection to hospital admission interval are RandomVariables.
+Here we load two more datasets which provide deterministic quantities for these variables.
 
 ```{python}
 # | label: data-extract-intervals
