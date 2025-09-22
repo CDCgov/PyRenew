@@ -2,11 +2,11 @@
 
 ⚠️ This is a work in progress ⚠️
 
-`pyrenew` is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing renewal models. Built on top of the [numpyro](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building, including pre-defined models for processing various types of observational processes.
+The PyRenew package is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing renewal models. Built on top of the [numpyro](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building, including pre-defined models for processing various types of observational processes.
 
-The [fundamental](https://cdcgov.github.io/PyRenew/tutorials/getting_started.html#the-fundamentals)  Python metaclass objects define a `Model` class, from which we can draw samples, and a `RandomVariable` class which has been abstracted to allow for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.  See the tutorial  [Fitting a basic renewal model](https://cdcgov.github.io/PyRenew/tutorials/basic_renewal_model.html) to see how this works.
+The [fundamental](https://cdcgov.github.io/PyRenew/tutorials/getting_started.html#the-fundamentals)  building blocks are the `Model` metaclass, from which we can draw samples, and the `RandomVariable` metaclass which has been abstracted to allow for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.  (See the tutorial  [Fitting a basic renewal model](https://cdcgov.github.io/PyRenew/tutorials/basic_renewal_model.html) to see how this works.)
 
-The following diagram illustrates the composition of the `HospitalAdmissionsModel` class.    See the tutorial  [Fitting a hospital-only admissions model](https://cdcgov.github.io/PyRenew/tutorials/hospital_admissions_mode..html) for details.
+The following diagram illustrates the composition of the `HospitalAdmissionsModel` class.    (See the tutorial  [Fitting a hospital-only admissions model](https://cdcgov.github.io/PyRenew/tutorials/hospital_admissions_mode..html) for details.)
 
 ```mermaid
 flowchart LR
