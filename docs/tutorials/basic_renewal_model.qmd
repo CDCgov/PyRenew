@@ -49,8 +49,6 @@ numpyro.set_host_device_count(2)
 The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`. The following diagram shows a detailed view of how metaclasses, modules, and classes interact to create the `RtInfectionsRenewalModel` instantiated in the next section:
 
 ```mermaid
-%%| label: overview-of-RtInfectionsRenewalModel
-%%| include: true
 flowchart LR
     rand((RandomVariable\nmetaclass))
     models((Model\nmetaclass))
