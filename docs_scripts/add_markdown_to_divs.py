@@ -1,4 +1,5 @@
 # numpydoc ignore=GL08
+
 import sys
 from pathlib import Path
 
@@ -10,7 +11,7 @@ def add_markdown_to_divs(html: str) -> str:  # numpydoc ignore=GL08
     for div in soup.find_all("div"):
         if "markdown" not in div.attrs:
             div["markdown"] = "1"
-    return str(soup)
+    return soup.decode(formatter=None)
 
 
 if __name__ == "__main__":

@@ -2,26 +2,28 @@
 
 ⚠️ This is a work in progress ⚠️
 
-`pyrenew` is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing renewal models. Built on top of the [numpyro](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building, including pre-defined models for processing various types of observational processes. To start, visit the tutorials section on the project's website [here](https://cdcgov.github.io/PyRenew/tutorials/index.html).
+The PyRenew package is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing renewal models. Built on top of the [numpyro](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building, including pre-defined models for processing various types of observational processes.
 
-The following diagram illustrates the composition of the `HospitalAdmissionsModel` class. Notably, all components are modular and can be replaced with custom implementations.
+The [fundamental](https://cdcgov.github.io/PyRenew/tutorials/getting_started.html#the-fundamentals)  building blocks are the `Model` metaclass, from which we can draw samples, and the `RandomVariable` metaclass which has been abstracted to allow for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.  (See the tutorial  [Fitting a basic renewal model](https://cdcgov.github.io/PyRenew/tutorials/basic_renewal_model.html) to see how this works.)
+
+The following diagram illustrates the composition of the `HospitalAdmissionsModel` class.    (See the tutorial  [Fitting a hospital-only admissions model](https://cdcgov.github.io/PyRenew/tutorials/hospital_admissions_mode..html) for details.)
 
 ```mermaid
 flowchart LR
 
   %% Elements
-  rt_proc["Random Walk Rt\nProcess (latent)"];
-  latent_inf["Latent Infections"]
-  latent_ihr["Infection to Hosp.\nrate (latent)"]
-  neg_binom["Observation process\n(hospitalizations)"]
-  latent_hosp["Latent Hospitalizations"];
-  i0["Initial infections\n(latent)"];
-  gen_int["Generation\ninterval (fixed)"];
-  hosp_int["Hospitalization\ninterval (fixed)"];
+  rt_proc["Random walk RT process <br> (latent)"];
+  latent_inf["Latent infections"]
+  latent_ihr["Infection to hospitalization rate <br> (latent)"]
+  neg_binom["Observation process <br> (hospitalizations)"]
+  latent_hosp["Latent hospitalizations"];
+  i0["Initial infections <br> (latent)"];
+  gen_int["Generation interval <br> (fixed)"];
+  hosp_int["Hospitalization interval <br> (fixed)"];
 
   %% Models
-  basic_model(("Infections\nModel"));
-  admin_model(("Hospital Admissions\nModel"));
+  basic_model(("Infections model"));
+  admin_model(("Hospital admissions model"));
 
   %% Latent infections
   rt_proc --> latent_inf;
@@ -53,8 +55,8 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 
 ## Resources
 
-* [The MSR Website](https://cdcgov.github.io/PyRenew/tutorials/index.html) provides general documentation and tutorials on using MSR.
-* [The Model Equations Sheet](https://github.com/CDCgov/PyRenew/blob/main/equations.md) describe the mathematics of the renewal processes and models MSR supports.
+* [The PyRenew documentation suite](https://cdcgov.github.io/PyRenew) provides API reference documentation and  tutorials on implementing multisignal renewal models with PyRenew.
+* [The Model Equations Sheet](https://github.com/CDCgov/PyRenew/blob/main/equations.md) describes the mathematics of the multisignal renewal processes and models PyRenew supports.
 * Additional reading on renewal processes in epidemiology
   * [_Semi-mechanistic Bayesian modelling of COVID-19 with renewal processes_](https://academic.oup.com/jrsssa/article-pdf/186/4/601/54770289/qnad030.pdf)
   * [_Unifying incidence and prevalence under a time-varying general branching process_](https://link.springer.com/content/pdf/10.1007/s00285-023-01958-w.pdf)
