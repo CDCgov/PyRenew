@@ -12,18 +12,18 @@ The following diagram illustrates the composition of the `HospitalAdmissionsMode
 flowchart LR
 
   %% Elements
-  rt_proc["Random Walk Rt Process (latent)"];
-  latent_inf["Latent Infections"]
-  latent_ihr["Infection to Hosp. rate (latent)"]
-  neg_binom["Observation process (hospitalizations)"]
-  latent_hosp["Latent Hospitalizations"];
-  i0["Initial infections (latent)"];
-  gen_int["Generation interval (fixed)"];
-  hosp_int["Hospitalization interval (fixed)"];
+  rt_proc["Random walk RT process <br> (latent)"];
+  latent_inf["Latent infections"]
+  latent_ihr["Infection to hospitalization rate <br> (latent)"]
+  neg_binom["Observation process <br> (hospitalizations)"]
+  latent_hosp["Latent hospitalizations"];
+  i0["Initial infections <br> (latent)"];
+  gen_int["Generation interval <br> (fixed)"];
+  hosp_int["Hospitalization interval <br> (fixed)"];
 
   %% Models
-  basic_model(("Infections Model"));
-  admin_model(("Hospital Admissions Model"));
+  basic_model(("Infections model"));
+  admin_model(("Hospital admissions model"));
 
   %% Latent infections
   rt_proc --> latent_inf;
@@ -56,7 +56,7 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 ## Resources
 
 * [The PyRenew documentation suite](https://cdcgov.github.io/PyRenew) provides API reference documentation and  tutorials on implementing multisignal renewal models with PyRenew.
-* [The Model Equations Sheet](https://github.com/CDCgov/PyRenew/blob/main/equations.md) describe the  mathematics of the multisignal renewal processes and models PyRenew supports.
+* [The Model Equations Sheet](https://github.com/CDCgov/PyRenew/blob/main/equations.md) describes the mathematics of the multisignal renewal processes and models PyRenew supports.
 * Additional reading on renewal processes in epidemiology
   * [_Semi-mechanistic Bayesian modelling of COVID-19 with renewal processes_](https://academic.oup.com/jrsssa/article-pdf/186/4/601/54770289/qnad030.pdf)
   * [_Unifying incidence and prevalence under a time-varying general branching process_](https://link.springer.com/content/pdf/10.1007/s00285-023-01958-w.pdf)
