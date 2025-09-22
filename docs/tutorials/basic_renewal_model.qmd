@@ -53,24 +53,24 @@ flowchart LR
     models("(Model metaclass)")
 
     subgraph observations["Observations module"]
-        obs["infection_obs_process_rv (PoissonObservation)"]
+        obs["infection_obs_process_rv <br> (PoissonObservation)"]
     end
 
     subgraph latent["Latent module"]
-        inf["latent_infections_rv (Infections)"]
-        i0["I0_rv (DistributionalVariable)"]
+        inf["latent_infections_rv <br> (Infections)"]
+        i0["I0_rv <br> (DistributionalVariable)"]
     end
 
     subgraph process["Process module"]
-        rt["Rt_process_rv (Custom class built using RandomWalk)"]
+        rt["Rt_process_rv <br> (Custom class built using RandomWalk)"]
     end
 
     subgraph deterministic["Deterministic module"]
-        detpmf["gen_int_rv (DeterministicPMF)"]
+        detpmf["gen_int_rv <br> (DeterministicPMF)"]
     end
 
     subgraph model[Model module]
-        model1["model1 (RtInfectionsRenewalModel)"]
+        model1["model1 <br> (RtInfectionsRenewalModel)"]
     end
 
     rand-->|Inherited by|observations
@@ -89,27 +89,27 @@ flowchart LR
 
 The pyrenew package models the real-time reproductive number $\mathcal{R}(t)$, the average number of secondary infections caused by an infected individual, as a renewal process model. Our basic renewal process model defines five components:
 
-(1) generation interval, the times between infections
+1. generation interval, the times between infections
 
-(2) initial infections, occurring prior to time $t = 0$
+2. initial infections, occurring prior to time $t = 0$
 
-(3) $\mathcal{R}(t)$, the time-varying reproductive number,
+3. $\mathcal{R}(t)$, the time-varying reproductive number,
 
-(4) latent infections, i.e., those infections which are known to exist but are not observed (or not observable), and
+4. latent infections, i.e., those infections which are known to exist but are not observed (or not observable), and
 
-(5) observed infections, a subset of underlying true infections that are reported, perhaps via hospital admissions, physician's office visits, or routine biosurveillance.
+5. observed infections, a subset of underlying true infections that are reported, perhaps via hospital admissions, physician's office visits, or routine biosurveillance.
 
 To initialize these five components within the renewal modeling framework, we estimate each component with:
 
-(1) In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
+1. In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
 
-(2) an instance of the `InfectionInitializationProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
+2. an instance of the `InfectionInitializationProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
 
-(3) A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a fixed Normal step-size distribution. For this, we construct a custom `RandomVariable`, `MyRt`.
+3. A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a fixed Normal step-size distribution. For this, we construct a custom `RandomVariable`, `MyRt`.
 
-(4) an instance of the `Infections` class with default values, and
+4. an instance of the `Infections` class with default values, and
 
-(5) an instance of the `PoissonObservation` class with default values
+5. an instance of the `PoissonObservation` class with default values
 
 ```{python}
 # | label: creating-elements
