@@ -130,8 +130,9 @@ I0 = InfectionInitializationProcess(
     InitializeInfectionsZeroPad(pmf_array.size),
 )
 
+
 # (3) The random walk process.
-# We construct a custom RandomVariable on log Rt, with an inferred s.d. 
+# We construct a custom RandomVariable on log Rt, with an inferred s.d.
 class RtRandomWalk(RandomVariable):
     def validate(self):
         pass
