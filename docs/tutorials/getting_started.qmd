@@ -13,7 +13,7 @@ The following tutorials assume that you are familiar with both infectious diseas
  - You must have a Python3 installation (use tools like [pyenv](https://realpython.com/intro-to-pyenv/) or [compile and install](https://ubuntuhandbook.org/index.php/2023/05/install-python-3-12-ubuntu/) from the [release page](https://www.python.org/downloads/)).
  - You should be able to install packages, load modules in python, and manage virtual environments (we recommend [uv](https://docs.astral.sh/uv/)).
  - You should understand the concept of a [class](https://realpython.com/python-classes/) and [metaclass](https://realpython.com/courses/python-metaclasses/) in python.
- - You should be familiar with Bayesian inference, and a working understanding of MCMC methods used to fit Bayesian models to data (some resources are available [here](https://mc-stan.org/docs/2_18/reference-manual/effective-sample-size-section.html), and [here](https://xcelab.net/rm/)).
+ - You should be familiar with Bayesian inference and have a working understanding of MCMC methods used to fit Bayesian models to data (some resources are available [here](https://mc-stan.org/docs/2_18/reference-manual/effective-sample-size-section.html), and [here](https://xcelab.net/rm/)).
 
 ## Installing pyrenew
 
