@@ -63,7 +63,7 @@ The `RtWeeklyDiff` class is a particular case of `RtPeriodicDiff` with a period 
 
 ## Repeated sequences (tiling)
 
-By specifying `broadcast_type = "tile"`, the `PeriodicBroadcaster`repeats the sequence as a whole. 
+By specifying `broadcast_type = "tile"`, the `PeriodicBroadcaster`repeats the sequence as a whole.
 The `DayOfWeekEffect` class is a particular case of `PeriodicEffect` with a period size of seven.
 We sample from a scaled Dirchlet distribution such that the sum of the samples is 7:
 
@@ -105,4 +105,3 @@ for i in range(0, 30, 7):
     plt.axvline(i, color="black", linestyle="--", alpha=0.5)
 plt.show()
 ```
-

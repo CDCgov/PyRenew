@@ -216,7 +216,9 @@ I0 = InfectionInitializationProcess(
 )
 
 # Generation interval
-gen_int_pmf = deterministic.DeterministicPMF(name="gen_int", value=gen_int_array)
+gen_int_pmf = deterministic.DeterministicPMF(
+    name="gen_int", value=gen_int_array
+)
 ```
 
 Then we define the $\mathcal{R}(t)$ random walk process `rtproc`.
@@ -253,6 +255,7 @@ class RtRandomWalk(metaclass.RandomVariable):
         init_rt = rt_init_rv.sample()
 
         return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
+
 
 rtproc = RtRandomWalk()
 ```
@@ -293,6 +296,7 @@ Let's simulate from the prior predictive distribution to check that the model is
 ```{python}
 # | label: simulation
 import numpy as np
+
 timeframe = 120
 
 with numpyro.handlers.seed(rng_seed=223):
