@@ -1,12 +1,13 @@
 ---
 title: Defining Custom PyRenew RandomVariables
 format: gfm
+engine: jupyter
 ---
 
 This tutorial illustrates how define new `RandomVariable` classes in order to extend existing models and build new ones, according to [PyRenew principles](https://cdcgov.github.io/PyRenew/developer_documentation.html#pyrenew-principles).
 
 An example of a custom `RandomVariable` class is the `InfectionsWithFeedback` class which models
-the number of infections at time $t$ as a function of the number of infections at time $t - \tau$
+the number of infections at time $t$ as a function of the number of infections at time $t - \tau$ as follows:
 
 $$I(t) = \mathcal{R}(t) \sum_{\tau = 1}^{T_g} I(t-\tau) g(\tau)$$
 

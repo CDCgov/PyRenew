@@ -5,8 +5,8 @@ engine: jupyter
 ---
 
 A common practice in time series forecasting is featuring periodic effects such as day of the week or weekend effects.
-The the `arrayutils.PeriodicBroadcaster` class provides this functionality.
-This tutorial shows how to use this to model both repeating elements of a sequences and repeating a sequence as a whole (tiling).
+The `arrayutils.PeriodicBroadcaster` class provides this functionality.
+This tutorial shows how to use this to model both repeating elements of a sequence and repeating a sequence as a whole (tiling).
 
 ## Repeated units
 
@@ -58,12 +58,12 @@ plt.show()
 ```
 
 The implementation of the `RtWeeklyDiffARProcess` (which is an instance of `RtPeriodicDiffARProcess`),
-uses `repeat_until_n` to repeating values: `repeat_until_n(..., period_size=7)`.
+uses `repeat_until_n` to repeat values: `repeat_until_n(..., period_size=7)`.
 The `RtWeeklyDiff` class is a particular case of `RtPeriodicDiff` with a period size of seven.
 
 ## Repeated sequences (tiling)
 
-By specifying `broadcast_type = "tile"`, the `PeriodicBroadcaster`repeats the sequence as a whole.
+By specifying `broadcast_type = "tile"`, the `PeriodicBroadcaster` repeats the sequence as a whole.
 The `DayOfWeekEffect` class is a particular case of `PeriodicEffect` with a period size of seven.
 We sample from a scaled Dirchlet distribution such that the sum of the samples is 7:
 

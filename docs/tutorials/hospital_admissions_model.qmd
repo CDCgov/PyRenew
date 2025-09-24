@@ -124,7 +124,6 @@ from pyrenew import (
     deterministic,
     latent,
     metaclass,
-    metaclass,
     model,
     observation,
     process,

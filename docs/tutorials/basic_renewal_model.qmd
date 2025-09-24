@@ -1,8 +1,10 @@
 ---
-title: "Fitting a basic renewal model"
+title: Fitting a basic renewal model
+format: gfm
+engine: jupyter
 ---
 
-This document will show the steps to build a simple renewal model featuring a latent infection process, a random walk Rt process, and an observation process for the reported infections.
+This document will show the steps to build a simple renewal model featuring a latent infection process, a random walk $\mathcal{R}(t)$ process, and an observation process for the reported infections.
 
 We start by loading the needed components to build a basic renewal model:
 
@@ -36,15 +38,14 @@ numpyro.set_host_device_count(2)
 
 ## `pyrenew` core metaclasses
 
-Most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`. From them, the following four sub-modules arise:
+Most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`.
+These, in turn, provide the following sub-modules.
 
--   The `process` sub-module,
--   The `deterministic` sub-module,
--   The `observation` sub-module,
--   The `latent` sub-module, and
--   The `models` sub-module
-
-The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`.
+-  `deterministic` - `RandomVariable` classes for fixed transformations and non-random parameters
+-  `latent` - `RandomVariable` classes for hidden states requiring statistical inference
+-  `observation` - `RandomVariable` classes for observed data and likelihoods
+-  `process` - `RandomVariable` classes for stochastic processes for disease dynamics
+-  `models` - `Model` classes for specific epidemiological models and workflows
 
 ## Architecture of `RtInfectionsRenewalModel`
 
@@ -130,9 +131,8 @@ I0 = InfectionInitializationProcess(
     InitializeInfectionsZeroPad(pmf_array.size),
 )
 
-
 # (3) The random walk process.
-# We construct a custom RandomVariable on log Rt, with an inferred s.d.
+# We construct a custom RandomVariable on log Rt, with an inferred s.d. 
 class RtRandomWalk(RandomVariable):
     def validate(self):
         pass
