@@ -34,9 +34,9 @@ By default, XLA (which is used by JAX for compilation) considers all CPU cores a
 numpyro.set_host_device_count(2)
 ```
 
-## Architecture of `RtInfectionsRenewalModel`
+## `pyrenew` core metaclasses
 
-`pyrenew` leverages `numpyro`'s flexibility to build models via composition. As a principle, most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`. From them, the following four sub-modules arise:
+Most objects in `pyrenew` can be treated as random variables we can sample. At the top-level `pyrenew` has two metaclasses from which most objects inherit: `RandomVariable` and `Model`. From them, the following four sub-modules arise:
 
 -   The `process` sub-module,
 -   The `deterministic` sub-module,
@@ -44,8 +44,25 @@ numpyro.set_host_device_count(2)
 -   The `latent` sub-module, and
 -   The `models` sub-module
 
-The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`. The following diagram shows a detailed view of how metaclasses, modules, and classes interact to create the `RtInfectionsRenewalModel` instantiated in the next section:
+The first four are collections of instances of `RandomVariable`, and the last is a collection of instances of `Model`.
 
+## Architecture of `RtInfectionsRenewalModel`
+
+The class `RtInfectionsRenewalModel` is basic renewal model consisting of infections and reproduction numbers.
+It models the real-time reproductive number $\mathcal{R}(t)$, the average number of secondary infections caused by an infected individual, as a renewal process model
+defined in terms of:
+
+1. generation interval, the times between infections
+
+2. initial infections, occurring prior to time $t = 0$
+
+3. $\mathcal{R}(t)$, the time-varying reproductive number,
+
+4. latent infections, i.e., those infections which are known to exist but are not observed (or not observable), and
+
+5. observed infections, a subset of underlying true infections that are reported, perhaps via hospital admissions, physician's office visits, or routine biosurveillance.
+
+The following diagram shows a detailed view of how metaclasses, modules, and classes are used to in the `RtInfectionsRenewalModel`.
 ```mermaid
 flowchart LR
 
@@ -86,30 +103,19 @@ flowchart LR
     inf-->|Composes|model1
 ```
 
+## Implementing a `RtInfectionsRenewalModel`
 
-The pyrenew package models the real-time reproductive number $\mathcal{R}(t)$, the average number of secondary infections caused by an infected individual, as a renewal process model. Our basic renewal process model defines five components:
+In this example we specify a renewal model with the following components.
 
-1. generation interval, the times between infections
+1. The generation interval is provided as a deterministic instance of `RandomVariable`
 
-2. initial infections, occurring prior to time $t = 0$
+2. The `InfectionInitializationProcess` specifies the number of latent infections immediately before the renewal process begins as following a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
 
-3. $\mathcal{R}(t)$, the time-varying reproductive number,
+3. A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a fixed Normal step-size distribution. For this, we construct a custom `RandomVariable`, `RtRandomWalk`.
 
-4. latent infections, i.e., those infections which are known to exist but are not observed (or not observable), and
+4. An instance of the `Infections` class with default values.
 
-5. observed infections, a subset of underlying true infections that are reported, perhaps via hospital admissions, physician's office visits, or routine biosurveillance.
-
-To initialize these five components within the renewal modeling framework, we estimate each component with:
-
-1. In this example, the generation interval is not estimated but passed as a deterministic instance of `RandomVariable`
-
-2. an instance of the `InfectionInitializationProcess` class, where the number of latent infections immediately before the renewal process begins follows a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
-
-3. A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a fixed Normal step-size distribution. For this, we construct a custom `RandomVariable`, `MyRt`.
-
-4. an instance of the `Infections` class with default values, and
-
-5. an instance of the `PoissonObservation` class with default values
+5. An instance of the `PoissonObservation` class with default values
 
 ```{python}
 # | label: creating-elements
@@ -124,10 +130,9 @@ I0 = InfectionInitializationProcess(
     InitializeInfectionsZeroPad(pmf_array.size),
 )
 
-
-# (3) The random walk on log Rt, with an inferred s.d. Here, we
-# construct a custom RandomVariable.
-class MyRt(RandomVariable):
+# (3) The random walk process.
+# We construct a custom RandomVariable on log Rt, with an inferred s.d. 
+class RtRandomWalk(RandomVariable):
     def validate(self):
         pass
 
@@ -152,7 +157,7 @@ class MyRt(RandomVariable):
         return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 
 
-rt_proc = MyRt()
+rt_proc = RtRandomWalk()
 
 # (4) Latent infection process (which will use 1 and 2)
 latent_infections = Infections()

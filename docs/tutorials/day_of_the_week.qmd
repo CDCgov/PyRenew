@@ -8,19 +8,66 @@ This document illustrates how to leverage the time-aware arrays to create a a da
 
 ## Recap: Hospital Admissions Model
 
-In the ["Fitting a hospital admissions-only model" tutorial](hospital_admissions_model.md), we built a fairly complicated model that included pre-defined random variables as well as a custom random variable representing the reproductive number. In this tutorial, we will focus on adding a new component: the day-of-the-week effect. We start by reproducing the model without the day-of-the-week effect:
+In the ["Fitting a hospital admissions-only model" tutorial](hospital_admissions_model.md), we built a fairly complicated model that included pre-defined random variables as well as a custom random variable representing the reproductive number.
 
-1. We load the data:
+
+```mermaid
+flowchart LR
+
+  %% Elements
+  rt_proc["Random walk RT process <br> (latent)"];
+  latent_inf["Latent infections"]
+  latent_ihr["Infection to hospitalization rate <br> (latent)"]
+  neg_binom["Observation process <br> (hospitalizations)"]
+  latent_hosp["Latent hospitalizations"];
+  i0["Initial infections <br> (latent)"];
+  gen_int["Generation interval <br> (fixed)"];
+  hosp_int["Hospitalization interval <br> (fixed)"];
+
+  %% Models
+  basic_model(("Infections model"));
+  admin_model(("Hospital admissions model"));
+
+  %% Latent infections
+  rt_proc --> latent_inf;
+  i0 --> latent_inf;
+  gen_int --> latent_inf;
+  latent_inf --> basic_model
+
+  %% Hospitalizations
+  hosp_int --> latent_hosp
+
+  neg_binom --> admin_model;
+  latent_ihr --> latent_hosp;
+  basic_model --> admin_model;
+  latent_hosp --> admin_model;
+```
+
+In this tutorial, we will focus on adding a new component: the day-of-the-week effect.
+
+#### Setup: import all packages and load the simulated data
 
 ```{python}
 # | label: setup
-# | code-fold: true
-# Setup
 import numpyro
 import polars as pl
-from pyrenew import datasets
-
-# Setting the number of devices
+import jax.numpy as jnp
+import numpyro.distributions as dist
+from pyrenew import (
+     datasets,
+     deterministic,
+     latent,
+     metaclass,
+     model,
+     observation,
+     process,
+     randomvariable,
+     transformation
+)
+from pyrenew.latent import (
+    InfectionInitializationProcess,
+    InitializeInfectionsExponentialGrowth,
+)
 numpyro.set_host_device_count(2)
 
 # Loading and processing the data
@@ -32,7 +79,6 @@ dat = (
     .sort("date")
     .head(90)
 )
-
 daily_hosp_admits = dat["daily_hosp_admits"].to_numpy()
 dates = dat["date"].to_numpy()
 
@@ -42,19 +88,17 @@ inf_hosp_int = datasets.load_infection_admission_interval()
 
 # We only need the probability_mass column of each dataset
 gen_int_array = gen_int["probability_mass"].to_numpy()
-gen_int = gen_int_array
 inf_hosp_int_array = inf_hosp_int["probability_mass"].to_numpy()
 ```
 
-2. Next, we defined the model's components:
+#### Define all model components
+
+We start by (re)defining the hospital admissions model without a day-of-the-week effect.
 
 ```{python}
-# | label: latent-hosp
-# | code-fold: true
-from pyrenew import latent, deterministic, randomvariable
-import jax.numpy as jnp
-import numpyro.distributions as dist
+# | label: hospital-admissions-model
 
+# Hospital admissions
 inf_hosp_int = deterministic.DeterministicPMF(
     name="inf_hosp_int", value=inf_hosp_int_array
 )
@@ -66,12 +110,6 @@ hosp_rate = randomvariable.DistributionalVariable(
 latent_hosp = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
     infection_hospitalization_ratio_rv=hosp_rate,
-)
-
-from pyrenew import model, process, observation, metaclass, transformation
-from pyrenew.latent import (
-    InfectionInitializationProcess,
-    InitializeInfectionsExponentialGrowth,
 )
 
 
@@ -91,25 +129,15 @@ I0 = InfectionInitializationProcess(
     ),
 )
 
-# Generation interval and Rt
-gen_int = deterministic.DeterministicPMF(name="gen_int", value=gen_int)
-```
+# Generation interval
+gen_int_pmf = deterministic.DeterministicPMF(name="gen_int", value=gen_int_array)
 
-including the Rt effect:
-
-```{python}
-# | label: Rt-process
-# | code-fold: true
-class MyRt(metaclass.RandomVariable):
-    def __init__(self, sd_rv):
-        self.sd_rv = sd_rv
-
+class RtRandomWalk(metaclass.RandomVariable):
     def validate(self):
         pass
 
     def sample(self, n: int, **kwargs) -> tuple:
-        # Standard deviation of the random walk
-        sd_rt = self.sd_rv()
+        sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
 
         # Random walk step
         step_rv = randomvariable.DistributionalVariable(
@@ -136,19 +164,8 @@ class MyRt(metaclass.RandomVariable):
 
         return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 
+rtproc = RtRandomWalk()
 
-rtproc = MyRt(
-    randomvariable.DistributionalVariable(
-        name="Rt_random_walk_sd", distribution=dist.HalfNormal(0.025)
-    )
-)
-```
-
-3. We defined the observation model:
-
-```{python}
-# | label: obs-model
-# | code-fold: true
 # we place a log-Normal prior on the concentration
 # parameter of the negative binomial.
 nb_conc_rv = randomvariable.TransformedVariable(
@@ -165,29 +182,21 @@ obs = observation.NegativeBinomialObservation(
     "negbinom_rv",
     concentration_rv=nb_conc_rv,
 )
-```
 
-4. And finally, we build the model:
-
-```{python}
-# | label: init-model
-# | code-fold: true
+# now we build the model
 hosp_model = model.HospitalAdmissionsModel(
     latent_infections_rv=latent_inf,
     latent_hosp_admissions_rv=latent_hosp,
     I0_rv=I0,
-    gen_int_rv=gen_int,
+    gen_int_rv=gen_int_pmf,
     Rt_process_rv=rtproc,
     hosp_admission_obs_process_rv=obs,
 )
 ```
 
-Here is what the model looks like without the day-of-the-week effect:
+We run the model and then plot the posterior samples.
 
 ```{python}
-# | label: fig-output-admissions-padding-and-weekday
-# | fig-cap: Hospital Admissions posterior distribution without weekday effect
-# | code-fold: true
 import jax
 import numpy as np
 
@@ -203,16 +212,14 @@ hosp_model.run(
 
 ```{python}
 # | code-fold: true
+# | label: fig-output-admissions-padding-and-weekday
+# | fig-cap: Hospital Admissions posterior distribution without weekday effect
 import arviz as az
 import matplotlib.pyplot as plt
 
-
-# Retrieve the posterior samples from the model
 ppc_samples = hosp_model.posterior_predictive(
     n_datapoints=daily_hosp_admits.size
 )
-
-# Create an InferenceData object from model
 idata = az.from_numpyro(
     posterior=hosp_model.mcmc,
     posterior_predictive=ppc_samples,
@@ -246,14 +253,18 @@ plt.show()
 ```
 
 
-
-
-
 ## Round 2: Incorporating day-of-the-week effects
 
-We will re-use the infection to admission interval and infection to hospitalization rate from the previous model. But we will also add a day-of-the-week effect. To do this, we will add two additional arguments to the latent hospital admissions random variable: `day_of_the_week_rv` (a `RandomVariable`) and `obs_data_first_day_of_the_week` (an `int` mapping days of the week from 0:6, zero being Monday). The `day_of_the_week_rv`'s sample method should return a vector of length seven; those values are then broadcasted to match the length of the dataset. Moreover, since the observed data may start in a weekday other than Monday, the `obs_data_first_day_of_the_week` argument is used to offset the day-of-the-week effect.
+To add a day-of-the-week effect to the previos model we add two additional arguments to the latent hospital admissions random variable:
 
-For this example, the effect will be passed as a scaled Dirichlet distribution. It will consist of a `TransformedVariable` that samples an array of length seven from numpyro's `distributions.Dirichlet` and applies a `transformation.AffineTransform` to scale it by seven. [^note-other-examples]:
+* `day_of_the_week_rv` (a `RandomVariable`)
+* `obs_data_first_day_of_the_week` (an `int` mapping days of the week from 0:6, zero being Monday).
+
+The `day_of_the_week_rv`'s sample method should return a vector of length seven; those values are then broadcasted to match the length of the dataset.
+Since the observed data may start in a weekday other than Monday, the `obs_data_first_day_of_the_week` argument is used to offset the day-of-the-week effect.
+
+For this effect we use a scaled Dirichlet distribution, and define
+a `TransformedVariable` that samples an array of length seven from numpyro's `distributions.Dirichlet` and applies a `transformation.AffineTransform` to scale it by seven. [^note-other-examples]:
 
 [^note-other-examples]: A similar weekday effect is implemented in its own module, with example code in the [Periodic Effects](periodic_effects.md) tutorial.
 
@@ -272,7 +283,10 @@ dayofweek_effect = randomvariable.TransformedVariable(
 )
 ```
 
-Now, by re-defining the latent hospital admissions random variable with the day-of-the-week effect, we can build a model that includes this effect. Since the day-of-the-week effect takes into account the first day of the dataset, we need to determine the day of the week of the first observation. We can do this by converting the first date in the dataset to a `datetime` object and extracting the day of the week:
+We use this day-of-the-week effect as the latent hospital admissions random variable.
+
+Since the day-of-the-week effect takes into account the first day of the dataset, we need to determine the day of the week of the first observation.
+To do this, we convert the first date in the dataset to a `datetime` object and extract the day of the week:
 
 ```{python}
 # | label: latent-hosp-weekday
@@ -282,8 +296,7 @@ import datetime as dt
 first_dow_in_data = dates[0].astype(dt.datetime).weekday()
 first_dow_in_data  # zero
 
-# Re-defining the latent hospital admissions RV, now with the
-# day-of-the-week effect
+# Define the latent hospital admissions RV with the day-of-the-week effect
 latent_hosp_wday_effect = latent.HospitalAdmissions(
     infection_to_admission_interval_rv=inf_hosp_int,
     infection_hospitalization_ratio_rv=hosp_rate,
@@ -297,7 +310,7 @@ hosp_model_dow = model.HospitalAdmissionsModel(
     latent_infections_rv=latent_inf,
     latent_hosp_admissions_rv=latent_hosp_wday_effect,
     I0_rv=I0,
-    gen_int_rv=gen_int,
+    gen_int_rv=gen_int_pmf,
     Rt_process_rv=rtproc,
     hosp_admission_obs_process_rv=obs,
 )
@@ -320,6 +333,7 @@ hosp_model_dow.run(
 As a result, we can see the posterior distribution of our novel day-of-the-week effect:
 
 ```{python}
+# | code-fold: true
 # | label: fig-output-day-of-week
 # | fig-cap: Day of the week effect
 # Create an InferenceData object from hosp_model_dow
@@ -353,9 +367,10 @@ ax.set_xlabel("Day Of Week", fontsize=20)
 plt.show()
 ```
 
-The new model with the day-of-the-week effect can be compared to the previous model without the effect. Finally, let's reproduce the figure without the day-of-the-week effect, and then plot the new model with the effect:
+The new model with the day-of-the-week effect can be compared to the previous model, which doesn't distinguish the day of the week by plotting the posterior distributions of each.
 
 ```{python}
+# | code-fold: true
 # | label: fig-output-admissions-original
 # | fig-cap: Hospital Admissions posterior distribution without weekday effect
 # Without weekday effect (from earlier)
@@ -388,6 +403,7 @@ plt.show()
 ```
 
 ```{python}
+# | code-fold: true
 # | label: fig-output-admissions-wof
 # | fig-cap: Hospital Admissions posterior distribution with weekday effect
 # Figure with weekday effect

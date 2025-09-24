@@ -4,13 +4,13 @@ format: gfm
 engine: jupyter
 ---
 
-A common practice in time series forecasting is featuring periodic effects such as day of the week or weekend effects. `pyrenew` has built-in functions and classes to incorporate such effects into renewal models. Notably, the `arrayutils.PeriodicBroadcaster` class.
-
-This document demonstrates how to use these functions and classes to model periodic effects and broadcasting in renewal models: Repeating elements of a sequence and repeating a sequence as a whole (tiling).
+A common practice in time series forecasting is featuring periodic effects such as day of the week or weekend effects.
+The the `arrayutils.PeriodicBroadcaster` class provides this functionality.
+This tutorial shows how to use this to model both repeating elements of a sequences and repeating a sequence as a whole (tiling).
 
 ## Repeated units
 
-The `RtPeriodicDiff` and `RtWeeklyDiff` classes use `PeriodicBroadcaster` to repeat each vector element to represent Rt values held constant within a period. Let's show its usage with a basic renewal model. We will use the same model structure shown in the `getting_started` tutorial:
+The `RtPeriodicDiff` and `RtWeeklyDiff` classes use `PeriodicBroadcaster` to repeat each vector element for $\mathcal{R}(t)$ values held constant within a period.
 
 ```{python}
 # | label: loading-pkgs
@@ -47,7 +47,7 @@ with numpyro.handlers.seed(rng_seed=20):
 import matplotlib.pyplot as plt
 
 plt.step(np.arange(len(sim_data)), sim_data, where="post")
-plt.xlabel("Time")
+plt.xlabel("Days")
 plt.ylabel("Rt")
 plt.title("Simulated Rt values")
 
@@ -57,11 +57,15 @@ for i in range(0, 30, 7):
 plt.show()
 ```
 
-The implementation of the `RtWeeklyDiffARProcess` (which is an instance of `RtPeriodicDiffARProcess`), uses `repeat_until_n` to repeating values: `repeat_until_n(..., period_size=7)`. The `RtWeeklyDiff` class is a particular case of `RtPeriodicDiff` with a period size of seven.
+The implementation of the `RtWeeklyDiffARProcess` (which is an instance of `RtPeriodicDiffARProcess`),
+uses `repeat_until_n` to repeating values: `repeat_until_n(..., period_size=7)`.
+The `RtWeeklyDiff` class is a particular case of `RtPeriodicDiff` with a period size of seven.
 
 ## Repeated sequences (tiling)
 
-The `PeriodicBroadcaster` class can also be used to repeat a sequence as a whole. For example, we can use this to model a periodic effect such as day-of-the-week effect. Let's use the `DayOfWeekEffect` random variable. We will sample from a scaled Dirchlet distribution such that the sum of the samples is 7:
+By specifying `broadcast_type = "tile"`, the `PeriodicBroadcaster`repeats the sequence as a whole. 
+The `DayOfWeekEffect` class is a particular case of `PeriodicEffect` with a period size of seven.
+We sample from a scaled Dirchlet distribution such that the sum of the samples is 7:
 
 ```{python}
 import numpyro.distributions as dist
@@ -82,7 +86,7 @@ dayofweek = process.DayOfWeekEffect(
 )
 ```
 
-Like before, we can use the `sample` method to generate samples from the day of week effect:
+We use the `sample` method to generate samples from the day of week effect:
 
 ```{python}
 with numpyro.handlers.seed(rng_seed=20):
@@ -92,7 +96,7 @@ with numpyro.handlers.seed(rng_seed=20):
 import matplotlib.pyplot as plt
 
 plt.step(np.arange(len(sim_data)), sim_data, where="post")
-plt.xlabel("Time")
+plt.xlabel("Days")
 plt.ylabel("Effect size")
 plt.title("Simulated Day of Week Effect values")
 
@@ -102,4 +106,3 @@ for i in range(0, 30, 7):
 plt.show()
 ```
 
-Like the example from the previous section, the `DayOfWeekEffect` class uses `PeriodicBroadcaster` to broadcast the data, this time using `broadcast_type = "tile"`, repeating the sequence as a whole. The `DayOfWeekEffect` class is a particular case of `PeriodicEffect` with a period size of seven.
