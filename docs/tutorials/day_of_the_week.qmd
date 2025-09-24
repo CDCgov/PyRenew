@@ -260,7 +260,7 @@ plt.show()
 
 ## Round 2: Incorporating day-of-the-week effects
 
-To add a day-of-the-week effect to the previos model we add two additional arguments to the latent hospital admissions random variable:
+To add a day-of-the-week effect to the previous model we add two additional arguments to the latent hospital admissions random variable:
 
 * `day_of_the_week_rv` (a `RandomVariable`)
 * `obs_data_first_day_of_the_week` (an `int` mapping days of the week from 0:6, zero being Monday).
