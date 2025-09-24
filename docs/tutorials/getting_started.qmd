@@ -44,7 +44,7 @@ class MyRandVar(RandomVariable):
         return numpyro.sample(...)
 ```
 
-instead, we can use a fixed quantity for that variable (like a pre-computed PMF), where the `RandomVariable`'s sample function could instead be defined as:
+We can instead use a fixed quantity for that variable (like a pre-computed PMF), where the `RandomVariable`'s sample function could be defined as:
 
 ```python
 # instead define MyRandVar to still inherit from the RandVariable class
