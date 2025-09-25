@@ -4,7 +4,7 @@ format: gfm
 engine: jupyter
 ---
 
-This document illustrates how a hospital admissions-only model can be fitted using simulated example data from the `pyrenew` package which was created by the CFA wastewater team.
+This document illustrates how a hospital admissions-only model can be fitted using simulated example data.
 
 We begin by loading `numpyro` and configuring the device count to 2 to enable running MCMC chains in parallel. By default, XLA (which is used by JAX for compilation) considers all CPU cores as one device. Depending on your system's configuration, we recommend using numpyro's [set_host_device_count()](https://num.pyro.ai/en/stable/utilities.html#set-host-device-count) function to set the number of devices available for parallel computing.
 
@@ -78,7 +78,7 @@ dat = datasets.load_wastewater()
 dat[["date", "site", "daily_hosp_admits"]].head(5)
 ```
 
-The data shows one entry per site.  In this simulated dataset, all sites have the same number of admissions each day, therefore, we only use the first observation per day, keeping the date and number of admissions.  Furthermore, we only use the first 90 days' worth of data.
+The data shows one entry per site.  In this simulated dataset, all sites have the same number of admissions each day; therefore, we only use the first observation per day, keeping the date and number of admissions.  Furthermore, we only use the first 90 days' worth of data.
 
 ```{python}
 # | label: aggregation
@@ -138,7 +138,7 @@ import jax.numpy as jnp
 import numpyro.distributions as dist
 ```
 
-The generation interval and the infection to hospital admission interval are RandomVariables.
+The generation interval and the infection to hospital admission interval are `RandomVariable`s.
 Here we load two more datasets which provide deterministic quantities for these variables.
 
 ```{python}
