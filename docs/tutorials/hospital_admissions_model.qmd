@@ -78,7 +78,7 @@ dat = datasets.load_wastewater()
 dat[["date", "site", "daily_hosp_admits"]].head(5)
 ```
 
-The data shows one entry per site.  In this simulated dataset, all sites have the same number of admissions each day, therefore, we only use the first observation per day, keeping the date and number of admissions.  Furthermore, we only use the first 90 days' worth of data.
+The data shows one entry per site.  In this simulated dataset, all sites have the same number of admissions each day; therefore, we only use the first observation per day, keeping the date and number of admissions.  Furthermore, we only use the first 90 days' worth of data.
 
 ```{python}
 # | label: aggregation
