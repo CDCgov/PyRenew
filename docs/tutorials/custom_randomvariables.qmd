@@ -154,7 +154,7 @@ With feedback strength $\gamma = 0.01$, we see:
 
 ### Fundamentals
 
-All instances of PyRenew's `RandomVariable` should have at least three functions: `__init__()`, `validate()`, and `sample()`. The `__init__()` function is the constructor and initializes the class. The `validate()` function checks if the class is correctly initialized. Finally, the `sample()` method contains the core of the class; it should return a tuple or named tuple. The following is a minimal example of a `RandomVariable` class based on `numpyro.distributions.Normal`:
+All instances of PyRenew's `RandomVariable` should have at least three functions: `__init__()`, `validate()`, and `sample()`. The `__init__()` function is the constructor and initializes the class. The `validate()` function checks if the class is correctly initialized. Finally, the `sample()` method contains the core of the class; it should return a `tuple` or `namedtuple`. The following is a minimal example of a `RandomVariable` class based on `numpyro.distributions.Normal`:
 
 ```{python}
 from pyrenew.metaclass import RandomVariable
@@ -184,7 +184,7 @@ The `@staticmethod` decorator exposes the `validate` function to be used outside
 As an exercise we define a new class `InfFeedback`, which exactly follows the `InfectionsWithFeedback` class,
 but omits the tedious checks on its inputs.
 
-Although returning namedtuples is not strictly required, they are the recommended return type, as they make the code more readable. The following code-chunk shows how to create a named tuple for the `InfectionsWithFeedback` class:
+Although returning a `namedtuple` is not strictly required, they are the recommended return type, as they make the code more readable. The following code-chunk shows how to create a `namedtuple` for the `InfectionsWithFeedback` class:
 
 ```{python}
 # | label: data-class
@@ -289,7 +289,7 @@ The core of the class is implemented in the `sample()` method. Things to highlig
 
 2. **Saving computed quantities**: Since `Rt_adj` is not generated via `numpyro.sample()`, we use `numpyro.deterministic()` to record the quantity to a site; allowing us to access it later.
 
-3. **Return type of `InfFeedback()`**: As said before, the `sample()` method should return a tuple or named tuple. In our case, we return a named tuple `InfFeedbackSample` with two fields: `infections` and `rt`.
+3. **Return type of `InfFeedback()`**: As said before, the `sample()` method should return a `tuple` or `namedtuple`. In our case, we return a `namedtuple` `InfFeedbackSample` with two fields: `infections` and `rt`.
 
 To check our work, we build a second model using our new class `InfFeedback` and compare it to our first model, which uses the built-in `InfectionsWithFeedback` class.
 Since class `InfFeedback` exactly follows the `InfectionsWithFeedback` class, if correctly implemented, the two models should provide exactly the same predictions.

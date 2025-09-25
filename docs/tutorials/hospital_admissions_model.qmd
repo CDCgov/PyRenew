@@ -340,7 +340,9 @@ hosp_model.run(
 )
 ```
 
-We can use `arviz` to visualize the model fit. Here, we plot the observed values against the inferred latent values (i.e. the mean of the negative binomial observation process).
+We use [`arviz`](https://www.arviz.org/) to visualize the model fit.
+First we load the module and converting the fitted model to an `arviz` `InferenceData` object,
+then we plot the observed values against the inferred latent values (i.e. the mean of the negative binomial observation process).
 
 ```{python}
 # | label: fig-output-hospital-admissions
@@ -383,19 +385,15 @@ plt.show()
 
 ## Results exploration and MCMC diagnostics
 
-To explore further, We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by loading the module and converting the fitted model to ArviZ `InferenceData` object:
-
-```{python}
-# | label: convert-inferenceData
-
-idata = az.from_numpyro(hosp_model.mcmc)
-```
-
+To explore further, we use `arviz` to visualize the results.
 We obtain the summary of model diagnostics and print the diagnostics for `latent_hospital_admissions[1]`
 
 ```{python}
-# | label: diagnostics
+# | label: mcmc-diagnostics
 # | warning: false
+
+idata = az.from_numpyro(hosp_model.mcmc)
+
 diagnostic_stats_summary = az.summary(
     idata.posterior,
     kind="diagnostics",
@@ -500,7 +498,7 @@ idata = az.from_numpyro(
 )
 ```
 
-We will use `plot_lm` method from ArviZ to plot the posterior predictive distribution against the actual observed data below:
+We will use `plot_lm` method from `arviz` to plot the posterior predictive distribution against the actual observed data below:
 
 ```{python}
 # | label: fig-posterior-predictive
