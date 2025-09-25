@@ -16,7 +16,7 @@ and $g(\tau)$
 is the distribution of times from incident infection to secondary infection, i.e., the infectiousness profile.
 
 The reproduction number at time $t$ is a function of the unadjusted reproduction number at time $t$
-$\mathcal{R}^\mathrm{u}(t)$ and a damping factor which provides feedback from recent transmission
+$\mathcal{R}^\mathrm{u}(t)$ and a damping factor which provides feedback from recent transmission:
 
 $$\mathcal{R}(t) = \mathcal{R}^u(t)\exp\left(-\gamma(t)\sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)$$
 
@@ -64,7 +64,7 @@ set to 0.01 to create moderate damping.
 * We specify the `InfectionsWithFeedback` component using the same distribution as the generation interval.
 
 * The latent random variable $\mathcal{R}^\mathrm{u}(t)$ is estimated via random walk
-on $log(\mathcal{R}^\mathrm{u}(t))$, (as in the basic renewal model).
+on $\log(\mathcal{R}^\mathrm{u}(t))$, (as in the basic renewal model).
 
 ```{python}
 # | label: model-components

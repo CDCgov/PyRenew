@@ -4,7 +4,7 @@ format: gfm
 engine: jupyter
 ---
 
-This document will show the steps to build a simple renewal model featuring a latent infection process, a random walk $\mathcal{R}(t)$ process, and an observation process for the reported infections.
+This tutorial shows the steps to build a simple renewal model featuring a latent infection process, a random walk $\mathcal{R}(t)$ process, and an observation process for the reported infections.
 
 We start by loading the needed components to build a basic renewal model:
 
@@ -131,8 +131,9 @@ I0 = InfectionInitializationProcess(
     InitializeInfectionsZeroPad(pmf_array.size),
 )
 
+
 # (3) The random walk process.
-# We construct a custom RandomVariable on log Rt, with an inferred s.d. 
+# We construct a custom RandomVariable on log Rt, with an inferred s.d.
 class RtRandomWalk(RandomVariable):
     def validate(self):
         pass
