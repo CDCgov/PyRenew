@@ -138,7 +138,7 @@ import jax.numpy as jnp
 import numpyro.distributions as dist
 ```
 
-The generation interval and the infection to hospital admission interval are RandomVariables.
+The generation interval and the infection to hospital admission interval are `RandomVariable`s.
 Here we load two more datasets which provide deterministic quantities for these variables.
 
 ```{python}
