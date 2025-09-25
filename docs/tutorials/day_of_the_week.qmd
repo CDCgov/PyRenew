@@ -372,7 +372,7 @@ ax.set_xlabel("Day Of Week", fontsize=20)
 plt.show()
 ```
 
-The new model with the day-of-the-week effect can be compared to the previous model, which doesn't distinguish the day of the week by plotting the posterior distributions of each.
+The new model with the day-of-the-week effect can be compared to the previous model, which doesn't distinguish the day of the week, by plotting the posterior distributions from each.
 
 ```{python}
 # | code-fold: true
