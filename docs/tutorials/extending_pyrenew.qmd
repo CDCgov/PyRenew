@@ -64,7 +64,7 @@ set to 0.01 to create moderate damping.
 * We specify the `InfectionsWithFeedback` component using the same distribution as the generation interval.
 
 * The latent random variable $\mathcal{R}^\mathrm{u}(t)$ is estimated via random walk
-on $log(\mathcal{R}^\mathrm{u}(t))$, (as in the basic renewal model).
+on $\log(\mathcal{R}^\mathrm{u}(t))$, (as in the basic renewal model).
 
 ```{python}
 # | label: model-components
