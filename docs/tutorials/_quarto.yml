@@ -1,7 +1,7 @@
 project:
   title: "PyRenew Tutorials"
   pre-render: uv run ../../docs_scripts/cleanup_generated_md.py . # remove generated .md files
-  post-render: uv run ../../docs_scripts/add_markdown_to_divs.py . # for proper mkdocs interpretation https://squidfunk.github.io/mkdocs-material/setup/extensions/python-markdown/#markdown-in-html
+  post-render: uv run ../../docs_scripts/add_markdown_to_divs.py . # see https://squidfunk.github.io/mkdocs-material/setup/extensions/python-markdown/#markdown-in-html
 
 format: gfm
 engine: jupyter
