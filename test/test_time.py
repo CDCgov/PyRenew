@@ -387,19 +387,23 @@ def test_model_t_to_date_input_types():
 # get_date_range_length tests
 def test_get_date_range_length_default_timestep():
     """Test with default timestep_days=1."""
-    dates = np.array([
-        np.datetime64("2025-01-01"),
-        np.datetime64("2025-01-15"),
-    ])
+    dates = np.array(
+        [
+            np.datetime64("2025-01-01"),
+            np.datetime64("2025-01-15"),
+        ]
+    )
     assert ptime.get_date_range_length(dates) == 15
 
 
 def test_get_date_range_length_weekly_timestep():
     """Test with timestep_days=7."""
-    dates = np.array([
-        np.datetime64("2025-01-01"),
-        np.datetime64("2025-01-29"),
-    ])
+    dates = np.array(
+        [
+            np.datetime64("2025-01-01"),
+            np.datetime64("2025-01-29"),
+        ]
+    )
     assert ptime.get_date_range_length(dates, timestep_days=7) == 5
 
 
@@ -411,12 +415,14 @@ def test_get_date_range_length_single_date():
 
 def test_get_date_range_length_multiple_dates():
     """Test with multiple dates in array."""
-    dates = np.array([
-        np.datetime64("2025-01-01"),
-        np.datetime64("2025-01-08"),
-        np.datetime64("2025-01-15"),
-        np.datetime64("2025-01-31"),
-    ])
+    dates = np.array(
+        [
+            np.datetime64("2025-01-01"),
+            np.datetime64("2025-01-08"),
+            np.datetime64("2025-01-15"),
+            np.datetime64("2025-01-31"),
+        ]
+    )
     # Should use min to max
     assert ptime.get_date_range_length(dates) == 31
 
@@ -484,10 +490,12 @@ def test_get_n_data_days_with_n_points():
 
 def test_get_n_data_days_with_date_array():
     """Test with only date_array specified."""
-    dates = np.array([
-        np.datetime64("2025-01-01"),
-        np.datetime64("2025-01-15"),
-    ])
+    dates = np.array(
+        [
+            np.datetime64("2025-01-01"),
+            np.datetime64("2025-01-15"),
+        ]
+    )
     assert ptime.get_n_data_days(date_array=dates) == 15
 
 
@@ -505,10 +513,12 @@ def test_get_n_data_days_both():
 
 def test_get_n_data_days_weekly_timestep():
     """Test timestep_days=7 with date_array."""
-    dates = np.array([
-        np.datetime64("2025-01-01"),
-        np.datetime64("2025-01-29"),
-    ])
+    dates = np.array(
+        [
+            np.datetime64("2025-01-01"),
+            np.datetime64("2025-01-29"),
+        ]
+    )
     assert ptime.get_n_data_days(date_array=dates, timestep_days=7) == 5
 
 
