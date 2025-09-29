@@ -281,7 +281,7 @@ def mmwr_epiweekly_to_daily(
 
 def date_to_model_t(
     date: Union[dt.datetime, np.datetime64],
-        start_date: Union[dt.datetime, np.datetime64]
+    start_date: Union[dt.datetime, np.datetime64]
 ) -> int:
     """
     Convert calendar date to model time index.
@@ -291,12 +291,16 @@ def date_to_model_t(
     :return: Model time index (days since start_date)
     """
     if isinstance(date, np.datetime64):
-        date = date.astype(dt.datetime)
+        date = date.astype('datetime64[D]').astype(object)
+    elif isinstance(date, dt.datetime):
+        date = date.date()
+    
     if isinstance(start_date, np.datetime64):
-        start_date = start_date.astype(dt.datetime)
+        start_date = start_date.astype('datetime64[D]').astype(object)
+    elif isinstance(start_date, dt.datetime):
+        start_date = start_date.date()
 
     return (date - start_date).days
-
 
 def model_t_to_date(
     model_t: int,
@@ -310,7 +314,11 @@ def model_t_to_date(
     :return: Calendar date
     """
     if isinstance(start_date, np.datetime64):
-        start_date = start_date.astype(dt.datetime)
+        start_date = start_date.astype('datetime64[D]').astype(object)
+    
+    # Ensure we have datetime, not just date
+    if isinstance(start_date, dt.date) and not isinstance(start_date, dt.datetime):
+        start_date = dt.datetime.combine(start_date, dt.time())
 
     return start_date + dt.timedelta(days=model_t)
 
@@ -522,44 +530,6 @@ def get_n_data_days(
         return get_date_range_length(date_array, timestep_days)
     else:
         return n_points
-
-
-def validate_temporal_inputs(
-    start_date: Union[dt.datetime, np.datetime64, None],
-    n_points: int
-) -> None:
-    """
-    Validate that temporal inputs are consistent.
-
-    :param start_date: Start date (can be None)
-    :param n_points: Number of data points
-    :raises ValueError: If start_date is None but n_points > 0
-    """
-    if start_date is None and n_points > 0:
-        raise ValueError(
-            f"Must provide start_date if n_points > 0. "
-            f"Got n_points={n_points} with start_date=None"
-        )
-
-
-def safe_get_end_date(
-    start_date: Union[dt.datetime, np.datetime64, None],
-    n_points: int,
-    timestep_days: int = 1
-) -> Union[np.datetime64, None]:
-    """
-    Calculate end date with None-safety for missing data.
-
-    :param start_date: First date (None if no data)
-    :param n_points: Number of data points
-    :param timestep_days: Days between consecutive points
-    :return: End date or None if no data
-    """
-    if start_date is None:
-        validate_temporal_inputs(start_date, n_points)
-        return None
-
-    return get_end_date(start_date, n_points, timestep_days)
 
 
 def align_observation_times(
