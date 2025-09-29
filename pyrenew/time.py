@@ -296,7 +296,7 @@ def date_to_model_t(
         date = date.astype('datetime64[D]').astype(object)
     elif isinstance(date, dt.datetime):
         date = date.date()
-    
+
     if isinstance(start_date, np.datetime64):
         start_date = start_date.astype('datetime64[D]').astype(object)
     elif isinstance(start_date, dt.datetime):
@@ -316,7 +316,7 @@ def model_t_to_date(
     """
     if isinstance(start_date, np.datetime64):
         start_date = start_date.astype('datetime64[D]').astype(object)
-    
+
     # Ensure we have datetime, not just date
     if isinstance(start_date, dt.date) and not isinstance(start_date, dt.datetime):
         start_date = dt.datetime.combine(start_date, dt.time())
