@@ -4,12 +4,14 @@ Helper functions for handling timeseries in Pyrenew
 Days of the week in pyrenew are 0-indexed and follow
 ISO standards, so 0 is Monday at 6 is Sunday.
 """
+
 import datetime as dt
+from typing import Tuple, Union
+
 import jax.numpy as jnp
-from jax.typing import ArrayLike
 import numpy as np
 import polars as pl
-from typing import Union, Tuple
+from jax.typing import ArrayLike
 
 
 def validate_dow(day_of_week: int, variable_name: str) -> None:
@@ -281,7 +283,7 @@ def mmwr_epiweekly_to_daily(
 
 def date_to_model_t(
     date: Union[dt.datetime, np.datetime64],
-        start_date: Union[dt.datetime, np.datetime64]
+    start_date: Union[dt.datetime, np.datetime64],
 ) -> int:
     """
     Convert calendar date to model time index.
@@ -299,8 +301,7 @@ def date_to_model_t(
 
 
 def model_t_to_date(
-    model_t: int,
-    start_date: Union[dt.datetime, np.datetime64]
+    model_t: int, start_date: Union[dt.datetime, np.datetime64]
 ) -> dt.datetime:
     """
     Convert model time index to calendar date.
@@ -318,7 +319,7 @@ def model_t_to_date(
 def get_observation_indices(
     observed_dates: ArrayLike,
     data_start_date: Union[dt.datetime, np.datetime64],
-    freq: str = "mmwr_weekly"
+    freq: str = "mmwr_weekly",
 ) -> jnp.ndarray:
     """
     Get indices for observed data in aggregated time series.
@@ -369,16 +370,14 @@ def get_observation_indices(
 def get_date_range_length(date_array: ArrayLike, timestep_days: int = 1) -> int:
     """Calculate number of time steps in a date range."""
     return (
-        (max(date_array) - min(date_array))
-        // np.timedelta64(timestep_days, "D")
-        + 1
+        (max(date_array) - min(date_array)) // np.timedelta64(timestep_days, "D") + 1
     ).item()
 
 
 def aggregate_with_dates(
     daily_data: ArrayLike,
     start_date: Union[dt.datetime, np.datetime64],
-    target_freq: str = "mmwr_weekly"
+    target_freq: str = "mmwr_weekly",
 ) -> Tuple[jnp.ndarray, dt.datetime]:
     """
     Aggregate daily data with automatic date handling.
@@ -433,7 +432,7 @@ def aggregate_with_dates(
 def create_date_time_spine(
     start_date: Union[dt.datetime, np.datetime64],
     end_date: Union[dt.datetime, np.datetime64],
-    freq: str = "1d"
+    freq: str = "1d",
 ) -> pl.DataFrame:
     """
     Create a DataFrame mapping calendar dates to model time indices.
@@ -445,32 +444,33 @@ def create_date_time_spine(
     """
     # Convert np.datetime64 to datetime.date for polars compatibility
     if isinstance(start_date, np.datetime64):
-        start_date = start_date.astype('datetime64[D]').astype(dt.datetime)
+        start_date = start_date.astype("datetime64[D]").astype(dt.datetime)
     elif isinstance(start_date, dt.datetime):
         start_date = start_date.date()
 
     if isinstance(end_date, np.datetime64):
-        end_date = end_date.astype('datetime64[D]').astype(dt.datetime)
+        end_date = end_date.astype("datetime64[D]").astype(dt.datetime)
     elif isinstance(end_date, dt.datetime):
         end_date = end_date.date()
 
     return (
-        pl.DataFrame({
-            "date": pl.date_range(
-                start=start_date,
-                end=end_date,
-                interval=freq,
-                eager=True,
-            )
-        })
+        pl.DataFrame(
+            {
+                "date": pl.date_range(
+                    start=start_date,
+                    end=end_date,
+                    interval=freq,
+                    eager=True,
+                )
+            }
+        )
         .with_row_index("t")
         .with_columns(pl.col("t").cast(pl.Int64))
     )
 
+
 def get_end_date(
-    start_date: Union[dt.datetime, np.datetime64],
-    n_points: int,
-    timestep_days: int = 1
+    start_date: Union[dt.datetime, np.datetime64], n_points: int, timestep_days: int = 1
 ) -> Union[np.datetime64, None]:
     """
     Calculate end date from start date and number of data points.
@@ -486,7 +486,7 @@ def get_end_date(
             raise ValueError(
                 f"Must provide start_date if n_points > 0. "
                 f"Got n_points={n_points} with start_date=None"
-                )
+            )
         return None
 
     if n_points < 0:
@@ -499,9 +499,7 @@ def get_end_date(
 
 
 def get_n_data_days(
-    n_points: int = None,
-    date_array: ArrayLike = None,
-    timestep_days: int = 1
+    n_points: int = None, date_array: ArrayLike = None, timestep_days: int = 1
 ) -> int:
     """
     Determine data length from either point count or date array.
@@ -515,9 +513,7 @@ def get_n_data_days(
     if n_points is None and date_array is None:
         return 0
     elif date_array is not None and n_points is not None:
-        raise ValueError(
-            "Must provide at most one of n_points and date_array"
-        )
+        raise ValueError("Must provide at most one of n_points and date_array")
     elif date_array is not None:
         return get_date_range_length(date_array, timestep_days)
     else:
@@ -525,8 +521,7 @@ def get_n_data_days(
 
 
 def validate_temporal_inputs(
-    start_date: Union[dt.datetime, np.datetime64, None],
-    n_points: int
+    start_date: Union[dt.datetime, np.datetime64, None], n_points: int
 ) -> None:
     """
     Validate that temporal inputs are consistent.
@@ -545,7 +540,7 @@ def validate_temporal_inputs(
 def safe_get_end_date(
     start_date: Union[dt.datetime, np.datetime64, None],
     n_points: int,
-    timestep_days: int = 1
+    timestep_days: int = 1,
 ) -> Union[np.datetime64, None]:
     """
     Calculate end date with None-safety for missing data.
@@ -565,7 +560,7 @@ def safe_get_end_date(
 def align_observation_times(
     observation_dates: ArrayLike,
     model_start_date: Union[dt.datetime, np.datetime64],
-    aggregation_freq: str = "daily"
+    aggregation_freq: str = "daily",
 ) -> jnp.ndarray:
     """
     Convert observation dates to model time indices with temporal aggregation.
@@ -577,10 +572,9 @@ def align_observation_times(
     :raises NotImplementedError: For unsupported frequencies
     """
     if aggregation_freq == "daily":
-        return jnp.array([
-            date_to_model_t(date, model_start_date)
-            for date in observation_dates
-        ])
+        return jnp.array(
+            [date_to_model_t(date, model_start_date) for date in observation_dates]
+        )
     elif aggregation_freq in ["weekly", "mmwr_weekly"]:
         return get_observation_indices(
             observation_dates, model_start_date, aggregation_freq
