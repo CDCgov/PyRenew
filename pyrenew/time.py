@@ -283,11 +283,7 @@ def mmwr_epiweekly_to_daily(
 
 def date_to_model_t(
     date: Union[dt.datetime, np.datetime64],
-<<<<<<< HEAD
     start_date: Union[dt.datetime, np.datetime64]
-=======
-    start_date: Union[dt.datetime, np.datetime64],
->>>>>>> 16f045a2ead7d91503535d67b26465e586436734
 ) -> int:
     """
     Convert calendar date to model time index.
@@ -556,3 +552,31 @@ def align_observation_times(
         )
     else:
         raise NotImplementedError(f"Frequency '{aggregation_freq}' not supported")
+
+
+def get_first_week_on_or_after_t0(
+    model_t_first_weekly_value: int,
+    week_interval_days: int = 7
+) -> int:
+    """
+    Find the first weekly index where the week ends on or after model t=0.
+    
+    :param model_t_first_weekly_value: Model time of the first weekly value 
+        (often negative during initialization period). Represents week-ending date.
+    :param week_interval_days: Days between consecutive weekly values. Default 7.
+    :return: Index of first week ending on or after model t=0.
+    
+    Notes
+    -----
+    Weekly values are indexed 0, 1, 2, ... and occur at model times:
+    - Week 0: model_t_first_weekly_value
+    - Week k: model_t_first_weekly_value + k * week_interval_days
+    
+    We find min k such that: model_t_first_weekly_value + k * week_interval_days >= 0
+    Equivalently: k >= ceil(-model_t_first_weekly_value / week_interval_days)
+    Using ceiling division identity: ceil(-x / d) = (-x - 1) // d + 1
+    """
+    if model_t_first_weekly_value >= 0:
+        return 0
+    
+    return (-model_t_first_weekly_value - 1) // week_interval_days + 1
