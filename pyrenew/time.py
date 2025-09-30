@@ -340,7 +340,9 @@ def get_observation_indices(
     :raises NotImplementedError: For unsupported frequencies
     """
     if isinstance(data_start_date, np.datetime64):
-        data_start_date = data_start_date.astype(dt.datetime)
+        data_start_date = data_start_date.astype("datetime64[D]").astype(object)
+    if isinstance(data_start_date, dt.date) and not isinstance(data_start_date, dt.datetime):
+        data_start_date = dt.datetime.combine(data_start_date, dt.time())
 
     if freq == "mmwr_weekly":
         # Calculate weeks since first Saturday (MMWR week end)
@@ -352,7 +354,9 @@ def get_observation_indices(
         indices = []
         for obs_date in observed_dates:
             if isinstance(obs_date, np.datetime64):
-                obs_date = obs_date.astype(dt.datetime)
+                obs_date = obs_date.astype("datetime64[D]").astype(object)
+            if isinstance(obs_date, dt.date) and not isinstance(obs_date, dt.datetime):
+                obs_date = dt.datetime.combine(obs_date, dt.time())
             weeks_diff = (obs_date - first_saturday).days // 7
             indices.append(weeks_diff)
         return jnp.array(indices)
@@ -367,7 +371,9 @@ def get_observation_indices(
         indices = []
         for obs_date in observed_dates:
             if isinstance(obs_date, np.datetime64):
-                obs_date = obs_date.astype(dt.datetime)
+                obs_date = obs_date.astype("datetime64[D]").astype(object)
+            if isinstance(obs_date, dt.date) and not isinstance(obs_date, dt.datetime):
+                obs_date = dt.datetime.combine(obs_date, dt.time())
             weeks_diff = (obs_date - first_monday).days // 7
             indices.append(weeks_diff)
         return jnp.array(indices)

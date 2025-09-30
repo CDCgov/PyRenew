@@ -600,3 +600,308 @@ def test_create_date_time_spine_date_values():
     assert dates[0] == dt.date(2025, 1, 1)
     assert dates[1] == dt.date(2025, 1, 2)
     assert dates[2] == dt.date(2025, 1, 3)
+
+
+# get_observation_indices tests
+def test_get_observation_indices_mmwr_weekly():
+    """Test MMWR weekly observation indices."""
+    # Start on a Monday (2025-01-06)
+    start_date = dt.datetime(2025, 1, 6)
+    # First Saturday is 2025-01-11
+    obs_dates = [
+        dt.datetime(2025, 1, 11),  # First Saturday
+        dt.datetime(2025, 1, 18),  # Second Saturday (week 1)
+        dt.datetime(2025, 1, 25),  # Third Saturday (week 2)
+    ]
+    result = ptime.get_observation_indices(obs_dates, start_date, freq="mmwr_weekly")
+    expected = jnp.array([0, 1, 2])
+    assert_array_equal(result, expected)
+
+
+def test_get_observation_indices_mmwr_weekly_start_saturday():
+    """Test MMWR weekly when start date is a Saturday."""
+    start_date = dt.datetime(2025, 1, 4)  # Saturday
+    obs_dates = [
+        dt.datetime(2025, 1, 4),  # Same Saturday
+        dt.datetime(2025, 1, 11),  # Next Saturday (week 1)
+    ]
+    result = ptime.get_observation_indices(obs_dates, start_date, freq="mmwr_weekly")
+    expected = jnp.array([0, 1])
+    assert_array_equal(result, expected)
+
+
+def test_get_observation_indices_mmwr_weekly_np_datetime64():
+    """Test with np.datetime64 inputs."""
+    start_date = np.datetime64("2025-01-06")
+    obs_dates = [
+        np.datetime64("2025-01-11"),
+        np.datetime64("2025-01-18"),
+    ]
+    result = ptime.get_observation_indices(obs_dates, start_date, freq="mmwr_weekly")
+    expected = jnp.array([0, 1])
+    assert_array_equal(result, expected)
+
+
+def test_get_observation_indices_weekly():
+    """Test ISO weekly (Monday start) observation indices."""
+    # Start on a Tuesday (2025-01-07)
+    start_date = dt.datetime(2025, 1, 7)
+    # First Monday is 2025-01-13
+    obs_dates = [
+        dt.datetime(2025, 1, 13),  # First Monday
+        dt.datetime(2025, 1, 20),  # Second Monday (week 1)
+        dt.datetime(2025, 1, 27),  # Third Monday (week 2)
+    ]
+    result = ptime.get_observation_indices(obs_dates, start_date, freq="weekly")
+    expected = jnp.array([0, 1, 2])
+    assert_array_equal(result, expected)
+
+
+def test_get_observation_indices_weekly_start_monday():
+    """Test ISO weekly when start date is a Monday."""
+    start_date = dt.datetime(2025, 1, 6)  # Monday
+    obs_dates = [
+        dt.datetime(2025, 1, 6),  # Same Monday
+        dt.datetime(2025, 1, 13),  # Next Monday (week 1)
+    ]
+    result = ptime.get_observation_indices(obs_dates, start_date, freq="weekly")
+    expected = jnp.array([0, 1])
+    assert_array_equal(result, expected)
+
+
+def test_get_observation_indices_mmwr_weekly_various_start_days():
+    """Test MMWR weekly with various start days of the week."""
+    # Start on Sunday (weekday 6) - edge case where calculation wraps
+    start_date = dt.datetime(2025, 1, 12)  # Sunday
+    obs_dates = [
+        dt.datetime(2025, 1, 18),  # Saturday after (next MMWR week end)
+        dt.datetime(2025, 1, 25),  # Following Saturday
+    ]
+    result = ptime.get_observation_indices(obs_dates, start_date, freq="mmwr_weekly")
+    expected = jnp.array([0, 1])
+    assert_array_equal(result, expected)
+
+
+def test_get_observation_indices_weekly_various_start_days():
+    """Test ISO weekly with various start days of the week."""
+    # Start on Tuesday to test calculation with mid-week start
+    start_date = dt.datetime(2025, 1, 14)  # Tuesday
+    obs_dates = [
+        dt.datetime(2025, 1, 20),  # Following Monday
+        dt.datetime(2025, 1, 27),  # Next Monday
+    ]
+    result = ptime.get_observation_indices(obs_dates, start_date, freq="weekly")
+    expected = jnp.array([0, 1])
+    assert_array_equal(result, expected)
+
+
+def test_get_observation_indices_mmwr_with_np_datetime64_observations():
+    """Test get_observation_indices with np.datetime64 observation dates for MMWR weekly."""
+    start_date = dt.datetime(2025, 1, 6)  # Monday
+    obs_dates = [
+        np.datetime64("2025-01-11"),  # Saturday (np.datetime64)
+        np.datetime64("2025-01-18"),  # Next Saturday (np.datetime64)
+    ]
+    result = ptime.get_observation_indices(obs_dates, start_date, freq="mmwr_weekly")
+    expected = jnp.array([0, 1])
+    assert_array_equal(result, expected)
+
+
+def test_get_observation_indices_weekly_with_np_datetime64_observations():
+    """Test get_observation_indices with np.datetime64 observation dates for ISO weekly."""
+    start_date = dt.datetime(2025, 1, 6)  # Monday
+    obs_dates = [
+        np.datetime64("2025-01-06"),  # Same Monday (np.datetime64)
+        np.datetime64("2025-01-13"),  # Next Monday (np.datetime64)
+    ]
+    result = ptime.get_observation_indices(obs_dates, start_date, freq="weekly")
+    expected = jnp.array([0, 1])
+    assert_array_equal(result, expected)
+
+
+def test_get_observation_indices_unsupported_freq():
+    """Test that unsupported frequency raises NotImplementedError."""
+    start_date = dt.datetime(2025, 1, 1)
+    obs_dates = [dt.datetime(2025, 1, 8)]
+    with pytest.raises(NotImplementedError, match="Frequency 'daily' not implemented"):
+        ptime.get_observation_indices(obs_dates, start_date, freq="daily")
+
+
+# aggregate_with_dates tests
+def test_aggregate_with_dates_mmwr_weekly():
+    """Test MMWR weekly aggregation with date handling."""
+    # Start on Sunday (2025-01-05), which is MMWR week start
+    start_date = dt.datetime(2025, 1, 5)
+    daily_data = jnp.arange(1, 15)  # 14 days
+    result, first_date = ptime.aggregate_with_dates(
+        daily_data, start_date, target_freq="mmwr_weekly"
+    )
+    # Should aggregate to 2 weeks
+    assert result.shape[0] == 2
+    # First weekly date should be the first Saturday after start (2025-01-11)
+    assert first_date == dt.datetime(2025, 1, 11)
+
+
+def test_aggregate_with_dates_mmwr_weekly_monday_start():
+    """Test MMWR weekly aggregation when starting on Monday."""
+    # Start on Monday (2025-01-06)
+    start_date = dt.datetime(2025, 1, 6)
+    daily_data = jnp.arange(1, 15)  # 14 days
+    result, first_date = ptime.aggregate_with_dates(
+        daily_data, start_date, target_freq="mmwr_weekly"
+    )
+    # Should skip partial first week
+    assert result.shape[0] == 1
+    # First weekly date should be first Saturday (2025-01-11)
+    assert first_date == dt.datetime(2025, 1, 11)
+
+
+def test_aggregate_with_dates_weekly():
+    """Test ISO weekly aggregation with date handling."""
+    # Start on Monday (2025-01-06)
+    start_date = dt.datetime(2025, 1, 6)
+    daily_data = jnp.arange(1, 15)  # 14 days
+    result, first_date = ptime.aggregate_with_dates(
+        daily_data, start_date, target_freq="weekly"
+    )
+    # Should aggregate to 2 weeks
+    assert result.shape[0] == 2
+    # First weekly date should be the first Monday (same day since we start on Monday)
+    assert first_date == dt.datetime(2025, 1, 6)
+
+
+def test_aggregate_with_dates_weekly_tuesday_start():
+    """Test ISO weekly aggregation when starting on Tuesday."""
+    # Start on Tuesday (2025-01-07)
+    start_date = dt.datetime(2025, 1, 7)
+    daily_data = jnp.arange(1, 15)  # 14 days
+    result, first_date = ptime.aggregate_with_dates(
+        daily_data, start_date, target_freq="weekly"
+    )
+    # Should skip partial first week
+    assert result.shape[0] == 1
+    # First weekly date should be first Monday (2025-01-13)
+    assert first_date == dt.datetime(2025, 1, 13)
+
+
+def test_aggregate_with_dates_np_datetime64():
+    """Test with np.datetime64 start date."""
+    start_date = np.datetime64("2025-01-05")  # Sunday
+    daily_data = jnp.arange(1, 15)
+    result, first_date = ptime.aggregate_with_dates(
+        daily_data, start_date, target_freq="mmwr_weekly"
+    )
+    assert result.shape[0] == 2
+    # first_date should be a datetime-like object
+    assert first_date.year == 2025 and first_date.month == 1 and first_date.day == 11
+
+
+def test_aggregate_with_dates_mmwr_weekly_sunday_start():
+    """Test MMWR weekly aggregation starting on Sunday (MMWR week start day)."""
+    # Start on Sunday - MMWR epiweeks start on Sunday
+    start_date = dt.datetime(2025, 1, 12)  # Sunday
+    daily_data = jnp.arange(1, 15)
+    result, first_date = ptime.aggregate_with_dates(
+        daily_data, start_date, target_freq="mmwr_weekly"
+    )
+    # Starting on Sunday means we start at MMWR week beginning, so we get 2 weeks
+    assert result.shape[0] == 2
+    # First Saturday should be 2025-01-18
+    assert first_date == dt.datetime(2025, 1, 18)
+
+
+def test_aggregate_with_dates_weekly_tuesday_start():
+    """Test ISO weekly aggregation starting on Tuesday."""
+    # Start on Tuesday to test mid-week start behavior
+    start_date = dt.datetime(2025, 1, 14)  # Tuesday
+    daily_data = jnp.arange(1, 15)
+    result, first_date = ptime.aggregate_with_dates(
+        daily_data, start_date, target_freq="weekly"
+    )
+    assert result.shape[0] == 1
+    # First Monday should be 2025-01-20
+    assert first_date == dt.datetime(2025, 1, 20)
+
+
+def test_aggregate_with_dates_unsupported_freq():
+    """Test that unsupported frequency raises ValueError."""
+    start_date = dt.datetime(2025, 1, 1)
+    daily_data = jnp.arange(1, 15)
+    with pytest.raises(ValueError, match="Unsupported target frequency"):
+        ptime.aggregate_with_dates(daily_data, start_date, target_freq="monthly")
+
+
+# align_observation_times tests
+def test_align_observation_times_daily():
+    """Test daily observation time alignment."""
+    start_date = dt.datetime(2025, 1, 1)
+    obs_dates = [
+        dt.datetime(2025, 1, 1),  # t=0
+        dt.datetime(2025, 1, 5),  # t=4
+        dt.datetime(2025, 1, 10),  # t=9
+    ]
+    result = ptime.align_observation_times(obs_dates, start_date, aggregation_freq="daily")
+    expected = jnp.array([0, 4, 9])
+    assert_array_equal(result, expected)
+
+
+def test_align_observation_times_weekly():
+    """Test weekly observation time alignment."""
+    start_date = dt.datetime(2025, 1, 7)  # Tuesday
+    obs_dates = [
+        dt.datetime(2025, 1, 13),  # First Monday
+        dt.datetime(2025, 1, 20),  # Second Monday
+    ]
+    result = ptime.align_observation_times(obs_dates, start_date, aggregation_freq="weekly")
+    expected = jnp.array([0, 1])
+    assert_array_equal(result, expected)
+
+
+def test_align_observation_times_mmwr_weekly():
+    """Test MMWR weekly observation time alignment."""
+    start_date = dt.datetime(2025, 1, 6)  # Monday
+    obs_dates = [
+        dt.datetime(2025, 1, 11),  # First Saturday
+        dt.datetime(2025, 1, 18),  # Second Saturday
+    ]
+    result = ptime.align_observation_times(
+        obs_dates, start_date, aggregation_freq="mmwr_weekly"
+    )
+    expected = jnp.array([0, 1])
+    assert_array_equal(result, expected)
+
+
+def test_align_observation_times_unsupported_freq():
+    """Test that unsupported frequency raises NotImplementedError."""
+    start_date = dt.datetime(2025, 1, 1)
+    obs_dates = [dt.datetime(2025, 1, 8)]
+    with pytest.raises(NotImplementedError, match="Frequency 'monthly' not supported"):
+        ptime.align_observation_times(obs_dates, start_date, aggregation_freq="monthly")
+
+
+# get_first_week_on_or_after_t0 tests
+def test_get_first_week_on_or_after_t0_positive_start():
+    """Test when first weekly value is already at or after t=0."""
+    assert ptime.get_first_week_on_or_after_t0(0) == 0
+    assert ptime.get_first_week_on_or_after_t0(3) == 0
+    assert ptime.get_first_week_on_or_after_t0(7) == 0
+
+
+def test_get_first_week_on_or_after_t0_negative_start():
+    """Test when first weekly value is before t=0."""
+    # Week 0 at t=-7, Week 1 at t=0
+    assert ptime.get_first_week_on_or_after_t0(-7) == 1
+    # Week 0 at t=-14, Week 1 at t=-7, Week 2 at t=0
+    assert ptime.get_first_week_on_or_after_t0(-14) == 2
+    # Week 0 at t=-1, Week 1 at t=6
+    assert ptime.get_first_week_on_or_after_t0(-1) == 1
+    # Week 0 at t=-6, Week 1 at t=1
+    assert ptime.get_first_week_on_or_after_t0(-6) == 1
+
+
+def test_get_first_week_on_or_after_t0_custom_interval():
+    """Test with custom week interval."""
+    # Week 0 at t=-10, Week 1 at t=0 (interval=10)
+    assert ptime.get_first_week_on_or_after_t0(-10, week_interval_days=10) == 1
+    # Week 0 at t=-15, Week 1 at t=-1, Week 2 at t=13 (interval=14)
+    assert ptime.get_first_week_on_or_after_t0(-15, week_interval_days=14) == 2
