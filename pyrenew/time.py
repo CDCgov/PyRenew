@@ -283,7 +283,7 @@ def mmwr_epiweekly_to_daily(
 
 def date_to_model_t(
     date: Union[dt.datetime, np.datetime64],
-    start_date: Union[dt.datetime, np.datetime64]
+    start_date: Union[dt.datetime, np.datetime64],
 ) -> int:
     """
     Convert calendar date to model time index.
@@ -293,16 +293,17 @@ def date_to_model_t(
     :return: Model time index (days since start_date)
     """
     if isinstance(date, np.datetime64):
-        date = date.astype('datetime64[D]').astype(object)
+        date = date.astype("datetime64[D]").astype(object)
     elif isinstance(date, dt.datetime):
         date = date.date()
 
     if isinstance(start_date, np.datetime64):
-        start_date = start_date.astype('datetime64[D]').astype(object)
+        start_date = start_date.astype("datetime64[D]").astype(object)
     elif isinstance(start_date, dt.datetime):
         start_date = start_date.date()
 
     return (date - start_date).days
+
 
 def model_t_to_date(
     model_t: int, start_date: Union[dt.datetime, np.datetime64]
@@ -315,7 +316,7 @@ def model_t_to_date(
     :return: Calendar date
     """
     if isinstance(start_date, np.datetime64):
-        start_date = start_date.astype('datetime64[D]').astype(object)
+        start_date = start_date.astype("datetime64[D]").astype(object)
 
     # Ensure we have datetime, not just date
     if isinstance(start_date, dt.date) and not isinstance(start_date, dt.datetime):
@@ -555,28 +556,27 @@ def align_observation_times(
 
 
 def get_first_week_on_or_after_t0(
-    model_t_first_weekly_value: int,
-    week_interval_days: int = 7
+    model_t_first_weekly_value: int, week_interval_days: int = 7
 ) -> int:
     """
     Find the first weekly index where the week ends on or after model t=0.
-    
-    :param model_t_first_weekly_value: Model time of the first weekly value 
+
+    :param model_t_first_weekly_value: Model time of the first weekly value
         (often negative during initialization period). Represents week-ending date.
     :param week_interval_days: Days between consecutive weekly values. Default 7.
     :return: Index of first week ending on or after model t=0.
-    
+
     Notes
     -----
     Weekly values are indexed 0, 1, 2, ... and occur at model times:
     - Week 0: model_t_first_weekly_value
     - Week k: model_t_first_weekly_value + k * week_interval_days
-    
+
     We find min k such that: model_t_first_weekly_value + k * week_interval_days >= 0
     Equivalently: k >= ceil(-model_t_first_weekly_value / week_interval_days)
     Using ceiling division identity: ceil(-x / d) = (-x - 1) // d + 1
     """
     if model_t_first_weekly_value >= 0:
         return 0
-    
+
     return (-model_t_first_weekly_value - 1) // week_interval_days + 1
