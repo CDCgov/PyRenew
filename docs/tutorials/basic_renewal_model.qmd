@@ -112,7 +112,8 @@ In this example we specify a renewal model with the following components.
 
 2. The `InfectionInitializationProcess` specifies the number of latent infections immediately before the renewal process begins as following a log-normal distribution with mean = 0 and standard deviation = 1. By specifying `InitializeInfectionsZeroPad`, the latent infections before this time are assumed to be 0.
 
-3. A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a fixed Normal step-size distribution. For this, we construct a custom `RandomVariable`, `RtRandomWalk`.
+3. A process to represent $\mathcal{R}(t)$ as a random walk on the log scale, with an inferred initial value and a random walk with a hierarchical step-size prior.
+For this, we construct a custom `RandomVariable`, `RtRandomWalk`.
 
 4. An instance of the `Infections` class with default values.
 
@@ -180,7 +181,8 @@ model1 = RtInfectionsRenewalModel(
 )
 ```
 
-Using `numpyro`, we can simulate data using the `sample()` member function of `RtInfectionsRenewalModel`. The `sample()` method of the `RtInfectionsRenewalModel` class returns a list composed of the `Rt` and `infections` sequences, called `sim_data`:
+Using `numpyro`, we can simulate data using the `sample()` member function of `RtInfectionsRenewalModel`.
+The `sample()` method of the `RtInfectionsRenewalModel` class returns a Namedtuple composed of the `Rt` and latent and inferred `infections` sequences, called `sim_data`:
 
 ```{python}
 # | label: simulate
