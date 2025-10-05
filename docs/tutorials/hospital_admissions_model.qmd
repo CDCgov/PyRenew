@@ -1,12 +1,13 @@
 ---
-title: Fitting a hospital admissions-only model
+title: "Fitting a hospital admissions-only model"
 format: gfm
 engine: jupyter
 ---
 
-This document illustrates how a hospital admissions-only model can be fitted using data from the Pyrenew package, particularly the wastewater dataset. The CFA wastewater team created this dataset, which contains simulated data.
+This document illustrates how a hospital admissions-only model can be fitted using simulated example data.
 
 We begin by loading `numpyro` and configuring the device count to 2 to enable running MCMC chains in parallel. By default, XLA (which is used by JAX for compilation) considers all CPU cores as one device. Depending on your system's configuration, we recommend using numpyro's [set_host_device_count()](https://num.pyro.ai/en/stable/utilities.html#set-host-device-count) function to set the number of devices available for parallel computing.
+
 
 ```{python}
 # | label: numpyro setup
@@ -14,28 +15,37 @@ import numpyro
 
 numpyro.set_host_device_count(2)
 ```
+
 ## Model definition
 
-In this section, we provide the formal definition of the model. The hospital admissions model is a semi-mechanistic model that describes the number of observed hospital admissions as a function of a set of latent variables. Mainly, the observed number of hospital admissions is discretely distributed with location at the number of latent hospital admissions:
-
+The hospital admissions model is a semi-mechanistic model that describes the number of observed hospital admissions, a positive integer, as a discretely distributed variable whose location is the number of latent hospital admissions
 $$
-h(t) \sim \text{HospDist}\left(H(t)\right)
+h(t) \sim \text{HospDist}\left(H(t)\right),
+$$
+where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$.
+For this example $\text{HospDist}$ is a negative binomial distribution with an inferred concentration $k$.
+$$
+h(t) \sim \mathrm{NegativeBinomial}\left(\mathrm{mean} = H(t), \mathrm{concentration} = k\right)
 $$
 
-Where $h(t)$ is the observed number of hospital admissions at time $t$, and $H(t)$ is the number of latent hospital admissions at time $t$. The distribution $\text{HospDist}$ is discrete. For this example, we will use a negative binomial distribution with an inferred concentration.
+The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to admission rate
+$$
+H(t) = p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau)
+$$
+where $d(\tau)$ is the infection to hospital admission interval, $I(t)$ is the number of latent infections at time $t$, and $p_\mathrm{hosp}(t)$ is the infection to admission rate.
+
+The priors on $p_\mathrm{hosp}(t)$ and $k$ reflect our knowledge, or lack thereof, of these variables.
 
 $$
 \begin{align*}
-h(t) & \sim \mathrm{NegativeBinomial}\left(\mathrm{mean} = H(t), \mathrm{concentration} = k\right) \\
-H(t) & = p_\mathrm{hosp}(t) \sum_{\tau = 0}^{T_d} d(\tau) I(t-\tau) \\
-\log[p_\mathrm{hosp}(t)] & \sim \mathrm{Normal}(\mu=\log(0.05), \sigma=\log(1.1)) \\
+\log(p_{\mathrm{hosp}(t)}) & \sim \mathrm{Normal}(\mu=\log(0.05), \sigma=\log(1.1)) \\
 \log(k) & \sim \mathrm{Normal}(\mu=\log(1), \sigma=\log(10))
 \end{align*}
 $$
 
-Where $d(\tau)$ is the infection to hospital admission interval, $I(t)$ is the number of latent infections at time $t$, and $p_\mathrm{hosp}(t)$ is the infection to admission rate.
+Without much information, the prior on $k$ allows for any amount of overdispersion.
 
-The number of latent hospital admissions at time $t$ is a function of the number of latent infections at time $t$ and the infection to admission rate. The latent infections are modeled as a renewal process:
+The latent infections are modeled as a renewal process:
 
 $$
 \begin{align*}
@@ -65,22 +75,21 @@ import polars as pl
 from pyrenew import datasets
 
 dat = datasets.load_wastewater()
-dat.head(5)
+dat[["date", "site", "daily_hosp_admits"]].head(5)
 ```
 
-The data shows one entry per site, but the way it was simulated, the number of admissions is the same across sites. Thus, we will only keep the first observation per day.
+The data shows one entry per site.  In this simulated dataset, all sites have the same number of admissions each day; therefore, we only use the first observation per day, keeping the date and number of admissions.  Furthermore, we only use the first 90 days' worth of data.
 
 ```{python}
 # | label: aggregation
-# Keeping the first observation of each date
-dat = dat.group_by("date").first().select(["date", "daily_hosp_admits"])
-
-# Now, sorting by date
-dat = dat.sort("date")
-
-# Keeping the first 90 days
-dat = dat.head(90)
-
+# Keeping the first observation of each date, sort by date, first 90 days only
+dat = (
+    dat.group_by("date")
+    .first()
+    .select(["date", "daily_hosp_admits"])
+    .sort("date")
+    .head(90)
+)
 dat.head(5)
 ```
 
@@ -107,40 +116,71 @@ plt.show()
 
 ## Building the model
 
-First, we will extract two datasets we will use as deterministic quantities: the generation interval and the infection to hospital admission interval.
+
+This model uses the following imports from `pyrenew`, `jax`, and `numpyro`.
 
 ```{python}
-# | label: fig-data-extract
-# | fig-cap: Generation interval and infection to hospital admission interval
+from pyrenew import (
+    deterministic,
+    latent,
+    metaclass,
+    model,
+    observation,
+    process,
+    randomvariable,
+    transformation,
+)
+from pyrenew.latent import (
+    InfectionInitializationProcess,
+    InitializeInfectionsExponentialGrowth,
+)
+import jax.numpy as jnp
+import numpyro.distributions as dist
+```
+
+The generation interval and the infection to hospital admission interval are `RandomVariable`s.
+Here we load two more datasets which provide deterministic quantities for these variables.
+
+```{python}
+# | label: data-extract-intervals
 gen_int = datasets.load_generation_interval()
 inf_hosp_int = datasets.load_infection_admission_interval()
 
 # We only need the probability_mass column of each dataset
 gen_int_array = gen_int["probability_mass"].to_numpy()
-gen_int = gen_int_array
 inf_hosp_int_array = inf_hosp_int["probability_mass"].to_numpy()
 
 # Taking a peek at the first 5 elements of each
-gen_int[:5], inf_hosp_int_array[:5]
+print("Generation interval\n", gen_int[:5])
+print("Hospital admission interval\n", inf_hosp_int_array[:5])
+```
 
-# Visualizing both quantities side by side
+We plot the full distribution curves side-by-side.
+
+```{python}
+# | label: fig-data-plot
+# | fig-cap: Generation interval and infection to hospital admission interval
 fig, axs = plt.subplots(1, 2)
 
-axs[0].plot(gen_int)
+axs[0].plot(gen_int_array)
 axs[0].set_title("Generation interval")
 axs[1].plot(inf_hosp_int_array)
 axs[1].set_title("Infection to hospital admission interval")
+fig.supxlabel("Days")
 plt.show()
 ```
 
-With these two in hand, we can start building the model. First, we will define the latent hospital admissions:
+With these arrays in hand, we define the necessary components of the model.
+
+* `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospital admission interval as input.
+
+* `hosp_rate` is a `DistributionalVariable` object that takes a numpyro distribution to represent the infection to hospital admission rate
+
+* `latent_hosp` is an instance of the `HospitalAdmissions` class.  It is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospital admission rate.
+
 
 ```{python}
 # | label: latent-hosp
-from pyrenew import latent, deterministic, metaclass, randomvariable
-import jax.numpy as jnp
-import numpyro.distributions as dist
-
 inf_hosp_int = deterministic.DeterministicPMF(
     name="inf_hosp_int", value=inf_hosp_int_array
 )
@@ -155,17 +195,10 @@ latent_hosp = latent.HospitalAdmissions(
 )
 ```
 
-The `inf_hosp_int` is a `DeterministicPMF` object that takes the infection to hospital admission interval as input. The `hosp_rate` is a `DistributionalVariable` object that takes a numpyro distribution to represent the infection to hospital admission rate. The `HospitalAdmissions` class is a `RandomVariable` that takes two distributions as inputs: the infection to admission interval and the infection to hospital admission rate. Now, we can define the rest of the other components:
+Next we define infection process `IO` and generation interval `gen_int`.
 
 ```{python}
 # | label: initializing-rest-of-model
-from pyrenew import model, process, observation, metaclass, transformation
-from pyrenew.latent import (
-    InfectionInitializationProcess,
-    InitializeInfectionsExponentialGrowth,
-)
-
-
 # Infection process
 latent_inf = latent.Infections()
 n_initialization_points = max(gen_int_array.size, inf_hosp_int_array.size) - 1
@@ -181,58 +214,69 @@ I0 = InfectionInitializationProcess(
     ),
 )
 
-# Generation interval and Rt
-gen_int = deterministic.DeterministicPMF(name="gen_int", value=gen_int)
+# Generation interval
+gen_int_pmf = deterministic.DeterministicPMF(
+    name="gen_int", value=gen_int_array
+)
+```
 
+Then we define the $\mathcal{R}(t)$ random walk process `rtproc`.
 
-class MyRt(metaclass.RandomVariable):
+```{python}
+class RtRandomWalk(metaclass.RandomVariable):
     def validate(self):
         pass
 
     def sample(self, n: int, **kwargs) -> tuple:
         sd_rt = numpyro.sample("Rt_random_walk_sd", dist.HalfNormal(0.025))
 
-        rt_rv = randomvariable.TransformedVariable(
-            name="log_rt_random_walk",
-            base_rv=process.RandomWalk(
-                name="log_rt",
-                step_rv=randomvariable.DistributionalVariable(
-                    name="rw_step_rv", distribution=dist.Normal(0, 0.025)
-                ),
-            ),
-            transforms=transformation.ExpTransform(),
+        # Random walk step
+        step_rv = randomvariable.DistributionalVariable(
+            name="rw_step_rv", distribution=dist.Normal(0, sd_rt)
         )
+
         rt_init_rv = randomvariable.DistributionalVariable(
             name="init_log_rt", distribution=dist.Normal(0, 0.2)
+        )
+
+        # Random walk process
+        base_rv = process.RandomWalk(
+            name="log_rt",
+            step_rv=step_rv,
+        )
+
+        # Transforming the random walk to the Rt scale
+        rt_rv = randomvariable.TransformedVariable(
+            name="Rt_rv",
+            base_rv=base_rv,
+            transforms=transformation.ExpTransform(),
         )
         init_rt = rt_init_rv.sample()
 
         return rt_rv.sample(n=n, init_vals=init_rt, **kwargs)
 
 
-rtproc = MyRt()
+rtproc = RtRandomWalk()
+```
 
-# The observation model
+The final model component is the observation process `obs`.
 
-# we place a log-Normal prior on the concentration
-# parameter of the negative binomial.
-nb_conc_rv = randomvariable.TransformedVariable(
+```{python}
+# Put a log-Normal prior on the concentration parameter
+# of the negative binomial.
+nb_conc_rv = randomvariable.DistributionalVariable(
     "concentration",
-    randomvariable.DistributionalVariable(
-        name="concentration_raw",
-        distribution=dist.TruncatedNormal(loc=0, scale=1, low=0.01),
-    ),
-    transformation.PowerTransform(-2),
+    distribution=dist.LogNormal(loc=0.0, scale=jnp.log(10.0)),
 )
 
-# now we define the observation process
+# The observation process
 obs = observation.NegativeBinomialObservation(
     "negbinom_rv",
     concentration_rv=nb_conc_rv,
 )
 ```
 
-Notice all the components are `RandomVariable` instances. We can now build the model:
+We can now build the model.
 
 ```{python}
 # | label: init-model
@@ -240,7 +284,7 @@ hosp_model = model.HospitalAdmissionsModel(
     latent_infections_rv=latent_inf,
     latent_hosp_admissions_rv=latent_hosp,
     I0_rv=I0,
-    gen_int_rv=gen_int,
+    gen_int_rv=gen_int_pmf,
     Rt_process_rv=rtproc,
     hosp_admission_obs_process_rv=obs,
 )
@@ -296,9 +340,9 @@ hosp_model.run(
 )
 ```
 
-We can use `arviz` to visualize the model fit. Here, we plot the observed values against the inferred latent values (i.e. the mean of the negative binomial observation process)[^capture]:
-
-[^capture]: The output is captured to avoid `quarto` from displaying the output twice.
+We use [`arviz`](https://www.arviz.org/) to visualize the model fit.
+First we load the module and converting the fitted model to an `arviz` `InferenceData` object,
+then we plot the observed values against the inferred latent values (i.e. the mean of the negative binomial observation process).
 
 ```{python}
 # | label: fig-output-hospital-admissions
@@ -341,19 +385,15 @@ plt.show()
 
 ## Results exploration and MCMC diagnostics
 
-To explore further, We can use [ArviZ](https://www.arviz.org/) to visualize the results. Let's start by loading the module and converting the fitted model to ArviZ `InferenceData` object:
-
-```{python}
-# | label: convert-inferenceData
-
-idata = az.from_numpyro(hosp_model.mcmc)
-```
-
+To explore further, we use `arviz` to visualize the results.
 We obtain the summary of model diagnostics and print the diagnostics for `latent_hospital_admissions[1]`
 
 ```{python}
-# | label: diagnostics
+# | label: mcmc-diagnostics
 # | warning: false
+
+idata = az.from_numpyro(hosp_model.mcmc)
+
 diagnostic_stats_summary = az.summary(
     idata.posterior,
     kind="diagnostics",
@@ -440,7 +480,6 @@ axes.plot(x_data, median_ts, color="C0", label="Median")
 axes.legend()
 ```
 
-
 ## Predictive checks and forecasting
 We can use the `Model`'s `posterior_predictive` and `prior_predictive` methods to generate posterior and prior predictive samples for observed admissions.
 
@@ -459,7 +498,7 @@ idata = az.from_numpyro(
 )
 ```
 
-We will use `plot_lm` method from ArviZ to plot the posterior predictive distribution against the actual observed data below:
+We will use `plot_lm` method from `arviz` to plot the posterior predictive distribution against the actual observed data below:
 
 ```{python}
 # | label: fig-posterior-predictive
@@ -479,7 +518,6 @@ ax.set_ylabel("Hospital Admissions")
 ax.set_xlabel("Days")
 plt.show()
 ```
-
 
 By increasing `n_datapoints`, we can perform forecasting using the posterior predictive distribution.
 
@@ -543,6 +581,7 @@ plt.show()
 ```
 
 And now we plot the posterior predictive distributions with a `{python} n_forecast_points`-day-ahead forecast:
+
 ```{python}
 # | label: fig-output-posterior-predictive-forecast
 # | fig-cap: Posterior predictive admissions, including a forecast.

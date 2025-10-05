@@ -1,7 +1,7 @@
-arrange:
+nav:
   - getting_started.md
   - basic_renewal_model.md
-  - extending_pyrenew.md
+  - custom_randomvariables.md
   - hospital_admissions_model.md
   - day_of_the_week.md
   - periodic_effects.md
