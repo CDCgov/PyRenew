@@ -96,7 +96,7 @@ def convert_date(
         return date
     raise TypeError(
         "convert_date expects a numpy.datetime64, datetime.datetime, or "
-        "datetime.date; got {typ}".format(typ=type(date))
+        "datetime.date; got {t}".format(t=type(date))
     )
 
 
@@ -333,9 +333,17 @@ def date_to_model_t(
     """
     Convert calendar date to model time index.
 
-    :param date: Target date
-    :param start_date: Date corresponding to model time t=0
-    :return: Model time index (days since start_date)
+    Parameters
+    ----------
+    date
+        Target date
+    start_date
+        Date corresponding to model time t=0
+
+    Returns
+    -------
+    int
+        Model time index (days since start_date)
     """
     date = convert_date(date)
     start_date = convert_date(start_date)
@@ -348,9 +356,17 @@ def model_t_to_date(
     """
     Convert model time index to calendar date.
 
-    :param model_t: Model time index
-    :param start_date: Date corresponding to model time t=0
-    :return: Calendar date
+    Parameters
+    ----------
+    model_t
+        Model time index
+    start_date
+        Date corresponding to model time t=0
+
+    Returns
+    -------
+    dt.datetime
+        Calendar date
     """
     # Convert start_date to date, then make a datetime at midnight
     start_date_date = convert_date(start_date)
@@ -366,11 +382,24 @@ def get_observation_indices(
     """
     Get indices for observed data in aggregated time series.
 
-    :param observed_dates: Dates of observations
-    :param data_start_date: Start date of the data series
-    :param freq: Frequency of aggregated data ("mmwr_weekly" or "weekly")
-    :return: Indices for observed data points in aggregated series
-    :raises NotImplementedError: For unsupported frequencies
+    Parameters
+    ----------
+    observed_dates
+        Dates of observations
+    data_start_date
+        Start date of the data series
+    freq
+        Frequency of aggregated data ("mmwr_weekly" or "weekly")
+
+    Returns
+    -------
+    jnp.ndarray
+        Indices for observed data points in aggregated series
+
+    Raises
+    ------
+    NotImplementedError
+        For unsupported frequencies
     """
     data_start_date = convert_date(data_start_date)
 
@@ -403,7 +432,21 @@ def get_observation_indices(
 
 
 def get_date_range_length(date_array: ArrayLike, timestep_days: int = 1) -> int:
-    """Calculate number of time steps in a date range."""
+    """
+    Calculate number of time steps in a date range.
+
+    Parameters
+    ----------
+    date_array
+        Array of observation dates
+    timestep_days
+        Days between consecutive points
+
+    Returns
+    -------
+    int
+        Number of time steps in the date range
+    """
     return (
         (max(date_array) - min(date_array)) // np.timedelta64(timestep_days, "D") + 1
     ).item()
@@ -417,13 +460,28 @@ def aggregate_with_dates(
     """
     Aggregate daily data with automatic date handling.
 
-    :param daily_data: Daily time series
-    :param start_date: Date of first data point
-    :param target_freq: Target frequency ("mmwr_weekly" or "weekly")
-    :return: (aggregated_data, first_aggregated_date)
-    :raises ValueError: For unsupported frequencies
+    Parameters
+    ----------
+    daily_data
+        Daily time series
+    start_date
+        Date of first data point
+    target_freq
+        Target frequency ("mmwr_weekly" or "weekly")
 
-    Note:  Python's datetime.weekday  uses 0=Monday..6=Sunday
+    Returns
+    -------
+    Tuple[jnp.ndarray, dt.datetime]
+        Tuple containing (aggregated_data, first_aggregated_date)
+
+    Raises
+    ------
+    ValueError
+        For unsupported frequencies
+
+    Notes
+    -----
+    Python's datetime.weekday uses 0=Monday..6=Sunday
     which matches PyRenew's day-of-week indexing.
     """
     start_date = convert_date(start_date)
@@ -461,10 +519,19 @@ def create_date_time_spine(
     """
     Create a DataFrame mapping calendar dates to model time indices.
 
-    :param start_date: First date (becomes t=0)
-    :param end_date: Last date
-    :param freq: Frequency string for polars date_range
-    :return: DataFrame with 'date' and 't' columns
+    Parameters
+    ----------
+    start_date
+        First date (becomes t=0)
+    end_date
+        Last date
+    freq
+        Frequency string for polars date_range
+
+    Returns
+    -------
+    pl.DataFrame
+        DataFrame with 'date' and 't' columns
     """
     # Normalize inputs to datetime.date for polars compatibility
     start_date = convert_date(start_date)
@@ -492,11 +559,24 @@ def get_end_date(
     """
     Calculate end date from start date and number of data points.
 
-    :param start_date: First date in the series
-    :param n_points: Number of data points
-    :param timestep_days: Days between consecutive points
-    :return: Date of the last data point
-    :raises ValueError: If n_points is non-positive
+    Parameters
+    ----------
+    start_date
+        First date in the series
+    n_points
+        Number of data points
+    timestep_days
+        Days between consecutive points
+
+    Returns
+    -------
+    Union[np.datetime64, None]
+        Date of the last data point
+
+    Raises
+    ------
+    ValueError
+        If n_points is non-positive
     """
     if start_date is None:
         if n_points > 0:
@@ -507,7 +587,7 @@ def get_end_date(
         return None
 
     if n_points < 0:
-        raise ValueError(f"n_points must be non-negative, got {n_points}")
+        raise ValueError(f"n_points must be positive, got {n_points}")
 
     # Normalize to a datetime.date and then to numpy.datetime64 (day precision)
     sd = convert_date(start_date)
@@ -522,11 +602,24 @@ def get_n_data_days(
     """
     Determine data length from either point count or date array.
 
-    :param n_points: Explicit number of data points
-    :param date_array: Array of observation dates
-    :param timestep_days: Days between consecutive points
-    :return: Number of data points
-    :raises ValueError: If both or neither arguments provided
+    Parameters
+    ----------
+    n_points
+        Explicit number of data points
+    date_array
+        Array of observation dates
+    timestep_days
+        Days between consecutive points
+
+    Returns
+    -------
+    int
+        Number of data points. Returns 0 if both n_points and date_array are None.
+
+    Raises
+    ------
+    ValueError
+        If both n_points and date_array are provided.
     """
     if n_points is None and date_array is None:
         return 0
@@ -546,11 +639,24 @@ def align_observation_times(
     """
     Convert observation dates to model time indices with temporal aggregation.
 
-    :param observation_dates: Dates when observations occurred
-    :param model_start_date: Date corresponding to model time t=0
-    :param aggregation_freq: Temporal aggregation ("daily", "weekly", "mmwr_weekly")
-    :return: Model time indices for observations
-    :raises NotImplementedError: For unsupported frequencies
+    Parameters
+    ----------
+    observation_dates
+        Dates when observations occurred
+    model_start_date
+        Date corresponding to model time t=0
+    aggregation_freq
+        Temporal aggregation ("daily", "weekly", "mmwr_weekly")
+
+    Returns
+    -------
+    jnp.ndarray
+        Model time indices for observations
+
+    Raises
+    ------
+    NotImplementedError
+        For unsupported frequencies
     """
     if aggregation_freq == "daily":
         return jnp.array(
@@ -570,10 +676,18 @@ def get_first_week_on_or_after_t0(
     """
     Find the first weekly index where the week ends on or after model t=0.
 
-    :param model_t_first_weekly_value: Model time of the first weekly value
+    Parameters
+    ----------
+    model_t_first_weekly_value
+        Model time of the first weekly value
         (often negative during initialization period). Represents week-ending date.
-    :param week_interval_days: Days between consecutive weekly values. Default 7.
-    :return: Index of first week ending on or after model t=0.
+    week_interval_days
+        Days between consecutive weekly values. Default 7.
+
+    Returns
+    -------
+    int
+        Index of first week ending on or after model t=0.
 
     Notes
     -----

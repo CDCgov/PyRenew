@@ -15,6 +15,7 @@ import pyrenew.time as ptime
 
 
 def test_convert_date_with_datetime():
+    """Test convert_date with datetime.datetime input."""
     dt_in = dt.datetime(2025, 1, 18, 15, 30)
     out = ptime.convert_date(dt_in)
     assert isinstance(out, dt.date)
@@ -22,6 +23,7 @@ def test_convert_date_with_datetime():
 
 
 def test_convert_date_with_date():
+    """Test convert_date with datetime.date input."""
     d_in = dt.date(2025, 1, 18)
     out = ptime.convert_date(d_in)
     assert isinstance(out, dt.date)
@@ -29,6 +31,7 @@ def test_convert_date_with_date():
 
 
 def test_convert_date_with_numpy_datetime64():
+    """Test convert_date with numpy.datetime64 input."""
     np_in = np.datetime64("2025-01-18")
     out = ptime.convert_date(np_in)
     assert isinstance(out, dt.date)
@@ -37,11 +40,13 @@ def test_convert_date_with_numpy_datetime64():
 
 @pytest.mark.parametrize("bad", [None, "2025-01-18", 123, 12.34])
 def test_convert_date_unsupported_types_raise(bad):
+    """Test convert_date raises TypeError for unsupported types."""
     with pytest.raises(TypeError):
         ptime.convert_date(bad)
 
 
 def test_get_observation_indices_mmwr_and_weekly():
+    """Test get_observation_indices with MMWR and weekly frequencies."""
     start = dt.datetime(2025, 1, 1)  # Wednesday
     observed = [dt.datetime(2025, 1, 4), np.datetime64("2025-01-11")]  # two Saturdays
     mmwr_idx = ptime.get_observation_indices(observed, start, freq="mmwr_weekly")
@@ -51,17 +56,20 @@ def test_get_observation_indices_mmwr_and_weekly():
 
 
 def test_get_observation_indices_bad_freq_raises():
+    """Test get_observation_indices raises for unsupported frequency."""
     with pytest.raises(NotImplementedError):
         ptime.get_observation_indices([dt.datetime(2025, 1, 4)], dt.datetime(2025, 1, 1), freq="monthly")
 
 
 def test_get_date_range_length_and_get_n_data_days():
+    """Test get_date_range_length and get_n_data_days."""
     arr = [np.datetime64("2025-01-01"), np.datetime64("2025-01-05")]
     assert ptime.get_date_range_length(arr, timestep_days=1) == 5
     assert ptime.get_n_data_days(date_array=arr, timestep_days=1) == 5
 
 
 def test_aggregate_with_dates_variants():
+    """Test aggregate_with_dates with different frequencies."""
     daily = jnp.arange(1, 15)
     weekly_mmwr, first_mmwr = ptime.aggregate_with_dates(daily, dt.datetime(2025, 1, 1), target_freq="mmwr_weekly")
     weekly_iso, first_iso = ptime.aggregate_with_dates(daily, np.datetime64("2025-01-01"), target_freq="weekly")
@@ -72,6 +80,7 @@ def test_aggregate_with_dates_variants():
 
 
 def test_create_date_time_spine_with_various_inputs():
+    """Test create_date_time_spine with various input types."""
     df1 = ptime.create_date_time_spine(dt.datetime(2025, 1, 1), dt.datetime(2025, 1, 3))
     df2 = ptime.create_date_time_spine(np.datetime64("2025-01-01"), np.datetime64("2025-01-03"))
     assert set(df1.columns) == {"date", "t"}
@@ -79,6 +88,7 @@ def test_create_date_time_spine_with_various_inputs():
 
 
 def test_get_end_date_and_errors():
+    """Test get_end_date with various inputs and error conditions."""
     # None with 0 points returns None
     assert ptime.get_end_date(None, 0) is None
     # None with >0 raises
@@ -94,11 +104,13 @@ def test_get_end_date_and_errors():
     assert isinstance(res_np, np.datetime64)
 
     def test_aggregate_with_dates_unsupported_freq_raises():
+        """Test aggregate_with_dates raises for unsupported frequency."""
         with pytest.raises(ValueError):
             ptime.aggregate_with_dates(jnp.arange(1, 10), dt.datetime(2025, 1, 1), target_freq="monthly")
 
 
 def test_align_observation_times_and_first_week():
+    """Test align_observation_times and get_first_week_on_or_after_t0."""
     obs = [dt.datetime(2025, 1, 2), np.datetime64("2025-01-03")]
     # daily
     daily_idx = ptime.align_observation_times(obs, dt.datetime(2025, 1, 1), aggregation_freq="daily")
@@ -488,7 +500,7 @@ def test_model_t_to_date_input_types():
 
 # get_date_range_length tests
 def test_get_date_range_length_default_timestep():
-    """Test with default timestep_days=1."""
+    """Test get_date_range_length with default timestep_days=1."""
     dates = np.array(
         [
             np.datetime64("2025-01-01"),
@@ -499,7 +511,7 @@ def test_get_date_range_length_default_timestep():
 
 
 def test_get_date_range_length_weekly_timestep():
-    """Test with timestep_days=7."""
+    """Test get_date_range_length with timestep_days=7."""
     dates = np.array(
         [
             np.datetime64("2025-01-01"),
@@ -510,13 +522,13 @@ def test_get_date_range_length_weekly_timestep():
 
 
 def test_get_date_range_length_single_date():
-    """Single date should return 1."""
+    """Test get_date_range_length with single date."""
     dates = np.array([np.datetime64("2025-01-01")])
     assert ptime.get_date_range_length(dates) == 1
 
 
 def test_get_date_range_length_multiple_dates():
-    """Test with multiple dates in array."""
+    """Test get_date_range_length with multiple dates in array."""
     dates = np.array(
         [
             np.datetime64("2025-01-01"),
@@ -531,7 +543,7 @@ def test_get_date_range_length_multiple_dates():
 
 # get_end_date tests
 def test_get_end_date_basic():
-    """Test basic calculation with various n_points."""
+    """Test get_end_date with various n_points."""
     start = dt.datetime(2025, 1, 1)
     assert ptime.get_end_date(start, 1) == np.datetime64("2025-01-01")
     assert ptime.get_end_date(start, 7) == np.datetime64("2025-01-07")
@@ -539,40 +551,40 @@ def test_get_end_date_basic():
 
 
 def test_get_end_date_n_points_one():
-    """n_points=1 should return start_date."""
+    """Test get_end_date with n_points=1."""
     start = dt.datetime(2025, 1, 15)
     result = ptime.get_end_date(start, 1)
     assert result == np.datetime64("2025-01-15")
 
 
 def test_get_end_date_negative_n_points():
-    """Negative n_points should raise ValueError."""
+    """Test get_end_date raises for negative n_points."""
     start = dt.datetime(2025, 1, 1)
     with pytest.raises(ValueError, match="n_points must be non-negative"):
         ptime.get_end_date(start, -5)
 
 
 def test_get_end_date_none_start_with_zero_points():
-    """start_date=None with n_points=0 should return None."""
+    """Test get_end_date with None start_date and n_points=0."""
     result = ptime.get_end_date(None, 0)
     assert result is None
 
 
 def test_get_end_date_none_start_with_positive_points():
-    """start_date=None with n_points>0 should raise ValueError."""
+    """Test get_end_date raises for None start_date with positive n_points."""
     with pytest.raises(ValueError, match="Must provide start_date"):
         ptime.get_end_date(None, 5)
 
 
 def test_get_end_date_weekly_timestep():
-    """Test with timestep_days=7."""
+    """Test get_end_date with timestep_days=7."""
     start = dt.datetime(2025, 1, 1)
     result = ptime.get_end_date(start, 4, timestep_days=7)
     assert result == np.datetime64("2025-01-22")
 
 
 def test_get_end_date_input_types():
-    """Test datetime vs np.datetime64 input."""
+    """Test get_end_date with different input types."""
     start_dt = dt.datetime(2025, 1, 1)
     start_np = np.datetime64("2025-01-01")
 
@@ -585,13 +597,13 @@ def test_get_end_date_input_types():
 
 # get_n_data_days tests
 def test_get_n_data_days_with_n_points():
-    """Test with only n_points specified."""
+    """Test get_n_data_days with n_points specified."""
     assert ptime.get_n_data_days(n_points=15) == 15
     assert ptime.get_n_data_days(n_points=0) == 0
 
 
 def test_get_n_data_days_with_date_array():
-    """Test with only date_array specified."""
+    """Test get_n_data_days with date_array specified."""
     dates = np.array(
         [
             np.datetime64("2025-01-01"),
@@ -602,19 +614,19 @@ def test_get_n_data_days_with_date_array():
 
 
 def test_get_n_data_days_neither():
-    """Both None should return 0."""
+    """Test get_n_data_days with both parameters None."""
     assert ptime.get_n_data_days() == 0
 
 
 def test_get_n_data_days_both():
-    """Both specified should raise ValueError."""
+    """Test get_n_data_days raises when both parameters specified."""
     dates = np.array([np.datetime64("2025-01-01")])
     with pytest.raises(ValueError, match="Must provide at most one"):
         ptime.get_n_data_days(n_points=10, date_array=dates)
 
 
 def test_get_n_data_days_weekly_timestep():
-    """Test timestep_days=7 with date_array."""
+    """Test get_n_data_days with timestep_days=7."""
     dates = np.array(
         [
             np.datetime64("2025-01-01"),
@@ -625,7 +637,7 @@ def test_get_n_data_days_weekly_timestep():
 
 
 def test_create_date_time_spine_daily():
-    """Test with daily frequency."""
+    """Test create_date_time_spine with daily frequency."""
     start = dt.datetime(2025, 1, 1)
     end = dt.datetime(2025, 1, 5)
     result = ptime.create_date_time_spine(start, end, freq="1d")
@@ -638,7 +650,7 @@ def test_create_date_time_spine_daily():
 
 
 def test_create_date_time_spine_columns():
-    """Verify output has correct columns."""
+    """Test create_date_time_spine output columns."""
     start = dt.datetime(2025, 1, 1)
     end = dt.datetime(2025, 1, 3)
     result = ptime.create_date_time_spine(start, end)
@@ -649,7 +661,7 @@ def test_create_date_time_spine_columns():
 
 
 def test_create_date_time_spine_t_starts_at_zero():
-    """First row should have t=0."""
+    """Test create_date_time_spine starts at t=0."""
     start = dt.datetime(2025, 1, 1)
     end = dt.datetime(2025, 1, 5)
     result = ptime.create_date_time_spine(start, end)
@@ -658,7 +670,7 @@ def test_create_date_time_spine_t_starts_at_zero():
 
 
 def test_create_date_time_spine_t_increments():
-    """t should increment correctly."""
+    """Test create_date_time_spine t increments correctly."""
     start = dt.datetime(2025, 1, 1)
     end = dt.datetime(2025, 1, 5)
     result = ptime.create_date_time_spine(start, end)
@@ -667,7 +679,7 @@ def test_create_date_time_spine_t_increments():
 
 
 def test_create_date_time_spine_single_day():
-    """Test with start_date == end_date."""
+    """Test create_date_time_spine with single day."""
     start = dt.datetime(2025, 1, 15)
     end = dt.datetime(2025, 1, 15)
     result = ptime.create_date_time_spine(start, end)
@@ -677,7 +689,7 @@ def test_create_date_time_spine_single_day():
 
 
 def test_create_date_time_spine_input_types():
-    """Test different input date types."""
+    """Test create_date_time_spine with different input types."""
     start_dt = dt.datetime(2025, 1, 1)
     end_dt = dt.datetime(2025, 1, 3)
     start_np = np.datetime64("2025-01-01")
@@ -693,7 +705,7 @@ def test_create_date_time_spine_input_types():
 
 
 def test_create_date_time_spine_date_values():
-    """Verify date column contains correct dates."""
+    """Test create_date_time_spine date values."""
     start = dt.datetime(2025, 1, 1)
     end = dt.datetime(2025, 1, 3)
     result = ptime.create_date_time_spine(start, end)
