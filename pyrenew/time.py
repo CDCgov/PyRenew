@@ -54,6 +54,52 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
     return None
 
 
+def convert_date(
+    date: Union[dt.datetime, dt.date, np.datetime64]
+) -> dt.date:
+    """Normalize a date-like object to a python ``datetime.date``.
+
+    The function accepts any of the common representations used in this
+    codebase and returns a ``datetime.date`` (i.e. without time component).
+
+    Supported input types:
+    - ``numpy.datetime64``: converted to date (day precision)
+    - ``datetime.datetime``: converted via ``.date()``
+    - ``datetime.date``: returned unchanged
+
+    Parameters
+    ----------
+    date
+        A date-like object to normalize.
+
+    Returns
+    -------
+    datetime.date
+        The corresponding date (with no time information).
+
+    Notes
+    -----
+        - ``numpy.datetime64`` objects are first normalized to day precision
+            (``datetime64[D]``) and then converted by computing the integer
+            number of days since the UNIX epoch and constructing a ``datetime.date``.
+            This is robust across NumPy versions where direct conversion to Python
+            datetimes can behave differently.
+
+        - Fails fast for unsupported input types by raising a ``TypeError``
+    """
+    if isinstance(date, np.datetime64):
+        days_since_epoch = int(date.astype("datetime64[D]").astype("int"))
+        return dt.date(1970, 1, 1) + dt.timedelta(days=days_since_epoch)
+    if isinstance(date, dt.datetime):
+        return date.date()
+    if isinstance(date, dt.date):
+        return date
+    raise TypeError(
+        "convert_date expects a numpy.datetime64, datetime.datetime, or "
+        "datetime.date; got {typ}".format(typ=type(date))
+    )
+
+
 def validate_mmwr_dates(dates: ArrayLike) -> None:
     """
     Validate that dates are Saturdays (MMWR week endings).
@@ -64,8 +110,7 @@ def validate_mmwr_dates(dates: ArrayLike) -> None:
     for date in dates:
         if date is None:  # Skip None values
             continue
-        if isinstance(date, np.datetime64):
-            date = date.astype(dt.datetime)
+        date = convert_date(date)
         if date.weekday() != 5:  # Saturday
             raise ValueError(
                 f"MMWR dates must be Saturdays (weekday=5). "
@@ -292,16 +337,8 @@ def date_to_model_t(
     :param start_date: Date corresponding to model time t=0
     :return: Model time index (days since start_date)
     """
-    if isinstance(date, np.datetime64):
-        date = date.astype("datetime64[D]").astype(object)
-    elif isinstance(date, dt.datetime):
-        date = date.date()
-
-    if isinstance(start_date, np.datetime64):
-        start_date = start_date.astype("datetime64[D]").astype(object)
-    elif isinstance(start_date, dt.datetime):
-        start_date = start_date.date()
-
+    date = convert_date(date)
+    start_date = convert_date(start_date)
     return (date - start_date).days
 
 
@@ -315,14 +352,10 @@ def model_t_to_date(
     :param start_date: Date corresponding to model time t=0
     :return: Calendar date
     """
-    if isinstance(start_date, np.datetime64):
-        start_date = start_date.astype("datetime64[D]").astype(object)
-
-    # Ensure we have datetime, not just date
-    if isinstance(start_date, dt.date) and not isinstance(start_date, dt.datetime):
-        start_date = dt.datetime.combine(start_date, dt.time())
-
-    return start_date + dt.timedelta(days=model_t)
+    # Convert start_date to date, then make a datetime at midnight
+    start_date_date = convert_date(start_date)
+    start_date_dt = dt.datetime.combine(start_date_date, dt.time())
+    return start_date_dt + dt.timedelta(days=model_t)
 
 
 def get_observation_indices(
@@ -339,20 +372,16 @@ def get_observation_indices(
     :return: Indices for observed data points in aggregated series
     :raises NotImplementedError: For unsupported frequencies
     """
-    if isinstance(data_start_date, np.datetime64):
-        data_start_date = data_start_date.astype(dt.datetime)
+    data_start_date = convert_date(data_start_date)
 
     if freq == "mmwr_weekly":
         # Calculate weeks since first Saturday (MMWR week end)
         days_to_first_saturday = (5 - data_start_date.weekday()) % 7
-        if days_to_first_saturday == 0 and data_start_date.weekday() != 5:
-            days_to_first_saturday = 7
         first_saturday = data_start_date + dt.timedelta(days=days_to_first_saturday)
 
         indices = []
         for obs_date in observed_dates:
-            if isinstance(obs_date, np.datetime64):
-                obs_date = obs_date.astype(dt.datetime)
+            obs_date = convert_date(obs_date)
             weeks_diff = (obs_date - first_saturday).days // 7
             indices.append(weeks_diff)
         return jnp.array(indices)
@@ -360,14 +389,11 @@ def get_observation_indices(
     elif freq == "weekly":
         # Calculate weeks since first Monday (ISO week start)
         days_to_first_monday = (7 - data_start_date.weekday()) % 7
-        if days_to_first_monday == 0 and data_start_date.weekday() != 0:
-            days_to_first_monday = 7
         first_monday = data_start_date + dt.timedelta(days=days_to_first_monday)
 
         indices = []
         for obs_date in observed_dates:
-            if isinstance(obs_date, np.datetime64):
-                obs_date = obs_date.astype(dt.datetime)
+            obs_date = convert_date(obs_date)
             weeks_diff = (obs_date - first_monday).days // 7
             indices.append(weeks_diff)
         return jnp.array(indices)
@@ -396,44 +422,33 @@ def aggregate_with_dates(
     :param target_freq: Target frequency ("mmwr_weekly" or "weekly")
     :return: (aggregated_data, first_aggregated_date)
     :raises ValueError: For unsupported frequencies
+
+    Note:  Python's datetime.weekday  uses 0=Monday..6=Sunday
+    which matches PyRenew's day-of-week indexing.
     """
-    if isinstance(start_date, np.datetime64):
-        start_date = start_date.astype(dt.datetime)
+    start_date = convert_date(start_date)
 
     if target_freq == "mmwr_weekly":
-        # Convert to PyRenew day-of-week indexing (0=Monday, 6=Sunday)
-        first_dow = (start_date.weekday() + 1) % 7
-        if first_dow == 0:  # Monday in datetime becomes 6 in PyRenew
-            first_dow = 6
-        else:
-            first_dow = first_dow - 1
+        
+        first_dow = start_date.weekday()
 
         weekly_data = daily_to_mmwr_epiweekly(daily_data, first_dow)
 
         # Calculate first Saturday (MMWR week end)
         days_to_saturday = (5 - start_date.weekday()) % 7
-        if days_to_saturday == 0 and start_date.weekday() != 5:
-            days_to_saturday = 7
         first_weekly_date = start_date + dt.timedelta(days=days_to_saturday)
 
     elif target_freq == "weekly":
-        # Convert to PyRenew indexing
-        first_dow = (start_date.weekday() + 1) % 7
-        if first_dow == 0:
-            first_dow = 6
-        else:
-            first_dow = first_dow - 1
+        first_dow = start_date.weekday()
 
         weekly_data = daily_to_weekly(daily_data, first_dow, week_start_dow=0)
 
         # Calculate first Monday (ISO week start)
         days_to_monday = (7 - start_date.weekday()) % 7
-        if days_to_monday == 0 and start_date.weekday() != 0:
-            days_to_monday = 7
         first_weekly_date = start_date + dt.timedelta(days=days_to_monday)
 
     else:
-        raise ValueError(f"Unsupported target frequency: {target_freq}")
+        raise ValueError(f"Unsupported target frequency: {target_freq}")  # pragma: no cover
 
     return weekly_data, first_weekly_date
 
@@ -451,16 +466,9 @@ def create_date_time_spine(
     :param freq: Frequency string for polars date_range
     :return: DataFrame with 'date' and 't' columns
     """
-    # Convert np.datetime64 to datetime.date for polars compatibility
-    if isinstance(start_date, np.datetime64):
-        start_date = start_date.astype("datetime64[D]").astype(dt.datetime)
-    elif isinstance(start_date, dt.datetime):
-        start_date = start_date.date()
-
-    if isinstance(end_date, np.datetime64):
-        end_date = end_date.astype("datetime64[D]").astype(dt.datetime)
-    elif isinstance(end_date, dt.datetime):
-        end_date = end_date.date()
+    # Normalize inputs to datetime.date for polars compatibility
+    start_date = convert_date(start_date)
+    end_date = convert_date(end_date)
 
     return (
         pl.DataFrame(
@@ -501,8 +509,9 @@ def get_end_date(
     if n_points < 0:
         raise ValueError(f"n_points must be non-negative, got {n_points}")
 
-    if isinstance(start_date, dt.datetime):
-        start_date = np.datetime64(start_date.date())
+    # Normalize to a datetime.date and then to numpy.datetime64 (day precision)
+    sd = convert_date(start_date)
+    start_date = np.datetime64(sd)
 
     return start_date + np.timedelta64((n_points - 1) * timestep_days, "D")
 
