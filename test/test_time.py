@@ -576,7 +576,7 @@ def test_get_end_date_n_points_one():
 def test_get_end_date_negative_n_points():
     """Test get_end_date raises for negative n_points."""
     start = dt.datetime(2025, 1, 1)
-    with pytest.raises(ValueError, match="n_points must be non-negative"):
+    with pytest.raises(ValueError, match="n_points must be positive"):
         ptime.get_end_date(start, -5)
 
 
