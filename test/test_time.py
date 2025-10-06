@@ -58,7 +58,9 @@ def test_get_observation_indices_mmwr_and_weekly():
 def test_get_observation_indices_bad_freq_raises():
     """Test get_observation_indices raises for unsupported frequency."""
     with pytest.raises(NotImplementedError):
-        ptime.get_observation_indices([dt.datetime(2025, 1, 4)], dt.datetime(2025, 1, 1), freq="monthly")
+        ptime.get_observation_indices(
+            [dt.datetime(2025, 1, 4)], dt.datetime(2025, 1, 1), freq="monthly"
+        )
 
 
 def test_get_date_range_length_and_get_n_data_days():
@@ -71,8 +73,12 @@ def test_get_date_range_length_and_get_n_data_days():
 def test_aggregate_with_dates_variants():
     """Test aggregate_with_dates with different frequencies."""
     daily = jnp.arange(1, 15)
-    weekly_mmwr, first_mmwr = ptime.aggregate_with_dates(daily, dt.datetime(2025, 1, 1), target_freq="mmwr_weekly")
-    weekly_iso, first_iso = ptime.aggregate_with_dates(daily, np.datetime64("2025-01-01"), target_freq="weekly")
+    weekly_mmwr, first_mmwr = ptime.aggregate_with_dates(
+        daily, dt.datetime(2025, 1, 1), target_freq="mmwr_weekly"
+    )
+    weekly_iso, first_iso = ptime.aggregate_with_dates(
+        daily, np.datetime64("2025-01-01"), target_freq="weekly"
+    )
     assert weekly_mmwr.shape[0] >= 1
     assert isinstance(first_mmwr, dt.date)
     assert weekly_iso.shape[0] >= 1
@@ -82,7 +88,9 @@ def test_aggregate_with_dates_variants():
 def test_create_date_time_spine_with_various_inputs():
     """Test create_date_time_spine with various input types."""
     df1 = ptime.create_date_time_spine(dt.datetime(2025, 1, 1), dt.datetime(2025, 1, 3))
-    df2 = ptime.create_date_time_spine(np.datetime64("2025-01-01"), np.datetime64("2025-01-03"))
+    df2 = ptime.create_date_time_spine(
+        np.datetime64("2025-01-01"), np.datetime64("2025-01-03")
+    )
     assert set(df1.columns) == {"date", "t"}
     assert set(df2.columns) == {"date", "t"}
 
@@ -106,21 +114,29 @@ def test_get_end_date_and_errors():
     def test_aggregate_with_dates_unsupported_freq_raises():
         """Test aggregate_with_dates raises for unsupported frequency."""
         with pytest.raises(ValueError):
-            ptime.aggregate_with_dates(jnp.arange(1, 10), dt.datetime(2025, 1, 1), target_freq="monthly")
+            ptime.aggregate_with_dates(
+                jnp.arange(1, 10), dt.datetime(2025, 1, 1), target_freq="monthly"
+            )
 
 
 def test_align_observation_times_and_first_week():
     """Test align_observation_times and get_first_week_on_or_after_t0."""
     obs = [dt.datetime(2025, 1, 2), np.datetime64("2025-01-03")]
     # daily
-    daily_idx = ptime.align_observation_times(obs, dt.datetime(2025, 1, 1), aggregation_freq="daily")
+    daily_idx = ptime.align_observation_times(
+        obs, dt.datetime(2025, 1, 1), aggregation_freq="daily"
+    )
     assert isinstance(daily_idx, jnp.ndarray)
     # weekly aggregator
-    weekly_idx = ptime.align_observation_times(obs, dt.datetime(2025, 1, 1), aggregation_freq="weekly")
+    weekly_idx = ptime.align_observation_times(
+        obs, dt.datetime(2025, 1, 1), aggregation_freq="weekly"
+    )
     assert isinstance(weekly_idx, jnp.ndarray)
     # bad aggregator raises
     with pytest.raises(NotImplementedError):
-        ptime.align_observation_times(obs, dt.datetime(2025, 1, 1), aggregation_freq="monthly")
+        ptime.align_observation_times(
+            obs, dt.datetime(2025, 1, 1), aggregation_freq="monthly"
+        )
 
     # first week calculations
     assert ptime.get_first_week_on_or_after_t0(0) == 0

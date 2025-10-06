@@ -54,9 +54,7 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
     return None
 
 
-def convert_date(
-    date: Union[dt.datetime, dt.date, np.datetime64]
-) -> dt.date:
+def convert_date(date: Union[dt.datetime, dt.date, np.datetime64]) -> dt.date:
     """Normalize a date-like object to a python ``datetime.date``.
 
     The function accepts any of the common representations used in this
@@ -487,7 +485,6 @@ def aggregate_with_dates(
     start_date = convert_date(start_date)
 
     if target_freq == "mmwr_weekly":
-        
         first_dow = start_date.weekday()
 
         weekly_data = daily_to_mmwr_epiweekly(daily_data, first_dow)
@@ -506,7 +503,9 @@ def aggregate_with_dates(
         first_weekly_date = start_date + dt.timedelta(days=days_to_monday)
 
     else:
-        raise ValueError(f"Unsupported target frequency: {target_freq}")  # pragma: no cover
+        raise ValueError(
+            f"Unsupported target frequency: {target_freq}"
+        )  # pragma: no cover
 
     return weekly_data, first_weekly_date
 
