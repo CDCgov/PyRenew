@@ -19,7 +19,7 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
     - uses: quarto-dev/quarto-actions/setup@v2
 
     # Setting up the environment
@@ -82,7 +82,7 @@ jobs:
         pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Post comment preview
         uses: CDCgov/cfa-actions/post-artifact@v1.5.0

@@ -29,7 +29,6 @@ dev = [
     "pytest>=8.4.2",
     "pytest-cov>=6.3.0",
     "pytest-mpl>=0.17.0",
-    "ruff>=0.13.0",
     "scipy>=1.16.1",
 ]
 
