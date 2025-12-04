@@ -66,10 +66,6 @@ def new_convolve_scanner(
     \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d} \right)
     ```
 
-    ```math
-    a + b = c^2
-    ```
-
     Where $\mathbf{d}$ is a vector of length $n$,
     $m(t)$ is a scalar for each value of time $t$,
     and $f$ is a scalar-valued function.
