@@ -63,7 +63,7 @@ class CountNoise(ABC):
         ArrayLike
             Sampled or conditioned counts, same shape as expected.
         """
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def validate(self) -> None:
@@ -75,7 +75,7 @@ class CountNoise(ABC):
         ValueError
             If parameters are invalid.
         """
-        pass
+        pass  # pragma: no cover
 
 
 class PoissonNoise(CountNoise):
@@ -235,7 +235,7 @@ class MeasurementNoise(ABC):
         ArrayLike
             Sampled or conditioned measurements, same shape as expected.
         """
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def validate(self) -> None:
@@ -247,7 +247,7 @@ class MeasurementNoise(ABC):
         ValueError
             If parameters are invalid.
         """
-        pass
+        pass  # pragma: no cover
 
 
 class HierarchicalNormalNoise(MeasurementNoise):

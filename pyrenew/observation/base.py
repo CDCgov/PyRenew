@@ -88,7 +88,7 @@ class BaseObservationProcess(RandomVariable):
         ValueError
             If any parameters fail validation.
         """
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def get_required_lookback(self) -> int:
@@ -110,7 +110,7 @@ class BaseObservationProcess(RandomVariable):
         n_initialization_points as:
         ``max(gen_int_length, max(all lookbacks)) - 1``
         """
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def infection_resolution(self) -> str:
@@ -140,7 +140,7 @@ class BaseObservationProcess(RandomVariable):
         This is used by multi-signal models to route the correct infection
         output to each observation process.
         """
-        pass
+        pass  # pragma: no cover
 
     def _validate_pmf(
         self,
@@ -305,7 +305,7 @@ class BaseObservationProcess(RandomVariable):
         --------
         sample : Uses this method then applies noise model
         """
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def sample(self, **kwargs) -> ArrayLike:
@@ -329,4 +329,4 @@ class BaseObservationProcess(RandomVariable):
         ArrayLike
             Observed or sampled values from the observation process.
         """
-        pass
+        pass  # pragma: no cover
