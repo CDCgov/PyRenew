@@ -46,6 +46,13 @@ class TestHierarchicalNormalPrior:
         # Tight prior should have smaller standard deviation
         assert jnp.std(samples_tight) < jnp.std(samples_wide)
 
+    def test_validate(self):
+        """Test that validate() runs without error."""
+        prior = HierarchicalNormalPrior(
+            "effect", sd_rv=DeterministicVariable("sd", 1.0)
+        )
+        prior.validate()  # Should not raise
+
     def test_rejects_non_random_variable_sd(self):
         """Test that non-RandomVariable sd_rv is rejected."""
         with pytest.raises(TypeError, match="sd_rv must be a RandomVariable"):
@@ -120,6 +127,15 @@ class TestGammaGroupSdPrior:
                 sd_min=-0.1,
             )
 
+    def test_validate(self):
+        """Test that validate() runs without error."""
+        prior = GammaGroupSdPrior(
+            "sd",
+            sd_mean_rv=DeterministicVariable("sd_mean", 0.5),
+            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+        )
+        prior.validate()  # Should not raise
+
 
 class TestStudentTGroupModePrior:
     """Test StudentTGroupModePrior."""
@@ -173,6 +189,15 @@ class TestStudentTGroupModePrior:
                 sd_rv=DeterministicVariable("sd", 1.0),
                 df_rv=4.0,
             )
+
+    def test_validate(self):
+        """Test that validate() runs without error."""
+        prior = StudentTGroupModePrior(
+            "mode",
+            sd_rv=DeterministicVariable("sd", 1.0),
+            df_rv=DeterministicVariable("df", 4.0),
+        )
+        prior.validate()  # Should not raise
 
 
 if __name__ == "__main__":

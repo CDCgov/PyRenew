@@ -16,6 +16,7 @@ from pyrenew.observation import (
     NegativeBinomialNoise,
     PoissonNoise,
 )
+from pyrenew.observation.count_observations import _CountBase
 from pyrenew.randomvariable import DistributionalVariable
 
 
@@ -372,6 +373,168 @@ class TestPoissonNoise:
 
         assert counts.shape[0] == 20
         assert jnp.all(counts >= 0)
+
+
+class TestCountBaseInternalMethods:
+    """Test internal _CountBase methods for coverage."""
+
+    def test_count_base_infection_resolution_raises(self, simple_delay_pmf):
+        """Test that _CountBase.infection_resolution() raises NotImplementedError."""
+
+        # Create a subclass that doesn't override infection_resolution
+        class IncompleteCountProcess(_CountBase):
+            """Incomplete count process for testing."""
+
+            def sample(self, **kwargs):
+                """Sample method stub."""
+                pass
+
+        process = IncompleteCountProcess(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        with pytest.raises(
+            NotImplementedError, match="Subclasses must implement infection_resolution"
+        ):
+            process.infection_resolution()
+
+
+class TestValidationMethods:
+    """Test validation methods for coverage."""
+
+    def test_validate_calls_all_validations(self, simple_delay_pmf):
+        """Test that validate() calls all necessary validations."""
+        process = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        # Should not raise
+        process.validate()
+
+    def test_validate_invalid_ascertainment_rate_negative(self, simple_delay_pmf):
+        """Test that validate raises for negative ascertainment rate."""
+        process = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", -0.1),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        with pytest.raises(ValueError, match="ascertainment_rate_rv must be in"):
+            process.validate()
+
+    def test_validate_invalid_ascertainment_rate_greater_than_one(
+        self, simple_delay_pmf
+    ):
+        """Test that validate raises for ascertainment rate > 1."""
+        process = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.5),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        with pytest.raises(ValueError, match="ascertainment_rate_rv must be in"):
+            process.validate()
+
+    def test_get_required_lookback(self, simple_delay_pmf, long_delay_pmf):
+        """Test get_required_lookback returns PMF length."""
+        process_short = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        assert process_short.get_required_lookback() == 1
+
+        process_long = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", long_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        assert process_long.get_required_lookback() == 10
+
+    def test_infection_resolution_counts(self, simple_delay_pmf):
+        """Test that Counts returns 'jurisdiction' resolution."""
+        process = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        assert process.infection_resolution() == "jurisdiction"
+
+
+class TestNoiseValidation:
+    """Test noise model validation methods."""
+
+    def test_poisson_noise_validate(self):
+        """Test PoissonNoise validate method."""
+        noise = PoissonNoise()
+        # Should not raise - Poisson has no parameters to validate
+        noise.validate()
+
+    def test_negative_binomial_noise_validate_success(self):
+        """Test NegativeBinomialNoise validate with valid concentration."""
+        noise = NegativeBinomialNoise(DeterministicVariable("conc", 10.0))
+        # Should not raise
+        noise.validate()
+
+    def test_negative_binomial_noise_validate_zero_concentration(self):
+        """Test NegativeBinomialNoise validate with zero concentration."""
+        noise = NegativeBinomialNoise(DeterministicVariable("conc", 0.0))
+        with pytest.raises(ValueError, match="concentration must be positive"):
+            noise.validate()
+
+    def test_negative_binomial_noise_validate_negative_concentration(self):
+        """Test NegativeBinomialNoise validate with negative concentration."""
+        noise = NegativeBinomialNoise(DeterministicVariable("conc", -1.0))
+        with pytest.raises(ValueError, match="concentration must be positive"):
+            noise.validate()
+
+
+class TestBaseObservationProcessValidation:
+    """Test base observation process PMF validation."""
+
+    def test_validate_pmf_empty_array(self, simple_delay_pmf):
+        """Test that _validate_pmf raises for empty array."""
+        process = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        empty_pmf = jnp.array([])
+        with pytest.raises(ValueError, match="must return non-empty array"):
+            process._validate_pmf(empty_pmf, "test_pmf")
+
+    def test_validate_pmf_sum_not_one(self, simple_delay_pmf):
+        """Test that _validate_pmf raises for PMF not summing to 1."""
+        process = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        bad_pmf = jnp.array([0.3, 0.3, 0.3])  # sums to 0.9
+        with pytest.raises(ValueError, match="must sum to 1.0"):
+            process._validate_pmf(bad_pmf, "test_pmf")
+
+    def test_validate_pmf_negative_values(self, simple_delay_pmf):
+        """Test that _validate_pmf raises for negative values."""
+        process = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        bad_pmf = jnp.array([1.5, -0.5])  # sums to 1.0 but has negative
+        with pytest.raises(ValueError, match="must have non-negative values"):
+            process._validate_pmf(bad_pmf, "test_pmf")
+
+    def test_get_minimum_observation_day(self):
+        """Test get_minimum_observation_day returns correct value."""
+        delay_pmf = jnp.array([0.2, 0.5, 0.3])  # length 3
+        process = Counts(
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        # First valid day should be len(pmf) - 1 = 2
+        assert process.get_minimum_observation_day() == 2
 
 
 if __name__ == "__main__":

@@ -20,3 +20,10 @@ def test_poisson_obs():
         sim_pois = pois(mu=rates)
 
     testing.assert_array_equal(sim_pois, jnp.ceil(sim_pois))
+
+
+def test_poisson_validate():
+    """
+    Check that PoissonObservation.validate() runs without error.
+    """
+    PoissonObservation.validate()

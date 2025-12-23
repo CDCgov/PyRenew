@@ -97,6 +97,20 @@ class TestMeasurementsBase:
 class TestHierarchicalNormalNoise:
     """Test HierarchicalNormalNoise model."""
 
+    def test_validate(self):
+        """Test HierarchicalNormalNoise validate method."""
+        site_mode_prior = HierarchicalNormalPrior(
+            name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
+        )
+        site_sd_prior = GammaGroupSdPrior(
+            name="sd",
+            sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
+            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+        )
+        noise = HierarchicalNormalNoise(site_mode_prior, site_sd_prior)
+        # Should not raise - validation is deferred to sample time
+        noise.validate()
+
     def test_sample_shape(self):
         """Test that HierarchicalNormalNoise produces correct shape."""
         site_mode_prior = HierarchicalNormalPrior(
