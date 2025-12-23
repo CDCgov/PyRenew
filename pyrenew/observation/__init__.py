@@ -1,4 +1,23 @@
 # numpydoc ignore=GL08
+"""
+Observation processes for connecting infections to observed data.
+
+Architecture
+------------
+``BaseObservationProcess`` is the abstract base. Concrete subclasses:
+
+- ``Counts``: Jurisdiction-level counts (admissions, deaths)
+- ``CountsBySite``: Site-specific disaggregated counts
+- ``Measurements``: Continuous site-level signals (e.g., wastewater)
+
+All observation processes implement:
+
+- ``_expected_signal(infections)``: transforms infections to expected values
+- ``sample()``: calls ``_expected_signal()`` then applies noise model
+
+Noise models (``CountNoise``, ``MeasurementNoise``) are composable—pass them
+to observation constructors to control the output distribution.
+"""
 
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.count_observations import Counts, CountsBySite

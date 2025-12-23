@@ -34,6 +34,14 @@ class BaseObservationProcess(RandomVariable):
     - Convolution wrapper with timeline alignment
     - Deterministic quantity tracking
 
+    Subclasses must implement:
+
+    - ``validate()``: Validate parameters (call ``_validate_pmf()`` for PMFs)
+    - ``get_required_lookback()``: Return PMF length for initialization
+    - ``infection_resolution()``: Return ``"jurisdiction"`` or ``"site"``
+    - ``_expected_signal()``: Transform infections to expected values
+    - ``sample()``: Apply noise model to expected signal
+
     Notes
     -----
     Computing expected observations on day t requires infection history

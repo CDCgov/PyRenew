@@ -4,6 +4,18 @@ Noise models for observation processes.
 
 Provides composable noise strategies for count and measurement observations,
 separating the noise distribution from the observation structure.
+
+Count Noise
+-----------
+- ``PoissonNoise``: Equidispersed counts (variance = mean). No parameters.
+- ``NegativeBinomialNoise``: Overdispersed counts (variance > mean).
+  Takes ``concentration_rv`` (higher = less overdispersion).
+
+Measurement Noise
+-----------------
+- ``HierarchicalNormalNoise``: Normal noise with hierarchical site effects.
+  Takes ``site_mode_prior_rv`` and ``site_sd_prior_rv`` for site-level
+  bias and variability.
 """
 
 from __future__ import annotations
