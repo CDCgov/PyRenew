@@ -413,8 +413,12 @@ infections_constant = jnp.ones((40, 1)) * 1500.0
 
 # Each sensor samples at multiple time points
 times_per_sensor = 10
-observation_times = jnp.tile(jnp.arange(10, 30, 2, dtype=jnp.int32), num_sensors)
-sensor_ids = jnp.repeat(jnp.arange(num_sensors, dtype=jnp.int32), times_per_sensor)
+observation_times = jnp.tile(
+    jnp.arange(10, 30, 2, dtype=jnp.int32), num_sensors
+)
+sensor_ids = jnp.repeat(
+    jnp.arange(num_sensors, dtype=jnp.int32), times_per_sensor
+)
 subpop_ids = jnp.zeros(num_sensors * times_per_sensor, dtype=jnp.int32)
 
 with numpyro.handlers.seed(rng_seed=42):
