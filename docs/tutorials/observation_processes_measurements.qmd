@@ -52,7 +52,7 @@ The core convolution $\sum_{d=0}^{D} I_{t-d} \cdot p_d$ is the same as for count
 | Temporal PMF | Delay distribution | Shedding/decay kinetics |
 | Output space | Expected counts (linear) | Log-concentrations |
 | Noise model | Poisson or Negative Binomial | Normal on log scale |
-| Site structure | Optional (`CountsBySite`) | Inherent (hierarchical effects) |
+| Subpop structure | Optional (`CountsBySubpop`) | Inherent (hierarchical effects) |
 
 **Key features of measurement data:**
 
@@ -113,7 +113,7 @@ class Wastewater(Measurements):
         self._validate_pmf(shedding_pmf, "shedding_kinetics_rv")
         self.noise.validate()
 
-    def get_required_lookback(self) -> int:
+    def lookback_days(self) -> int:
         """Return shedding PMF length."""
         return len(self.temporal_pmf_rv())
 
@@ -134,7 +134,7 @@ class Wastewater(Measurements):
             )
             return convolved
 
-        # Apply to all sites (infections shape: n_days x n_sites)
+        # Apply to all subpops (infections shape: n_days x n_subpops)
         shedding_signal = jax.vmap(convolve_site, in_axes=1, out_axes=1)(
             infections
         )
@@ -208,21 +208,21 @@ log10_genome_rv = DeterministicVariable("log10_genome", 9.0)
 ml_per_person_per_day = 1000.0
 ```
 
-## Noise model with site-level effects
+## Noise model with sensor-level effects
 
-Different sites have systematic differences in measured concentrations due to lab protocols, sampling methods, and flow estimation. We model this with hierarchical site effects:
+A measurement depends on both the thing being measured (e.g., wastewater from a treatment plant) and the calibration of the lab/instruments used to obtain that measurement. We call this combination a "sensor"—the WWTP/lab pair that determines the measurement characteristics. Different sensors have systematic biases and variabilities that we model with hierarchical effects.
 
 ```{python}
 # | label: noise-model
-# Site-level mode: systematic differences between sites
-site_mode_prior = HierarchicalNormalPrior(
-    name="ww_site_mode",
+# Sensor-level mode: systematic differences between sensors
+sensor_mode_prior = HierarchicalNormalPrior(
+    name="ww_sensor_mode",
     sd_rv=DeterministicVariable("mode_sd", 0.5),
 )
 
-# Site-level SD: measurement variability within each site
-site_sd_prior = GammaGroupSdPrior(
-    name="ww_site_sd",
+# Sensor-level SD: measurement variability within each sensor
+sensor_sd_prior = GammaGroupSdPrior(
+    name="ww_sensor_sd",
     sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
     sd_concentration_rv=DeterministicVariable("sd_concentration", 4.0),
     sd_min=0.10,
@@ -230,8 +230,8 @@ site_sd_prior = GammaGroupSdPrior(
 
 # Create the noise model
 ww_noise = HierarchicalNormalNoise(
-    site_mode_prior_rv=site_mode_prior,
-    site_sd_prior_rv=site_sd_prior,
+    sensor_mode_prior_rv=sensor_mode_prior,
+    sensor_sd_prior_rv=sensor_sd_prior,
 )
 ```
 
@@ -246,20 +246,20 @@ ww_process = Wastewater(
     noise=ww_noise,
 )
 
-print(f"Required lookback: {ww_process.get_required_lookback()} days")
+print(f"Required lookback: {ww_process.lookback_days()} days")
 ```
 
 ### Timeline alignment and lookback period
 
 The observation process convolves infections with a shedding distribution, maintaining alignment between input and output: day $t$ in the output corresponds to day $t$ in the input.
 
-Wastewater concentrations depend on infections from prior days (the length of our shedding distribution minus one). The method `get_required_lookback()` returns this length; the first valid observation day is at index `lookback - 1`. Earlier days are marked invalid with NaN.
+Wastewater concentrations depend on infections from prior days (the length of our shedding distribution minus one). The method `lookback_days()` returns this length; the first valid observation day is at index `lookback - 1`. Earlier days are marked invalid with NaN.
 
 ```{python}
 # | label: helper-function
 def first_valid_observation_day(obs_process) -> int:
     """Return the first day index with complete infection history for convolution."""
-    return obs_process.get_required_lookback() - 1
+    return obs_process.lookback_days() - 1
 ```
 
 ## Simulating wastewater observations from infections
@@ -273,7 +273,7 @@ n_days = 50
 # First valid observation day
 day_one = first_valid_observation_day(ww_process)
 
-# Create infections with a spike (shape: n_days x n_sites)
+# Create infections with a spike (shape: n_days x n_subpops)
 infection_spike_day = day_one + 10
 infections = jnp.zeros((n_days, 1))  # 1 subpopulation
 infections = infections.at[infection_spike_day, 0].set(2000.0)
@@ -290,10 +290,10 @@ with numpyro.handlers.seed(rng_seed=42):
     ww_obs = ww_process.sample(
         infections=infections,
         subpop_indices=jnp.zeros(n_obs, dtype=jnp.int32),
-        site_indices=jnp.zeros(n_obs, dtype=jnp.int32),
+        sensor_indices=jnp.zeros(n_obs, dtype=jnp.int32),
         times=observation_days,
         concentrations=None,  # Sample from prior
-        n_sites=1,
+        n_sensors=1,
     )
 ```
 
@@ -335,15 +335,15 @@ samples_by_day = {int(d - day_one): [] for d in observation_days}
 
 for seed in range(n_samples):
     with numpyro.handlers.seed(rng_seed=seed):
-        ww_sample = ww_process.sample(
+        ww_result = ww_process.sample(
             infections=infections,
             subpop_indices=jnp.zeros(n_obs, dtype=jnp.int32),
-            site_indices=jnp.zeros(n_obs, dtype=jnp.int32),
+            sensor_indices=jnp.zeros(n_obs, dtype=jnp.int32),
             times=observation_days,
             concentrations=None,
-            n_sites=1,
+            n_sensors=1,
         )
-    for day_idx, conc in zip(observation_days, ww_sample):
+    for day_idx, conc in zip(observation_days, ww_result.observed):
         samples_by_day[int(day_idx) - day_one].append(float(conc))
 
 # Convert to arrays for plotting
@@ -402,57 +402,57 @@ print(
 )
 ```
 
-## Site-level variability
+## Sensor-level variability
 
-Different sites measuring the same underlying infections will show systematic differences:
+Different sensors measuring the same underlying infections will show systematic differences:
 
 ```{python}
-# | label: multi-site
-n_sites = 4
+# | label: multi-sensor
+num_sensors = 4
 infections_constant = jnp.ones((40, 1)) * 1500.0
 
-# Each site samples at multiple time points
-times_per_site = 10
-observation_times = jnp.tile(jnp.arange(10, 30, 2, dtype=jnp.int32), n_sites)
-site_ids = jnp.repeat(jnp.arange(n_sites, dtype=jnp.int32), times_per_site)
-subpop_ids = jnp.zeros(n_sites * times_per_site, dtype=jnp.int32)
+# Each sensor samples at multiple time points
+times_per_sensor = 10
+observation_times = jnp.tile(jnp.arange(10, 30, 2, dtype=jnp.int32), num_sensors)
+sensor_ids = jnp.repeat(jnp.arange(num_sensors, dtype=jnp.int32), times_per_sensor)
+subpop_ids = jnp.zeros(num_sensors * times_per_sensor, dtype=jnp.int32)
 
 with numpyro.handlers.seed(rng_seed=42):
-    ww_multi_site = ww_process.sample(
+    ww_multi_sensor = ww_process.sample(
         infections=infections_constant,
         subpop_indices=subpop_ids,
-        site_indices=site_ids,
+        sensor_indices=sensor_ids,
         times=observation_times,
         concentrations=None,
-        n_sites=n_sites,
+        n_sensors=num_sensors,
     )
 ```
 
 ```{python}
-# | label: fig-multi-site
-# | fig-cap: Multiple sites observing the same infections
+# | label: fig-multi-sensor
+# | fig-cap: Multiple sensors observing the same infections
 fig, ax = plt.subplots(figsize=(8, 4))
 
 colors = ["steelblue", "coral", "green", "purple"]
-for site in range(n_sites):
-    mask = np.array(site_ids) == site
+for sensor in range(num_sensors):
+    mask = np.array(sensor_ids) == sensor
     ax.plot(
         np.array(observation_times)[mask],
-        np.array(ww_multi_site)[mask],
+        np.array(ww_multi_sensor.observed)[mask],
         "-o",
-        color=colors[site],
-        label=f"Site {site}",
+        color=colors[sensor],
+        label=f"Sensor {sensor}",
     )
 
 ax.set_xlabel("Day")
 ax.set_ylabel("Log Viral Concentration")
-ax.set_title("Multiple Sites Observing Same Infections")
+ax.set_title("Multiple Sensors Observing Same Infections")
 ax.legend()
 plt.tight_layout()
 plt.show()
 ```
 
-Each site has a different baseline concentration (site mode) and different measurement variability (site SD). The hierarchical model learns these site-specific effects during inference.
+Each sensor has a different baseline concentration (sensor mode) and different measurement variability (sensor SD). The hierarchical model learns these sensor-specific effects during inference.
 
 ## Effect of genome shedding parameter
 
@@ -482,12 +482,12 @@ for genome_val in genome_values:
         ww_temp = process_temp.sample(
             infections=infections_decay,
             subpop_indices=jnp.zeros(n_obs_cmp, dtype=jnp.int32),
-            site_indices=jnp.zeros(n_obs_cmp, dtype=jnp.int32),
+            sensor_indices=jnp.zeros(n_obs_cmp, dtype=jnp.int32),
             times=observation_days_cmp,
             concentrations=None,
-            n_sites=1,
+            n_sensors=1,
         )
-    results[genome_val] = np.array(ww_temp)
+    results[genome_val] = np.array(ww_temp.observed)
 ```
 
 ```{python}
@@ -516,7 +516,7 @@ plt.show()
 
 ## Multiple subpopulations
 
-In hierarchical models, each measurement site serves a distinct subpopulation. Different subpopulations can have different infection levels:
+In hierarchical models, each sensor serves a distinct subpopulation (catchment area). Different subpopulations can have different infection levels:
 
 ```{python}
 # | label: multi-subpop
@@ -530,32 +530,32 @@ infections_subpop2 = 2000.0 * jnp.exp(
 )  # Fast decay
 infections_multi = jnp.stack([infections_subpop1, infections_subpop2], axis=1)
 
-# Two sites, each observing a different subpopulation
+# Two sensors, each observing a different subpopulation
 obs_days_mp = jnp.tile(jnp.arange(10, 30, 2, dtype=jnp.int32), 2)
 subpop_ids_mp = jnp.array([0] * 10 + [1] * 10, dtype=jnp.int32)
-site_ids_mp = jnp.array([0] * 10 + [1] * 10, dtype=jnp.int32)
+sensor_ids_mp = jnp.array([0] * 10 + [1] * 10, dtype=jnp.int32)
 
 with numpyro.handlers.seed(rng_seed=42):
     ww_multi_subpop = ww_process.sample(
         infections=infections_multi,
         subpop_indices=subpop_ids_mp,
-        site_indices=site_ids_mp,
+        sensor_indices=sensor_ids_mp,
         times=obs_days_mp,
         concentrations=None,
-        n_sites=2,
+        n_sensors=2,
     )
 ```
 
 ```{python}
 # | label: fig-multi-subpop
-# | fig-cap: Sites observing different subpopulations with different infection dynamics
+# | fig-cap: Sensors observing different subpopulations with different infection dynamics
 fig, ax = plt.subplots(figsize=(8, 4))
 
 for subpop in [0, 1]:
     mask = np.array(subpop_ids_mp) == subpop
     ax.plot(
         np.array(obs_days_mp)[mask],
-        np.array(ww_multi_subpop)[mask],
+        np.array(ww_multi_subpop.observed)[mask],
         "-o",
         label=f"Subpop {subpop}",
     )

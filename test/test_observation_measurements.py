@@ -27,7 +27,7 @@ class ConcreteMeasurements(Measurements):
         pmf = self.temporal_pmf_rv()
         self._validate_pmf(pmf, "temporal_pmf_rv")
 
-    def get_required_lookback(self) -> int:
+    def lookback_days(self) -> int:
         """
         Return temporal PMF length.
 
@@ -49,7 +49,7 @@ class ConcreteMeasurements(Measurements):
         """
         pmf = self.temporal_pmf_rv()
 
-        # Handle 2D infections (n_days, n_sites)
+        # Handle 2D infections (n_days, n_subpops)
         if infections.ndim == 1:
             infections = infections[:, jnp.newaxis]
 
@@ -73,25 +73,25 @@ class TestMeasurementsBase:
         """Test that Measurements inherits from BaseObservationProcess."""
         assert issubclass(Measurements, BaseObservationProcess)
 
-    def test_infection_resolution_is_site(self):
-        """Test that Measurements returns 'site' resolution."""
+    def test_infection_resolution_is_subpop(self):
+        """Test that Measurements returns 'subpop' resolution."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
-        site_mode_prior = HierarchicalNormalPrior(
+        sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("sd", 0.5)
         )
-        site_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = GammaGroupSdPrior(
             name="sd",
             sd_mean_rv=DeterministicVariable("mean", 0.3),
             sd_concentration_rv=DeterministicVariable("conc", 4.0),
         )
-        noise = HierarchicalNormalNoise(site_mode_prior, site_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
         process = ConcreteMeasurements(
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=noise,
         )
 
-        assert process.infection_resolution() == "site"
+        assert process.infection_resolution() == "subpop"
 
 
 class TestHierarchicalNormalNoise:
@@ -99,67 +99,67 @@ class TestHierarchicalNormalNoise:
 
     def test_validate(self):
         """Test HierarchicalNormalNoise validate method."""
-        site_mode_prior = HierarchicalNormalPrior(
+        sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
         )
-        site_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = GammaGroupSdPrior(
             name="sd",
             sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
             sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
         )
-        noise = HierarchicalNormalNoise(site_mode_prior, site_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
         # Should not raise - validation is deferred to sample time
         noise.validate()
 
     def test_sample_shape(self):
         """Test that HierarchicalNormalNoise produces correct shape."""
-        site_mode_prior = HierarchicalNormalPrior(
+        sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
         )
-        site_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = GammaGroupSdPrior(
             name="sd",
             sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
             sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
         )
-        noise = HierarchicalNormalNoise(site_mode_prior, site_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
         expected = jnp.array([1.0, 2.0, 3.0, 4.0])
-        site_indices = jnp.array([0, 0, 1, 1])
+        sensor_indices = jnp.array([0, 0, 1, 1])
 
         with numpyro.handlers.seed(rng_seed=42):
             samples = noise.sample(
                 name="test",
                 expected=expected,
                 obs=None,
-                site_indices=site_indices,
-                n_sites=2,
+                sensor_indices=sensor_indices,
+                n_sensors=2,
             )
 
         assert samples.shape == expected.shape
 
     def test_sample_with_observations(self):
         """Test that HierarchicalNormalNoise conditions on observations."""
-        site_mode_prior = HierarchicalNormalPrior(
+        sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
         )
-        site_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = GammaGroupSdPrior(
             name="sd",
             sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
             sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
         )
-        noise = HierarchicalNormalNoise(site_mode_prior, site_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
         expected = jnp.array([1.0, 2.0, 3.0, 4.0])
         obs = jnp.array([1.1, 2.1, 3.1, 4.1])
-        site_indices = jnp.array([0, 0, 1, 1])
+        sensor_indices = jnp.array([0, 0, 1, 1])
 
         with numpyro.handlers.seed(rng_seed=42):
             samples = noise.sample(
                 name="test",
                 expected=expected,
                 obs=obs,
-                site_indices=site_indices,
-                n_sites=2,
+                sensor_indices=sensor_indices,
+                n_sensors=2,
             )
 
         # When obs is provided, samples should equal obs
@@ -172,52 +172,53 @@ class TestConcreteMeasurements:
     def test_sample_shape(self):
         """Test that sample returns correct shape."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
-        site_mode_prior = HierarchicalNormalPrior(
+        sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
         )
-        site_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = GammaGroupSdPrior(
             name="sd",
             sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
             sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
         )
-        noise = HierarchicalNormalNoise(site_mode_prior, site_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
         process = ConcreteMeasurements(
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=noise,
         )
 
-        # 30 days, 2 sites
+        # 30 days, 2 subpops
         infections = jnp.ones((30, 2)) * 1000
         subpop_indices = jnp.array([0, 0, 1, 1])
-        site_indices = jnp.array([0, 0, 1, 1])
+        sensor_indices = jnp.array([0, 0, 1, 1])
         times = jnp.array([10, 15, 10, 15])
 
         with numpyro.handlers.seed(rng_seed=42):
-            samples = process.sample(
+            result = process.sample(
                 infections=infections,
                 subpop_indices=subpop_indices,
-                site_indices=site_indices,
+                sensor_indices=sensor_indices,
                 times=times,
                 concentrations=None,
-                n_sites=2,
+                n_sensors=2,
             )
 
-        assert samples.shape == times.shape
+        assert result.observed.shape == times.shape
+        assert result.expected.shape == infections.shape
 
     def test_expected_signal_stored(self):
         """Test that expected_log_conc is stored as deterministic."""
         shedding_pmf = jnp.array([0.5, 0.5])
-        site_mode_prior = HierarchicalNormalPrior(
+        sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.01)
         )
-        site_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = GammaGroupSdPrior(
             name="sd",
             sd_mean_rv=DeterministicVariable("sd_mean", 0.01),
             sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
             sd_min=0.001,
         )
-        noise = HierarchicalNormalNoise(site_mode_prior, site_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
         process = ConcreteMeasurements(
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
@@ -226,7 +227,7 @@ class TestConcreteMeasurements:
 
         infections = jnp.ones((20, 2)) * 1000
         subpop_indices = jnp.array([0, 1])
-        site_indices = jnp.array([0, 1])
+        sensor_indices = jnp.array([0, 1])
         times = jnp.array([10, 10])
 
         with numpyro.handlers.seed(rng_seed=42):
@@ -234,10 +235,10 @@ class TestConcreteMeasurements:
                 lambda: process.sample(
                     infections=infections,
                     subpop_indices=subpop_indices,
-                    site_indices=site_indices,
+                    sensor_indices=sensor_indices,
                     times=times,
                     concentrations=None,
-                    n_sites=2,
+                    n_sensors=2,
                 )
             ).get_trace()
 

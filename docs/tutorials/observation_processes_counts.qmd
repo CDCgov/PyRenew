@@ -22,7 +22,7 @@ from pyrenew import datasets
 ## Overview
 
 Count observation processes model the lag between infections and an observed outcome such as hospital admissions, emergency department visits, confirmed cases, or deaths.
-Observed data can be aggregated at the jurisdiction level or available as disaggregated counts from reporting entities, which are modeled by classes `Counts` and `CountsBySite`, respectively.
+Observed data can be aggregated or available as subpopulation-level counts, which are modeled by classes `Counts` and `CountsBySubpop`, respectively.
 
 Count observation processes transform infections into expected observed counts by applying an ascertainment rate and convolving with a delay distribution.
 
@@ -129,20 +129,20 @@ hosp_process = Counts(
     noise=NegativeBinomialNoise(concentration_rv),
 )
 
-print(f"Required lookback: {hosp_process.get_required_lookback()} days")
+print(f"Required lookback: {hosp_process.lookback_days()} days")
 ```
 
 ### Timeline alignment and lookback period
 
 The observation process convolves infections with a delay distribution, maintaining alignment between input and output: day $t$ in the output corresponds to day $t$ in the input.
 
-Hospital admissions depend on infections from prior days (the length of our delay distribution minus one). The method `get_required_lookback()` returns this length; the first valid observation day is at index `lookback - 1`. Earlier days are marked invalid.
+Hospital admissions depend on infections from prior days (the length of our delay distribution minus one). The method `lookback_days()` returns this length; the first valid observation day is at index `lookback - 1`. Earlier days are marked invalid.
 
 ```{python}
 # | label: helper-function
 def first_valid_observation_day(obs_process) -> int:
     """Return the first day index with complete infection history for convolution."""
-    return obs_process.get_required_lookback() - 1
+    return obs_process.lookback_days() - 1
 ```
 
 ## Simulating hospital admissions from infections
@@ -152,7 +152,7 @@ To demonstrate how the observation process works, we simulate admissions from a 
 ```{python}
 # | label: simulate-spike
 n_days = 100
-lookback = hosp_process.get_required_lookback()
+lookback = hosp_process.lookback_days()
 
 # First valid observation day
 day_one = lookback - 1
@@ -207,7 +207,7 @@ Because all infections occur on a single day, we can see how they spread into ho
 fig, ax = plt.subplots(figsize=(8, 4))
 ax.plot(
     np.arange(n_plot_days),
-    np.array(hosp_admissions[day_one:]),
+    np.array(hosp_admissions.observed[day_one:]),
     "-o",
     color="purple",
 )
@@ -246,8 +246,8 @@ samples = []
 
 for seed in range(n_samples):
     with numpyro.handlers.seed(rng_seed=seed):
-        sample = hosp_process.sample(infections=infections, counts=None)
-    samples.append(np.array(sample[day_one:]))
+        result = hosp_process.sample(infections=infections, counts=None)
+    samples.append(np.array(result.observed[day_one:]))
 
 samples = np.array(samples)
 sample_mean = samples.mean(axis=0)
@@ -328,8 +328,8 @@ for ihr_val in ihr_values:
     samples = []
     for seed in range(20):
         with numpyro.handlers.seed(rng_seed=seed):
-            sample = process.sample(infections=infections_decay, counts=None)
-        samples.append(np.array(sample[day_one:]))
+            result = process.sample(infections=infections_decay, counts=None)
+        samples.append(np.array(result.observed[day_one:]))
     results[ihr_val] = np.mean(samples, axis=0)
 ```
 
@@ -381,12 +381,12 @@ for ax, conc_val in zip(axes, concentration_values):
 
     for seed in range(n_replicates):
         with numpyro.handlers.seed(rng_seed=seed):
-            sample = process.sample(
+            result = process.sample(
                 infections=infections_constant, counts=None
             )
         ax.plot(
             np.arange(n_plot_days),
-            np.array(sample[day_one:]),
+            np.array(result.observed[day_one:]),
             color="steelblue",
             alpha=0.5,
             linewidth=0.8,
@@ -414,12 +414,12 @@ hosp_process_poisson = Counts(
 )
 
 with numpyro.handlers.seed(rng_seed=42):
-    poisson_sample = hosp_process_poisson.sample(
+    poisson_result = hosp_process_poisson.sample(
         infections=infections,
         counts=None,
     )
 
 print(
-    f"Sampled {len(poisson_sample)} days of hospital admissions with Poisson noise"
+    f"Sampled {len(poisson_result.observed)} days of hospital admissions with Poisson noise"
 )
 ```

@@ -37,8 +37,8 @@ class BaseObservationProcess(RandomVariable):
     Subclasses must implement:
 
     - ``validate()``: Validate parameters (call ``_validate_pmf()`` for PMFs)
-    - ``get_required_lookback()``: Return PMF length for initialization
-    - ``infection_resolution()``: Return ``"jurisdiction"`` or ``"site"``
+    - ``lookback_days()``: Return PMF length for initialization
+    - ``infection_resolution()``: Return ``"aggregate"`` or ``"subpop"``
     - ``_expected_signal()``: Transform infections to expected values
     - ``sample()``: Apply noise model to expected signal
 
@@ -91,7 +91,7 @@ class BaseObservationProcess(RandomVariable):
         pass  # pragma: no cover
 
     @abstractmethod
-    def get_required_lookback(self) -> int:
+    def lookback_days(self) -> int:
         """
         Return the number of days this observation process needs to look back.
 
@@ -115,25 +115,27 @@ class BaseObservationProcess(RandomVariable):
     @abstractmethod
     def infection_resolution(self) -> str:
         """
-        Return the resolution of infections this observation uses.
+        Return whether this observation uses aggregate or subpop infections.
 
         Returns one of:
 
-        - ``"jurisdiction"``: Uses jurisdiction-level aggregated infections
-        - ``"site"``: Uses site-level disaggregated infections
+        - ``"aggregate"``: Uses a single aggregated infection trajectory.
+          Shape: ``(n_days,)``
+        - ``"subpop"``: Uses subpopulation-level infection trajectories.
+          Shape: ``(n_days, n_subpops)``, indexed via ``subpop_indices``.
 
         Returns
         -------
         str
-            Either ``"jurisdiction"`` or ``"site"``
+            Either ``"aggregate"`` or ``"subpop"``
 
         Examples
         --------
-        >>> # Aggregated count observations use jurisdiction-level
-        >>> hosp_obs.infection_resolution()  # Returns "jurisdiction"
+        >>> # Aggregated count observations
+        >>> hosp_obs.infection_resolution()  # Returns "aggregate"
         >>>
-        >>> # Wastewater uses site-level
-        >>> ww_obs.infection_resolution()  # Returns "site"
+        >>> # Subpopulation-level observations (wastewater, subpop-specific counts)
+        >>> ww_obs.infection_resolution()  # Returns "subpop"
 
         Notes
         -----
@@ -285,8 +287,8 @@ class BaseObservationProcess(RandomVariable):
         ----------
         infections : ArrayLike
             Infections from the infection process.
-            Shape: (n_days,) for jurisdiction-level observations
-            Shape: (n_days, n_sites) for site-level observations
+            Shape: (n_days,) for aggregate observations
+            Shape: (n_days, n_subpops) for subpop-level observations
 
         Returns
         -------

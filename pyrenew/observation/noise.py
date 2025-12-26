@@ -13,8 +13,8 @@ Count Noise
 
 Measurement Noise
 -----------------
-- ``HierarchicalNormalNoise``: Normal noise with hierarchical site effects.
-  Takes ``site_mode_prior_rv`` and ``site_sd_prior_rv`` for site-level
+- ``HierarchicalNormalNoise``: Normal noise with hierarchical sensor effects.
+  Takes ``sensor_mode_prior_rv`` and ``sensor_sd_prior_rv`` for sensor-level
   bias and variability.
 """
 
@@ -87,6 +87,10 @@ class PoissonNoise(CountNoise):
         """Initialize Poisson noise (no parameters)."""
         pass
 
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return "PoissonNoise()"
+
     def validate(self) -> None:
         """Validate Poisson noise (always valid)."""
         pass
@@ -150,6 +154,10 @@ class NegativeBinomialNoise(CountNoise):
             Higher values reduce overdispersion.
         """
         self.concentration_rv = concentration_rv
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return f"NegativeBinomialNoise(concentration_rv={self.concentration_rv!r})"
 
     def validate(self) -> None:
         """
@@ -228,7 +236,7 @@ class MeasurementNoise(ABC):
         obs : ArrayLike | None
             Observed measurements for conditioning, or None for prior sampling.
         **kwargs
-            Additional context (e.g., site indices).
+            Additional context (e.g., sensor indices).
 
         Returns
         -------
@@ -252,18 +260,18 @@ class MeasurementNoise(ABC):
 
 class HierarchicalNormalNoise(MeasurementNoise):
     """
-    Normal noise with hierarchical site-level effects.
+    Normal noise with hierarchical sensor-level effects.
 
-    Observation model: ``obs ~ Normal(expected + site_mode, site_sd)``
-    where site_mode and site_sd are hierarchically modeled.
+    Observation model: ``obs ~ Normal(expected + sensor_mode, sensor_sd)``
+    where sensor_mode and sensor_sd are hierarchically modeled.
 
     Parameters
     ----------
-    site_mode_prior_rv : RandomVariable
-        Hierarchical prior for site-level modes (log-scale biases).
+    sensor_mode_prior_rv : RandomVariable
+        Hierarchical prior for sensor-level modes (log-scale biases).
         Must support ``sample(n_groups=...)`` interface.
-    site_sd_prior_rv : RandomVariable
-        Hierarchical prior for site-level SDs (must be > 0).
+    sensor_sd_prior_rv : RandomVariable
+        Hierarchical prior for sensor-level SDs (must be > 0).
         Must support ``sample(n_groups=...)`` interface.
 
     Notes
@@ -273,30 +281,38 @@ class HierarchicalNormalNoise(MeasurementNoise):
     See Also
     --------
     pyrenew.randomvariable.HierarchicalNormalPrior :
-        Suitable prior for site_mode_prior_rv
+        Suitable prior for sensor_mode_prior_rv
     pyrenew.randomvariable.GammaGroupSdPrior :
-        Suitable prior for site_sd_prior_rv
+        Suitable prior for sensor_sd_prior_rv
     """
 
     def __init__(
         self,
-        site_mode_prior_rv: RandomVariable,
-        site_sd_prior_rv: RandomVariable,
+        sensor_mode_prior_rv: RandomVariable,
+        sensor_sd_prior_rv: RandomVariable,
     ) -> None:
         """
         Initialize hierarchical Normal noise.
 
         Parameters
         ----------
-        site_mode_prior_rv : RandomVariable
-            Hierarchical prior for site-level modes (log-scale biases).
+        sensor_mode_prior_rv : RandomVariable
+            Hierarchical prior for sensor-level modes (log-scale biases).
             Must support ``sample(n_groups=...)`` interface.
-        site_sd_prior_rv : RandomVariable
-            Hierarchical prior for site-level SDs (must be > 0).
+        sensor_sd_prior_rv : RandomVariable
+            Hierarchical prior for sensor-level SDs (must be > 0).
             Must support ``sample(n_groups=...)`` interface.
         """
-        self.site_mode_prior_rv = site_mode_prior_rv
-        self.site_sd_prior_rv = site_sd_prior_rv
+        self.sensor_mode_prior_rv = sensor_mode_prior_rv
+        self.sensor_sd_prior_rv = sensor_sd_prior_rv
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"HierarchicalNormalNoise("
+            f"sensor_mode_prior_rv={self.sensor_mode_prior_rv!r}, "
+            f"sensor_sd_prior_rv={self.sensor_sd_prior_rv!r})"
+        )
 
     def validate(self) -> None:
         """
@@ -314,11 +330,11 @@ class HierarchicalNormalNoise(MeasurementNoise):
         expected: ArrayLike,
         obs: ArrayLike | None = None,
         *,
-        site_indices: ArrayLike,
-        n_sites: int,
+        sensor_indices: ArrayLike,
+        n_sensors: int,
     ) -> ArrayLike:
         """
-        Sample from Normal distribution with site-level hierarchical effects.
+        Sample from Normal distribution with sensor-level hierarchical effects.
 
         Parameters
         ----------
@@ -330,27 +346,27 @@ class HierarchicalNormalNoise(MeasurementNoise):
         obs : ArrayLike | None
             Observed log-scale measurements for conditioning.
             Shape: (n_obs,)
-        site_indices : ArrayLike
-            Site index for each observation (0-indexed).
+        sensor_indices : ArrayLike
+            Sensor index for each observation (0-indexed).
             Shape: (n_obs,)
-        n_sites : int
-            Total number of sites.
+        n_sensors : int
+            Total number of sensors.
 
         Returns
         -------
         ArrayLike
-            Normal distributed measurements with hierarchical site effects.
+            Normal distributed measurements with hierarchical sensor effects.
             Shape: (n_obs,)
 
         Raises
         ------
         ValueError
-            If site_sd samples non-positive values.
+            If sensor_sd samples non-positive values.
         """
-        site_mode = self.site_mode_prior_rv.sample(n_groups=n_sites)
-        site_sd = self.site_sd_prior_rv.sample(n_groups=n_sites)
+        sensor_mode = self.sensor_mode_prior_rv.sample(n_groups=n_sensors)
+        sensor_sd = self.sensor_sd_prior_rv.sample(n_groups=n_sensors)
 
-        loc = expected + site_mode[site_indices]
-        scale = site_sd[site_indices]
+        loc = expected + sensor_mode[sensor_indices]
+        scale = sensor_sd[sensor_indices]
 
         return numpyro.sample(name, dist.Normal(loc=loc, scale=scale), obs=obs)

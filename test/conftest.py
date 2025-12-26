@@ -127,9 +127,9 @@ def medium_shedding_pmf():
 
 
 @pytest.fixture
-def site_mode_prior():
+def sensor_mode_prior():
     """
-    Standard hierarchical normal prior for site modes.
+    Standard hierarchical normal prior for sensor modes.
 
     Returns
     -------
@@ -137,12 +137,12 @@ def site_mode_prior():
         A hierarchical normal prior with standard deviation 0.5.
     """
     return HierarchicalNormalPrior(
-        name="ww_site_mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
+        name="ww_sensor_mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
     )
 
 
 @pytest.fixture
-def site_mode_prior_tight():
+def sensor_mode_prior_tight():
     """
     Tight hierarchical normal prior for deterministic-like behavior.
 
@@ -152,14 +152,14 @@ def site_mode_prior_tight():
         A hierarchical normal prior with small standard deviation 0.01.
     """
     return HierarchicalNormalPrior(
-        name="ww_site_mode", sd_rv=DeterministicVariable("mode_sd_tight", 0.01)
+        name="ww_sensor_mode", sd_rv=DeterministicVariable("mode_sd_tight", 0.01)
     )
 
 
 @pytest.fixture
-def site_sd_prior():
+def sensor_sd_prior():
     """
-    Standard gamma prior for site standard deviations.
+    Standard gamma prior for sensor standard deviations.
 
     Returns
     -------
@@ -167,7 +167,7 @@ def site_sd_prior():
         A gamma prior for group standard deviations.
     """
     return GammaGroupSdPrior(
-        name="ww_site_sd",
+        name="ww_sensor_sd",
         sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
         sd_concentration_rv=DeterministicVariable("sd_concentration", 4.0),
         sd_min=0.10,
@@ -175,7 +175,7 @@ def site_sd_prior():
 
 
 @pytest.fixture
-def site_sd_prior_tight():
+def sensor_sd_prior_tight():
     """
     Tight gamma prior for deterministic-like behavior.
 
@@ -185,7 +185,7 @@ def site_sd_prior_tight():
         A gamma prior with small mean for tight behavior.
     """
     return GammaGroupSdPrior(
-        name="ww_site_sd",
+        name="ww_sensor_sd",
         sd_mean_rv=DeterministicVariable("sd_mean_tight", 0.01),
         sd_concentration_rv=DeterministicVariable("sd_concentration_tight", 4.0),
         sd_min=0.005,

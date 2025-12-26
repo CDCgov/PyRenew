@@ -14,6 +14,7 @@ from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.noise import CountNoise
+from pyrenew.observation.types import ObservationSample
 
 
 class _CountBase(BaseObservationProcess):
@@ -67,7 +68,7 @@ class _CountBase(BaseObservationProcess):
 
         self.noise.validate()
 
-    def get_required_lookback(self) -> int:
+    def lookback_days(self) -> int:
         """
         Return delay PMF length.
 
@@ -85,7 +86,7 @@ class _CountBase(BaseObservationProcess):
         Returns
         -------
         str
-            "jurisdiction" for aggregated, "site" for disaggregated.
+            "aggregate" or "subpop".
         """
         raise NotImplementedError("Subclasses must implement infection_resolution()")
 
@@ -100,8 +101,8 @@ class _CountBase(BaseObservationProcess):
         ----------
         infections : ArrayLike
             Infections from the infection process.
-            Shape: (n_days,) for jurisdiction-level
-            Shape: (n_days, n_sites) for site-level
+            Shape: (n_days,) for aggregate
+            Shape: (n_days, n_subpops) for subpop-level
 
         Returns
         -------
@@ -127,10 +128,10 @@ class _CountBase(BaseObservationProcess):
 
 class Counts(_CountBase):
     """
-    Aggregated count observation for jurisdiction-level data.
+    Aggregated count observation.
 
-    Maps jurisdiction-level infections to aggregated counts through
-    ascertainment x delay convolution with composable noise model.
+    Maps aggregate infections to counts through ascertainment x delay
+    convolution with composable noise model.
 
     Parameters
     ----------
@@ -167,21 +168,29 @@ class Counts(_CountBase):
 
     def infection_resolution(self) -> str:
         """
-        Return "jurisdiction" for aggregated observations.
+        Return "aggregate" for aggregated observations.
 
         Returns
         -------
         str
-            The string "jurisdiction".
+            The string "aggregate".
         """
-        return "jurisdiction"
+        return "aggregate"
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"Counts(ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
+            f"delay_distribution_rv={self.temporal_pmf_rv!r}, "
+            f"noise={self.noise!r})"
+        )
 
     def sample(
         self,
         infections: ArrayLike,
         counts: ArrayLike | None = None,
         times: ArrayLike | None = None,
-    ) -> ArrayLike:
+    ) -> ObservationSample:
         """
         Sample aggregated counts with dense or sparse observations.
 
@@ -191,7 +200,7 @@ class Counts(_CountBase):
         Parameters
         ----------
         infections : ArrayLike
-            Jurisdiction-level infections from the infection process.
+            Aggregate infections from the infection process.
             Shape: (n_days,)
         counts : ArrayLike | None
             Observed counts. Dense: (n_days,), Sparse: (n_obs,), None: prior.
@@ -200,9 +209,9 @@ class Counts(_CountBase):
 
         Returns
         -------
-        ArrayLike
-            Observed or sampled counts.
-            Dense: (n_days,), Sparse: (n_obs,)
+        ObservationSample
+            Named tuple with `observed` (sampled/conditioned counts) and
+            `expected` (expected counts before noise).
         """
         expected_counts = self._expected_signal(infections)
         self._deterministic("expected_counts", expected_counts)
@@ -214,18 +223,20 @@ class Counts(_CountBase):
         else:
             expected_obs = expected_counts_safe
 
-        return self.noise.sample(
+        observed = self.noise.sample(
             name="counts",
             expected=expected_obs,
             obs=counts,
         )
 
+        return ObservationSample(observed=observed, expected=expected_counts)
 
-class CountsBySite(_CountBase):
+
+class CountsBySubpop(_CountBase):
     """
-    Disaggregated count observation for site-specific data.
+    Subpopulation-level count observation.
 
-    Maps site-level infections to site-specific counts through
+    Maps subpopulation-level infections to counts through
     ascertainment x delay convolution with composable noise model.
 
     Parameters
@@ -244,19 +255,19 @@ class CountsBySite(_CountBase):
     Examples
     --------
     >>> from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
-    >>> from pyrenew.observation import CountsBySite, PoissonNoise
+    >>> from pyrenew.observation import CountsBySubpop, PoissonNoise
     >>> import jax.numpy as jnp
     >>> import numpyro
     >>>
     >>> delay_pmf = jnp.array([0.3, 0.4, 0.3])
-    >>> counts_obs = CountsBySite(
+    >>> counts_obs = CountsBySubpop(
     ...     ascertainment_rate_rv=DeterministicVariable("ihr", 0.02),
     ...     delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
     ...     noise=PoissonNoise(),
     ... )
     >>>
     >>> with numpyro.handlers.seed(rng_seed=42):
-    ...     infections = jnp.ones((30, 3)) * 500  # 30 days, 3 sites
+    ...     infections = jnp.ones((30, 3)) * 500  # 30 days, 3 subpops
     ...     times = jnp.array([10, 15, 10, 15])
     ...     subpop_indices = jnp.array([0, 0, 1, 1])
     ...     sampled = counts_obs.sample(
@@ -267,16 +278,24 @@ class CountsBySite(_CountBase):
     ...     )
     """
 
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"CountsBySubpop(ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
+            f"delay_distribution_rv={self.temporal_pmf_rv!r}, "
+            f"noise={self.noise!r})"
+        )
+
     def infection_resolution(self) -> str:
         """
-        Return "site" for disaggregated observations.
+        Return "subpop" for subpopulation-level observations.
 
         Returns
         -------
         str
-            The string "site".
+            The string "subpop".
         """
-        return "site"
+        return "subpop"
 
     def sample(
         self,
@@ -284,9 +303,9 @@ class CountsBySite(_CountBase):
         subpop_indices: ArrayLike,
         times: ArrayLike,
         counts: ArrayLike | None = None,
-    ) -> ArrayLike:
+    ) -> ObservationSample:
         """
-        Sample disaggregated counts with flexible indexing.
+        Sample subpopulation-level counts with flexible indexing.
 
         Validation is performed before JAX tracing at runtime,
         prior to calling this method.
@@ -294,8 +313,8 @@ class CountsBySite(_CountBase):
         Parameters
         ----------
         infections : ArrayLike
-            Site-level infections from the infection process.
-            Shape: (n_days, n_sites)
+            Subpopulation-level infections from the infection process.
+            Shape: (n_days, n_subpops)
         subpop_indices : ArrayLike
             Subpopulation index for each observation (0-indexed).
             Shape: (n_obs,)
@@ -307,21 +326,23 @@ class CountsBySite(_CountBase):
 
         Returns
         -------
-        ArrayLike
-            Observed or sampled counts.
-            Shape: (n_obs,)
+        ObservationSample
+            Named tuple with `observed` (sampled/conditioned counts) and
+            `expected` (expected counts before noise, shape: n_days x n_subpops).
         """
-        # Compute expected counts for all sites
+        # Compute expected counts for all subpops
         expected_counts_all = self._expected_signal(infections)
 
-        self._deterministic("expected_counts_by_site", expected_counts_all)
+        self._deterministic("expected_counts_by_subpop", expected_counts_all)
 
         # Replace NaN padding with 0 for distribution creation
         expected_counts_safe = jnp.nan_to_num(expected_counts_all, nan=0.0)
         expected_obs = expected_counts_safe[times, subpop_indices]
 
-        return self.noise.sample(
-            name="counts_by_site",
+        observed = self.noise.sample(
+            name="counts_by_subpop",
             expected=expected_obs,
             obs=counts,
         )
+
+        return ObservationSample(observed=observed, expected=expected_counts_all)

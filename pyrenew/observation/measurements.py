@@ -11,6 +11,7 @@ from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.noise import MeasurementNoise
+from pyrenew.observation.types import ObservationSample
 
 
 class Measurements(BaseObservationProcess):
@@ -37,7 +38,7 @@ class Measurements(BaseObservationProcess):
     See Also
     --------
     pyrenew.observation.noise.HierarchicalNormalNoise :
-        Suitable noise model for site-level measurements
+        Suitable noise model for sensor-level measurements
     pyrenew.observation.base.BaseObservationProcess :
         Parent class with common observation utilities
     """
@@ -55,39 +56,47 @@ class Measurements(BaseObservationProcess):
         temporal_pmf_rv : RandomVariable
             Temporal distribution PMF (e.g., shedding kinetics).
         noise : MeasurementNoise
-            Noise model (e.g., HierarchicalNormalNoise with site effects).
+            Noise model (e.g., HierarchicalNormalNoise with sensor effects).
         """
         super().__init__(temporal_pmf_rv=temporal_pmf_rv)
         self.noise = noise
 
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"{self.__class__.__name__}("
+            f"temporal_pmf_rv={self.temporal_pmf_rv!r}, "
+            f"noise={self.noise!r})"
+        )
+
     def infection_resolution(self) -> str:
         """
-        Return "site" for measurement observations.
+        Return "subpop" for measurement observations.
 
-        Measurement observations require site-level infections
-        because each measurement site corresponds to a specific catchment.
+        Measurement observations require subpopulation-level infections
+        because each measurement corresponds to a specific catchment area.
 
         Returns
         -------
         str
-            ``"site"``
+            ``"subpop"``
         """
-        return "site"
+        return "subpop"
 
     def sample(
         self,
         infections: ArrayLike,
         subpop_indices: ArrayLike,
-        site_indices: ArrayLike,
+        sensor_indices: ArrayLike,
         times: ArrayLike,
         concentrations: ArrayLike | None,
-        n_sites: int,
-    ) -> ArrayLike:
+        n_sensors: int,
+    ) -> ObservationSample:
         """
-        Sample measurements from observed sites.
+        Sample measurements from observed sensors.
 
         This method does not perform runtime validation of index values
-        (times, subpop_indices, site_indices). Validate observation data
+        (times, subpop_indices, sensor_indices). Validate observation data
         before sampling.
 
         Transforms infections to expected values via signal-specific processing
@@ -97,26 +106,26 @@ class Measurements(BaseObservationProcess):
         ----------
         infections : ArrayLike
             Infections from the infection process.
-            Shape: (n_days, n_sites)
+            Shape: (n_days, n_subpops)
         subpop_indices : ArrayLike
             Subpopulation index for each observation (0-indexed).
             Shape: (n_obs,)
-        site_indices : ArrayLike
-            Site index for each observation (0-indexed).
+        sensor_indices : ArrayLike
+            Sensor index for each observation (0-indexed).
             Shape: (n_obs,)
         times : ArrayLike
             Day index for each observation (0-indexed).
             Shape: (n_obs,)
         concentrations : ArrayLike | None
             Observed measurements (n_obs,), or None for prior sampling.
-        n_sites : int
-            Total number of measurement sites.
+        n_sensors : int
+            Total number of measurement sensors.
 
         Returns
         -------
-        ArrayLike
-            Observed or sampled measurements.
-            Shape: (n_obs,)
+        ObservationSample
+            Named tuple with `observed` (sampled/conditioned measurements) and
+            `expected` (expected values before noise, shape: n_days x n_subpops).
         """
         expected_values = self._expected_signal(infections)
 
@@ -124,10 +133,12 @@ class Measurements(BaseObservationProcess):
 
         expected_obs = expected_values[times, subpop_indices]
 
-        return self.noise.sample(
+        observed = self.noise.sample(
             name="concentrations",
             expected=expected_obs,
             obs=concentrations,
-            site_indices=site_indices,
-            n_sites=n_sites,
+            sensor_indices=sensor_indices,
+            n_sensors=n_sensors,
         )
+
+        return ObservationSample(observed=observed, expected=expected_values)
