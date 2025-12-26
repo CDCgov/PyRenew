@@ -10,11 +10,11 @@ from __future__ import annotations
 import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
+from pyrenew.observation.types import ObservationSample
 
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.noise import CountNoise
-from pyrenew.observation.types import ObservationSample
 
 
 class _CountBase(BaseObservationProcess):
