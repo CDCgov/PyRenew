@@ -7,11 +7,11 @@ air quality, serology, etc.) with signal-specific processing.
 """
 
 from jax.typing import ArrayLike
-from pyrenew.observation.types import ObservationSample
 
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.noise import MeasurementNoise
+from pyrenew.observation.types import ObservationSample
 
 
 class Measurements(BaseObservationProcess):
