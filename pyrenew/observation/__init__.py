@@ -20,6 +20,8 @@ Noise models (``CountNoise``, ``MeasurementNoise``) are composable—pass them
 to observation constructors to control the output distribution.
 """
 
+from pyrenew.observation.types import ObservationSample
+
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.count_observations import Counts, CountsBySubpop
 from pyrenew.observation.measurements import Measurements
@@ -32,7 +34,6 @@ from pyrenew.observation.noise import (
     PoissonNoise,
 )
 from pyrenew.observation.poisson import PoissonObservation
-from pyrenew.observation.types import ObservationSample
 
 __all__ = [
     # Existing (kept for backward compatibility)
