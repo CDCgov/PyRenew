@@ -33,7 +33,7 @@ $$\lambda_t = \alpha \cdot \sum_{d=0}^{D} I_{t-d} \cdot p_d$$
 where:
 
 - $I_{t-d}$ is the number of incident (new) infections on day $t-d$ (i.e., $d$ days before day $t$)
-- $\alpha$ is the ascertainment rate (e.g., infection-hospitalization ratio)
+- $\alpha$ is the rate of ascertained counts per infection (e.g., infection-to-hospital admission rate). This can model a mix of biological effects (e.g. some percentage of infections lead to hospital admissions, but not all) and reporting effects (e.g. some percentage of admissions that occur are reported, but not all).
 - $p_d$ is the delay distribution from infection to observation, conditional on an infection leading to an observation
 - $D$ is the maximum delay
 
