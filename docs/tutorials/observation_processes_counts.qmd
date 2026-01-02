@@ -24,7 +24,7 @@ from pyrenew import datasets
 Count observation processes model the lag between infections and an observed outcome such as hospital admissions, emergency department visits, confirmed cases, or deaths.
 Observed data can be aggregated or available as subpopulation-level counts, which are modeled by classes `Counts` and `CountsBySubpop`, respectively.
 
-Count observation processes transform infections into expected observed counts by applying an ascertainment rate and convolving with a delay distribution.
+Count observation processes transform infections into predicted counts by applying an event probability and/or ascertainment rate and convolving with a delay distribution.
 
 The expected observations on day $t$ are:
 
