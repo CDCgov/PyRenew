@@ -463,6 +463,23 @@ class TestValidationMethods:
         assert process.infection_resolution() == "aggregate"
 
 
+class TestNoiseRepr:
+    """Test noise model __repr__ methods."""
+
+    def test_poisson_noise_repr(self):
+        """Test PoissonNoise __repr__ method."""
+        noise = PoissonNoise()
+        assert repr(noise) == "PoissonNoise()"
+
+    def test_negative_binomial_noise_repr(self):
+        """Test NegativeBinomialNoise __repr__ method."""
+        conc_rv = DeterministicVariable("conc", 10.0)
+        noise = NegativeBinomialNoise(conc_rv)
+        repr_str = repr(noise)
+        assert "NegativeBinomialNoise" in repr_str
+        assert "concentration_rv" in repr_str
+
+
 class TestNoiseValidation:
     """Test noise model validation methods."""
 

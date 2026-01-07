@@ -94,6 +94,18 @@ class TestMeasurementsBase:
 class TestHierarchicalNormalNoise:
     """Test HierarchicalNormalNoise model."""
 
+    def test_repr(self):
+        """Test HierarchicalNormalNoise __repr__ method."""
+        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
+        sensor_sd_rv = DistributionalVariable(
+            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
+        )
+        noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
+        repr_str = repr(noise)
+        assert "HierarchicalNormalNoise" in repr_str
+        assert "sensor_mode_rv" in repr_str
+        assert "sensor_sd_rv" in repr_str
+
     def test_validate(self):
         """Test HierarchicalNormalNoise validate method."""
         sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
@@ -153,6 +165,25 @@ class TestHierarchicalNormalNoise:
 
 class TestConcreteMeasurements:
     """Test concrete Measurements implementation."""
+
+    def test_repr(self):
+        """Test Measurements __repr__ method."""
+        shedding_pmf = jnp.array([0.3, 0.4, 0.3])
+        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
+        sensor_sd_rv = DistributionalVariable(
+            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
+        )
+        noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
+
+        process = ConcreteMeasurements(
+            temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
+            noise=noise,
+        )
+
+        repr_str = repr(process)
+        assert "ConcreteMeasurements" in repr_str
+        assert "temporal_pmf_rv" in repr_str
+        assert "noise" in repr_str
 
     def test_sample_shape(self):
         """Test that sample returns correct shape."""
