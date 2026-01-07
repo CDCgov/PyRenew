@@ -8,8 +8,8 @@ separating the noise distribution from the observation structure.
 Count Noise
 -----------
 - ``PoissonNoise``: Equidispersed counts (variance = mean). No parameters.
-- ``NegativeBinomialNoise``: Overdispersed counts (variance > mean).
-  Takes ``concentration_rv`` (higher = less overdispersion).
+- ``NegativeBinomialNoise``: Overdispersed counts relative to Poisson (variance > mean).
+  Takes ``concentration_rv`` (higher concentration = less overdispersed, more Poisson-like).
 
 Measurement Noise
 -----------------
