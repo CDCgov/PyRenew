@@ -11,7 +11,7 @@ import pytest
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.observation import HierarchicalNormalNoise, Measurements
 from pyrenew.observation.base import BaseObservationProcess
-from pyrenew.randomvariable import GammaGroupSdPrior, HierarchicalNormalPrior
+from pyrenew.randomvariable import HierarchicalNormalPrior, TruncatedNormalGroupSdPrior
 
 
 class ConcreteMeasurements(Measurements):
@@ -79,10 +79,10 @@ class TestMeasurementsBase:
         sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("sd", 0.5)
         )
-        sensor_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = TruncatedNormalGroupSdPrior(
             name="sd",
-            sd_mean_rv=DeterministicVariable("mean", 0.3),
-            sd_concentration_rv=DeterministicVariable("conc", 4.0),
+            loc_rv=DeterministicVariable("loc", 0.3),
+            scale_rv=DeterministicVariable("scale", 0.15),
         )
         noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
@@ -102,10 +102,10 @@ class TestHierarchicalNormalNoise:
         sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
         )
-        sensor_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = TruncatedNormalGroupSdPrior(
             name="sd",
-            sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
-            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+            loc_rv=DeterministicVariable("sd_loc", 0.3),
+            scale_rv=DeterministicVariable("sd_scale", 0.15),
         )
         noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
         # Should not raise - validation is deferred to sample time
@@ -116,10 +116,10 @@ class TestHierarchicalNormalNoise:
         sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
         )
-        sensor_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = TruncatedNormalGroupSdPrior(
             name="sd",
-            sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
-            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+            loc_rv=DeterministicVariable("sd_loc", 0.3),
+            scale_rv=DeterministicVariable("sd_scale", 0.15),
         )
         noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
@@ -142,10 +142,10 @@ class TestHierarchicalNormalNoise:
         sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
         )
-        sensor_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = TruncatedNormalGroupSdPrior(
             name="sd",
-            sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
-            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+            loc_rv=DeterministicVariable("sd_loc", 0.3),
+            scale_rv=DeterministicVariable("sd_scale", 0.15),
         )
         noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
@@ -175,10 +175,10 @@ class TestConcreteMeasurements:
         sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
         )
-        sensor_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = TruncatedNormalGroupSdPrior(
             name="sd",
-            sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
-            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+            loc_rv=DeterministicVariable("sd_loc", 0.3),
+            scale_rv=DeterministicVariable("sd_scale", 0.15),
         )
         noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
@@ -212,10 +212,10 @@ class TestConcreteMeasurements:
         sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.01)
         )
-        sensor_sd_prior = GammaGroupSdPrior(
+        sensor_sd_prior = TruncatedNormalGroupSdPrior(
             name="sd",
-            sd_mean_rv=DeterministicVariable("sd_mean", 0.01),
-            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+            loc_rv=DeterministicVariable("sd_loc", 0.01),
+            scale_rv=DeterministicVariable("sd_scale", 0.005),
             sd_min=0.001,
         )
         noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)

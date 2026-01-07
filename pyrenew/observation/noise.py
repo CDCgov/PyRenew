@@ -282,7 +282,7 @@ class HierarchicalNormalNoise(MeasurementNoise):
     --------
     pyrenew.randomvariable.HierarchicalNormalPrior :
         Suitable prior for sensor_mode_prior_rv
-    pyrenew.randomvariable.GammaGroupSdPrior :
+    pyrenew.randomvariable.TruncatedNormalGroupSdPrior :
         Suitable prior for sensor_sd_prior_rv
     """
 

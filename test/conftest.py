@@ -10,7 +10,7 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.observation import Counts, NegativeBinomialNoise
-from pyrenew.randomvariable import GammaGroupSdPrior, HierarchicalNormalPrior
+from pyrenew.randomvariable import HierarchicalNormalPrior, TruncatedNormalGroupSdPrior
 
 # =============================================================================
 # PMF Fixtures
@@ -159,17 +159,17 @@ def sensor_mode_prior_tight():
 @pytest.fixture
 def sensor_sd_prior():
     """
-    Standard gamma prior for sensor standard deviations.
+    Standard truncated normal prior for sensor standard deviations.
 
     Returns
     -------
-    GammaGroupSdPrior
-        A gamma prior for group standard deviations.
+    TruncatedNormalGroupSdPrior
+        A truncated normal prior for group standard deviations.
     """
-    return GammaGroupSdPrior(
+    return TruncatedNormalGroupSdPrior(
         name="ww_sensor_sd",
-        sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
-        sd_concentration_rv=DeterministicVariable("sd_concentration", 4.0),
+        loc_rv=DeterministicVariable("sd_loc", 0.3),
+        scale_rv=DeterministicVariable("sd_scale", 0.15),
         sd_min=0.10,
     )
 
@@ -177,17 +177,17 @@ def sensor_sd_prior():
 @pytest.fixture
 def sensor_sd_prior_tight():
     """
-    Tight gamma prior for deterministic-like behavior.
+    Tight truncated normal prior for deterministic-like behavior.
 
     Returns
     -------
-    GammaGroupSdPrior
-        A gamma prior with small mean for tight behavior.
+    TruncatedNormalGroupSdPrior
+        A truncated normal prior with small scale for tight behavior.
     """
-    return GammaGroupSdPrior(
+    return TruncatedNormalGroupSdPrior(
         name="ww_sensor_sd",
-        sd_mean_rv=DeterministicVariable("sd_mean_tight", 0.01),
-        sd_concentration_rv=DeterministicVariable("sd_concentration_tight", 4.0),
+        loc_rv=DeterministicVariable("sd_loc_tight", 0.01),
+        scale_rv=DeterministicVariable("sd_scale_tight", 0.005),
         sd_min=0.005,
     )
 

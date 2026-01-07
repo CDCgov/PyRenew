@@ -8,9 +8,9 @@ import pytest
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.randomvariable import (
     DistributionalVariable,
-    GammaGroupSdPrior,
     HierarchicalNormalPrior,
     StudentTGroupModePrior,
+    TruncatedNormalGroupSdPrior,
 )
 
 
@@ -69,15 +69,15 @@ class TestHierarchicalNormalPrior:
         assert samples.shape == (5,)
 
 
-class TestGammaGroupSdPrior:
-    """Test GammaGroupSdPrior."""
+class TestTruncatedNormalGroupSdPrior:
+    """Test TruncatedNormalGroupSdPrior."""
 
     def test_sample_shape(self):
         """Test that sample returns correct shape."""
-        prior = GammaGroupSdPrior(
+        prior = TruncatedNormalGroupSdPrior(
             "sd",
-            sd_mean_rv=DeterministicVariable("sd_mean", 0.5),
-            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+            loc_rv=DeterministicVariable("sd_loc", 0.5),
+            scale_rv=DeterministicVariable("sd_scale", 0.15),
         )
 
         with numpyro.handlers.seed(rng_seed=42):
@@ -87,10 +87,10 @@ class TestGammaGroupSdPrior:
 
     def test_respects_sd_min(self):
         """Test that sd_min is enforced as lower bound."""
-        prior = GammaGroupSdPrior(
+        prior = TruncatedNormalGroupSdPrior(
             "sd",
-            sd_mean_rv=DeterministicVariable("sd_mean", 0.1),
-            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+            loc_rv=DeterministicVariable("sd_loc", 0.1),
+            scale_rv=DeterministicVariable("sd_scale", 0.05),
             sd_min=0.5,
         )
 
@@ -101,38 +101,36 @@ class TestGammaGroupSdPrior:
 
     def test_rejects_non_random_variable_params(self):
         """Test that non-RandomVariable parameters are rejected."""
-        with pytest.raises(TypeError, match="sd_mean_rv must be a RandomVariable"):
-            GammaGroupSdPrior(
+        with pytest.raises(TypeError, match="loc_rv must be a RandomVariable"):
+            TruncatedNormalGroupSdPrior(
                 "sd",
-                sd_mean_rv=0.5,
-                sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+                loc_rv=0.5,
+                scale_rv=DeterministicVariable("sd_scale", 0.15),
             )
 
-        with pytest.raises(
-            TypeError, match="sd_concentration_rv must be a RandomVariable"
-        ):
-            GammaGroupSdPrior(
+        with pytest.raises(TypeError, match="scale_rv must be a RandomVariable"):
+            TruncatedNormalGroupSdPrior(
                 "sd",
-                sd_mean_rv=DeterministicVariable("sd_mean", 0.5),
-                sd_concentration_rv=4.0,
+                loc_rv=DeterministicVariable("sd_loc", 0.5),
+                scale_rv=0.15,
             )
 
     def test_rejects_negative_sd_min(self):
         """Test that negative sd_min is rejected."""
         with pytest.raises(ValueError, match="sd_min must be non-negative"):
-            GammaGroupSdPrior(
+            TruncatedNormalGroupSdPrior(
                 "sd",
-                sd_mean_rv=DeterministicVariable("sd_mean", 0.5),
-                sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+                loc_rv=DeterministicVariable("sd_loc", 0.5),
+                scale_rv=DeterministicVariable("sd_scale", 0.15),
                 sd_min=-0.1,
             )
 
     def test_validate(self):
         """Test that validate() runs without error."""
-        prior = GammaGroupSdPrior(
+        prior = TruncatedNormalGroupSdPrior(
             "sd",
-            sd_mean_rv=DeterministicVariable("sd_mean", 0.5),
-            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+            loc_rv=DeterministicVariable("sd_loc", 0.5),
+            scale_rv=DeterministicVariable("sd_scale", 0.15),
         )
         prior.validate()  # Should not raise
 

@@ -6,9 +6,9 @@ from pyrenew.randomvariable.distributionalvariable import (
     StaticDistributionalVariable,
 )
 from pyrenew.randomvariable.hierarchical import (
-    GammaGroupSdPrior,
     HierarchicalNormalPrior,
     StudentTGroupModePrior,
+    TruncatedNormalGroupSdPrior,
 )
 from pyrenew.randomvariable.transformedvariable import TransformedVariable
 
@@ -18,6 +18,6 @@ __all__ = [
     "DynamicDistributionalVariable",
     "TransformedVariable",
     "HierarchicalNormalPrior",
-    "GammaGroupSdPrior",
+    "TruncatedNormalGroupSdPrior",
     "StudentTGroupModePrior",
 ]

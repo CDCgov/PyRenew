@@ -7,7 +7,6 @@ distributions with a `sample(n_groups=...)` interface, enabling
 dynamic group sizes at sample time with proper numpyro plate contexts.
 """
 
-import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 
@@ -107,42 +106,52 @@ class HierarchicalNormalPrior(RandomVariable):
         return effects
 
 
-class GammaGroupSdPrior(RandomVariable):
+class TruncatedNormalGroupSdPrior(RandomVariable):
     """
-    Gamma prior for group-level standard deviations, bounded away from zero.
+    Truncated Normal prior for group-level standard deviations.
 
-    Samples n_groups positive values from Gamma(concentration, rate) + sd_min
-    within a numpyro plate context.
+    Samples n_groups positive values from TruncatedNormal(loc, scale, low=sd_min)
+    within a numpyro plate context. Uses NumPyro's native truncated distribution
+    support for proper likelihood computation.
 
     Parameters
     ----------
     name : str
         Unique name for the sampled parameter in numpyro.
-    sd_mean_rv : RandomVariable
-        RandomVariable returning the mean of the Gamma distribution.
-    sd_concentration_rv : RandomVariable
-        RandomVariable returning the concentration (shape) parameter of Gamma.
+    loc_rv : RandomVariable
+        RandomVariable returning the location (mean) of the underlying Normal.
+    scale_rv : RandomVariable
+        RandomVariable returning the scale (std) of the underlying Normal.
     sd_min : float, default=0.05
-        Minimum SD value (lower bound).
+        Minimum SD value (left truncation point).
 
     Notes
     -----
-    This class parameterizes Gamma by mean and concentration rather than
-    shape and rate, which is often more interpretable. The rate is computed as
-    concentration / mean.
+    Truncated normal is a common choice for standard deviation priors because:
 
-    The sd_min floor prevents numerical issues when standard deviations
-    approach zero.
+    - It naturally constrains values to be positive (via left truncation)
+    - The location parameter represents the expected SD value
+    - The scale parameter controls uncertainty about the SD
+    - It integrates well with NumPyro's truncation support for proper likelihood
+
+    Parameter guidance:
+
+    - ``loc``: Set to your prior expectation for the SD (e.g., 0.3 for
+      moderate sensor variability on log scale)
+    - ``scale``: Controls uncertainty; smaller values give tighter priors
+      around ``loc``
+    - ``sd_min``: Prevents numerical issues when SDs approach zero; typical
+      values are 0.01-0.1 depending on the scale of the data
 
     Examples
     --------
     >>> from pyrenew.deterministic import DeterministicVariable
-    >>> from pyrenew.randomvariable import GammaGroupSdPrior
+    >>> from pyrenew.randomvariable import TruncatedNormalGroupSdPrior
     >>> import numpyro
     >>>
-    >>> mean_rv = DeterministicVariable("sd_mean", 0.3)
-    >>> conc_rv = DeterministicVariable("sd_conc", 4.0)
-    >>> prior = GammaGroupSdPrior("site_sd", mean_rv, conc_rv, sd_min=0.05)
+    >>> loc_rv = DeterministicVariable("sd_loc", 0.3)
+    >>> scale_rv = DeterministicVariable("sd_scale", 0.15)
+    >>> prior = TruncatedNormalGroupSdPrior("site_sd", loc_rv, scale_rv, sd_min=0.05)
     >>>
     >>> with numpyro.handlers.seed(rng_seed=42):
     ...     sds = prior.sample(n_groups=5)
@@ -153,44 +162,44 @@ class GammaGroupSdPrior(RandomVariable):
     def __init__(
         self,
         name: str,
-        sd_mean_rv: RandomVariable,
-        sd_concentration_rv: RandomVariable,
+        loc_rv: RandomVariable,
+        scale_rv: RandomVariable,
         sd_min: float = 0.05,
     ) -> None:
         """
-        Default constructor for GammaGroupSdPrior.
+        Default constructor for TruncatedNormalGroupSdPrior.
 
         Parameters
         ----------
         name : str
             Unique name for the sampled parameter in numpyro.
-        sd_mean_rv : RandomVariable
-            RandomVariable returning the mean of the Gamma distribution.
-        sd_concentration_rv : RandomVariable
-            RandomVariable returning the concentration (shape) parameter.
+        loc_rv : RandomVariable
+            RandomVariable returning the location (mean) of the underlying Normal.
+        scale_rv : RandomVariable
+            RandomVariable returning the scale (std) of the underlying Normal.
         sd_min : float, default=0.05
-            Minimum SD value (lower bound).
+            Minimum SD value (left truncation point).
 
         Returns
         -------
         None
         """
-        if not isinstance(sd_mean_rv, RandomVariable):
+        if not isinstance(loc_rv, RandomVariable):
             raise TypeError(
-                f"sd_mean_rv must be a RandomVariable, got {type(sd_mean_rv).__name__}. "
+                f"loc_rv must be a RandomVariable, got {type(loc_rv).__name__}. "
                 "Use DeterministicVariable(name, value) to wrap a fixed value."
             )
-        if not isinstance(sd_concentration_rv, RandomVariable):
+        if not isinstance(scale_rv, RandomVariable):
             raise TypeError(
-                f"sd_concentration_rv must be a RandomVariable, got {type(sd_concentration_rv).__name__}. "
+                f"scale_rv must be a RandomVariable, got {type(scale_rv).__name__}. "
                 "Use DeterministicVariable(name, value) to wrap a fixed value."
             )
         if sd_min < 0:
             raise ValueError(f"sd_min must be non-negative, got {sd_min}")
 
         self.name = name
-        self.sd_mean_rv = sd_mean_rv
-        self.sd_concentration_rv = sd_concentration_rv
+        self.loc_rv = loc_rv
+        self.scale_rv = scale_rv
         self.sd_min = sd_min
 
     def validate(self):
@@ -213,19 +222,13 @@ class GammaGroupSdPrior(RandomVariable):
         ArrayLike
             Array of shape (n_groups,) with values >= sd_min.
         """
-        sd_mean = self.sd_mean_rv()
-        concentration = self.sd_concentration_rv()
-        rate = concentration / sd_mean
+        loc = self.loc_rv()
+        scale = self.scale_rv()
 
         with numpyro.plate(f"n_{self.name}", n_groups):
-            raw_sd = numpyro.sample(
-                f"{self.name}_raw",
-                dist.Gamma(concentration, rate),
-            )
-
-            group_sd = numpyro.deterministic(
+            group_sd = numpyro.sample(
                 self.name,
-                jnp.maximum(raw_sd, self.sd_min),
+                dist.TruncatedNormal(loc=loc, scale=scale, low=self.sd_min),
             )
         return group_sd
 

@@ -16,7 +16,10 @@ import numpyro
 import matplotlib.pyplot as plt
 
 from pyrenew.observation import Measurements, HierarchicalNormalNoise
-from pyrenew.randomvariable import HierarchicalNormalPrior, GammaGroupSdPrior
+from pyrenew.randomvariable import (
+    HierarchicalNormalPrior,
+    TruncatedNormalGroupSdPrior,
+)
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 ```
 
@@ -212,6 +215,13 @@ ml_per_person_per_day = 1000.0
 
 A measurement depends on both the thing being measured (e.g., wastewater from a treatment plant) and the calibration of the lab/instruments used to obtain that measurement. We call this combination a "sensor"—the WWTP/lab pair that determines the measurement characteristics. Different sensors have systematic biases and variabilities that we model with hierarchical effects.
 
+For the sensor-level standard deviations, we use a truncated normal prior. This is a common choice for SD parameters because:
+
+- It naturally constrains values to be positive
+- The `loc` parameter represents our prior expectation for the SD
+- The `scale` parameter controls how uncertain we are about the SD
+- The `sd_min` floor prevents numerical issues when SDs approach zero
+
 ```{python}
 # | label: noise-model
 # Sensor-level mode: systematic differences between sensors
@@ -221,10 +231,10 @@ sensor_mode_prior = HierarchicalNormalPrior(
 )
 
 # Sensor-level SD: measurement variability within each sensor
-sensor_sd_prior = GammaGroupSdPrior(
+sensor_sd_prior = TruncatedNormalGroupSdPrior(
     name="ww_sensor_sd",
-    sd_mean_rv=DeterministicVariable("sd_mean", 0.3),
-    sd_concentration_rv=DeterministicVariable("sd_concentration", 4.0),
+    loc_rv=DeterministicVariable("sd_loc", 0.3),
+    scale_rv=DeterministicVariable("sd_scale", 0.15),
     sd_min=0.10,
 )
 
