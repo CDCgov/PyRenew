@@ -24,7 +24,7 @@ from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 
 Measurement observation processes model continuous signals derived from infections, such as viral RNA concentrations in wastewater. Unlike count observations (hospital admissions, deaths), measurements are continuous values and in some cases may be negative.
 
-The expected measurement on day $t$ is:
+As an example, we'll consider the wastewater viral genome measurement from the [Pyrenew-HEW](https://github.com/cdcgov/pyrenew-hew) family of models. The predicted measurement on day $t$ is:
 
 $$\lambda_t = \frac{G}{V} \cdot \sum_{d=0}^{D} I_{t-d} \cdot p_d$$
 
