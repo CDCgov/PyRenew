@@ -32,7 +32,7 @@ where:
 
 - $I_{t-d}$ is the number of incident (new) infections on day $t-d$
 - $G$ is a scaling factor (here, genome copies shed per infection)
-- $V$ is a normalization factor (e.g., wastewater volume per person per day)
+- $V$ is another scaling factor (here, wastewater volume per person per day)
 - $p_d$ is the temporal distribution (e.g., viral shedding kinetics)
 - $D$ is the maximum duration
 
