@@ -38,14 +38,14 @@ class ConcreteMeasurements(Measurements):
         """
         return len(self.temporal_pmf_rv())
 
-    def _expected_signal(self, infections):
+    def _predicted_obs(self, infections):
         """
-        Simple expected signal: log(convolution * scale).
+        Simple predicted signal: log(convolution * scale).
 
         Returns
         -------
         jnp.ndarray
-            Log-transformed expected signal.
+            Log-transformed predicted signal.
         """
         pmf = self.temporal_pmf_rv()
 
@@ -58,12 +58,12 @@ class ConcreteMeasurements(Measurements):
 
         import jax
 
-        expected = jax.vmap(convolve_col, in_axes=1, out_axes=1)(infections)
+        predicted = jax.vmap(convolve_col, in_axes=1, out_axes=1)(infections)
 
         # Apply log10 scaling (simplified from wastewater model)
-        log_expected = jnp.log(expected + 1e-10) + self.log10_scale * jnp.log(10)
+        log_predicted = jnp.log(predicted + 1e-10) + self.log10_scale * jnp.log(10)
 
-        return log_expected
+        return log_predicted
 
 
 class TestMeasurementsBase:
@@ -123,19 +123,19 @@ class TestHierarchicalNormalNoise:
         )
         noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
-        expected = jnp.array([1.0, 2.0, 3.0, 4.0])
+        predicted = jnp.array([1.0, 2.0, 3.0, 4.0])
         sensor_indices = jnp.array([0, 0, 1, 1])
 
         with numpyro.handlers.seed(rng_seed=42):
             samples = noise.sample(
                 name="test",
-                expected=expected,
+                predicted=predicted,
                 obs=None,
                 sensor_indices=sensor_indices,
                 n_sensors=2,
             )
 
-        assert samples.shape == expected.shape
+        assert samples.shape == predicted.shape
 
     def test_sample_with_observations(self):
         """Test that HierarchicalNormalNoise conditions on observations."""
@@ -149,14 +149,14 @@ class TestHierarchicalNormalNoise:
         )
         noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
 
-        expected = jnp.array([1.0, 2.0, 3.0, 4.0])
+        predicted = jnp.array([1.0, 2.0, 3.0, 4.0])
         obs = jnp.array([1.1, 2.1, 3.1, 4.1])
         sensor_indices = jnp.array([0, 0, 1, 1])
 
         with numpyro.handlers.seed(rng_seed=42):
             samples = noise.sample(
                 name="test",
-                expected=expected,
+                predicted=predicted,
                 obs=obs,
                 sensor_indices=sensor_indices,
                 n_sensors=2,
@@ -204,10 +204,10 @@ class TestConcreteMeasurements:
             )
 
         assert result.observed.shape == times.shape
-        assert result.expected.shape == infections.shape
+        assert result.predicted.shape == infections.shape
 
-    def test_expected_signal_stored(self):
-        """Test that expected_log_conc is stored as deterministic."""
+    def test_predicted_obs_stored(self):
+        """Test that predicted_log_conc is stored as deterministic."""
         shedding_pmf = jnp.array([0.5, 0.5])
         sensor_mode_prior = HierarchicalNormalPrior(
             name="mode", sd_rv=DeterministicVariable("mode_sd", 0.01)
@@ -242,7 +242,7 @@ class TestConcreteMeasurements:
                 )
             ).get_trace()
 
-        assert "expected_log_conc" in trace
+        assert "predicted_log_conc" in trace
 
 
 if __name__ == "__main__":

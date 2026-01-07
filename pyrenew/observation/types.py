@@ -19,10 +19,10 @@ class ObservationSample(NamedTuple):
     observed : ArrayLike
         Sampled or conditioned observations. Shape depends on the
         observation process and indexing.
-    expected : ArrayLike
-        Expected values before noise is applied. Useful for
+    predicted : ArrayLike
+        Predicted values before noise is applied. Useful for
         diagnostics and posterior predictive checks.
     """
 
     observed: ArrayLike
-    expected: ArrayLike
+    predicted: ArrayLike

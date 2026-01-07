@@ -73,7 +73,7 @@ class TestCountsBasics:
 
         assert result.observed.shape[0] > 0
         assert result.observed.ndim == 1
-        assert result.expected.shape == infections.shape
+        assert result.predicted.shape == infections.shape
 
     def test_delay_convolution(self, counts_factory, short_delay_pmf):
         """Test that delay is properly applied."""
@@ -340,7 +340,7 @@ class TestCountsBySubpop:
             )
 
         assert result.observed.shape == times.shape
-        assert result.expected.shape == infections.shape
+        assert result.predicted.shape == infections.shape
 
     def test_infection_resolution(self):
         """Test that CountsBySubpop returns 'subpop' resolution."""

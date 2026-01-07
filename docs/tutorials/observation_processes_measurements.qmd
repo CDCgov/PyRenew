@@ -65,7 +65,7 @@ The core convolution $\sum_{d=0}^{D} I_{t-d} \cdot p_d$ is the same as for count
 
 ## Subclassing Measurements for wastewater
 
-The `Measurements` class is abstract—you must subclass it and implement `_expected_signal()` for your specific signal type. Here we create a `Wastewater` class for viral concentration measurements:
+The `Measurements` class is abstract—you must subclass it and implement `_predicted_obs()` for your specific signal type. Here we create a `Wastewater` class for viral concentration measurements:
 
 ```{python}
 # | label: wastewater-class
@@ -78,7 +78,7 @@ class Wastewater(Measurements):
     """
     Wastewater viral concentration observation process.
 
-    Transforms site-level infections into expected log-concentrations
+    Transforms site-level infections into predicted log-concentrations
     via shedding kinetics convolution and genome/volume scaling.
     """
 
@@ -117,9 +117,9 @@ class Wastewater(Measurements):
         """Return shedding PMF length."""
         return len(self.temporal_pmf_rv())
 
-    def _expected_signal(self, infections: ArrayLike) -> ArrayLike:
+    def _predicted_obs(self, infections: ArrayLike) -> ArrayLike:
         """
-        Compute expected log-concentration from infections.
+        Compute predicted log-concentration from infections.
 
         Applies shedding kinetics convolution, then scales by
         genome copies and volume to get concentration.

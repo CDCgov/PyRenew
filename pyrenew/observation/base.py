@@ -39,12 +39,12 @@ class BaseObservationProcess(RandomVariable):
     - ``validate()``: Validate parameters (call ``_validate_pmf()`` for PMFs)
     - ``lookback_days()``: Return PMF length for initialization
     - ``infection_resolution()``: Return ``"aggregate"`` or ``"subpop"``
-    - ``_expected_signal()``: Transform infections to expected values
-    - ``sample()``: Apply noise model to expected signal
+    - ``_predicted_obs()``: Transform infections to predicted values
+    - ``sample()``: Apply noise model to predicted observations
 
     Notes
     -----
-    Computing expected observations on day t requires infection history
+    Computing predicted observations on day t requires infection history
     from previous days (determined by the temporal PMF length).
     The first ``len(pmf) - 1`` days have insufficient history and return NaN.
 
@@ -257,7 +257,7 @@ class BaseObservationProcess(RandomVariable):
         Track a deterministic quantity in the numpyro execution trace.
 
         This is a convenience wrapper around ``numpyro.deterministic`` for
-        tracking intermediate quantities (e.g., latent admissions, expected
+        tracking intermediate quantities (e.g., latent admissions, predicted
         concentrations) that are useful for diagnostics and model checking.
         These quantities are stored in MCMC samples and can be used for
         model diagnostics and posterior predictive checks.
@@ -272,16 +272,16 @@ class BaseObservationProcess(RandomVariable):
         numpyro.deterministic(name, value)
 
     @abstractmethod
-    def _expected_signal(
+    def _predicted_obs(
         self,
         infections: ArrayLike,
     ) -> ArrayLike:
         """
-        Transform infections to expected observation values.
+        Transform infections to predicted observation values.
 
         This is the core transformation that each observation process must
         implement. It converts infections (from the infection process)
-        to expected values for the observation model.
+        to predicted values for the observation model.
 
         Parameters
         ----------
@@ -293,14 +293,14 @@ class BaseObservationProcess(RandomVariable):
         Returns
         -------
         ArrayLike
-            Expected observation values (counts, log-concentrations, etc.).
+            Predicted observation values (counts, log-concentrations, etc.).
             Same shape as input, with first len(pmf)-1 days as NaN.
 
         Notes
         -----
         The transformation is observation-specific:
 
-        - Count observations: ascertainment x delay convolution -> expected counts
+        - Count observations: ascertainment x delay convolution -> predicted counts
         - Wastewater: shedding convolution -> genome scaling -> dilution -> log
 
         See Also
@@ -315,7 +315,7 @@ class BaseObservationProcess(RandomVariable):
         Sample from the observation process.
 
         Subclasses must implement this method to define the specific
-        observation model. Typically calls ``_expected_signal`` first,
+        observation model. Typically calls ``_predicted_obs`` first,
         then applies the noise model.
 
         Parameters

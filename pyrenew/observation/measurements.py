@@ -19,7 +19,7 @@ class Measurements(BaseObservationProcess):
     Abstract base for continuous measurement observations.
 
     Subclasses implement signal-specific transformations from infections
-    to expected measurement values, then add measurement noise.
+    to predicted measurement values, then add measurement noise.
 
     Parameters
     ----------
@@ -31,7 +31,7 @@ class Measurements(BaseObservationProcess):
 
     Notes
     -----
-    Subclasses must implement ``_expected_signal()`` according to their
+    Subclasses must implement ``_predicted_obs()`` according to their
     specific signal processing (e.g., wastewater shedding kinetics,
     dilution factors, etc.).
 
@@ -99,8 +99,8 @@ class Measurements(BaseObservationProcess):
         (times, subpop_indices, sensor_indices). Validate observation data
         before sampling.
 
-        Transforms infections to expected values via signal-specific processing
-        (``_expected_signal``), then applies noise model.
+        Transforms infections to predicted values via signal-specific processing
+        (``_predicted_obs``), then applies noise model.
 
         Parameters
         ----------
@@ -125,20 +125,20 @@ class Measurements(BaseObservationProcess):
         -------
         ObservationSample
             Named tuple with `observed` (sampled/conditioned measurements) and
-            `expected` (expected values before noise, shape: n_days x n_subpops).
+            `predicted` (predicted values before noise, shape: n_days x n_subpops).
         """
-        expected_values = self._expected_signal(infections)
+        predicted_values = self._predicted_obs(infections)
 
-        self._deterministic("expected_log_conc", expected_values)
+        self._deterministic("predicted_log_conc", predicted_values)
 
-        expected_obs = expected_values[times, subpop_indices]
+        predicted_obs = predicted_values[times, subpop_indices]
 
         observed = self.noise.sample(
             name="concentrations",
-            expected=expected_obs,
+            predicted=predicted_obs,
             obs=concentrations,
             sensor_indices=sensor_indices,
             n_sensors=n_sensors,
         )
 
-        return ObservationSample(observed=observed, expected=expected_values)
+        return ObservationSample(observed=observed, predicted=predicted_values)

@@ -90,12 +90,12 @@ class _CountBase(BaseObservationProcess):
         """
         raise NotImplementedError("Subclasses must implement infection_resolution()")
 
-    def _expected_signal(
+    def _predicted_obs(
         self,
         infections: ArrayLike,
     ) -> ArrayLike:
         """
-        Compute expected counts via ascertainment x delay convolution.
+        Compute predicted counts via ascertainment x delay convolution.
 
         Parameters
         ----------
@@ -107,7 +107,7 @@ class _CountBase(BaseObservationProcess):
         Returns
         -------
         ArrayLike
-            Expected counts with timeline alignment.
+            Predicted counts with timeline alignment.
             Same shape as input.
             First len(delay_pmf)-1 days are NaN.
         """
@@ -121,9 +121,9 @@ class _CountBase(BaseObservationProcess):
         def convolve_col(col):  # numpydoc ignore=GL08
             return self._convolve_with_alignment(col, delay_pmf, ascertainment_rate)[0]
 
-        expected_counts = jax.vmap(convolve_col, in_axes=1, out_axes=1)(infections)
+        predicted_counts = jax.vmap(convolve_col, in_axes=1, out_axes=1)(infections)
 
-        return expected_counts[:, 0] if is_1d else expected_counts
+        return predicted_counts[:, 0] if is_1d else predicted_counts
 
 
 class Counts(_CountBase):
@@ -211,25 +211,25 @@ class Counts(_CountBase):
         -------
         ObservationSample
             Named tuple with `observed` (sampled/conditioned counts) and
-            `expected` (expected counts before noise).
+            `predicted` (predicted counts before noise).
         """
-        expected_counts = self._expected_signal(infections)
-        self._deterministic("expected_counts", expected_counts)
-        expected_counts_safe = jnp.nan_to_num(expected_counts, nan=0.0)
+        predicted_counts = self._predicted_obs(infections)
+        self._deterministic("predicted_counts", predicted_counts)
+        predicted_counts_safe = jnp.nan_to_num(predicted_counts, nan=0.0)
 
         # Only use sparse indexing when conditioning on observations
         if times is not None and counts is not None:
-            expected_obs = expected_counts_safe[times]
+            predicted_obs = predicted_counts_safe[times]
         else:
-            expected_obs = expected_counts_safe
+            predicted_obs = predicted_counts_safe
 
         observed = self.noise.sample(
             name="counts",
-            expected=expected_obs,
+            predicted=predicted_obs,
             obs=counts,
         )
 
-        return ObservationSample(observed=observed, expected=expected_counts)
+        return ObservationSample(observed=observed, predicted=predicted_counts)
 
 
 class CountsBySubpop(_CountBase):
@@ -328,21 +328,21 @@ class CountsBySubpop(_CountBase):
         -------
         ObservationSample
             Named tuple with `observed` (sampled/conditioned counts) and
-            `expected` (expected counts before noise, shape: n_days x n_subpops).
+            `predicted` (predicted counts before noise, shape: n_days x n_subpops).
         """
-        # Compute expected counts for all subpops
-        expected_counts_all = self._expected_signal(infections)
+        # Compute predicted counts for all subpops
+        predicted_counts_all = self._predicted_obs(infections)
 
-        self._deterministic("expected_counts_by_subpop", expected_counts_all)
+        self._deterministic("predicted_counts_by_subpop", predicted_counts_all)
 
         # Replace NaN padding with 0 for distribution creation
-        expected_counts_safe = jnp.nan_to_num(expected_counts_all, nan=0.0)
-        expected_obs = expected_counts_safe[times, subpop_indices]
+        predicted_counts_safe = jnp.nan_to_num(predicted_counts_all, nan=0.0)
+        predicted_obs = predicted_counts_safe[times, subpop_indices]
 
         observed = self.noise.sample(
             name="counts_by_subpop",
-            expected=expected_obs,
+            predicted=predicted_obs,
             obs=counts,
         )
 
-        return ObservationSample(observed=observed, expected=expected_counts_all)
+        return ObservationSample(observed=observed, predicted=predicted_counts_all)

@@ -36,32 +36,32 @@ class CountNoise(ABC):
     """
     Abstract base for count observation noise models.
 
-    Defines how discrete count observations are distributed around expected values.
+    Defines how discrete count observations are distributed around predicted values.
     """
 
     @abstractmethod
     def sample(
         self,
         name: str,
-        expected: ArrayLike,
+        predicted: ArrayLike,
         obs: ArrayLike | None = None,
     ) -> ArrayLike:
         """
-        Sample count observations given expected counts.
+        Sample count observations given predicted counts.
 
         Parameters
         ----------
         name : str
             Numpyro sample site name.
-        expected : ArrayLike
-            Expected count values (non-negative).
+        predicted : ArrayLike
+            Predicted count values (non-negative).
         obs : ArrayLike | None
             Observed counts for conditioning, or None for prior sampling.
 
         Returns
         -------
         ArrayLike
-            Sampled or conditioned counts, same shape as expected.
+            Sampled or conditioned counts, same shape as predicted.
         """
         pass  # pragma: no cover
 
@@ -98,7 +98,7 @@ class PoissonNoise(CountNoise):
     def sample(
         self,
         name: str,
-        expected: ArrayLike,
+        predicted: ArrayLike,
         obs: ArrayLike | None = None,
     ) -> ArrayLike:
         """
@@ -108,8 +108,8 @@ class PoissonNoise(CountNoise):
         ----------
         name : str
             Numpyro sample site name.
-        expected : ArrayLike
-            Expected count values.
+        predicted : ArrayLike
+            Predicted count values.
         obs : ArrayLike | None
             Observed counts for conditioning.
 
@@ -120,7 +120,7 @@ class PoissonNoise(CountNoise):
         """
         return numpyro.sample(
             name,
-            dist.Poisson(rate=expected + _EPSILON),
+            dist.Poisson(rate=predicted + _EPSILON),
             obs=obs,
         )
 
@@ -178,7 +178,7 @@ class NegativeBinomialNoise(CountNoise):
     def sample(
         self,
         name: str,
-        expected: ArrayLike,
+        predicted: ArrayLike,
         obs: ArrayLike | None = None,
     ) -> ArrayLike:
         """
@@ -188,8 +188,8 @@ class NegativeBinomialNoise(CountNoise):
         ----------
         name : str
             Numpyro sample site name.
-        expected : ArrayLike
-            Expected count values.
+        predicted : ArrayLike
+            Predicted count values.
         obs : ArrayLike | None
             Observed counts for conditioning.
 
@@ -202,7 +202,7 @@ class NegativeBinomialNoise(CountNoise):
         return numpyro.sample(
             name,
             dist.NegativeBinomial2(
-                mean=expected + _EPSILON,
+                mean=predicted + _EPSILON,
                 concentration=concentration,
             ),
             obs=obs,
@@ -213,26 +213,26 @@ class MeasurementNoise(ABC):
     """
     Abstract base for continuous measurement noise models.
 
-    Defines how continuous observations are distributed around expected values.
+    Defines how continuous observations are distributed around predicted values.
     """
 
     @abstractmethod
     def sample(
         self,
         name: str,
-        expected: ArrayLike,
+        predicted: ArrayLike,
         obs: ArrayLike | None = None,
         **kwargs,
     ) -> ArrayLike:
         """
-        Sample continuous observations given expected values.
+        Sample continuous observations given predicted values.
 
         Parameters
         ----------
         name : str
             Numpyro sample site name.
-        expected : ArrayLike
-            Expected measurement values.
+        predicted : ArrayLike
+            Predicted measurement values.
         obs : ArrayLike | None
             Observed measurements for conditioning, or None for prior sampling.
         **kwargs
@@ -241,7 +241,7 @@ class MeasurementNoise(ABC):
         Returns
         -------
         ArrayLike
-            Sampled or conditioned measurements, same shape as expected.
+            Sampled or conditioned measurements, same shape as predicted.
         """
         pass  # pragma: no cover
 
@@ -262,7 +262,7 @@ class HierarchicalNormalNoise(MeasurementNoise):
     """
     Normal noise with hierarchical sensor-level effects.
 
-    Observation model: ``obs ~ Normal(expected + sensor_mode, sensor_sd)``
+    Observation model: ``obs ~ Normal(predicted + sensor_mode, sensor_sd)``
     where sensor_mode and sensor_sd are hierarchically modeled.
 
     Parameters
@@ -327,7 +327,7 @@ class HierarchicalNormalNoise(MeasurementNoise):
     def sample(
         self,
         name: str,
-        expected: ArrayLike,
+        predicted: ArrayLike,
         obs: ArrayLike | None = None,
         *,
         sensor_indices: ArrayLike,
@@ -340,8 +340,8 @@ class HierarchicalNormalNoise(MeasurementNoise):
         ----------
         name : str
             Numpyro sample site name.
-        expected : ArrayLike
-            Expected log-scale measurement values.
+        predicted : ArrayLike
+            Predicted log-scale measurement values.
             Shape: (n_obs,)
         obs : ArrayLike | None
             Observed log-scale measurements for conditioning.
@@ -366,7 +366,7 @@ class HierarchicalNormalNoise(MeasurementNoise):
         sensor_mode = self.sensor_mode_prior_rv.sample(n_groups=n_sensors)
         sensor_sd = self.sensor_sd_prior_rv.sample(n_groups=n_sensors)
 
-        loc = expected + sensor_mode[sensor_indices]
+        loc = predicted + sensor_mode[sensor_indices]
         scale = sensor_sd[sensor_indices]
 
         return numpyro.sample(name, dist.Normal(loc=loc, scale=scale), obs=obs)
