@@ -6,11 +6,12 @@ test data, and common configurations used across multiple test files.
 """
 
 import jax.numpy as jnp
+import numpyro.distributions as dist
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.observation import Counts, NegativeBinomialNoise
-from pyrenew.randomvariable import HierarchicalNormalPrior, TruncatedNormalGroupSdPrior
+from pyrenew.randomvariable import DistributionalVariable
 
 # =============================================================================
 # PMF Fixtures
@@ -122,73 +123,63 @@ def medium_shedding_pmf():
 
 
 # =============================================================================
-# Hierarchical Prior Fixtures
+# Sensor Prior Fixtures
 # =============================================================================
 
 
 @pytest.fixture
-def sensor_mode_prior():
+def sensor_mode_rv():
     """
-    Standard hierarchical normal prior for sensor modes.
+    Standard normal prior for sensor modes.
 
     Returns
     -------
-    HierarchicalNormalPrior
-        A hierarchical normal prior with standard deviation 0.5.
+    DistributionalVariable
+        A normal prior with standard deviation 0.5.
     """
-    return HierarchicalNormalPrior(
-        name="ww_sensor_mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
-    )
+    return DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5))
 
 
 @pytest.fixture
-def sensor_mode_prior_tight():
+def sensor_mode_rv_tight():
     """
-    Tight hierarchical normal prior for deterministic-like behavior.
+    Tight normal prior for deterministic-like behavior.
 
     Returns
     -------
-    HierarchicalNormalPrior
-        A hierarchical normal prior with small standard deviation 0.01.
+    DistributionalVariable
+        A normal prior with small standard deviation 0.01.
     """
-    return HierarchicalNormalPrior(
-        name="ww_sensor_mode", sd_rv=DeterministicVariable("mode_sd_tight", 0.01)
-    )
+    return DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.01))
 
 
 @pytest.fixture
-def sensor_sd_prior():
+def sensor_sd_rv():
     """
     Standard truncated normal prior for sensor standard deviations.
 
     Returns
     -------
-    TruncatedNormalGroupSdPrior
-        A truncated normal prior for group standard deviations.
+    DistributionalVariable
+        A truncated normal prior for sensor standard deviations.
     """
-    return TruncatedNormalGroupSdPrior(
-        name="ww_sensor_sd",
-        loc_rv=DeterministicVariable("sd_loc", 0.3),
-        scale_rv=DeterministicVariable("sd_scale", 0.15),
-        sd_min=0.10,
+    return DistributionalVariable(
+        "ww_sensor_sd", dist.TruncatedNormal(0.3, 0.15, low=0.10)
     )
 
 
 @pytest.fixture
-def sensor_sd_prior_tight():
+def sensor_sd_rv_tight():
     """
     Tight truncated normal prior for deterministic-like behavior.
 
     Returns
     -------
-    TruncatedNormalGroupSdPrior
+    DistributionalVariable
         A truncated normal prior with small scale for tight behavior.
     """
-    return TruncatedNormalGroupSdPrior(
-        name="ww_sensor_sd",
-        loc_rv=DeterministicVariable("sd_loc_tight", 0.01),
-        scale_rv=DeterministicVariable("sd_scale_tight", 0.005),
-        sd_min=0.005,
+    return DistributionalVariable(
+        "ww_sensor_sd", dist.TruncatedNormal(0.01, 0.005, low=0.005)
     )
 
 

@@ -6,12 +6,13 @@ These tests validate the measurement observation process base class implementati
 
 import jax.numpy as jnp
 import numpyro
+import numpyro.distributions as dist
 import pytest
 
-from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.deterministic import DeterministicPMF
 from pyrenew.observation import HierarchicalNormalNoise, Measurements
 from pyrenew.observation.base import BaseObservationProcess
-from pyrenew.randomvariable import HierarchicalNormalPrior, TruncatedNormalGroupSdPrior
+from pyrenew.randomvariable import DistributionalVariable
 
 
 class ConcreteMeasurements(Measurements):
@@ -76,15 +77,11 @@ class TestMeasurementsBase:
     def test_infection_resolution_is_subpop(self):
         """Test that Measurements returns 'subpop' resolution."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
-        sensor_mode_prior = HierarchicalNormalPrior(
-            name="mode", sd_rv=DeterministicVariable("sd", 0.5)
+        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
+        sensor_sd_rv = DistributionalVariable(
+            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
         )
-        sensor_sd_prior = TruncatedNormalGroupSdPrior(
-            name="sd",
-            loc_rv=DeterministicVariable("loc", 0.3),
-            scale_rv=DeterministicVariable("scale", 0.15),
-        )
-        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
         process = ConcreteMeasurements(
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
@@ -99,29 +96,21 @@ class TestHierarchicalNormalNoise:
 
     def test_validate(self):
         """Test HierarchicalNormalNoise validate method."""
-        sensor_mode_prior = HierarchicalNormalPrior(
-            name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
+        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
+        sensor_sd_rv = DistributionalVariable(
+            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
         )
-        sensor_sd_prior = TruncatedNormalGroupSdPrior(
-            name="sd",
-            loc_rv=DeterministicVariable("sd_loc", 0.3),
-            scale_rv=DeterministicVariable("sd_scale", 0.15),
-        )
-        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
         # Should not raise - validation is deferred to sample time
         noise.validate()
 
     def test_sample_shape(self):
         """Test that HierarchicalNormalNoise produces correct shape."""
-        sensor_mode_prior = HierarchicalNormalPrior(
-            name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
+        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
+        sensor_sd_rv = DistributionalVariable(
+            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
         )
-        sensor_sd_prior = TruncatedNormalGroupSdPrior(
-            name="sd",
-            loc_rv=DeterministicVariable("sd_loc", 0.3),
-            scale_rv=DeterministicVariable("sd_scale", 0.15),
-        )
-        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
         predicted = jnp.array([1.0, 2.0, 3.0, 4.0])
         sensor_indices = jnp.array([0, 0, 1, 1])
@@ -139,15 +128,11 @@ class TestHierarchicalNormalNoise:
 
     def test_sample_with_observations(self):
         """Test that HierarchicalNormalNoise conditions on observations."""
-        sensor_mode_prior = HierarchicalNormalPrior(
-            name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
+        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
+        sensor_sd_rv = DistributionalVariable(
+            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
         )
-        sensor_sd_prior = TruncatedNormalGroupSdPrior(
-            name="sd",
-            loc_rv=DeterministicVariable("sd_loc", 0.3),
-            scale_rv=DeterministicVariable("sd_scale", 0.15),
-        )
-        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
         predicted = jnp.array([1.0, 2.0, 3.0, 4.0])
         obs = jnp.array([1.1, 2.1, 3.1, 4.1])
@@ -172,15 +157,11 @@ class TestConcreteMeasurements:
     def test_sample_shape(self):
         """Test that sample returns correct shape."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
-        sensor_mode_prior = HierarchicalNormalPrior(
-            name="mode", sd_rv=DeterministicVariable("mode_sd", 0.5)
+        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
+        sensor_sd_rv = DistributionalVariable(
+            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
         )
-        sensor_sd_prior = TruncatedNormalGroupSdPrior(
-            name="sd",
-            loc_rv=DeterministicVariable("sd_loc", 0.3),
-            scale_rv=DeterministicVariable("sd_scale", 0.15),
-        )
-        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
         process = ConcreteMeasurements(
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
@@ -209,16 +190,11 @@ class TestConcreteMeasurements:
     def test_predicted_obs_stored(self):
         """Test that predicted_log_conc is stored as deterministic."""
         shedding_pmf = jnp.array([0.5, 0.5])
-        sensor_mode_prior = HierarchicalNormalPrior(
-            name="mode", sd_rv=DeterministicVariable("mode_sd", 0.01)
+        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.01))
+        sensor_sd_rv = DistributionalVariable(
+            "sd", dist.TruncatedNormal(0.01, 0.005, low=0.001)
         )
-        sensor_sd_prior = TruncatedNormalGroupSdPrior(
-            name="sd",
-            loc_rv=DeterministicVariable("sd_loc", 0.01),
-            scale_rv=DeterministicVariable("sd_scale", 0.005),
-            sd_min=0.001,
-        )
-        noise = HierarchicalNormalNoise(sensor_mode_prior, sensor_sd_prior)
+        noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
         process = ConcreteMeasurements(
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),

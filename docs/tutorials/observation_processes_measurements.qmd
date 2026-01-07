@@ -15,11 +15,10 @@ import numpy as np
 import numpyro
 import matplotlib.pyplot as plt
 
+import numpyro.distributions as dist
+
 from pyrenew.observation import Measurements, HierarchicalNormalNoise
-from pyrenew.randomvariable import (
-    HierarchicalNormalPrior,
-    TruncatedNormalGroupSdPrior,
-)
+from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 ```
 
@@ -215,33 +214,22 @@ ml_per_person_per_day = 1000.0
 
 A measurement depends on both the thing being measured (e.g., wastewater from a treatment plant) and the calibration of the lab/instruments used to obtain that measurement. We call this combination a "sensor"—the WWTP/lab pair that determines the measurement characteristics. Different sensors have systematic biases and variabilities that we model with hierarchical effects.
 
-For the sensor-level standard deviations, we use a truncated normal prior. This is a common choice for SD parameters because:
-
-- It naturally constrains values to be positive
-- The `loc` parameter represents our prior expectation for the SD
-- The `scale` parameter controls how uncertain we are about the SD
-- The `sd_min` floor prevents numerical issues when SDs approach zero
+The `HierarchicalNormalNoise` model samples sensor-level parameters within a plate context, so any `RandomVariable` can be used. For the sensor-level standard deviations, we use a truncated normal prior—a common choice for SD parameters because it naturally constrains values to be positive.
 
 ```{python}
 # | label: noise-model
-# Sensor-level mode: systematic differences between sensors
-sensor_mode_prior = HierarchicalNormalPrior(
-    name="ww_sensor_mode",
-    sd_rv=DeterministicVariable("mode_sd", 0.5),
-)
+# Sensor-level mode: systematic differences between sensors (zero-centered normal)
+sensor_mode_rv = DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5))
 
-# Sensor-level SD: measurement variability within each sensor
-sensor_sd_prior = TruncatedNormalGroupSdPrior(
-    name="ww_sensor_sd",
-    loc_rv=DeterministicVariable("sd_loc", 0.3),
-    scale_rv=DeterministicVariable("sd_scale", 0.15),
-    sd_min=0.10,
+# Sensor-level SD: measurement variability within each sensor (truncated normal)
+sensor_sd_rv = DistributionalVariable(
+    "ww_sensor_sd", dist.TruncatedNormal(loc=0.3, scale=0.15, low=0.10)
 )
 
 # Create the noise model
 ww_noise = HierarchicalNormalNoise(
-    sensor_mode_prior_rv=sensor_mode_prior,
-    sensor_sd_prior_rv=sensor_sd_prior,
+    sensor_mode_rv=sensor_mode_rv,
+    sensor_sd_rv=sensor_sd_rv,
 )
 ```
 

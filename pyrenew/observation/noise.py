@@ -263,55 +263,63 @@ class HierarchicalNormalNoise(MeasurementNoise):
     Normal noise with hierarchical sensor-level effects.
 
     Observation model: ``obs ~ Normal(predicted + sensor_mode, sensor_sd)``
-    where sensor_mode and sensor_sd are hierarchically modeled.
+    where sensor_mode and sensor_sd are sampled per-sensor within a plate.
 
     Parameters
     ----------
-    sensor_mode_prior_rv : RandomVariable
-        Hierarchical prior for sensor-level modes (log-scale biases).
-        Must support ``sample(n_groups=...)`` interface.
-    sensor_sd_prior_rv : RandomVariable
-        Hierarchical prior for sensor-level SDs (must be > 0).
-        Must support ``sample(n_groups=...)`` interface.
+    sensor_mode_rv : RandomVariable
+        Prior for sensor-level modes (log-scale biases).
+        Sampled once per sensor within a plate context.
+        Example: ``DistributionalVariable("mode", dist.Normal(0, 0.5))``
+    sensor_sd_rv : RandomVariable
+        Prior for sensor-level SDs (should be > 0).
+        Sampled once per sensor within a plate context.
+        Example: ``DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05))``
 
     Notes
     -----
     Expects data already on log scale for wastewater applications.
 
-    See Also
+    The sensor-level parameters are sampled within a numpyro plate context,
+    so any standard RandomVariable can be used (no special interface required).
+
+    Examples
     --------
-    pyrenew.randomvariable.HierarchicalNormalPrior :
-        Suitable prior for sensor_mode_prior_rv
-    pyrenew.randomvariable.TruncatedNormalGroupSdPrior :
-        Suitable prior for sensor_sd_prior_rv
+    >>> from pyrenew.randomvariable import DistributionalVariable
+    >>> import numpyro.distributions as dist
+    >>>
+    >>> noise = HierarchicalNormalNoise(
+    ...     sensor_mode_rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
+    ...     sensor_sd_rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
+    ... )
     """
 
     def __init__(
         self,
-        sensor_mode_prior_rv: RandomVariable,
-        sensor_sd_prior_rv: RandomVariable,
+        sensor_mode_rv: RandomVariable,
+        sensor_sd_rv: RandomVariable,
     ) -> None:
         """
         Initialize hierarchical Normal noise.
 
         Parameters
         ----------
-        sensor_mode_prior_rv : RandomVariable
-            Hierarchical prior for sensor-level modes (log-scale biases).
-            Must support ``sample(n_groups=...)`` interface.
-        sensor_sd_prior_rv : RandomVariable
-            Hierarchical prior for sensor-level SDs (must be > 0).
-            Must support ``sample(n_groups=...)`` interface.
+        sensor_mode_rv : RandomVariable
+            Prior for sensor-level modes (log-scale biases).
+            Sampled once per sensor within a plate context.
+        sensor_sd_rv : RandomVariable
+            Prior for sensor-level SDs (should be > 0).
+            Sampled once per sensor within a plate context.
         """
-        self.sensor_mode_prior_rv = sensor_mode_prior_rv
-        self.sensor_sd_prior_rv = sensor_sd_prior_rv
+        self.sensor_mode_rv = sensor_mode_rv
+        self.sensor_sd_rv = sensor_sd_rv
 
     def __repr__(self) -> str:
         """Return string representation."""
         return (
             f"HierarchicalNormalNoise("
-            f"sensor_mode_prior_rv={self.sensor_mode_prior_rv!r}, "
-            f"sensor_sd_prior_rv={self.sensor_sd_prior_rv!r})"
+            f"sensor_mode_rv={self.sensor_mode_rv!r}, "
+            f"sensor_sd_rv={self.sensor_sd_rv!r})"
         )
 
     def validate(self) -> None:
@@ -363,8 +371,9 @@ class HierarchicalNormalNoise(MeasurementNoise):
         ValueError
             If sensor_sd samples non-positive values.
         """
-        sensor_mode = self.sensor_mode_prior_rv.sample(n_groups=n_sensors)
-        sensor_sd = self.sensor_sd_prior_rv.sample(n_groups=n_sensors)
+        with numpyro.plate("sensor", n_sensors):
+            sensor_mode = self.sensor_mode_rv()
+            sensor_sd = self.sensor_sd_rv()
 
         loc = predicted + sensor_mode[sensor_indices]
         scale = sensor_sd[sensor_indices]
