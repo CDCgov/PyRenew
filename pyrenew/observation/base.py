@@ -310,7 +310,11 @@ class BaseObservationProcess(RandomVariable):
         pass  # pragma: no cover
 
     @abstractmethod
-    def sample(self, **kwargs) -> ArrayLike:
+    def sample(
+        self,
+        obs: ArrayLike | None = None,
+        **kwargs,
+    ) -> ArrayLike:
         """
         Sample from the observation process.
 
@@ -320,11 +324,10 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
+        obs : ArrayLike | None
+            Observed data for conditioning, or None for prior predictive sampling.
         **kwargs
-            Subclass-specific parameters. At minimum, should include:
-
-            - infections from the infection process
-            - Observed data (or None for prior predictive sampling)
+            Subclass-specific parameters (e.g., infections from the infection process).
 
         Returns
         -------
