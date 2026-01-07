@@ -22,7 +22,7 @@ from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 
 ## Overview
 
-Measurement observation processes model continuous signals derived from infections, such as viral RNA concentrations in wastewater. Unlike count observations (hospital admissions, deaths), measurements are continuous values that span orders of magnitude.
+Measurement observation processes model continuous signals derived from infections, such as viral RNA concentrations in wastewater. Unlike count observations (hospital admissions, deaths), measurements are continuous values and in some cases may be negative.
 
 The expected measurement on day $t$ is:
 
