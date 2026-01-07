@@ -9,7 +9,7 @@ Count Noise
 -----------
 - ``PoissonNoise``: Equidispersed counts (variance = mean). No parameters.
 - ``NegativeBinomialNoise``: Overdispersed counts (variance > mean).
-  Takes ``concentration_rv`` (higher = less overdispersion).
+  Takes ``concentration_rv`` (higher concentration = less overdispersed, more Poisson-like).
 
 Measurement Noise
 -----------------
