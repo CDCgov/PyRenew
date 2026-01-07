@@ -163,7 +163,7 @@ class Counts(_CountBase):
     >>>
     >>> with numpyro.handlers.seed(rng_seed=42):
     ...     infections = jnp.ones(30) * 1000
-    ...     sampled_counts = counts_obs.sample(infections=infections, counts=None)
+    ...     sampled_counts = counts_obs.sample(infections=infections, obs=None)
     """
 
     def infection_resolution(self) -> str:
@@ -188,7 +188,7 @@ class Counts(_CountBase):
     def sample(
         self,
         infections: ArrayLike,
-        counts: ArrayLike | None = None,
+        obs: ArrayLike | None = None,
         times: ArrayLike | None = None,
     ) -> ObservationSample:
         """
@@ -202,7 +202,7 @@ class Counts(_CountBase):
         infections : ArrayLike
             Aggregate infections from the infection process.
             Shape: (n_days,)
-        counts : ArrayLike | None
+        obs : ArrayLike | None
             Observed counts. Dense: (n_days,), Sparse: (n_obs,), None: prior.
         times : ArrayLike | None
             Day indices for sparse observations. None for dense observations.
@@ -218,7 +218,7 @@ class Counts(_CountBase):
         predicted_counts_safe = jnp.nan_to_num(predicted_counts, nan=0.0)
 
         # Only use sparse indexing when conditioning on observations
-        if times is not None and counts is not None:
+        if times is not None and obs is not None:
             predicted_obs = predicted_counts_safe[times]
         else:
             predicted_obs = predicted_counts_safe
@@ -226,7 +226,7 @@ class Counts(_CountBase):
         observed = self.noise.sample(
             name="counts",
             predicted=predicted_obs,
-            obs=counts,
+            obs=obs,
         )
 
         return ObservationSample(observed=observed, predicted=predicted_counts)
@@ -274,7 +274,7 @@ class CountsBySubpop(_CountBase):
     ...         infections=infections,
     ...         subpop_indices=subpop_indices,
     ...         times=times,
-    ...         counts=None,
+    ...         obs=None,
     ...     )
     """
 
@@ -302,7 +302,7 @@ class CountsBySubpop(_CountBase):
         infections: ArrayLike,
         subpop_indices: ArrayLike,
         times: ArrayLike,
-        counts: ArrayLike | None = None,
+        obs: ArrayLike | None = None,
     ) -> ObservationSample:
         """
         Sample subpopulation-level counts with flexible indexing.
@@ -321,7 +321,7 @@ class CountsBySubpop(_CountBase):
         times : ArrayLike
             Day index for each observation (0-indexed).
             Shape: (n_obs,)
-        counts : ArrayLike | None
+        obs : ArrayLike | None
             Observed counts (n_obs,), or None for prior sampling.
 
         Returns
@@ -342,7 +342,7 @@ class CountsBySubpop(_CountBase):
         observed = self.noise.sample(
             name="counts_by_subpop",
             predicted=predicted_obs,
-            obs=counts,
+            obs=obs,
         )
 
         return ObservationSample(observed=observed, predicted=predicted_counts_all)

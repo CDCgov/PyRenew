@@ -199,7 +199,7 @@ class TestConcreteMeasurements:
                 subpop_indices=subpop_indices,
                 sensor_indices=sensor_indices,
                 times=times,
-                concentrations=None,
+                obs=None,
                 n_sensors=2,
             )
 
@@ -237,7 +237,7 @@ class TestConcreteMeasurements:
                     subpop_indices=subpop_indices,
                     sensor_indices=sensor_indices,
                     times=times,
-                    concentrations=None,
+                    obs=None,
                     n_sensors=2,
                 )
             ).get_trace()

@@ -166,7 +166,7 @@ infections = infections.at[infection_spike_day].set(2000)
 with numpyro.handlers.seed(rng_seed=42):
     hosp_admissions = hosp_process.sample(
         infections=infections,
-        counts=None,  # Sample from prior (no observed data)
+        obs=None,  # Sample from prior (no observed data)
     )
 ```
 
@@ -246,7 +246,7 @@ samples = []
 
 for seed in range(n_samples):
     with numpyro.handlers.seed(rng_seed=seed):
-        result = hosp_process.sample(infections=infections, counts=None)
+        result = hosp_process.sample(infections=infections, obs=None)
     samples.append(np.array(result.observed[day_one:]))
 
 samples = np.array(samples)
@@ -328,7 +328,7 @@ for ihr_val in ihr_values:
     samples = []
     for seed in range(20):
         with numpyro.handlers.seed(rng_seed=seed):
-            result = process.sample(infections=infections_decay, counts=None)
+            result = process.sample(infections=infections_decay, obs=None)
         samples.append(np.array(result.observed[day_one:]))
     results[ihr_val] = np.mean(samples, axis=0)
 ```
@@ -381,9 +381,7 @@ for ax, conc_val in zip(axes, concentration_values):
 
     for seed in range(n_replicates):
         with numpyro.handlers.seed(rng_seed=seed):
-            result = process.sample(
-                infections=infections_constant, counts=None
-            )
+            result = process.sample(infections=infections_constant, obs=None)
         ax.plot(
             np.arange(n_plot_days),
             np.array(result.observed[day_one:]),
@@ -416,7 +414,7 @@ hosp_process_poisson = Counts(
 with numpyro.handlers.seed(rng_seed=42):
     poisson_result = hosp_process_poisson.sample(
         infections=infections,
-        counts=None,
+        obs=None,
     )
 
 print(

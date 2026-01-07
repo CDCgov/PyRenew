@@ -68,7 +68,7 @@ class TestCountsBasics:
         with numpyro.handlers.seed(rng_seed=42):
             result = counts_process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         assert result.observed.shape[0] > 0
@@ -85,7 +85,7 @@ class TestCountsBasics:
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         # Timeline alignment: output length equals input length
@@ -108,7 +108,7 @@ class TestCountsBasics:
             with numpyro.handlers.seed(rng_seed=42):
                 result = process.sample(
                     infections=infections,
-                    counts=None,
+                    obs=None,
                 )
                 results.append(jnp.mean(result.observed))
 
@@ -130,7 +130,7 @@ class TestCountsBasics:
             with numpyro.handlers.seed(rng_seed=seed):
                 result = process.sample(
                     infections=infections,
-                    counts=None,
+                    obs=None,
                 )
                 samples.append(jnp.sum(result.observed))
 
@@ -158,7 +158,7 @@ class TestCountsWithPriors:
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         assert result.observed.shape[0] > 0
@@ -183,7 +183,7 @@ class TestCountsWithPriors:
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         assert result.observed.shape[0] > 0
@@ -200,7 +200,7 @@ class TestCountsEdgeCases:
         with numpyro.handlers.seed(rng_seed=42):
             result = counts_process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         assert result.observed.shape[0] > 0
@@ -212,7 +212,7 @@ class TestCountsEdgeCases:
         with numpyro.handlers.seed(rng_seed=42):
             result = counts_process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         assert result.observed.shape[0] > 0
@@ -227,7 +227,7 @@ class TestCountsEdgeCases:
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         # Timeline alignment maintained
@@ -252,7 +252,7 @@ class TestCountsSparseObservations:
         with numpyro.handlers.seed(rng_seed=42):
             result = counts_process.sample(
                 infections=infections,
-                counts=counts_data,
+                obs=counts_data,
                 times=times,
             )
 
@@ -264,11 +264,11 @@ class TestCountsSparseObservations:
         n_days = 30
         infections = jnp.ones(n_days) * 100
 
-        # Dense: prior sampling (counts=None, no times)
+        # Dense: prior sampling (obs=None, no times)
         with numpyro.handlers.seed(rng_seed=42):
             dense_result = counts_process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         # Sparse with observed data: only some days
@@ -277,7 +277,7 @@ class TestCountsSparseObservations:
         with numpyro.handlers.seed(rng_seed=42):
             sparse_result = counts_process.sample(
                 infections=infections,
-                counts=sparse_obs_data,
+                obs=sparse_obs_data,
                 times=times,
             )
 
@@ -289,23 +289,23 @@ class TestCountsSparseObservations:
         assert jnp.allclose(sparse_result.observed, sparse_obs_data)
 
     def test_prior_sampling_ignores_times(self, counts_process):
-        """Test that times parameter is ignored when counts=None (prior sampling)."""
+        """Test that times parameter is ignored when obs=None (prior sampling)."""
         n_days = 30
         infections = jnp.ones(n_days) * 100
         times = jnp.array([5, 10, 15, 20])
 
-        # When counts=None, times is ignored - output is dense
+        # When obs=None, times is ignored - output is dense
         with numpyro.handlers.seed(rng_seed=42):
             result_with_times = counts_process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
                 times=times,
             )
 
         with numpyro.handlers.seed(rng_seed=42):
             result_without_times = counts_process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         # Both should produce dense output of shape (n_days,)
@@ -336,7 +336,7 @@ class TestCountsBySubpop:
                 infections=infections,
                 subpop_indices=subpop_indices,
                 times=times,
-                counts=None,
+                obs=None,
             )
 
         assert result.observed.shape == times.shape
@@ -370,7 +370,7 @@ class TestPoissonNoise:
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
-                counts=None,
+                obs=None,
             )
 
         assert result.observed.shape[0] == 20

@@ -89,7 +89,7 @@ class Measurements(BaseObservationProcess):
         subpop_indices: ArrayLike,
         sensor_indices: ArrayLike,
         times: ArrayLike,
-        concentrations: ArrayLike | None,
+        obs: ArrayLike | None,
         n_sensors: int,
     ) -> ObservationSample:
         """
@@ -116,7 +116,7 @@ class Measurements(BaseObservationProcess):
         times : ArrayLike
             Day index for each observation (0-indexed).
             Shape: (n_obs,)
-        concentrations : ArrayLike | None
+        obs : ArrayLike | None
             Observed measurements (n_obs,), or None for prior sampling.
         n_sensors : int
             Total number of measurement sensors.
@@ -136,7 +136,7 @@ class Measurements(BaseObservationProcess):
         observed = self.noise.sample(
             name="concentrations",
             predicted=predicted_obs,
-            obs=concentrations,
+            obs=obs,
             sensor_indices=sensor_indices,
             n_sensors=n_sensors,
         )

@@ -292,7 +292,7 @@ with numpyro.handlers.seed(rng_seed=42):
         subpop_indices=jnp.zeros(n_obs, dtype=jnp.int32),
         sensor_indices=jnp.zeros(n_obs, dtype=jnp.int32),
         times=observation_days,
-        concentrations=None,  # Sample from prior
+        obs=None,
         n_sensors=1,
     )
 ```
@@ -340,7 +340,7 @@ for seed in range(n_samples):
             subpop_indices=jnp.zeros(n_obs, dtype=jnp.int32),
             sensor_indices=jnp.zeros(n_obs, dtype=jnp.int32),
             times=observation_days,
-            concentrations=None,
+            obs=None,
             n_sensors=1,
         )
     for day_idx, conc in zip(observation_days, ww_result.observed):
@@ -427,7 +427,7 @@ with numpyro.handlers.seed(rng_seed=42):
         subpop_indices=subpop_ids,
         sensor_indices=sensor_ids,
         times=observation_times,
-        concentrations=None,
+        obs=None,
         n_sensors=num_sensors,
     )
 ```
@@ -488,7 +488,7 @@ for genome_val in genome_values:
             subpop_indices=jnp.zeros(n_obs_cmp, dtype=jnp.int32),
             sensor_indices=jnp.zeros(n_obs_cmp, dtype=jnp.int32),
             times=observation_days_cmp,
-            concentrations=None,
+            obs=None,
             n_sensors=1,
         )
     results[genome_val] = np.array(ww_temp.observed)
@@ -545,7 +545,7 @@ with numpyro.handlers.seed(rng_seed=42):
         subpop_indices=subpop_ids_mp,
         sensor_indices=sensor_ids_mp,
         times=obs_days_mp,
-        concentrations=None,
+        obs=None,
         n_sensors=2,
     )
 ```
