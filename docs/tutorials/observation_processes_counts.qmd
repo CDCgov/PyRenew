@@ -23,6 +23,7 @@ from pathlib import Path
 import sys
 import warnings
 from plotnine.exceptions import PlotnineWarning
+
 warnings.filterwarnings("ignore", category=PlotnineWarning)
 
 import matplotlib.pyplot as plt
@@ -92,7 +93,9 @@ days = np.arange(len(hosp_delay_pmf))
 mean_delay = float(np.sum(days * hosp_delay_pmf))
 mode_delay = int(np.argmax(hosp_delay_pmf))
 sd = float(np.sqrt(np.sum(days**2 * hosp_delay_pmf) - mean_delay**2))
-print(f"mode delay: {mode_delay},  mean delay: {mean_delay:.1f},  sd: {sd:.1f}")
+print(
+    f"mode delay: {mode_delay},  mean delay: {mean_delay:.1f},  sd: {sd:.1f}"
+)
 ```
 
 <details>
@@ -182,6 +185,7 @@ Hospital admissions depend on infections from prior days (the length of our dela
 ```{python}
 # | label: helper-function
 print(f"Required lookback: {hosp_process.lookback_days()} days")
+
 
 def first_valid_observation_day(obs_process) -> int:
     """Return the first day index with complete infection history for convolution."""
