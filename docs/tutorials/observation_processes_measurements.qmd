@@ -33,7 +33,7 @@ from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 ```
 
-# The Measurements Framework
+## The Measurements Class
 
 The `Measurements` class models continuous signals derived from infections. Unlike count observations (hospital admissions, deaths), measurements are continuous values that may span orders of magnitude or even be negative (e.g., log-transformed data).
 
@@ -44,7 +44,7 @@ The `Measurements` class models continuous signals derived from infections. Unli
 - Serological assay results
 - Environmental sensor readings
 
-## The general pattern
+### The general pattern
 
 All measurement observation processes follow the same pattern:
 
@@ -62,7 +62,7 @@ The `Measurements` base class provides:
 - Integration with hierarchical noise models
 - Support for multiple sensors and subpopulations
 
-## Comparison with count observations
+### Comparison with count observations
 
 The core convolution structure is shared with count observations, but key aspects differ:
 
@@ -74,7 +74,7 @@ The core convolution structure is shared with count observations, but key aspect
 | Scaling | Ascertainment rate $\alpha \in [0,1]$ | Domain-specific |
 | Subpop structure | Optional (`CountsBySubpop`) | Inherent (sensor/site effects) |
 
-## The noise model
+### The noise model
 
 Measurement data typically exhibits **sensor-level variability**: different instruments, labs, or sampling locations have systematic biases and different precision levels.
 
@@ -106,7 +106,7 @@ noise = HierarchicalNormalNoise(
 )
 ```
 
-## The indexing system
+### The indexing system
 
 Measurement observations use three index arrays to map observations to their context:
 
@@ -122,7 +122,7 @@ This flexible indexing supports:
 - **Multiple sensors per subpopulation**: Different labs analyzing the same source
 - **Multiple subpopulations per sensor**: One sensor serving multiple areas (less common)
 
-## Subclassing Measurements
+### Subclassing Measurements
 
 To create a measurement process for your domain, subclass `Measurements` and implement:
 
@@ -151,12 +151,12 @@ class MyMeasurement(Measurements):
 ```
 
 
-# Wastewater Example
+## Measurement Example: Wastewater
 
 To illustrate the framework, we specify a wastewater viral concentration observation process,
 based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-hew) family of models.
 
-## The wastewater signal
+**The wastewater signal**
 
 Wastewater treatment plants measure viral RNA concentrations in sewage.
 The predicted concentration depends on:
@@ -180,7 +180,7 @@ Observations are log-concentrations with normal noise:
 
 $$y_t \sim \text{Normal}(\log(\lambda_t) + \text{sensor\_mode}, \text{sensor\_sd})$$
 
-## Implementing the Wastewater class
+### Implementing the Wastewater class
 
 ```{python}
 # | label: wastewater-class
@@ -264,9 +264,9 @@ class Wastewater(Measurements):
         return jnp.log(concentration)
 ```
 
-## Configuring wastewater-specific parameters
+#### Configuring wastewater-specific parameters
 
-### Viral shedding kinetics
+**Viral shedding kinetics**
 
 The shedding PMF describes what fraction of total viral shedding occurs on each day after infection:
 
@@ -329,7 +329,7 @@ shedding_df = pd.DataFrame(
 )
 ```
 
-### Genome copies and wastewater volume
+**Genome copies and wastewater volume**
 
 ```{python}
 # | label: scaling-params
@@ -362,7 +362,7 @@ ww_noise = HierarchicalNormalNoise(
 )
 ```
 
-## Creating the wastewater observation process
+### Creating the wastewater observation process
 
 ```{python}
 # | label: create-process
@@ -376,7 +376,7 @@ ww_process = Wastewater(
 print(f"Required lookback: {ww_process.lookback_days()} days")
 ```
 
-## Demonstrations
+## Simulations
 
 ### Timeline alignment
 
@@ -711,7 +711,7 @@ The diverging trajectories reflect the different underlying infection curves. Su
 
 ## Summary
 
-The `Measurements` framework provides:
+The `Measurements` class provides:
 
 1. **A consistent interface** for continuous observation processes
 2. **Hierarchical noise models** that capture sensor-level variability
