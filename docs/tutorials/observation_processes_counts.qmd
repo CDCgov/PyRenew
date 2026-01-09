@@ -4,13 +4,17 @@ format:
   gfm:
     fig-width: 16
     fig-height: 10
+  html:
+    toc: true
+    embed-resources: true
+    self-contained-math: true
+    code-fold: true
+    code-tools: true
 engine: jupyter
 ---
 
 This tutorial demonstrates how to use the `Counts` observation process to model count data such as hospital admissions, emergency department visits, or deaths.
 
-<details>
-<summary>Show code</summary>
 ```{python}
 # | label: setup
 # | output: false
@@ -23,6 +27,7 @@ from pathlib import Path
 import sys
 import warnings
 from plotnine.exceptions import PlotnineWarning
+
 warnings.filterwarnings("ignore", category=PlotnineWarning)
 
 import matplotlib.pyplot as plt
@@ -31,7 +36,6 @@ from pyrenew.observation import Counts, NegativeBinomialNoise, PoissonNoise
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 from pyrenew import datasets
 ```
-</details>
 
 ## Overview
 
@@ -92,11 +96,11 @@ days = np.arange(len(hosp_delay_pmf))
 mean_delay = float(np.sum(days * hosp_delay_pmf))
 mode_delay = int(np.argmax(hosp_delay_pmf))
 sd = float(np.sqrt(np.sum(days**2 * hosp_delay_pmf) - mean_delay**2))
-print(f"mode delay: {mode_delay},  mean delay: {mean_delay:.1f},  sd: {sd:.1f}")
+print(
+    f"mode delay: {mode_delay},  mean delay: {mean_delay:.1f},  sd: {sd:.1f}"
+)
 ```
 
-<details>
-<summary>Show code</summary>
 ```{python}
 # | label: plot-delay-distribution
 delay_df = pd.DataFrame(
@@ -136,10 +140,6 @@ plot_delay = (
         size=10,
     )
 )
-```
-</details>
-```{python}
-# | label: viz-delay-distribution
 plot_delay
 ```
 
@@ -183,6 +183,7 @@ Hospital admissions depend on infections from prior days (the length of our dela
 # | label: helper-function
 print(f"Required lookback: {hosp_process.lookback_days()} days")
 
+
 def first_valid_observation_day(obs_process) -> int:
     """Return the first day index with complete infection history for convolution."""
     return obs_process.lookback_days() - 1
@@ -205,8 +206,6 @@ infections = infections.at[infection_spike_day].set(2000)
 ```
 
 We plot the infections starting from day_one (the first valid observation day, after the lookback period).
-<details>
-<summary>Show code</summary>
 ```{python}
 # | label: plot-infections
 # Plot relative to first valid observation day
@@ -244,10 +243,6 @@ plot_infections = (
         size=10,
     )
 )
-```
-</details>
-```{python}
-# | label: viz-infections
 plot_infections
 ```
 
@@ -272,8 +267,6 @@ predicted_admissions, offset = compute_delay_ascertained_incidence(
 )
 ```
 
-<details>
-<summary>Show code</summary>
 ```{python}
 # | label: plot-predicted-no-noise
 # Relative peak day for plotting
@@ -329,10 +322,6 @@ plot_predicted = (
         ha="center",
     )
 )
-```
-</details>
-```{python}
-# | label: viz-predicted
 plot_predicted
 ```
 
@@ -375,8 +364,6 @@ for i, val in enumerate(predicted_admissions[day_one:]):
     )
 ```
 
-<details>
-<summary>Show code</summary>
 ```{python}
 # | label: plot-realizations
 samples_df = pd.DataFrame(samples_list)
@@ -423,11 +410,6 @@ plot_50_samples = (
     )
     + p9.theme_grey()
 )
-```
-</details>
-
-```{python}
-# | label: viz-realizations
 plot_50_samples
 ```
 
@@ -478,8 +460,6 @@ for ihr_val in ihr_values:
 ```
 
 
-<details>
-<summary>Show code</summary>
 ```{python}
 # | label: plot-ihr-comparisons
 results_df = pd.DataFrame(results_list)
@@ -496,11 +476,6 @@ plot_ihr = (
     )
     + p9.theme_grey()
 )
-```
-</details>
-
-```{python}
-# | label: viz-ihr-comparisons
 plot_ihr
 ```
 
@@ -556,8 +531,6 @@ for conc_val in concentration_values:
             )
 ```
 
-<details>
-<summary>Show code</summary>
 ```{python}
 # | label: plot-concentration-comparisons
 conc_df = pd.DataFrame(conc_results)
@@ -580,11 +553,6 @@ plot_concentration = (
     )
     + p9.theme_grey()
 )
-```
-</details>
-
-```{python}
-# | label: viz-concentration-comparisons
 plot_concentration
 ```
 
@@ -613,6 +581,8 @@ print(
 
 We can visualize the Poisson noise model using the same constant infection scenario as the concentration comparison above. Since Poisson assumes variance equals the mean, it produces less variability than the negative binomial with low concentration values.
 
+To see the reduction in noise, it is necessary to keep the y-axis on the same scale as in the previous plot.
+
 ```{python}
 # | label: poisson-realizations
 # Sample multiple realizations with Poisson noise
@@ -634,12 +604,6 @@ for seed in range(n_replicates_poisson):
                 "replicate": seed,
             }
         )
-```
-
-<details>
-<summary>Show code</summary>
-```{python}
-# | label: plot-poisson-realizations
 poisson_df = pd.DataFrame(poisson_results)
 
 plot_poisson = (
@@ -653,11 +617,5 @@ plot_poisson = (
     + p9.theme_grey()
     + p9.ylim(0, 105)
 )
-```
-</details>
-
-To see the reduction in noise, it is ncessary to keep the y-axis on the same scale as in the previous plot.
-```{python}
-# | label: viz-poisson-realizations
 plot_poisson
 ```

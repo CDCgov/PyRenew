@@ -1,6 +1,15 @@
 ---
 title: "Observation processes for continuous measurements"
-format: gfm
+format:
+  gfm:
+    fig-width: 16
+    fig-height: 10
+  html:
+    toc: true
+    embed-resources: true
+    self-contained-math: true
+    code-fold: true
+    code-tools: true
 engine: jupyter
 ---
 
@@ -14,6 +23,8 @@ import jax.numpy as jnp
 import numpy as np
 import numpyro
 import matplotlib.pyplot as plt
+import pandas as pd
+import plotnine as p9
 
 import numpyro.distributions as dist
 
@@ -22,9 +33,7 @@ from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 ```
 
-# Part 1: The Measurements Framework
-
-## Overview
+# The Measurements Framework
 
 The `Measurements` class models continuous signals derived from infections. Unlike count observations (hospital admissions, deaths), measurements are continuous values that may span orders of magnitude or even be negative (e.g., log-transformed data).
 
@@ -35,7 +44,7 @@ The `Measurements` class models continuous signals derived from infections. Unli
 - Serological assay results
 - Environmental sensor readings
 
-### The general pattern
+## The general pattern
 
 All measurement observation processes follow the same pattern:
 
@@ -53,7 +62,7 @@ The `Measurements` base class provides:
 - Integration with hierarchical noise models
 - Support for multiple sensors and subpopulations
 
-### Comparison with count observations
+## Comparison with count observations
 
 The core convolution structure is shared with count observations, but key aspects differ:
 
@@ -141,15 +150,16 @@ class MyMeasurement(Measurements):
         return len(self.temporal_pmf_rv())
 ```
 
----
 
-# Part 2: Wastewater Example
+# Wastewater Example
 
-We now illustrate the framework with a wastewater viral concentration model, based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-hew) family of models.
+To illustrate the framework, we specify a wastewater viral concentration observation process,
+based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-hew) family of models.
 
 ## The wastewater signal
 
-Wastewater treatment plants measure viral RNA concentrations in sewage. The predicted concentration depends on:
+Wastewater treatment plants measure viral RNA concentrations in sewage.
+The predicted concentration depends on:
 
 - **Infections**: People shed virus into wastewater
 - **Shedding kinetics**: Viral shedding peaks a few days after infection
@@ -278,30 +288,45 @@ print(f"Mode: {mode_shedding_day} days, Mean: {mean_shedding_day:.1f} days")
 ```
 
 ```{python}
-# | label: fig-shedding
-# | fig-cap: Viral shedding kinetics distribution
-fig, ax = plt.subplots(figsize=(8, 4))
-ax.bar(days, shedding_pmf, color="steelblue", alpha=0.7, edgecolor="black")
-ax.axvline(
-    mode_shedding_day,
-    color="purple",
-    linestyle="-",
-    linewidth=2,
-    label=f"Mode: {mode_shedding_day}",
+# | label: plot-shedding
+# Visualize the shedding distribution
+shedding_df = pd.DataFrame(
+    {"days": days, "probability": np.array(shedding_pmf)}
 )
-ax.axvline(
-    mean_shedding_day,
-    color="red",
-    linestyle="--",
-    linewidth=2,
-    label=f"Mean: {mean_shedding_day:.1f}",
+
+(
+    p9.ggplot(shedding_df, p9.aes(x="days", y="probability"))
+    + p9.geom_col(fill="steelblue", alpha=0.7, color="black")
+    + p9.geom_vline(
+        xintercept=mode_shedding_day, color="purple", linetype="solid", size=1
+    )
+    + p9.geom_vline(
+        xintercept=mean_shedding_day, color="red", linetype="dashed", size=1
+    )
+    + p9.labs(
+        x="Days after infection",
+        y="Fraction of total shedding",
+        title="Viral Shedding Kinetics",
+    )
+    + p9.theme_grey()
+    + p9.theme(plot_title=p9.element_text(size=14, weight="bold"))
+    + p9.annotate(
+        "text",
+        x=mode_shedding_day + 2,
+        y=max(shedding_df["probability"]) * 0.95,
+        label=f"Mode: {mode_shedding_day} days",
+        color="purple",
+        size=10,
+    )
+    + p9.annotate(
+        "text",
+        x=mean_shedding_day + 2,
+        y=max(shedding_df["probability"]) * 0.8,
+        label=f"Mean: {mean_shedding_day:.1f} days",
+        color="red",
+        size=10,
+    )
 )
-ax.set_xlabel("Days after infection")
-ax.set_ylabel("Fraction of total shedding")
-ax.set_title("Viral Shedding Kinetics")
-ax.legend()
-plt.tight_layout()
-plt.show()
 ```
 
 ### Genome copies and wastewater volume
@@ -364,7 +389,7 @@ def first_valid_observation_day(obs_process) -> int:
     return obs_process.lookback_days() - 1
 ```
 
-### Simulating from an infection spike
+### Simulating from observations from a single-day infection spike
 
 To see how infections spread into concentrations via shedding kinetics, we simulate from a single-day spike:
 
@@ -379,7 +404,7 @@ infections = jnp.zeros((n_days, 1))  # 1 subpopulation
 infections = infections.at[infection_spike_day, 0].set(2000.0)
 
 # For plotting
-spike_day = infection_spike_day - day_one
+rel_spike_day = infection_spike_day - day_one
 n_plot_days = n_days - day_one
 
 # Observation times and indices
@@ -396,30 +421,43 @@ with numpyro.handlers.seed(rng_seed=42):
         n_sensors=1,
     )
 ```
+We plot the resulting observations starting from the first valid observation day.
 
 ```{python}
-# | label: fig-spike-infections
-# | fig-cap: Input infections with a single-day spike
-fig, ax = plt.subplots(figsize=(8, 4))
-ax.plot(
-    np.arange(n_plot_days),
-    np.array(infections[day_one:, 0]),
-    "-o",
-    color="darkblue",
+# | label: plot-spike-infections
+infections_df = pd.DataFrame(
+    {
+        "day": np.arange(n_plot_days),
+        "infections": np.array(infections[day_one:, 0]),
+    }
 )
-ax.axvline(spike_day, color="darkred", linestyle="--", alpha=0.7)
-ax.annotate(
-    f"Infection spike\n(day {spike_day})",
-    xy=(spike_day, 1800),
-    xytext=(spike_day + 3, 1800),
-    fontsize=10,
-    color="darkred",
+
+max_infection_count = float(jnp.max(infections[day_one:]))
+
+plot_infections = (
+    p9.ggplot(infections_df, p9.aes(x="day", y="infections"))
+    + p9.geom_line(color="darkblue", size=1)
+    + p9.geom_point(color="darkblue", size=2)
+    + p9.geom_vline(
+        xintercept=rel_spike_day,
+        color="darkred",
+        linetype="dashed",
+        alpha=0.5,
+    )
+    + p9.labs(x="Day", y="Daily Infections", title="Infections (Input)")
+    + p9.theme_grey()
+    + p9.theme(plot_title=p9.element_text(size=13, weight="bold"))
+    + p9.annotate(
+        "text",
+        x=rel_spike_day,
+        y=max_infection_count * 1.05,
+        label=f"Infection spike\n(day {rel_spike_day})",
+        color="darkred",
+        size=10,
+        ha="center",
+    )
 )
-ax.set_xlabel("Day")
-ax.set_ylabel("Daily Infections")
-ax.set_title("Infections (Input)")
-plt.tight_layout()
-plt.show()
+plot_infections
 ```
 
 ### Observation noise
@@ -429,7 +467,7 @@ Sampling multiple times from the same infections shows the range of possible obs
 ```{python}
 # | label: sample-realizations
 n_samples = 50
-samples_by_day = {int(d - day_one): [] for d in observation_days}
+ww_samples_list = []
 
 for seed in range(n_samples):
     with numpyro.handlers.seed(rng_seed=seed):
@@ -442,109 +480,174 @@ for seed in range(n_samples):
             n_sensors=1,
         )
     for day_idx, conc in zip(observation_days, ww_result.observed):
-        samples_by_day[int(day_idx) - day_one].append(float(conc))
+        ww_samples_list.append(
+            {
+                "day": int(day_idx) - day_one,
+                "log_concentration": float(conc),
+                "sample": seed,
+            }
+        )
 
-# Convert to arrays for plotting
-plot_days = sorted(samples_by_day.keys())
-all_samples = np.array(
-    [[samples_by_day[d][i] for d in plot_days] for i in range(n_samples)]
-)
-sample_mean = all_samples.mean(axis=0)
+ww_samples_df = pd.DataFrame(ww_samples_list)
 ```
 
 ```{python}
-# | label: fig-sampled-concentrations
-# | fig-cap: Multiple realizations showing observation noise
-fig, ax = plt.subplots(figsize=(8, 4))
+# | label: plot-sampled-concentrations
+# Compute mean across samples for each day
+mean_by_day = (
+    ww_samples_df.groupby("day")["log_concentration"].mean().reset_index()
+)
+mean_by_day["sample"] = -1
 
-# Plot all samples
-for i in range(1, n_samples):
-    ax.plot(
-        plot_days, all_samples[i], color="orange", alpha=0.15, linewidth=0.5
+# Relative peak day for plotting (using mode, not mean, since distribution is skewed)
+peak_day = rel_spike_day + mode_shedding_day
+
+# Separate one sample to highlight
+highlight_sample = 0
+other_samples_df = ww_samples_df[ww_samples_df["sample"] != highlight_sample]
+highlight_df = ww_samples_df[ww_samples_df["sample"] == highlight_sample]
+
+# For annotation positioning
+max_conc = ww_samples_df["log_concentration"].max()
+
+(
+    p9.ggplot()
+    + p9.geom_line(
+        p9.aes(x="day", y="log_concentration", group="sample"),
+        data=other_samples_df,
+        color="orange",
+        alpha=0.15,
+        size=0.5,
     )
-
-# Highlight one sample
-ax.plot(
-    plot_days,
-    all_samples[0],
-    color="steelblue",
-    linewidth=1,
-    label="One realization",
+    + p9.geom_line(
+        p9.aes(x="day", y="log_concentration"),
+        data=highlight_df,
+        color="steelblue",
+        size=1,
+    )
+    + p9.geom_line(
+        p9.aes(x="day", y="log_concentration"),
+        data=mean_by_day,
+        color="darkred",
+        size=1.2,
+    )
+    + p9.geom_vline(
+        xintercept=rel_spike_day,
+        color="darkblue",
+        linetype="dashed",
+        alpha=0.5,
+    )
+    + p9.geom_vline(
+        xintercept=peak_day,
+        color="darkred",
+        linetype="dotted",
+        alpha=0.7,
+    )
+    + p9.annotate(
+        "text",
+        x=rel_spike_day,
+        y=max_conc * 1.05,
+        label=f"Infection spike\n(day {rel_spike_day})",
+        color="darkblue",
+        size=9,
+        ha="center",
+    )
+    + p9.annotate(
+        "text",
+        x=peak_day,
+        y=max_conc * 0.98,
+        label=f"Expected peak\n(day {peak_day})",
+        color="darkred",
+        size=9,
+        ha="center",
+    )
+    + p9.labs(
+        x="Day",
+        y="Log Viral Concentration",
+        title=f"Observation Noise: {n_samples} Samples from Same Infections",
+        subtitle="Blue: one realization | Orange: other samples | Dark red: sample mean",
+    )
+    + p9.theme_grey()
 )
-
-# Sample mean
-ax.plot(
-    plot_days, sample_mean, color="darkred", linewidth=1.2, label="Sample mean"
-)
-
-ax.axvline(spike_day, color="darkblue", linestyle="--", alpha=0.5)
-ax.set_xlabel("Day")
-ax.set_ylabel("Log Viral Concentration")
-ax.set_title(f"Observation Noise: {n_samples} Samples from Same Infections")
-ax.legend()
-plt.tight_layout()
-plt.show()
 ```
 
 ### Sensor-level variability
 
-Different sensors (WWTP/lab pairs) measuring the same underlying infections show systematic differences:
+The previous plot showed variability from repeatedly sampling the entire observation process (resampling sensor parameters and noise each time). In practice, we have multiple physical sensors, each with fixed but unknown characteristics.
+
+This plot shows four sensors observing the **same infection spike**. Each sensor has:
+
+- A **sensor mode** (systematic bias): shifts all observations up or down
+- A **sensor SD** (measurement precision): determines noise level around predictions
+
+These parameters are sampled once per sensor, then held fixed across all observations from that sensor.
 
 ```{python}
 # | label: multi-sensor
 num_sensors = 4
-infections_constant = jnp.ones((40, 1)) * 1500.0
 
-# Each sensor samples at multiple time points
-times_per_sensor = 10
-observation_times = jnp.tile(
-    jnp.arange(10, 30, 2, dtype=jnp.int32), num_sensors
-)
+# Use the same observation times and infections as the sampled-concentrations plot
+sensor_obs_times = jnp.tile(observation_days, num_sensors)
 sensor_ids = jnp.repeat(
-    jnp.arange(num_sensors, dtype=jnp.int32), times_per_sensor
+    jnp.arange(num_sensors, dtype=jnp.int32), len(observation_days)
 )
-subpop_ids = jnp.zeros(num_sensors * times_per_sensor, dtype=jnp.int32)
+subpop_ids = jnp.zeros(num_sensors * len(observation_days), dtype=jnp.int32)
 
 with numpyro.handlers.seed(rng_seed=42):
     ww_multi_sensor = ww_process.sample(
-        infections=infections_constant,
+        infections=infections,  # Same spike as before
         subpop_indices=subpop_ids,
         sensor_indices=sensor_ids,
-        times=observation_times,
+        times=sensor_obs_times,
         obs=None,
         n_sensors=num_sensors,
     )
+
+# Create DataFrame for plotting (using relative days)
+multi_sensor_df = pd.DataFrame(
+    {
+        "day": np.array(sensor_obs_times) - day_one,
+        "log_concentration": np.array(ww_multi_sensor.observed),
+        "sensor": [f"Sensor {i}" for i in np.array(sensor_ids)],
+    }
+)
 ```
 
 ```{python}
-# | label: fig-multi-sensor
-# | fig-cap: Multiple sensors observing the same infections
-fig, ax = plt.subplots(figsize=(8, 4))
+# | label: plot-multi-sensor
+# Use same y-axis range as sampled-concentrations plot for comparison
+y_min = ww_samples_df["log_concentration"].min()
+y_max = ww_samples_df["log_concentration"].max()
 
-colors = ["steelblue", "coral", "green", "purple"]
-for sensor in range(num_sensors):
-    mask = np.array(sensor_ids) == sensor
-    ax.plot(
-        np.array(observation_times)[mask],
-        np.array(ww_multi_sensor.observed)[mask],
-        "-o",
-        color=colors[sensor],
-        label=f"Sensor {sensor}",
+(
+    p9.ggplot(
+        multi_sensor_df, p9.aes(x="day", y="log_concentration", color="sensor")
     )
-
-ax.set_xlabel("Day")
-ax.set_ylabel("Log Viral Concentration")
-ax.set_title("Multiple Sensors Observing Same Infections")
-ax.legend()
-plt.tight_layout()
-plt.show()
+    + p9.geom_line(size=1)
+    + p9.geom_point(size=2)
+    + p9.ylim(y_min, y_max * 1.05)
+    + p9.labs(
+        x="Day",
+        y="Log Viral Concentration",
+        title="Four Sensors Observing the Same Infection Spike",
+        color="Sensor",
+    )
+    + p9.theme_grey()
+)
 ```
 
-Each sensor has a different baseline (sensor mode) and measurement variability (sensor SD). During inference, these sensor-specific effects are learned from data.
+Compare this to the previous plot: here, each colored line represents a distinct physical sensor with its own systematic bias. The vertical spread between sensors reflects differences in sensor modes, while the noise within each line reflects each sensor's measurement precision. During inference, these sensor-specific effects are learned from data.
 
 ### Multiple subpopulations
 
-In hierarchical models, each sensor may serve a distinct catchment area (subpopulation) with different infection dynamics:
+In regional surveillance, each wastewater treatment plant serves a distinct **catchment area** (subpopulation) with its own infection dynamics. The `subpop_indices` array maps each observation to the appropriate infection trajectory.
+
+This example shows two subpopulations with different epidemic curves:
+
+- **Subpopulation 0**: Slow decay (e.g., large urban area with sustained transmission)
+- **Subpopulation 1**: Fast decay (e.g., smaller community with rapid burnout)
+
+Each subpopulation is observed by its own sensor. The observed concentrations reflect both the underlying infection differences AND the sensor-specific measurement characteristics.
 
 ```{python}
 # | label: multi-subpop
@@ -572,29 +675,37 @@ with numpyro.handlers.seed(rng_seed=42):
         obs=None,
         n_sensors=2,
     )
+
+# Create DataFrame for plotting
+multi_subpop_df = pd.DataFrame(
+    {
+        "day": np.array(obs_days_mp),
+        "log_concentration": np.array(ww_multi_subpop.observed),
+        "subpopulation": [f"Subpop {i}" for i in np.array(subpop_ids_mp)],
+    }
+)
 ```
 
 ```{python}
-# | label: fig-multi-subpop
-# | fig-cap: Sensors observing different subpopulations
-fig, ax = plt.subplots(figsize=(8, 4))
-
-for subpop in [0, 1]:
-    mask = np.array(subpop_ids_mp) == subpop
-    ax.plot(
-        np.array(obs_days_mp)[mask],
-        np.array(ww_multi_subpop.observed)[mask],
-        "-o",
-        label=f"Subpop {subpop}",
+# | label: plot-multi-subpop
+(
+    p9.ggplot(
+        multi_subpop_df,
+        p9.aes(x="day", y="log_concentration", color="subpopulation"),
     )
-
-ax.set_xlabel("Day")
-ax.set_ylabel("Log Viral Concentration")
-ax.set_title("Multiple Subpopulations with Different Infection Dynamics")
-ax.legend()
-plt.tight_layout()
-plt.show()
+    + p9.geom_line(size=1)
+    + p9.geom_point(size=2)
+    + p9.labs(
+        x="Day",
+        y="Log Viral Concentration",
+        title="Two Subpopulations with Different Infection Dynamics",
+        color="Subpopulation",
+    )
+    + p9.theme_grey()
+)
 ```
+
+The diverging trajectories reflect the different underlying infection curves. Subpopulation 1 starts higher but decays faster, while Subpopulation 0 maintains more sustained levels. In a full model, you would jointly infer the infection trajectories for each subpopulation while accounting for sensor-specific biases.
 
 ---
 
