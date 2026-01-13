@@ -10,7 +10,11 @@ import numpyro.distributions as dist
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF
-from pyrenew.observation import HierarchicalNormalNoise, Measurements
+from pyrenew.observation import (
+    HierarchicalNormalNoise,
+    Measurements,
+    VectorizedRV,
+)
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.randomvariable import DistributionalVariable
 
@@ -77,9 +81,13 @@ class TestMeasurementsBase:
     def test_infection_resolution_is_subpop(self):
         """Test that Measurements returns 'subpop' resolution."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
-        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
-        sensor_sd_rv = DistributionalVariable(
-            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
+        sensor_mode_rv = VectorizedRV(
+            DistributionalVariable("mode", dist.Normal(0, 0.5)),
+            plate_name="sensor_mode",
+        )
+        sensor_sd_rv = VectorizedRV(
+            DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
+            plate_name="sensor_sd",
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
@@ -96,9 +104,13 @@ class TestHierarchicalNormalNoise:
 
     def test_repr(self):
         """Test HierarchicalNormalNoise __repr__ method."""
-        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
-        sensor_sd_rv = DistributionalVariable(
-            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
+        sensor_mode_rv = VectorizedRV(
+            DistributionalVariable("mode", dist.Normal(0, 0.5)),
+            plate_name="sensor_mode",
+        )
+        sensor_sd_rv = VectorizedRV(
+            DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
+            plate_name="sensor_sd",
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
         repr_str = repr(noise)
@@ -108,9 +120,13 @@ class TestHierarchicalNormalNoise:
 
     def test_validate(self):
         """Test HierarchicalNormalNoise validate method."""
-        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
-        sensor_sd_rv = DistributionalVariable(
-            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
+        sensor_mode_rv = VectorizedRV(
+            DistributionalVariable("mode", dist.Normal(0, 0.5)),
+            plate_name="sensor_mode",
+        )
+        sensor_sd_rv = VectorizedRV(
+            DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
+            plate_name="sensor_sd",
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
         # Should not raise - validation is deferred to sample time
@@ -118,9 +134,13 @@ class TestHierarchicalNormalNoise:
 
     def test_sample_shape(self):
         """Test that HierarchicalNormalNoise produces correct shape."""
-        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
-        sensor_sd_rv = DistributionalVariable(
-            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
+        sensor_mode_rv = VectorizedRV(
+            DistributionalVariable("mode", dist.Normal(0, 0.5)),
+            plate_name="sensor_mode",
+        )
+        sensor_sd_rv = VectorizedRV(
+            DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
+            plate_name="sensor_sd",
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
@@ -140,9 +160,13 @@ class TestHierarchicalNormalNoise:
 
     def test_sample_with_observations(self):
         """Test that HierarchicalNormalNoise conditions on observations."""
-        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
-        sensor_sd_rv = DistributionalVariable(
-            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
+        sensor_mode_rv = VectorizedRV(
+            DistributionalVariable("mode", dist.Normal(0, 0.5)),
+            plate_name="sensor_mode",
+        )
+        sensor_sd_rv = VectorizedRV(
+            DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
+            plate_name="sensor_sd",
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
@@ -169,9 +193,13 @@ class TestConcreteMeasurements:
     def test_repr(self):
         """Test Measurements __repr__ method."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
-        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
-        sensor_sd_rv = DistributionalVariable(
-            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
+        sensor_mode_rv = VectorizedRV(
+            DistributionalVariable("mode", dist.Normal(0, 0.5)),
+            plate_name="sensor_mode",
+        )
+        sensor_sd_rv = VectorizedRV(
+            DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
+            plate_name="sensor_sd",
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
@@ -188,9 +216,13 @@ class TestConcreteMeasurements:
     def test_sample_shape(self):
         """Test that sample returns correct shape."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
-        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.5))
-        sensor_sd_rv = DistributionalVariable(
-            "sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)
+        sensor_mode_rv = VectorizedRV(
+            DistributionalVariable("mode", dist.Normal(0, 0.5)),
+            plate_name="sensor_mode",
+        )
+        sensor_sd_rv = VectorizedRV(
+            DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
+            plate_name="sensor_sd",
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
@@ -199,7 +231,6 @@ class TestConcreteMeasurements:
             noise=noise,
         )
 
-        # 30 days, 2 subpops
         infections = jnp.ones((30, 2)) * 1000
         subpop_indices = jnp.array([0, 0, 1, 1])
         sensor_indices = jnp.array([0, 0, 1, 1])
@@ -221,9 +252,13 @@ class TestConcreteMeasurements:
     def test_predicted_obs_stored(self):
         """Test that predicted_log_conc is stored as deterministic."""
         shedding_pmf = jnp.array([0.5, 0.5])
-        sensor_mode_rv = DistributionalVariable("mode", dist.Normal(0, 0.01))
-        sensor_sd_rv = DistributionalVariable(
-            "sd", dist.TruncatedNormal(0.01, 0.005, low=0.001)
+        sensor_mode_rv = VectorizedRV(
+            DistributionalVariable("mode", dist.Normal(0, 0.01)),
+            plate_name="sensor_mode",
+        )
+        sensor_sd_rv = VectorizedRV(
+            DistributionalVariable("sd", dist.TruncatedNormal(0.01, 0.005, low=0.001)),
+            plate_name="sensor_sd",
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 

@@ -14,8 +14,12 @@ Count Noise
 Measurement Noise
 -----------------
 - ``HierarchicalNormalNoise``: Normal noise with hierarchical sensor effects.
-  Takes ``sensor_mode_prior_rv`` and ``sensor_sd_prior_rv`` for sensor-level
+  Takes ``sensor_mode_rv`` and ``sensor_sd_rv`` for sensor-level
   bias and variability.
+
+Utilities
+---------
+- ``VectorizedRV``: Wrapper that adds ``n_groups`` support to simple RVs.
 """
 
 from __future__ import annotations
@@ -30,6 +34,57 @@ from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 _EPSILON = 1e-10
+
+
+class VectorizedRV(RandomVariable):
+    """
+    Wrapper that adds n_groups support to simple RandomVariables.
+
+    Uses numpyro.plate to vectorize sampling, enabling simple RVs
+    to work with noise models expecting the group-level interface.
+
+    Parameters
+    ----------
+    rv : RandomVariable
+        The underlying RandomVariable to wrap.
+    plate_name : str
+        Name for the numpyro plate used for vectorization.
+    """
+
+    def __init__(self, rv: RandomVariable, plate_name: str) -> None:
+        """
+        Initialize VectorizedRV wrapper.
+
+        Parameters
+        ----------
+        rv : RandomVariable
+            The underlying RandomVariable to wrap.
+        plate_name : str
+            Name for the numpyro plate used for vectorization.
+        """
+        self.rv = rv
+        self.plate_name = plate_name
+
+    def validate(self):
+        """Validate the underlying RV."""
+        self.rv.validate()
+
+    def sample(self, n_groups: int, **kwargs):
+        """
+        Sample n_groups values using numpyro.plate.
+
+        Parameters
+        ----------
+        n_groups : int
+            Number of group-level values to sample.
+
+        Returns
+        -------
+        ArrayLike
+            Array of shape (n_groups,).
+        """
+        with numpyro.plate(self.plate_name, n_groups):
+            return self.rv(**kwargs)
 
 
 class CountNoise(ABC):
@@ -263,35 +318,20 @@ class HierarchicalNormalNoise(MeasurementNoise):
     Normal noise with hierarchical sensor-level effects.
 
     Observation model: ``obs ~ Normal(predicted + sensor_mode, sensor_sd)``
-    where sensor_mode and sensor_sd are sampled per-sensor within a plate.
+    where sensor_mode and sensor_sd are sampled per-sensor.
 
     Parameters
     ----------
     sensor_mode_rv : RandomVariable
-        Prior for sensor-level modes (log-scale biases).
-        Sampled once per sensor within a plate context.
-        Example: ``DistributionalVariable("mode", dist.Normal(0, 0.5))``
+        Prior for sensor-level modes.
+        Must implement ``sample(n_groups=...) -> ArrayLike``.
     sensor_sd_rv : RandomVariable
-        Prior for sensor-level SDs (should be > 0).
-        Sampled once per sensor within a plate context.
-        Example: ``DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05))``
+        Prior for sensor-level SDs (must be > 0).
+        Must implement ``sample(n_groups=...) -> ArrayLike``.
 
     Notes
     -----
-    Expects data already on log scale for wastewater applications.
-
-    The sensor-level parameters are sampled within a numpyro plate context,
-    so any standard RandomVariable can be used (no special interface required).
-
-    Examples
-    --------
-    >>> from pyrenew.randomvariable import DistributionalVariable
-    >>> import numpyro.distributions as dist
-    >>>
-    >>> noise = HierarchicalNormalNoise(
-    ...     sensor_mode_rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
-    ...     sensor_sd_rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
-    ... )
+    Use ``VectorizedRV`` to wrap simple RVs that lack this interface.
     """
 
     def __init__(
@@ -305,11 +345,11 @@ class HierarchicalNormalNoise(MeasurementNoise):
         Parameters
         ----------
         sensor_mode_rv : RandomVariable
-            Prior for sensor-level modes (log-scale biases).
-            Sampled once per sensor within a plate context.
+            Prior for sensor-level modes.
+            Must implement ``sample(n_groups=...) -> ArrayLike``.
         sensor_sd_rv : RandomVariable
-            Prior for sensor-level SDs (should be > 0).
-            Sampled once per sensor within a plate context.
+            Prior for sensor-level SDs (must be > 0).
+            Must implement ``sample(n_groups=...) -> ArrayLike``.
         """
         self.sensor_mode_rv = sensor_mode_rv
         self.sensor_sd_rv = sensor_sd_rv
@@ -349,10 +389,10 @@ class HierarchicalNormalNoise(MeasurementNoise):
         name : str
             Numpyro sample site name.
         predicted : ArrayLike
-            Predicted log-scale measurement values.
+            Predicted measurement values.
             Shape: (n_obs,)
         obs : ArrayLike | None
-            Observed log-scale measurements for conditioning.
+            Observed measurements for conditioning.
             Shape: (n_obs,)
         sensor_indices : ArrayLike
             Sensor index for each observation (0-indexed).
@@ -365,15 +405,9 @@ class HierarchicalNormalNoise(MeasurementNoise):
         ArrayLike
             Normal distributed measurements with hierarchical sensor effects.
             Shape: (n_obs,)
-
-        Raises
-        ------
-        ValueError
-            If sensor_sd samples non-positive values.
         """
-        with numpyro.plate("sensor", n_sensors):
-            sensor_mode = self.sensor_mode_rv()
-            sensor_sd = self.sensor_sd_rv()
+        sensor_mode = self.sensor_mode_rv(n_groups=n_sensors)
+        sensor_sd = self.sensor_sd_rv(n_groups=n_sensors)
 
         loc = predicted + sensor_mode[sensor_indices]
         scale = sensor_sd[sensor_indices]

@@ -28,7 +28,11 @@ import plotnine as p9
 
 import numpyro.distributions as dist
 
-from pyrenew.observation import Measurements, HierarchicalNormalNoise
+from pyrenew.observation import (
+    Measurements,
+    HierarchicalNormalNoise,
+    VectorizedRV,
+)
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 ```
@@ -87,16 +91,22 @@ Measurement data typically exhibits **sensor-level variability**: different inst
 observed ~ Normal(predicted + sensor_mode[sensor], sensor_sd[sensor])
 ```
 
-The noise model samples sensor-level parameters within a plate, so any `RandomVariable` can be used as a prior:
+The sensor-level RVs must implement `sample(n_groups=...)`. Use `VectorizedRV` to wrap simple distributions:
 
 ```{python}
 # | label: noise-model-general
 # Sensor modes: zero-centered, allowing positive or negative bias
-sensor_mode_rv = DistributionalVariable("sensor_mode", dist.Normal(0, 0.5))
+sensor_mode_rv = VectorizedRV(
+    DistributionalVariable("sensor_mode", dist.Normal(0, 0.5)),
+    plate_name="sensor_mode",
+)
 
 # Sensor SDs: must be positive, truncated normal is a common choice
-sensor_sd_rv = DistributionalVariable(
-    "sensor_sd", dist.TruncatedNormal(loc=0.3, scale=0.15, low=0.05)
+sensor_sd_rv = VectorizedRV(
+    DistributionalVariable(
+        "sensor_sd", dist.TruncatedNormal(loc=0.3, scale=0.15, low=0.05)
+    ),
+    plate_name="sensor_sd",
 )
 
 # Create noise model
@@ -347,13 +357,17 @@ For wastewater, a "sensor" is a WWTP/lab pair—the combination of treatment pla
 ```{python}
 # | label: ww-noise-model
 # Sensor-level mode: systematic differences between WWTP/lab pairs
-ww_sensor_mode_rv = DistributionalVariable(
-    "ww_sensor_mode", dist.Normal(0, 0.5)
+ww_sensor_mode_rv = VectorizedRV(
+    DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5)),
+    plate_name="ww_sensor_mode",
 )
 
 # Sensor-level SD: measurement variability within each WWTP/lab pair
-ww_sensor_sd_rv = DistributionalVariable(
-    "ww_sensor_sd", dist.TruncatedNormal(loc=0.3, scale=0.15, low=0.10)
+ww_sensor_sd_rv = VectorizedRV(
+    DistributionalVariable(
+        "ww_sensor_sd", dist.TruncatedNormal(loc=0.3, scale=0.15, low=0.10)
+    ),
+    plate_name="ww_sensor_sd",
 )
 
 ww_noise = HierarchicalNormalNoise(
@@ -421,6 +435,7 @@ with numpyro.handlers.seed(rng_seed=42):
         n_sensors=1,
     )
 ```
+
 We plot the resulting observations starting from the first valid observation day.
 
 ```{python}
@@ -615,17 +630,12 @@ multi_sensor_df = pd.DataFrame(
 
 ```{python}
 # | label: plot-multi-sensor
-# Use same y-axis range as sampled-concentrations plot for comparison
-y_min = ww_samples_df["log_concentration"].min()
-y_max = ww_samples_df["log_concentration"].max()
-
 (
     p9.ggplot(
         multi_sensor_df, p9.aes(x="day", y="log_concentration", color="sensor")
     )
     + p9.geom_line(size=1)
     + p9.geom_point(size=2)
-    + p9.ylim(y_min, y_max * 1.05)
     + p9.labs(
         x="Day",
         y="Log Viral Concentration",
