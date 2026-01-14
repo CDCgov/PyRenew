@@ -1,0 +1,392 @@
+"""
+Base class for latent infection processes with subpopulation structure.
+"""
+
+from __future__ import annotations
+
+from abc import abstractmethod
+from dataclasses import dataclass
+from typing import NamedTuple
+
+import jax
+import jax.numpy as jnp
+from jax.typing import ArrayLike
+from pyrenew.metaclass import RandomVariable
+
+
+class LatentSample(NamedTuple):
+    """
+    Output from latent infection process sampling.
+
+    Attributes
+    ----------
+    aggregate : ArrayLike
+        Total infections aggregated across all subpopulations.
+        Shape: (n_total_days,)
+    all_subpops : ArrayLike
+        Infections for all subpopulations.
+        Shape: (n_total_days, K)
+    observed : ArrayLike
+        Infections for observed subpopulations only.
+        Shape: (n_total_days, K_obs)
+    unobserved : ArrayLike
+        Infections for unobserved subpopulations only.
+        Shape: (n_total_days, K_unobs)
+    """
+
+    aggregate: ArrayLike
+    all_subpops: ArrayLike
+    observed: ArrayLike
+    unobserved: ArrayLike
+
+
+@dataclass
+class PopulationStructure:
+    """
+    Parsed and validated population structure for a jurisdiction.
+
+    Attributes
+    ----------
+    obs_fractions : ArrayLike
+        Population fractions for observed subpopulations
+    unobs_fractions : ArrayLike
+        Population fractions for unobserved subpopulations
+    K : int
+        Total number of subpopulations
+    K_obs : int
+        Number of observed subpopulations
+    K_unobs : int
+        Number of unobserved subpopulations
+    """
+
+    obs_fractions: ArrayLike
+    unobs_fractions: ArrayLike
+    K: int
+    K_obs: int
+    K_unobs: int
+
+
+class BaseLatentInfectionProcess(RandomVariable):
+    """
+    Base class for latent infection processes with subpopulation structure.
+
+    Provides common functionality for hierarchical and partitioned infection models:
+    - Population fraction validation and parsing (at sample time)
+    - Splitting subpopulations into observed/unobserved
+    - Standard 4-tuple output structure
+
+    All subclasses return infections as a ``LatentSample`` named tuple with fields:
+    (aggregate, all_subpops, observed, unobserved)
+
+    The constructor specifies model structure (generation interval, priors,
+    temporal processes). Population structure (obs_fractions, unobs_fractions) is
+    provided at sample time, allowing a single model to be fit to multiple
+    jurisdictions with different population structures.
+
+    Parameters
+    ----------
+    gen_int_rv : RandomVariable
+        Generation interval PMF
+    n_initialization_points : int, optional
+        Number of initialization days before day 0. If not specified, automatically
+        computed as max(21, 2*len(gen_int)-1). The ModelBuilder will compute and pass
+        the correct value based on all observation processes.
+
+    Notes
+    -----
+    Population structure (obs_fractions, unobs_fractions) is passed to the sample()
+    method, not the constructor. This allows a single model instance to be fit to
+    multiple datasets with different jurisdiction structures.
+
+    When using ModelBuilder, n_initialization_points is computed automatically from
+    all observation processes. When manually creating latent processes, you can either
+    specify it explicitly or let it default to max(21, 2*len(gen_int)-1).
+
+    Subclasses must implement the `sample` method which returns a 4-tuple with
+    shapes: (n_total_days,), (n_total_days, K), (n_total_days, K_obs),
+    (n_total_days, K_unobs).
+    """
+
+    def __init__(
+        self,
+        *,
+        gen_int_rv: RandomVariable,
+        n_initialization_points: int = None,
+    ) -> None:
+        """
+        Initialize base latent infection process.
+
+        Parameters
+        ----------
+        gen_int_rv : RandomVariable
+            Generation interval PMF
+        n_initialization_points : int, optional
+            Number of initialization days before day 0. If not specified,
+            defaults to max(21, 2*len(gen_int)-1).
+        """
+        if gen_int_rv is None:
+            raise ValueError("gen_int_rv is required")
+        self.gen_int_rv = gen_int_rv
+
+        # Compute n_initialization_points if not provided
+        # Use max(21, 2*len(gen_int)-1) for conservative default
+        if n_initialization_points is None:
+            gen_int_length = len(self.gen_int_rv())
+            n_initialization_points = max(21, 2 * gen_int_length - 1)
+
+        if n_initialization_points < 0:
+            raise ValueError(
+                f"n_initialization_points must be non-negative, "
+                f"got {n_initialization_points}"
+            )
+        self.n_initialization_points = n_initialization_points
+
+    @staticmethod
+    def _parse_and_validate_fractions(
+        obs_fractions: ArrayLike = None,
+        unobs_fractions: ArrayLike = None,
+    ) -> PopulationStructure:
+        """
+        Parse and validate population fraction parameters.
+
+        Returns
+        -------
+        PopulationStructure
+            Parsed and validated population structure
+
+        Raises
+        ------
+        ValueError
+            If parameterization is invalid or fractions don't sum to 1.0
+        """
+        if obs_fractions is None or unobs_fractions is None:
+            raise ValueError("Both obs_fractions and unobs_fractions must be provided")
+
+        obs_fractions = jnp.asarray(obs_fractions)
+        unobs_fractions = jnp.asarray(unobs_fractions)
+
+        if obs_fractions.ndim != 1 or unobs_fractions.ndim != 1:
+            raise ValueError("Fractions must be 1D arrays")
+
+        K_obs = len(obs_fractions)
+        K_unobs = len(unobs_fractions)
+        K = K_obs + K_unobs
+
+        if K_obs == 0:
+            raise ValueError("Must have at least one observed subpopulation")
+
+        # Only validate when values are concrete (not during JAX tracing)
+        try:
+            if jnp.any(obs_fractions < 0) or jnp.any(unobs_fractions < 0):
+                raise ValueError("All population fractions must be non-negative")
+
+            total = jnp.sum(obs_fractions) + jnp.sum(unobs_fractions)
+            if not jnp.isclose(total, 1.0, atol=1e-6):
+                raise ValueError(
+                    f"Population fractions must sum to 1.0, got {float(total):.6f}"
+                )
+        except jax.errors.TracerBoolConversionError:
+            # Skip validation during JAX tracing - values were validated before MCMC
+            pass
+
+        return PopulationStructure(
+            obs_fractions=obs_fractions,
+            unobs_fractions=unobs_fractions,
+            K=K,
+            K_obs=K_obs,
+            K_unobs=K_unobs,
+        )
+
+    @staticmethod
+    def _split_subpopulations(
+        infections_all: ArrayLike,
+        pop: PopulationStructure,
+    ) -> tuple[ArrayLike, ArrayLike]:
+        """
+        Split all subpopulations into observed and unobserved.
+
+        Parameters
+        ----------
+        infections_all : ArrayLike
+            Infections for all subpopulations, shape (n_days, K)
+        pop : PopulationStructure
+            Population structure with K_obs for splitting
+
+        Returns
+        -------
+        tuple[ArrayLike, ArrayLike]
+            (infections_observed, infections_unobserved) with shapes
+            (n_days, K_obs) and (n_days, K_unobs)
+        """
+        infections_observed = infections_all[:, : pop.K_obs]
+        infections_unobserved = infections_all[:, pop.K_obs :]
+        return infections_observed, infections_unobserved
+
+    @staticmethod
+    def _validate_output_shapes(
+        infections_aggregate: ArrayLike,
+        infections_all: ArrayLike,
+        infections_observed: ArrayLike,
+        infections_unobserved: ArrayLike,
+        n_total_days: int,
+        pop: PopulationStructure,
+    ) -> None:
+        """
+        Validate that output shapes match expected dimensions.
+
+        Parameters
+        ----------
+        infections_aggregate : ArrayLike
+            Aggregate infections (sum across subpopulations)
+        infections_all : ArrayLike
+            All subpopulation infections
+        infections_observed : ArrayLike
+            Observed subpopulation infections
+        infections_unobserved : ArrayLike
+            Unobserved subpopulation infections
+        n_total_days : int
+            Expected number of days (n_initialization_points + n_days_post_init)
+        pop : PopulationStructure
+            Population structure with K, K_obs, K_unobs
+
+        Raises
+        ------
+        ValueError
+            If any output shape is incorrect
+        """
+        expected = {
+            "infections_aggregate": (n_total_days,),
+            "infections_all": (n_total_days, pop.K),
+            "infections_observed": (n_total_days, pop.K_obs),
+            "infections_unobserved": (n_total_days, pop.K_unobs),
+        }
+
+        actual = {
+            "infections_aggregate": infections_aggregate.shape,
+            "infections_all": infections_all.shape,
+            "infections_observed": infections_observed.shape,
+            "infections_unobserved": infections_unobserved.shape,
+        }
+
+        for name, expected_shape in expected.items():
+            if actual[name] != expected_shape:
+                raise ValueError(
+                    f"{name} has incorrect shape. "
+                    f"Expected {expected_shape}, got {actual[name]}"
+                )
+
+    @staticmethod
+    def _validate_I0(I0: ArrayLike) -> None:
+        """
+        Validate that I0 values are valid infection prevalences.
+
+        I0 represents initial infection prevalence as a proportion of the
+        population. Values must be in the interval (0, 1].
+
+        Parameters
+        ----------
+        I0 : ArrayLike
+            Initial infection prevalence (scalar or array)
+
+        Raises
+        ------
+        ValueError
+            If any I0 value is not in the interval (0, 1]
+
+        Notes
+        -----
+        Validation is skipped during JAX tracing (e.g., when using Predictive)
+        since traced values cannot be used in Python boolean operations.
+        """
+        import jax
+
+        I0 = jnp.asarray(I0)
+
+        # Skip validation during JAX tracing (e.g., Predictive sampling)
+        # Traced arrays cannot be used in Python boolean operations
+        try:
+            # This will fail if I0 is a tracer
+            is_invalid_low = bool(jnp.any(I0 <= 0))
+            is_invalid_high = bool(jnp.any(I0 > 1))
+        except jax.errors.TracerBoolConversionError:
+            # During tracing, skip validation
+            return
+
+        if is_invalid_low:
+            raise ValueError(
+                f"I0 must be positive (got min={float(jnp.min(I0)):.6f}). "
+                "I0 represents infection prevalence as a proportion of the population."
+            )
+        if is_invalid_high:
+            raise ValueError(
+                f"I0 must be <= 1 (got max={float(jnp.max(I0)):.6f}). "
+                "I0 represents infection prevalence as a proportion of the population."
+            )
+
+    def get_required_lookback(self) -> int:
+        """
+        Return the generation interval length for builder pattern support.
+
+        This method is used by ModelBuilder to compute n_initialization_points
+        from all model components. Returns the generation interval PMF length.
+
+        Returns
+        -------
+        int
+            Length of generation interval PMF
+        """
+        return len(self.gen_int_rv())
+
+    @abstractmethod
+    def validate(self) -> None:
+        """
+        Validate latent process parameters.
+
+        Subclasses must implement this method to validate all parameters specific
+        to their implementation (e.g., temporal process parameters, I0 parameters).
+
+        Common validation (n_initialization_points, gen_int_rv) is performed in
+        __init__. Population structure validation is performed at sample time.
+
+        Raises
+        ------
+        ValueError
+            If any parameters fail validation
+        """
+        pass
+
+    @abstractmethod
+    def sample(
+        self,
+        n_days_post_init: int,
+        *,
+        obs_fractions: ArrayLike = None,
+        unobs_fractions: ArrayLike = None,
+        **kwargs,
+    ) -> LatentSample:
+        """
+        Sample latent infections for all subpopulations.
+
+        Parameters
+        ----------
+        n_days_post_init : int
+            Number of days to simulate after initialization period
+        obs_fractions : ArrayLike
+            Population fractions for observed subpopulations.
+        unobs_fractions : ArrayLike
+            Population fractions for unobserved subpopulations.
+        **kwargs
+            Additional parameters required by specific implementations
+
+        Returns
+        -------
+        LatentSample
+            Named tuple with fields:
+            - aggregate: shape (n_total_days,)
+            - all_subpops: shape (n_total_days, K)
+            - observed: shape (n_total_days, K_obs)
+            - unobserved: shape (n_total_days, K_unobs)
+
+            where n_total_days = n_initialization_points + n_days_post_init
+        """
+        pass
