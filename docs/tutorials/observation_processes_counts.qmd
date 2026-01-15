@@ -83,7 +83,7 @@ In this example, we use fixed parameter values for illustration; in practice, th
 The delay distribution specifies the probability that an infected person is hospitalized $d$ days after infection, conditional on the infection leading to a hospitalization.
 For example, if `hosp_delay_pmf[5] = 0.2`, then 20% of infections that result in hospitalization will appear as hospital admissions 5 days after infection.
 
-We load a delay distribution from PyRenew's datasets which peaks around day 8-9 post-infection, compute summary statistics, and plot it.
+We load a delay distribution from PyRenew's example datasets, compute summary statistics, and plot it. The distribution peaks around day 8-9 post-infection.
 
 ```{python}
 # | label: delay-distribution

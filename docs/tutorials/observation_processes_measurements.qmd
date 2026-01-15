@@ -80,7 +80,7 @@ The core convolution structure is shared with count observations, but key aspect
 
 ### The noise model
 
-Measurement data typically exhibits **sensor-level variability**: different instruments, labs, or sampling locations have systematic biases and different precision levels.
+Measurement data typically exhibits **sensor-level variability**: different instruments, labs, or sampling locations may have systematic biases and different precision levels.
 
 `HierarchicalNormalNoise` models this with two per-sensor parameters:
 
