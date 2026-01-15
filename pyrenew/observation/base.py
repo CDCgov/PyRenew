@@ -56,12 +56,16 @@ class BaseObservationProcess(RandomVariable):
         Base class for all random variables
     """
 
-    def __init__(self, temporal_pmf_rv: RandomVariable) -> None:
+    def __init__(self, name: str, temporal_pmf_rv: RandomVariable) -> None:
         """
         Initialize base observation process.
 
         Parameters
         ----------
+        name : str
+            Unique name for this observation process. Used to prefix all
+            numpyro sample and deterministic site names, enabling multiple
+            observations of the same type in a single model.
         temporal_pmf_rv : RandomVariable
             The temporal distribution PMF (e.g., delay or shedding distribution).
             Must sample to a 1D array that sums to ~1.0 with non-negative values.
@@ -69,9 +73,10 @@ class BaseObservationProcess(RandomVariable):
 
         Notes
         -----
-        Subclasses should call ``super().__init__(temporal_pmf_rv)``
+        Subclasses should call ``super().__init__(name, temporal_pmf_rv)``
         in their constructors and may add additional parameters.
         """
+        self.name = name
         self.temporal_pmf_rv = temporal_pmf_rv
 
     @abstractmethod
@@ -128,14 +133,6 @@ class BaseObservationProcess(RandomVariable):
         -------
         str
             Either ``"aggregate"`` or ``"subpop"``
-
-        Examples
-        --------
-        >>> # Aggregated count observations
-        >>> hosp_obs.infection_resolution()  # Returns "aggregate"
-        >>>
-        >>> # Subpopulation-level observations (wastewater, subpop-specific counts)
-        >>> ww_obs.infection_resolution()  # Returns "subpop"
 
         Notes
         -----
@@ -252,7 +249,7 @@ class BaseObservationProcess(RandomVariable):
             pad=True,  # Maintains timeline alignment
         )
 
-    def _deterministic(self, name: str, value: ArrayLike) -> None:
+    def _deterministic(self, suffix: str, value: ArrayLike) -> None:
         """
         Track a deterministic quantity in the numpyro execution trace.
 
@@ -262,14 +259,36 @@ class BaseObservationProcess(RandomVariable):
         These quantities are stored in MCMC samples and can be used for
         model diagnostics and posterior predictive checks.
 
+        The site name is prefixed with ``self.name`` to ensure uniqueness
+        when multiple observations of the same type are used.
+
         Parameters
         ----------
-        name : str
-            Name for the tracked quantity. Will appear in MCMC samples.
+        suffix : str
+            Suffix for the site name. Will be prefixed with ``self.name``.
+            For example, suffix="predicted" becomes "{name}_predicted".
         value : ArrayLike
             Value to track. Can be any shape.
         """
-        numpyro.deterministic(name, value)
+        site_name = f"{self.name}_{suffix}"
+        numpyro.deterministic(site_name, value)
+
+    def _sample_site_name(self, suffix: str) -> str:
+        """
+        Generate a prefixed sample site name.
+
+        Parameters
+        ----------
+        suffix : str
+            Suffix for the site name (e.g., "obs").
+
+        Returns
+        -------
+        str
+            Full site name with ``self.name`` prefix.
+            For example, suffix="obs" returns "{name}_obs".
+        """
+        return f"{self.name}_{suffix}"
 
     @abstractmethod
     def _predicted_obs(

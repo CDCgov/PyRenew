@@ -140,10 +140,12 @@ To create a measurement process for your domain, subclass `Measurements` and imp
 2. **`validate()`**: Check parameter validity
 3. **`lookback_days()`**: Return the temporal PMF length
 
+The `Measurements` base class requires a `name` parameter. Observation processes are components in multi-signal models, where each signal must have a unique, meaningful name (e.g., `"wastewater"`, `"air_quality"`). This name prefixes all numpyro sample sites, ensuring distinct identifiers in the inference trace.
+
 ```python
 class MyMeasurement(Measurements):
-    def __init__(self, temporal_pmf_rv, noise, my_scaling_param):
-        super().__init__(temporal_pmf_rv=temporal_pmf_rv, noise=noise)
+    def __init__(self, name, temporal_pmf_rv, noise, my_scaling_param):
+        super().__init__(name=name, temporal_pmf_rv=temporal_pmf_rv, noise=noise)
         self.my_scaling_param = my_scaling_param
 
     def _predicted_obs(self, infections):
@@ -209,6 +211,7 @@ class Wastewater(Measurements):
 
     def __init__(
         self,
+        name: str,
         shedding_kinetics_rv: RandomVariable,
         log10_genome_per_infection_rv: RandomVariable,
         ml_per_person_per_day: float,
@@ -219,6 +222,8 @@ class Wastewater(Measurements):
 
         Parameters
         ----------
+        name : str
+            Unique name for this observation process.
         shedding_kinetics_rv : RandomVariable
             Viral shedding PMF (fraction shed each day post-infection).
         log10_genome_per_infection_rv : RandomVariable
@@ -228,7 +233,7 @@ class Wastewater(Measurements):
         noise : MeasurementNoise
             Noise model (e.g., HierarchicalNormalNoise).
         """
-        super().__init__(temporal_pmf_rv=shedding_kinetics_rv, noise=noise)
+        super().__init__(name=name, temporal_pmf_rv=shedding_kinetics_rv, noise=noise)
         self.log10_genome_per_infection_rv = log10_genome_per_infection_rv
         self.ml_per_person_per_day = ml_per_person_per_day
 
@@ -381,6 +386,7 @@ ww_noise = HierarchicalNormalNoise(
 ```{python}
 # | label: create-process
 ww_process = Wastewater(
+    name="wastewater",
     shedding_kinetics_rv=shedding_rv,
     log10_genome_per_infection_rv=log10_genome_rv,
     ml_per_person_per_day=ml_per_person_per_day,

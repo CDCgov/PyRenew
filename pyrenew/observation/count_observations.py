@@ -26,6 +26,7 @@ class _CountBase(BaseObservationProcess):
 
     def __init__(
         self,
+        name: str,
         ascertainment_rate_rv: RandomVariable,
         delay_distribution_rv: RandomVariable,
         noise: CountNoise,
@@ -35,6 +36,9 @@ class _CountBase(BaseObservationProcess):
 
         Parameters
         ----------
+        name : str
+            Unique name for this observation process. Used to prefix all
+            numpyro sample and deterministic site names.
         ascertainment_rate_rv : RandomVariable
             Ascertainment rate in [0, 1] (e.g., IHR, IER).
         delay_distribution_rv : RandomVariable
@@ -42,7 +46,7 @@ class _CountBase(BaseObservationProcess):
         noise : CountNoise
             Noise model for count observations (Poisson, NegBin, etc.).
         """
-        super().__init__(temporal_pmf_rv=delay_distribution_rv)
+        super().__init__(name=name, temporal_pmf_rv=delay_distribution_rv)
         self.ascertainment_rate_rv = ascertainment_rate_rv
         self.noise = noise
 
@@ -135,6 +139,10 @@ class Counts(_CountBase):
 
     Parameters
     ----------
+    name : str
+        Unique name for this observation process. Used to prefix all
+        numpyro sample and deterministic site names (e.g., "hospital"
+        produces sites "hospital_obs", "hospital_predicted").
     ascertainment_rate_rv : RandomVariable
         Ascertainment rate in [0, 1] (e.g., IHR, IER).
     delay_distribution_rv : RandomVariable
@@ -146,24 +154,6 @@ class Counts(_CountBase):
     -----
     Output preserves input timeline. First len(delay_pmf)-1 days return
     -1 or ~0 (depending on noise model) due to NaN padding.
-
-    Examples
-    --------
-    >>> from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
-    >>> from pyrenew.observation import Counts, NegativeBinomialNoise
-    >>> import jax.numpy as jnp
-    >>> import numpyro
-    >>>
-    >>> delay_pmf = jnp.array([0.2, 0.5, 0.3])
-    >>> counts_obs = Counts(
-    ...     ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
-    ...     delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
-    ...     noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
-    ... )
-    >>>
-    >>> with numpyro.handlers.seed(rng_seed=42):
-    ...     infections = jnp.ones(30) * 1000
-    ...     sampled_counts = counts_obs.sample(infections=infections, obs=None)
     """
 
     def infection_resolution(self) -> str:
@@ -180,7 +170,8 @@ class Counts(_CountBase):
     def __repr__(self) -> str:
         """Return string representation."""
         return (
-            f"Counts(ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
+            f"Counts(name={self.name!r}, "
+            f"ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
             f"delay_distribution_rv={self.temporal_pmf_rv!r}, "
             f"noise={self.noise!r})"
         )
@@ -214,7 +205,7 @@ class Counts(_CountBase):
             `predicted` (predicted counts before noise).
         """
         predicted_counts = self._predicted_obs(infections)
-        self._deterministic("predicted_counts", predicted_counts)
+        self._deterministic("predicted", predicted_counts)
         predicted_counts_safe = jnp.nan_to_num(predicted_counts, nan=0.0)
 
         # Only use sparse indexing when conditioning on observations
@@ -224,7 +215,7 @@ class Counts(_CountBase):
             predicted_obs = predicted_counts_safe
 
         observed = self.noise.sample(
-            name="counts",
+            name=self._sample_site_name("obs"),
             predicted=predicted_obs,
             obs=obs,
         )
@@ -241,6 +232,9 @@ class CountsBySubpop(_CountBase):
 
     Parameters
     ----------
+    name : str
+        Unique name for this observation process. Used to prefix all
+        numpyro sample and deterministic site names.
     ascertainment_rate_rv : RandomVariable
         Ascertainment rate in [0, 1].
     delay_distribution_rv : RandomVariable
@@ -251,37 +245,13 @@ class CountsBySubpop(_CountBase):
     Notes
     -----
     Output preserves input timeline. First len(delay_pmf)-1 days are NaN.
-
-    Examples
-    --------
-    >>> from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
-    >>> from pyrenew.observation import CountsBySubpop, PoissonNoise
-    >>> import jax.numpy as jnp
-    >>> import numpyro
-    >>>
-    >>> delay_pmf = jnp.array([0.3, 0.4, 0.3])
-    >>> counts_obs = CountsBySubpop(
-    ...     ascertainment_rate_rv=DeterministicVariable("ihr", 0.02),
-    ...     delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
-    ...     noise=PoissonNoise(),
-    ... )
-    >>>
-    >>> with numpyro.handlers.seed(rng_seed=42):
-    ...     infections = jnp.ones((30, 3)) * 500  # 30 days, 3 subpops
-    ...     times = jnp.array([10, 15, 10, 15])
-    ...     subpop_indices = jnp.array([0, 0, 1, 1])
-    ...     sampled = counts_obs.sample(
-    ...         infections=infections,
-    ...         subpop_indices=subpop_indices,
-    ...         times=times,
-    ...         obs=None,
-    ...     )
     """
 
     def __repr__(self) -> str:
         """Return string representation."""
         return (
-            f"CountsBySubpop(ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
+            f"CountsBySubpop(name={self.name!r}, "
+            f"ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
             f"delay_distribution_rv={self.temporal_pmf_rv!r}, "
             f"noise={self.noise!r})"
         )
@@ -333,14 +303,14 @@ class CountsBySubpop(_CountBase):
         # Compute predicted counts for all subpops
         predicted_counts_all = self._predicted_obs(infections)
 
-        self._deterministic("predicted_counts_by_subpop", predicted_counts_all)
+        self._deterministic("predicted", predicted_counts_all)
 
         # Replace NaN padding with 0 for distribution creation
         predicted_counts_safe = jnp.nan_to_num(predicted_counts_all, nan=0.0)
         predicted_obs = predicted_counts_safe[times, subpop_indices]
 
         observed = self.noise.sample(
-            name="counts_by_subpop",
+            name=self._sample_site_name("obs"),
             predicted=predicted_obs,
             obs=obs,
         )

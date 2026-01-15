@@ -148,6 +148,7 @@ class TestCountsWithPriors:
         concentration = DeterministicVariable("conc", 10.0)
 
         process = Counts(
+            name="test",
             ascertainment_rate_rv=ascertainment,
             delay_distribution_rv=delay,
             noise=NegativeBinomialNoise(concentration),
@@ -173,6 +174,7 @@ class TestCountsWithPriors:
         concentration = DistributionalVariable("conc", dist.HalfNormal(10.0))
 
         process = Counts(
+            name="test",
             ascertainment_rate_rv=ascertainment,
             delay_distribution_rv=delay,
             noise=NegativeBinomialNoise(concentration),
@@ -322,6 +324,7 @@ class TestCountsBySubpop:
         """Test that CountsBySubpop sample returns correct shape."""
         delay_pmf = jnp.array([0.3, 0.4, 0.3])
         process = CountsBySubpop(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.02),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
             noise=PoissonNoise(),
@@ -346,6 +349,7 @@ class TestCountsBySubpop:
         """Test that CountsBySubpop returns 'subpop' resolution."""
         delay_pmf = jnp.array([1.0])
         process = CountsBySubpop(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
             noise=PoissonNoise(),
@@ -360,6 +364,7 @@ class TestPoissonNoise:
     def test_poisson_counts(self, simple_delay_pmf):
         """Test Counts with Poisson noise."""
         process = Counts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=PoissonNoise(),
@@ -392,6 +397,7 @@ class TestCountBaseInternalMethods:
                 pass
 
         process = IncompleteCountProcess(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -408,6 +414,7 @@ class TestValidationMethods:
     def test_validate_calls_all_validations(self, simple_delay_pmf):
         """Test that validate() calls all necessary validations."""
         process = Counts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -418,6 +425,7 @@ class TestValidationMethods:
     def test_validate_invalid_ascertainment_rate_negative(self, simple_delay_pmf):
         """Test that validate raises for negative ascertainment rate."""
         process = Counts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", -0.1),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -430,6 +438,7 @@ class TestValidationMethods:
     ):
         """Test that validate raises for ascertainment rate > 1."""
         process = Counts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.5),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -440,6 +449,7 @@ class TestValidationMethods:
     def test_lookback_days(self, simple_delay_pmf, long_delay_pmf):
         """Test lookback_days returns PMF length."""
         process_short = Counts(
+            name="test_short",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -447,6 +457,7 @@ class TestValidationMethods:
         assert process_short.lookback_days() == 1
 
         process_long = Counts(
+            name="test_long",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", long_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -456,6 +467,7 @@ class TestValidationMethods:
     def test_infection_resolution_counts(self, simple_delay_pmf):
         """Test that Counts returns 'aggregate' resolution."""
         process = Counts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -514,6 +526,7 @@ class TestBaseObservationProcessValidation:
     def test_validate_pmf_empty_array(self, simple_delay_pmf):
         """Test that _validate_pmf raises for empty array."""
         process = Counts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -525,6 +538,7 @@ class TestBaseObservationProcessValidation:
     def test_validate_pmf_sum_not_one(self, simple_delay_pmf):
         """Test that _validate_pmf raises for PMF not summing to 1."""
         process = Counts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -536,6 +550,7 @@ class TestBaseObservationProcessValidation:
     def test_validate_pmf_negative_values(self, simple_delay_pmf):
         """Test that _validate_pmf raises for negative values."""
         process = Counts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -548,6 +563,7 @@ class TestBaseObservationProcessValidation:
         """Test get_minimum_observation_day returns correct value."""
         delay_pmf = jnp.array([0.2, 0.5, 0.3])  # length 3
         process = Counts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),

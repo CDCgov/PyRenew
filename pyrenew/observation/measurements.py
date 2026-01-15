@@ -23,6 +23,9 @@ class Measurements(BaseObservationProcess):
 
     Parameters
     ----------
+    name : str
+        Unique name for this observation process. Used to prefix all
+        numpyro sample and deterministic site names.
     temporal_pmf_rv : RandomVariable
         Temporal distribution PMF (e.g., shedding kinetics for wastewater).
     noise : MeasurementNoise
@@ -45,6 +48,7 @@ class Measurements(BaseObservationProcess):
 
     def __init__(
         self,
+        name: str,
         temporal_pmf_rv: RandomVariable,
         noise: MeasurementNoise,
     ) -> None:
@@ -53,18 +57,21 @@ class Measurements(BaseObservationProcess):
 
         Parameters
         ----------
+        name : str
+            Unique name for this observation process. Used to prefix all
+            numpyro sample and deterministic site names.
         temporal_pmf_rv : RandomVariable
             Temporal distribution PMF (e.g., shedding kinetics).
         noise : MeasurementNoise
             Noise model (e.g., HierarchicalNormalNoise with sensor effects).
         """
-        super().__init__(temporal_pmf_rv=temporal_pmf_rv)
+        super().__init__(name=name, temporal_pmf_rv=temporal_pmf_rv)
         self.noise = noise
 
     def __repr__(self) -> str:
         """Return string representation."""
         return (
-            f"{self.__class__.__name__}("
+            f"{self.__class__.__name__}(name={self.name!r}, "
             f"temporal_pmf_rv={self.temporal_pmf_rv!r}, "
             f"noise={self.noise!r})"
         )
@@ -129,12 +136,12 @@ class Measurements(BaseObservationProcess):
         """
         predicted_values = self._predicted_obs(infections)
 
-        self._deterministic("predicted_log_conc", predicted_values)
+        self._deterministic("predicted", predicted_values)
 
         predicted_obs = predicted_values[times, subpop_indices]
 
         observed = self.noise.sample(
-            name="concentrations",
+            name=self._sample_site_name("obs"),
             predicted=predicted_obs,
             obs=obs,
             sensor_indices=sensor_indices,
