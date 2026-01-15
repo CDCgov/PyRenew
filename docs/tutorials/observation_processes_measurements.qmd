@@ -233,7 +233,9 @@ class Wastewater(Measurements):
         noise : MeasurementNoise
             Noise model (e.g., HierarchicalNormalNoise).
         """
-        super().__init__(name=name, temporal_pmf_rv=shedding_kinetics_rv, noise=noise)
+        super().__init__(
+            name=name, temporal_pmf_rv=shedding_kinetics_rv, noise=noise
+        )
         self.log10_genome_per_infection_rv = log10_genome_per_infection_rv
         self.ml_per_person_per_day = ml_per_person_per_day
 
