@@ -51,13 +51,6 @@ def load_hospital_data_for_state(
     )
 
     if len(df) == 0:
-        # Try filtering by ABBR column if it exists
-        df = pl.read_csv(source=data_path)
-        df = df.with_columns(pl.col("date").str.to_date())
-        if "ABBR" in df.columns:
-            df = df.filter(pl.col("ABBR") == state_abbr).sort("date")
-
-    if len(df) == 0:
         raise ValueError(f"No data found for state {state_abbr} in {filename}")
 
     daily_admits = jnp.array(df["daily_hosp_admits"].to_numpy())

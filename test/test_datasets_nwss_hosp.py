@@ -55,60 +55,10 @@ class TestLoadWastewaterDataForState:
         assert data["n_sites"] > 0
         assert len(data["wwtp_names"]) == data["n_sites"]
 
-    def test_load_state_nm(self):
-        """Test loading wastewater data for NM state (has log10 units)."""
-        data = load_wastewater_data_for_state(state_abbr="NM")
-
-        assert data["n_obs"] > 0
-        # NM has log10 units, so standardize_log_units should convert them
-        assert jnp.all(data["observed_conc_linear"] > 0)
-
     def test_invalid_state_raises_error(self):
         """Test that invalid state raises ValueError."""
         with pytest.raises(ValueError, match="No wastewater data found"):
-            load_wastewater_data_for_state(state_abbr="XX")
-
-    def test_substitute_below_lod_true(self):
-        """Test below-LOD substitution when enabled."""
-        data = load_wastewater_data_for_state(
-            state_abbr="CA",
-            substitute_below_lod=True,
-        )
-
-        # All linear concentrations should be positive
-        assert jnp.all(data["observed_conc_linear"] > 0)
-
-    def test_substitute_below_lod_false(self):
-        """Test behavior when below-LOD substitution is disabled."""
-        data = load_wastewater_data_for_state(
-            state_abbr="CA",
-            substitute_below_lod=False,
-        )
-
-        # Should still have valid data
-        assert data["n_obs"] > 0
-
-    def test_standardize_log_units_false(self):
-        """Test behavior when log unit standardization is disabled."""
-        data = load_wastewater_data_for_state(
-            state_abbr="CA",
-            standardize_log_units=False,
-        )
-
-        assert data["n_obs"] > 0
-        assert jnp.all(data["observed_conc_linear"] >= 0)
-
-    def test_standardize_log_units_true_with_log10_data(self):
-        """Test log unit standardization with data that has log10 units."""
-        # NM has log10 units in the test data
-        data = load_wastewater_data_for_state(
-            state_abbr="NM",
-            standardize_log_units=True,
-        )
-
-        assert data["n_obs"] > 0
-        # Linear concentrations should be converted from log10
-        assert jnp.all(data["observed_conc_linear"] > 0)
+            load_wastewater_data_for_state(state_abbr="INVALID")
 
     def test_site_ids_are_valid_indices(self):
         """Test that site_ids are valid indices into wwtp_names."""
@@ -131,6 +81,11 @@ class TestLoadWastewaterDataForState:
         # There's an epsilon of 1e-8 added before log transform
         expected_log = jnp.log(data["observed_conc_linear"] + 1e-8)
         assert jnp.allclose(data["observed_conc"], expected_log, rtol=1e-5)
+
+    def test_concentrations_are_positive(self):
+        """Test that linear concentrations are positive."""
+        data = load_wastewater_data_for_state()
+        assert jnp.all(data["observed_conc_linear"] > 0)
 
 
 class TestLoadHospitalDataForState:
@@ -183,6 +138,11 @@ class TestLoadHospitalDataForState:
 
         assert data["n_days"] == len(data["daily_admits"])
         assert data["n_days"] == len(data["dates"])
+
+    def test_invalid_state_raises_error(self):
+        """Test that invalid state raises ValueError."""
+        with pytest.raises(ValueError, match="No data found for state"):
+            load_hospital_data_for_state(state_abbr="XX")
 
 
 if __name__ == "__main__":

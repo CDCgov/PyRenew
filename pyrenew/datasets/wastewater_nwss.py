@@ -15,8 +15,6 @@ import polars as pl
 def load_wastewater_data_for_state(
     state_abbr: str = "CA",
     filename: str = "fake_nwss.csv",
-    substitute_below_lod: bool = True,
-    standardize_log_units: bool = True,
 ) -> dict:
     """
     Load wastewater data for a specific state.
@@ -27,12 +25,6 @@ def load_wastewater_data_for_state(
         State abbreviation (e.g., "CA"). Default is "CA".
     filename : str
         CSV filename. Default is "fake_nwss.csv".
-    substitute_below_lod : bool
-        If True, replace concentrations below LOD with 0.5*LOD.
-        Default is True.
-    standardize_log_units : bool
-        If True, convert log10 units to linear scale.
-        Default is True.
 
     Returns
     -------
@@ -55,7 +47,8 @@ def load_wastewater_data_for_state(
     License: Public Domain (CC0 1.0 Universal) - U.S. Government work.
 
     The data is synthetic and contains deliberately added noise for
-    public release.
+    public release. Concentrations are in copies/L and are converted
+    to copies/mL (divided by 1000).
     """
     data_path = files("pyrenew.datasets.wastewater_nwss_data") / filename
     df = pl.read_csv(
@@ -64,46 +57,15 @@ def load_wastewater_data_for_state(
     )
     df = df.with_columns(pl.col("sample_collect_date").str.to_date())
 
-    # Quality filtering for real NWSS data
-    if "sample_location" in df.columns:
-        df = df.filter(pl.col("sample_location") == "wwtp")
-    if "sample_matrix" in df.columns:
-        df = df.filter(pl.col("sample_matrix") != "primary sludge")
-    if "pcr_target" in df.columns:
-        df = df.filter(pl.col("pcr_target") == "sars-cov-2")
-
     # Filter to requested state
     df = df.filter(pl.col("wwtp_jurisdiction") == state_abbr)
     if len(df) == 0:
         raise ValueError(f"No wastewater data found for state {state_abbr}")
 
-    if standardize_log_units:
-        # Convert log10 units to linear, then standardize to copies/mL
-        # NWSS data is in copies/L, so divide by 1000 to get copies/mL
-        df = df.with_columns(
-            pl.when(pl.col("pcr_target_units").str.contains("(?i)log10"))
-            .then(10 ** pl.col("pcr_target_avg_conc") / 1000)
-            .otherwise(pl.col("pcr_target_avg_conc") / 1000)
-            .alias("conc_linear"),
-            pl.when(pl.col("pcr_target_units").str.contains("(?i)log10"))
-            .then(10 ** pl.col("lod_sewage") / 1000)
-            .otherwise(pl.col("lod_sewage") / 1000)
-            .alias("lod_linear"),
-        )
-    else:
-        df = df.with_columns(
-            (pl.col("pcr_target_avg_conc") / 1000).alias("conc_linear"),
-            (pl.col("lod_sewage") / 1000).alias("lod_linear"),
-        )
-
-    # Substitute below-LOD values with 0.5*LOD
-    if substitute_below_lod:
-        df = df.with_columns(
-            pl.when(pl.col("conc_linear") < pl.col("lod_linear"))
-            .then(0.5 * pl.col("lod_linear"))
-            .otherwise(pl.col("conc_linear"))
-            .alias("conc_linear")
-        )
+    # Convert copies/L to copies/mL
+    df = df.with_columns(
+        (pl.col("pcr_target_avg_conc") / 1000).alias("conc_linear"),
+    )
 
     df = df.sort("sample_collect_date")
     unique_sites = sorted(df["wwtp_name"].unique().to_list())

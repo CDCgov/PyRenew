@@ -49,5 +49,5 @@ ca_ww = datasets.load_wastewater_data_for_state("CA")
 
 ## Notes
 
-- Some measurements are in linear scale, others in log10 scale (check `pcr_target_units`)
-- The loader function handles unit standardization and below-LOD substitution
+- Concentrations are in copies/L and are converted to copies/mL by the loader
+- The synthetic data uses consistent units (copies/L wastewater)
