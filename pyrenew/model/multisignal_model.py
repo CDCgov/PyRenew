@@ -13,9 +13,9 @@ import jax.random as random
 import numpyro
 import numpyro.handlers
 from numpyro.infer import MCMC, NUTS
-from pyrenew.metaclass import Model
 
 from pyrenew.latent.base import BaseLatentInfectionProcess
+from pyrenew.metaclass import Model
 from pyrenew.observation.base import BaseObservationProcess
 
 

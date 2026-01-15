@@ -5,8 +5,8 @@ Tests for ModelBuilder and MultiSignalModel.
 import jax.numpy as jnp
 import numpyro
 import pytest
-from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HierarchicalInfections, RandomWalk
 from pyrenew.model import ModelBuilder, MultiSignalModel
 from pyrenew.observation import Counts, NegativeBinomialNoise
@@ -18,7 +18,14 @@ UNOBS_FRACTIONS = jnp.array([0.45])
 
 @pytest.fixture
 def simple_builder():
-    """Create a configured builder (no population structure at configure time)."""
+    """
+    Create a configured builder (no population structure at configure time).
+
+    Returns
+    -------
+    ModelBuilder
+        Configured model builder.
+    """
     builder = ModelBuilder()
     gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 

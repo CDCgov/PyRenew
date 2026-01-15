@@ -25,6 +25,7 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
+
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process import RandomWalk as PyRenewRandomWalk
 from pyrenew.randomvariable import DistributionalVariable
@@ -171,7 +172,14 @@ class AR1(TemporalProcess):
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
-        """Sample a single AR(1) trajectory."""
+        """
+        Sample a single AR(1) trajectory.
+
+        Returns
+        -------
+        ArrayLike
+            Trajectory of shape (n_timepoints,).
+        """
         if initial_value is None:
             initial_value = 0.0
 
@@ -198,7 +206,14 @@ class AR1(TemporalProcess):
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
-        """Sample multiple AR(1) trajectories in parallel."""
+        """
+        Sample multiple AR(1) trajectories in parallel.
+
+        Returns
+        -------
+        ArrayLike
+            Trajectories of shape (n_timepoints, n_processes).
+        """
         if initial_values is None:
             initial_values = jnp.zeros(n_processes)
         elif jnp.isscalar(initial_values):
@@ -321,7 +336,14 @@ class DifferencedAR1(TemporalProcess):
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
-        """Sample a single differenced AR(1) trajectory."""
+        """
+        Sample a single differenced AR(1) trajectory.
+
+        Returns
+        -------
+        ArrayLike
+            Trajectory of shape (n_timepoints,).
+        """
         if initial_value is None:
             initial_value = 0.0
 
@@ -349,7 +371,14 @@ class DifferencedAR1(TemporalProcess):
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
-        """Sample multiple differenced AR(1) trajectories in parallel."""
+        """
+        Sample multiple differenced AR(1) trajectories in parallel.
+
+        Returns
+        -------
+        ArrayLike
+            Trajectories of shape (n_timepoints, n_processes).
+        """
         if initial_values is None:
             initial_values = jnp.zeros(n_processes)
         elif jnp.isscalar(initial_values):
@@ -466,7 +495,14 @@ class RandomWalk(TemporalProcess):
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
-        """Sample a single random walk trajectory using PyRenew's RandomWalk."""
+        """
+        Sample a single random walk trajectory using PyRenew's RandomWalk.
+
+        Returns
+        -------
+        ArrayLike
+            Trajectory of shape (n_timepoints,).
+        """
         if initial_value is None:
             initial_value = 0.0
 
@@ -492,7 +528,14 @@ class RandomWalk(TemporalProcess):
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
-        """Sample multiple random walk trajectories in parallel."""
+        """
+        Sample multiple random walk trajectories in parallel.
+
+        Returns
+        -------
+        ArrayLike
+            Trajectories of shape (n_timepoints, n_processes).
+        """
         if initial_values is None:
             initial_values = jnp.zeros(n_processes)
         elif jnp.isscalar(initial_values):

@@ -23,8 +23,8 @@ jupyter:
 ---
 
 ```{python}
-#| label: setup
-#| output: false
+# | label: setup
+# | output: false
 import jax.numpy as jnp
 import jax.random as random
 import numpy as np
@@ -33,10 +33,12 @@ from numpyro.infer import Predictive
 import pandas as pd
 import plotnine as p9
 import warnings
+
 warnings.filterwarnings("ignore")
 ```
 
 ```{python}
+# | label: imports
 from pyrenew.latent import (
     HierarchicalInfections,
     AR1,
@@ -91,6 +93,7 @@ I0_rv = DistributionalVariable("I0", dist.Beta(1, 1000))
 We define subpopulations as fractions of the total jurisdiction population:
 
 ```{python}
+# | label: population-structure
 # 5 observed subpopulations
 obs_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07])
 
@@ -111,6 +114,7 @@ Note: Population structure is passed at **sample time**, not when constructing t
 The **generation interval** is the probability distribution over the time between infection of a primary case and infection of a secondary case. It determines the "memory" of the renewal process—how current infections depend on past infections.
 
 ```{python}
+# | label: gen-interval-define
 # Typical COVID-like generation interval
 gen_int_pmf = jnp.array([0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02])
 gen_int_rv = DeterministicPMF("gen_int", gen_int_pmf)
@@ -128,6 +132,7 @@ print(f"Mean generation time: {mean_gen_time:.1f} days")
 The generation interval is typically fixed based on pathogen biology, not estimated from data.
 
 ```{python}
+# | label: gen-interval-compare
 # Compare generation intervals: short vs long
 gi_short = jnp.array([0.4, 0.4, 0.2])  # Mean ~1 day
 gi_long = jnp.array([0.05, 0.1, 0.2, 0.3, 0.2, 0.1, 0.05])  # Mean ~3.5 days
@@ -135,14 +140,19 @@ gi_long = jnp.array([0.05, 0.1, 0.2, 0.3, 0.2, 0.1, 0.05])  # Mean ~3.5 days
 gi_short_rv = DeterministicPMF("gi_short", gi_short)
 gi_long_rv = DeterministicPMF("gi_long", gi_long)
 
-print(f"Short GI mean: {float(np.sum(np.arange(len(gi_short)) * gi_short)):.1f} days")
-print(f"Long GI mean: {float(np.sum(np.arange(len(gi_long)) * gi_long)):.1f} days")
+print(
+    f"Short GI mean: {float(np.sum(np.arange(len(gi_short)) * gi_short)):.1f} days"
+)
+print(
+    f"Long GI mean: {float(np.sum(np.arange(len(gi_long)) * gi_long)):.1f} days"
+)
 ```
 
 To illustrate, we sample infection trajectories using each generation interval while holding other inputs fixed (I0 = 0.001, DifferencedAR1 baseline, AR1 deviations) and using the same random seed so the underlying Rt trajectory is identical. Solid lines use `initial_log_rt = 0` (Rt starts at 1); dashed lines show `initial_log_rt = ±0.2` (Rt starts growing or declining) with the standard GI:
 
 ```{python}
-#| fig-cap: Effect of generation interval and initial_log_rt on infection dynamics. Solid lines start at Rt=1; dashed lines show initial growth (Rt≈1.22) or decline (Rt≈0.82).
+# | label: fig-gi-effect
+# | fig-cap: Effect of generation interval and initial_log_rt on infection dynamics. Solid lines start at Rt=1; dashed lines show initial growth (Rt≈1.22) or decline (Rt≈0.82).
 
 # Create models with different generation intervals
 baseline_temporal = DifferencedAR1(autoreg=0.9, innovation_sd=0.05)
@@ -175,15 +185,20 @@ for name, gi_rv in gi_configs.items():
     n_init = model.n_initialization_points
     inf = np.array(inf_agg)[n_init:]
     for d in range(len(inf)):
-        gi_data.append({
-            "day": d,
-            "infections": float(inf[d]),
-            "config": name,
-            "linetype": "solid",
-        })
+        gi_data.append(
+            {
+                "day": d,
+                "infections": float(inf[d]),
+                "config": name,
+                "linetype": "solid",
+            }
+        )
 
 # initial_log_rt comparison with standard GI
-for init_rt_name, init_rt_val in [("Rt≈1.22 (growing)", 0.2), ("Rt≈0.82 (declining)", -0.2)]:
+for init_rt_name, init_rt_val in [
+    ("Rt≈1.22 (growing)", 0.2),
+    ("Rt≈0.82 (declining)", -0.2),
+]:
     model = HierarchicalInfections(
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
@@ -200,17 +215,22 @@ for init_rt_name, init_rt_val in [("Rt≈1.22 (growing)", 0.2), ("Rt≈0.82 (dec
     n_init = model.n_initialization_points
     inf = np.array(inf_agg)[n_init:]
     for d in range(len(inf)):
-        gi_data.append({
-            "day": d,
-            "infections": float(inf[d]),
-            "config": f"Standard GI, {init_rt_name}",
-            "linetype": "dashed",
-        })
+        gi_data.append(
+            {
+                "day": d,
+                "infections": float(inf[d]),
+                "config": f"Standard GI, {init_rt_name}",
+                "linetype": "dashed",
+            }
+        )
 
 gi_df = pd.DataFrame(gi_data)
 
 (
-    p9.ggplot(gi_df, p9.aes(x="day", y="infections", color="config", linetype="linetype"))
+    p9.ggplot(
+        gi_df,
+        p9.aes(x="day", y="infections", color="config", linetype="linetype"),
+    )
     + p9.geom_line(size=1)
     + p9.scale_linetype_manual(
         values={"solid": "solid", "dashed": "dashed"},
@@ -229,12 +249,16 @@ gi_df = pd.DataFrame(gi_data)
 ```
 
 ```{python}
-#| fig-cap: Zoomed view of days 14-21 showing separation between trajectories.
+# | label: fig-gi-effect-zoom
+# | fig-cap: Zoomed view of days 14-21 showing separation between trajectories.
 
 gi_df_zoom = gi_df[(gi_df["day"] >= 14) & (gi_df["day"] <= 21)]
 
 (
-    p9.ggplot(gi_df_zoom, p9.aes(x="day", y="infections", color="config", linetype="linetype"))
+    p9.ggplot(
+        gi_df_zoom,
+        p9.aes(x="day", y="infections", color="config", linetype="linetype"),
+    )
     + p9.geom_line(size=1)
     + p9.scale_linetype_manual(
         values={"solid": "solid", "dashed": "dashed"},
@@ -263,9 +287,12 @@ The flat period for solid lines also reflects DifferencedAR1 with high autoregre
 `I0` is the proportion of the population infected at time zero. It seeds the renewal equation and scales the entire trajectory:
 
 ```{python}
+# | label: initial-conditions
 # Default values
 I0_rv = DeterministicVariable("I0", 0.001)  # 0.1% initially infected
-initial_log_rt_rv = DeterministicVariable("initial_log_rt", 0.0)  # Rt starts at 1.0
+initial_log_rt_rv = DeterministicVariable(
+    "initial_log_rt", 0.0
+)  # Rt starts at 1.0
 
 print(f"I0 = 0.001 means {0.001:.1%} of population initially infected")
 print(f"initial_log_rt = 0.0 means Rt starts at {np.exp(0.0):.1f}")
@@ -274,7 +301,8 @@ print(f"initial_log_rt = 0.0 means Rt starts at {np.exp(0.0):.1f}")
 In the previous plot, `I0` was specified as:  `I0_rv=DeterministicVariable("I0", 0.001)`, i.e., $1%$ of the population.  We overplot trajectories for $10%$ and $0.1%$ as well.
 
 ```{python}
-#| fig-cap: Effect of I0 on infection scale. Higher I0 shifts the entire trajectory up proportionally.
+# | label: fig-i0-effect
+# | fig-cap: Effect of I0 on infection scale. Higher I0 shifts the entire trajectory up proportionally.
 
 i0_configs = {
     "I0 = 0.0001 (0.01%)": 0.0001,
@@ -350,6 +378,7 @@ The temporal process determines how $R_{\text{baseline}}(t)$ and the deviations 
 Now let's assemble all the inputs:
 
 ```{python}
+# | label: temporal-config
 # Baseline Rt: DifferencedAR1 allows trends while stabilizing growth rate
 baseline_temporal = DifferencedAR1(autoreg=0.9, innovation_sd=0.05)
 
@@ -365,6 +394,7 @@ subpop_temporal = AR1(autoreg=0.8, innovation_sd=0.05)
 ### Creating the Process
 
 ```{python}
+# | label: create-process
 latent_infections = HierarchicalInfections(
     gen_int_rv=gen_int_rv,
     I0_rv=I0_rv,
@@ -373,8 +403,12 @@ latent_infections = HierarchicalInfections(
     subpop_temporal=subpop_temporal,
 )
 
-print(f"Generation interval length: {latent_infections.get_required_lookback()} days")
-print(f"Initialization points: {latent_infections.n_initialization_points} days")
+print(
+    f"Generation interval length: {latent_infections.get_required_lookback()} days"
+)
+print(
+    f"Initialization points: {latent_infections.n_initialization_points} days"
+)
 ```
 
 ## Prior Predictive Checks: What Does the Model Believe?
@@ -384,6 +418,7 @@ Now we examine what infection dynamics this configuration considers plausible—
 ### Single Sample
 
 ```{python}
+# | label: single-sample
 n_days = 28  # 4 weeks of simulation
 
 with numpyro.handlers.seed(rng_seed=42):
@@ -403,7 +438,9 @@ print(f"  Aggregate (jurisdiction total): {infections_agg.shape}")
 print(f"  All subpopulations: {infections_all.shape}")
 print(f"  Observed subpopulations: {infections_obs.shape}")
 print(f"  Unobserved subpopulations: {infections_unobs.shape}")
-print(f"\nTimeline: {n_init} initialization days + {n_days} simulation days = {n_total} total")
+print(
+    f"\nTimeline: {n_init} initialization days + {n_days} simulation days = {n_total} total"
+)
 ```
 
 ### Many Samples: The Prior Predictive Distribution
@@ -411,6 +448,7 @@ print(f"\nTimeline: {n_init} initialization days + {n_days} simulation days = {n
 A single sample tells us little. We need many samples to understand the *distribution* of trajectories the model considers plausible.
 
 ```{python}
+# | label: prior-predictive-sample
 def sample_model():
     """Wrapper for prior predictive sampling."""
     return latent_infections.sample(
@@ -418,6 +456,7 @@ def sample_model():
         obs_fractions=obs_fractions,
         unobs_fractions=unobs_fractions,
     )
+
 
 n_samples = 200
 predictive = Predictive(sample_model, num_samples=n_samples)
@@ -430,6 +469,7 @@ print(f"Infection samples: {prior_samples['infections_aggregate'].shape}")
 ### Visualizing the Prior: Baseline Rt Trajectories
 
 ```{python}
+# | label: rt-trajectories-data
 # Extract post-initialization Rt trajectories
 rt_samples = np.array(prior_samples["rt_baseline"])[:, n_init:]
 
@@ -448,7 +488,8 @@ rt_q95 = np.percentile(rt_samples, 95, axis=0)
 ```
 
 ```{python}
-#| fig-cap: Prior predictive distribution of baseline Rt. Each light blue line is one sample from the prior. The model considers all these trajectories plausible before seeing data.
+# | label: fig-prior-rt
+# | fig-cap: Prior predictive distribution of baseline Rt. Each light blue line is one sample from the prior. The model considers all these trajectories plausible before seeing data.
 
 # Cap display for readability (some trajectories explode)
 rt_cap = 5.0
@@ -472,6 +513,7 @@ n_extreme = np.sum(np.any(rt_samples > rt_cap, axis=1))
 ### Interpreting the Prior Predictive
 
 ```{python}
+# | label: rt-summary-stats
 print("Rt at end of simulation (day 28):")
 print(f"  5th percentile:  {rt_q05[-1]:.2f}")
 print(f"  Median:          {rt_median[-1]:.2f}")
@@ -495,6 +537,7 @@ The median stays near 1, but the mean is pulled up by explosive trajectories. Th
 The prior predictive distribution changes dramatically based on your temporal process choices. Let's compare the three options for baseline Rt.
 
 ```{python}
+# | label: temporal-process-samples
 temporal_configs = {
     "AR(1)": AR1(autoreg=0.9, innovation_sd=0.05),
     "DifferencedAR1": DifferencedAR1(autoreg=0.9, innovation_sd=0.05),
@@ -525,17 +568,20 @@ for name, temporal in temporal_configs.items():
 ```
 
 ```{python}
+# | label: temporal-comparison-data
 # Build comparison dataframe
 comparison_data = []
 for name, rt in process_samples.items():
     for i in range(n_samples):
         for d in range(n_days):
-            comparison_data.append({
-                "day": d,
-                "rt": float(rt[i, d]),
-                "sample": i,
-                "process": name,
-            })
+            comparison_data.append(
+                {
+                    "day": d,
+                    "rt": float(rt[i, d]),
+                    "sample": i,
+                    "process": name,
+                }
+            )
 comparison_df = pd.DataFrame(comparison_data)
 comparison_df["process"] = pd.Categorical(
     comparison_df["process"],
@@ -545,7 +591,8 @@ comparison_df["process"] = pd.Categorical(
 ```
 
 ```{python}
-#| fig-cap: Effect of temporal process choice on prior Rt trajectories. AR(1) stays bounded near 1; DifferencedAR1 and RandomWalk can drift further.
+# | label: fig-temporal-comparison
+# | fig-cap: Effect of temporal process choice on prior Rt trajectories. AR(1) stays bounded near 1; DifferencedAR1 and RandomWalk can drift further.
 
 (
     p9.ggplot(comparison_df, p9.aes(x="day", y="rt", group="sample"))
@@ -565,13 +612,16 @@ comparison_df["process"] = pd.Categorical(
 ```
 
 ```{python}
+# | label: temporal-summary-table
 print("Rt at day 28 by temporal process:")
 print(f"{'Process':<18} {'Median':>8} {'Mean':>8} {'95th %':>8} {'Max':>8}")
 print("-" * 52)
 for name in ["AR(1)", "DifferencedAR1", "RandomWalk"]:
     rt = process_samples[name][:, -1]
-    print(f"{name:<18} {np.median(rt):>8.2f} {np.mean(rt):>8.2f} "
-          f"{np.percentile(rt, 95):>8.2f} {np.max(rt):>8.1f}")
+    print(
+        f"{name:<18} {np.median(rt):>8.2f} {np.mean(rt):>8.2f} "
+        f"{np.percentile(rt, 95):>8.2f} {np.max(rt):>8.1f}"
+    )
 ```
 
 **Key observations:**
@@ -585,6 +635,7 @@ for name in ["AR(1)", "DifferencedAR1", "RandomWalk"]:
 The same choice applies to subpopulation deviations $\delta_k(t)$. Let's compare AR(1) vs RandomWalk:
 
 ```{python}
+# | label: subpop-deviation-samples
 subpop_configs = {
     "AR(1) deviations": AR1(autoreg=0.8, innovation_sd=0.05),
     "RandomWalk deviations": RandomWalk(innovation_sd=0.05),
@@ -607,29 +658,35 @@ for name, subpop_temporal in subpop_configs.items():
             unobs_fractions=unobs_fractions,
         )
 
-    deviation_samples[name] = Predictive(make_sampler(model), num_samples=n_samples)(
-        random.PRNGKey(42)
-    )
+    deviation_samples[name] = Predictive(
+        make_sampler(model), num_samples=n_samples
+    )(random.PRNGKey(42))
 ```
 
 ```{python}
+# | label: deviation-data
 # Plot deviations for first subpopulation
 dev_data = []
 for name in subpop_configs.keys():
-    devs = np.array(deviation_samples[name]["subpop_deviations"])[:, n_init:, 0]
+    devs = np.array(deviation_samples[name]["subpop_deviations"])[
+        :, n_init:, 0
+    ]
     for i in range(n_samples):
         for d in range(n_days):
-            dev_data.append({
-                "day": d,
-                "deviation": float(devs[i, d]),
-                "sample": i,
-                "process": name,
-            })
+            dev_data.append(
+                {
+                    "day": d,
+                    "deviation": float(devs[i, d]),
+                    "sample": i,
+                    "process": name,
+                }
+            )
 dev_df = pd.DataFrame(dev_data)
 ```
 
 ```{python}
-#| fig-cap: Subpopulation deviations under different temporal processes. AR(1) deviations decay toward zero; RandomWalk deviations can diverge.
+# | label: fig-subpop-deviations
+# | fig-cap: Subpopulation deviations under different temporal processes. AR(1) deviations decay toward zero; RandomWalk deviations can diverge.
 
 (
     p9.ggplot(dev_df, p9.aes(x="day", y="deviation", group="sample"))
@@ -659,6 +716,7 @@ Choose based on your scientific question: Do you expect local differences to per
 The `autoreg` and `innovation_sd` parameters control how constrained the prior is. Let's compare a "weakly informative" vs "more informative" configuration:
 
 ```{python}
+# | label: tuning-samples
 configs = {
     "Weakly informative\n(autoreg=0.9, sd=0.05)": {
         "baseline": DifferencedAR1(autoreg=0.9, innovation_sd=0.05),
@@ -687,29 +745,33 @@ for name, cfg in configs.items():
             unobs_fractions=unobs_fractions,
         )
 
-    tuning_samples[name] = Predictive(make_sampler(model), num_samples=n_samples)(
-        random.PRNGKey(42)
-    )
+    tuning_samples[name] = Predictive(
+        make_sampler(model), num_samples=n_samples
+    )(random.PRNGKey(42))
 ```
 
 ```{python}
+# | label: tuning-data
 # Build comparison dataframe
 tuning_data = []
 for name, samples in tuning_samples.items():
     rt = np.array(samples["rt_baseline"])[:, n_init:]
     for i in range(n_samples):
         for d in range(n_days):
-            tuning_data.append({
-                "day": d,
-                "rt": float(rt[i, d]),
-                "sample": i,
-                "config": name,
-            })
+            tuning_data.append(
+                {
+                    "day": d,
+                    "rt": float(rt[i, d]),
+                    "sample": i,
+                    "config": name,
+                }
+            )
 tuning_df = pd.DataFrame(tuning_data)
 ```
 
 ```{python}
-#| fig-cap: Effect of hyperparameter choices on prior Rt distribution. Tighter parameters produce more constrained trajectories.
+# | label: fig-tuning-effect
+# | fig-cap: Effect of hyperparameter choices on prior Rt distribution. Tighter parameters produce more constrained trajectories.
 
 (
     p9.ggplot(tuning_df, p9.aes(x="day", y="rt", group="sample"))
@@ -739,6 +801,7 @@ tuning_df = pd.DataFrame(tuning_data)
 Before using `HierarchicalInfections` in a full model, verify the hierarchical structure is working correctly:
 
 ```{python}
+# | label: verify-deviations
 # Check that deviations sum to zero (identifiability constraint)
 with numpyro.handlers.seed(rng_seed=123):
     with numpyro.handlers.trace() as trace:
@@ -750,11 +813,14 @@ with numpyro.handlers.seed(rng_seed=123):
 
 deviations = trace["subpop_deviations"]["value"]
 deviation_sums = jnp.sum(deviations, axis=1)
-print(f"Max |sum of deviations|: {float(jnp.max(jnp.abs(deviation_sums))):.2e}")
+print(
+    f"Max |sum of deviations|: {float(jnp.max(jnp.abs(deviation_sums))):.2e}"
+)
 print("(Should be ~0 due to sum-to-zero constraint)")
 ```
 
 ```{python}
+# | label: verify-aggregate
 # Check that aggregate = weighted sum of subpopulations
 with numpyro.handlers.seed(rng_seed=123):
     inf_agg, inf_all, _, _ = latent_infections.sample(
@@ -768,7 +834,11 @@ computed_agg = jnp.sum(inf_all * all_fractions[None, :], axis=1)
 max_diff = float(jnp.max(jnp.abs(computed_agg - inf_agg)))
 
 print(f"Max difference (aggregate vs weighted sum): {max_diff:.2e}")
-print("Hierarchical structure verified!" if max_diff < 1e-5 else "ERROR: Mismatch detected")
+print(
+    "Hierarchical structure verified!"
+    if max_diff < 1e-5
+    else "ERROR: Mismatch detected"
+)
 ```
 
 ## Summary

@@ -5,19 +5,34 @@ Unit tests for HierarchicalInfections.
 import jax.numpy as jnp
 import numpyro
 import pytest
-from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HierarchicalInfections, RandomWalk
 
 
 @pytest.fixture
 def gen_int_rv():
+    """
+    Create a generation interval random variable.
+
+    Returns
+    -------
+    DeterministicPMF
+        Generation interval PMF.
+    """
     return DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
 
 @pytest.fixture
 def process(gen_int_rv):
-    """Create a HierarchicalInfections with the new keyword-only API."""
+    """
+    Create a HierarchicalInfections with the new keyword-only API.
+
+    Returns
+    -------
+    HierarchicalInfections
+        Configured infection process.
+    """
     return HierarchicalInfections(
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),

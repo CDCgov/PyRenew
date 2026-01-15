@@ -1,0 +1,1054 @@
+---
+title: Building Multi-Signal Renewal Models
+format:
+  gfm:
+    fig-width: 16
+    fig-height: 10
+  html:
+    toc: true
+    embed-resources: true
+    self-contained-math: true
+    code-fold: true
+    code-tools: true
+engine: jupyter
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .qmd
+      format_name: quarto
+      format_version: '1.0'
+      jupytext_version: 1.18.1
+  kernelspec:
+    display_name: Python 3 (ipykernel)
+    language: python
+    name: python3
+---
+
+```{python}
+# | label: setup
+# | output: false
+import numpyro
+from numpyro.infer.reparam import LocScaleReparam
+
+# to run samplers in parallel you must run `set_host_device_count` before importing jax
+numpyro.set_host_device_count(4)
+numpyro.enable_x64()
+```
+
+```{python}
+import arviz as az
+import jax
+import jax.numpy as jnp
+import jax.random as random
+import numpy as np
+import plotnine as p9
+import pandas as pd
+import time
+import warnings
+
+warnings.filterwarnings("ignore")
+
+
+def make_rng_key():
+    """Generate a time-based random seed."""
+    seed = int(time.time() * 1000) % (2**32)
+    return random.PRNGKey(seed)
+```
+
+```{python}
+import jax
+from jax.typing import ArrayLike
+
+from pyrenew import datasets
+from pyrenew.deterministic import (
+    DeterministicPMF,
+    DeterministicVariable,
+)
+from pyrenew.metaclass import RandomVariable
+
+from pyrenew.latent import (
+    HierarchicalInfections,
+    AR1,
+    RandomWalk,
+    GammaGroupSdPrior,
+    HierarchicalNormalPrior,
+)
+from pyrenew.model import ModelBuilder
+
+from pyrenew.observation import (
+    Counts,
+    HierarchicalNormalNoise,
+    Measurements,
+    MeasurementNoise,
+    NegativeBinomialNoise,
+)
+```
+
+## Overview
+
+Renewal models in PyRenew combine two types of components:
+
+1.  **Latent infection process**: Generates unobserved infections via the renewal equation, driven by a time-varying reproduction number $R(t)$
+
+2.  **Observation processes**: Transform latent infections into observable signals (hospital admissions, wastewater concentrations, etc.) by applying delays, ascertainment, and noise
+
+A **multi-signal model** combines multiple observation processes—each representing a different data stream, e.g., hospital admissions, wastewater concentrations, which stem from the same underlying latent infection process. By jointly modeling these signals, we can improve estimation and prediction of the time-varying reproduction number $R(t)$. Such a model must:
+
+-   Generate a single coherent infection trajectory (or set of trajectories for subpopulations)
+-   Route those infections to each observation process appropriately
+-   Handle the initialization period required by delay distributions
+
+The `ModelBuilder` class handles this plumbing. You specify:
+
+1.  A **latent process** (e.g., `HierarchicalInfections`) that defines how infections evolve
+2.  One or more **observation processes** (e.g., `Counts`, `Measurements`) that define how infections become data
+
+The builder computes initialization requirements, wires components together, and produces a model ready for inference.
+
+### Related Tutorials
+
+Before diving into multi-signal models, you may want to review these foundational tutorials:
+
+-   **[Hierarchical Latent Infections](latent_hierarchical_infections.qmd)**: Understanding temporal process choices for $R(t)$
+-   **[Observation Processes: Counts](observation_processes_counts.qmd)**: Modeling count data (admissions, deaths)
+-   **[Observation Processes: Measurements](observation_processes_measurements.qmd)**: Modeling continuous data (wastewater)
+
+This tutorial shows how to combine these components into a complete multi-signal model.
+
+### What This Tutorial Covers
+
+This tutorial demonstrates building a multi-signal renewal model using:
+
+-   `HierarchicalInfections` — subpopulations share a jurisdiction-level baseline $R(t)$ with subpopulation-specific deviations
+-   `Counts` — hospital admissions (jurisdiction-level)
+-   A custom `Wastewater` class — viral concentrations (subpopulation-level)
+
+## Model Structure
+
+Before diving into implementation, let's visualize how data flows through a multi-signal renewal model. The diagram below shows the generative process: latent infections flow from the renewal equation to observation processes, which transform them into predicted observations.
+
+```mermaid
+flowchart TB
+
+    subgraph Latent["Latent Infection Process"]
+        L[HierarchicalInfections]
+    end
+
+    subgraph Infections["Infection Arrays"]
+        J["infections_aggregate (T,)"]
+        S["infections_subpop (T, K_obs)"]
+    end
+
+    subgraph Obs["Observation Processes"]
+        C[Counts]
+        W[Wastewater]
+    end
+
+    subgraph Data["Observed Data"]
+        HA[Hospital Admissions]
+        WW[Concentrations]
+    end
+
+    L --> J
+    L --> S
+    J -->|"aggregate"| C
+    S -->|"subpop"| W
+    C -->|"ascertainment × delay"| HA
+    W -->|"shedding × genome × dilution"| WW
+```
+
+### Infection Resolution
+
+Different observation processes observe different levels of the model hierarchy. Each observation process declares an **infection resolution** that determines what infection data it receives:
+
+| Resolution | Receives | Example signals |
+|----------------------|-------------------|-------------------------------|
+| `"aggregate"` | Aggregated infections (sum across all subpopulations) | Hospital admissions, case counts |
+| `"subpop"` | Infection matrix with one column per observed subpopulation | Wastewater, site-specific surveillance |
+
+The `ModelBuilder` routes latent infections to observation processes based on each process's declared resolution.
+
+With this structure in mind, we'll now define each component following the generative direction: first the latent infection process, then the observation processes.
+
+## Latent Infection Process
+
+Latent infection processes implement the renewal equation to generate infection trajectories. All latent processes share common components:
+
+-   **Generation interval**: PMF for secondary infection timing
+-   **Initial infections (I0)**: Starting condition for the renewal process
+-   **Temporal dynamics**: How $R(t)$ evolves over time
+
+### Generation Interval
+
+The generation interval PMF specifies the probability that a secondary infection occurs $d$ days after the primary infection.
+
+```{python}
+covid_gen_int = [0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02]
+gen_int_pmf = jnp.array(covid_gen_int)
+gen_int_rv = DeterministicPMF("gen_int", gen_int_pmf)
+
+# Mean generation time
+days = np.arange(len(gen_int_pmf))
+print(f"Generation interval length: {len(gen_int_pmf)} days")
+```
+
+### I0: Initial Infections
+
+The initial infections RV `I0_rv` specifies the **proportion of the population infected** at the first observation time. This must be a value in the interval (0, 1].
+
+```{python}
+I0_rv = DeterministicVariable("I0", 0.01)
+```
+
+### Initial Log Rt
+
+We set the initial log(Rt) to 0.0, meaning Rt starts at 1.0.
+
+```{python}
+initial_log_rt_rv = DeterministicVariable("initial_log_rt", 0.0)
+```
+
+### Temporal Processes for $R(t)$
+
+We configure two temporal processes:
+
+-   **Jurisdiction-level** (`baseline_temporal`): AR(1) process for the baseline $R(t)$
+-   **Subpopulation-level** (`subpop_temporal`): RandomWalk for subpopulation deviations
+
+The RandomWalk allows flexible evolution of subpopulation-specific transmission without mean reversion.
+
+```{python}
+# AR1 provides mean-reverting behavior for baseline Rt
+baseline_temporal = AR1(autoreg=0.9, innovation_sd=0.05)
+
+# RandomWalk allows flexible subpopulation deviations
+subpop_temporal = RandomWalk(innovation_sd=0.025)
+```
+
+## Observation Processes
+
+Observation processes transform latent infections into observable signals and define the statistical model linking predictions to data. Each observation process:
+
+-   Declares what **infection resolution** it needs (`"aggregate"` or `"subpop"`)
+-   Applies signal-specific transformations (ascertainment, delay convolution, shedding kinetics)
+-   Defines the noise model
+
+### Hospital Admissions
+
+In this example we use a dataset consisting of hospital admissions for COVID-19 across California
+for the first 10 months of 2023 (as reported to the CDC).
+
+```{python}
+# Load daily hospital admissions for California
+ca_hosp_data = datasets.load_hospital_data_for_state("CA", "2023-11-06.csv")
+
+hosp_admits = ca_hosp_data["daily_admits"]
+population_size = ca_hosp_data["population"]
+n_hosp_days = ca_hosp_data["n_days"]
+
+print("State: California")
+print(f"Population: {population_size:,}")
+print(f"Date range: {ca_hosp_data['dates'][0]} to {ca_hosp_data['dates'][-1]}")
+print(f"Number of days: {n_hosp_days}")
+print(
+    f"Admissions range: {int(hosp_admits.min())} to {int(hosp_admits.max())}"
+)
+```
+
+The hospital admissions data is aggregated at the jurisdiction level, therefore we specify a `Counts` observation process.
+
+```{python}
+# Infection-to-hospitalization delay (COVID-19, from literature)
+inf_to_hosp_pmf = jnp.array(
+    [
+        0,
+        0.00469,
+        0.01452,
+        0.02786,
+        0.04237,
+        0.05581,
+        0.06657,
+        0.07379,
+        0.07729,
+        0.07737,
+        0.07465,
+        0.06988,
+        0.06377,
+        0.05696,
+        0.04996,
+        0.04315,
+        0.03677,
+        0.03097,
+        0.02583,
+        0.02135,
+        0.01751,
+        0.01427,
+        0.01156,
+        0.00931,
+        0.00746,
+        0.00596,
+        0.00474,
+        0.00375,
+        0.00296,
+        0.00233,
+        0.00183,
+        0.00143,
+        0.00107,
+        0.00077,
+        0.00054,
+        0.00036,
+        0.00024,
+        0.00015,
+        0.00009,
+        0.00005,
+        0.00003,
+        0.00002,
+        0.00001,
+    ]
+)
+hosp_delay_rv = DeterministicPMF("inf_to_hosp_delay", inf_to_hosp_pmf)
+
+# IHR: ~1% of infections lead to hospitalization
+ihr_rv = DeterministicVariable("ihr", 0.01)
+
+# Negative binomial concentration (moderate overdispersion)
+hosp_concentration_rv = DeterministicVariable("hosp_concentration", 10.0)
+
+# Create hospital observation process
+hosp_obs = Counts(
+    ascertainment_rate_rv=ihr_rv,
+    delay_distribution_rv=hosp_delay_rv,
+    noise=NegativeBinomialNoise(hosp_concentration_rv),
+)
+
+print("Hospital observation:")
+print(f"  Infection resolution: {hosp_obs.infection_resolution()}")
+print(f"  Delay PMF length: {len(inf_to_hosp_pmf)} days")
+```
+
+### Wastewater Concentrations
+
+#### Wastewater Observation Process
+
+The `Measurements` base class handles continuous observation processes. Domain-specific
+implementations subclass it and implement `_predicted_obs()` to transform infections
+into predicted values. See `observation_processes_measurements.qmd` for a detailed tutorial.
+
+```{python}
+class Wastewater(Measurements):
+    """
+    Wastewater viral concentration observation process.
+
+    Transforms site-level infections into predicted log-concentrations
+    via shedding kinetics convolution and genome/volume scaling.
+    """
+
+    def __init__(
+        self,
+        shedding_kinetics_rv: RandomVariable,
+        log10_genome_per_infection_rv: RandomVariable,
+        ml_per_person_per_day: float,
+        noise: MeasurementNoise,
+    ) -> None:
+        super().__init__(temporal_pmf_rv=shedding_kinetics_rv, noise=noise)
+        self.log10_genome_per_infection_rv = log10_genome_per_infection_rv
+        self.ml_per_person_per_day = ml_per_person_per_day
+
+    def validate(self) -> None:
+        shedding_pmf = self.temporal_pmf_rv()
+        self._validate_pmf(shedding_pmf, "shedding_kinetics_rv")
+        self.noise.validate()
+
+    def lookback_days(self) -> int:
+        return len(self.temporal_pmf_rv())
+
+    def _predicted_obs(self, infections: ArrayLike) -> ArrayLike:
+        shedding_pmf = self.temporal_pmf_rv()
+        log10_genome = self.log10_genome_per_infection_rv()
+
+        def convolve_site(site_infections):
+            convolved, _ = self._convolve_with_alignment(
+                site_infections, shedding_pmf, p_observed=1.0
+            )
+            return convolved
+
+        shedding_signal = jax.vmap(convolve_site, in_axes=1, out_axes=1)(
+            infections
+        )
+        genome_copies = 10**log10_genome
+        concentration = (
+            shedding_signal * genome_copies / self.ml_per_person_per_day
+        )
+        return jnp.log(concentration)
+```
+
+#### Wastewater Data
+
+For the wastewater data, we use a simulated dataset for California with realistic noise patterns
+that covers the same time period.
+
+```{python}
+# Load wastewater data for California
+ca_ww_data = datasets.load_wastewater_data_for_state("CA", "fake_nwss.csv")
+
+ww_conc = ca_ww_data["observed_conc"]  # log concentrations
+ww_site_ids = ca_ww_data["site_ids"]
+ww_time_indices = ca_ww_data["time_indices"]
+ww_n_sites = ca_ww_data["n_sites"]
+ww_n_obs = ca_ww_data["n_obs"]
+ww_wwtp_names = ca_ww_data["wwtp_names"]
+
+print("State: California")
+print(f"Number of sites: {ww_n_sites}")
+print(f"Number of observations: {ww_n_obs}")
+print(f"Date range: {ca_ww_data['dates'][0]} to {ca_ww_data['dates'][-1]}")
+print(
+    f"Time index range: {int(ww_time_indices.min())} to {int(ww_time_indices.max())}"
+)
+print("\nSites:")
+for i, name in enumerate(ww_wwtp_names[:5]):
+    print(f"  {i}: {name}")
+if ww_n_sites > 5:
+    print(f"  ... and {ww_n_sites - 5} more")
+```
+
+Wastewater observations are site-level: each measurement is associated with a specific measurement site. The Wastewater observation process uses LogNormalNoise, which takes hierarchical priors for the site-level mode and standard deviation parameters. This enables partial pooling across measurement sites.
+
+Here we specify HierarchicalNormalPrior for the site-level mode and GammaGroupSdPrior for the standard deviation.
+
+```{python}
+# Viral shedding kinetics PMF (days post-infection)
+shedding_pmf = jnp.array(
+    [
+        0.0,
+        0.02,
+        0.08,
+        0.15,
+        0.20,
+        0.18,
+        0.14,
+        0.10,
+        0.06,
+        0.04,
+        0.02,
+        0.01,
+    ]
+)
+shedding_pmf = shedding_pmf / shedding_pmf.sum()  # normalize
+shedding_rv = DeterministicPMF("shedding_kinetics", shedding_pmf)
+
+# Log10 genomes shed per infection
+log10_genome_rv = DeterministicVariable("log10_genome_per_inf", 9.0)
+
+# Wastewater volume per person per day (mL)
+ml_per_person_per_day = 1000.0
+
+# Hierarchical priors for site-level effects
+site_mode_prior = HierarchicalNormalPrior(
+    "ww_site_mode", sd_rv=DeterministicVariable("site_mode_sd", 0.5)
+)
+site_sd_prior = GammaGroupSdPrior(
+    "ww_site_sd",
+    sd_mean_rv=DeterministicVariable("site_sd_mean", 0.3),
+    sd_concentration_rv=DeterministicVariable("site_sd_conc", 4.0),
+)
+
+# Create wastewater observation process
+ww_obs = Wastewater(
+    shedding_kinetics_rv=shedding_rv,
+    log10_genome_per_infection_rv=log10_genome_rv,
+    ml_per_person_per_day=ml_per_person_per_day,
+    noise=HierarchicalNormalNoise(site_mode_prior, site_sd_prior),
+)
+
+print("Wastewater observation:")
+print(f"  Infection resolution: {ww_obs.infection_resolution()}")
+print(f"  Shedding PMF length: {len(shedding_pmf)} days")
+```
+
+## Model Building
+
+We instantiate a `ModelBuilder` object which handles the composition of the latent infection process and the observation process.
+
+```{python}
+# Build the multi-signal model
+builder = ModelBuilder()
+```
+
+The `ModelBuilder` object has 3 key methods:
+
+-   `configure_latent`
+-   `add_observation`
+-   `build`
+
+Methods `configure_latent` and `add_observation` can be called in any order. Method `build` is called once all processes have been specified in the model.
+
+### Configuring the Latent Process
+
+We use `configure_latent` to specify the **model structure**: generation interval, initial infections, and temporal dynamics.
+
+```{python}
+print("Latent process configuration:")
+print(f"  Generation interval length: {len(gen_int_rv())} days")
+
+builder.configure_latent(
+    HierarchicalInfections,
+    gen_int_rv=gen_int_rv,
+    I0_rv=I0_rv,
+    initial_log_rt_rv=initial_log_rt_rv,
+    baseline_temporal=baseline_temporal,
+    subpop_temporal=subpop_temporal,
+)
+```
+
+### Specifying the Observation Processes, Data
+
+The name passed to add_observation() becomes the keyword used to pass that observation's data to model.fit() (e.g., hospital={...}, wastewater={...}).
+
+```{python}
+builder.add_observation(hosp_obs, "hospital")
+builder.add_observation(ww_obs, "wastewater")
+model = builder.build()
+
+n_init = model.latent.n_initialization_points
+print("Model built successfully")
+print(f"  n_initialization_points: {n_init}")
+print(f"  Latent process: {type(model.latent).__name__}")
+print(f"  Observation processes: {list(model.observations.keys())}")
+```
+
+## Fitting the Model to Data:  `model.fit()`
+
+When you call `model.fit()`, you supply two types of information:
+
+- **Observation data** — one data dictionary per registered observation process
+- **Population structure** — how the jurisdiction is divided into subpopulations
+
+### Observation Data by Signal Type
+
+Each observation process is registered with a name via `add_observation()`. That name becomes the keyword argument for passing data to `model.fit()`:
+
+```python
+builder.add_observation(hosp_obs, "hospital")    # → hospital={...}
+builder.add_observation(ww_obs, "wastewater")    # → wastewater={...}
+```
+
+#### Jurisdiction-level signals
+
+The jurisdiction-level hospital admissions data is specified as a `Counts` observations process.
+
+```python
+hospital={
+    "obs": jnp.array([...]),   # observed values
+}
+```
+
+*Note*: this example uses dense data, i.e., there is an observation for every day in the timeline. Were the data sparse, it would be necessary to also provide an array `times` which supplies the time index for each observation.
+
+#### Subpopulation-level signal
+
+The subpopulation-level wastewater data is specified as a `Wastewater` observations process.
+
+```python
+wastewater={
+    "obs": jnp.array([...]),             # observed log concentrations
+    "times": jnp.array([...]),           # time index for each observation
+    "subpop_indices": jnp.array([...]),  # which catchment (selects infection trajectory)
+    "sensor_indices": jnp.array([...]),  # which WWTP/lab pair (selects noise parameters)
+    "n_sensors": int,                    # total number of WWTP/lab pairs
+}
+```
+
+A **subpopulation** is a portion of the jurisdiction's population defined by a catchment area. A **sensor** is a measurement source — typically a WWTP/lab pair — that produces observations. Multiple sensors can observe the same subpopulation (e.g., different labs processing samples from the same catchment), so `subpop_indices` and `sensor_indices` may differ.
+
+-   `subpop_indices` links each observation to the appropriate infection trajectory
+-   `sensor_indices` selects which sensor's noise parameters (mode and sd) to apply
+
+**Example**: A jurisdiction has 3 catchments (subpopulations 0, 1, 2). Catchment 0 has samples processed by two labs (sensors 0 and 1). Observations from catchment 0 all have `subpop_indices=0` but may have `sensor_indices=0` or `sensor_indices=1` depending on which lab processed the sample.
+
+### Population Structure
+
+Population structure is specified via two arrays:
+
+```python
+model.fit(
+    obs_fractions=jnp.array([0.10, 0.14, 0.21, 0.22, 0.07]),  # 5 observed
+    unobs_fractions=jnp.array([0.26]),                        # 1 unobserved
+    ...
+)
+```
+
+This specifies 5 observed subpopulations (e.g., wastewater catchments) and 1 unobserved (remainder of jurisdiction). The fractions must sum to 1.0.
+
+
+### Example `model.fit()` Call
+
+```python
+model.fit(
+    n_days_post_init=n_days,
+    population_size=population_size,
+    # Population structure (choose one parameterization)
+    obs_fractions=obs_subpop_fractions,
+    unobs_fractions=unobs_subpop_fractions,
+    # Observation data (keyed by names from add_observation)
+    hospital={"obs": hosp_counts, "times": hosp_times},
+    wastewater={
+        "obs": ww_conc,
+        "times": ww_times,
+        "subpop_indices": ww_subpop_indices,
+        "sensor_indices": ww_sensor_indices,
+        "n_sensors": n_ww_sensors,
+    },
+)
+```
+
+## Running the Model
+
+First we declare the population structure.
+
+```{python}
+# 5 observed subpopulations (wastewater catchments)
+obs_subpop_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07])
+
+# 1 unobserved subpopulation (remainder of jurisdiction)
+unobs_subpop_fractions = jnp.array([0.26])
+
+K_obs = len(obs_subpop_fractions)
+
+print(f"Observed subpopulations (K_obs): {K_obs}")
+print(f"Unobserved subpopulations: {len(unobs_subpop_fractions)}")
+print(f"Observed coverage: {float(jnp.sum(obs_subpop_fractions)):.0%}")
+print(
+    f"Total coverage: {float(jnp.sum(obs_subpop_fractions) + jnp.sum(unobs_subpop_fractions)):.0%}"
+)
+```
+
+It is necessary to align the data with the model's time indexing.
+
+-   Times are relative to the start of the simulation (0 = first day of initialization period)
+-   Observation times should be offset by `n_initialization_points`
+
+To do this, we define function `prepare_observation-data`.
+
+```{python}
+def prepare_observation_data(n_days_fit, n_init, hosp_admits, ww_data, K_obs):
+    """
+    Prepare observation data for fitting.
+
+    Returns hospital and wastewater data dicts aligned with model time indexing.
+
+    Parameters
+    ----------
+    n_days_fit : int
+        Number of days to include in fit
+    n_init : int
+        Number of initialization points (for time offset)
+    hosp_admits : array
+        Hospital admissions time series
+    ww_data : dict
+        Wastewater data dictionary
+    K_obs : int
+        Number of observed subpopulations (for mapping sites to subpops)
+    """
+    # Hospital: jurisdiction-level, sparse times
+    hosp_times = jnp.arange(n_days_fit) + n_init
+    hosp_counts = hosp_admits[:n_days_fit]
+
+    # Wastewater: sensor-level, sparse times
+    # Filter to observations within the fitting window
+    ww_mask = ww_data["time_indices"] < n_days_fit
+    ww_times = ww_data["time_indices"][ww_mask] + n_init
+    ww_conc = ww_data["observed_conc"][ww_mask]
+    ww_sensors = ww_data["site_ids"][ww_mask]
+
+    # Map wastewater sensors to subpopulation indices
+    # For this demo, we cycle through the K_obs observed subpopulations
+    n_ww_sensors = ww_data["n_sites"]
+    sensor_to_subpop = {i: i % K_obs for i in range(n_ww_sensors)}
+    ww_subpop_indices = jnp.array(
+        [sensor_to_subpop[int(s)] for s in ww_sensors]
+    )
+
+    return {
+        "hospital": {
+            "obs": hosp_counts,
+            "times": hosp_times,
+        },
+        "wastewater": {
+            "obs": ww_conc,
+            "times": ww_times,
+            "subpop_indices": ww_subpop_indices,
+            "sensor_indices": ww_sensors,
+            "n_sensors": n_ww_sensors,
+        },
+    }
+```
+
+### Fit: 90 Days
+
+Putting this altogether, we align the data with the model time and call `model.fit()`.
+We run 4 sampler chains.
+
+```{python}
+# Clear JAX caches to avoid interference from earlier cells
+jax.clear_caches()
+
+n_days_90 = 90
+obs_data_90 = prepare_observation_data(
+    n_days_90, n_init, hosp_admits, ca_ww_data, K_obs
+)
+
+# Try non-centered reparameterization for hierarchical parameters
+reparam_config = {
+    "log_rt_baseline_noise": LocScaleReparam(centered=0),
+    "subpop_deviations_increments": LocScaleReparam(centered=0),
+    "ww_site_mode": LocScaleReparam(centered=0),
+}
+
+print(f"Fitting model with {n_days_90} days of data...")
+print("  This may take a few minutes...")
+
+start_time = time.time()
+mcmc_90 = model.fit(
+    n_days_post_init=n_days_90,
+    population_size=population_size,
+    obs_fractions=obs_subpop_fractions,
+    unobs_fractions=unobs_subpop_fractions,
+    num_warmup=500,
+    num_samples=500,
+    num_chains=4,
+    rng_key=make_rng_key(),
+    reparam_config=reparam_config,
+    **obs_data_90,
+    progress_bar=False,
+)
+# JAX uses asynchronous dispatch, so we must block until sampling completes
+# to get accurate timing
+samples_90 = mcmc_90.get_samples()
+jax.block_until_ready(samples_90)
+elapsed_90 = time.time() - start_time
+print(f"Elapsed time: {elapsed_90:.1f} seconds")
+```
+
+```{python}
+lat_inf_90 = samples_90["latent_infections"]
+print(f"Posterior samples shape: {lat_inf_90.shape}")
+print(f"Mean latent infections: {np.mean(lat_inf_90):,.0f}")
+```
+
+We check that the chains have converged and the number of effective samples.
+
+```{python}
+# ArviZ diagnostics for 90-day fit
+def filter_samples_for_arviz(samples, n_init, num_chains=2):
+    """Slice time-series samples to exclude initialization period and reshape for chains."""
+    num_samples_per_chain = len(list(samples.values())[0]) // num_chains
+    filtered = {}
+    for k, v in samples.items():
+        if v.ndim == 2 and v.shape[1] > n_init:
+            # Time-series: slice to post-init period, reshape to (chains, draws, time)
+            filtered[k] = v[:, n_init:].reshape(
+                num_chains, num_samples_per_chain, -1
+            )
+        elif v.ndim == 1:
+            # Scalar: reshape to (chains, draws)
+            filtered[k] = v.reshape(num_chains, num_samples_per_chain)
+        else:
+            # Multi-dim: reshape to (chains, draws, ...)
+            filtered[k] = v.reshape(
+                num_chains, num_samples_per_chain, *v.shape[1:]
+            )
+    return filtered
+
+
+samples_90_filtered = filter_samples_for_arviz(
+    samples_90, n_init, num_chains=2
+)
+idata_90 = az.from_dict(posterior=samples_90_filtered)
+az.summary(idata_90, var_names=["~latent_infections", "~expected"])
+```
+
+We extract the posterior quantiles and print summary statistics.
+
+```{python}
+def extract_posterior_quantiles(samples, n_init, n_days):
+    """Extract posterior quantiles for latent infections."""
+    latent_inf = np.array(samples["latent_infections"])[
+        :, n_init : n_init + n_days
+    ]
+    return {
+        "q05": np.percentile(latent_inf, 5, axis=0),
+        "q50": np.percentile(latent_inf, 50, axis=0),
+        "q95": np.percentile(latent_inf, 95, axis=0),
+    }
+
+
+quantiles_90 = extract_posterior_quantiles(samples_90, n_init, n_days_90)
+
+# Summary statistics
+ci_width_90 = quantiles_90["q95"] - quantiles_90["q05"]
+print(f"Posterior summary for {n_days_90} days:")
+print(f"  Mean 90% CI width: {ci_width_90.mean():,.0f} infections")
+print(f"  Median infections (day 45): {quantiles_90['q50'][45]:,.0f}")
+```
+
+Finally, we visualize the posterior latent infections alongside observed hospitalizations. Note that **hospital admissions lag behind infections** by the infection-to-hospitalization delay (mode ~10 days in our delay PMF). When comparing the two panels, peaks in the infection curve should precede corresponding peaks in hospitalizations by roughly 10-14 days.
+
+```{python}
+# Visualize posterior latent infections and observed hospitalizations (90 days)
+# Create separate dataframes for faceted plot
+infections_df_90 = pd.DataFrame(
+    {
+        "day": np.arange(n_days_90),
+        "median": quantiles_90["q50"],
+        "q05": quantiles_90["q05"],
+        "q95": quantiles_90["q95"],
+        "signal": "Latent Infections",
+    }
+)
+
+# Add 14-day moving average to smooth noisy daily admissions
+hosp_raw_90 = np.array(hosp_admits[:n_days_90], dtype=float)
+hosp_ma_90 = (
+    pd.Series(hosp_raw_90).rolling(window=14, center=True).mean().values
+)
+
+hosp_df_90 = pd.DataFrame(
+    {
+        "day": np.arange(n_days_90),
+        "median": hosp_ma_90,
+        "raw": hosp_raw_90,
+        "q05": np.nan,
+        "q95": np.nan,
+        "signal": "Hospital Admissions (14-day MA)",
+    }
+)
+
+plot_df_90 = pd.concat([infections_df_90, hosp_df_90], ignore_index=True)
+plot_df_90["signal"] = pd.Categorical(
+    plot_df_90["signal"],
+    categories=["Latent Infections", "Hospital Admissions (14-day MA)"],
+    ordered=True,
+)
+
+(
+    p9.ggplot(plot_df_90, p9.aes(x="day"))
+    + p9.geom_ribbon(
+        p9.aes(ymin="q05", ymax="q95"),
+        fill="steelblue",
+        alpha=0.3,
+    )
+    + p9.geom_point(
+        p9.aes(y="raw"),
+        color="gray",
+        alpha=0.3,
+        size=1,
+    )
+    + p9.geom_line(
+        p9.aes(y="median"),
+        color="darkblue",
+        size=1,
+    )
+    + p9.facet_wrap("~signal", ncol=1, scales="free_y")
+    + p9.labs(
+        x="Day",
+        y="Count",
+        title="Posterior Latent Infections vs Observed Hospitalizations (90 days)",
+    )
+    + p9.theme_grey()
+    + p9.theme(figure_size=(12, 8))
+)
+```
+
+### Fit: 180 Days
+
+```{python}
+# Clear JAX caches to avoid interference
+jax.clear_caches()
+
+n_days_180 = 180
+obs_data_180 = prepare_observation_data(
+    n_days_180, n_init, hosp_admits, ca_ww_data, K_obs
+)
+
+print(f"Fitting model with {n_days_180} days of data...")
+print("  This may take a few minutes...")
+
+start_time = time.time()
+mcmc_180 = model.fit(
+    n_days_post_init=n_days_180,
+    population_size=population_size,
+    obs_fractions=obs_subpop_fractions,
+    unobs_fractions=unobs_subpop_fractions,
+    num_warmup=1000,
+    num_samples=500,
+    num_chains=4,
+    rng_key=make_rng_key(),
+    **obs_data_180,
+    progress_bar=False,
+)
+# Block until sampling completes for accurate timing
+samples_180 = mcmc_180.get_samples()
+jax.block_until_ready(samples_180)
+elapsed_180 = time.time() - start_time
+print(f"Elapsed time: {elapsed_180:.1f} seconds")
+```
+
+```{python}
+lat_inf_180 = samples_180["latent_infections"]
+print(f"Posterior samples shape: {lat_inf_180.shape}")
+print(f"Mean latent infections: {np.mean(lat_inf_180):,.0f}")
+```
+
+We check the model fit, as before.
+
+```{python}
+# ArviZ diagnostics for 180-day fit
+samples_180_filtered = filter_samples_for_arviz(
+    samples_180, n_init, num_chains=2
+)
+idata_180 = az.from_dict(posterior=samples_180_filtered)
+az.summary(idata_180, var_names=["~latent_infections", "~expected"])
+```
+
+```{python}
+quantiles_180 = extract_posterior_quantiles(samples_180, n_init, n_days_180)
+
+ci_width_180 = quantiles_180["q95"] - quantiles_180["q05"]
+print(f"Posterior summary for {n_days_180} days:")
+print(f"  Mean 90% CI width: {ci_width_180.mean():,.0f} infections")
+print(f"  Median infections (day 90): {quantiles_180['q50'][90]:,.0f}")
+```
+
+```{python}
+# Visualize posterior latent infections and observed hospitalizations (180 days)
+infections_df_180 = pd.DataFrame(
+    {
+        "day": np.arange(n_days_180),
+        "median": quantiles_180["q50"],
+        "q05": quantiles_180["q05"],
+        "q95": quantiles_180["q95"],
+        "signal": "Latent Infections",
+    }
+)
+
+# Add 14-day moving average to smooth noisy daily admissions
+hosp_raw_180 = np.array(hosp_admits[:n_days_180], dtype=float)
+hosp_ma_180 = (
+    pd.Series(hosp_raw_180).rolling(window=14, center=True).mean().values
+)
+
+hosp_df_180 = pd.DataFrame(
+    {
+        "day": np.arange(n_days_180),
+        "median": hosp_ma_180,
+        "raw": hosp_raw_180,
+        "q05": np.nan,
+        "q95": np.nan,
+        "signal": "Hospital Admissions (14-day MA)",
+    }
+)
+
+plot_df_180 = pd.concat([infections_df_180, hosp_df_180], ignore_index=True)
+plot_df_180["signal"] = pd.Categorical(
+    plot_df_180["signal"],
+    categories=["Latent Infections", "Hospital Admissions (14-day MA)"],
+    ordered=True,
+)
+
+(
+    p9.ggplot(plot_df_180, p9.aes(x="day"))
+    + p9.geom_ribbon(
+        p9.aes(ymin="q05", ymax="q95"),
+        fill="steelblue",
+        alpha=0.3,
+    )
+    + p9.geom_point(
+        p9.aes(y="raw"),
+        color="gray",
+        alpha=0.3,
+        size=1,
+    )
+    + p9.geom_line(
+        p9.aes(y="median"),
+        color="darkblue",
+        size=1,
+    )
+    + p9.facet_wrap("~signal", ncol=1, scales="free_y")
+    + p9.labs(
+        x="Day",
+        y="Count",
+        title="Posterior Latent Infections vs Observed Hospitalizations (180 days)",
+    )
+    + p9.theme_grey()
+    + p9.theme(figure_size=(12, 8))
+)
+```
+
+### Comparing 90-Day vs 180-Day Fits
+
+Comparing the two fits reveals where uncertainty reduction occurs—and why it matters for forecasting.
+
+```{python}
+# Compare CI widths for the overlapping 90-day period
+ci_width_90_overlap = quantiles_90["q95"] - quantiles_90["q05"]
+ci_width_180_overlap = (
+    quantiles_180["q95"][:n_days_90] - quantiles_180["q05"][:n_days_90]
+)
+
+# Compute difference in CI widths
+ci_diff = ci_width_90_overlap - ci_width_180_overlap
+ci_ratio = ci_width_90_overlap / ci_width_180_overlap
+
+print("CI Width Comparison (first 90 days):")
+print(
+    f"  90-day fit mean CI width:  {ci_width_90_overlap.mean():,.0f} infections"
+)
+print(
+    f"  180-day fit mean CI width: {ci_width_180_overlap.mean():,.0f} infections"
+)
+print(f"  Mean difference:           {ci_diff.mean():,.0f} infections")
+print(f"  Mean ratio (90/180):       {ci_ratio.mean():.2f}x")
+print(
+    f"\nThe 180-day fit has {(1 - ci_width_180_overlap.mean() / ci_width_90_overlap.mean()) * 100:.1f}% narrower CIs on average"
+)
+
+# Per-day comparison
+print("\nCI width by time period:")
+for start, end, label in [
+    (0, 30, "Days 0-30"),
+    (30, 60, "Days 30-60"),
+    (60, 90, "Days 60-90"),
+]:
+    mean_90 = ci_width_90_overlap[start:end].mean()
+    mean_180 = ci_width_180_overlap[start:end].mean()
+    reduction = (1 - mean_180 / mean_90) * 100
+    print(
+        f"  {label}: 90-day={mean_90:,.0f}, 180-day={mean_180:,.0f}, reduction={reduction:.1f}%"
+    )
+```
+
+Notice that the uncertainty reduction is concentrated in days 60-90—the final month of the 90-day window. Earlier periods (days 0-60) show little change because both fits have sufficient future data to constrain those estimates.
+
+This pattern has a direct implication for forecasting: **renewal models are most uncertain at the edge of the observation window**. Future observations constrain past latent infections through the renewal equation, but when predicting beyond available data, this constraint disappears. The high uncertainty in days 60-90 of the 90-day fit is exactly what we'd expect when forecasting 30 days ahead—there's no future signal to anchor the estimates.
+
+## Summary
+
+This tutorial demonstrated composing a multi-signal renewal model using `ModelBuilder`:
+
+1.  **Configure latent process** (`configure_latent`): generation interval, initial infections, temporal dynamics
+2.  **Add observation processes** (`add_observation`): each declares its infection resolution and gets a name for data binding
+3.  **Build and fit** (`build`, `model.fit`): the model routes infections to observations based on resolution and runs NUTS inference
+
+### Key Concepts
+
+-   **Two-part structure**: Renewal models separate latent infection dynamics from observation processes
+-   **Infection resolution**: Observation processes declare whether they need aggregate or subpop-level infections
+-   **Data routing**: `ModelBuilder` automatically routes infection trajectories to the appropriate observation processes
+-   **Time alignment**: Observations must be offset by `n_initialization_points` to align with model time
+
+### Next Steps
+
+-   Explore different temporal processes for $R(t)$ in the [Hierarchical Latent Infections](latent_hierarchical_infections.qmd) tutorial
+-   Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.qmd)
+-   Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.qmd)

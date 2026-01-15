@@ -4,14 +4,14 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pytest
-from pyrenew.deterministic import DeterministicVariable
-from pyrenew.randomvariable import DistributionalVariable
 
+from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     GammaGroupSdPrior,
     HierarchicalNormalPrior,
     StudentTGroupModePrior,
 )
+from pyrenew.randomvariable import DistributionalVariable
 
 
 class TestHierarchicalNormalPrior:

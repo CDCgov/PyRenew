@@ -10,7 +10,12 @@ import jax
 import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
+
 from pyrenew.deterministic import DeterministicVariable
+from pyrenew.latent.base import (
+    BaseLatentInfectionProcess,
+    LatentSample,
+)
 from pyrenew.latent.infection_functions import compute_infections_from_rt
 from pyrenew.latent.infection_initialization_method import (
     InitializeInfectionsExponentialGrowth,
@@ -18,14 +23,9 @@ from pyrenew.latent.infection_initialization_method import (
 from pyrenew.latent.infection_initialization_process import (
     InfectionInitializationProcess,
 )
+from pyrenew.latent.temporal_processes import TemporalProcess
 from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
-
-from pyrenew.latent.base import (
-    BaseLatentInfectionProcess,
-    LatentSample,
-)
-from pyrenew.latent.temporal_processes import TemporalProcess
 
 
 class HierarchicalInfections(BaseLatentInfectionProcess):
@@ -56,13 +56,13 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         observation time. Must return values in the interval (0, 1).
         Returns scalar (same for all subpops) or (K,) array (per-subpop).
         Full I0 matrix generated via exponential backprojection during sampling.
-    initial_log_rt_rv : RandomVariable
-        Initial value for log(Rt) at time 0.  Can be estimated from data
-        or given a prior distribution.
     baseline_temporal : TemporalProcess
         Temporal process for baseline Rt dynamics
     subpop_temporal : TemporalProcess
         Temporal process for subpopulation deviations
+    initial_log_rt_rv : RandomVariable
+        Initial value for log(Rt) at time 0.  Can be estimated from data
+        or given a prior distribution.
     n_initialization_points : int, optional
         Number of initialization days before day 0. If not specified, defaults to
         max(21, 2*len(gen_int)-1). When using ModelBuilder, this is computed

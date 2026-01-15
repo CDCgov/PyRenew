@@ -8,6 +8,7 @@ All classes in this module implement the group-level RV interface:
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
+
 from pyrenew.metaclass import RandomVariable
 
 
@@ -30,6 +31,16 @@ class HierarchicalNormalPrior(RandomVariable):
         name: str,
         sd_rv: RandomVariable,
     ) -> None:
+        """
+        Initialize hierarchical normal prior.
+
+        Parameters
+        ----------
+        name : str
+            Unique name for the sampled parameter.
+        sd_rv : RandomVariable
+            RandomVariable returning the standard deviation.
+        """
         if not isinstance(sd_rv, RandomVariable):
             raise TypeError(
                 f"sd_rv must be a RandomVariable, got {type(sd_rv).__name__}. "
@@ -40,6 +51,7 @@ class HierarchicalNormalPrior(RandomVariable):
         self.sd_rv = sd_rv
 
     def validate(self):
+        """Validate the random variable (no-op for this class)."""
         pass
 
     def sample(self, n_groups: int, **kwargs):
@@ -91,6 +103,20 @@ class GammaGroupSdPrior(RandomVariable):
         sd_concentration_rv: RandomVariable,
         sd_min: float = 0.05,
     ) -> None:
+        """
+        Initialize gamma group SD prior.
+
+        Parameters
+        ----------
+        name : str
+            Unique name for the sampled parameter.
+        sd_mean_rv : RandomVariable
+            RandomVariable returning the mean of the Gamma distribution.
+        sd_concentration_rv : RandomVariable
+            RandomVariable returning the concentration parameter.
+        sd_min : float, default=0.05
+            Minimum SD value (lower bound).
+        """
         if not isinstance(sd_mean_rv, RandomVariable):
             raise TypeError(
                 f"sd_mean_rv must be a RandomVariable, got {type(sd_mean_rv).__name__}. "
@@ -110,6 +136,7 @@ class GammaGroupSdPrior(RandomVariable):
         self.sd_min = sd_min
 
     def validate(self):
+        """Validate the random variable (no-op for this class)."""
         pass
 
     def sample(self, n_groups: int, **kwargs):
@@ -165,6 +192,18 @@ class StudentTGroupModePrior(RandomVariable):
         sd_rv: RandomVariable,
         df_rv: RandomVariable,
     ) -> None:
+        """
+        Initialize Student-t group mode prior.
+
+        Parameters
+        ----------
+        name : str
+            Unique name for the sampled parameter.
+        sd_rv : RandomVariable
+            RandomVariable returning the scale parameter.
+        df_rv : RandomVariable
+            RandomVariable returning the degrees of freedom.
+        """
         if not isinstance(sd_rv, RandomVariable):
             raise TypeError(
                 f"sd_rv must be a RandomVariable, got {type(sd_rv).__name__}. "
@@ -181,6 +220,7 @@ class StudentTGroupModePrior(RandomVariable):
         self.df_rv = df_rv
 
     def validate(self):
+        """Validate the random variable (no-op for this class)."""
         pass
 
     def sample(self, n_groups: int, **kwargs):
