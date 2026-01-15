@@ -116,19 +116,20 @@ class ModelBuilder:
     def add_observation(
         self,
         obs_process: BaseObservationProcess,
-        name: str,
     ) -> "ModelBuilder":
         """
         Add an observation process to the model.
 
+        The observation process's ``name`` attribute is used as the unique
+        identifier for this observation. This name is used when passing
+        observation data to ``model.sample()`` and ``model.fit()``, and also
+        prefixes all numpyro sample sites created by the process.
+
         Parameters
         ----------
         obs_process : BaseObservationProcess
-            Configured observation process instance (e.g., CountObservation,
-            WastewaterObservation, CountObservationBySubpop)
-        name : str
-            Unique identifier for this observation. This name is used when passing
-            observation data to model.sample().
+            Configured observation process instance (e.g., Counts,
+            Wastewater, CountsBySubpop). Must have a ``name`` attribute.
 
         Returns
         -------
@@ -140,6 +141,7 @@ class ModelBuilder:
         ValueError
             If an observation with this name already exists
         """
+        name = obs_process.name
         if name in self.observations:
             raise ValueError(
                 f"Observation '{name}' already added. "

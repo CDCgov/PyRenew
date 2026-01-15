@@ -142,13 +142,13 @@ flowchart TB
     end
 
     subgraph Obs["Observation Processes"]
-        C[Counts]
-        W[Wastewater]
+        C["Counts (name='hospital')"]
+        W["Wastewater (name='wastewater')"]
     end
 
     subgraph Data["Observed Data"]
-        HA[Hospital Admissions]
-        WW[Concentrations]
+        HA["hospital_obs"]
+        WW["wastewater_obs"]
     end
 
     L --> J
@@ -235,9 +235,23 @@ subpop_temporal = RandomWalk(innovation_sd=0.025)
 
 Observation processes transform latent infections into observable signals and define the statistical model linking predictions to data. Each observation process:
 
+-   Has a unique **name** that identifies the signal in model outputs
 -   Declares what **infection resolution** it needs (`"aggregate"` or `"subpop"`)
 -   Applies signal-specific transformations (ascertainment, delay convolution, shedding kinetics)
 -   Defines the noise model
+
+### Signal Naming
+
+Each observation process requires a `name` parameter—a short, meaningful identifier like `"hospital"` or `"wastewater"`. This name serves as the single identifier for the signal throughout the model:
+
+-   **Numpyro sites**: Prefixes all sample and deterministic sites (e.g., `hospital_obs`, `hospital_predicted`)
+-   **Data binding**: Becomes the keyword argument for passing data to `model.fit()` (e.g., `hospital={...}`)
+
+This unified naming provides several benefits:
+
+-   **Interpretable outputs**: When examining MCMC samples or posterior diagnostics, site names like `hospital_predicted` immediately indicate which signal each quantity refers to
+-   **Multiple signals of the same type**: You can include multiple count observations (e.g., hospital admissions and deaths) by giving each a distinct name
+-   **Clearer debugging**: Error messages and trace inspection show meaningful signal names rather than generic identifiers
 
 ### Hospital Admissions
 
@@ -324,6 +338,7 @@ hosp_concentration_rv = DeterministicVariable("hosp_concentration", 10.0)
 
 # Create hospital observation process
 hosp_obs = Counts(
+    name="hospital",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=hosp_delay_rv,
     noise=NegativeBinomialNoise(hosp_concentration_rv),
@@ -354,12 +369,15 @@ class Wastewater(Measurements):
 
     def __init__(
         self,
+        name: str,
         shedding_kinetics_rv: RandomVariable,
         log10_genome_per_infection_rv: RandomVariable,
         ml_per_person_per_day: float,
         noise: MeasurementNoise,
     ) -> None:
-        super().__init__(temporal_pmf_rv=shedding_kinetics_rv, noise=noise)
+        super().__init__(
+            name=name, temporal_pmf_rv=shedding_kinetics_rv, noise=noise
+        )
         self.log10_genome_per_infection_rv = log10_genome_per_infection_rv
         self.ml_per_person_per_day = ml_per_person_per_day
 
@@ -466,6 +484,7 @@ site_sd_prior = GammaGroupSdPrior(
 
 # Create wastewater observation process
 ww_obs = Wastewater(
+    name="wastewater",
     shedding_kinetics_rv=shedding_rv,
     log10_genome_per_infection_rv=log10_genome_rv,
     ml_per_person_per_day=ml_per_person_per_day,
@@ -516,12 +535,12 @@ builder.configure_latent(
 
 ### Specifying the Observation Processes, Data
 
-The name passed to add_observation() becomes the keyword used to pass that observation's data to model.fit() (e.g., hospital={...}, wastewater={...}).
+Each observation process's `name` attribute becomes the keyword used to pass that observation's data to `model.fit()` (e.g., `hospital={...}`, `wastewater={...}`).
 
 ```{python}
 # | label: add-observations-build
-builder.add_observation(hosp_obs, "hospital")
-builder.add_observation(ww_obs, "wastewater")
+builder.add_observation(hosp_obs)  # Uses hosp_obs.name = "hospital"
+builder.add_observation(ww_obs)  # Uses ww_obs.name = "wastewater"
 model = builder.build()
 
 n_init = model.latent.n_initialization_points
@@ -540,11 +559,11 @@ When you call `model.fit()`, you supply two types of information:
 
 ### Observation Data by Signal Type
 
-Each observation process is registered with a name via `add_observation()`. That name becomes the keyword argument for passing data to `model.fit()`:
+Each observation process's `name` attribute becomes the keyword argument for passing data to `model.fit()`:
 
 ```python
-builder.add_observation(hosp_obs, "hospital")    # → hospital={...}
-builder.add_observation(ww_obs, "wastewater")    # → wastewater={...}
+builder.add_observation(hosp_obs)   # hosp_obs.name="hospital" → hospital={...}
+builder.add_observation(ww_obs)     # ww_obs.name="wastewater" → wastewater={...}
 ```
 
 #### Jurisdiction-level signals

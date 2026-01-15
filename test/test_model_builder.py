@@ -40,11 +40,12 @@ def simple_builder():
 
     delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
     obs = Counts(
+        name="hospital",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=delay,
         noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
     )
-    builder.add_observation(obs, "hospital")
+    builder.add_observation(obs)
 
     return builder
 

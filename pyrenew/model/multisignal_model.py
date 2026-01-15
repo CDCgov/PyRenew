@@ -222,7 +222,7 @@ class MultiSignalModel(Model):
             Population fractions for unobserved subpopulations.
         **observation_data
             Data for each observation process, keyed by observation name
-            (the names provided to builder.add_observation()).
+            (the ``name`` attribute of each observation process).
             Each value should be a dict of kwargs for that observation's sample().
 
         Returns

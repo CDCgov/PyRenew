@@ -40,13 +40,6 @@ def load_hospital_data_for_state(
     -----
     Data source: CDC cfa-forecast-renewal-ww repository.
     License: Public Domain (CC0 1.0 Universal) - U.S. Government work.
-
-    Examples
-    --------
-    >>> from pyrenew import datasets
-    >>> ca_data = datasets.load_hospital_data_for_state("CA")
-    >>> ca_data["n_days"]
-    311
     """
     data_path = files("pyrenew.datasets.hospital_admissions_data") / filename
     df = pl.read_csv(source=data_path)

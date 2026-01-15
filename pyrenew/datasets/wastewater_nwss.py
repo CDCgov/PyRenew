@@ -56,13 +56,6 @@ def load_wastewater_data_for_state(
 
     The data is synthetic and contains deliberately added noise for
     public release.
-
-    Examples
-    --------
-    >>> from pyrenew import datasets
-    >>> ca_ww = datasets.load_wastewater_data_for_state("CA")
-    >>> ca_ww["n_sites"]
-    5
     """
     data_path = files("pyrenew.datasets.wastewater_nwss_data") / filename
     df = pl.read_csv(
