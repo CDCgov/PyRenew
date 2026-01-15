@@ -69,10 +69,95 @@ class TestModelBuilderConfiguration:
                 obs_fractions=jnp.array([0.5, 0.5]),  # Should fail
             )
 
+    def test_rejects_n_initialization_points_at_configure_time(self):
+        """Test that n_initialization_points is rejected at configure time."""
+        builder = ModelBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+
+        with pytest.raises(ValueError, match="Do not specify n_initialization_points"):
+            builder.configure_latent(
+                HierarchicalInfections,
+                gen_int_rv=gen_int,
+                I0_rv=DeterministicVariable("I0", 0.001),
+                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                baseline_temporal=RandomWalk(),
+                subpop_temporal=RandomWalk(),
+                n_initialization_points=10,  # Should fail
+            )
+
+    def test_rejects_reconfiguring_latent(self):
+        """Test that configuring latent twice raises RuntimeError."""
+        builder = ModelBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+
+        builder.configure_latent(
+            HierarchicalInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_temporal=RandomWalk(),
+            subpop_temporal=RandomWalk(),
+        )
+
+        with pytest.raises(RuntimeError, match="already configured"):
+            builder.configure_latent(
+                HierarchicalInfections,
+                gen_int_rv=gen_int,
+                I0_rv=DeterministicVariable("I0", 0.001),
+                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                baseline_temporal=RandomWalk(),
+                subpop_temporal=RandomWalk(),
+            )
+
+    def test_rejects_duplicate_observation_name(self, simple_builder):
+        """Test that adding duplicate observation name raises ValueError."""
+        delay = DeterministicPMF("delay2", jnp.array([0.5, 0.5]))
+        obs = Counts(
+            name="hospital",  # Same name as existing observation
+            ascertainment_rate_rv=DeterministicVariable("ihr2", 0.02),
+            delay_distribution_rv=delay,
+            noise=NegativeBinomialNoise(DeterministicVariable("conc2", 20.0)),
+        )
+
+        with pytest.raises(ValueError, match="already added"):
+            simple_builder.add_observation(obs)
+
     def test_build_creates_model(self, simple_builder):
         """Test that build() creates a MultiSignalModel."""
         model = simple_builder.build()
         assert isinstance(model, MultiSignalModel)
+
+    def test_build_without_latent_raises_error(self):
+        """Test that build() without configure_latent raises ValueError."""
+        builder = ModelBuilder()
+
+        with pytest.raises(ValueError, match="Must call configure_latent"):
+            builder.build()
+
+    def test_compute_n_initialization_points_without_latent_raises(self):
+        """Test that compute_n_initialization_points without latent raises."""
+        builder = ModelBuilder()
+
+        with pytest.raises(ValueError, match="Must call configure_latent"):
+            builder.compute_n_initialization_points()
+
+    def test_compute_n_initialization_points_without_gen_int_raises(self):
+        """Test that compute_n_initialization_points without gen_int_rv raises."""
+        builder = ModelBuilder()
+        # Configure latent without gen_int_rv
+        builder.latent_class = HierarchicalInfections
+        builder.latent_params = {}  # Missing gen_int_rv
+
+        with pytest.raises(ValueError, match="gen_int_rv is required"):
+            builder.compute_n_initialization_points()
+
+    def test_compute_n_initialization_points_returns_correct_value(
+        self, simple_builder
+    ):
+        """Test that compute_n_initialization_points returns max of lookbacks."""
+        n_init = simple_builder.compute_n_initialization_points()
+        # gen_int has 3 elements, delay has 4 elements, so max is 4
+        assert n_init == 4
 
 
 class TestMultiSignalModelSampling:
@@ -154,6 +239,111 @@ class TestMultiSignalModelValidation:
                     "times": jnp.array([n_total + 10]),
                 },
             )
+
+    def test_validate_data_rejects_negative_times(self, simple_builder):
+        """Test that negative times raises error."""
+        model = simple_builder.build()
+
+        with pytest.raises(ValueError, match="cannot contain negative"):
+            model.validate_data(
+                n_days_post_init=30,
+                obs_fractions=OBS_FRACTIONS,
+                unobs_fractions=UNOBS_FRACTIONS,
+                hospital={
+                    "obs": jnp.array([10]),
+                    "times": jnp.array([-1]),
+                },
+            )
+
+    def test_validate_data_rejects_unknown_observation(self, simple_builder):
+        """Test that unknown observation name raises error."""
+        model = simple_builder.build()
+
+        with pytest.raises(ValueError, match="Unknown observation"):
+            model.validate_data(
+                n_days_post_init=30,
+                obs_fractions=OBS_FRACTIONS,
+                unobs_fractions=UNOBS_FRACTIONS,
+                unknown_obs={
+                    "obs": jnp.array([10]),
+                    "times": jnp.array([5]),
+                },
+            )
+
+    def test_validate_data_rejects_mismatched_obs_times_length(self, simple_builder):
+        """Test that mismatched obs and times lengths raises error."""
+        model = simple_builder.build()
+
+        with pytest.raises(ValueError, match="obs length.*must match times length"):
+            model.validate_data(
+                n_days_post_init=30,
+                obs_fractions=OBS_FRACTIONS,
+                unobs_fractions=UNOBS_FRACTIONS,
+                hospital={
+                    "obs": jnp.array([10, 20, 30]),  # 3 elements
+                    "times": jnp.array([5, 10]),  # 2 elements
+                },
+            )
+
+    def test_validate_method_calls_internal_validate(self, simple_builder):
+        """Test that validate() method calls _validate()."""
+        model = simple_builder.build()
+        # Should not raise
+        model.validate()
+
+
+class TestMultiSignalModelObservationValidation:
+    """Test observation process validation in MultiSignalModel."""
+
+    def test_rejects_observation_without_infection_resolution(self):
+        """Test that observations must implement infection_resolution()."""
+        from pyrenew.observation.base import BaseObservationProcess
+
+        class BadObservation(BaseObservationProcess):
+            """Observation that raises NotImplementedError for infection_resolution."""
+
+            def __init__(self):
+                """Initialize without temporal_pmf_rv."""
+                self.name = "bad"
+                self.temporal_pmf_rv = None
+
+            def sample(self, **kwargs):
+                """Sample stub."""
+                pass
+
+            def validate(self):
+                """Validate stub."""
+                pass
+
+            def lookback_days(self):
+                """Return lookback."""
+                return 1
+
+            def infection_resolution(self):
+                """Raise NotImplementedError to simulate missing implementation."""
+                raise NotImplementedError("Not implemented")
+
+            def _predicted_obs(self, infections):
+                """Predicted obs stub."""
+                return infections
+
+        builder = ModelBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+
+        builder.configure_latent(
+            HierarchicalInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_temporal=RandomWalk(),
+            subpop_temporal=RandomWalk(),
+        )
+
+        bad_obs = BadObservation()
+        builder.add_observation(bad_obs)
+
+        with pytest.raises(ValueError, match="must implement infection_resolution"):
+            builder.build()
 
 
 if __name__ == "__main__":

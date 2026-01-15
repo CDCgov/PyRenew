@@ -401,7 +401,7 @@ class DifferencedAR1(TemporalProcess):
             noise_name=f"{name_prefix}_noise",
         )
 
-        return trajectories[:n_timepoints, :]
+        return trajectories[:n_timepoints, :].squeeze(axis=1)
 
 
 class RandomWalk(TemporalProcess):

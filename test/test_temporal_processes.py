@@ -9,6 +9,248 @@ import pytest
 from pyrenew.latent import AR1, DifferencedAR1, RandomWalk
 
 
+class TestTemporalProcessRepr:
+    """Test __repr__ methods for temporal processes."""
+
+    def test_ar1_repr(self):
+        """Test AR1 __repr__ method."""
+        ar1 = AR1(autoreg=0.7, innovation_sd=0.5)
+        repr_str = repr(ar1)
+        assert "AR1" in repr_str
+        assert "autoreg=0.7" in repr_str
+        assert "innovation_sd=0.5" in repr_str
+
+    def test_differenced_ar1_repr(self):
+        """Test DifferencedAR1 __repr__ method."""
+        dar1 = DifferencedAR1(autoreg=0.6, innovation_sd=0.3)
+        repr_str = repr(dar1)
+        assert "DifferencedAR1" in repr_str
+        assert "autoreg=0.6" in repr_str
+        assert "innovation_sd=0.3" in repr_str
+
+    def test_random_walk_repr(self):
+        """Test RandomWalk __repr__ method."""
+        rw = RandomWalk(innovation_sd=0.2)
+        repr_str = repr(rw)
+        assert "RandomWalk" in repr_str
+        assert "innovation_sd=0.2" in repr_str
+
+
+class TestAR1Validation:
+    """Test AR1 validation."""
+
+    def test_ar1_rejects_autoreg_equal_one(self):
+        """Test that AR1 rejects autoreg=1."""
+        with pytest.raises(ValueError, match="must satisfy"):
+            AR1(autoreg=1.0)
+
+    def test_ar1_rejects_autoreg_negative_one(self):
+        """Test that AR1 rejects autoreg=-1."""
+        with pytest.raises(ValueError, match="must satisfy"):
+            AR1(autoreg=-1.0)
+
+    def test_ar1_rejects_autoreg_greater_than_one(self):
+        """Test that AR1 rejects autoreg > 1."""
+        with pytest.raises(ValueError, match="must satisfy"):
+            AR1(autoreg=1.5)
+
+
+class TestDifferencedAR1Validation:
+    """Test DifferencedAR1 validation."""
+
+    def test_differenced_ar1_rejects_autoreg_equal_one(self):
+        """Test that DifferencedAR1 rejects autoreg=1."""
+        with pytest.raises(ValueError, match="must satisfy"):
+            DifferencedAR1(autoreg=1.0)
+
+    def test_differenced_ar1_rejects_autoreg_negative_one(self):
+        """Test that DifferencedAR1 rejects autoreg=-1."""
+        with pytest.raises(ValueError, match="must satisfy"):
+            DifferencedAR1(autoreg=-1.0)
+
+
+class TestAR1VectorizedSampling:
+    """Test AR1 vectorized sampling."""
+
+    def test_ar1_vectorized_sample_shape(self):
+        """Test that AR1 vectorized sample returns correct shape."""
+        n_timepoints = 30
+        n_processes = 5
+
+        ar1 = AR1(autoreg=0.7, innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectories = ar1.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+            )
+
+        assert trajectories.shape == (n_timepoints, n_processes)
+
+    def test_ar1_vectorized_with_initial_values_array(self):
+        """Test AR1 vectorized with array of initial values."""
+        n_timepoints = 30
+        n_processes = 4
+        initial_values = jnp.array([0.0, 1.0, -1.0, 2.0])
+
+        ar1 = AR1(autoreg=0.7, innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectories = ar1.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=initial_values,
+            )
+
+        assert trajectories.shape == (n_timepoints, n_processes)
+
+    def test_ar1_vectorized_with_scalar_initial_value(self):
+        """Test AR1 vectorized with scalar initial value (broadcast)."""
+        n_timepoints = 30
+        n_processes = 3
+
+        ar1 = AR1(autoreg=0.7, innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectories = ar1.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=1.0,
+            )
+
+        assert trajectories.shape == (n_timepoints, n_processes)
+
+
+class TestDifferencedAR1Sampling:
+    """Test DifferencedAR1 sampling methods."""
+
+    def test_differenced_ar1_single_sample_shape(self):
+        """Test that DifferencedAR1 single sample returns correct shape."""
+        n_timepoints = 30
+
+        dar1 = DifferencedAR1(autoreg=0.6, innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectory = dar1.sample(n_timepoints=n_timepoints)
+
+        assert trajectory.shape == (n_timepoints,)
+
+    def test_differenced_ar1_single_with_initial_value(self):
+        """Test DifferencedAR1 single sample with initial value."""
+        n_timepoints = 30
+
+        dar1 = DifferencedAR1(autoreg=0.6, innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectory = dar1.sample(
+                n_timepoints=n_timepoints,
+                initial_value=1.5,
+            )
+
+        assert trajectory.shape == (n_timepoints,)
+
+    def test_differenced_ar1_vectorized_sample_shape(self):
+        """Test that DifferencedAR1 vectorized sample returns correct shape."""
+        n_timepoints = 30
+        n_processes = 5
+
+        dar1 = DifferencedAR1(autoreg=0.6, innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectories = dar1.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+            )
+
+        assert trajectories.shape == (n_timepoints, n_processes)
+
+    def test_differenced_ar1_vectorized_with_initial_values_array(self):
+        """Test DifferencedAR1 vectorized with array of initial values."""
+        n_timepoints = 30
+        n_processes = 4
+        initial_values = jnp.array([0.0, 1.0, -1.0, 2.0])
+
+        dar1 = DifferencedAR1(autoreg=0.6, innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectories = dar1.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=initial_values,
+            )
+
+        assert trajectories.shape == (n_timepoints, n_processes)
+
+    def test_differenced_ar1_vectorized_with_scalar_initial_value(self):
+        """Test DifferencedAR1 vectorized with scalar initial value."""
+        n_timepoints = 30
+        n_processes = 3
+
+        dar1 = DifferencedAR1(autoreg=0.6, innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectories = dar1.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=1.0,
+            )
+
+        assert trajectories.shape == (n_timepoints, n_processes)
+
+    def test_differenced_ar1_override_innovation_sd(self):
+        """Test DifferencedAR1 with overridden innovation_sd."""
+        dar1 = DifferencedAR1(autoreg=0.6, innovation_sd=0.1)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectory = dar1.sample(
+                n_timepoints=30,
+                innovation_sd=0.5,  # Override constructor value
+            )
+
+        assert trajectory.shape == (30,)
+
+
+class TestRandomWalkVectorizedSampling:
+    """Test RandomWalk vectorized sampling."""
+
+    def test_random_walk_vectorized_with_initial_values_array(self):
+        """Test RandomWalk vectorized with array of initial values."""
+        n_timepoints = 30
+        n_processes = 4
+        initial_values = jnp.array([0.0, 1.0, -1.0, 2.0])
+
+        rw = RandomWalk(innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectories = rw.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=initial_values,
+            )
+
+        assert trajectories.shape == (n_timepoints, n_processes)
+        # First row should be close to initial values (may vary by implementation)
+        assert jnp.allclose(trajectories[0, :], initial_values)
+
+    def test_random_walk_vectorized_with_scalar_initial_value(self):
+        """Test RandomWalk vectorized with scalar initial value."""
+        n_timepoints = 30
+        n_processes = 3
+
+        rw = RandomWalk(innovation_sd=0.3)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            trajectories = rw.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=1.0,
+            )
+
+        assert trajectories.shape == (n_timepoints, n_processes)
+        # First row should be all 1.0
+        assert jnp.allclose(trajectories[0, :], 1.0)
+
+
 class TestTemporalProcessInnovationSD:
     """Test that temporal processes correctly use innovation_sd parameter."""
 
