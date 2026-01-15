@@ -1,6 +1,9 @@
 ---
 title: 'Hierarchical Latent Infections: Understanding Temporal Process Choices'
 format:
+  gfm:
+    fig-width: 16
+    fig-height: 10
   html:
     toc: true
     toc-depth: 3
