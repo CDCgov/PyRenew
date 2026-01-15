@@ -182,6 +182,35 @@ class TestMultiSignalModelSampling:
         assert inf_all.shape == (n_total, 3)  # K=3
         assert inf_obs.shape == (n_total, 2)  # K_obs=2
 
+    def test_fit_with_reparam_config(self, simple_builder):
+        """Test that fit() works with reparameterization config."""
+        from numpyro.infer.reparam import LocScaleReparam
+
+        model = simple_builder.build()
+        n_days = 10
+
+        times = jnp.array([5, 6, 7, 8, 9])
+        obs = jnp.array([10, 12, 15, 14, 11])
+
+        # Test with reparam_config
+        reparam_config = {
+            "log_rt_baseline_innovations": LocScaleReparam(centered=0),
+        }
+
+        mcmc = model.fit(
+            n_days_post_init=n_days,
+            population_size=1_000_000,
+            obs_fractions=OBS_FRACTIONS,
+            unobs_fractions=UNOBS_FRACTIONS,
+            num_warmup=2,
+            num_samples=2,
+            reparam_config=reparam_config,
+            hospital={"obs": obs, "times": times},
+        )
+
+        samples = mcmc.get_samples()
+        assert "latent_infections" in samples
+
     def test_fit_with_population_structure(self, simple_builder):
         """Test that fit() works with population structure at sample time."""
         model = simple_builder.build()
@@ -291,6 +320,133 @@ class TestMultiSignalModelValidation:
         # Should not raise
         model.validate()
 
+    def test_validate_data_rejects_negative_subpop_indices(self, simple_builder):
+        """Test that negative subpop_indices raises error."""
+        model = simple_builder.build()
+
+        with pytest.raises(ValueError, match="subpop_indices cannot be negative"):
+            model.validate_data(
+                n_days_post_init=30,
+                obs_fractions=OBS_FRACTIONS,
+                unobs_fractions=UNOBS_FRACTIONS,
+                hospital={
+                    "subpop_indices": jnp.array([-1, 0, 1]),
+                    "times": jnp.array([5, 6, 7]),
+                },
+            )
+
+    def test_validate_data_rejects_out_of_bounds_subpop_indices(self, simple_builder):
+        """Test that subpop_indices >= K_obs raises error."""
+        model = simple_builder.build()
+
+        # K_obs is 2 (from OBS_FRACTIONS = [0.3, 0.25])
+        with pytest.raises(ValueError, match="subpop_indices contains"):
+            model.validate_data(
+                n_days_post_init=30,
+                obs_fractions=OBS_FRACTIONS,
+                unobs_fractions=UNOBS_FRACTIONS,
+                hospital={
+                    "subpop_indices": jnp.array([0, 1, 5]),  # 5 >= 2
+                    "times": jnp.array([5, 6, 7]),
+                },
+            )
+
+
+class TestModelBuilderErrorHandling:
+    """Test ModelBuilder error handling."""
+
+    def test_compute_n_init_rejects_obs_without_lookback_days(self):
+        """Test that observation without lookback_days() raises error."""
+        from pyrenew.observation.base import BaseObservationProcess
+
+        class BadObservationNoLookback(BaseObservationProcess):
+            """Observation that has no lookback_days method."""
+
+            def __init__(self):
+                """Initialize without temporal_pmf_rv."""
+                self.name = "bad"
+                self.temporal_pmf_rv = None
+
+            def sample(self, **kwargs):
+                """Sample stub."""
+                pass
+
+            def validate(self):
+                """Validate stub."""
+                pass
+
+            def lookback_days(self):
+                """Raise NotImplementedError to simulate missing implementation."""
+                raise NotImplementedError("Not implemented")
+
+            def infection_resolution(self):
+                """
+                Return aggregate.
+
+                Returns
+                -------
+                str
+                    The string "aggregate".
+                """
+                return "aggregate"
+
+            def _predicted_obs(self, infections):
+                """
+                Predicted obs stub.
+
+                Returns
+                -------
+                ArrayLike
+                    The infections array unchanged.
+                """
+                return infections
+
+        builder = ModelBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+
+        builder.configure_latent(
+            HierarchicalInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_temporal=RandomWalk(),
+            subpop_temporal=RandomWalk(),
+        )
+
+        bad_obs = BadObservationNoLookback()
+        builder.add_observation(bad_obs)
+
+        with pytest.raises(ValueError, match="must implement lookback_days"):
+            builder.compute_n_initialization_points()
+
+    def test_build_raises_on_construction_error(self):
+        """Test that build() raises TypeError on latent construction failure."""
+        builder = ModelBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+
+        # Configure with an invalid parameter that will cause construction to fail
+        builder.configure_latent(
+            HierarchicalInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_temporal=RandomWalk(),
+            subpop_temporal=RandomWalk(),
+            invalid_extra_param="this will cause TypeError",  # Invalid param
+        )
+
+        delay = DeterministicPMF("delay", jnp.array([0.5, 0.5]))
+        obs = Counts(
+            name="hospital",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=delay,
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        builder.add_observation(obs)
+
+        with pytest.raises(TypeError, match="Error constructing"):
+            builder.build()
+
 
 class TestMultiSignalModelObservationValidation:
     """Test observation process validation in MultiSignalModel."""
@@ -316,7 +472,14 @@ class TestMultiSignalModelObservationValidation:
                 pass
 
             def lookback_days(self):
-                """Return lookback."""
+                """
+                Return lookback.
+
+                Returns
+                -------
+                int
+                    The lookback value of 1.
+                """
                 return 1
 
             def infection_resolution(self):
@@ -324,7 +487,14 @@ class TestMultiSignalModelObservationValidation:
                 raise NotImplementedError("Not implemented")
 
             def _predicted_obs(self, infections):
-                """Predicted obs stub."""
+                """
+                Predicted obs stub.
+
+                Returns
+                -------
+                ArrayLike
+                    The infections array unchanged.
+                """
                 return infections
 
         builder = ModelBuilder()

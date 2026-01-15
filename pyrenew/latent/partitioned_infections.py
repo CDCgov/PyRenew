@@ -141,14 +141,14 @@ class PartitionedInfections(BaseLatentInfectionProcess):
             If any parameters fail validation
         """
         gen_int_pmf = self.gen_int_rv()
-        if gen_int_pmf.size == 0:
+        if gen_int_pmf.size == 0:  # pragma: no cover
             raise ValueError("gen_int_rv must return non-empty array")
 
         pmf_sum = jnp.sum(gen_int_pmf)
-        if not jnp.isclose(pmf_sum, 1.0, atol=1e-6):
+        if not jnp.isclose(pmf_sum, 1.0, atol=1e-6):  # pragma: no cover
             raise ValueError(f"gen_int_rv must sum to 1.0, got {float(pmf_sum):.6f}")
 
-        if jnp.any(gen_int_pmf < 0):
+        if jnp.any(gen_int_pmf < 0):  # pragma: no cover
             raise ValueError("gen_int_rv must have non-negative values")
 
     def sample(

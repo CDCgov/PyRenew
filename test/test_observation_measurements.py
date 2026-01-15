@@ -100,6 +100,20 @@ class TestMeasurementsBase:
         assert process.infection_resolution() == "subpop"
 
 
+class TestVectorizedRV:
+    """Test VectorizedRV wrapper class."""
+
+    def test_init_and_sample(self):
+        """Test VectorizedRV initialization and sampling."""
+        rv = DistributionalVariable("test", dist.Normal(0, 1.0))
+        vectorized = VectorizedRV(rv, plate_name="test_plate")
+
+        with numpyro.handlers.seed(rng_seed=42):
+            samples = vectorized.sample(n_groups=5)
+
+        assert samples.shape == (5,)
+
+
 class TestHierarchicalNormalNoise:
     """Test HierarchicalNormalNoise model."""
 

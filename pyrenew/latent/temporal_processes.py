@@ -6,8 +6,8 @@ Provides time-series processes for modeling Rt dynamics and subpopulation
 deviations. All processes support both single trajectory and vectorized
 (multiple parallel trajectories) sampling.
 
-Temporal Processes
-------------------
+**Temporal Processes**
+
 - ``AR1``: Autoregressive process with mean reversion. Keeps Rt bounded
   near a baseline.
 - ``DifferencedAR1``: AR(1) on first differences. Allows persistent trends

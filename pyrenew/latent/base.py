@@ -354,7 +354,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         ValueError
             If any parameters fail validation
         """
-        pass
+        pass  # pragma: no cover
 
     @abstractmethod
     def sample(
@@ -390,4 +390,4 @@ class BaseLatentInfectionProcess(RandomVariable):
 
             where n_total_days = n_initialization_points + n_days_post_init
         """
-        pass
+        pass  # pragma: no cover

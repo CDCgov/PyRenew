@@ -2,8 +2,8 @@
 """
 Observation processes for connecting infections to observed data.
 
-Architecture
-------------
+**Architecture**
+
 ``BaseObservationProcess`` is the abstract base. Concrete subclasses:
 
 - ``Counts``: Aggregate counts (admissions, deaths)

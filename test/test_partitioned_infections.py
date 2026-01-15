@@ -114,6 +114,50 @@ class TestPartitionedInfectionsSample:
 class TestPartitionedInfectionsValidation:
     """Test validation of inputs."""
 
+    def test_rejects_missing_I0_rv(self, gen_int_rv):
+        """Test that None I0_rv is rejected."""
+        with pytest.raises(ValueError, match="I0_rv is required"):
+            PartitionedInfections(
+                gen_int_rv=gen_int_rv,
+                I0_rv=None,
+                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                rt_temporal=RandomWalk(),
+                allocation_temporal=RandomWalk(),
+            )
+
+    def test_rejects_missing_initial_log_rt_rv(self, gen_int_rv):
+        """Test that None initial_log_rt_rv is rejected."""
+        with pytest.raises(ValueError, match="initial_log_rt_rv is required"):
+            PartitionedInfections(
+                gen_int_rv=gen_int_rv,
+                I0_rv=DeterministicVariable("I0", 0.001),
+                initial_log_rt_rv=None,
+                rt_temporal=RandomWalk(),
+                allocation_temporal=RandomWalk(),
+            )
+
+    def test_rejects_missing_rt_temporal(self, gen_int_rv):
+        """Test that None rt_temporal is rejected."""
+        with pytest.raises(ValueError, match="rt_temporal is required"):
+            PartitionedInfections(
+                gen_int_rv=gen_int_rv,
+                I0_rv=DeterministicVariable("I0", 0.001),
+                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                rt_temporal=None,
+                allocation_temporal=RandomWalk(),
+            )
+
+    def test_rejects_missing_allocation_temporal(self, gen_int_rv):
+        """Test that None allocation_temporal is rejected."""
+        with pytest.raises(ValueError, match="allocation_temporal is required"):
+            PartitionedInfections(
+                gen_int_rv=gen_int_rv,
+                I0_rv=DeterministicVariable("I0", 0.001),
+                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                rt_temporal=RandomWalk(),
+                allocation_temporal=None,
+            )
+
     def test_rejects_invalid_I0(self, gen_int_rv):
         """Test that invalid I0 values are rejected."""
         with pytest.raises(ValueError, match="I0 must be positive"):
@@ -134,6 +178,40 @@ class TestPartitionedInfectionsValidation:
                     obs_fractions=jnp.array([0.3, 0.25]),
                     unobs_fractions=jnp.array([0.40]),  # Sum is 0.95
                 )
+
+    def test_validate_method(self, process):
+        """Test that validate() method runs without error."""
+        process.validate()
+
+
+class TestPartitionedInfectionsSingleSubpop:
+    """Test partitioned infections with single subpopulation (K=1)."""
+
+    def test_single_subpop_sample(self, gen_int_rv):
+        """Test sampling with a single observed subpopulation."""
+        process = PartitionedInfections(
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+            rt_temporal=RandomWalk(),
+            allocation_temporal=RandomWalk(),
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                n_days_post_init=30,
+                obs_fractions=jnp.array([1.0]),
+                unobs_fractions=jnp.array([]),
+            )
+
+        inf_juris, inf_all, inf_obs, inf_unobs = result
+        n_total = process.n_initialization_points + 30
+
+        # K=1 case: no allocation deviations needed
+        assert inf_juris.shape == (n_total,)
+        assert inf_all.shape == (n_total, 1)
+        assert inf_obs.shape == (n_total, 1)
+        assert inf_unobs.shape == (n_total, 0)
 
 
 if __name__ == "__main__":

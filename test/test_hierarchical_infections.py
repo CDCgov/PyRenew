@@ -119,6 +119,50 @@ class TestHierarchicalInfectionsSample:
 class TestHierarchicalInfectionsValidation:
     """Test validation of inputs."""
 
+    def test_rejects_missing_I0_rv(self, gen_int_rv):
+        """Test that None I0_rv is rejected."""
+        with pytest.raises(ValueError, match="I0_rv is required"):
+            HierarchicalInfections(
+                gen_int_rv=gen_int_rv,
+                I0_rv=None,
+                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                baseline_temporal=RandomWalk(),
+                subpop_temporal=RandomWalk(),
+            )
+
+    def test_rejects_missing_initial_log_rt_rv(self, gen_int_rv):
+        """Test that None initial_log_rt_rv is rejected."""
+        with pytest.raises(ValueError, match="initial_log_rt_rv is required"):
+            HierarchicalInfections(
+                gen_int_rv=gen_int_rv,
+                I0_rv=DeterministicVariable("I0", 0.001),
+                initial_log_rt_rv=None,
+                baseline_temporal=RandomWalk(),
+                subpop_temporal=RandomWalk(),
+            )
+
+    def test_rejects_missing_baseline_temporal(self, gen_int_rv):
+        """Test that None baseline_temporal is rejected."""
+        with pytest.raises(ValueError, match="baseline_temporal is required"):
+            HierarchicalInfections(
+                gen_int_rv=gen_int_rv,
+                I0_rv=DeterministicVariable("I0", 0.001),
+                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                baseline_temporal=None,
+                subpop_temporal=RandomWalk(),
+            )
+
+    def test_rejects_missing_subpop_temporal(self, gen_int_rv):
+        """Test that None subpop_temporal is rejected."""
+        with pytest.raises(ValueError, match="subpop_temporal is required"):
+            HierarchicalInfections(
+                gen_int_rv=gen_int_rv,
+                I0_rv=DeterministicVariable("I0", 0.001),
+                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                baseline_temporal=RandomWalk(),
+                subpop_temporal=None,
+            )
+
     def test_rejects_invalid_I0(self, gen_int_rv):
         """Test that invalid I0 values are rejected."""
         with pytest.raises(ValueError, match="I0 must be positive"):
@@ -139,6 +183,37 @@ class TestHierarchicalInfectionsValidation:
                     obs_fractions=jnp.array([0.3, 0.25]),
                     unobs_fractions=jnp.array([0.40]),  # Sum is 0.95
                 )
+
+    def test_validate_method(self, process):
+        """Test that validate() method runs without error."""
+        process.validate()
+
+
+class TestHierarchicalInfectionsPerSubpopI0:
+    """Test per-subpopulation I0 values."""
+
+    def test_per_subpop_I0_array(self, gen_int_rv):
+        """Test with per-subpopulation I0 values (array instead of scalar)."""
+        process = HierarchicalInfections(
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", jnp.array([0.001, 0.002, 0.0015])),
+            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_temporal=RandomWalk(),
+            subpop_temporal=RandomWalk(),
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                n_days_post_init=30,
+                obs_fractions=jnp.array([0.3, 0.25]),
+                unobs_fractions=jnp.array([0.45]),
+            )
+
+        inf_juris, inf_all, inf_obs, inf_unobs = result
+        n_total = process.n_initialization_points + 30
+
+        assert inf_juris.shape == (n_total,)
+        assert inf_all.shape == (n_total, 3)
 
 
 if __name__ == "__main__":

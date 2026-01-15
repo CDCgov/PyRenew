@@ -61,6 +61,14 @@ class TestHierarchicalNormalPrior:
 
         assert samples.shape == (5,)
 
+    def test_validate_method(self):
+        """Test that validate() method runs without error."""
+        prior = HierarchicalNormalPrior(
+            "effect", sd_rv=DeterministicVariable("sd", 1.0)
+        )
+        # Should not raise - validate is a no-op
+        prior.validate()
+
 
 class TestGammaGroupSdPrior:
     """Test GammaGroupSdPrior."""
@@ -120,6 +128,16 @@ class TestGammaGroupSdPrior:
                 sd_min=-0.1,
             )
 
+    def test_validate_method(self):
+        """Test that validate() method runs without error."""
+        prior = GammaGroupSdPrior(
+            "sd",
+            sd_mean_rv=DeterministicVariable("sd_mean", 0.5),
+            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
+        )
+        # Should not raise - validate is a no-op
+        prior.validate()
+
 
 class TestStudentTGroupModePrior:
     """Test StudentTGroupModePrior."""
@@ -173,6 +191,16 @@ class TestStudentTGroupModePrior:
                 sd_rv=DeterministicVariable("sd", 1.0),
                 df_rv=4.0,
             )
+
+    def test_validate_method(self):
+        """Test that validate() method runs without error."""
+        prior = StudentTGroupModePrior(
+            "mode",
+            sd_rv=DeterministicVariable("sd", 1.0),
+            df_rv=DeterministicVariable("df", 4.0),
+        )
+        # Should not raise - validate is a no-op
+        prior.validate()
 
 
 if __name__ == "__main__":

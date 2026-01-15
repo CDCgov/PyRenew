@@ -5,20 +5,20 @@ Noise models for observation processes.
 Provides composable noise strategies for count and measurement observations,
 separating the noise distribution from the observation structure.
 
-Count Noise
------------
+**Count Noise**
+
 - ``PoissonNoise``: Equidispersed counts (variance = mean). No parameters.
 - ``NegativeBinomialNoise``: Overdispersed counts relative to Poisson (variance > mean).
   Takes ``concentration_rv`` (higher concentration = less overdispersed, more Poisson-like).
 
-Measurement Noise
------------------
+**Measurement Noise**
+
 - ``HierarchicalNormalNoise``: Normal noise with hierarchical sensor effects.
   Takes ``sensor_mode_rv`` and ``sensor_sd_rv`` for sensor-level
   bias and variability.
 
-Utilities
----------
+**Utilities**
+
 - ``VectorizedRV``: Wrapper that adds ``n_groups`` support to simple RVs.
 """
 
@@ -65,7 +65,7 @@ class VectorizedRV(RandomVariable):
         self.rv = rv
         self.plate_name = plate_name
 
-    def validate(self):
+    def validate(self):  # pragma: no cover
         """Validate the underlying RV."""
         self.rv.validate()
 

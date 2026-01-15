@@ -492,6 +492,38 @@ class TestNoiseRepr:
         assert "concentration_rv" in repr_str
 
 
+class TestCountsRepr:
+    """Test Counts and CountsBySubpop __repr__ methods."""
+
+    def test_counts_repr(self, simple_delay_pmf):
+        """Test Counts __repr__ method."""
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        repr_str = repr(process)
+        assert "Counts" in repr_str
+        assert "name='test'" in repr_str
+        assert "ascertainment_rate_rv" in repr_str
+        assert "delay_distribution_rv" in repr_str
+        assert "noise" in repr_str
+
+    def test_counts_by_subpop_repr(self, simple_delay_pmf):
+        """Test CountsBySubpop __repr__ method."""
+        process = CountsBySubpop(
+            name="test_subpop",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.02),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        repr_str = repr(process)
+        assert "CountsBySubpop" in repr_str
+        assert "name='test_subpop'" in repr_str
+        assert "ascertainment_rate_rv" in repr_str
+
+
 class TestNoiseValidation:
     """Test noise model validation methods."""
 
