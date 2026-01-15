@@ -199,6 +199,7 @@ def counts_process(simple_delay_pmf):
         A Counts observation process with no delay.
     """
     return Counts(
+        name="test_counts",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
         noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
@@ -216,6 +217,7 @@ def counts_process_medium_delay(medium_delay_pmf):
         A Counts observation process with 4-day delay.
     """
     return Counts(
+        name="test_counts",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", medium_delay_pmf),
         noise=NegativeBinomialNoise(DeterministicVariable("conc", 50.0)),
@@ -233,6 +235,7 @@ def counts_process_realistic(realistic_delay_pmf):
         A Counts observation process with realistic parameters.
     """
     return Counts(
+        name="test_counts",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.005),
         delay_distribution_rv=DeterministicPMF("delay", realistic_delay_pmf),
         noise=NegativeBinomialNoise(DeterministicVariable("conc", 100.0)),
@@ -244,6 +247,7 @@ class CountsProcessFactory:
 
     @staticmethod
     def create(
+        name="test_counts",
         delay_pmf=None,
         ascertainment_rate=0.01,
         concentration=10.0,
@@ -259,6 +263,7 @@ class CountsProcessFactory:
         if delay_pmf is None:
             delay_pmf = jnp.array([1.0])
         return Counts(
+            name=name,
             ascertainment_rate_rv=DeterministicVariable("ihr", ascertainment_rate),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", concentration)),

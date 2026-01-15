@@ -83,7 +83,7 @@ In this example, we use fixed parameter values for illustration; in practice, th
 The delay distribution specifies the probability that an infected person is hospitalized $d$ days after infection, conditional on the infection leading to a hospitalization.
 For example, if `hosp_delay_pmf[5] = 0.2`, then 20% of infections that result in hospitalization will appear as hospital admissions 5 days after infection.
 
-We load a delay distribution from PyRenew's datasets which peaks around day 8-9 post-infection, compute summary statistics, and plot it.
+We load a delay distribution from PyRenew's example datasets, compute summary statistics, and plot it. The distribution peaks around day 8-9 post-infection.
 
 ```{python}
 # | label: delay-distribution
@@ -147,15 +147,18 @@ plot_delay
 
 A `Counts` object takes the following arguments:
 
+- **`name`**: unique, meaningful identifier for this observation process (e.g., `"hospital"`, `"deaths"`)
 - **`ascertainment_rate_rv`**: the probability an infection results in an observation (e.g., IHR)
 - **`delay_distribution_rv`**: delay distribution from infection to observation (PMF)
 - **`noise`**: noise model (`PoissonNoise()` or `NegativeBinomialNoise(concentration_rv)`)
+
+Observation processes are components in multi-signal models, where each signal must have a unique name. This name prefixes all numpyro sample sites (e.g., `"hospital"` creates sites `"hospital_obs"` and `"hospital_predicted"`), ensuring distinct identifiers in the inference trace.
 
 For hospital admissions, the ascertainment rate is specifically called the infection-hospitalization rate (IHR).
 In this example, the percentage of infections which lead to hospitalization is treated as a fixed value,
 which will allow us to see how different values affect the model.
 The concentration parameter for the negative binomial noise model is also fixed.
-In  practice, both of these parameters would be given a somewhat informative prior and then inferred.
+In practice, both of these parameters would be given a somewhat informative prior and then inferred.
 
 ```{python}
 # | label: create-counts-process
@@ -167,6 +170,7 @@ concentration_rv = DeterministicVariable("concentration", 10.0)
 
 # Create the observation process
 hosp_process = Counts(
+    name="hospital",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=delay_rv,
     noise=NegativeBinomialNoise(concentration_rv),
@@ -507,6 +511,7 @@ conc_results = []
 for conc_val in concentration_values:
     conc_rv_temp = DeterministicVariable("conc", conc_val)
     process_temp = Counts(
+        name="hospital",
         ascertainment_rate_rv=ihr_rv,
         delay_distribution_rv=delay_rv,
         noise=NegativeBinomialNoise(conc_rv_temp),
@@ -563,6 +568,7 @@ To use Poisson noise instead of negative binomial, change the noise model:
 ```{python}
 # | label: poisson-noise
 hosp_process_poisson = Counts(
+    name="hospital",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=delay_rv,
     noise=PoissonNoise(),

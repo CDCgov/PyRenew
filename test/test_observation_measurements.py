@@ -22,9 +22,9 @@ from pyrenew.randomvariable import DistributionalVariable
 class ConcreteMeasurements(Measurements):
     """Concrete implementation of Measurements for testing."""
 
-    def __init__(self, temporal_pmf_rv, noise, log10_scale=9.0):
+    def __init__(self, name, temporal_pmf_rv, noise, log10_scale=9.0):
         """Initialize the concrete measurements for testing."""
-        super().__init__(temporal_pmf_rv=temporal_pmf_rv, noise=noise)
+        super().__init__(name=name, temporal_pmf_rv=temporal_pmf_rv, noise=noise)
         self.log10_scale = log10_scale
 
     def validate(self) -> None:
@@ -92,6 +92,7 @@ class TestMeasurementsBase:
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
         process = ConcreteMeasurements(
+            name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=noise,
         )
@@ -204,6 +205,7 @@ class TestConcreteMeasurements:
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
         process = ConcreteMeasurements(
+            name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=noise,
         )
@@ -227,6 +229,7 @@ class TestConcreteMeasurements:
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
         process = ConcreteMeasurements(
+            name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=noise,
         )
@@ -250,7 +253,7 @@ class TestConcreteMeasurements:
         assert result.predicted.shape == infections.shape
 
     def test_predicted_obs_stored(self):
-        """Test that predicted_log_conc is stored as deterministic."""
+        """Test that predicted values are stored as deterministic."""
         shedding_pmf = jnp.array([0.5, 0.5])
         sensor_mode_rv = VectorizedRV(
             DistributionalVariable("mode", dist.Normal(0, 0.01)),
@@ -263,6 +266,7 @@ class TestConcreteMeasurements:
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
         process = ConcreteMeasurements(
+            name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=noise,
         )
@@ -284,7 +288,7 @@ class TestConcreteMeasurements:
                 )
             ).get_trace()
 
-        assert "predicted_log_conc" in trace
+        assert "test_predicted" in trace
 
 
 if __name__ == "__main__":
