@@ -4,13 +4,7 @@ format:
   gfm:
     fig-width: 16
     fig-height: 10
-  html:
-    toc: true
-    toc-depth: 3
-    embed-resources: true
-    self-contained-math: true
     code-fold: true
-    code-tools: true
 engine: jupyter
 jupyter:
   jupytext:
