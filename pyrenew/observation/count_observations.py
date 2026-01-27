@@ -206,13 +206,12 @@ class Counts(_CountBase):
         """
         predicted_counts = self._predicted_obs(infections)
         self._deterministic("predicted", predicted_counts)
-        predicted_counts_safe = jnp.nan_to_num(predicted_counts, nan=0.0)
 
         # Only use sparse indexing when conditioning on observations
         if times is not None and obs is not None:
-            predicted_obs = predicted_counts_safe[times]
+            predicted_obs = predicted_counts[times]
         else:
-            predicted_obs = predicted_counts_safe
+            predicted_obs = predicted_counts
 
         observed = self.noise.sample(
             name=self._sample_site_name("obs"),
@@ -301,13 +300,10 @@ class CountsBySubpop(_CountBase):
             `predicted` (predicted counts before noise, shape: n_days x n_subpops).
         """
         # Compute predicted counts for all subpops
-        predicted_counts_all = self._predicted_obs(infections)
+        predicted_counts = self._predicted_obs(infections)
 
-        self._deterministic("predicted", predicted_counts_all)
-
-        # Replace NaN padding with 0 for distribution creation
-        predicted_counts_safe = jnp.nan_to_num(predicted_counts_all, nan=0.0)
-        predicted_obs = predicted_counts_safe[times, subpop_indices]
+        self._deterministic("predicted", predicted_counts)
+        predicted_obs = predicted_counts[times, subpop_indices]
 
         observed = self.noise.sample(
             name=self._sample_site_name("obs"),
@@ -315,4 +311,4 @@ class CountsBySubpop(_CountBase):
             obs=obs,
         )
 
-        return ObservationSample(observed=observed, predicted=predicted_counts_all)
+        return ObservationSample(observed=observed, predicted=predicted_counts)
