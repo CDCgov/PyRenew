@@ -183,23 +183,6 @@ class BaseObservationProcess(RandomVariable):
         if jnp.any(pmf < 0):
             raise ValueError(f"{param_name} must have non-negative values")
 
-    def get_minimum_observation_day(self) -> int:
-        """
-        Get the first day with valid (non-NaN) convolution results.
-
-        Due to the convolution operation requiring a history window,
-        the first ``len(pmf) - 1`` days will have NaN values in the
-        output. This method returns the index of the first valid day.
-
-        Returns
-        -------
-        int
-            Day index (0-based) of first valid observation.
-            Equal to ``len(pmf) - 1``.
-        """
-        pmf = self.temporal_pmf_rv()
-        return int(len(pmf) - 1)
-
     def _convolve_with_alignment(
         self,
         latent_incidence: ArrayLike,
@@ -270,8 +253,7 @@ class BaseObservationProcess(RandomVariable):
         value : ArrayLike
             Value to track. Can be any shape.
         """
-        site_name = f"{self.name}_{suffix}"
-        numpyro.deterministic(site_name, value)
+        numpyro.deterministic(self._sample_site_name(suffix), value)
 
     def _sample_site_name(self, suffix: str) -> str:
         """
