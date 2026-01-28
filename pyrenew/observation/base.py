@@ -183,7 +183,6 @@ class BaseObservationProcess(RandomVariable):
         if jnp.any(pmf < 0):
             raise ValueError(f"{param_name} must have non-negative values")
 
-
     def _convolve_with_alignment(
         self,
         latent_incidence: ArrayLike,
