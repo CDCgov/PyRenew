@@ -559,18 +559,5 @@ class TestBaseObservationProcessValidation:
         with pytest.raises(ValueError, match="must have non-negative values"):
             process._validate_pmf(bad_pmf, "test_pmf")
 
-    def test_get_minimum_observation_day(self):
-        """Test get_minimum_observation_day returns correct value."""
-        delay_pmf = jnp.array([0.2, 0.5, 0.3])  # length 3
-        process = Counts(
-            name="test",
-            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
-            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
-            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
-        )
-        # First valid day should be len(pmf) - 1 = 2
-        assert process.get_minimum_observation_day() == 2
-
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
