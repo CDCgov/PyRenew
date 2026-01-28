@@ -247,9 +247,6 @@ class CountsBySubpop(_CountBase):
     noise : CountNoise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
 
-    Notes
-    -----
-    Output preserves input timeline. First len(delay_pmf)-1 days are NaN.
     """
 
     def __repr__(self) -> str:
