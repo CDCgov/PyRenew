@@ -120,14 +120,10 @@ class _CountBase(BaseObservationProcess):
 
         is_1d = infections.ndim == 1
         if is_1d:
-            infections = infections[:, jnp.newaxis]
-
-        def convolve_col(col):  # numpydoc ignore=GL08
-            return self._convolve_with_alignment(col, delay_pmf, ascertainment_rate)[0]
-
-        predicted_counts = jax.vmap(convolve_col, in_axes=1, out_axes=1)(infections)
-
-        return predicted_counts[:, 0] if is_1d else predicted_counts
+            predicted_counts = self._convolve_with_alignment(infections, delay_pmf, ascertainment_rate)[0]
+        else: 
+            predicted_counts = jax.vmap(lambda col: self._convolve_with_alignment(col, delay_pmf, ascertainment_rate)[0], in_axes=1, out_axes=1)(infections)
+        return predicted_counts
 
 
 class Counts(_CountBase):
