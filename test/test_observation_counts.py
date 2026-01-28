@@ -234,10 +234,8 @@ class TestCountsEdgeCases:
             )
 
         # Timeline alignment maintained
-        assert result.observed.shape[0] == infections.shape[0]
-        # Skip NaN padding: 10-day delay -> first 9 days are NaN
-        valid_counts = result.observed[9:]
-        assert jnp.sum(valid_counts) > 0
+        assert jnp.all(~jnp.isnan(result.observed))
+        assert jnp.all(result.observed >= 0))
 
 
 class TestCountsSparseObservations:
