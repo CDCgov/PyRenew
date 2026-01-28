@@ -214,7 +214,10 @@ class Counts(_CountBase):
         if times is not None and obs is not None:
             predicted_obs = predicted_counts[times]
         else:
-            predicted_obs = predicted_counts
+            observable = ~jnp.isnan(predicted_counts)
+            predicted_obs = predicted_counts[observable]
+            if obs is not None:
+                obs = obs[observable]
 
         observed = self.noise.sample(
             name=self._sample_site_name("obs"),
