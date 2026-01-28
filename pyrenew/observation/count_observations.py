@@ -156,8 +156,7 @@ class Counts(_CountBase):
 
     Notes
     -----
-    Output preserves input timeline. First len(delay_pmf)-1 days return
-    -1 or ~0 (depending on noise model) due to NaN padding.
+    Output preserves input timeline. First len(delay_pmf)-1 days return ``NaN``.
     """
 
     def infection_resolution(self) -> str:
@@ -200,7 +199,7 @@ class Counts(_CountBase):
         obs : ArrayLike | None
             Observed counts. Dense: (n_days,), Sparse: (n_obs,), None: prior.
         times : ArrayLike | None
-            Day indices for sparse observations. None for dense observations.
+            Day indices relative to the infections vector for sparse observations. None for dense observations.
 
         Returns
         -------
