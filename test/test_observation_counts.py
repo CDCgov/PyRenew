@@ -559,5 +559,6 @@ class TestBaseObservationProcessValidation:
         with pytest.raises(ValueError, match="must have non-negative values"):
             process._validate_pmf(bad_pmf, "test_pmf")
 
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
