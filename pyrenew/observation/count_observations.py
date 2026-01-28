@@ -214,7 +214,10 @@ class Counts(_CountBase):
         if times is not None and obs is not None:
             predicted_obs = predicted_counts[times]
         else:
-            predicted_obs = predicted_counts
+            observable = ~jnp.isnan(predicted_counts)
+            predicted_obs = predicted_counts[observable]
+            if obs is not None:
+                obs = obs[observable]
 
         observed = self.noise.sample(
             name=self._sample_site_name("obs"),
@@ -244,9 +247,6 @@ class CountsBySubpop(_CountBase):
     noise : CountNoise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
 
-    Notes
-    -----
-    Output preserves input timeline. First len(delay_pmf)-1 days are NaN.
     """
 
     def __repr__(self) -> str:

@@ -90,9 +90,11 @@ class TestCountsBasics:
 
         # Timeline alignment: output length equals input length
         assert result.observed.shape[0] == len(infections)
-        # First len(delay_pmf)-1 days are NaN (appear as -1 after NegativeBinomial sampling)
-        assert jnp.all(result.observed[1:] >= 0)
-        assert jnp.sum(result.observed[result.observed >= 0]) > 0
+        # first len(pmf) - 1 entries NaN, others not
+        assert jnp.all(jnp.isnan(result.predicted[:2]))
+        assert jnp.all(~jnp.isnan(result.predicted[1:]))
+        assert jnp.all(~jnp.isnan(result.observed))
+        assert jnp.all(result.observed >= 0)
 
     def test_ascertainment_scaling(self, counts_factory, simple_delay_pmf):
         """Test that ascertainment rate properly scales counts."""
@@ -163,9 +165,8 @@ class TestCountsWithPriors:
             )
 
         assert result.observed.shape[0] > 0
-        # Skip NaN padding
-        valid_counts = result.observed[2:]
-        assert jnp.all(valid_counts >= 0)
+        assert jnp.all(~jnp.isnan(result.observed))
+        assert jnp.all(result.observed >= 0))
 
     def test_with_stochastic_concentration(self, simple_delay_pmf):
         """Test with uncertain concentration parameter."""
@@ -233,10 +234,8 @@ class TestCountsEdgeCases:
             )
 
         # Timeline alignment maintained
-        assert result.observed.shape[0] == infections.shape[0]
-        # Skip NaN padding: 10-day delay -> first 9 days are NaN
-        valid_counts = result.observed[9:]
-        assert jnp.sum(valid_counts) > 0
+        assert jnp.all(~jnp.isnan(result.observed))
+        assert jnp.all(result.observed >= 0))
 
 
 class TestCountsSparseObservations:
