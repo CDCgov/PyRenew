@@ -156,8 +156,7 @@ class Counts(_CountBase):
 
     Notes
     -----
-    Output preserves input timeline. First len(delay_pmf)-1 days return
-    -1 or ~0 (depending on noise model) due to NaN padding.
+    Output preserves input timeline. First len(delay_pmf)-1 days return ``NaN``.
     """
 
     def infection_resolution(self) -> str:
