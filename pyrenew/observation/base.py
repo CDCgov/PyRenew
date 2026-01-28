@@ -270,8 +270,7 @@ class BaseObservationProcess(RandomVariable):
         value : ArrayLike
             Value to track. Can be any shape.
         """
-        site_name = f"{self.name}_{suffix}"
-        numpyro.deterministic(site_name, value)
+        numpyro.deterministic(self._sample_site_name(suffix), value)
 
     def _sample_site_name(self, suffix: str) -> str:
         """
