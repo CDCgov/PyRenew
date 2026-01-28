@@ -200,7 +200,7 @@ class Counts(_CountBase):
         obs : ArrayLike | None
             Observed counts. Dense: (n_days,), Sparse: (n_obs,), None: prior.
         times : ArrayLike | None
-            Day indices for sparse observations. None for dense observations.
+            Day indices relative to the infections vector for sparse observations. None for dense observations.
 
         Returns
         -------
