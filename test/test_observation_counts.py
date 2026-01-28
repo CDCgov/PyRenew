@@ -90,7 +90,6 @@ class TestCountsBasics:
 
         # Timeline alignment: output length equals input length
         assert result.observed.shape[0] == len(infections)
-        # First len(delay_pmf)-1 days are NaN (appear as -1 after NegativeBinomial sampling)
         assert jnp.all(result.observed[1:] >= 0)
         assert jnp.sum(result.observed[result.observed >= 0]) > 0
 
