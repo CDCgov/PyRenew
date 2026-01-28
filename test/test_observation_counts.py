@@ -90,8 +90,11 @@ class TestCountsBasics:
 
         # Timeline alignment: output length equals input length
         assert result.observed.shape[0] == len(infections)
-        assert jnp.all(result.observed[1:] >= 0)
-        assert jnp.sum(result.observed[result.observed >= 0]) > 0
+        # first len(pmf) - 1 entries NaN, others not
+        assert jnp.all(jnp.isnan(result.predicted[:2]))
+        assert jnp.all(~jnp.isnan(result.predicted[1:]))
+        assert jnp.all(~jnp.isnan(result.observed))
+        assert jnp.all(result.observed >= 0)
 
     def test_ascertainment_scaling(self, counts_factory, simple_delay_pmf):
         """Test that ascertainment rate properly scales counts."""
