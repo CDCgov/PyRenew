@@ -165,9 +165,8 @@ class TestCountsWithPriors:
             )
 
         assert result.observed.shape[0] > 0
-        # Skip NaN padding
-        valid_counts = result.observed[2:]
-        assert jnp.all(valid_counts >= 0)
+        assert jnp.all(~jnp.isnan(result.observed))
+        assert jnp.all(result.observed >= 0))
 
     def test_with_stochastic_concentration(self, simple_delay_pmf):
         """Test with uncertain concentration parameter."""
