@@ -1,43 +1,28 @@
 # PyRenew: A Package for Bayesian Renewal Modeling with JAX and NumPyro.
 
-⚠️ This is a work in progress ⚠️
+The PyRenew package is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing hierarchical multi-signal renewal models.
+Inspired by the R package [EpiNow2](https://epiforecasts.io/EpiNow2/), 
+it provides  a Python API built on top of [numpyro](https://num.pyro.ai/) and [JAX](https://docs.jax.dev/en/latest/index.html).
 
-The PyRenew package is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing renewal models. Built on top of the [numpyro](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building, including pre-defined models for processing various types of observational processes.
+A renewal model estimates new infections from recent past infections using a generation interval (the time between successive infections in a transmission chain). 
+From this, it infers $R_t$, the time-varying reproduction number, which indicates whether transmission is increasing or decreasing.
+The core renewal equation is:
 
-The [fundamental](https://cdcgov.github.io/PyRenew/tutorials/getting_started.html#the-fundamentals)  building blocks are the `Model` metaclass, from which we can draw samples, and the `RandomVariable` metaclass which has been abstracted to allow for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.  (See the tutorial  [Fitting a basic renewal model](https://cdcgov.github.io/PyRenew/tutorials/basic_renewal_model.html) to see how this works.)
+$$I(t) = R_t \sum_{s} I(t-s) \, w(s)$$
 
-The following diagram illustrates the composition of the `HospitalAdmissionsModel` class.    (See the tutorial  [Fitting a hospital-only admissions model](https://cdcgov.github.io/PyRenew/tutorials/hospital_admissions_mode..html) for details.)
+where $w(s)$ is the generation interval distribution: the probability that $s$ time units separate infection in an index case and a secondary case.
 
-```mermaid
-flowchart LR
+Inference is complicated by the fact that observational data require their own models ([Bhatt et al., 2023, §2](https://doi.org/10.1093/jrsssa/qnad030)).
+The observation equation links infections to expected observations:
 
-  %% Elements
-  rt_proc["Random walk RT process <br> (latent)"];
-  latent_inf["Latent infections"]
-  latent_ihr["Infection to hospitalization rate <br> (latent)"]
-  neg_binom["Observation process <br> (hospitalizations)"]
-  latent_hosp["Latent hospitalizations"];
-  i0["Initial infections <br> (latent)"];
-  gen_int["Generation interval <br> (fixed)"];
-  hosp_int["Hospitalization interval <br> (fixed)"];
+$$\mu(t) = \alpha \sum_{s} I(t-s) \, \pi(s)$$
 
-  %% Models
-  basic_model(("Infections model"));
-  admin_model(("Hospital admissions model"));
+where $\alpha$ is the ascertainment rate and $\pi(s)$ is the delay distribution from infection to observation.
 
-  %% Latent infections
-  rt_proc --> latent_inf;
-  i0 --> latent_inf;
-  gen_int --> latent_inf;
-  latent_inf --> basic_model
+PyRenew provides composable building blocks for these components via its `RandomVariable` abstraction - each element exposes a `sample()` method, allowing complex hierarchical models to be composed from modular, interchangeable building blocks.
+These methods internally call NumPyro's `numpyro.sample()` primitive to register named random variables with the inference engine, which automatically handles posterior sampling via MCMC or variational inference.
 
-  %% Hospitalizations
-  hosp_int --> latent_hosp
 
-  neg_binom --> admin_model;
-  latent_ihr --> latent_hosp;
-  basic_model --> admin_model;
-  latent_hosp --> admin_model;
 ```
 
 ## Installation
