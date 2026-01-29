@@ -5,7 +5,7 @@ Inspired by the R package [EpiNow2](https://epiforecasts.io/EpiNow2/),
 it provides  a Python API built on top of [numpyro](https://num.pyro.ai/) and [JAX](https://docs.jax.dev/en/latest/index.html).
 
 A renewal model estimates new infections from recent past infections using a generation interval (the time between successive infections in a transmission chain).
-From this, it infers $R_t$, the time-varying reproduction number, which indicates whether transmission is increasing or decreasing.
+From this, it infers $R_t$, the time-varying reproduction number, which indicates whether infection prevalence is increasing or decreasing.
 The core renewal equation is:
 
 $$I(t) = R_t \sum_{s} I(t-s) \, w(s)$$
