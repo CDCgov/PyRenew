@@ -332,6 +332,7 @@ The predicted admissions mirror the delay distribution, shifted by the infection
 The negative binomial distribution adds stochastic variation. Sampling multiple times from the same infections shows the range of possible observations:
 
 ```{python}
+
 # | label: sample-realizations
 # Sample 50 realizations of hospital admissions from the same infection spike
 n_samples = 50
@@ -492,6 +493,7 @@ We compare three concentration values spanning two orders of magnitude:
 - **φ = 100**: nearly Poisson (minimal noise)
 
 ```{python}
+
 # | label: concentration-comparisons
 # Use constant infections
 peak_value = 2000
@@ -585,6 +587,7 @@ We can visualize the Poisson noise model using the same constant infection scena
 To see the reduction in noise, it is necessary to keep the y-axis on the same scale as in the previous plot.
 
 ```{python}
+
 # | label: poisson-realizations
 # Sample multiple realizations with Poisson noise
 n_replicates_poisson = 10
