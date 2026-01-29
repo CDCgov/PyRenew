@@ -302,6 +302,7 @@ class TestConcreteMeasurements:
                 )
             ).get_trace()
 
+        assert "test_obs" in trace
         assert "test_predicted" in trace
 
 

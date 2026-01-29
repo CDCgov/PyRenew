@@ -7,5 +7,7 @@ nav:
   - observation_processes_measurements.md
   - latent_hierarchical_infections.md
   - hospital_admissions_model.md
+  - observation_processes_counts.md
+  - observation_processes_measurements.md
   - day_of_the_week.md
   - periodic_effects.md

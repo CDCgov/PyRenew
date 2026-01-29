@@ -120,14 +120,18 @@ class _CountBase(BaseObservationProcess):
 
         is_1d = infections.ndim == 1
         if is_1d:
-            infections = infections[:, jnp.newaxis]
-
-        def convolve_col(col):  # numpydoc ignore=GL08
-            return self._convolve_with_alignment(col, delay_pmf, ascertainment_rate)[0]
-
-        predicted_counts = jax.vmap(convolve_col, in_axes=1, out_axes=1)(infections)
-
-        return predicted_counts[:, 0] if is_1d else predicted_counts
+            predicted_counts = self._convolve_with_alignment(
+                infections, delay_pmf, ascertainment_rate
+            )[0]
+        else:
+            predicted_counts = jax.vmap(
+                lambda col: self._convolve_with_alignment(
+                    col, delay_pmf, ascertainment_rate
+                )[0],
+                in_axes=1,
+                out_axes=1,
+            )(infections)
+        return predicted_counts
 
 
 class Counts(_CountBase):
@@ -149,11 +153,6 @@ class Counts(_CountBase):
         Delay distribution PMF (must sum to ~1.0).
     noise : CountNoise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
-
-    Notes
-    -----
-    Output preserves input timeline. First len(delay_pmf)-1 days return
-    -1 or ~0 (depending on noise model) due to NaN padding.
     """
 
     def infection_resolution(self) -> str:
@@ -196,7 +195,7 @@ class Counts(_CountBase):
         obs : ArrayLike | None
             Observed counts. Dense: (n_days,), Sparse: (n_obs,), None: prior.
         times : ArrayLike | None
-            Day indices for sparse observations. None for dense observations.
+            Day indices relative to the infections vector for sparse observations. None for dense observations.
 
         Returns
         -------
@@ -211,7 +210,10 @@ class Counts(_CountBase):
         if times is not None and obs is not None:
             predicted_obs = predicted_counts[times]
         else:
-            predicted_obs = predicted_counts
+            observable = ~jnp.isnan(predicted_counts)
+            predicted_obs = predicted_counts[observable]
+            if obs is not None:
+                obs = obs[observable]
 
         observed = self.noise.sample(
             name=self._sample_site_name("obs"),
@@ -240,10 +242,6 @@ class CountsBySubpop(_CountBase):
         Delay distribution PMF (must sum to ~1.0).
     noise : CountNoise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
-
-    Notes
-    -----
-    Output preserves input timeline. First len(delay_pmf)-1 days are NaN.
     """
 
     def __repr__(self) -> str:

@@ -4,7 +4,16 @@ format:
   gfm:
     fig-width: 16
     fig-height: 10
+<<<<<<< HEAD
     code-fold: true
+=======
+  html:
+    toc: true
+    embed-resources: true
+    self-contained-math: true
+    code-fold: true
+    code-tools: true
+>>>>>>> 247baba3a881150741bdc8f46087eed2d6e677e2
 engine: jupyter
 ---
 
@@ -341,7 +350,11 @@ for seed in range(n_samples):
     with numpyro.handlers.seed(rng_seed=seed):
         hosp_sample = hosp_process.sample(infections=infections, obs=None)
 
+<<<<<<< HEAD
     for i, val in enumerate(hosp_sample.observed[day_one:]):
+=======
+    for i, val in enumerate(hosp_sample.observed):
+>>>>>>> 247baba3a881150741bdc8f46087eed2d6e677e2
         samples_list.append(
             {
                 "day": i,
@@ -520,7 +533,11 @@ for conc_val in concentration_values:
             )
 
         # Use relative days
+<<<<<<< HEAD
         for i, admit in enumerate(hosp_temp.observed[day_one:]):
+=======
+        for i, admit in enumerate(hosp_temp.observed):
+>>>>>>> 247baba3a881150741bdc8f46087eed2d6e677e2
             conc_results.append(
                 {
                     "day": i,
@@ -597,7 +614,11 @@ for seed in range(n_replicates_poisson):
             obs=None,
         )
 
+<<<<<<< HEAD
     for i, admit in enumerate(poisson_temp.observed[day_one:]):
+=======
+    for i, admit in enumerate(poisson_temp.observed):
+>>>>>>> 247baba3a881150741bdc8f46087eed2d6e677e2
         poisson_results.append(
             {
                 "day": i,

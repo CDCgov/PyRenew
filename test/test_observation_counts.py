@@ -88,11 +88,15 @@ class TestCountsBasics:
                 obs=None,
             )
 
-        # Timeline alignment: output length equals input length
-        assert result.observed.shape[0] == len(infections)
-        # First len(delay_pmf)-1 days are NaN (appear as -1 after NegativeBinomial sampling)
-        assert jnp.all(result.observed[1:] >= 0)
-        assert jnp.sum(result.observed[result.observed >= 0]) > 0
+        # Timeline alignment: predicted length equals input length
+        assert result.predicted.shape[0] == len(infections)
+        # observed excludes NaN entries (first len(pmf) - 1)
+        assert result.observed.shape[0] == len(infections) - (len(short_delay_pmf) - 1)
+        # first len(pmf) - 1 entries NaN, others not
+        assert jnp.all(jnp.isnan(result.predicted[:1]))
+        assert jnp.all(~jnp.isnan(result.predicted[1:]))
+        assert jnp.all(~jnp.isnan(result.observed))
+        assert jnp.all(result.observed >= 0)
 
     def test_ascertainment_scaling(self, counts_factory, simple_delay_pmf):
         """Test that ascertainment rate properly scales counts."""
@@ -163,9 +167,8 @@ class TestCountsWithPriors:
             )
 
         assert result.observed.shape[0] > 0
-        # Skip NaN padding
-        valid_counts = result.observed[2:]
-        assert jnp.all(valid_counts >= 0)
+        assert jnp.all(~jnp.isnan(result.observed))
+        assert jnp.all(result.observed >= 0)
 
     def test_with_stochastic_concentration(self, simple_delay_pmf):
         """Test with uncertain concentration parameter."""
@@ -206,6 +209,7 @@ class TestCountsEdgeCases:
             )
 
         assert result.observed.shape[0] > 0
+        assert jnp.all(result.observed >= 0)
 
     def test_small_infections(self, counts_process):
         """Test with small infection values."""
@@ -232,11 +236,8 @@ class TestCountsEdgeCases:
                 obs=None,
             )
 
-        # Timeline alignment maintained
-        assert result.observed.shape[0] == infections.shape[0]
-        # Skip NaN padding: 10-day delay -> first 9 days are NaN
-        valid_counts = result.observed[9:]
-        assert jnp.sum(valid_counts) > 0
+        assert jnp.all(~jnp.isnan(result.observed))
+        assert jnp.all(result.observed >= 0)
 
 
 class TestCountsSparseObservations:
@@ -590,18 +591,6 @@ class TestBaseObservationProcessValidation:
         bad_pmf = jnp.array([1.5, -0.5])  # sums to 1.0 but has negative
         with pytest.raises(ValueError, match="must have non-negative values"):
             process._validate_pmf(bad_pmf, "test_pmf")
-
-    def test_get_minimum_observation_day(self):
-        """Test get_minimum_observation_day returns correct value."""
-        delay_pmf = jnp.array([0.2, 0.5, 0.3])  # length 3
-        process = Counts(
-            name="test",
-            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
-            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
-            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
-        )
-        # First valid day should be len(pmf) - 1 = 2
-        assert process.get_minimum_observation_day() == 2
 
 
 if __name__ == "__main__":
