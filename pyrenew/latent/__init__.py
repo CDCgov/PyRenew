@@ -1,7 +1,5 @@
 # numpydoc ignore=GL08
 
-from pyrenew.latent.partitioned_infections import PartitionedInfections
-
 from pyrenew.latent.base import (
     BaseLatentInfectionProcess,
     LatentSample,
@@ -55,7 +53,6 @@ __all__ = [
     "PopulationStructure",
     # Hierarchical infection processes
     "HierarchicalInfections",
-    "PartitionedInfections",
     # Hierarchical priors
     "HierarchicalNormalPrior",
     "GammaGroupSdPrior",
