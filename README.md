@@ -23,7 +23,6 @@ PyRenew provides composable building blocks for these components via its `Random
 These methods internally call NumPyro's `numpyro.sample()` primitive to register named random variables with the inference engine, which automatically handles posterior sampling via MCMC or variational inference.
 
 
-```
 
 ## Installation
 
