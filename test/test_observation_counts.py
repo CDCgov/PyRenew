@@ -209,6 +209,7 @@ class TestCountsEdgeCases:
             )
 
         assert result.observed.shape[0] > 0
+        assert jnp.all(result.observed >= 0)
 
     def test_small_infections(self, counts_process):
         """Test with small infection values."""
