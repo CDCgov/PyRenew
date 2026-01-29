@@ -525,7 +525,7 @@ for conc_val in concentration_values:
             )
 
         # Use relative days
-        for i, admit in enumerate(hosp_temp.observed[day_one:]):
+        for i, admit in enumerate(hosp_temp.observed):
             conc_results.append(
                 {
                     "day": i,
