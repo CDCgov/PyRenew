@@ -1,5 +1,7 @@
 # numpydoc ignore=GL08
 
+from pyrenew.latent.partitioned_infections import PartitionedInfections
+
 from pyrenew.latent.base import (
     BaseLatentInfectionProcess,
     LatentSample,
@@ -28,7 +30,6 @@ from pyrenew.latent.infection_initialization_process import (
 )
 from pyrenew.latent.infections import Infections
 from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
-from pyrenew.latent.partitioned_infections import PartitionedInfections
 from pyrenew.latent.temporal_processes import (
     AR1,
     DifferencedAR1,
