@@ -602,7 +602,7 @@ for seed in range(n_replicates_poisson):
             obs=None,
         )
 
-    for i, admit in enumerate(poisson_temp.observed[day_one:]):
+    for i, admit in enumerate(poisson_temp.observed):
         poisson_results.append(
             {
                 "day": i,
