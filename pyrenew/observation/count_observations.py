@@ -246,7 +246,6 @@ class CountsBySubpop(_CountBase):
         Delay distribution PMF (must sum to ~1.0).
     noise : CountNoise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
-
     """
 
     def __repr__(self) -> str:

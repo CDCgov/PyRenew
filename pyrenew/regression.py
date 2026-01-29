@@ -157,7 +157,7 @@ class GLMPrediction(AbstractRegressionPrediction):
         Sample generalized linear model
 
         Parameters
-        -----------
+        ----------
         predictor_values
             Matrix of predictor variables (covariates) for the
             regression problem. Each row should represent the

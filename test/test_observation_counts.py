@@ -88,10 +88,12 @@ class TestCountsBasics:
                 obs=None,
             )
 
-        # Timeline alignment: output length equals input length
-        assert result.observed.shape[0] == len(infections)
+        # Timeline alignment: predicted length equals input length
+        assert result.predicted.shape[0] == len(infections)
+        # observed excludes NaN entries (first len(pmf) - 1)
+        assert result.observed.shape[0] == len(infections) - (len(short_delay_pmf) - 1)
         # first len(pmf) - 1 entries NaN, others not
-        assert jnp.all(jnp.isnan(result.predicted[:2]))
+        assert jnp.all(jnp.isnan(result.predicted[:1]))
         assert jnp.all(~jnp.isnan(result.predicted[1:]))
         assert jnp.all(~jnp.isnan(result.observed))
         assert jnp.all(result.observed >= 0)
@@ -166,7 +168,7 @@ class TestCountsWithPriors:
 
         assert result.observed.shape[0] > 0
         assert jnp.all(~jnp.isnan(result.observed))
-        assert jnp.all(result.observed >= 0))
+        assert jnp.all(result.observed >= 0)
 
     def test_with_stochastic_concentration(self, simple_delay_pmf):
         """Test with uncertain concentration parameter."""
@@ -235,7 +237,7 @@ class TestCountsEdgeCases:
 
         # Timeline alignment maintained
         assert jnp.all(~jnp.isnan(result.observed))
-        assert jnp.all(result.observed >= 0))
+        assert jnp.all(result.observed >= 0)
 
 
 class TestCountsSparseObservations:
