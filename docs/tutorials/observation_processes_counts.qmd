@@ -346,7 +346,7 @@ for seed in range(n_samples):
     with numpyro.handlers.seed(rng_seed=seed):
         hosp_sample = hosp_process.sample(infections=infections, obs=None)
 
-    for i, val in enumerate(hosp_sample.observed[day_one:]):
+    for i, val in enumerate(hosp_sample.observed):
         samples_list.append(
             {
                 "day": i,
