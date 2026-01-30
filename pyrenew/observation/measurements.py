@@ -76,6 +76,20 @@ class Measurements(BaseObservationProcess):
             f"noise={self.noise!r})"
         )
 
+    def lookback_days(self) -> int:
+        """
+        Return required lookback days for this observation.
+
+        Temporal PMFs are 0-indexed (effect can occur on day 0), so a PMF
+        of length L covers lags 0 to L-1, requiring L-1 initialization points.
+
+        Returns
+        -------
+        int
+            Length of temporal PMF minus 1.
+        """
+        return len(self.temporal_pmf_rv()) - 1
+
     def infection_resolution(self) -> str:
         """
         Return "subpop" for measurement observations.
@@ -93,18 +107,18 @@ class Measurements(BaseObservationProcess):
     def sample(
         self,
         infections: ArrayLike,
+        times: ArrayLike,
         subpop_indices: ArrayLike,
         sensor_indices: ArrayLike,
-        times: ArrayLike,
-        obs: ArrayLike | None,
         n_sensors: int,
+        obs: ArrayLike | None = None,
     ) -> ObservationSample:
         """
         Sample measurements from observed sensors.
 
-        This method does not perform runtime validation of index values
-        (times, subpop_indices, sensor_indices). Validate observation data
-        before sampling.
+        Times are on the shared time axis [0, n_total) where
+        n_total = n_init + n_days. This method performs direct indexing
+        without any offset adjustment.
 
         Transforms infections to predicted values via signal-specific processing
         (``_predicted_obs``), then applies noise model.
@@ -113,31 +127,31 @@ class Measurements(BaseObservationProcess):
         ----------
         infections : ArrayLike
             Infections from the infection process.
-            Shape: (n_days, n_subpops)
+            Shape: (n_total, n_subpops)
+        times : ArrayLike
+            Day index for each observation on the shared time axis.
+            Must be in range [0, n_total). Shape: (n_obs,)
         subpop_indices : ArrayLike
             Subpopulation index for each observation (0-indexed).
             Shape: (n_obs,)
         sensor_indices : ArrayLike
             Sensor index for each observation (0-indexed).
             Shape: (n_obs,)
-        times : ArrayLike
-            Day index for each observation (0-indexed).
-            Shape: (n_obs,)
-        obs : ArrayLike | None
-            Observed measurements (n_obs,), or None for prior sampling.
         n_sensors : int
             Total number of measurement sensors.
+        obs : ArrayLike | None
+            Observed measurements (n_obs,), or None for prior sampling.
 
         Returns
         -------
         ObservationSample
             Named tuple with `observed` (sampled/conditioned measurements) and
-            `predicted` (predicted values before noise, shape: n_days x n_subpops).
+            `predicted` (predicted values before noise, shape: n_total x n_subpops).
         """
         predicted_values = self._predicted_obs(infections)
-
         self._deterministic("predicted", predicted_values)
 
+        # Direct indexing on shared time axis - no offset needed
         predicted_obs = predicted_values[times, subpop_indices]
 
         observed = self.noise.sample(

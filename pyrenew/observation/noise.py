@@ -100,6 +100,7 @@ class CountNoise(ABC):
         name: str,
         predicted: ArrayLike,
         obs: ArrayLike | None = None,
+        obs_mask: ArrayLike | None = None,
     ) -> ArrayLike:
         """
         Sample count observations given predicted counts.
@@ -112,11 +113,22 @@ class CountNoise(ABC):
             Predicted count values (non-negative).
         obs : ArrayLike | None
             Observed counts for conditioning, or None for prior sampling.
+        obs_mask : ArrayLike | None
+            Boolean mask indicating which observations to include in the
+            likelihood. If None, all observations are included. If provided,
+            observations where mask is False are excluded from the likelihood.
 
         Returns
         -------
         ArrayLike
             Sampled or conditioned counts, same shape as predicted.
+
+        Notes
+        -----
+        Implementations use ``numpyro.handlers.mask`` rather than the
+        ``obs_mask`` parameter of ``numpyro.sample``. This avoids creating
+        latent variables for masked entries, which would fail with NUTS
+        for discrete distributions.
         """
         pass  # pragma: no cover
 
@@ -155,6 +167,7 @@ class PoissonNoise(CountNoise):
         name: str,
         predicted: ArrayLike,
         obs: ArrayLike | None = None,
+        obs_mask: ArrayLike | None = None,
     ) -> ArrayLike:
         """
         Sample from Poisson distribution.
@@ -167,17 +180,27 @@ class PoissonNoise(CountNoise):
             Predicted count values.
         obs : ArrayLike | None
             Observed counts for conditioning.
+        obs_mask : ArrayLike | None
+            Boolean mask indicating which observations to include in the
+            likelihood. If None, all observations are included.
 
         Returns
         -------
         ArrayLike
             Poisson-distributed counts.
         """
-        return numpyro.sample(
-            name,
-            dist.Poisson(rate=predicted + _EPSILON),
-            obs=obs,
-        )
+        if obs_mask is None:
+            return numpyro.sample(
+                name,
+                dist.Poisson(rate=predicted + _EPSILON),
+                obs=obs,
+            )
+        with numpyro.handlers.mask(mask=obs_mask):
+            return numpyro.sample(
+                name,
+                dist.Poisson(rate=predicted + _EPSILON),
+                obs=obs,
+            )
 
 
 class NegativeBinomialNoise(CountNoise):
@@ -235,6 +258,7 @@ class NegativeBinomialNoise(CountNoise):
         name: str,
         predicted: ArrayLike,
         obs: ArrayLike | None = None,
+        obs_mask: ArrayLike | None = None,
     ) -> ArrayLike:
         """
         Sample from Negative Binomial distribution.
@@ -247,6 +271,9 @@ class NegativeBinomialNoise(CountNoise):
             Predicted count values.
         obs : ArrayLike | None
             Observed counts for conditioning.
+        obs_mask : ArrayLike | None
+            Boolean mask indicating which observations to include in the
+            likelihood. If None, all observations are included.
 
         Returns
         -------
@@ -254,14 +281,24 @@ class NegativeBinomialNoise(CountNoise):
             Negative Binomial-distributed counts.
         """
         concentration = self.concentration_rv()
-        return numpyro.sample(
-            name,
-            dist.NegativeBinomial2(
-                mean=predicted + _EPSILON,
-                concentration=concentration,
-            ),
-            obs=obs,
-        )
+        if obs_mask is None:
+            return numpyro.sample(
+                name,
+                dist.NegativeBinomial2(
+                    mean=predicted + _EPSILON,
+                    concentration=concentration,
+                ),
+                obs=obs,
+            )
+        with numpyro.handlers.mask(mask=obs_mask):
+            return numpyro.sample(
+                name,
+                dist.NegativeBinomial2(
+                    mean=predicted + _EPSILON,
+                    concentration=concentration,
+                ),
+                obs=obs,
+            )
 
 
 class MeasurementNoise(ABC):

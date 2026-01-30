@@ -382,7 +382,7 @@ class Wastewater(Measurements):
         self.noise.validate()
 
     def lookback_days(self) -> int:
-        return len(self.temporal_pmf_rv())
+        return len(self.temporal_pmf_rv()) - 1
 
     def _predicted_obs(self, infections: ArrayLike) -> ArrayLike:
         shedding_pmf = self.temporal_pmf_rv()
@@ -552,6 +552,19 @@ When you call `model.fit()`, you supply two types of information:
 - **Observation data** — one data dictionary per registered observation process
 - **Population structure** — how the jurisdiction is divided into subpopulations
 
+### Shared Time Axis
+
+All observation data uses a **shared time axis** `[0, n_total)` where `n_total = n_init + n_days`. This shared axis aligns observations with the internal infection vectors:
+
+- Index 0 corresponds to the first day of the initialization period
+- Index `n_init` corresponds to the first day of actual observations
+- Index `n_total - 1` corresponds to the last observation day
+
+The model provides helper methods to align your data with this shared axis:
+
+- `model.pad_observations(obs)` — prepends `n_init` NaN values to dense observation vectors
+- `model.shift_times(times)` — adds `n_init` to sparse time indices
+
 ### Observation Data by Signal Type
 
 Each observation process's `name` attribute becomes the keyword argument for passing data to `model.fit()`:
@@ -561,31 +574,33 @@ builder.add_observation(hosp_obs)   # hosp_obs.name="hospital" → hospital={...
 builder.add_observation(ww_obs)     # ww_obs.name="wastewater" → wastewater={...}
 ```
 
-#### Jurisdiction-level signals
+#### Jurisdiction-level signals (dense)
 
-The jurisdiction-level hospital admissions data is specified as a `Counts` observations process.
+The jurisdiction-level hospital admissions data is specified as a `Counts` observations process with dense data padded to length `n_total`:
 
 ```python
 hospital={
-    "obs": jnp.array([...]),   # observed values
+    "obs": model.pad_observations(hosp_counts),  # shape: (n_total,), NaN-padded
 }
 ```
 
-*Note*: this example uses dense data, i.e., there is an observation for every day in the timeline. Were the data sparse, it would be necessary to also provide an array `times` which supplies the time index for each observation.
+The `pad_observations` method prepends `n_init` NaN values. NaN marks the initialization period where predictions exist but observations do not. You can also use NaN to mark missing data within the observation period.
 
-#### Subpopulation-level signal
+#### Subpopulation-level signals (sparse)
 
-The subpopulation-level wastewater data is specified as a `Wastewater` observations process.
+The subpopulation-level wastewater data is specified as a `Wastewater` observations process with sparse indexing on the shared time axis:
 
 ```python
 wastewater={
-    "obs": jnp.array([...]),             # observed log concentrations
-    "times": jnp.array([...]),           # time index for each observation
-    "subpop_indices": jnp.array([...]),  # which catchment (selects infection trajectory)
-    "sensor_indices": jnp.array([...]),  # which WWTP/lab pair (selects noise parameters)
-    "n_sensors": int,                    # total number of WWTP/lab pairs
+    "obs": jnp.array([...]),                      # observed log concentrations (n_obs,)
+    "times": model.shift_times(ww_times),         # time indices on shared axis
+    "subpop_indices": jnp.array([...]),           # which catchment (selects infection trajectory)
+    "sensor_indices": jnp.array([...]),           # which WWTP/lab pair (selects noise parameters)
+    "n_sensors": int,                             # total number of WWTP/lab pairs
 }
 ```
+
+The `shift_times` method adds `n_init` to convert from natural coordinates (0 = first observation day) to the shared time axis.
 
 A **subpopulation** is a portion of the jurisdiction's population defined by a catchment area. A **sensor** is a measurement source — typically a WWTP/lab pair — that produces observations. Multiple sensors can observe the same subpopulation (e.g., different labs processing samples from the same catchment), so `subpop_indices` and `sensor_indices` may differ.
 
@@ -615,14 +630,14 @@ This specifies 5 observed subpopulations (e.g., wastewater catchments) and 1 uno
 model.fit(
     n_days_post_init=n_days,
     population_size=population_size,
-    # Population structure (choose one parameterization)
+    # Population structure
     obs_fractions=obs_subpop_fractions,
     unobs_fractions=unobs_subpop_fractions,
     # Observation data (keyed by names from add_observation)
-    hospital={"obs": hosp_counts, "times": hosp_times},
+    hospital={"obs": model.pad_observations(hosp_counts)},
     wastewater={
         "obs": ww_conc,
-        "times": ww_times,
+        "times": model.shift_times(ww_times),
         "subpop_indices": ww_subpop_indices,
         "sensor_indices": ww_sensor_indices,
         "n_sensors": n_ww_sensors,
@@ -652,27 +667,23 @@ print(
 )
 ```
 
-It is necessary to align the data with the model's time indexing.
-
--   Times are relative to the start of the simulation (0 = first day of initialization period)
--   Observation times should be offset by `n_initialization_points`
-
-To do this, we define function `prepare_observation-data`.
+We define a function to prepare observation data using the model's helper methods to align with the shared time axis.
 
 ```{python}
 # | label: prepare-observation-data
-def prepare_observation_data(n_days_fit, n_init, hosp_admits, ww_data, K_obs):
+def prepare_observation_data(model, n_days_fit, hosp_admits, ww_data, K_obs):
     """
     Prepare observation data for fitting.
 
-    Returns hospital and wastewater data dicts aligned with model time indexing.
+    Uses model.pad_observations() and model.shift_times() to align data
+    with the shared time axis.
 
     Parameters
     ----------
+    model : MultiSignalModel
+        The model (provides padding/shifting helpers)
     n_days_fit : int
         Number of days to include in fit
-    n_init : int
-        Number of initialization points (for time offset)
     hosp_admits : array
         Hospital admissions time series
     ww_data : dict
@@ -680,14 +691,12 @@ def prepare_observation_data(n_days_fit, n_init, hosp_admits, ww_data, K_obs):
     K_obs : int
         Number of observed subpopulations (for mapping sites to subpops)
     """
-    # Hospital: jurisdiction-level, sparse times
-    hosp_times = jnp.arange(n_days_fit) + n_init
-    hosp_counts = hosp_admits[:n_days_fit]
+    # Hospital: dense, NaN-padded to length n_total
+    hosp_obs = model.pad_observations(hosp_admits[:n_days_fit])
 
-    # Wastewater: sensor-level, sparse times
-    # Filter to observations within the fitting window
+    # Wastewater: sparse, times shifted to shared axis
     ww_mask = ww_data["time_indices"] < n_days_fit
-    ww_times = ww_data["time_indices"][ww_mask] + n_init
+    ww_times = model.shift_times(ww_data["time_indices"][ww_mask])
     ww_conc = ww_data["observed_conc"][ww_mask]
     ww_sensors = ww_data["site_ids"][ww_mask]
 
@@ -701,8 +710,7 @@ def prepare_observation_data(n_days_fit, n_init, hosp_admits, ww_data, K_obs):
 
     return {
         "hospital": {
-            "obs": hosp_counts,
-            "times": hosp_times,
+            "obs": hosp_obs,
         },
         "wastewater": {
             "obs": ww_conc,
@@ -726,7 +734,7 @@ jax.clear_caches()
 
 n_days_90 = 90
 obs_data_90 = prepare_observation_data(
-    n_days_90, n_init, hosp_admits, ca_ww_data, K_obs
+    model, n_days_90, hosp_admits, ca_ww_data, K_obs
 )
 
 # Try non-centered reparameterization for hierarchical parameters
@@ -905,7 +913,7 @@ jax.clear_caches()
 
 n_days_180 = 180
 obs_data_180 = prepare_observation_data(
-    n_days_180, n_init, hosp_admits, ca_ww_data, K_obs
+    model, n_days_180, hosp_admits, ca_ww_data, K_obs
 )
 
 print(f"Fitting model with {n_days_180} days of data...")

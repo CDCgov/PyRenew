@@ -106,6 +106,61 @@ class MultiSignalModel(Model):
         """
         self._validate()
 
+    def pad_observations(
+        self,
+        obs: jnp.ndarray,
+        axis: int = 0,
+    ) -> jnp.ndarray:
+        """
+        Pad observations with NaN for the initialization period.
+
+        Observation data uses a shared time axis [0, n_total) where
+        n_total = n_init + n_days. This method prepends n_init NaN values
+        to align user data (starting at day 0 of observations) with the
+        shared axis.
+
+        Parameters
+        ----------
+        obs : ArrayLike
+            Observations in natural coordinates (index 0 = first observation day).
+            Integer arrays are converted to float (required for NaN).
+        axis : int, default 0
+            Axis along which to pad (typically 0 for time axis).
+
+        Returns
+        -------
+        jnp.ndarray
+            Padded observations. First n_init values are NaN.
+        """
+        n_init = self.latent.n_initialization_points
+        obs = jnp.asarray(obs, dtype=float)
+        pad_shape = list(obs.shape)
+        pad_shape[axis] = n_init
+        padding = jnp.full(pad_shape, jnp.nan)
+        return jnp.concatenate([padding, obs], axis=axis)
+
+    def shift_times(self, times: jnp.ndarray) -> jnp.ndarray:
+        """
+        Shift time indices from natural coordinates to shared time axis.
+
+        Observation data uses a shared time axis [0, n_total) where
+        n_total = n_init + n_days. User-provided times in natural coordinates
+        (0 = first observation day) must be shifted by n_init to align with
+        the shared axis.
+
+        Parameters
+        ----------
+        times : ArrayLike
+            Time indices in natural coordinates (0 = first observation day).
+
+        Returns
+        -------
+        jnp.ndarray
+            Time indices on the shared axis [n_init, n_total).
+        """
+        n_init = self.latent.n_initialization_points
+        return jnp.asarray(times) + n_init
+
     def validate_data(
         self,
         n_days_post_init: int,
@@ -116,9 +171,14 @@ class MultiSignalModel(Model):
         """
         Validate observation data before running MCMC.
 
-        This method should be called with concrete (non-traced) values
-        before running inference. It performs validation that cannot be
-        done during JAX tracing.
+        All observation data uses a shared time axis [0, n_total) where
+        n_total = n_init + n_days_post_init. Dense observations must have
+        length n_total with NaN padding for the initialization period.
+        Sparse observations provide times indices on this shared axis.
+
+        This method must be called with concrete (non-traced) values
+        before running inference. Validation using Python control flow
+        (if/raise) cannot be done during JAX tracing.
 
         Parameters
         ----------
@@ -136,15 +196,16 @@ class MultiSignalModel(Model):
         ------
         ValueError
             If times indices are out of bounds or negative
+            If dense obs length doesn't match n_total
             If data shapes are inconsistent
         """
-        # Parse population structure to get K_obs for validation
         pop = BaseLatentInfectionProcess._parse_and_validate_fractions(
             obs_fractions=obs_fractions,
             unobs_fractions=unobs_fractions,
         )
 
-        n_total_days = self.latent.n_initialization_points + n_days_post_init
+        n_init = self.latent.n_initialization_points
+        n_total = n_init + n_days_post_init
 
         for name, obs_data in observation_data.items():
             if name not in self.observations:
@@ -153,32 +214,39 @@ class MultiSignalModel(Model):
                     f"Available: {list(self.observations.keys())}"
                 )
 
-            # Validate times if present (sparse observations)
+            obs = obs_data.get("obs")
             times = obs_data.get("times")
+
             if times is not None:
+                # Sparse observations: times on shared axis [0, n_total)
                 times = jnp.asarray(times)
                 if jnp.any(times < 0):
-                    raise ValueError(
-                        f"Observation '{name}': times cannot contain negative values"
-                    )
+                    raise ValueError(f"Observation '{name}': times cannot be negative")
                 max_time = jnp.max(times)
-                if max_time >= n_total_days:
+                if max_time >= n_total:
                     raise ValueError(
-                        f"Observation '{name}': times contains {int(max_time)} "
-                        f">= {n_total_days} (n_total_days = "
-                        f"{self.latent.n_initialization_points} init + "
-                        f"{n_days_post_init} post-init)"
+                        f"Observation '{name}': times index {int(max_time)} "
+                        f">= n_total ({n_total} = {n_init} init + "
+                        f"{n_days_post_init} days). "
+                        f"Times must be on shared axis [0, {n_total})."
                     )
-
-                # Validate obs matches times length
-                obs = obs_data.get("obs")
                 if obs is not None and len(obs) != len(times):
                     raise ValueError(
                         f"Observation '{name}': obs length {len(obs)} "
                         f"must match times length {len(times)}"
                     )
+            elif obs is not None:
+                # Dense observations: length must equal n_total
+                obs = jnp.asarray(obs)
+                if obs.shape[0] != n_total:
+                    raise ValueError(
+                        f"Observation '{name}': obs length {obs.shape[0]} "
+                        f"must equal n_total ({n_total} = {n_init} init + "
+                        f"{n_days_post_init} days). "
+                        f"Pad with NaN for initialization period."
+                    )
 
-            # Validate subpop_indices if present (site-level observations)
+            # Validate subpop_indices if present
             subpop_indices = obs_data.get("subpop_indices")
             if subpop_indices is not None:
                 subpop_indices = jnp.asarray(subpop_indices)

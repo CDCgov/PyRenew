@@ -3,18 +3,59 @@
 Temporal processes for latent infection models.
 
 Provides time-series processes for modeling Rt dynamics and subpopulation
-deviations. All processes support both single trajectory and vectorized
-(multiple parallel trajectories) sampling.
+deviations in hierarchical infection models. All processes support both
+single trajectory and vectorized (multiple parallel trajectories) sampling
+through a unified ``TemporalProcess`` protocol.
 
-**Temporal Processes**
+Relationship to pyrenew.process
+-------------------------------
+This module provides **high-level, domain-specific wrappers** around the
+low-level building blocks in :mod:`pyrenew.process`. The key differences:
 
+.. list-table::
+   :header-rows: 1
+
+   * - Aspect
+     - ``pyrenew.process``
+     - ``pyrenew.latent.temporal_processes``
+   * - Abstraction level
+     - Low-level composable primitives
+     - High-level domain-specific API
+   * - Interface
+     - Varied signatures per class
+     - Unified ``TemporalProcess`` protocol
+   * - Target use
+     - General time-series modeling
+     - Rt dynamics, hierarchical infections
+   * - Vectorization
+     - Caller manages array shapes
+     - Automatic via ``n_processes`` parameter
+   * - Validation
+     - Minimal constraints
+     - Enforces stationarity (``|autoreg| < 1``)
+
+**When to use which:**
+
+- Use ``pyrenew.process`` classes (``ARProcess``, ``DifferencedProcess``,
+  ``RandomWalk``) when building novel statistical models or when you need
+  fine-grained control over array shapes and numpyro sampling semantics.
+
+- Use this module's classes (``AR1``, ``DifferencedAR1``, ``RandomWalk``)
+  when modeling Rt trajectories in hierarchical infection models. These
+  provide a consistent interface, automatic vectorization, and enforce
+  epidemiologically-sensible constraints.
+
+Temporal Processes
+------------------
 - ``AR1``: Autoregressive process with mean reversion. Keeps Rt bounded
-  near a baseline.
+  near a baseline. Wraps :class:`pyrenew.process.ARProcess`.
 - ``DifferencedAR1``: AR(1) on first differences. Allows persistent trends
-  while stabilizing the growth rate.
+  while stabilizing the growth rate. Wraps :class:`pyrenew.process.DifferencedProcess`.
 - ``RandomWalk``: No mean reversion. Rt can drift without bound.
+  Wraps :class:`pyrenew.process.RandomWalk`.
 
-All implementations satisfy the ``TemporalProcess`` protocol.
+All implementations satisfy the ``TemporalProcess`` protocol and can be
+used interchangeably in hierarchical infection models.
 """
 
 from __future__ import annotations
@@ -83,6 +124,10 @@ class AR1(TemporalProcess):
     Each value depends on the previous value plus noise, with reversion
     toward a mean level. Keeps Rt bounded near a baseline — values that
     drift away are "pulled back" over time.
+
+    This class wraps :class:`pyrenew.process.ARProcess` with a simplified,
+    protocol-compliant interface that handles vectorization automatically
+    and enforces stationarity constraints.
 
     Parameters
     ----------
@@ -245,6 +290,10 @@ class DifferencedAR1(TemporalProcess):
     Each *change* in value depends on the previous change plus noise, with
     the rate of change reverting toward a mean. Unlike AR(1), this allows
     Rt to trend persistently upward or downward while the growth rate stabilizes.
+
+    This class wraps :class:`pyrenew.process.DifferencedProcess` with
+    :class:`pyrenew.process.ARProcess` as the fundamental process, providing
+    a simplified, protocol-compliant interface.
 
     Parameters
     ----------
@@ -411,6 +460,10 @@ class RandomWalk(TemporalProcess):
     Each value equals the previous value plus noise, with no reversion
     toward a mean. Allows Rt to drift without bound — suitable when you
     have no prior expectation that Rt will return to a baseline.
+
+    This class wraps :class:`pyrenew.process.RandomWalk` with a simplified,
+    protocol-compliant interface. The vectorized mode uses a non-centered
+    parameterization to avoid funnel problems in inference.
 
     Parameters
     ----------

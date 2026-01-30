@@ -34,14 +34,17 @@ class ConcreteMeasurements(Measurements):
 
     def lookback_days(self) -> int:
         """
-        Return temporal PMF length.
+        Return required lookback days for this observation.
+
+        Temporal PMFs are 0-indexed (effect can occur on day 0), so a PMF
+        of length L covers lags 0 to L-1, requiring L-1 initialization points.
 
         Returns
         -------
         int
-            Length of the temporal PMF.
+            Length of temporal PMF minus 1.
         """
-        return len(self.temporal_pmf_rv())
+        return len(self.temporal_pmf_rv()) - 1
 
     def _predicted_obs(self, infections):
         """
@@ -205,6 +208,28 @@ class TestHierarchicalNormalNoise:
 class TestConcreteMeasurements:
     """Test concrete Measurements implementation."""
 
+    def test_lookback_days(self):
+        """Test lookback_days returns len(pmf) - 1."""
+        # PMF of length 3 should return 2 (covers lags 0, 1, 2)
+        shedding_pmf = jnp.array([0.3, 0.4, 0.3])
+        sensor_mode_rv = VectorizedRV(
+            DistributionalVariable("mode", dist.Normal(0, 0.5)),
+            plate_name="sensor_mode",
+        )
+        sensor_sd_rv = VectorizedRV(
+            DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
+            plate_name="sensor_sd",
+        )
+        noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
+
+        process = ConcreteMeasurements(
+            name="test",
+            temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
+            noise=noise,
+        )
+
+        assert process.lookback_days() == 2  # len(3) - 1 = 2
+
     def test_repr(self):
         """Test Measurements __repr__ method."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
@@ -256,11 +281,11 @@ class TestConcreteMeasurements:
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
+                times=times,
                 subpop_indices=subpop_indices,
                 sensor_indices=sensor_indices,
-                times=times,
-                obs=None,
                 n_sensors=2,
+                obs=None,
             )
 
         assert result.observed.shape == times.shape
@@ -294,11 +319,11 @@ class TestConcreteMeasurements:
             trace = numpyro.handlers.trace(
                 lambda: process.sample(
                     infections=infections,
+                    times=times,
                     subpop_indices=subpop_indices,
                     sensor_indices=sensor_indices,
-                    times=times,
-                    obs=None,
                     n_sensors=2,
+                    obs=None,
                 )
             ).get_trace()
 

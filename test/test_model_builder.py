@@ -156,8 +156,10 @@ class TestModelBuilderConfiguration:
     ):
         """Test that compute_n_initialization_points returns max of lookbacks."""
         n_init = simple_builder.compute_n_initialization_points()
-        # gen_int has 3 elements, delay has 4 elements, so max is 4
-        assert n_init == 4
+        # gen_int has 3 elements (1-indexed) -> 3
+        # delay has 4 elements (0-indexed) -> lookback_days = 3
+        # max(3, 3) = 3
+        assert n_init == 3
 
 
 class TestMultiSignalModelSampling:
@@ -189,8 +191,11 @@ class TestMultiSignalModelSampling:
         model = simple_builder.build()
         n_days = 10
 
-        times = jnp.array([5, 6, 7, 8, 9])
-        obs = jnp.array([10, 12, 15, 14, 11])
+        # Create dense observations with NaN padding for initialization period
+        obs_values = jnp.array([10.0, 12.0, 15.0, 14.0, 11.0])
+        obs = model.pad_observations(obs_values)
+        # Pad with NaN for remaining days
+        obs = jnp.concatenate([obs, jnp.full(n_days - len(obs_values), jnp.nan)])
 
         # Test with reparam_config
         reparam_config = {
@@ -205,7 +210,7 @@ class TestMultiSignalModelSampling:
             num_warmup=2,
             num_samples=2,
             reparam_config=reparam_config,
-            hospital={"obs": obs, "times": times},
+            hospital={"obs": obs},
         )
 
         samples = mcmc.get_samples()
@@ -217,8 +222,11 @@ class TestMultiSignalModelSampling:
         n_days = 10
         n_total = model.latent.n_initialization_points + n_days
 
-        times = jnp.array([5, 6, 7, 8, 9])
-        obs = jnp.array([10, 12, 15, 14, 11])
+        # Create dense observations with NaN padding for initialization period
+        obs_values = jnp.array([10.0, 12.0, 15.0, 14.0, 11.0])
+        obs = model.pad_observations(obs_values)
+        # Pad with NaN for remaining days
+        obs = jnp.concatenate([obs, jnp.full(n_days - len(obs_values), jnp.nan)])
 
         mcmc = model.fit(
             n_days_post_init=n_days,
@@ -227,7 +235,7 @@ class TestMultiSignalModelSampling:
             unobs_fractions=UNOBS_FRACTIONS,
             num_warmup=5,
             num_samples=5,
-            hospital={"obs": obs, "times": times},
+            hospital={"obs": obs},
         )
 
         samples = mcmc.get_samples()
@@ -258,7 +266,7 @@ class TestMultiSignalModelValidation:
         model = simple_builder.build()
         n_total = model.latent.n_initialization_points + 30
 
-        with pytest.raises(ValueError, match="times contains"):
+        with pytest.raises(ValueError, match="times index"):
             model.validate_data(
                 n_days_post_init=30,
                 obs_fractions=OBS_FRACTIONS,
@@ -273,7 +281,7 @@ class TestMultiSignalModelValidation:
         """Test that negative times raises error."""
         model = simple_builder.build()
 
-        with pytest.raises(ValueError, match="cannot contain negative"):
+        with pytest.raises(ValueError, match="times cannot be negative"):
             model.validate_data(
                 n_days_post_init=30,
                 obs_fractions=OBS_FRACTIONS,
