@@ -549,22 +549,15 @@ class RandomWalk(TemporalProcess):
                     dist.Normal(0, 1),
                 )
 
+        # Transpose: (n_processes, n_timepoints-1) -> (n_timepoints-1, n_processes)
         increments = numpyro.deterministic(
             f"{name_prefix}_increments",
-            increments_raw * innovation_sd,
+            (increments_raw * innovation_sd).T,
         )
-
-        # Transpose: (n_processes, n_timepoints-1) -> (n_timepoints-1, n_processes)
-        increments = increments.T
 
         cumulative = jnp.cumsum(increments, axis=0)
 
-        trajectories = jnp.concatenate(
-            [
-                initial_values[jnp.newaxis, :],
-                initial_values[jnp.newaxis, :] + cumulative,
-            ],
+        return jnp.concatenate(
+            [initial_values[jnp.newaxis, :], initial_values + cumulative],
             axis=0,
         )
-
-        return trajectories

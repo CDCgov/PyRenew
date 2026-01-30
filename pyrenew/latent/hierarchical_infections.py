@@ -17,12 +17,6 @@ from pyrenew.latent.base import (
     LatentSample,
 )
 from pyrenew.latent.infection_functions import compute_infections_from_rt
-from pyrenew.latent.infection_initialization_method import (
-    InitializeInfectionsExponentialGrowth,
-)
-from pyrenew.latent.infection_initialization_process import (
-    InfectionInitializationProcess,
-)
 from pyrenew.latent.temporal_processes import TemporalProcess
 from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
@@ -224,10 +218,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
 
         gen_int = self.gen_int_rv()
 
-        I0_raw = self.I0_rv()
-        I0 = jnp.asarray(I0_raw)
-
-        # Validate I0 at runtime (for stochastic RVs)
+        I0 = jnp.asarray(self.I0_rv())
         self._validate_I0(I0)
 
         if I0.ndim == 0:
@@ -239,39 +230,29 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             partial(r_approx_from_R, g=gen_int, n_newton_steps=4)
         )(rt_subpop[0, :])
 
-        I0_all = jnp.zeros((self.n_initialization_points, pop.K))
-
-        for k in range(pop.K):
-            i0_rv_k = DeterministicVariable(f"I0_subpop_{k}", I0_subpop[k])
-            r_rv_k = DeterministicVariable(f"initial_r_subpop_{k}", initial_r_subpop[k])
-
-            init_proc_k = InfectionInitializationProcess(
-                f"I0_initialization_subpop_{k}",
-                i0_rv_k,
-                InitializeInfectionsExponentialGrowth(
-                    self.n_initialization_points,
-                    r_rv_k,
-                    t_pre_init=0,
-                ),
-            )
-            I0_all = I0_all.at[:, k].set(init_proc_k())
+        # Vectorized exponential growth initialization for all subpopulations
+        # Formula: I0_subpop[k] * exp(initial_r_subpop[k] * t) for t in [0, n_init)
+        time_indices = jnp.arange(self.n_initialization_points)
+        I0_all = I0_subpop[jnp.newaxis, :] * jnp.exp(
+            initial_r_subpop[jnp.newaxis, :] * time_indices[:, jnp.newaxis]
+        )
+        numpyro.deterministic("I0_init_all_subpops", I0_all)
 
         gen_int_reversed = jnp.flip(gen_int)
         recent_I0_all = I0_all[-gen_int.size :, :]
 
         all_fractions = jnp.concatenate([pop.obs_fractions, pop.unobs_fractions])
 
-        post_init_infections_all = jnp.zeros((n_days_post_init, pop.K))
-
-        for k in range(pop.K):
-            post_init_k = compute_infections_from_rt(
-                I0=recent_I0_all[:, k],
-                Rt=rt_subpop[self.n_initialization_points :, k],
+        # Vectorized renewal equation for all subpopulations via vmap
+        post_init_infections_all = jax.vmap(
+            lambda I0_col, Rt_col: compute_infections_from_rt(
+                I0=I0_col,
+                Rt=Rt_col,
                 reversed_generation_interval_pmf=gen_int_reversed,
-            )
-            post_init_infections_all = post_init_infections_all.at[:, k].set(
-                post_init_k
-            )
+            ),
+            in_axes=1,
+            out_axes=1,
+        )(recent_I0_all, rt_subpop[self.n_initialization_points :, :])
 
         infections_all = jnp.vstack([I0_all, post_init_infections_all])
 

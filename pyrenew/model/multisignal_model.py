@@ -138,8 +138,6 @@ class MultiSignalModel(Model):
             If times indices are out of bounds or negative
             If data shapes are inconsistent
         """
-        from pyrenew.latent.base import BaseLatentInfectionProcess
-
         # Parse population structure to get K_obs for validation
         pop = BaseLatentInfectionProcess._parse_and_validate_fractions(
             obs_fractions=obs_fractions,

@@ -299,30 +299,24 @@ class BaseLatentInfectionProcess(RandomVariable):
         Validation is skipped during JAX tracing (e.g., when using Predictive)
         since traced values cannot be used in Python boolean operations.
         """
-        import jax
-
         I0 = jnp.asarray(I0)
 
         # Skip validation during JAX tracing (e.g., Predictive sampling)
         # Traced arrays cannot be used in Python boolean operations
         try:
-            # This will fail if I0 is a tracer
-            is_invalid_low = bool(jnp.any(I0 <= 0))
-            is_invalid_high = bool(jnp.any(I0 > 1))
+            if jnp.any(I0 <= 0):
+                raise ValueError(
+                    f"I0 must be positive (got min={float(jnp.min(I0)):.6f}). "
+                    "I0 represents infection prevalence as a proportion of the population."
+                )
+            if jnp.any(I0 > 1):
+                raise ValueError(
+                    f"I0 must be <= 1 (got max={float(jnp.max(I0)):.6f}). "
+                    "I0 represents infection prevalence as a proportion of the population."
+                )
         except jax.errors.TracerBoolConversionError:
             # During tracing, skip validation
-            return
-
-        if is_invalid_low:
-            raise ValueError(
-                f"I0 must be positive (got min={float(jnp.min(I0)):.6f}). "
-                "I0 represents infection prevalence as a proportion of the population."
-            )
-        if is_invalid_high:
-            raise ValueError(
-                f"I0 must be <= 1 (got max={float(jnp.max(I0)):.6f}). "
-                "I0 represents infection prevalence as a proportion of the population."
-            )
+            pass
 
     def get_required_lookback(self) -> int:
         """
