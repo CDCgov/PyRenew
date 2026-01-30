@@ -4,12 +4,7 @@ format:
   gfm:
     fig-width: 16
     fig-height: 10
-  html:
-    toc: true
-    embed-resources: true
-    self-contained-math: true
     code-fold: true
-    code-tools: true
 engine: jupyter
 ---
 
@@ -181,7 +176,7 @@ hosp_process = Counts(
 
 The observation process convolves infections with a delay distribution, maintaining alignment between input and output: day $t$ in the output corresponds to day $t$ in the input.
 
-Hospital admissions depend on infections from prior days (the length of our delay distribution minus one). The method `lookback_days()` returns this length; the first valid observation day is at index `lookback - 1`. Earlier days are marked invalid.
+Hospital admissions depend on infections from prior days. A delay PMF of length $L$ covers delays 0 to $L-1$, requiring $L-1$ days of prior infection history. The method `lookback_days()` returns $L-1$; the first valid observation day is at index `lookback_days()`. Earlier days are marked invalid.
 
 ```{python}
 # | label: helper-function
@@ -190,7 +185,7 @@ print(f"Required lookback: {hosp_process.lookback_days()} days")
 
 def first_valid_observation_day(obs_process) -> int:
     """Return the first day index with complete infection history for convolution."""
-    return obs_process.lookback_days() - 1
+    return obs_process.lookback_days()
 ```
 
 ## Simulating observed hospital admissions given a single day's worth of infections
@@ -346,7 +341,8 @@ for seed in range(n_samples):
     with numpyro.handlers.seed(rng_seed=seed):
         hosp_sample = hosp_process.sample(infections=infections, obs=None)
 
-    for i, val in enumerate(hosp_sample.observed):
+    # Slice from day_one to align with valid observation period
+    for i, val in enumerate(hosp_sample.observed[day_one:]):
         samples_list.append(
             {
                 "day": i,
@@ -524,8 +520,8 @@ for conc_val in concentration_values:
                 obs=None,
             )
 
-        # Use relative days
-        for i, admit in enumerate(hosp_temp.observed):
+        # Slice from day_one to align with valid observation period
+        for i, admit in enumerate(hosp_temp.observed[day_one:]):
             conc_results.append(
                 {
                     "day": i,
@@ -602,7 +598,8 @@ for seed in range(n_replicates_poisson):
             obs=None,
         )
 
-    for i, admit in enumerate(poisson_temp.observed):
+    # Slice from day_one to align with valid observation period
+    for i, admit in enumerate(poisson_temp.observed[day_one:]):
         poisson_results.append(
             {
                 "day": i,
