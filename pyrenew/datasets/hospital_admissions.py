@@ -33,7 +33,7 @@ def load_hospital_data_for_state(
 
         - daily_admits: JAX array of daily hospital admissions
         - population: Population size (scalar)
-        - dates: List of date strings
+        - dates: List of datetime.date objects
         - n_days: Number of days
 
     Notes

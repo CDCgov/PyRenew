@@ -295,7 +295,7 @@ print(f"I0 = 0.001 means {0.001:.1%} of population initially infected")
 print(f"initial_log_rt = 0.0 means Rt starts at {np.exp(0.0):.1f}")
 ```
 
-In the previous plot, `I0` was specified as:  `I0_rv=DeterministicVariable("I0", 0.001)`, i.e., $1%$ of the population.  We overplot trajectories for $10%$ and $0.1%$ as well.
+In the previous plot, `I0` was specified as:  `I0_rv=DeterministicVariable("I0", 0.001)`, i.e., $0.1%$ of the population.  We overplot trajectories for $10%$ and $0.01%$ as well.
 
 ```{python}
 # | label: fig-i0-effect
@@ -864,11 +864,6 @@ print(
 | Temporal process | AR1 for regularization; RandomWalk for flexibility |
 | `autoreg`, `innovation_sd` | Lower values = tighter prior; adjust if trajectories explode |
 
-### Next Steps
-
-- **`model_architecture.qmd`**: Learn how to combine `HierarchicalInfections` with observation processes using `ModelBuilder`
-- **Observation process tutorials**: `observation_processes_counts.qmd` and `observation_processes_measurements.qmd`
-
 ### Code Summary
 
 ```python
@@ -892,4 +887,9 @@ infections_agg, infections_all, infections_obs, infections_unobs = latent.sample
 )
 ```
 
-In a full model, you would pass `HierarchicalInfections` to `ModelBuilder` along with observation processes—the builder handles initialization, routing, and assembly automatically.
+When building the full multisignal model, you would instantiate a `ModelBuilder` object
+and call the `configure_latent` method
+to specify the latent process model structure: generation interval, initial infections, and temporal dynamics.
+See tutorial:
+
+- [Building Multi-Signal Renewal Models](building_multisignal_models.qmd)

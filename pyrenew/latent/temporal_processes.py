@@ -405,7 +405,7 @@ class DifferencedAR1(TemporalProcess):
             n=n_timepoints + 1,
             init_vals=jnp.array([[initial_value]]),
             autoreg=jnp.array([[self.autoreg]]),
-            noise_sd=jnp.array([[innovation_sd]]),
+            noise_sd=innovation_sd,
             fundamental_process_init_vals=jnp.array([[init_rate_of_change]]),
             noise_name=f"{name_prefix}_noise",
         )
@@ -445,12 +445,12 @@ class DifferencedAR1(TemporalProcess):
             n=n_timepoints + 1,
             init_vals=initial_values[jnp.newaxis, :],
             autoreg=jnp.full((1, n_processes), self.autoreg),
-            noise_sd=jnp.full((1, n_processes), innovation_sd),
+            noise_sd=innovation_sd,
             fundamental_process_init_vals=init_rates[jnp.newaxis, :],
             noise_name=f"{name_prefix}_noise",
         )
 
-        return trajectories[:n_timepoints, :].squeeze(axis=1)
+        return trajectories[:n_timepoints, :]
 
 
 class RandomWalk(TemporalProcess):

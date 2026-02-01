@@ -781,7 +781,7 @@ We check that the chains have converged and the number of effective samples.
 ```{python}
 # | label: arviz-diagnostics-90
 # ArviZ diagnostics for 90-day fit
-def filter_samples_for_arviz(samples, n_init, num_chains=2):
+def filter_samples_for_arviz(samples, n_init, num_chains=4):
     """Slice time-series samples to exclude initialization period and reshape for chains."""
     num_samples_per_chain = len(list(samples.values())[0]) // num_chains
     filtered = {}
