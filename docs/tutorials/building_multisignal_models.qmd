@@ -53,7 +53,6 @@ def make_rng_key():
 
 ```{python}
 # | label: imports-pyrenew
-import jax
 from jax.typing import ArrayLike
 
 from pyrenew import datasets

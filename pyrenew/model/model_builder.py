@@ -196,7 +196,7 @@ class ModelBuilder:
                 raise ValueError(
                     f"Observation process '{name}' must implement "
                     f"lookback_days(). Error: {e}"
-                )
+                ) from e
 
         # Formula: max(all lookbacks)
         # For generation interval (1-indexed): L-element PMF has max lag L days → need L init points
@@ -247,7 +247,7 @@ class ModelBuilder:
                 f"Error constructing {self.latent_class.__name__} with "
                 f"computed n_initialization_points={n_init}. "
                 f"Original error: {e}"
-            )
+            ) from e
 
         # Build model
         model = MultiSignalModel(

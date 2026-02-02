@@ -32,7 +32,7 @@ low-level building blocks in :mod:`pyrenew.process`. The key differences:
      - Automatic via ``n_processes`` parameter
    * - Validation
      - Minimal constraints
-     - Enforces stationarity (``|autoreg| < 1``)
+     - Validates positive innovation_sd
 
 **When to use which:**
 
@@ -60,7 +60,7 @@ used interchangeably in hierarchical infection models.
 
 from __future__ import annotations
 
-from typing import Optional, Protocol, Union, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import jax.numpy as jnp
 import numpyro
@@ -85,9 +85,9 @@ class TemporalProcess(Protocol):
     def sample(
         self,
         n_timepoints: int,
-        initial_value: Optional[Union[float, ArrayLike]] = None,
+        initial_value: float | ArrayLike | None = None,
         innovation_sd: float = 1.0,
-        n_processes: Optional[int] = None,
+        n_processes: int | None = None,
         name_prefix: str = "temporal",
     ) -> ArrayLike:
         """
@@ -126,13 +126,13 @@ class AR1(TemporalProcess):
     drift away are "pulled back" over time.
 
     This class wraps :class:`pyrenew.process.ARProcess` with a simplified,
-    protocol-compliant interface that handles vectorization automatically
-    and enforces stationarity constraints.
+    protocol-compliant interface that handles vectorization automatically.
 
     Parameters
     ----------
     autoreg : float
-        Autoregressive coefficient. Must satisfy |autoreg| < 1 for stationarity.
+        Autoregressive coefficient. For stationarity, |autoreg| < 1, but
+        this is not enforced (use priors to constrain if needed).
     innovation_sd : float, default 1.0
         Standard deviation of noise at each time step. Larger values produce
         more volatile trajectories; smaller values produce smoother ones.
@@ -145,20 +145,16 @@ class AR1(TemporalProcess):
         Parameters
         ----------
         autoreg : float
-            Autoregressive coefficient. Must satisfy |autoreg| < 1.
+            Autoregressive coefficient. For stationarity, |autoreg| < 1,
+            but this is not enforced (use priors to constrain if needed).
         innovation_sd : float, default 1.0
             Standard deviation of innovations
 
         Raises
         ------
         ValueError
-            If |autoreg| >= 1 or innovation_sd <= 0
+            If innovation_sd <= 0
         """
-        if abs(autoreg) >= 1.0:
-            raise ValueError(
-                f"AR coefficient must satisfy |autoreg| < 1 for stationarity. "
-                f"Got autoreg={autoreg}"
-            )
         if innovation_sd <= 0:
             raise ValueError(f"innovation_sd must be positive, got {innovation_sd}")
         self.autoreg = autoreg
@@ -172,9 +168,9 @@ class AR1(TemporalProcess):
     def sample(
         self,
         n_timepoints: int,
-        initial_value: Optional[Union[float, ArrayLike]] = None,
-        innovation_sd: Optional[float] = None,
-        n_processes: Optional[int] = None,
+        initial_value: float | ArrayLike | None = None,
+        innovation_sd: float | None = None,
+        n_processes: int | None = None,
         name_prefix: str = "ar1",
     ) -> ArrayLike:
         """
@@ -213,7 +209,7 @@ class AR1(TemporalProcess):
     def _sample_single(
         self,
         n_timepoints: int,
-        initial_value: Optional[float],
+        initial_value: float | None,
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
@@ -247,7 +243,7 @@ class AR1(TemporalProcess):
         self,
         n_timepoints: int,
         n_processes: int,
-        initial_values: Optional[ArrayLike],
+        initial_values: ArrayLike | None,
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
@@ -298,7 +294,9 @@ class DifferencedAR1(TemporalProcess):
     Parameters
     ----------
     autoreg : float
-        Autoregressive coefficient for differences. Must satisfy |autoreg| < 1.
+        Autoregressive coefficient for differences. For stationarity,
+        |autoreg| < 1, but this is not enforced (use priors to constrain
+        if needed).
     innovation_sd : float, default 1.0
         Standard deviation of noise added to changes. Larger values produce
         more erratic growth rates; smaller values produce smoother trends.
@@ -311,20 +309,17 @@ class DifferencedAR1(TemporalProcess):
         Parameters
         ----------
         autoreg : float
-            Autoregressive coefficient for differences. Must satisfy |autoreg| < 1.
+            Autoregressive coefficient for differences. For stationarity,
+            |autoreg| < 1, but this is not enforced (use priors to constrain
+            if needed).
         innovation_sd : float, default 1.0
             Standard deviation of innovations
 
         Raises
         ------
         ValueError
-            If |autoreg| >= 1 or innovation_sd <= 0
+            If innovation_sd <= 0
         """
-        if abs(autoreg) >= 1.0:
-            raise ValueError(
-                f"AR coefficient must satisfy |autoreg| < 1 for stationarity. "
-                f"Got autoreg={autoreg}"
-            )
         if innovation_sd <= 0:
             raise ValueError(f"innovation_sd must be positive, got {innovation_sd}")
         self.autoreg = autoreg
@@ -340,9 +335,9 @@ class DifferencedAR1(TemporalProcess):
     def sample(
         self,
         n_timepoints: int,
-        initial_value: Optional[Union[float, ArrayLike]] = None,
-        innovation_sd: Optional[float] = None,
-        n_processes: Optional[int] = None,
+        initial_value: float | ArrayLike | None = None,
+        innovation_sd: float | None = None,
+        n_processes: int | None = None,
         name_prefix: str = "diff_ar1",
     ) -> ArrayLike:
         """
@@ -381,7 +376,7 @@ class DifferencedAR1(TemporalProcess):
     def _sample_single(
         self,
         n_timepoints: int,
-        initial_value: Optional[float],
+        initial_value: float | None,
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
@@ -416,7 +411,7 @@ class DifferencedAR1(TemporalProcess):
         self,
         n_timepoints: int,
         n_processes: int,
-        initial_values: Optional[ArrayLike],
+        initial_values: ArrayLike | None,
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
@@ -503,9 +498,9 @@ class RandomWalk(TemporalProcess):
     def sample(
         self,
         n_timepoints: int,
-        initial_value: Optional[Union[float, ArrayLike]] = None,
-        innovation_sd: Optional[float] = None,
-        n_processes: Optional[int] = None,
+        initial_value: float | ArrayLike | None = None,
+        innovation_sd: float | None = None,
+        n_processes: int | None = None,
         name_prefix: str = "rw",
     ) -> ArrayLike:
         """
@@ -544,7 +539,7 @@ class RandomWalk(TemporalProcess):
     def _sample_single(
         self,
         n_timepoints: int,
-        initial_value: Optional[float],
+        initial_value: float | None,
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
@@ -577,7 +572,7 @@ class RandomWalk(TemporalProcess):
         self,
         n_timepoints: int,
         n_processes: int,
-        initial_values: Optional[ArrayLike],
+        initial_values: ArrayLike | None,
         innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:

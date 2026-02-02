@@ -209,7 +209,7 @@ class TestHierarchicalInfectionsPerSubpopI0:
                 unobs_fractions=jnp.array([0.45]),
             )
 
-        inf_juris, inf_all, inf_obs, inf_unobs = result
+        inf_juris, inf_all, _inf_obs, _inf_unobs = result
         n_total = process.n_initialization_points + 30
 
         assert inf_juris.shape == (n_total,)

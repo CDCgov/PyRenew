@@ -36,39 +36,6 @@ class TestTemporalProcessRepr:
         assert "innovation_sd=0.2" in repr_str
 
 
-class TestAR1Validation:
-    """Test AR1 validation."""
-
-    def test_ar1_rejects_autoreg_equal_one(self):
-        """Test that AR1 rejects autoreg=1."""
-        with pytest.raises(ValueError, match="must satisfy"):
-            AR1(autoreg=1.0)
-
-    def test_ar1_rejects_autoreg_negative_one(self):
-        """Test that AR1 rejects autoreg=-1."""
-        with pytest.raises(ValueError, match="must satisfy"):
-            AR1(autoreg=-1.0)
-
-    def test_ar1_rejects_autoreg_greater_than_one(self):
-        """Test that AR1 rejects autoreg > 1."""
-        with pytest.raises(ValueError, match="must satisfy"):
-            AR1(autoreg=1.5)
-
-
-class TestDifferencedAR1Validation:
-    """Test DifferencedAR1 validation."""
-
-    def test_differenced_ar1_rejects_autoreg_equal_one(self):
-        """Test that DifferencedAR1 rejects autoreg=1."""
-        with pytest.raises(ValueError, match="must satisfy"):
-            DifferencedAR1(autoreg=1.0)
-
-    def test_differenced_ar1_rejects_autoreg_negative_one(self):
-        """Test that DifferencedAR1 rejects autoreg=-1."""
-        with pytest.raises(ValueError, match="must satisfy"):
-            DifferencedAR1(autoreg=-1.0)
-
-
 class TestAR1VectorizedSampling:
     """Test AR1 vectorized sampling."""
 

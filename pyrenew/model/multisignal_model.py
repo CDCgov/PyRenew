@@ -6,7 +6,7 @@ Combines a latent infection process with multiple observation processes.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 import jax.numpy as jnp
 import jax.random as random
@@ -329,6 +329,11 @@ class MultiSignalModel(Model):
         for name, obs_process in self.observations.items():
             # Get the appropriate latent infections based on observation type
             resolution = obs_process.infection_resolution()
+            if resolution not in latent_map:
+                raise ValueError(
+                    f"Observation '{name}' returned invalid infection_resolution "
+                    f"'{resolution}'. Expected 'aggregate' or 'subpop'."
+                )
             latent_infections = latent_map[resolution]
 
             # Get observation-specific data
@@ -354,7 +359,7 @@ class MultiSignalModel(Model):
         num_samples: int = 500,
         num_chains: int = 1,
         rng_key: random.PRNGKey = None,
-        reparam_config: Optional[Dict[str, Any]] = None,
+        reparam_config: Dict[str, Any] | None = None,
         progress_bar: bool = True,
         **observation_data,
     ):

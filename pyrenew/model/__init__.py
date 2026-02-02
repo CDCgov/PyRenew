@@ -6,8 +6,8 @@ from pyrenew.model.multisignal_model import MultiSignalModel
 from pyrenew.model.rtinfectionsrenewalmodel import RtInfectionsRenewalModel
 
 __all__ = [
-    "RtInfectionsRenewalModel",
     "HospitalAdmissionsModel",
     "ModelBuilder",
     "MultiSignalModel",
+    "RtInfectionsRenewalModel",
 ]

@@ -172,7 +172,7 @@ class TestMultiSignalModelSampling:
         n_total = model.latent.n_initialization_points + n_days
 
         with numpyro.handlers.seed(rng_seed=42):
-            inf_aggregate, inf_all, inf_obs, inf_unobs = model.sample(
+            inf_aggregate, inf_all, inf_obs, _inf_unobs = model.sample(
                 n_days_post_init=n_days,
                 population_size=1_000_000,
                 obs_fractions=OBS_FRACTIONS,
@@ -311,7 +311,7 @@ class TestMultiSignalModelValidation:
         """Test that mismatched obs and times lengths raises error."""
         model = simple_builder.build()
 
-        with pytest.raises(ValueError, match="obs length.*must match times length"):
+        with pytest.raises(ValueError, match=r"obs length.*must match times length"):
             model.validate_data(
                 n_days_post_init=30,
                 obs_fractions=OBS_FRACTIONS,
