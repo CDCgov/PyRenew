@@ -3,7 +3,7 @@
 The PyRenew package is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing hierarchical multi-signal renewal models.
 Built on top of the [numpyro](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building.
 
-A renewal model estimates new infections from recent past infections using a generation interval (the time between successive infections in a transmission chain). 
+A renewal model estimates new infections from recent past infections using a generation interval (the time between successive infections in a transmission chain).
 From this, it infers $R_t$, the time-varying reproduction number, which indicates whether transmission is increasing or decreasing.
 The core renewal equation is:
 
@@ -20,9 +20,9 @@ where $\alpha$ is the ascertainment rate and $\pi(s)$ is the delay distribution 
 
 The Pyrenew package provides configurable classes which encapsulate these components and methods to orchestrate the configuration and composition of these processes
 resulting in programs which clearly express the model structure and choices, allowing for both ease of model specification and dissemination.
-The fundamental building blocks are the `Model` metaclass, from which we can draw samples, 
+The fundamental building blocks are the `Model` metaclass, from which we can draw samples,
 and the `RandomVariable` metaclass which has been abstracted to allow for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.
-The `PyrenewBuilder` class 
+The `PyrenewBuilder` class
 
 PyRenew's strength lies in multi-signal integration for information pooling across diverse data streams
 such as hospital admissions, wastewater concentrations, and emergency department visits
