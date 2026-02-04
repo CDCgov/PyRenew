@@ -6,10 +6,10 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import List, Match
+from re import Match
 
 
-def format_python_code(code: str, ruff_args: List[str]) -> str:  # numpydoc ignore=RT01
+def format_python_code(code: str, ruff_args: list[str]) -> str:  # numpydoc ignore=RT01
     """Format Python code using Ruff with custom arguments."""
     try:
         cmd = ["ruff", "format", "-"] + ruff_args
@@ -27,13 +27,13 @@ def format_python_code(code: str, ruff_args: List[str]) -> str:  # numpydoc igno
 
 
 def replace_code_block(
-    match: Match[str], ruff_args: List[str]
+    match: Match[str], ruff_args: list[str]
 ) -> str:  # numpydoc ignore=RT01
     """Replace code block with formatted version."""
     return f"{match.group(1)}\n{format_python_code(match.group(2), ruff_args)}{match.group(3)}"
 
 
-def process_file(filepath: Path, ruff_args: List[str]) -> None:  # numpydoc ignore=RT01
+def process_file(filepath: Path, ruff_args: list[str]) -> None:  # numpydoc ignore=RT01
     """Process the given file, formatting Python code blocks."""
     python_code_block_pattern = r"(```\{python\})(.*?)(```)"
     try:
@@ -50,7 +50,7 @@ def process_file(filepath: Path, ruff_args: List[str]) -> None:  # numpydoc igno
             temp_filepath = Path(temp_file.name)
 
         shutil.move(str(temp_filepath), str(filepath))
-    except IOError as e:
+    except OSError as e:
         print(f"Error processing file {filepath}: {e}", file=sys.stderr)
         sys.exit(1)
 

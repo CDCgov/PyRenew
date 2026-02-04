@@ -1,6 +1,7 @@
 # numpydoc ignore=GL08
 
-from typing import Callable, Self
+from collections.abc import Callable
+from typing import Self
 
 import numpyro
 import numpyro.distributions as dist

@@ -13,7 +13,7 @@ with an appropriate array to scan along.
 
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
