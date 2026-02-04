@@ -119,7 +119,7 @@ class TemporalProcess(Protocol):
 
 class AR1(TemporalProcess):
     """
-    AR(1) autoregressive process for log(Rt).
+    AR(1) process.
 
     Each value depends on the previous value plus noise, with reversion
     toward a mean level. Keeps Rt bounded near a baseline — values that
@@ -281,7 +281,7 @@ class AR1(TemporalProcess):
 
 class DifferencedAR1(TemporalProcess):
     """
-    AR(1) process on first differences of log(Rt).
+    AR(1) process on first differences.
 
     Each *change* in value depends on the previous change plus noise, with
     the rate of change reverting toward a mean. Unlike AR(1), this allows
