@@ -6,7 +6,6 @@ ISO standards, so 0 is Monday at 6 is Sunday.
 """
 
 import datetime as dt
-from typing import Tuple, Union
 
 import jax.numpy as jnp
 import numpy as np
@@ -54,7 +53,7 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
     return None
 
 
-def convert_date(date: Union[dt.datetime, dt.date, np.datetime64]) -> dt.date:
+def convert_date(date: dt.datetime | dt.date | np.datetime64) -> dt.date:
     """Normalize a date-like object to a python ``datetime.date``.
 
     The function accepts any of the common representations used in this
@@ -94,7 +93,7 @@ def convert_date(date: Union[dt.datetime, dt.date, np.datetime64]) -> dt.date:
         return date
     raise TypeError(
         "convert_date expects a numpy.datetime64, datetime.datetime, or "
-        "datetime.date; got {t}".format(t=type(date))
+        f"datetime.date; got {type(date)}"
     )
 
 
@@ -325,8 +324,8 @@ def mmwr_epiweekly_to_daily(
 
 
 def date_to_model_t(
-    date: Union[dt.datetime, np.datetime64],
-    start_date: Union[dt.datetime, np.datetime64],
+    date: dt.datetime | np.datetime64,
+    start_date: dt.datetime | np.datetime64,
 ) -> int:
     """
     Convert calendar date to model time index.
@@ -349,7 +348,7 @@ def date_to_model_t(
 
 
 def model_t_to_date(
-    model_t: int, start_date: Union[dt.datetime, np.datetime64]
+    model_t: int, start_date: dt.datetime | np.datetime64
 ) -> dt.datetime:
     """
     Convert model time index to calendar date.
@@ -374,7 +373,7 @@ def model_t_to_date(
 
 def get_observation_indices(
     observed_dates: ArrayLike,
-    data_start_date: Union[dt.datetime, np.datetime64],
+    data_start_date: dt.datetime | np.datetime64,
     freq: str = "mmwr_weekly",
 ) -> jnp.ndarray:
     """
@@ -452,9 +451,9 @@ def get_date_range_length(date_array: ArrayLike, timestep_days: int = 1) -> int:
 
 def aggregate_with_dates(
     daily_data: ArrayLike,
-    start_date: Union[dt.datetime, np.datetime64],
+    start_date: dt.datetime | np.datetime64,
     target_freq: str = "mmwr_weekly",
-) -> Tuple[jnp.ndarray, dt.datetime]:
+) -> tuple[jnp.ndarray, dt.datetime]:
     """
     Aggregate daily data with automatic date handling.
 
@@ -511,8 +510,8 @@ def aggregate_with_dates(
 
 
 def create_date_time_spine(
-    start_date: Union[dt.datetime, np.datetime64],
-    end_date: Union[dt.datetime, np.datetime64],
+    start_date: dt.datetime | np.datetime64,
+    end_date: dt.datetime | np.datetime64,
     freq: str = "1d",
 ) -> pl.DataFrame:
     """
@@ -553,8 +552,8 @@ def create_date_time_spine(
 
 
 def get_end_date(
-    start_date: Union[dt.datetime, np.datetime64], n_points: int, timestep_days: int = 1
-) -> Union[np.datetime64, None]:
+    start_date: dt.datetime | np.datetime64, n_points: int, timestep_days: int = 1
+) -> np.datetime64 | None:
     """
     Calculate end date from start date and number of data points.
 
@@ -632,7 +631,7 @@ def get_n_data_days(
 
 def align_observation_times(
     observation_dates: ArrayLike,
-    model_start_date: Union[dt.datetime, np.datetime64],
+    model_start_date: dt.datetime | np.datetime64,
     aggregation_freq: str = "daily",
 ) -> jnp.ndarray:
     """
