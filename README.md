@@ -1,8 +1,7 @@
 # PyRenew: A Package for Bayesian Renewal Modeling with JAX and NumPyro.
 
 The PyRenew package is a flexible tool for simulation and statistical inference of epidemiological models, emphasizing hierarchical multi-signal renewal models.
-Inspired by the R package [EpiNow2](https://epiforecasts.io/EpiNow2/), 
-it provides  a Python API built on top of [numpyro](https://num.pyro.ai/) and [JAX](https://docs.jax.dev/en/latest/index.html).
+Built on top of the [numpyro](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building.
 
 A renewal model estimates new infections from recent past infections using a generation interval (the time between successive infections in a transmission chain). 
 From this, it infers $R_t$, the time-varying reproduction number, which indicates whether transmission is increasing or decreasing.
@@ -12,18 +11,23 @@ $$I(t) = R_t \sum_{s} I(t-s) \, w(s)$$
 
 where $w(s)$ is the generation interval distribution: the probability that $s$ time units separate infection in an index case and a secondary case.
 
-Inference is complicated by the fact that observational data require their own models ([Bhatt et al., 2023, §2](https://doi.org/10.1093/jrsssa/qnad030)).
+However inference is complicated by the fact that observational data require their own models ([Bhatt et al., 2023, §2](https://doi.org/10.1093/jrsssa/qnad030)).
 The observation equation links infections to expected observations:
 
 $$\mu(t) = \alpha \sum_{s} I(t-s) \, \pi(s)$$
 
 where $\alpha$ is the ascertainment rate and $\pi(s)$ is the delay distribution from infection to observation.
 
-PyRenew provides composable building blocks for these components via its `RandomVariable` abstraction - each element exposes a `sample()` method, allowing complex hierarchical models to be composed from modular, interchangeable building blocks.
-These methods internally call NumPyro's `numpyro.sample()` primitive to register named random variables with the inference engine, which automatically handles posterior sampling via MCMC or variational inference.
+The Pyrenew package provides configurable classes which encapsulate these components and methods to orchestrate the configuration and composition of these processes
+resulting in programs which clearly express the model structure and choices, allowing for both ease of model specification and dissemination.
+The fundamental building blocks are the `Model` metaclass, from which we can draw samples, 
+and the `RandomVariable` metaclass which has been abstracted to allow for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.
+The `PyrenewBuilder` class 
 
-
-```
+PyRenew's strength lies in multi-signal integration for information pooling across diverse data streams
+such as hospital admissions, wastewater concentrations, and emergency department visits
+where each signal has distinct observation delays, noise characteristics, and spatial resolutions.
+For single-signal renewal models, we recommend the excellent R package [EpiNow2](https://epiforecasts.io/EpiNow2/);
 
 ## Installation
 
