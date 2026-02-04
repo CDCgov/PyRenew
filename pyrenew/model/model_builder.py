@@ -7,7 +7,7 @@ and constructs properly configured models.
 
 from __future__ import annotations
 
-from typing import Any, Dict, Type
+from typing import Any
 
 from pyrenew.latent.base import BaseLatentInfectionProcess
 from pyrenew.model.multisignal_model import MultiSignalModel
@@ -50,15 +50,15 @@ class ModelBuilder:
         2. add_observation() - add one or more observation processes
         3. build() - construct the final model
         """
-        self.latent_class: Type[BaseLatentInfectionProcess] | None = None
-        self.latent_params: Dict[str, Any] = {}
-        self.observations: Dict[str, BaseObservationProcess] = {}
+        self.latent_class: type[BaseLatentInfectionProcess] | None = None
+        self.latent_params: dict[str, Any] = {}
+        self.observations: dict[str, BaseObservationProcess] = {}
 
     def configure_latent(
         self,
-        latent_class: Type[BaseLatentInfectionProcess],
+        latent_class: type[BaseLatentInfectionProcess],
         **params,
-    ) -> "ModelBuilder":
+    ) -> ModelBuilder:
         """
         Configure the latent infection process.
 
@@ -116,7 +116,7 @@ class ModelBuilder:
     def add_observation(
         self,
         obs_process: BaseObservationProcess,
-    ) -> "ModelBuilder":
+    ) -> ModelBuilder:
         """
         Add an observation process to the model.
 

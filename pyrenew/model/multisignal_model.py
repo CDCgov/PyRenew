@@ -6,7 +6,7 @@ Combines a latent infection process with multiple observation processes.
 
 from __future__ import annotations
 
-from typing import Any, Dict
+from typing import Any
 
 import jax.numpy as jnp
 import jax.random as random
@@ -51,7 +51,7 @@ class MultiSignalModel(Model):
     def __init__(
         self,
         latent_process: BaseLatentInfectionProcess,
-        observations: Dict[str, BaseObservationProcess],
+        observations: dict[str, BaseObservationProcess],
     ):
         """
         Initialize multi-signal model.
@@ -166,7 +166,7 @@ class MultiSignalModel(Model):
         n_days_post_init: int,
         obs_fractions=None,
         unobs_fractions=None,
-        **observation_data: Dict[str, Any],
+        **observation_data: dict[str, Any],
     ) -> None:
         """
         Validate observation data before running MCMC.
@@ -359,7 +359,7 @@ class MultiSignalModel(Model):
         num_samples: int = 500,
         num_chains: int = 1,
         rng_key: random.PRNGKey = None,
-        reparam_config: Dict[str, Any] | None = None,
+        reparam_config: dict[str, Any] | None = None,
         progress_bar: bool = True,
         **observation_data,
     ):
