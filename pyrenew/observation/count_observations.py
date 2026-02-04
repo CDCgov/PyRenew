@@ -208,18 +208,18 @@ class Counts(_CountBase):
 
         # Compute mask: True where observation contributes to likelihood.
         # NaN in predictions (initialization period) or obs (missing data)
-        # are excluded via obs_mask.
+        # are excluded via mask.
         valid_pred = ~jnp.isnan(predicted_counts)
         if obs is not None:
             valid_obs = ~jnp.isnan(obs)
-            obs_mask = valid_pred & valid_obs
+            mask = valid_pred & valid_obs
         else:
-            obs_mask = valid_pred
+            mask = valid_pred
 
-        # JAX evaluates log_prob for all array elements even when obs_mask
+        # JAX evaluates log_prob for all array elements even when mask
         # excludes them from the likelihood sum. Replace NaN with safe values
         # to avoid NaN propagation in JAX's computation graph. These values
-        # do not affect inference since obs_mask=False excludes them.
+        # do not affect inference since mask=False excludes them.
         safe_predicted = jnp.where(jnp.isnan(predicted_counts), 1.0, predicted_counts)
         safe_obs = None
         if obs is not None:
@@ -229,7 +229,7 @@ class Counts(_CountBase):
             name=self._sample_site_name("obs"),
             predicted=safe_predicted,
             obs=safe_obs,
-            obs_mask=obs_mask,
+            mask=mask,
         )
 
         return ObservationSample(observed=observed, predicted=predicted_counts)

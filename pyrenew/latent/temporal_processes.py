@@ -86,7 +86,6 @@ class TemporalProcess(Protocol):
         self,
         n_timepoints: int,
         initial_value: float | ArrayLike | None = None,
-        innovation_sd: float = 1.0,
         n_processes: int | None = None,
         name_prefix: str = "temporal",
     ) -> ArrayLike:
@@ -101,8 +100,6 @@ class TemporalProcess(Protocol):
             Initial value(s) for the process(es).
             - If n_processes is None: scalar initial value (default: 0.0)
             - If n_processes is K: scalar (broadcast) or array of shape (K,)
-        innovation_sd : float, default 1.0
-            Standard deviation of innovations
         n_processes : int, optional
             Number of parallel processes. If None, samples a single trajectory.
         name_prefix : str, default "temporal"
@@ -169,7 +166,6 @@ class AR1(TemporalProcess):
         self,
         n_timepoints: int,
         initial_value: float | ArrayLike | None = None,
-        innovation_sd: float | None = None,
         n_processes: int | None = None,
         name_prefix: str = "ar1",
     ) -> ArrayLike:
@@ -182,8 +178,6 @@ class AR1(TemporalProcess):
             Number of time points to generate
         initial_value : float or ArrayLike, optional
             Initial value(s). Defaults to 0.0.
-        innovation_sd : float, optional
-            Override constructor's innovation_sd if provided.
         n_processes : int, optional
             Number of parallel processes. If None, samples single trajectory.
         name_prefix : str, default "ar1"
@@ -194,23 +188,17 @@ class AR1(TemporalProcess):
         ArrayLike
             Trajectory (n_timepoints,) or trajectories (n_timepoints, K)
         """
-        if innovation_sd is None:
-            innovation_sd = self.innovation_sd
-
         if n_processes is None:
-            return self._sample_single(
-                n_timepoints, initial_value, innovation_sd, name_prefix
-            )
+            return self._sample_single(n_timepoints, initial_value, name_prefix)
         else:
             return self._sample_vectorized(
-                n_timepoints, n_processes, initial_value, innovation_sd, name_prefix
+                n_timepoints, n_processes, initial_value, name_prefix
             )
 
     def _sample_single(
         self,
         n_timepoints: int,
         initial_value: float | None,
-        innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
         """
@@ -224,27 +212,26 @@ class AR1(TemporalProcess):
         if initial_value is None:
             initial_value = 0.0
 
-        stationary_sd = innovation_sd / jnp.sqrt(1 - self.autoreg**2)
+        stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
         init_state = numpyro.sample(
             f"{name_prefix}_init", dist.Normal(initial_value, stationary_sd)
         )
 
         trajectory = self.ar_process(
             n=n_timepoints,
-            init_vals=jnp.array([[init_state]]),
-            autoreg=jnp.array([[self.autoreg]]),
-            noise_sd=innovation_sd,
+            init_vals=jnp.array([init_state]),
+            autoreg=jnp.array([self.autoreg]),
+            noise_sd=self.innovation_sd,
             noise_name=f"{name_prefix}_noise",
         )
 
-        return jnp.squeeze(trajectory)
+        return trajectory
 
     def _sample_vectorized(
         self,
         n_timepoints: int,
         n_processes: int,
         initial_values: ArrayLike | None,
-        innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
         """
@@ -260,7 +247,7 @@ class AR1(TemporalProcess):
         elif jnp.isscalar(initial_values):
             initial_values = jnp.full(n_processes, initial_values)
 
-        stationary_sd = innovation_sd / jnp.sqrt(1 - self.autoreg**2)
+        stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
 
         with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
             init_states = numpyro.sample(
@@ -272,7 +259,7 @@ class AR1(TemporalProcess):
             n=n_timepoints,
             init_vals=init_states[jnp.newaxis, :],
             autoreg=jnp.full((1, n_processes), self.autoreg),
-            noise_sd=innovation_sd,
+            noise_sd=self.innovation_sd,
             noise_name=f"{name_prefix}_noise",
         )
 
@@ -336,7 +323,6 @@ class DifferencedAR1(TemporalProcess):
         self,
         n_timepoints: int,
         initial_value: float | ArrayLike | None = None,
-        innovation_sd: float | None = None,
         n_processes: int | None = None,
         name_prefix: str = "diff_ar1",
     ) -> ArrayLike:
@@ -349,8 +335,6 @@ class DifferencedAR1(TemporalProcess):
             Number of time points to generate
         initial_value : float or ArrayLike, optional
             Initial value(s). Defaults to 0.0.
-        innovation_sd : float, optional
-            Override constructor's innovation_sd if provided.
         n_processes : int, optional
             Number of parallel processes. If None, samples single trajectory.
         name_prefix : str, default "diff_ar1"
@@ -361,23 +345,17 @@ class DifferencedAR1(TemporalProcess):
         ArrayLike
             Trajectory (n_timepoints,) or trajectories (n_timepoints, K)
         """
-        if innovation_sd is None:
-            innovation_sd = self.innovation_sd
-
         if n_processes is None:
-            return self._sample_single(
-                n_timepoints, initial_value, innovation_sd, name_prefix
-            )
+            return self._sample_single(n_timepoints, initial_value, name_prefix)
         else:
             return self._sample_vectorized(
-                n_timepoints, n_processes, initial_value, innovation_sd, name_prefix
+                n_timepoints, n_processes, initial_value, name_prefix
             )
 
     def _sample_single(
         self,
         n_timepoints: int,
         initial_value: float | None,
-        innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
         """
@@ -391,28 +369,27 @@ class DifferencedAR1(TemporalProcess):
         if initial_value is None:
             initial_value = 0.0
 
-        stationary_sd = innovation_sd / jnp.sqrt(1 - self.autoreg**2)
+        stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
         init_rate_of_change = numpyro.sample(
             f"{name_prefix}_init_rate", dist.Normal(0, stationary_sd)
         )
 
         trajectory = self.process(
             n=n_timepoints + 1,
-            init_vals=jnp.array([[initial_value]]),
-            autoreg=jnp.array([[self.autoreg]]),
-            noise_sd=innovation_sd,
-            fundamental_process_init_vals=jnp.array([[init_rate_of_change]]),
+            init_vals=jnp.array([initial_value]),
+            autoreg=jnp.array([self.autoreg]),
+            noise_sd=self.innovation_sd,
+            fundamental_process_init_vals=jnp.array([init_rate_of_change]),
             noise_name=f"{name_prefix}_noise",
         )
 
-        return jnp.squeeze(trajectory[:n_timepoints])
+        return trajectory[:n_timepoints]
 
     def _sample_vectorized(
         self,
         n_timepoints: int,
         n_processes: int,
         initial_values: ArrayLike | None,
-        innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
         """
@@ -428,7 +405,7 @@ class DifferencedAR1(TemporalProcess):
         elif jnp.isscalar(initial_values):
             initial_values = jnp.full(n_processes, initial_values)
 
-        stationary_sd = innovation_sd / jnp.sqrt(1 - self.autoreg**2)
+        stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
 
         with numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes):
             init_rates = numpyro.sample(
@@ -440,7 +417,7 @@ class DifferencedAR1(TemporalProcess):
             n=n_timepoints + 1,
             init_vals=initial_values[jnp.newaxis, :],
             autoreg=jnp.full((1, n_processes), self.autoreg),
-            noise_sd=innovation_sd,
+            noise_sd=self.innovation_sd,
             fundamental_process_init_vals=init_rates[jnp.newaxis, :],
             noise_name=f"{name_prefix}_noise",
         )
@@ -499,7 +476,6 @@ class RandomWalk(TemporalProcess):
         self,
         n_timepoints: int,
         initial_value: float | ArrayLike | None = None,
-        innovation_sd: float | None = None,
         n_processes: int | None = None,
         name_prefix: str = "rw",
     ) -> ArrayLike:
@@ -512,8 +488,6 @@ class RandomWalk(TemporalProcess):
             Number of time points to generate
         initial_value : float or ArrayLike, optional
             Initial value(s). Defaults to 0.0.
-        innovation_sd : float, optional
-            Override constructor's innovation_sd if provided.
         n_processes : int, optional
             Number of parallel processes. If None, samples single trajectory.
         name_prefix : str, default "rw"
@@ -524,23 +498,17 @@ class RandomWalk(TemporalProcess):
         ArrayLike
             Trajectory (n_timepoints,) or trajectories (n_timepoints, K)
         """
-        if innovation_sd is None:
-            innovation_sd = self.innovation_sd
-
         if n_processes is None:
-            return self._sample_single(
-                n_timepoints, initial_value, innovation_sd, name_prefix
-            )
+            return self._sample_single(n_timepoints, initial_value, name_prefix)
         else:
             return self._sample_vectorized(
-                n_timepoints, n_processes, initial_value, innovation_sd, name_prefix
+                n_timepoints, n_processes, initial_value, name_prefix
             )
 
     def _sample_single(
         self,
         n_timepoints: int,
         initial_value: float | None,
-        innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
         """
@@ -556,7 +524,7 @@ class RandomWalk(TemporalProcess):
 
         step_rv = DistributionalVariable(
             name=f"{name_prefix}_step",
-            distribution=dist.Normal(0, innovation_sd),
+            distribution=dist.Normal(0, self.innovation_sd),
         )
 
         rw = PyRenewRandomWalk(step_rv=step_rv)
@@ -566,14 +534,13 @@ class RandomWalk(TemporalProcess):
             n=n_timepoints,
         )
 
-        return jnp.squeeze(trajectory)
+        return trajectory
 
     def _sample_vectorized(
         self,
         n_timepoints: int,
         n_processes: int,
         initial_values: ArrayLike | None,
-        innovation_sd: float,
         name_prefix: str,
     ) -> ArrayLike:
         """
@@ -600,7 +567,7 @@ class RandomWalk(TemporalProcess):
         # Transpose: (n_processes, n_timepoints-1) -> (n_timepoints-1, n_processes)
         increments = numpyro.deterministic(
             f"{name_prefix}_increments",
-            (increments_raw * innovation_sd).T,
+            (increments_raw * self.innovation_sd).T,
         )
 
         cumulative = jnp.cumsum(increments, axis=0)

@@ -164,18 +164,6 @@ class TestDifferencedAR1Sampling:
 
         assert trajectories.shape == (n_timepoints, n_processes)
 
-    def test_differenced_ar1_override_innovation_sd(self):
-        """Test DifferencedAR1 with overridden innovation_sd."""
-        dar1 = DifferencedAR1(autoreg=0.6, innovation_sd=0.1)
-
-        with numpyro.handlers.seed(rng_seed=42):
-            trajectory = dar1.sample(
-                n_timepoints=30,
-                innovation_sd=0.5,  # Override constructor value
-            )
-
-        assert trajectory.shape == (30,)
-
 
 class TestRandomWalkVectorizedSampling:
     """Test RandomWalk vectorized sampling."""
@@ -282,19 +270,6 @@ class TestTemporalProcessInnovationSD:
         diffs_large = jnp.diff(trajectory_large)
 
         assert jnp.std(diffs_small) < jnp.std(diffs_large)
-
-    def test_explicit_innovation_sd_overrides_constructor_value(self):
-        """Verify that explicit innovation_sd in sample() overrides constructor value."""
-        rw = RandomWalk(innovation_sd=0.1)
-
-        with numpyro.handlers.seed(rng_seed=42):
-            traj_constructor = rw.sample(n_timepoints=50)
-
-        with numpyro.handlers.seed(rng_seed=42):
-            traj_override = rw.sample(n_timepoints=50, innovation_sd=1.0)
-
-        # Trajectories should be substantially different
-        assert not jnp.allclose(traj_constructor, traj_override, rtol=0.1)
 
     def test_vectorized_sampling_respects_innovation_sd(self):
         """Verify vectorized sampling uses the innovation_sd parameter."""
