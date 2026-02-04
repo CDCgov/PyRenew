@@ -58,7 +58,7 @@ class PyrenewBuilder:
         self,
         latent_class: type[BaseLatentInfectionProcess],
         **params,
-    ) -> ModelBuilder:
+    ) -> PyrenewBuilder:
         """
         Configure the latent infection process.
 
@@ -77,7 +77,7 @@ class PyrenewBuilder:
 
         Returns
         -------
-        ModelBuilder
+        PyrenewBuilder
             Self, for method chaining
 
         Raises
@@ -97,7 +97,7 @@ class PyrenewBuilder:
             raise ValueError(
                 "Do not specify n_initialization_points - it will be computed "
                 "automatically from observation processes and generation interval. "
-                "Use ModelBuilder.build() to create the model with the correct value."
+                "Use PyrenewBuilder.build() to create the model with the correct value."
             )
 
         # Check for population structure params that should be at sample time
@@ -116,7 +116,7 @@ class PyrenewBuilder:
     def add_observation(
         self,
         obs_process: BaseObservationProcess,
-    ) -> ModelBuilder:
+    ) -> PyrenewBuilder:
         """
         Add an observation process to the model.
 
@@ -133,7 +133,7 @@ class PyrenewBuilder:
 
         Returns
         -------
-        ModelBuilder
+        PyrenewBuilder
             Self, for method chaining
 
         Raises
