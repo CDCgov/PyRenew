@@ -8,7 +8,7 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HierarchicalInfections, RandomWalk
-from pyrenew.model import PyrenewBuilder, MultiSignalModel
+from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import Counts, NegativeBinomialNoise
 
 # Standard population structure for tests
