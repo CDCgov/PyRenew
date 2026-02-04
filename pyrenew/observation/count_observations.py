@@ -223,7 +223,7 @@ class Counts(_CountBase):
         safe_predicted = jnp.where(jnp.isnan(predicted_counts), 1.0, predicted_counts)
         safe_obs = None
         if obs is not None:
-            safe_obs = jnp.where(jnp.isnan(obs), 0.0, obs)
+            safe_obs = jnp.where(jnp.isnan(obs), safe_predicted, obs)
 
         observed = self.noise.sample(
             name=self._sample_site_name("obs"),
