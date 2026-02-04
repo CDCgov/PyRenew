@@ -281,7 +281,7 @@ class AR1(TemporalProcess):
 
 class DifferencedAR1(TemporalProcess):
     """
-    AR(1) process on first differences of log(Rt).
+    AR(1) process on first differences.
 
     Each *change* in value depends on the previous change plus noise, with
     the rate of change reverting toward a mean. Unlike AR(1), this allows
