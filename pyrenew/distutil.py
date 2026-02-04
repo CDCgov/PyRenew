@@ -49,16 +49,14 @@ def validate_discrete_dist_vector(
             "Discrete distribution "
             "vector must have "
             "only non-negative "
-            "entries; got {}"
-            "".format(discrete_dist)
+            f"entries; got {discrete_dist}"
         )
     dist_norm = np.sum(discrete_dist)
     if not np.abs(dist_norm - 1) < tol:
         raise ValueError(
             "Discrete generation interval "
             "distributions must sum to 1 "
-            "with a tolerance of {}"
-            "".format(tol)
+            f"with a tolerance of {tol}"
         )
     return discrete_dist / dist_norm
 
