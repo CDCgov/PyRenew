@@ -59,7 +59,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         or given a prior distribution.
     n_initialization_points : int, optional
         Number of initialization days before day 0. If not specified, defaults to
-        max(21, 2*len(gen_int)-1). When using ModelBuilder, this is computed
+        max(21, 2*len(gen_int)-1). When using PyrenewBuilder, this is computed
         automatically from all observation processes.
 
     Notes
@@ -67,7 +67,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     Sum-to-zero constraint on deviations ensures R_baseline(t) is the geometric
     mean of subpopulation Rt values, providing identifiability.
 
-    When using ModelBuilder (recommended), n_initialization_points is computed
+    When using PyrenewBuilder (recommended), n_initialization_points is computed
     automatically from all observation processes and should not be specified manually.
     """
 

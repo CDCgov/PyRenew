@@ -887,7 +887,7 @@ infections_agg, infections_all, infections_obs, infections_unobs = latent.sample
 )
 ```
 
-When building the full multisignal model, you would instantiate a `ModelBuilder` object
+When building the full multisignal model, you would instantiate a `PyrenewBuilder` object
 and call the `configure_latent` method
 to specify the latent process model structure: generation interval, initial infections, and temporal dynamics.
 See tutorial:

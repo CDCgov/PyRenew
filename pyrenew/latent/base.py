@@ -90,7 +90,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         Generation interval PMF
     n_initialization_points : int, optional
         Number of initialization days before day 0. If not specified, automatically
-        computed as max(21, 2*len(gen_int)-1). The ModelBuilder will compute and pass
+        computed as max(21, 2*len(gen_int)-1). The PyrenewBuilder will compute and pass
         the correct value based on all observation processes.
 
     Notes
@@ -99,7 +99,7 @@ class BaseLatentInfectionProcess(RandomVariable):
     method, not the constructor. This allows a single model instance to be fit to
     multiple datasets with different jurisdiction structures.
 
-    When using ModelBuilder, n_initialization_points is computed automatically from
+    When using PyrenewBuilder, n_initialization_points is computed automatically from
     all observation processes. When manually creating latent processes, you can either
     specify it explicitly or let it default to max(21, 2*len(gen_int)-1).
 
@@ -322,7 +322,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         """
         Return the generation interval length for builder pattern support.
 
-        This method is used by ModelBuilder to compute n_initialization_points
+        This method is used by PyrenewBuilder to compute n_initialization_points
         from all model components. Returns the generation interval PMF length.
 
         Returns

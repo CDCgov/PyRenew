@@ -1,5 +1,5 @@
 """
-Tests for ModelBuilder and MultiSignalModel.
+Tests for PyrenewBuilder and MultiSignalModel.
 """
 
 import jax.numpy as jnp
@@ -8,7 +8,7 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HierarchicalInfections, RandomWalk
-from pyrenew.model import ModelBuilder, MultiSignalModel
+from pyrenew.model import PyrenewBuilder, MultiSignalModel
 from pyrenew.observation import Counts, NegativeBinomialNoise
 
 # Standard population structure for tests
@@ -23,10 +23,10 @@ def simple_builder():
 
     Returns
     -------
-    ModelBuilder
+    PyrenewBuilder
         Configured model builder.
     """
-    builder = ModelBuilder()
+    builder = PyrenewBuilder()
     gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
     builder.configure_latent(
@@ -50,12 +50,12 @@ def simple_builder():
     return builder
 
 
-class TestModelBuilderConfiguration:
-    """Test ModelBuilder configuration."""
+class TestPyrenewBuilderConfiguration:
+    """Test PyrenewBuilder configuration."""
 
     def test_rejects_population_structure_at_configure_time(self):
         """Test that population structure params are rejected at configure time."""
-        builder = ModelBuilder()
+        builder = PyrenewBuilder()
         gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
         with pytest.raises(ValueError, match="Do not specify"):
@@ -71,7 +71,7 @@ class TestModelBuilderConfiguration:
 
     def test_rejects_n_initialization_points_at_configure_time(self):
         """Test that n_initialization_points is rejected at configure time."""
-        builder = ModelBuilder()
+        builder = PyrenewBuilder()
         gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
         with pytest.raises(ValueError, match="Do not specify n_initialization_points"):
@@ -87,7 +87,7 @@ class TestModelBuilderConfiguration:
 
     def test_rejects_reconfiguring_latent(self):
         """Test that configuring latent twice raises RuntimeError."""
-        builder = ModelBuilder()
+        builder = PyrenewBuilder()
         gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
         builder.configure_latent(
@@ -129,21 +129,21 @@ class TestModelBuilderConfiguration:
 
     def test_build_without_latent_raises_error(self):
         """Test that build() without configure_latent raises ValueError."""
-        builder = ModelBuilder()
+        builder = PyrenewBuilder()
 
         with pytest.raises(ValueError, match="Must call configure_latent"):
             builder.build()
 
     def test_compute_n_initialization_points_without_latent_raises(self):
         """Test that compute_n_initialization_points without latent raises."""
-        builder = ModelBuilder()
+        builder = PyrenewBuilder()
 
         with pytest.raises(ValueError, match="Must call configure_latent"):
             builder.compute_n_initialization_points()
 
     def test_compute_n_initialization_points_without_gen_int_raises(self):
         """Test that compute_n_initialization_points without gen_int_rv raises."""
-        builder = ModelBuilder()
+        builder = PyrenewBuilder()
         # Configure latent without gen_int_rv
         builder.latent_class = HierarchicalInfections
         builder.latent_params = {}  # Missing gen_int_rv
@@ -360,8 +360,8 @@ class TestMultiSignalModelValidation:
             )
 
 
-class TestModelBuilderErrorHandling:
-    """Test ModelBuilder error handling."""
+class TestPyrenewBuilderErrorHandling:
+    """Test PyrenewBuilder error handling."""
 
     def test_compute_n_init_rejects_obs_without_lookback_days(self):
         """Test that observation without lookback_days() raises error."""
@@ -409,7 +409,7 @@ class TestModelBuilderErrorHandling:
                 """
                 return infections
 
-        builder = ModelBuilder()
+        builder = PyrenewBuilder()
         gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
         builder.configure_latent(
@@ -429,7 +429,7 @@ class TestModelBuilderErrorHandling:
 
     def test_build_raises_on_construction_error(self):
         """Test that build() raises TypeError on latent construction failure."""
-        builder = ModelBuilder()
+        builder = PyrenewBuilder()
         gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
         # Configure with an invalid parameter that will cause construction to fail
@@ -505,7 +505,7 @@ class TestMultiSignalModelObservationValidation:
                 """
                 return infections
 
-        builder = ModelBuilder()
+        builder = PyrenewBuilder()
         gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
         builder.configure_latent(

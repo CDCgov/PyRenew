@@ -69,7 +69,7 @@ from pyrenew.latent import (
     GammaGroupSdPrior,
     HierarchicalNormalPrior,
 )
-from pyrenew.model import ModelBuilder
+from pyrenew.model import PyrenewBuilder
 
 from pyrenew.observation import (
     Counts,
@@ -94,7 +94,7 @@ A **multi-signal model** combines multiple observation processes—each represen
 -   Route those infections to each observation process appropriately
 -   Handle the initialization period required by delay distributions
 
-The `ModelBuilder` class handles this plumbing. You specify:
+The `PyrenewBuilder` class handles this plumbing. You specify:
 
 1.  A **latent process** (e.g., `HierarchicalInfections`) that defines how infections evolve
 2.  One or more **observation processes** (e.g., `Counts`, `Measurements`) that define how infections become data
@@ -162,7 +162,7 @@ Different observation processes observe different levels of the model hierarchy.
 | `"aggregate"` | Aggregated infections (sum across all subpopulations) | Hospital admissions, case counts |
 | `"subpop"` | Infection matrix with one column per observed subpopulation | Wastewater, site-specific surveillance |
 
-The `ModelBuilder` routes latent infections to observation processes based on each process's declared resolution.
+The `PyrenewBuilder` routes latent infections to observation processes based on each process's declared resolution.
 
 With this structure in mind, we'll now define each component following the generative direction: first the latent infection process, then the observation processes.
 
@@ -492,15 +492,15 @@ print(f"  Shedding PMF length: {len(shedding_pmf)} days")
 
 ## Model Building
 
-We instantiate a `ModelBuilder` object which handles the composition of the latent infection process and the observation process.
+We instantiate a `PyrenewBuilder` object which handles the composition of the latent infection process and the observation process.
 
 ```{python}
 # | label: model-builder-init
 # Build the multi-signal model
-builder = ModelBuilder()
+builder = PyrenewBuilder()
 ```
 
-The `ModelBuilder` object has 3 key methods:
+The `PyrenewBuilder` object has 3 key methods:
 
 -   `configure_latent`
 -   `add_observation`
@@ -1084,7 +1084,7 @@ This pattern has a direct implication for forecasting: **renewal models are most
 
 ## Summary
 
-This tutorial demonstrated composing a multi-signal renewal model using `ModelBuilder`:
+This tutorial demonstrated composing a multi-signal renewal model using `PyrenewBuilder`:
 
 1.  **Configure latent process** (`configure_latent`): generation interval, initial infections, temporal dynamics
 2.  **Add observation processes** (`add_observation`): each declares its infection resolution and gets a name for data binding
@@ -1094,7 +1094,7 @@ This tutorial demonstrated composing a multi-signal renewal model using `ModelBu
 
 -   **Two-part structure**: Renewal models separate latent infection dynamics from observation processes
 -   **Infection resolution**: Observation processes declare whether they need aggregate or subpop-level infections
--   **Data routing**: `ModelBuilder` automatically routes infection trajectories to the appropriate observation processes
+-   **Data routing**: `PyrenewBuilder` automatically routes infection trajectories to the appropriate observation processes
 -   **Time alignment**: Observations must be offset by `n_initialization_points` to align with model time
 
 ### Next Steps

@@ -27,7 +27,7 @@ class MultiSignalModel(Model):
     PartitionedInfections) with multiple observation processes (e.g.,
     CountObservation, WastewaterObservation).
 
-    Built via ModelBuilder to ensure n_initialization_points is computed
+    Built via PyrenewBuilder to ensure n_initialization_points is computed
     correctly from all components. Can also be constructed manually for
     advanced use cases.
 

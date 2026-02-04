@@ -23,7 +23,7 @@ _SAMPLE_TIME_PARAMS = {
 }
 
 
-class ModelBuilder:
+class PyrenewBuilder:
     """
     Builder for multi-signal renewal models.
 
