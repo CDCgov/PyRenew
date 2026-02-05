@@ -2,8 +2,8 @@
 
 ## Provenance
 
-- **Source Repository**: [CDC cfa-forecast-renewal-ww](https://github.com/cdcgov/cfa-forecast-renewal-ww)
-- **Original Location**: `cfaforecastrenewalww/inst/testdata/`
+- **Source Repository**: [CDCgov/wastewater-informed-covid-forecasting](https://github.com/CDCgov/wastewater-informed-covid-forecasting)
+- **Original Location**: [`cfaforecastrenewalww/inst/testdata/`](https://github.com/CDCgov/wastewater-informed-covid-forecasting/blob/7c30b603f5e57f2b728f23506fe7714d576c31c9/cfaforecastrenewalww/inst/testdata/2023-11-06.csv)
 - **License**: Public Domain (CC0 1.0 Universal) - U.S. Government work
 - **Date Extracted**: January 2025
 
