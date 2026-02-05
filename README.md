@@ -22,7 +22,7 @@ The Pyrenew package provides configurable classes which encapsulate these compon
 resulting in programs which clearly express the model structure and choices, allowing for both ease of model specification and dissemination.
 The fundamental building blocks are the `Model` metaclass, from which we can draw samples,
 and the `RandomVariable` metaclass which has been abstracted to allow for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.
-The `PyrenewBuilder` class
+The `PyrenewBuilder` class orchestrates the composition process.
 
 PyRenew's strength lies in multi-signal integration for information pooling across diverse observed data streams
 such as hospital admissions, wastewater concentrations, and emergency department visits
