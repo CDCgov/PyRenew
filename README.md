@@ -27,7 +27,7 @@ The `PyrenewBuilder` class
 PyRenew's strength lies in multi-signal integration for information pooling across diverse observed data streams
 such as hospital admissions, wastewater concentrations, and emergency department visits
 where each signal has distinct observation delays, noise characteristics, and spatial resolutions.
-For single-signal renewal models, we recommend the excellent R package [EpiNow2](https://epiforecasts.io/EpiNow2/);
+For single-signal renewal models, we recommend the excellent R package [EpiNow2](https://epiforecasts.io/EpiNow2/).
 
 ## Installation
 
