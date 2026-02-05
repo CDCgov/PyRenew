@@ -91,17 +91,14 @@ We define subpopulations as fractions of the total jurisdiction population:
 
 ```{python}
 # | label: population-structure
-# 5 observed subpopulations
-obs_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07])
+# 6 subpopulations with their population fractions
+# Which subpopulations are "observed" or "unobserved" is determined by each
+# observation process (via subpop_indices), not by the latent process.
+subpop_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07, 0.26])
 
-# 1 unobserved subpopulation
-unobs_fractions = jnp.array([0.26])
-
-# Verify fractions sum to 1
-total = float(jnp.sum(obs_fractions) + jnp.sum(unobs_fractions))
-print(f"Total population fraction: {total:.2f}")
-print(f"Observed coverage: {float(jnp.sum(obs_fractions)):.0%}")
-print(f"Unobserved coverage: {float(jnp.sum(unobs_fractions)):.0%}")
+K = len(subpop_fractions)
+print(f"Number of subpopulations (K): {K}")
+print(f"Total population fraction: {float(jnp.sum(subpop_fractions)):.2f}")
 ```
 
 Note: Population structure is passed at **sample time**, not when constructing the process. This allows the same model specification to be fit to different jurisdictions.
@@ -174,10 +171,9 @@ for name, gi_rv in gi_configs.items():
         subpop_temporal=subpop_temporal,
     )
     with numpyro.handlers.seed(rng_seed=42):
-        inf_agg, _, _, _ = model.sample(
+        inf_agg, _ = model.sample(
             n_days_post_init=n_days_demo,
-            obs_fractions=obs_fractions,
-            unobs_fractions=unobs_fractions,
+            subpop_fractions=subpop_fractions,
         )
     n_init = model.n_initialization_points
     inf = np.array(inf_agg)[n_init:]
@@ -204,10 +200,9 @@ for init_rt_name, init_rt_val in [
         subpop_temporal=subpop_temporal,
     )
     with numpyro.handlers.seed(rng_seed=42):
-        inf_agg, _, _, _ = model.sample(
+        inf_agg, _ = model.sample(
             n_days_post_init=n_days_demo,
-            obs_fractions=obs_fractions,
-            unobs_fractions=unobs_fractions,
+            subpop_fractions=subpop_fractions,
         )
     n_init = model.n_initialization_points
     inf = np.array(inf_agg)[n_init:]
@@ -317,10 +312,9 @@ for name, i0_val in i0_configs.items():
         subpop_temporal=subpop_temporal,
     )
     with numpyro.handlers.seed(rng_seed=42):
-        inf_agg, _, _, _ = model.sample(
+        inf_agg, _ = model.sample(
             n_days_post_init=n_days_demo,
-            obs_fractions=obs_fractions,
-            unobs_fractions=unobs_fractions,
+            subpop_fractions=subpop_fractions,
         )
     n_init = model.n_initialization_points
     i0_results[name] = np.array(inf_agg)[n_init:]
@@ -421,11 +415,10 @@ n_days = 28  # 4 weeks of simulation
 with numpyro.handlers.seed(rng_seed=42):
     result = latent_infections.sample(
         n_days_post_init=n_days,
-        obs_fractions=obs_fractions,
-        unobs_fractions=unobs_fractions,
+        subpop_fractions=subpop_fractions,
     )
 
-infections_agg, infections_all, infections_obs, infections_unobs = result
+infections_agg, infections_all = result
 
 n_total = infections_agg.shape[0]
 n_init = n_total - n_days
@@ -433,8 +426,6 @@ n_init = n_total - n_days
 print("Output shapes:")
 print(f"  Aggregate (jurisdiction total): {infections_agg.shape}")
 print(f"  All subpopulations: {infections_all.shape}")
-print(f"  Observed subpopulations: {infections_obs.shape}")
-print(f"  Unobserved subpopulations: {infections_unobs.shape}")
 print(
     f"\nTimeline: {n_init} initialization days + {n_days} simulation days = {n_total} total"
 )
@@ -450,8 +441,7 @@ def sample_model():
     """Wrapper for prior predictive sampling."""
     return latent_infections.sample(
         n_days_post_init=n_days,
-        obs_fractions=obs_fractions,
-        unobs_fractions=unobs_fractions,
+        subpop_fractions=subpop_fractions,
     )
 
 
@@ -468,7 +458,7 @@ print(f"Infection samples: {prior_samples['infections_aggregate'].shape}")
 ```{python}
 # | label: rt-trajectories-data
 # Extract post-initialization Rt trajectories
-rt_samples = np.array(prior_samples["rt_baseline"])[:, n_init:]
+rt_samples = np.array(prior_samples["rt_baseline"])[:, n_init:, 0]
 
 # Build long-format dataframe for plotting
 rt_data = []
@@ -554,14 +544,13 @@ for name, temporal in temporal_configs.items():
     def make_sampler(m):
         return lambda: m.sample(
             n_days_post_init=n_days,
-            obs_fractions=obs_fractions,
-            unobs_fractions=unobs_fractions,
+            subpop_fractions=subpop_fractions,
         )
 
     samples = Predictive(make_sampler(model), num_samples=n_samples)(
         random.PRNGKey(42)
     )
-    process_samples[name] = np.array(samples["rt_baseline"])[:, n_init:]
+    process_samples[name] = np.array(samples["rt_baseline"])[:, n_init:, 0]
 ```
 
 ```{python}
@@ -651,8 +640,7 @@ for name, subpop_temporal in subpop_configs.items():
     def make_sampler(m):
         return lambda: m.sample(
             n_days_post_init=n_days,
-            obs_fractions=obs_fractions,
-            unobs_fractions=unobs_fractions,
+            subpop_fractions=subpop_fractions,
         )
 
     deviation_samples[name] = Predictive(
@@ -738,8 +726,7 @@ for name, cfg in configs.items():
     def make_sampler(m):
         return lambda: m.sample(
             n_days_post_init=n_days,
-            obs_fractions=obs_fractions,
-            unobs_fractions=unobs_fractions,
+            subpop_fractions=subpop_fractions,
         )
 
     tuning_samples[name] = Predictive(
@@ -752,7 +739,7 @@ for name, cfg in configs.items():
 # Build comparison dataframe
 tuning_data = []
 for name, samples in tuning_samples.items():
-    rt = np.array(samples["rt_baseline"])[:, n_init:]
+    rt = np.array(samples["rt_baseline"])[:, n_init:, 0]
     for i in range(n_samples):
         for d in range(n_days):
             tuning_data.append(
@@ -804,8 +791,7 @@ with numpyro.handlers.seed(rng_seed=123):
     with numpyro.handlers.trace() as trace:
         latent_infections.sample(
             n_days_post_init=n_days,
-            obs_fractions=obs_fractions,
-            unobs_fractions=unobs_fractions,
+            subpop_fractions=subpop_fractions,
         )
 
 deviations = trace["subpop_deviations"]["value"]
@@ -820,14 +806,12 @@ print("(Should be ~0 due to sum-to-zero constraint)")
 # | label: verify-aggregate
 # Check that aggregate = weighted sum of subpopulations
 with numpyro.handlers.seed(rng_seed=123):
-    inf_agg, inf_all, _, _ = latent_infections.sample(
+    inf_agg, inf_all = latent_infections.sample(
         n_days_post_init=n_days,
-        obs_fractions=obs_fractions,
-        unobs_fractions=unobs_fractions,
+        subpop_fractions=subpop_fractions,
     )
 
-all_fractions = jnp.concatenate([obs_fractions, unobs_fractions])
-computed_agg = jnp.sum(inf_all * all_fractions[None, :], axis=1)
+computed_agg = jnp.sum(inf_all * subpop_fractions[None, :], axis=1)
 max_diff = float(jnp.max(jnp.abs(computed_agg - inf_agg)))
 
 print(f"Max difference (aggregate vs weighted sum): {max_diff:.2e}")
@@ -880,10 +864,9 @@ latent = HierarchicalInfections(
 )
 
 # Sample (population structure provided at sample time)
-infections_agg, infections_all, infections_obs, infections_unobs = latent.sample(
+infections_agg, infections_all = latent.sample(
     n_days_post_init=28,
-    obs_fractions=obs_fractions,
-    unobs_fractions=unobs_fractions,
+    subpop_fractions=subpop_fractions,
 )
 ```
 

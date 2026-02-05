@@ -11,9 +11,8 @@ from pyrenew.latent import HierarchicalInfections, RandomWalk
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import Counts, NegativeBinomialNoise
 
-# Standard population structure for tests
-OBS_FRACTIONS = jnp.array([0.3, 0.25])
-UNOBS_FRACTIONS = jnp.array([0.45])
+# Standard population structure for tests (3 subpopulations)
+SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
 
 
 @pytest.fixture
@@ -66,7 +65,7 @@ class TestPyrenewBuilderConfiguration:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_temporal=RandomWalk(),
                 subpop_temporal=RandomWalk(),
-                obs_fractions=jnp.array([0.5, 0.5]),  # Should fail
+                subpop_fractions=jnp.array([0.5, 0.5]),  # Should fail
             )
 
     def test_rejects_n_initialization_points_at_configure_time(self):
@@ -172,17 +171,15 @@ class TestMultiSignalModelSampling:
         n_total = model.latent.n_initialization_points + n_days
 
         with numpyro.handlers.seed(rng_seed=42):
-            inf_aggregate, inf_all, inf_obs, _inf_unobs = model.sample(
+            inf_aggregate, inf_all = model.sample(
                 n_days_post_init=n_days,
                 population_size=1_000_000,
-                obs_fractions=OBS_FRACTIONS,
-                unobs_fractions=UNOBS_FRACTIONS,
+                subpop_fractions=SUBPOP_FRACTIONS,
                 hospital={"obs": None},
             )
 
         assert inf_aggregate.shape == (n_total,)
         assert inf_all.shape == (n_total, 3)  # K=3
-        assert inf_obs.shape == (n_total, 2)  # K_obs=2
 
     def test_fit_with_reparam_config(self, simple_builder):
         """Test that fit() works with reparameterization config."""
@@ -205,8 +202,7 @@ class TestMultiSignalModelSampling:
         mcmc = model.fit(
             n_days_post_init=n_days,
             population_size=1_000_000,
-            obs_fractions=OBS_FRACTIONS,
-            unobs_fractions=UNOBS_FRACTIONS,
+            subpop_fractions=SUBPOP_FRACTIONS,
             num_warmup=2,
             num_samples=2,
             reparam_config=reparam_config,
@@ -231,8 +227,7 @@ class TestMultiSignalModelSampling:
         mcmc = model.fit(
             n_days_post_init=n_days,
             population_size=1_000_000,
-            obs_fractions=OBS_FRACTIONS,
-            unobs_fractions=UNOBS_FRACTIONS,
+            subpop_fractions=SUBPOP_FRACTIONS,
             num_warmup=5,
             num_samples=5,
             hospital={"obs": obs},
@@ -253,8 +248,7 @@ class TestMultiSignalModelValidation:
         # Should work with population structure
         model.validate_data(
             n_days_post_init=30,
-            obs_fractions=OBS_FRACTIONS,
-            unobs_fractions=UNOBS_FRACTIONS,
+            subpop_fractions=SUBPOP_FRACTIONS,
             hospital={
                 "obs": jnp.array([10, 20]),
                 "times": jnp.array([5, 10]),
@@ -269,8 +263,7 @@ class TestMultiSignalModelValidation:
         with pytest.raises(ValueError, match="times index"):
             model.validate_data(
                 n_days_post_init=30,
-                obs_fractions=OBS_FRACTIONS,
-                unobs_fractions=UNOBS_FRACTIONS,
+                subpop_fractions=SUBPOP_FRACTIONS,
                 hospital={
                     "obs": jnp.array([10]),
                     "times": jnp.array([n_total + 10]),
@@ -284,8 +277,7 @@ class TestMultiSignalModelValidation:
         with pytest.raises(ValueError, match="times cannot be negative"):
             model.validate_data(
                 n_days_post_init=30,
-                obs_fractions=OBS_FRACTIONS,
-                unobs_fractions=UNOBS_FRACTIONS,
+                subpop_fractions=SUBPOP_FRACTIONS,
                 hospital={
                     "obs": jnp.array([10]),
                     "times": jnp.array([-1]),
@@ -299,8 +291,7 @@ class TestMultiSignalModelValidation:
         with pytest.raises(ValueError, match="Unknown observation"):
             model.validate_data(
                 n_days_post_init=30,
-                obs_fractions=OBS_FRACTIONS,
-                unobs_fractions=UNOBS_FRACTIONS,
+                subpop_fractions=SUBPOP_FRACTIONS,
                 unknown_obs={
                     "obs": jnp.array([10]),
                     "times": jnp.array([5]),
@@ -314,8 +305,7 @@ class TestMultiSignalModelValidation:
         with pytest.raises(ValueError, match=r"obs length.*must match times length"):
             model.validate_data(
                 n_days_post_init=30,
-                obs_fractions=OBS_FRACTIONS,
-                unobs_fractions=UNOBS_FRACTIONS,
+                subpop_fractions=SUBPOP_FRACTIONS,
                 hospital={
                     "obs": jnp.array([10, 20, 30]),  # 3 elements
                     "times": jnp.array([5, 10]),  # 2 elements
@@ -335,8 +325,7 @@ class TestMultiSignalModelValidation:
         with pytest.raises(ValueError, match="subpop_indices cannot be negative"):
             model.validate_data(
                 n_days_post_init=30,
-                obs_fractions=OBS_FRACTIONS,
-                unobs_fractions=UNOBS_FRACTIONS,
+                subpop_fractions=SUBPOP_FRACTIONS,
                 hospital={
                     "subpop_indices": jnp.array([-1, 0, 1]),
                     "times": jnp.array([5, 6, 7]),
@@ -344,17 +333,16 @@ class TestMultiSignalModelValidation:
             )
 
     def test_validate_data_rejects_out_of_bounds_subpop_indices(self, simple_builder):
-        """Test that subpop_indices >= K_obs raises error."""
+        """Test that subpop_indices >= K raises error."""
         model = simple_builder.build()
 
-        # K_obs is 2 (from OBS_FRACTIONS = [0.3, 0.25])
+        # K is 3 (from SUBPOP_FRACTIONS = [0.3, 0.25, 0.45])
         with pytest.raises(ValueError, match="subpop_indices contains"):
             model.validate_data(
                 n_days_post_init=30,
-                obs_fractions=OBS_FRACTIONS,
-                unobs_fractions=UNOBS_FRACTIONS,
+                subpop_fractions=SUBPOP_FRACTIONS,
                 hospital={
-                    "subpop_indices": jnp.array([0, 1, 5]),  # 5 >= 2
+                    "subpop_indices": jnp.array([0, 1, 5]),  # 5 >= 3
                     "times": jnp.array([5, 6, 7]),
                 },
             )

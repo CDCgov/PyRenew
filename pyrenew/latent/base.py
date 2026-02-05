@@ -8,9 +8,9 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import NamedTuple
 
-import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
+from numpyro.util import not_jax_tracer
 
 from pyrenew.metaclass import RandomVariable
 
@@ -27,18 +27,10 @@ class LatentSample(NamedTuple):
     all_subpops : ArrayLike
         Infections for all subpopulations.
         Shape: (n_total_days, K)
-    observed : ArrayLike
-        Infections for observed subpopulations only.
-        Shape: (n_total_days, K_obs)
-    unobserved : ArrayLike
-        Infections for unobserved subpopulations only.
-        Shape: (n_total_days, K_unobs)
     """
 
     aggregate: ArrayLike
     all_subpops: ArrayLike
-    observed: ArrayLike
-    unobserved: ArrayLike
 
 
 @dataclass
@@ -48,23 +40,14 @@ class PopulationStructure:
 
     Attributes
     ----------
-    obs_fractions : ArrayLike
-        Population fractions for observed subpopulations
-    unobs_fractions : ArrayLike
-        Population fractions for unobserved subpopulations
+    fractions : ArrayLike
+        Population fractions for all subpopulations. Shape: (K,)
     K : int
         Total number of subpopulations
-    K_obs : int
-        Number of observed subpopulations
-    K_unobs : int
-        Number of unobserved subpopulations
     """
 
-    obs_fractions: ArrayLike
-    unobs_fractions: ArrayLike
+    fractions: ArrayLike
     K: int
-    K_obs: int
-    K_unobs: int
 
 
 class BaseLatentInfectionProcess(RandomVariable):
@@ -73,16 +56,15 @@ class BaseLatentInfectionProcess(RandomVariable):
 
     Provides common functionality for hierarchical and partitioned infection models:
     - Population fraction validation and parsing (at sample time)
-    - Splitting subpopulations into observed/unobserved
-    - Standard 4-tuple output structure
+    - Standard output structure via LatentSample
 
     All subclasses return infections as a ``LatentSample`` named tuple with fields:
-    (aggregate, all_subpops, observed, unobserved)
+    (aggregate, all_subpops). Observation processes are responsible for selecting
+    which subpopulations they observe via indexing.
 
     The constructor specifies model structure (generation interval, priors,
-    temporal processes). Population structure (obs_fractions, unobs_fractions) is
-    provided at sample time, allowing a single model to be fit to multiple
-    jurisdictions with different population structures.
+    temporal processes). Population structure (subpop_fractions) is provided at
+    sample time, allowing a single model to be fit to multiple jurisdictions.
 
     Parameters
     ----------
@@ -95,17 +77,13 @@ class BaseLatentInfectionProcess(RandomVariable):
 
     Notes
     -----
-    Population structure (obs_fractions, unobs_fractions) is passed to the sample()
-    method, not the constructor. This allows a single model instance to be fit to
-    multiple datasets with different jurisdiction structures.
+    Population structure (subpop_fractions) is passed to the sample() method, not
+    the constructor. This allows a single model instance to be fit to multiple
+    datasets with different jurisdiction structures.
 
     When using PyrenewBuilder, n_initialization_points is computed automatically from
     all observation processes. When manually creating latent processes, you can either
     specify it explicitly or let it default to max(21, 2*len(gen_int)-1).
-
-    Subclasses must implement the `sample` method which returns a 4-tuple with
-    shapes: (n_total_days,), (n_total_days, K), (n_total_days, K_obs),
-    (n_total_days, K_unobs).
     """
 
     def __init__(
@@ -144,11 +122,16 @@ class BaseLatentInfectionProcess(RandomVariable):
 
     @staticmethod
     def _parse_and_validate_fractions(
-        obs_fractions: ArrayLike = None,
-        unobs_fractions: ArrayLike = None,
+        subpop_fractions: ArrayLike = None,
     ) -> PopulationStructure:
         """
         Parse and validate population fraction parameters.
+
+        Parameters
+        ----------
+        subpop_fractions : ArrayLike
+            Population fractions for all subpopulations. Must be a 1D array
+            with at least one element. Values must be non-negative and sum to 1.
 
         Returns
         -------
@@ -158,77 +141,44 @@ class BaseLatentInfectionProcess(RandomVariable):
         Raises
         ------
         ValueError
-            If parameterization is invalid or fractions don't sum to 1.0
+            If fractions are invalid or don't sum to 1.0
         """
-        if obs_fractions is None or unobs_fractions is None:
-            raise ValueError("Both obs_fractions and unobs_fractions must be provided")
+        if subpop_fractions is None:
+            raise ValueError("subpop_fractions must be provided")
 
-        obs_fractions = jnp.asarray(obs_fractions)
-        unobs_fractions = jnp.asarray(unobs_fractions)
+        fractions = jnp.asarray(subpop_fractions)
 
-        if obs_fractions.ndim != 1 or unobs_fractions.ndim != 1:
-            raise ValueError("Fractions must be 1D arrays")
+        if fractions.ndim != 1:
+            raise ValueError("subpop_fractions must be a 1D array")
 
-        K_obs = len(obs_fractions)
-        K_unobs = len(unobs_fractions)
-        K = K_obs + K_unobs
+        K = len(fractions)
 
-        if K_obs == 0:
-            raise ValueError("Must have at least one observed subpopulation")
+        if K == 0:
+            raise ValueError("Must have at least one subpopulation")
 
-        # Only validate when values are concrete (not during JAX tracing)
-        try:
-            if jnp.any(obs_fractions < 0) or jnp.any(unobs_fractions < 0):
-                raise ValueError("All population fractions must be non-negative")
+        # Only validate when results are concrete (not during JAX tracing)
+        # Check the result of the comparison, not just the input, because
+        # JIT compilation can trace operations on concrete arrays
+        neg_check = jnp.any(fractions < 0)
+        if not_jax_tracer(neg_check) and neg_check:
+            raise ValueError("All population fractions must be non-negative")
 
-            total = jnp.sum(obs_fractions) + jnp.sum(unobs_fractions)
-            if not jnp.isclose(total, 1.0, atol=1e-6):
-                raise ValueError(
-                    f"Population fractions must sum to 1.0, got {float(total):.6f}"
-                )
-        except jax.errors.TracerBoolConversionError:
-            # Skip validation during JAX tracing - values were validated before MCMC
-            pass
+        total = jnp.sum(fractions)
+        sum_check = jnp.isclose(total, 1.0, atol=1e-6)
+        if not_jax_tracer(sum_check) and not sum_check:
+            raise ValueError(
+                f"Population fractions must sum to 1.0, got {float(total):.6f}"
+            )
 
         return PopulationStructure(
-            obs_fractions=obs_fractions,
-            unobs_fractions=unobs_fractions,
+            fractions=fractions,
             K=K,
-            K_obs=K_obs,
-            K_unobs=K_unobs,
         )
-
-    @staticmethod
-    def _split_subpopulations(
-        infections_all: ArrayLike,
-        pop: PopulationStructure,
-    ) -> tuple[ArrayLike, ArrayLike]:
-        """
-        Split all subpopulations into observed and unobserved.
-
-        Parameters
-        ----------
-        infections_all : ArrayLike
-            Infections for all subpopulations, shape (n_days, K)
-        pop : PopulationStructure
-            Population structure with K_obs for splitting
-
-        Returns
-        -------
-        tuple[ArrayLike, ArrayLike]
-            (infections_observed, infections_unobserved) with shapes
-            (n_days, K_obs) and (n_days, K_unobs)
-        """
-        infections_observed = infections_all[:, : pop.K_obs]
-        infections_unobserved = infections_all[:, pop.K_obs :]
-        return infections_observed, infections_unobserved
 
     @staticmethod
     def _validate_output_shapes(
         infections_aggregate: ArrayLike,
         infections_all: ArrayLike,
-        infections_observed: ArrayLike,
-        infections_unobserved: ArrayLike,
         n_total_days: int,
         pop: PopulationStructure,
     ) -> None:
@@ -241,14 +191,10 @@ class BaseLatentInfectionProcess(RandomVariable):
             Aggregate infections (sum across subpopulations)
         infections_all : ArrayLike
             All subpopulation infections
-        infections_observed : ArrayLike
-            Observed subpopulation infections
-        infections_unobserved : ArrayLike
-            Unobserved subpopulation infections
         n_total_days : int
             Expected number of days (n_initialization_points + n_days_post_init)
         pop : PopulationStructure
-            Population structure with K, K_obs, K_unobs
+            Population structure with K
 
         Raises
         ------
@@ -258,15 +204,11 @@ class BaseLatentInfectionProcess(RandomVariable):
         expected = {
             "infections_aggregate": (n_total_days,),
             "infections_all": (n_total_days, pop.K),
-            "infections_observed": (n_total_days, pop.K_obs),
-            "infections_unobserved": (n_total_days, pop.K_unobs),
         }
 
         actual = {
             "infections_aggregate": infections_aggregate.shape,
             "infections_all": infections_all.shape,
-            "infections_observed": infections_observed.shape,
-            "infections_unobserved": infections_unobserved.shape,
         }
 
         for name, expected_shape in expected.items():
@@ -301,22 +243,21 @@ class BaseLatentInfectionProcess(RandomVariable):
         """
         I0 = jnp.asarray(I0)
 
-        # Skip validation during JAX tracing (e.g., Predictive sampling)
-        # Traced arrays cannot be used in Python boolean operations
-        try:
-            if jnp.any(I0 <= 0):
-                raise ValueError(
-                    f"I0 must be positive (got min={float(jnp.min(I0)):.6f}). "
-                    "I0 represents infection prevalence as a proportion of the population."
-                )
-            if jnp.any(I0 > 1):
-                raise ValueError(
-                    f"I0 must be <= 1 (got max={float(jnp.max(I0)):.6f}). "
-                    "I0 represents infection prevalence as a proportion of the population."
-                )
-        except jax.errors.TracerBoolConversionError:
-            # During tracing, skip validation
-            pass
+        # Only validate when results are concrete (not during JAX tracing)
+        # Check the result of the comparison, not just the input, because
+        # JIT compilation can trace operations on concrete arrays
+        pos_check = jnp.any(I0 <= 0)
+        if not_jax_tracer(pos_check) and pos_check:
+            raise ValueError(
+                f"I0 must be positive (got min={float(jnp.min(I0)):.6f}). "
+                "I0 represents infection prevalence as a proportion of the population."
+            )
+        max_check = jnp.any(I0 > 1)
+        if not_jax_tracer(max_check) and max_check:
+            raise ValueError(
+                f"I0 must be <= 1 (got max={float(jnp.max(I0)):.6f}). "
+                "I0 represents infection prevalence as a proportion of the population."
+            )
 
     def get_required_lookback(self) -> int:
         """
@@ -355,8 +296,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         self,
         n_days_post_init: int,
         *,
-        obs_fractions: ArrayLike = None,
-        unobs_fractions: ArrayLike = None,
+        subpop_fractions: ArrayLike = None,
         **kwargs,
     ) -> LatentSample:
         """
@@ -366,10 +306,9 @@ class BaseLatentInfectionProcess(RandomVariable):
         ----------
         n_days_post_init : int
             Number of days to simulate after initialization period
-        obs_fractions : ArrayLike
-            Population fractions for observed subpopulations.
-        unobs_fractions : ArrayLike
-            Population fractions for unobserved subpopulations.
+        subpop_fractions : ArrayLike
+            Population fractions for all subpopulations. Shape: (K,).
+            Must sum to 1.0.
         **kwargs
             Additional parameters required by specific implementations
 
@@ -379,8 +318,6 @@ class BaseLatentInfectionProcess(RandomVariable):
             Named tuple with fields:
             - aggregate: shape (n_total_days,)
             - all_subpops: shape (n_total_days, K)
-            - observed: shape (n_total_days, K_obs)
-            - unobserved: shape (n_total_days, K_unobs)
 
             where n_total_days = n_initialization_points + n_days_post_init
         """

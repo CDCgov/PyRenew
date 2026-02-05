@@ -50,34 +50,29 @@ class TestHierarchicalInfectionsSample:
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 n_days_post_init=30,
-                obs_fractions=jnp.array([0.3, 0.25]),
-                unobs_fractions=jnp.array([0.45]),
+                subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
             )
 
-        inf_juris, inf_all, inf_obs, inf_unobs = result
+        inf_juris, inf_all = result
         n_total = process.n_initialization_points + 30
 
         assert inf_juris.shape == (n_total,)
         assert inf_all.shape == (n_total, 3)
-        assert inf_obs.shape == (n_total, 2)
-        assert inf_unobs.shape == (n_total, 1)
 
     def test_same_model_different_jurisdictions(self, process):
         """Test that one model can fit different population structures."""
-        # Jurisdiction A: 2 observed, 1 unobserved
+        # Jurisdiction A: 3 subpopulations
         with numpyro.handlers.seed(rng_seed=42):
-            _, inf_all_a, _, _ = process.sample(
+            _, inf_all_a = process.sample(
                 n_days_post_init=30,
-                obs_fractions=jnp.array([0.3, 0.25]),
-                unobs_fractions=jnp.array([0.45]),
+                subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
             )
 
-        # Jurisdiction B: 4 observed, 1 unobserved (different structure)
+        # Jurisdiction B: 5 subpopulations (different structure)
         with numpyro.handlers.seed(rng_seed=42):
-            _, inf_all_b, _, _ = process.sample(
+            _, inf_all_b = process.sample(
                 n_days_post_init=30,
-                obs_fractions=jnp.array([0.15, 0.20, 0.25, 0.10]),
-                unobs_fractions=jnp.array([0.30]),
+                subpop_fractions=jnp.array([0.15, 0.20, 0.25, 0.10, 0.30]),
             )
 
         assert inf_all_a.shape[1] == 3  # K=3
@@ -85,18 +80,15 @@ class TestHierarchicalInfectionsSample:
 
     def test_jurisdiction_total_is_weighted_sum(self, process):
         """Test that jurisdiction total equals weighted sum of subpopulations."""
-        obs_fracs = jnp.array([0.3, 0.25])
-        unobs_fracs = jnp.array([0.45])
+        fractions = jnp.array([0.3, 0.25, 0.45])
 
         with numpyro.handlers.seed(rng_seed=42):
-            inf_juris, inf_all, _, _ = process.sample(
+            inf_juris, inf_all = process.sample(
                 n_days_post_init=30,
-                obs_fractions=obs_fracs,
-                unobs_fractions=unobs_fracs,
+                subpop_fractions=fractions,
             )
 
-        all_fractions = jnp.concatenate([obs_fracs, unobs_fracs])
-        expected = jnp.sum(inf_all * all_fractions[jnp.newaxis, :], axis=1)
+        expected = jnp.sum(inf_all * fractions[jnp.newaxis, :], axis=1)
 
         assert jnp.allclose(inf_juris, expected, atol=1e-6)
 
@@ -106,8 +98,7 @@ class TestHierarchicalInfectionsSample:
             with numpyro.handlers.trace() as trace:
                 process.sample(
                     n_days_post_init=30,
-                    obs_fractions=jnp.array([0.3, 0.25]),
-                    unobs_fractions=jnp.array([0.45]),
+                    subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
                 )
 
         deviations = trace["subpop_deviations"]["value"]
@@ -180,8 +171,7 @@ class TestHierarchicalInfectionsValidation:
             with numpyro.handlers.seed(rng_seed=42):
                 process.sample(
                     n_days_post_init=30,
-                    obs_fractions=jnp.array([0.3, 0.25]),
-                    unobs_fractions=jnp.array([0.40]),  # Sum is 0.95
+                    subpop_fractions=jnp.array([0.3, 0.25, 0.40]),  # Sum is 0.95
                 )
 
     def test_validate_method(self, process):
@@ -205,11 +195,10 @@ class TestHierarchicalInfectionsPerSubpopI0:
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 n_days_post_init=30,
-                obs_fractions=jnp.array([0.3, 0.25]),
-                unobs_fractions=jnp.array([0.45]),
+                subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
             )
 
-        inf_juris, inf_all, _inf_obs, _inf_unobs = result
+        inf_juris, inf_all = result
         n_total = process.n_initialization_points + 30
 
         assert inf_juris.shape == (n_total,)

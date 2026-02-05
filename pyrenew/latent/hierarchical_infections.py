@@ -38,7 +38,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     - Aggregate total: I_aggregate(t) = sum_k p_k * I_k(t)
 
     The constructor specifies model structure (priors, temporal processes).
-    Population structure (fractions, K, K_obs) is provided at sample time,
+    Population structure (subpop_fractions) is provided at sample time,
     allowing a single model to be fit to multiple jurisdictions.
 
     Parameters
@@ -156,8 +156,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         self,
         n_days_post_init: int,
         *,
-        obs_fractions: ArrayLike = None,
-        unobs_fractions: ArrayLike = None,
+        subpop_fractions: ArrayLike = None,
         **kwargs,
     ) -> LatentSample:
         """
@@ -170,10 +169,9 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         ----------
         n_days_post_init : int
             Number of days to simulate after initialization period
-        obs_fractions : ArrayLike
-            Population fractions for observed subpopulations.
-        unobs_fractions : ArrayLike
-            Population fractions for unobserved subpopulations.
+        subpop_fractions : ArrayLike
+            Population fractions for all subpopulations. Shape: (K,).
+            Must sum to 1.0.
         **kwargs
             Additional arguments (unused, for compatibility)
 
@@ -183,13 +181,10 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             Named tuple with fields:
             - aggregate: shape (n_total_days,)
             - all_subpops: shape (n_total_days, K)
-            - observed: shape (n_total_days, K_obs)
-            - unobserved: shape (n_total_days, K_unobs)
         """
         # Parse and validate population structure
         pop = self._parse_and_validate_fractions(
-            obs_fractions=obs_fractions,
-            unobs_fractions=unobs_fractions,
+            subpop_fractions=subpop_fractions,
         )
 
         n_total_days = self.n_initialization_points + n_days_post_init
@@ -241,8 +236,6 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         gen_int_reversed = jnp.flip(gen_int)
         recent_I0_all = I0_all[-gen_int.size :, :]
 
-        all_fractions = jnp.concatenate([pop.obs_fractions, pop.unobs_fractions])
-
         # Vectorized renewal equation for all subpopulations via vmap
         post_init_infections_all = jax.vmap(
             lambda I0_col, Rt_col: compute_infections_from_rt(
@@ -257,18 +250,12 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         infections_all = jnp.vstack([I0_all, post_init_infections_all])
 
         infections_aggregate = jnp.sum(
-            infections_all * all_fractions[jnp.newaxis, :], axis=1
-        )
-
-        infections_observed, infections_unobserved = self._split_subpopulations(
-            infections_all, pop
+            infections_all * pop.fractions[jnp.newaxis, :], axis=1
         )
 
         self._validate_output_shapes(
             infections_aggregate,
             infections_all,
-            infections_observed,
-            infections_unobserved,
             n_total_days,
             pop,
         )
@@ -283,6 +270,4 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         return LatentSample(
             aggregate=infections_aggregate,
             all_subpops=infections_all,
-            observed=infections_observed,
-            unobserved=infections_unobserved,
         )

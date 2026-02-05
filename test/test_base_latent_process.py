@@ -13,65 +13,46 @@ from pyrenew.latent.base import BaseLatentInfectionProcess, LatentSample
 class TestPopulationStructureParsing:
     """Test _parse_and_validate_fractions static method."""
 
-    def test_parse_obs_unobs_fractions(self):
-        """Test parsing obs_fractions + unobs_fractions."""
+    def test_parse_subpop_fractions(self):
+        """Test parsing subpop_fractions."""
         pop = BaseLatentInfectionProcess._parse_and_validate_fractions(
-            obs_fractions=jnp.array([0.3, 0.25]),
-            unobs_fractions=jnp.array([0.45]),
+            subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
         )
 
         assert pop.K == 3
-        assert pop.K_obs == 2
-        assert pop.K_unobs == 1
+        assert jnp.allclose(pop.fractions, jnp.array([0.3, 0.25, 0.45]))
 
     def test_rejects_fractions_not_summing_to_one(self):
         """Test that fractions not summing to 1 raises error."""
         with pytest.raises(ValueError, match="must sum to 1.0"):
             BaseLatentInfectionProcess._parse_and_validate_fractions(
-                obs_fractions=jnp.array([0.3, 0.25]),
-                unobs_fractions=jnp.array([0.40]),
+                subpop_fractions=jnp.array([0.3, 0.25, 0.40]),  # Sum is 0.95
             )
 
     def test_rejects_negative_fractions(self):
         """Test that negative fractions raise error."""
         with pytest.raises(ValueError, match="must be non-negative"):
             BaseLatentInfectionProcess._parse_and_validate_fractions(
-                obs_fractions=jnp.array([0.3, -0.1]),
-                unobs_fractions=jnp.array([0.8]),
+                subpop_fractions=jnp.array([0.3, -0.1, 0.8]),
             )
 
     def test_rejects_missing_fractions(self):
         """Test that missing fractions raise error."""
-        with pytest.raises(
-            ValueError, match="Both obs_fractions and unobs_fractions must be provided"
-        ):
-            BaseLatentInfectionProcess._parse_and_validate_fractions(
-                obs_fractions=jnp.array([0.3, 0.25]),
-            )
-
-        with pytest.raises(
-            ValueError, match="Both obs_fractions and unobs_fractions must be provided"
-        ):
-            BaseLatentInfectionProcess._parse_and_validate_fractions(
-                unobs_fractions=jnp.array([0.45]),
-            )
+        with pytest.raises(ValueError, match="subpop_fractions must be provided"):
+            BaseLatentInfectionProcess._parse_and_validate_fractions()
 
     def test_rejects_2d_fractions(self):
         """Test that 2D fraction arrays raise error."""
-        with pytest.raises(ValueError, match="Fractions must be 1D arrays"):
+        with pytest.raises(ValueError, match="must be a 1D array"):
             BaseLatentInfectionProcess._parse_and_validate_fractions(
-                obs_fractions=jnp.array([[0.3, 0.25]]),  # 2D array
-                unobs_fractions=jnp.array([0.45]),
+                subpop_fractions=jnp.array([[0.3, 0.25, 0.45]]),  # 2D array
             )
 
-    def test_rejects_no_observed_subpopulations(self):
-        """Test that empty observed subpopulations raise error."""
-        with pytest.raises(
-            ValueError, match="Must have at least one observed subpopulation"
-        ):
+    def test_rejects_empty_subpopulations(self):
+        """Test that empty subpopulations raise error."""
+        with pytest.raises(ValueError, match="Must have at least one subpopulation"):
             BaseLatentInfectionProcess._parse_and_validate_fractions(
-                obs_fractions=jnp.array([]),  # No observed subpops
-                unobs_fractions=jnp.array([1.0]),
+                subpop_fractions=jnp.array([]),
             )
 
 
@@ -135,25 +116,18 @@ class TestValidateOutputShapes:
         from pyrenew.latent.base import PopulationStructure
 
         pop = PopulationStructure(
-            obs_fractions=jnp.array([0.5, 0.5]),
-            unobs_fractions=jnp.array([]),
+            fractions=jnp.array([0.5, 0.5]),
             K=2,
-            K_obs=2,
-            K_unobs=0,
         )
 
         # Create arrays with wrong shapes
         infections_aggregate = jnp.ones(10)  # Correct: (10,)
-        infections_all = jnp.ones((10, 2))  # Correct: (10, 2)
-        infections_observed = jnp.ones((10, 3))  # WRONG: should be (10, 2)
-        infections_unobserved = jnp.ones((10, 0))  # Correct: (10, 0)
+        infections_all = jnp.ones((10, 3))  # WRONG: should be (10, 2)
 
         with pytest.raises(ValueError, match="has incorrect shape"):
             BaseLatentInfectionProcess._validate_output_shapes(
                 infections_aggregate,
                 infections_all,
-                infections_observed,
-                infections_unobserved,
                 n_total_days=10,
                 pop=pop,
             )
@@ -188,15 +162,11 @@ class TestLatentSample:
         sample = LatentSample(
             aggregate=jnp.ones(10),
             all_subpops=jnp.ones((10, 2)),
-            observed=jnp.ones((10, 1)),
-            unobserved=jnp.ones((10, 1)),
         )
 
-        agg, all_s, obs, unobs = sample
+        agg, all_s = sample
         assert agg.shape == (10,)
         assert all_s.shape == (10, 2)
-        assert obs.shape == (10, 1)
-        assert unobs.shape == (10, 1)
 
 
 if __name__ == "__main__":

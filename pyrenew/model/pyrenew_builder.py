@@ -15,10 +15,6 @@ from pyrenew.observation.base import BaseObservationProcess
 
 # Parameters that should be passed at sample time, not configure time
 _SAMPLE_TIME_PARAMS = {
-    "obs_fractions",
-    "unobs_fractions",
-    "K",
-    "K_obs",
     "subpop_fractions",
 }
 
@@ -36,9 +32,9 @@ class PyrenewBuilder:
     3. Latent infections are routed to the correct observations
     4. The API is clean and easy to use
 
-    Population structure (obs_fractions, unobs_fractions, K, K_obs, subpop_fractions)
-    is passed at sample/fit time, not at configure time. This allows a single model
-    to be fit to multiple jurisdictions with different population structures.
+    Population structure (subpop_fractions) is passed at sample/fit time, not at
+    configure time. This allows a single model to be fit to multiple jurisdictions
+    with different population structures.
     """
 
     def __init__(self):
@@ -71,9 +67,9 @@ class PyrenewBuilder:
             Parameters for latent class constructor (model structure).
             DO NOT include n_initialization_points - it will be computed
             automatically from observation processes.
-            DO NOT include population structure params (obs_fractions,
-            unobs_fractions, K, K_obs, subpop_fractions) - these are passed
-            at sample/fit time to allow fitting to multiple jurisdictions.
+            DO NOT include population structure params (subpop_fractions) -
+            these are passed at sample/fit time to allow fitting to multiple
+            jurisdictions.
 
         Returns
         -------

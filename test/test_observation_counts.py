@@ -320,6 +320,57 @@ class TestCountsBySubpop:
 
         assert process.infection_resolution() == "subpop"
 
+    def test_non_contiguous_subpop_indices(self):
+        """Test that non-contiguous subpop_indices work correctly.
+
+        This verifies that observation processes can observe any subset
+        of subpopulations, not just contiguous indices starting from 0.
+        For example, with K=5 subpopulations, observations might only
+        cover indices {0, 2, 4} while indices {1, 3} are unobserved.
+        """
+        delay_pmf = jnp.array([0.3, 0.4, 0.3])
+        process = CountsBySubpop(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
+            noise=PoissonNoise(),
+        )
+
+        # 5 subpopulations with distinct infection levels
+        # Subpop 0: 100, Subpop 1: 200, Subpop 2: 300, Subpop 3: 400, Subpop 4: 500
+        n_days = 20
+        infections = jnp.zeros((n_days, 5))
+        for k in range(5):
+            infections = infections.at[:, k].set((k + 1) * 100.0)
+
+        # Observe only subpops 0, 2, 4 (non-contiguous, skipping 1 and 3)
+        times = jnp.array([10, 10, 10])
+        subpop_indices = jnp.array([0, 2, 4])  # Non-contiguous!
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                infections=infections,
+                times=times,
+                subpop_indices=subpop_indices,
+                obs=None,
+            )
+
+        # Verify correct shape
+        assert result.observed.shape == (3,)
+
+        # Verify the predicted values correspond to the correct subpopulations
+        # predicted[t, k] should reflect infections from subpop k
+        # At time 10, predicted counts should be proportional to infection levels
+        predicted_at_obs = result.predicted[10, subpop_indices]
+
+        # Subpop 0 has 100 infections, subpop 2 has 300, subpop 4 has 500
+        # So predicted[10, 0] < predicted[10, 2] < predicted[10, 4]
+        assert predicted_at_obs[0] < predicted_at_obs[1] < predicted_at_obs[2]
+
+        # Verify the ratios match the infection ratios (100:300:500 = 1:3:5)
+        assert jnp.isclose(predicted_at_obs[1] / predicted_at_obs[0], 3.0, atol=0.01)
+        assert jnp.isclose(predicted_at_obs[2] / predicted_at_obs[0], 5.0, atol=0.01)
+
 
 class TestPoissonNoise:
     """Test PoissonNoise model."""

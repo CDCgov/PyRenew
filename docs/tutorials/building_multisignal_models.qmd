@@ -132,7 +132,7 @@ flowchart TB
 
     subgraph Infections["Infection Arrays"]
         J["infections_aggregate (T,)"]
-        S["infections_subpop (T, K_obs)"]
+        S["infections_all_subpops (T, K)"]
     end
 
     subgraph Obs["Observation Processes"]
@@ -148,7 +148,7 @@ flowchart TB
     L --> J
     L --> S
     J -->|"aggregate"| C
-    S -->|"subpop"| W
+    S -->|"subpop + subpop_indices"| W
     C -->|"ascertainment × delay"| HA
     W -->|"shedding × genome × dilution"| WW
 ```
@@ -159,10 +159,12 @@ Different observation processes observe different levels of the model hierarchy.
 
 | Resolution | Receives | Example signals |
 |----------------------|-------------------|-------------------------------|
-| `"aggregate"` | Aggregated infections (sum across all subpopulations) | Hospital admissions, case counts |
-| `"subpop"` | Infection matrix with one column per observed subpopulation | Wastewater, site-specific surveillance |
+| `"aggregate"` | Aggregated infections (sum across all subpopulations), shape `(T,)` | Hospital admissions, case counts |
+| `"subpop"` | Infection matrix for all K subpopulations, shape `(T, K)` | Wastewater, site-specific surveillance |
 
 The `PyrenewBuilder` routes latent infections to observation processes based on each process's declared resolution.
+
+For subpopulation-level observations, the observation process selects which subpopulations it observes using `subpop_indices` provided at sample/fit time. This allows flexible observation patterns—for example, wastewater samples might only cover 5 of 6 subpopulations (catchment areas), while the 6th represents areas without wastewater monitoring.
 
 With this structure in mind, we'll now define each component following the generative direction: first the latent infection process, then the observation processes.
 
@@ -593,7 +595,7 @@ The subpopulation-level wastewater data is specified as a `Wastewater` observati
 wastewater={
     "obs": jnp.array([...]),                      # observed log concentrations (n_obs,)
     "times": model.shift_times(ww_times),         # time indices on shared axis
-    "subpop_indices": jnp.array([...]),           # which catchment (selects infection trajectory)
+    "subpop_indices": jnp.array([...]),           # which subpopulation (selects infection column)
     "sensor_indices": jnp.array([...]),           # which WWTP/lab pair (selects noise parameters)
     "n_sensors": int,                             # total number of WWTP/lab pairs
 }
@@ -601,26 +603,29 @@ wastewater={
 
 The `shift_times` method adds `n_init` to convert from natural coordinates (0 = first observation day) to the shared time axis.
 
-A **subpopulation** is a portion of the jurisdiction's population defined by a catchment area. A **sensor** is a measurement source — typically a WWTP/lab pair — that produces observations. Multiple sensors can observe the same subpopulation (e.g., different labs processing samples from the same catchment), so `subpop_indices` and `sensor_indices` may differ.
+**Understanding `subpop_indices`**: The latent process generates infections for all K subpopulations as a matrix of shape `(T, K)`. Each observation selects which column (subpopulation) it came from using `subpop_indices`. This is how observation processes "know" which subpopulations they observe—the user specifies this mapping at sample/fit time.
 
--   `subpop_indices` links each observation to the appropriate infection trajectory
+A **subpopulation** is a portion of the jurisdiction's population (e.g., a catchment area). A **sensor** is a measurement source — typically a WWTP/lab pair — that produces observations. Multiple sensors can observe the same subpopulation (e.g., different labs processing samples from the same catchment), so `subpop_indices` and `sensor_indices` may differ.
+
+-   `subpop_indices` links each observation to the appropriate infection column (0-indexed into the K subpopulations)
 -   `sensor_indices` selects which sensor's noise parameters (mode and sd) to apply
 
-**Example**: A jurisdiction has 3 catchments (subpopulations 0, 1, 2). Catchment 0 has samples processed by two labs (sensors 0 and 1). Observations from catchment 0 all have `subpop_indices=0` but may have `sensor_indices=0` or `sensor_indices=1` depending on which lab processed the sample.
+**Example**: A jurisdiction has 6 subpopulations (indices 0-5), where 5 have wastewater monitoring and 1 does not. The `subpop_fractions` array has 6 elements. If subpopulation 2 lacks wastewater monitoring, wastewater observations would have `subpop_indices` values only in {0, 1, 3, 4, 5}—never 2. The monitored subpopulations need not be contiguous. The latent process still generates infections for all 6 subpopulations; the wastewater observation just doesn't see subpopulation 2.
 
 ### Population Structure
 
-Population structure is specified via two arrays:
+Population structure is specified via a single array of fractions for all K subpopulations:
 
 ```python
 model.fit(
-    obs_fractions=jnp.array([0.10, 0.14, 0.21, 0.22, 0.07]),  # 5 observed
-    unobs_fractions=jnp.array([0.26]),                        # 1 unobserved
+    subpop_fractions=jnp.array([0.10, 0.14, 0.21, 0.22, 0.07, 0.26]),  # 6 subpopulations
     ...
 )
 ```
 
-This specifies 5 observed subpopulations (e.g., wastewater catchments) and 1 unobserved (remainder of jurisdiction). The fractions must sum to 1.0.
+This specifies 6 subpopulations with their population fractions. The fractions must sum to 1.0. The latent process generates infections for all 6 subpopulations.
+
+Which subpopulations each observation process "sees" is determined by the `subpop_indices` in the observation data, not by the population structure. For example, if wastewater monitoring covers only 5 of the 6 subpopulations (say, all except subpopulation 2), the wastewater observation data would have `subpop_indices` values in {0, 1, 3, 4, 5} but never 2. The monitored subpopulations can be any subset of {0, ..., K-1}.
 
 
 ### Example `model.fit()` Call
@@ -629,15 +634,14 @@ This specifies 5 observed subpopulations (e.g., wastewater catchments) and 1 uno
 model.fit(
     n_days_post_init=n_days,
     population_size=population_size,
-    # Population structure
-    obs_fractions=obs_subpop_fractions,
-    unobs_fractions=unobs_subpop_fractions,
+    # Population structure (all K subpopulations)
+    subpop_fractions=subpop_fractions,
     # Observation data (keyed by names from add_observation)
     hospital={"obs": model.pad_observations(hosp_counts)},
     wastewater={
         "obs": ww_conc,
         "times": model.shift_times(ww_times),
-        "subpop_indices": ww_subpop_indices,
+        "subpop_indices": ww_subpop_indices,  # selects which of K subpops each obs came from
         "sensor_indices": ww_sensor_indices,
         "n_sensors": n_ww_sensors,
     },
@@ -646,31 +650,39 @@ model.fit(
 
 ## Running the Model
 
-First we declare the population structure.
+First we declare the population structure. We have 6 subpopulations, where 5 have wastewater monitoring and 1 does not. The subpopulations with wastewater monitoring need not be contiguous indices—they could be any subset of {0, 1, ..., K-1}.
 
 ```{python}
 # | label: population-structure
-# 5 observed subpopulations (wastewater catchments)
-obs_subpop_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07])
+# All 6 subpopulations with their population fractions
+subpop_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07, 0.26])
 
-# 1 unobserved subpopulation (remainder of jurisdiction)
-unobs_subpop_fractions = jnp.array([0.26])
+K = len(subpop_fractions)
 
-K_obs = len(obs_subpop_fractions)
+# Which subpopulations have wastewater monitoring?
+# These indices will be used in subpop_indices for wastewater observations.
+# They can be any subset of {0, 1, ..., K-1}, not necessarily contiguous.
+ww_monitored_subpops = jnp.array(
+    [0, 1, 2, 3, 4]
+)  # subpop 5 has no wastewater monitoring
 
-print(f"Observed subpopulations (K_obs): {K_obs}")
-print(f"Unobserved subpopulations: {len(unobs_subpop_fractions)}")
-print(f"Observed coverage: {float(jnp.sum(obs_subpop_fractions)):.0%}")
+print(f"Total subpopulations (K): {K}")
 print(
-    f"Total coverage: {float(jnp.sum(obs_subpop_fractions) + jnp.sum(unobs_subpop_fractions)):.0%}"
+    f"Subpopulations with wastewater monitoring: {list(ww_monitored_subpops)}"
 )
+print(
+    f"Wastewater coverage: {float(jnp.sum(subpop_fractions[ww_monitored_subpops])):.0%}"
+)
+print(f"Total population: {float(jnp.sum(subpop_fractions)):.0%}")
 ```
 
 We define a function to prepare observation data using the model's helper methods to align with the shared time axis.
 
 ```{python}
 # | label: prepare-observation-data
-def prepare_observation_data(model, n_days_fit, hosp_admits, ww_data, K_obs):
+def prepare_observation_data(
+    model, n_days_fit, hosp_admits, ww_data, ww_monitored_subpops
+):
     """
     Prepare observation data for fitting.
 
@@ -687,8 +699,9 @@ def prepare_observation_data(model, n_days_fit, hosp_admits, ww_data, K_obs):
         Hospital admissions time series
     ww_data : dict
         Wastewater data dictionary
-    K_obs : int
-        Number of observed subpopulations (for mapping sites to subpops)
+    ww_monitored_subpops : array
+        Indices of subpopulations that have wastewater monitoring.
+        These are the valid values for subpop_indices in wastewater data.
     """
     # Hospital: dense, NaN-padded to length n_total
     hosp_obs = model.pad_observations(hosp_admits[:n_days_fit])
@@ -700,9 +713,15 @@ def prepare_observation_data(model, n_days_fit, hosp_admits, ww_data, K_obs):
     ww_sensors = ww_data["site_ids"][ww_mask]
 
     # Map wastewater sensors to subpopulation indices
-    # For this demo, we cycle through the K_obs observed subpopulations
+    # Each sensor is assigned to one of the monitored subpopulations.
+    # In practice, this mapping comes from your data (which WWTP serves which catchment).
+    # For this demo, we cycle sensors through the monitored subpopulations.
     n_ww_sensors = ww_data["n_sites"]
-    sensor_to_subpop = {i: i % K_obs for i in range(n_ww_sensors)}
+    n_monitored = len(ww_monitored_subpops)
+    sensor_to_subpop = {
+        i: int(ww_monitored_subpops[i % n_monitored])
+        for i in range(n_ww_sensors)
+    }
     ww_subpop_indices = jnp.array(
         [sensor_to_subpop[int(s)] for s in ww_sensors]
     )
@@ -733,7 +752,7 @@ jax.clear_caches()
 
 n_days_90 = 90
 obs_data_90 = prepare_observation_data(
-    model, n_days_90, hosp_admits, ca_ww_data, K_obs
+    model, n_days_90, hosp_admits, ca_ww_data, ww_monitored_subpops
 )
 
 # Try non-centered reparameterization for hierarchical parameters
@@ -750,8 +769,7 @@ start_time = time.time()
 mcmc_90 = model.fit(
     n_days_post_init=n_days_90,
     population_size=population_size,
-    obs_fractions=obs_subpop_fractions,
-    unobs_fractions=unobs_subpop_fractions,
+    subpop_fractions=subpop_fractions,
     num_warmup=500,
     num_samples=500,
     num_chains=4,
@@ -912,7 +930,7 @@ jax.clear_caches()
 
 n_days_180 = 180
 obs_data_180 = prepare_observation_data(
-    model, n_days_180, hosp_admits, ca_ww_data, K_obs
+    model, n_days_180, hosp_admits, ca_ww_data, ww_monitored_subpops
 )
 
 print(f"Fitting model with {n_days_180} days of data...")
@@ -922,8 +940,7 @@ start_time = time.time()
 mcmc_180 = model.fit(
     n_days_post_init=n_days_180,
     population_size=population_size,
-    obs_fractions=obs_subpop_fractions,
-    unobs_fractions=unobs_subpop_fractions,
+    subpop_fractions=subpop_fractions,
     num_warmup=1000,
     num_samples=500,
     num_chains=4,
