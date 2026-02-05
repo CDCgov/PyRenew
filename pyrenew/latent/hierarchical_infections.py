@@ -213,7 +213,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         mean_deviation = jnp.mean(deviations_raw, axis=1, keepdims=True)
         deviations = deviations_raw - mean_deviation
 
-        log_rt_subpop = log_rt_baseline[:, jnp.newaxis] + deviations
+        log_rt_subpop = log_rt_baseline + deviations
         rt_subpop = jnp.exp(log_rt_subpop)
 
         gen_int = self.gen_int_rv()

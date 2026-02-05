@@ -3,9 +3,9 @@
 Temporal processes for latent infection models.
 
 Provides time-series processes for modeling Rt dynamics and subpopulation
-deviations in hierarchical infection models. All processes support both
-single trajectory and vectorized (multiple parallel trajectories) sampling
-through a unified ``TemporalProcess`` protocol.
+deviations in hierarchical infection models. All processes return 2D arrays
+of shape (n_timepoints, n_processes) through a unified ``TemporalProcess``
+protocol.
 
 Relationship to pyrenew.process
 -------------------------------
@@ -68,8 +68,6 @@ import numpyro.distributions as dist
 from jax.typing import ArrayLike
 
 from pyrenew.process import ARProcess, DifferencedProcess
-from pyrenew.process import RandomWalk as PyRenewRandomWalk
-from pyrenew.randomvariable import DistributionalVariable
 
 
 @runtime_checkable
@@ -78,15 +76,15 @@ class TemporalProcess(Protocol):
     Protocol for temporal processes generating time-varying parameters.
 
     Used for jurisdiction-level Rt dynamics, subpopulation deviations, or
-    allocation trajectories. Supports both single trajectory and vectorized
-    (multiple parallel trajectories) sampling through a unified interface.
+    allocation trajectories. All processes return 2D arrays of shape
+    (n_timepoints, n_processes) for consistent handling.
     """
 
     def sample(
         self,
         n_timepoints: int,
         initial_value: float | ArrayLike | None = None,
-        n_processes: int | None = None,
+        n_processes: int = 1,
         name_prefix: str = "temporal",
     ) -> ArrayLike:
         """
@@ -98,18 +96,17 @@ class TemporalProcess(Protocol):
             Number of time points to generate
         initial_value : float or ArrayLike, optional
             Initial value(s) for the process(es).
-            - If n_processes is None: scalar initial value (default: 0.0)
-            - If n_processes is K: scalar (broadcast) or array of shape (K,)
-        n_processes : int, optional
-            Number of parallel processes. If None, samples a single trajectory.
+            Scalar (broadcast to all processes) or array of shape (n_processes,).
+            Defaults to 0.0.
+        n_processes : int, default 1
+            Number of parallel processes.
         name_prefix : str, default "temporal"
             Prefix for numpyro sample site names to avoid collisions
 
         Returns
         -------
         ArrayLike
-            - If n_processes is None: trajectory of shape (n_timepoints,)
-            - If n_processes is K: trajectories of shape (n_timepoints, K)
+            Trajectories of shape (n_timepoints, n_processes)
         """
         ...
 
@@ -166,7 +163,7 @@ class AR1(TemporalProcess):
         self,
         n_timepoints: int,
         initial_value: float | ArrayLike | None = None,
-        n_processes: int | None = None,
+        n_processes: int = 1,
         name_prefix: str = "ar1",
     ) -> ArrayLike:
         """
@@ -178,81 +175,27 @@ class AR1(TemporalProcess):
             Number of time points to generate
         initial_value : float or ArrayLike, optional
             Initial value(s). Defaults to 0.0.
-        n_processes : int, optional
-            Number of parallel processes. If None, samples single trajectory.
+        n_processes : int, default 1
+            Number of parallel processes.
         name_prefix : str, default "ar1"
             Prefix for numpyro sample sites
 
         Returns
         -------
         ArrayLike
-            Trajectory (n_timepoints,) or trajectories (n_timepoints, K)
-        """
-        if n_processes is None:
-            return self._sample_single(n_timepoints, initial_value, name_prefix)
-        else:
-            return self._sample_vectorized(
-                n_timepoints, n_processes, initial_value, name_prefix
-            )
-
-    def _sample_single(
-        self,
-        n_timepoints: int,
-        initial_value: float | None,
-        name_prefix: str,
-    ) -> ArrayLike:
-        """
-        Sample a single AR(1) trajectory.
-
-        Returns
-        -------
-        ArrayLike
-            Trajectory of shape (n_timepoints,).
+            Trajectories of shape (n_timepoints, n_processes)
         """
         if initial_value is None:
-            initial_value = 0.0
-
-        stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
-        init_state = numpyro.sample(
-            f"{name_prefix}_init", dist.Normal(initial_value, stationary_sd)
-        )
-
-        trajectory = self.ar_process(
-            n=n_timepoints,
-            init_vals=jnp.array([init_state]),
-            autoreg=jnp.array([self.autoreg]),
-            noise_sd=self.innovation_sd,
-            noise_name=f"{name_prefix}_noise",
-        )
-
-        return trajectory
-
-    def _sample_vectorized(
-        self,
-        n_timepoints: int,
-        n_processes: int,
-        initial_values: ArrayLike | None,
-        name_prefix: str,
-    ) -> ArrayLike:
-        """
-        Sample multiple AR(1) trajectories in parallel.
-
-        Returns
-        -------
-        ArrayLike
-            Trajectories of shape (n_timepoints, n_processes).
-        """
-        if initial_values is None:
-            initial_values = jnp.zeros(n_processes)
-        elif jnp.isscalar(initial_values):
-            initial_values = jnp.full(n_processes, initial_values)
+            initial_value = jnp.zeros(n_processes)
+        elif jnp.isscalar(initial_value):
+            initial_value = jnp.full(n_processes, initial_value)
 
         stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
 
         with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
             init_states = numpyro.sample(
                 f"{name_prefix}_init",
-                dist.Normal(initial_values, stationary_sd),
+                dist.Normal(initial_value, stationary_sd),
             )
 
         trajectories = self.ar_process(
@@ -323,7 +266,7 @@ class DifferencedAR1(TemporalProcess):
         self,
         n_timepoints: int,
         initial_value: float | ArrayLike | None = None,
-        n_processes: int | None = None,
+        n_processes: int = 1,
         name_prefix: str = "diff_ar1",
     ) -> ArrayLike:
         """
@@ -335,75 +278,20 @@ class DifferencedAR1(TemporalProcess):
             Number of time points to generate
         initial_value : float or ArrayLike, optional
             Initial value(s). Defaults to 0.0.
-        n_processes : int, optional
-            Number of parallel processes. If None, samples single trajectory.
+        n_processes : int, default 1
+            Number of parallel processes.
         name_prefix : str, default "diff_ar1"
             Prefix for numpyro sample sites
 
         Returns
         -------
         ArrayLike
-            Trajectory (n_timepoints,) or trajectories (n_timepoints, K)
-        """
-        if n_processes is None:
-            return self._sample_single(n_timepoints, initial_value, name_prefix)
-        else:
-            return self._sample_vectorized(
-                n_timepoints, n_processes, initial_value, name_prefix
-            )
-
-    def _sample_single(
-        self,
-        n_timepoints: int,
-        initial_value: float | None,
-        name_prefix: str,
-    ) -> ArrayLike:
-        """
-        Sample a single differenced AR(1) trajectory.
-
-        Returns
-        -------
-        ArrayLike
-            Trajectory of shape (n_timepoints,).
+            Trajectories of shape (n_timepoints, n_processes)
         """
         if initial_value is None:
-            initial_value = 0.0
-
-        stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
-        init_rate_of_change = numpyro.sample(
-            f"{name_prefix}_init_rate", dist.Normal(0, stationary_sd)
-        )
-
-        trajectory = self.process(
-            n=n_timepoints + 1,
-            init_vals=jnp.array([initial_value]),
-            autoreg=jnp.array([self.autoreg]),
-            noise_sd=self.innovation_sd,
-            fundamental_process_init_vals=jnp.array([init_rate_of_change]),
-            noise_name=f"{name_prefix}_noise",
-        )
-
-        return trajectory[:n_timepoints]
-
-    def _sample_vectorized(
-        self,
-        n_timepoints: int,
-        n_processes: int,
-        initial_values: ArrayLike | None,
-        name_prefix: str,
-    ) -> ArrayLike:
-        """
-        Sample multiple differenced AR(1) trajectories in parallel.
-
-        Returns
-        -------
-        ArrayLike
-            Trajectories of shape (n_timepoints, n_processes).
-        """
-        if initial_values is None:
-            initial_values = jnp.zeros(n_processes)
-        elif jnp.isscalar(initial_values):
-            initial_values = jnp.full(n_processes, initial_values)
+            initial_value = jnp.zeros(n_processes)
+        elif jnp.isscalar(initial_value):
+            initial_value = jnp.full(n_processes, initial_value)
 
         stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
 
@@ -415,7 +303,7 @@ class DifferencedAR1(TemporalProcess):
 
         trajectories = self.process(
             n=n_timepoints + 1,
-            init_vals=initial_values[jnp.newaxis, :],
+            init_vals=initial_value[jnp.newaxis, :],
             autoreg=jnp.full((1, n_processes), self.autoreg),
             noise_sd=self.innovation_sd,
             fundamental_process_init_vals=init_rates[jnp.newaxis, :],
@@ -476,7 +364,7 @@ class RandomWalk(TemporalProcess):
         self,
         n_timepoints: int,
         initial_value: float | ArrayLike | None = None,
-        n_processes: int | None = None,
+        n_processes: int = 1,
         name_prefix: str = "rw",
     ) -> ArrayLike:
         """
@@ -488,73 +376,20 @@ class RandomWalk(TemporalProcess):
             Number of time points to generate
         initial_value : float or ArrayLike, optional
             Initial value(s). Defaults to 0.0.
-        n_processes : int, optional
-            Number of parallel processes. If None, samples single trajectory.
+        n_processes : int, default 1
+            Number of parallel processes.
         name_prefix : str, default "rw"
             Prefix for numpyro sample sites
 
         Returns
         -------
         ArrayLike
-            Trajectory (n_timepoints,) or trajectories (n_timepoints, K)
-        """
-        if n_processes is None:
-            return self._sample_single(n_timepoints, initial_value, name_prefix)
-        else:
-            return self._sample_vectorized(
-                n_timepoints, n_processes, initial_value, name_prefix
-            )
-
-    def _sample_single(
-        self,
-        n_timepoints: int,
-        initial_value: float | None,
-        name_prefix: str,
-    ) -> ArrayLike:
-        """
-        Sample a single random walk trajectory using PyRenew's RandomWalk.
-
-        Returns
-        -------
-        ArrayLike
-            Trajectory of shape (n_timepoints,).
+            Trajectories of shape (n_timepoints, n_processes)
         """
         if initial_value is None:
-            initial_value = 0.0
-
-        step_rv = DistributionalVariable(
-            name=f"{name_prefix}_step",
-            distribution=dist.Normal(0, self.innovation_sd),
-        )
-
-        rw = PyRenewRandomWalk(step_rv=step_rv)
-
-        trajectory = rw.sample(
-            init_vals=jnp.array([initial_value]),
-            n=n_timepoints,
-        )
-
-        return trajectory
-
-    def _sample_vectorized(
-        self,
-        n_timepoints: int,
-        n_processes: int,
-        initial_values: ArrayLike | None,
-        name_prefix: str,
-    ) -> ArrayLike:
-        """
-        Sample multiple random walk trajectories in parallel.
-
-        Returns
-        -------
-        ArrayLike
-            Trajectories of shape (n_timepoints, n_processes).
-        """
-        if initial_values is None:
-            initial_values = jnp.zeros(n_processes)
-        elif jnp.isscalar(initial_values):
-            initial_values = jnp.full(n_processes, initial_values)
+            initial_value = jnp.zeros(n_processes)
+        elif jnp.isscalar(initial_value):
+            initial_value = jnp.full(n_processes, initial_value)
 
         # Non-centered parameterization to avoid funnel problems
         with numpyro.plate(f"{name_prefix}_time", n_timepoints - 1):
@@ -573,6 +408,6 @@ class RandomWalk(TemporalProcess):
         cumulative = jnp.cumsum(increments, axis=0)
 
         return jnp.concatenate(
-            [initial_values[jnp.newaxis, :], initial_values + cumulative],
+            [initial_value[jnp.newaxis, :], initial_value + cumulative],
             axis=0,
         )

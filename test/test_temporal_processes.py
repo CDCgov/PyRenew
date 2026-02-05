@@ -100,7 +100,7 @@ class TestDifferencedAR1Sampling:
         with numpyro.handlers.seed(rng_seed=42):
             trajectory = dar1.sample(n_timepoints=n_timepoints)
 
-        assert trajectory.shape == (n_timepoints,)
+        assert trajectory.shape == (n_timepoints, 1)
 
     def test_differenced_ar1_single_with_initial_value(self):
         """Test DifferencedAR1 single sample with initial value."""
@@ -114,7 +114,7 @@ class TestDifferencedAR1Sampling:
                 initial_value=1.5,
             )
 
-        assert trajectory.shape == (n_timepoints,)
+        assert trajectory.shape == (n_timepoints, 1)
 
     def test_differenced_ar1_vectorized_sample_shape(self):
         """Test that DifferencedAR1 vectorized sample returns correct shape."""
@@ -224,8 +224,8 @@ class TestTemporalProcessInnovationSD:
             trajectory_large = rw_large.sample(n_timepoints=n_timepoints)
 
         # Smaller innovation_sd should produce smaller step sizes
-        steps_small = jnp.abs(jnp.diff(trajectory_small))
-        steps_large = jnp.abs(jnp.diff(trajectory_large))
+        steps_small = jnp.abs(jnp.diff(trajectory_small[:, 0]))
+        steps_large = jnp.abs(jnp.diff(trajectory_large[:, 0]))
 
         assert jnp.mean(steps_small) < jnp.mean(steps_large)
         assert jnp.max(steps_small) < jnp.max(steps_large)
@@ -245,8 +245,8 @@ class TestTemporalProcessInnovationSD:
 
         # After burn-in, smaller innovation_sd should have lower variance
         burn_in = 20
-        var_small = jnp.var(trajectory_small[burn_in:])
-        var_large = jnp.var(trajectory_large[burn_in:])
+        var_small = jnp.var(trajectory_small[burn_in:, 0])
+        var_large = jnp.var(trajectory_large[burn_in:, 0])
 
         assert var_small < var_large
 
@@ -266,8 +266,8 @@ class TestTemporalProcessInnovationSD:
             trajectory_large = dar_large.sample(n_timepoints=n_timepoints)
 
         # Growth rates (differences) should have lower variance
-        diffs_small = jnp.diff(trajectory_small)
-        diffs_large = jnp.diff(trajectory_large)
+        diffs_small = jnp.diff(trajectory_small[:, 0])
+        diffs_large = jnp.diff(trajectory_large[:, 0])
 
         assert jnp.std(diffs_small) < jnp.std(diffs_large)
 
