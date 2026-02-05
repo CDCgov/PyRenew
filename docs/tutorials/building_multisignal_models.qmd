@@ -121,36 +121,41 @@ This tutorial demonstrates building a multi-signal renewal model using:
 
 ## Model Structure
 
-Before diving into implementation, let's visualize how data flows through a multi-signal renewal model. The diagram below shows the generative process: latent infections flow from the renewal equation to observation processes, which transform them into predicted observations.
+In this tutorial, we build a model that jointly fits two data streams to a shared latent infection process:
+
+- **Hospital admissions** — jurisdiction-level counts that reflect *total* infections across all subpopulations, delayed and underascertained
+- **Wastewater concentrations** — site-level measurements from a subset of subpopulations (catchment areas), reflecting viral shedding and dilution
+
+The diagram below shows how data flows through the model. The latent process generates infection trajectories for all subpopulations. Each observation process receives the infections it needs — aggregated totals or per-subpopulation arrays — and transforms them into predicted observations via delays, ascertainment, shedding kinetics, and noise.
 
 ```mermaid
 flowchart TB
 
     subgraph Latent["Latent Infection Process"]
-        L[HierarchicalInfections]
+        L["Renewal equation<br/>(HierarchicalInfections)"]
     end
 
-    subgraph Infections["Infection Arrays"]
-        J["infections_aggregate (T,)"]
-        S["infections_all_subpops (T, K)"]
+    subgraph Infections["Infection Trajectories"]
+        J["Jurisdiction total<br/>(summed across subpopulations)"]
+        S["Per-subpopulation infections<br/>(all K subpopulations)"]
     end
 
     subgraph Obs["Observation Processes"]
-        C["Counts (name='hospital')"]
-        W["Wastewater (name='wastewater')"]
+        C["Hospital admissions<br/>(Counts)"]
+        W["Wastewater concentrations<br/>(Measurements)"]
     end
 
     subgraph Data["Observed Data"]
-        HA["hospital_obs"]
-        WW["wastewater_obs"]
+        HA["Reported admissions"]
+        WW["Measured viral concentrations"]
     end
 
     L --> J
     L --> S
-    J -->|"aggregate"| C
-    S -->|"subpop + subpop_indices"| W
-    C -->|"ascertainment × delay"| HA
-    W -->|"shedding × genome × dilution"| WW
+    J --> C
+    S -->|"select monitored subpopulations"| W
+    C -->|"delay + ascertainment + noise"| HA
+    W -->|"shedding + dilution + noise"| WW
 ```
 
 ### Infection Resolution
