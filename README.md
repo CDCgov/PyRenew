@@ -24,7 +24,7 @@ The fundamental building blocks are the `Model` metaclass, from which we can dra
 and the `RandomVariable` metaclass which has been abstracted to allow for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.
 The `PyrenewBuilder` class
 
-PyRenew's strength lies in multi-signal integration for information pooling across diverse data streams
+PyRenew's strength lies in multi-signal integration for information pooling across diverse observed data streams
 such as hospital admissions, wastewater concentrations, and emergency department visits
 where each signal has distinct observation delays, noise characteristics, and spatial resolutions.
 For single-signal renewal models, we recommend the excellent R package [EpiNow2](https://epiforecasts.io/EpiNow2/);
