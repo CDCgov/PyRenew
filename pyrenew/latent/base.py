@@ -70,10 +70,10 @@ class BaseLatentInfectionProcess(RandomVariable):
     ----------
     gen_int_rv : RandomVariable
         Generation interval PMF
-    n_initialization_points : int, optional
-        Number of initialization days before day 0. If not specified, automatically
-        computed as max(21, 2*len(gen_int)-1). The PyrenewBuilder will compute and pass
-        the correct value based on all observation processes.
+    n_initialization_points : int
+        Number of initialization days before day 0. Must be at least
+        ``len(gen_int_rv())`` to provide enough history for the renewal
+        equation convolution.
 
     Notes
     -----
@@ -81,16 +81,16 @@ class BaseLatentInfectionProcess(RandomVariable):
     the constructor. This allows a single model instance to be fit to multiple
     datasets with different jurisdiction structures.
 
-    When using PyrenewBuilder, n_initialization_points is computed automatically from
-    all observation processes. When manually creating latent processes, you can either
-    specify it explicitly or let it default to max(21, 2*len(gen_int)-1).
+    When using PyrenewBuilder (recommended), n_initialization_points is computed
+    automatically from all observation processes. When constructing latent processes
+    directly, you must specify n_initialization_points explicitly.
     """
 
     def __init__(
         self,
         *,
         gen_int_rv: RandomVariable,
-        n_initialization_points: int = None,
+        n_initialization_points: int,
     ) -> None:
         """
         Initialize base latent infection process.
@@ -99,24 +99,26 @@ class BaseLatentInfectionProcess(RandomVariable):
         ----------
         gen_int_rv : RandomVariable
             Generation interval PMF
-        n_initialization_points : int, optional
-            Number of initialization days before day 0. If not specified,
-            defaults to max(21, 2*len(gen_int)-1).
+        n_initialization_points : int
+            Number of initialization days before day 0. Must be at least
+            ``len(gen_int_rv())`` to provide enough history for the renewal
+            equation convolution.
+
+        Raises
+        ------
+        ValueError
+            If gen_int_rv is None or n_initialization_points is insufficient.
         """
         if gen_int_rv is None:
             raise ValueError("gen_int_rv is required")
         self.gen_int_rv = gen_int_rv
 
-        # Compute n_initialization_points if not provided
-        # Use max(21, 2*len(gen_int)-1) for conservative default
-        if n_initialization_points is None:
-            gen_int_length = len(self.gen_int_rv())
-            n_initialization_points = max(21, 2 * gen_int_length - 1)
-
-        if n_initialization_points < 0:
+        gen_int_length = len(self.gen_int_rv())
+        if n_initialization_points < gen_int_length:
             raise ValueError(
-                f"n_initialization_points must be non-negative, "
-                f"got {n_initialization_points}"
+                f"n_initialization_points must be at least the generation "
+                f"interval length ({gen_int_length}), got "
+                f"{n_initialization_points}"
             )
         self.n_initialization_points = n_initialization_points
 

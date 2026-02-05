@@ -162,6 +162,10 @@ gi_configs = {
     "Long GI (~3.5 days)": gi_long_rv,
 }
 
+# Use consistent n_initialization_points across all GI configs
+# so the temporal process trajectories are comparable (same seed → same Rt)
+n_init_gi = max(len(rv()) for rv in gi_configs.values())
+
 for name, gi_rv in gi_configs.items():
     model = HierarchicalInfections(
         gen_int_rv=gi_rv,
@@ -169,6 +173,7 @@ for name, gi_rv in gi_configs.items():
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
         baseline_temporal=baseline_temporal,
         subpop_temporal=subpop_temporal,
+        n_initialization_points=n_init_gi,
     )
     with numpyro.handlers.seed(rng_seed=42):
         inf_agg, _ = model.sample(
@@ -198,6 +203,7 @@ for init_rt_name, init_rt_val in [
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", init_rt_val),
         baseline_temporal=baseline_temporal,
         subpop_temporal=subpop_temporal,
+        n_initialization_points=n_init_gi,
     )
     with numpyro.handlers.seed(rng_seed=42):
         inf_agg, _ = model.sample(
@@ -221,19 +227,24 @@ gi_df = pd.DataFrame(gi_data)
 (
     p9.ggplot(
         gi_df,
-        p9.aes(x="day", y="infections", color="config", linetype="linetype"),
+        p9.aes(x="day", y="infections", color="config", linetype="config"),
     )
     + p9.geom_line(size=1)
     + p9.scale_linetype_manual(
-        values={"solid": "solid", "dashed": "dashed"},
-        labels={"solid": "initial Rt = 1", "dashed": "initial Rt ≠ 1"},
+        values={
+            "Short GI (~1 day)": "solid",
+            "Standard GI (~2 days)": "solid",
+            "Long GI (~3.5 days)": "solid",
+            "Standard GI, Rt≈1.22 (growing)": "dashed",
+            "Standard GI, Rt≈0.82 (declining)": "dashed",
+        }
     )
     + p9.labs(
         x="Days",
         y="Infections (proportion)",
         title="Effect of Generation Interval and Initial Rt",
         color="Configuration",
-        linetype="Initial Rt",
+        linetype="Configuration",
     )
     + p9.theme_minimal()
     + p9.theme(figure_size=(10, 5), legend_position="right")
@@ -249,19 +260,24 @@ gi_df_zoom = gi_df[(gi_df["day"] >= 14) & (gi_df["day"] <= 21)]
 (
     p9.ggplot(
         gi_df_zoom,
-        p9.aes(x="day", y="infections", color="config", linetype="linetype"),
+        p9.aes(x="day", y="infections", color="config", linetype="config"),
     )
     + p9.geom_line(size=1)
     + p9.scale_linetype_manual(
-        values={"solid": "solid", "dashed": "dashed"},
-        labels={"solid": "initial Rt = 1", "dashed": "initial Rt ≠ 1"},
+        values={
+            "Short GI (~1 day)": "solid",
+            "Standard GI (~2 days)": "solid",
+            "Long GI (~3.5 days)": "solid",
+            "Standard GI, Rt≈1.22 (growing)": "dashed",
+            "Standard GI, Rt≈0.82 (declining)": "dashed",
+        }
     )
     + p9.labs(
         x="Days",
         y="Infections (proportion)",
         title="Zoomed: Days 14-21",
         color="Configuration",
-        linetype="Initial Rt",
+        linetype="Configuration",
     )
     + p9.theme_minimal()
     + p9.theme(figure_size=(10, 5), legend_position="right")
@@ -310,6 +326,7 @@ for name, i0_val in i0_configs.items():
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
         baseline_temporal=baseline_temporal,
         subpop_temporal=subpop_temporal,
+        n_initialization_points=len(gen_int_pmf),
     )
     with numpyro.handlers.seed(rng_seed=42):
         inf_agg, _ = model.sample(
@@ -392,6 +409,7 @@ latent_infections = HierarchicalInfections(
     initial_log_rt_rv=initial_log_rt_rv,
     baseline_temporal=baseline_temporal,
     subpop_temporal=subpop_temporal,
+    n_initialization_points=len(gen_int_pmf),
 )
 
 print(
@@ -486,6 +504,7 @@ n_extreme = np.sum(np.any(rt_samples > rt_cap, axis=1))
     p9.ggplot(rt_df, p9.aes(x="day", y="rt", group="sample"))
     + p9.geom_line(alpha=0.1, size=0.4, color="steelblue")
     + p9.geom_hline(yintercept=1.0, color="red", linetype="dashed", alpha=0.7)
+    + p9.scale_x_continuous(expand=(0, 0))
     + p9.coord_cartesian(ylim=(0, rt_cap))
     + p9.labs(
         x="Days",
@@ -539,6 +558,7 @@ for name, temporal in temporal_configs.items():
         initial_log_rt_rv=initial_log_rt_rv,
         baseline_temporal=temporal,
         subpop_temporal=AR1(autoreg=0.8, innovation_sd=0.05),
+        n_initialization_points=len(gen_int_pmf),
     )
 
     def make_sampler(m):
@@ -585,6 +605,7 @@ comparison_df["process"] = pd.Categorical(
     + p9.geom_line(alpha=0.1, size=0.4, color="steelblue")
     + p9.geom_hline(yintercept=1.0, color="red", linetype="dashed", alpha=0.7)
     + p9.facet_wrap("~ process", ncol=3)
+    + p9.scale_x_continuous(expand=(0, 0))
     + p9.coord_cartesian(ylim=(0, 3.0))
     + p9.labs(
         x="Days",
@@ -635,6 +656,7 @@ for name, subpop_temporal in subpop_configs.items():
         initial_log_rt_rv=initial_log_rt_rv,
         baseline_temporal=DifferencedAR1(autoreg=0.9, innovation_sd=0.05),
         subpop_temporal=subpop_temporal,
+        n_initialization_points=len(gen_int_pmf),
     )
 
     def make_sampler(m):
@@ -678,6 +700,7 @@ dev_df = pd.DataFrame(dev_data)
     + p9.geom_line(alpha=0.15, size=0.4, color="purple")
     + p9.geom_hline(yintercept=0, color="black", linetype="dotted")
     + p9.facet_wrap("~ process", ncol=2)
+    + p9.scale_x_continuous(expand=(0, 0))
     + p9.labs(
         x="Days",
         y="Deviation δ₁(t)",
@@ -721,6 +744,7 @@ for name, cfg in configs.items():
         initial_log_rt_rv=initial_log_rt_rv,
         baseline_temporal=cfg["baseline"],
         subpop_temporal=cfg["subpop"],
+        n_initialization_points=len(gen_int_pmf),
     )
 
     def make_sampler(m):
@@ -762,6 +786,7 @@ tuning_df = pd.DataFrame(tuning_data)
     + p9.geom_line(alpha=0.1, size=0.4, color="steelblue")
     + p9.geom_hline(yintercept=1.0, color="red", linetype="dashed", alpha=0.7)
     + p9.facet_wrap("~ config", ncol=2)
+    + p9.scale_x_continuous(expand=(0, 0))
     + p9.coord_cartesian(ylim=(0, 3.0))
     + p9.labs(
         x="Days",
@@ -861,6 +886,7 @@ latent = HierarchicalInfections(
     initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
     baseline_temporal=DifferencedAR1(autoreg=0.9, innovation_sd=0.05),
     subpop_temporal=AR1(autoreg=0.8, innovation_sd=0.05),
+    n_initialization_points=len(gen_int_pmf),
 )
 
 # Sample (population structure provided at sample time)

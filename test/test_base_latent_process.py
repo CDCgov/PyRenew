@@ -70,12 +70,12 @@ class TestBaseLatentInfectionProcessInit:
                 def sample(self, n_days_post_init, **kwargs):
                     pass
 
-            ConcreteLatent(gen_int_rv=None)
+            ConcreteLatent(gen_int_rv=None, n_initialization_points=3)
 
-    def test_rejects_negative_n_initialization_points(self):
-        """Test that negative n_initialization_points is rejected."""
+    def test_rejects_insufficient_n_initialization_points(self):
+        """Test that n_initialization_points < gen_int length is rejected."""
         with pytest.raises(
-            ValueError, match="n_initialization_points must be non-negative"
+            ValueError, match="n_initialization_points must be at least"
         ):
 
             class ConcreteLatent(BaseLatentInfectionProcess):
@@ -87,7 +87,7 @@ class TestBaseLatentInfectionProcessInit:
 
             ConcreteLatent(
                 gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
-                n_initialization_points=-1,
+                n_initialization_points=2,  # gen_int has length 3
             )
 
 
@@ -103,6 +103,7 @@ class TestGetRequiredLookback:
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
             baseline_temporal=RandomWalk(),
             subpop_temporal=RandomWalk(),
+            n_initialization_points=3,
         )
 
         assert process.get_required_lookback() == 3

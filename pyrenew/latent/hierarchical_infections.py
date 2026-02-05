@@ -57,9 +57,10 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     initial_log_rt_rv : RandomVariable
         Initial value for log(Rt) at time 0.  Can be estimated from data
         or given a prior distribution.
-    n_initialization_points : int, optional
-        Number of initialization days before day 0. If not specified, defaults to
-        max(21, 2*len(gen_int)-1). When using PyrenewBuilder, this is computed
+    n_initialization_points : int
+        Number of initialization days before day 0. Must be at least
+        ``len(gen_int_rv())`` to provide enough history for the renewal
+        equation convolution. When using PyrenewBuilder, this is computed
         automatically from all observation processes.
 
     Notes
@@ -68,7 +69,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     mean of subpopulation Rt values, providing identifiability.
 
     When using PyrenewBuilder (recommended), n_initialization_points is computed
-    automatically from all observation processes and should not be specified manually.
+    automatically from all observation processes.
     """
 
     def __init__(
@@ -79,7 +80,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         baseline_temporal: TemporalProcess,
         subpop_temporal: TemporalProcess,
         initial_log_rt_rv: RandomVariable,
-        n_initialization_points: int = None,
+        n_initialization_points: int,
     ) -> None:
         """
         Initialize hierarchical infections process.
@@ -96,7 +97,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             Temporal process for subpopulation deviations
         initial_log_rt_rv : RandomVariable
             Initial value for log(Rt) at time 0.
-        n_initialization_points : int, optional
+        n_initialization_points : int
             Number of initialization days before day 0.
 
         Raises

@@ -39,6 +39,7 @@ def process(gen_int_rv):
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
         baseline_temporal=RandomWalk(),
         subpop_temporal=RandomWalk(),
+        n_initialization_points=3,
     )
 
 
@@ -119,6 +120,7 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_temporal=RandomWalk(),
                 subpop_temporal=RandomWalk(),
+                n_initialization_points=3,
             )
 
     def test_rejects_missing_initial_log_rt_rv(self, gen_int_rv):
@@ -130,6 +132,7 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=None,
                 baseline_temporal=RandomWalk(),
                 subpop_temporal=RandomWalk(),
+                n_initialization_points=3,
             )
 
     def test_rejects_missing_baseline_temporal(self, gen_int_rv):
@@ -141,6 +144,7 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_temporal=None,
                 subpop_temporal=RandomWalk(),
+                n_initialization_points=3,
             )
 
     def test_rejects_missing_subpop_temporal(self, gen_int_rv):
@@ -152,6 +156,7 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_temporal=RandomWalk(),
                 subpop_temporal=None,
+                n_initialization_points=3,
             )
 
     def test_rejects_invalid_I0(self, gen_int_rv):
@@ -163,6 +168,21 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_temporal=RandomWalk(),
                 subpop_temporal=RandomWalk(),
+                n_initialization_points=3,
+            )
+
+    def test_rejects_insufficient_n_initialization_points(self, gen_int_rv):
+        """Test that n_initialization_points < gen_int length is rejected."""
+        with pytest.raises(
+            ValueError, match="n_initialization_points must be at least"
+        ):
+            HierarchicalInfections(
+                gen_int_rv=gen_int_rv,
+                I0_rv=DeterministicVariable("I0", 0.001),
+                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                baseline_temporal=RandomWalk(),
+                subpop_temporal=RandomWalk(),
+                n_initialization_points=2,  # gen_int has length 3
             )
 
     def test_rejects_fractions_not_summing_to_one(self, process):
@@ -190,6 +210,7 @@ class TestHierarchicalInfectionsPerSubpopI0:
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
             baseline_temporal=RandomWalk(),
             subpop_temporal=RandomWalk(),
+            n_initialization_points=3,
         )
 
         with numpyro.handlers.seed(rng_seed=42):
