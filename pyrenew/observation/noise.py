@@ -126,7 +126,7 @@ class CountNoise(ABC):
         Notes
         -----
         Implementations use ``numpyro.handlers.mask`` rather than the
-        ``mask`` parameter of ``numpyro.sample``. This avoids creating
+        ``obs_mask`` parameter of ``numpyro.sample``. This avoids creating
         latent variables for masked entries, which would fail with NUTS
         for discrete distributions.
         """
