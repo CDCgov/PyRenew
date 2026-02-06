@@ -53,7 +53,7 @@ You have a jurisdiction (e.g., a state or metropolitan area) with multiple subpo
 - Allow local transmission to deviate from the jurisdiction average
 - Produce estimates for both observed and unobserved areas
 
-`HierarchicalInfections` addresses this by decomposing the effective reproduction number $R(t)$ into:
+`HierarchicalInfections` addresses this by decomposing the effective reproduction number $\mathcal{R}(t)$ into:
 
 $$\log R_k(t) = \log R_{\text{baseline}}(t) + \delta_k(t)$$
 
