@@ -11,7 +11,6 @@ from pyrenew.latent.hierarchical_priors import (
     HierarchicalNormalPrior,
     StudentTGroupModePrior,
 )
-
 from pyrenew.latent.infection_functions import (
     compute_infections_from_rt,
     compute_infections_from_rt_with_feedback,
