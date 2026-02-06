@@ -275,16 +275,7 @@ class NegativeBinomialNoise(CountNoise):
             Negative Binomial-distributed counts.
         """
         concentration = self.concentration_rv()
-        if mask is None:
-            return numpyro.sample(
-                name,
-                dist.NegativeBinomial2(
-                    mean=predicted + _EPSILON,
-                    concentration=concentration,
-                ),
-                obs=obs,
-            )
-        with numpyro.handlers.mask(mask=mask):
+        with numpyro.handlers.mask(mask=True if mask is None else mask):
             return numpyro.sample(
                 name,
                 dist.NegativeBinomial2(
