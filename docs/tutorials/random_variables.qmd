@@ -1,5 +1,5 @@
 ---
-title: "PyRenew's RandomVariable metaclass"
+title: "PyRenew's RandomVariable abstract base class"
 format:
   gfm:
     fig-width: 16
@@ -26,17 +26,17 @@ jupyter:
 
 ## Design principle: all quantities are RandomVariables
 
-In a Bayesian model, every quantity---data, parameters, hyperparameters,
-derived computations---can in principle be treated as a random variable.
-A known constant is simply a degenerate random variable (a point mass).
-A fixed delay distribution is a degenerate random PMF.
-An estimated rate is a draw from a prior.
+In a Bayesian model, all quantities — data, parameters, hyperparameters, derived computations —
+are random variables living in a single joint probability model (Gelman et al., BDA3 §1.3).
+The only distinction is whether a given quantity is known (observed, conditioned on) or unknown (to be inferred).
+A fixed constant is just a degenerate random variable; an estimated rate is a draw from a prior.
+Both participate in the same joint distribution.
 
-PyRenew embodies this principle through its `RandomVariable` metaclass.
+PyRenew embodies this through its `RandomVariable` abstract base class.
 All model components implement the same `sample()` interface,
-regardless of whether they return a fixed value or draw from a distribution.
-This means you can swap a fixed quantity for an estimated one---or vice versa---without
-changing any model code.
+so you can swap a fixed quantity for an estimated one — or vice versa —
+without changing any surrounding model code.
+
 
 ```{python}
 # | label: setup
