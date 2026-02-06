@@ -332,7 +332,7 @@ class AscertainmentWithDayOfWeek(RandomVariable):
 This class bundles three things that belong together:
 
 1. **Two sample statements**: one for the baseline rate (delegated to `baseline_rate_rv`) and one for the Dirichlet day-of-week effects
-2. **Derived computation**: tiling, offsetting, and combining into a daily vector
+2. **Derived computation**: scaling, tiling, offsetting, and combining into a daily vector
 3. **Validation**: checking that concentration has shape `(7,)` and the offset is valid
 
 ### Sampling from the custom RV
