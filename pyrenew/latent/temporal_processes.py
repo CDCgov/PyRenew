@@ -12,27 +12,13 @@ protocol.
 This module provides **high-level, domain-specific wrappers** around the
 low-level building blocks in [pyrenew.process][]. The key differences:
 
-.. list-table::
-   :header-rows: 1
-
-   * - Aspect
-     - ``pyrenew.process``
-     - ``pyrenew.latent.temporal_processes``
-   * - Abstraction level
-     - Low-level composable primitives
-     - High-level domain-specific API
-   * - Interface
-     - Varied signatures per class
-     - Unified ``TemporalProcess`` protocol
-   * - Target use
-     - General time-series modeling
-     - Rt dynamics, hierarchical infections
-   * - Vectorization
-     - Caller manages array shapes
-     - Automatic via ``n_processes`` parameter
-   * - Validation
-     - Minimal constraints
-     - Validates positive innovation_sd
+| Aspect | ``pyrenew.process`` | ``pyrenew.latent.temporal_processes`` |
+| --- | --- | --- |
+| Abstraction level | Low-level composable primitives | High-level domain-specific API |
+| Interface | Varied signatures per class | Unified ``TemporalProcess`` protocol |
+| Target use | General time-series modeling | Rt dynamics, hierarchical infections |
+| Vectorization | Caller manages array shapes | Automatic via ``n_processes`` parameter |
+| Validation | Minimal constraints | Validates positive innovation_sd |
 
 **When to use which:**
 
