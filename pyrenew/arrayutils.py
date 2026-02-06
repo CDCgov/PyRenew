@@ -8,64 +8,6 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 
-def pad_edges_to_match(
-    x: ArrayLike,
-    y: ArrayLike,
-    axis: int = 0,
-    pad_direction: str = "end",
-    fix_y: bool = False,
-) -> tuple[ArrayLike, ArrayLike]:
-    """
-    Pad the shorter array at the start or end using the
-    edge values to match the length of the longer array.
-
-    Parameters
-    ----------
-    x
-        First array.
-    y
-        Second array.
-    axis
-        Axis along which to add padding, by default 0
-    pad_direction
-        Direction to pad the shorter array, either "start" or "end", by default "end".
-    fix_y
-        If True, raise an error when `y` is shorter than `x`, by default False.
-
-    Returns
-    -------
-    tuple[ArrayLike, ArrayLike]
-        Tuple of the two arrays with the same length.
-    """
-    x = jnp.atleast_1d(x)
-    y = jnp.atleast_1d(y)
-    x_len = x.shape[axis]
-    y_len = y.shape[axis]
-    pad_size = abs(x_len - y_len)
-    pad_width = [(0, 0)] * x.ndim
-
-    if pad_direction not in ["start", "end"]:
-        raise ValueError(
-            f"pad_direction must be either 'start' or 'end'. Got {pad_direction}."
-        )
-
-    pad_width[axis] = {"start": (pad_size, 0), "end": (0, pad_size)}.get(
-        pad_direction, None
-    )
-
-    if x_len > y_len:
-        if fix_y:
-            raise ValueError(
-                f"Cannot fix y when x is longer than y. x_len: {x_len}, y_len: {y_len}."
-            )
-        y = jnp.pad(y, pad_width, mode="edge")
-
-    elif y_len > x_len:
-        x = jnp.pad(x, pad_width, mode="edge")
-
-    return x, y
-
-
 class PeriodicProcessSample(NamedTuple):
     """
     A container for holding the output from `process.PeriodicProcess()`.
