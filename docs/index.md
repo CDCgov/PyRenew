@@ -47,9 +47,9 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 ## Tutorials
 
 - [The RandomVariable abstract base class](tutorials/random_variables.md) -- PyRenew's core abstraction and its concrete implementations.
+- [Building multi-signal models](tutorials/building_multisignal_models.md) -- composing a renewal model from PyRenew components using `PyrenewBuilder`.
 - [Observation processes: count data](tutorials/observation_processes_counts.md) -- connecting latent infections to observed counts.
 - [Observation processes: measurements](tutorials/observation_processes_measurements.md) -- connecting latent infections to continuous measurements.
-- [Building multi-signal models](tutorials/building_multisignal_models.md) -- composing a renewal model from PyRenew components using `PyrenewBuilder`.
 - [Latent hierarchical infections](tutorials/latent_hierarchical_infections.md) -- modeling infections with subpopulation structure.
 
 ## Resources
