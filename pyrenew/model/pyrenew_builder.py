@@ -197,7 +197,7 @@ class PyrenewBuilder:
         # Formula: max(all lookbacks)
         # For generation interval (1-indexed): L-element PMF has max lag L days → need L init points
         # For delay distributions (0-indexed): L-element PMF has max delay L-1 days
-        # We need at least max(all PMF lengths) to satisfy the renewal equation extraction
+        # We need at least max(all lookbacks) to satisfy the renewal equation extraction
         n_init = max(lookbacks)
 
         return n_init
@@ -233,8 +233,7 @@ class PyrenewBuilder:
         n_init = self.compute_n_initialization_points()
 
         # Construct latent process with computed n_initialization_points
-        latent_params = self.latent_params.copy()
-        latent_params["n_initialization_points"] = n_init
+        latent_params = {**self.latent_params, "n_initialization_points": n_init}
 
         try:
             latent_process = self.latent_class(**latent_params)
