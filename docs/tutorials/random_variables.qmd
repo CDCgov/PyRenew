@@ -39,8 +39,8 @@ This means you can swap a fixed quantity for an estimated one---or vice versa---
 changing any model code.
 
 ```{python}
-#| label: setup
-#| output: false
+# | label: setup
+# | output: false
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -75,7 +75,7 @@ A degenerate random variable that returns a fixed value.
 Its `sample()` method simply returns the stored value, unchanged.
 
 ```{python}
-#| label: deterministic-example
+# | label: deterministic-example
 ihr_fixed = DeterministicVariable("ihr", 0.01)
 
 with numpyro.handlers.seed(rng_seed=0):
@@ -87,7 +87,7 @@ with numpyro.handlers.seed(rng_seed=0):
 validating at construction time that the values sum to 1:
 
 ```{python}
-#| label: deterministic-pmf-example
+# | label: deterministic-pmf-example
 delay_pmf = DeterministicPMF(
     "delay",
     jnp.array([0.0, 0.1, 0.3, 0.3, 0.2, 0.1]),
@@ -107,7 +107,7 @@ depending on whether the distribution is known at construction time or built at 
 **StaticDistributionalVariable**: the distribution is fully specified at construction time.
 
 ```{python}
-#| label: static-distributional-example
+# | label: static-distributional-example
 # IHR with a Beta(2, 198) prior: mean ~1%, moderate uncertainty
 ihr_estimated = DistributionalVariable("ihr", dist.Beta(2, 198))
 print(f"Type: {type(ihr_estimated).__name__}")
@@ -121,7 +121,7 @@ from a callable. This is useful when distribution parameters depend on
 other sampled quantities.
 
 ```{python}
-#| label: dynamic-distributional-example
+# | label: dynamic-distributional-example
 # A Normal whose location is determined at sample time
 dynamic_rv = DistributionalVariable(
     "dynamic_normal",
@@ -140,7 +140,7 @@ Wraps another `RandomVariable` and applies a deterministic transformation to its
 This is useful for reparameterizations and derived quantities.
 
 ```{python}
-#| label: transformed-example
+# | label: transformed-example
 # Day-of-week effect: Dirichlet draw scaled by 7
 # so effects are multiplicative and preserve weekly totals
 dow_effect = TransformedVariable(
@@ -166,11 +166,9 @@ accepts any `RandomVariable` as its `ascertainment_rate_rv`.
 The model code is identical whether the rate is fixed or estimated:
 
 ```{python}
-#| label: interchangeability
+# | label: interchangeability
 hosp_delay_pmf = jnp.array(
-    datasets.load_infection_admission_interval()[
-        "probability_mass"
-    ].to_numpy()
+    datasets.load_infection_admission_interval()["probability_mass"].to_numpy()
 )
 
 # Fixed ascertainment rate
@@ -237,7 +235,7 @@ ascertainment rate and day-of-week effect into a single component,
 returning a daily rate vector.
 
 ```{python}
-#| label: custom-rv-definition
+# | label: custom-rv-definition
 from jax.typing import ArrayLike
 
 
@@ -286,9 +284,7 @@ class AscertainmentWithDayOfWeek(RandomVariable):
                 f"got {dow_concentration.shape}"
             )
         if jnp.any(dow_concentration <= 0):
-            raise ValueError(
-                "dow_concentration values must be positive"
-            )
+            raise ValueError("dow_concentration values must be positive")
         if not (0 <= first_day_offset <= 6):
             raise ValueError(
                 f"first_day_offset must be 0-6, got {first_day_offset}"
@@ -342,7 +338,7 @@ This class bundles three things that belong together:
 ### Sampling from the custom RV
 
 ```{python}
-#| label: sample-custom-rv
+# | label: sample-custom-rv
 ascertainment_rv = AscertainmentWithDayOfWeek(
     name="hosp",
     baseline_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
@@ -357,7 +353,7 @@ with numpyro.handlers.seed(rng_seed=42):
 ```
 
 ```{python}
-#| label: plot-custom-rv
+# | label: plot-custom-rv
 day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 rates_df = pd.DataFrame(
@@ -395,7 +391,7 @@ We generate infections with a simple epidemic curve, then produce
 hospital admissions with and without day-of-week effects.
 
 ```{python}
-#| label: simulate-infections
+# | label: simulate-infections
 # Epidemic curve: exponential growth then decay
 n_days = 60
 infections = 500.0 * jnp.exp(-((jnp.arange(n_days) - 25.0) ** 2) / 200.0)
@@ -404,7 +400,7 @@ infections = 500.0 * jnp.exp(-((jnp.arange(n_days) - 25.0) ** 2) / 200.0)
 First, we create an observation process with a *fixed* ascertainment rate (no day-of-week):
 
 ```{python}
-#| label: obs-no-dow
+# | label: obs-no-dow
 delay_rv = DeterministicPMF("delay", hosp_delay_pmf)
 concentration_rv = DeterministicVariable("concentration", 50.0)
 
@@ -422,7 +418,7 @@ observation process. This demonstrates how custom RandomVariables
 compose with existing PyRenew components.
 
 ```{python}
-#| label: simulate-with-dow
+# | label: simulate-with-dow
 n_samples = 20
 
 results = []
@@ -464,7 +460,7 @@ for seed in range(n_samples):
 ```
 
 ```{python}
-#| label: plot-comparison
+# | label: plot-comparison
 results_df = pd.DataFrame(results)
 
 (
