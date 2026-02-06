@@ -233,8 +233,7 @@ class PyrenewBuilder:
         n_init = self.compute_n_initialization_points()
 
         # Construct latent process with computed n_initialization_points
-        latent_params = self.latent_params.copy()
-        latent_params["n_initialization_points"] = n_init
+        latent_params = {**self.latent_params, "n_initialization_points": n_init}
 
         try:
             latent_process = self.latent_class(**latent_params)
