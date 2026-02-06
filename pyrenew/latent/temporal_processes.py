@@ -7,8 +7,8 @@ deviations in hierarchical infection models. All processes return 2D arrays
 of shape (n_timepoints, n_processes) through a unified ``TemporalProcess``
 protocol.
 
-Relationship to pyrenew.process
--------------------------------
+**Relationship to pyrenew.process:**
+
 This module provides **high-level, domain-specific wrappers** around the
 low-level building blocks in :mod:`pyrenew.process`. The key differences:
 
@@ -45,8 +45,8 @@ low-level building blocks in :mod:`pyrenew.process`. The key differences:
   provide a consistent interface, automatic vectorization, and enforce
   epidemiologically-sensible constraints.
 
-Temporal Processes
-------------------
+**Temporal processes provided:**
+
 - ``AR1``: Autoregressive process with mean reversion. Keeps Rt bounded
   near a baseline. Wraps :class:`pyrenew.process.ARProcess`.
 - ``DifferencedAR1``: AR(1) on first differences. Allows persistent trends

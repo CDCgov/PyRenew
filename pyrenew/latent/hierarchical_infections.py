@@ -262,14 +262,10 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         with numpyro.handlers.scope(prefix=self.name):
             numpyro.deterministic("I0_init_all_subpops", I0_all)
             numpyro.deterministic("log_rt_baseline", log_rt_baseline)
-            numpyro.deterministic(
-                "rt_baseline", jnp.exp(log_rt_baseline)
-            )
+            numpyro.deterministic("rt_baseline", jnp.exp(log_rt_baseline))
             numpyro.deterministic("rt_subpop", rt_subpop)
             numpyro.deterministic("subpop_deviations", deviations)
-            numpyro.deterministic(
-                "infections_aggregate", infections_aggregate
-            )
+            numpyro.deterministic("infections_aggregate", infections_aggregate)
 
         return LatentSample(
             aggregate=infections_aggregate,

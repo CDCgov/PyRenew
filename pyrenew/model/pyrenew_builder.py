@@ -216,8 +216,6 @@ class PyrenewBuilder:
         ------
         ValueError
             If latent process not configured
-        TypeError
-            If latent process constructor fails
         """
         if self.latent_class is None:
             raise ValueError("Must call configure_latent() before build()")
@@ -228,14 +226,7 @@ class PyrenewBuilder:
         # Construct latent process with computed n_initialization_points
         latent_params = {**self.latent_params, "n_initialization_points": n_init}
 
-        try:
-            latent_process = self.latent_class(**latent_params)
-        except TypeError as e:
-            raise TypeError(
-                f"Error constructing {self.latent_class.__name__} with "
-                f"computed n_initialization_points={n_init}. "
-                f"Original error: {e}"
-            ) from e
+        latent_process = self.latent_class(**latent_params)
 
         # Build model
         model = MultiSignalModel(

@@ -49,7 +49,14 @@ class PopulationStructure:
 
     @property
     def n_subpops(self) -> int:
-        """Total number of subpopulations."""
+        """
+        Total number of subpopulations.
+
+        Returns
+        -------
+        int
+            The number of subpopulations.
+        """
         return len(self.fractions)
 
 

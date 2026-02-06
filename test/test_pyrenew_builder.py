@@ -348,7 +348,7 @@ class TestPyrenewBuilderErrorHandling:
         )
         builder.add_observation(obs)
 
-        with pytest.raises(TypeError, match="Error constructing"):
+        with pytest.raises(TypeError, match="unexpected keyword argument"):
             builder.build()
 
 
@@ -387,7 +387,14 @@ class TestMultiSignalModelObservationValidation:
                 return 1
 
             def infection_resolution(self):
-                """Return an invalid resolution to simulate bad implementation."""
+                """
+                Return an invalid resolution to simulate bad implementation.
+
+                Returns
+                -------
+                str
+                    An invalid resolution string.
+                """
                 return "invalid_resolution"
 
             def _predicted_obs(self, infections):
