@@ -242,12 +242,15 @@ class InfFeedback(RandomVariable):
 
         inf_feedback_strength = jnp.atleast_1d(inf_feedback_strength)
 
-        # Pad inf_feedback_strength to match Rt length
+        # Pad arrays to match lengths
         if inf_feedback_strength.size < Rt.size:
             pad_size = Rt.size - inf_feedback_strength.size
             inf_feedback_strength = jnp.pad(
                 inf_feedback_strength, (0, pad_size), mode="edge"
             )
+        elif inf_feedback_strength.size > Rt.size:
+            pad_size = inf_feedback_strength.size - Rt.size
+            Rt = jnp.pad(Rt, (0, pad_size), mode="edge")
 
         # Sampling inf feedback and adjusting the shape
         inf_feedback_pmf = self.infection_feedback_pmf(**kwargs)
