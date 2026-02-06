@@ -180,7 +180,7 @@ flowchart LR
 
     direction TB
 
-    subgraph rt["R(t)"]
+    subgraph rt["\mathcal{R}(t)"]
       rt_elements["-Gaussian\n-AR\n-Link\n-User-def"]
     end
     style rt_elements text-align:left
@@ -219,8 +219,8 @@ flowchart LR
 
     direction LR
 
-    Rt(("R(t)")) --> Rtdots(("..."))
-    Rtdots --> Rtj(("R(t, j)"))
+    Rt(("\mathcal{R}(t)")) --> Rtdots(("..."))
+    Rtdots --> Rtj(("\mathcal{R}(t, j)"))
     style Rtdots fill:transparent,stroke:transparent
   end
 

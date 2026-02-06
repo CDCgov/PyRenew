@@ -85,11 +85,11 @@ from pyrenew.observation import (
 
 Renewal models in PyRenew combine two types of components:
 
-1.  **Latent infection process**: Generates unobserved infections via the renewal equation, driven by a time-varying reproduction number $R(t)$
+1.  **Latent infection process**: Generates unobserved infections via the renewal equation, driven by a time-varying reproduction number $\mathcal{R}(t)$
 
 2.  **Observation processes**: Transform latent infections into observable signals (hospital admissions, wastewater concentrations, etc.) by applying delays, ascertainment, and noise
 
-A **multi-signal model** combines multiple observation processes—each representing a different data stream, e.g., hospital admissions, wastewater concentrations, which stem from the same underlying latent infection process. By jointly modeling these signals, we can improve estimation and prediction of the time-varying reproduction number $R(t)$. Such a model must:
+A **multi-signal model** combines multiple observation processes—each representing a different data stream, e.g., hospital admissions, wastewater concentrations, which stem from the same underlying latent infection process. By jointly modeling these signals, we can improve estimation and prediction of the time-varying reproduction number $\mathcal{R}(t)$. Such a model must:
 
 -   Generate a single coherent infection trajectory (or set of trajectories for subpopulations)
 -   Route those infections to each observation process appropriately
@@ -106,7 +106,7 @@ The builder computes initialization requirements, wires components together, and
 
 Before diving into multi-signal models, you may want to review these foundational tutorials:
 
--   **[Hierarchical Latent Infections](latent_hierarchical_infections.md)**: Understanding temporal process choices for $R(t)$
+-   **[Hierarchical Latent Infections](latent_hierarchical_infections.md)**: Understanding temporal process choices for $\mathcal{R}(t)$
 -   **[Observation Processes: Counts](observation_processes_counts.md)**: Modeling count data (admissions, deaths)
 -   **[Observation Processes: Measurements](observation_processes_measurements.md)**: Modeling continuous data (wastewater)
 
@@ -116,7 +116,7 @@ This tutorial shows how to combine these components into a complete multi-signal
 
 This tutorial demonstrates building a multi-signal renewal model using:
 
--   `HierarchicalInfections` — subpopulations share a jurisdiction-level baseline $R(t)$ with subpopulation-specific deviations
+-   `HierarchicalInfections` — subpopulations share a jurisdiction-level baseline $\mathcal{R}(t)$ with subpopulation-specific deviations
 -   `Counts` — hospital admissions (jurisdiction-level)
 -   A custom `Wastewater` class — viral concentrations (subpopulation-level)
 
@@ -180,7 +180,7 @@ Latent infection processes implement the renewal equation to generate infection 
 
 -   **Generation interval**: PMF for secondary infection timing
 -   **Initial infections (I0)**: Starting condition for the renewal process
--   **Temporal dynamics**: How $R(t)$ evolves over time
+-   **Temporal dynamics**: How $\mathcal{R}(t)$ evolves over time
 
 ### Generation Interval
 
@@ -217,11 +217,11 @@ initial_log_rt_rv = DistributionalVariable(
 )
 ```
 
-### Temporal Processes for $R(t)$
+### Temporal Processes for $\mathcal{R}(t)$
 
 We configure two temporal processes:
 
--   **Jurisdiction-level** (`baseline_rt_process`): AR(1) process for the baseline $R(t)$
+-   **Jurisdiction-level** (`baseline_rt_process`): AR(1) process for the baseline $\mathcal{R}(t)$
 -   **Subpopulation-level** (`subpop_rt_deviation_process`): RandomWalk for subpopulation deviations
 
 The RandomWalk allows flexible evolution of subpopulation-specific transmission without mean reversion.
@@ -1119,6 +1119,6 @@ This tutorial demonstrated composing a multi-signal renewal model using `Pyrenew
 
 ### Next Steps
 
--   Explore different temporal processes for $R(t)$ in the [Hierarchical Latent Infections](latent_hierarchical_infections.md) tutorial
+-   Explore different temporal processes for $\mathcal{R}(t)$ in the [Hierarchical Latent Infections](latent_hierarchical_infections.md) tutorial
 -   Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.md)
 -   Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.md)
