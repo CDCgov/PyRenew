@@ -189,13 +189,7 @@ class PoissonNoise(CountNoise):
         ArrayLike
             Poisson-distributed counts.
         """
-        if mask is None:
-            return numpyro.sample(
-                name,
-                dist.Poisson(rate=predicted + _EPSILON),
-                obs=obs,
-            )
-        with numpyro.handlers.mask(mask=mask):
+        with numpyro.handlers.mask(mask=True if mask is None else mask):
             return numpyro.sample(
                 name,
                 dist.Poisson(rate=predicted + _EPSILON),
