@@ -9,3 +9,4 @@ nav:
   - hospital_admissions_model.md
   - day_of_the_week.md
   - periodic_effects.md
+  - extending_pyrenew.md
