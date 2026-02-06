@@ -53,18 +53,18 @@ You have a jurisdiction (e.g., a state or metropolitan area) with multiple subpo
 - Allow local transmission to deviate from the jurisdiction average
 - Produce estimates for both observed and unobserved areas
 
-`HierarchicalInfections` addresses this by decomposing the effective reproduction number $R(t)$ into:
+`HierarchicalInfections` addresses this by decomposing the effective reproduction number $\mathcal{R}(t)$ into:
 
-$$\log R_k(t) = \log R_{\text{baseline}}(t) + \delta_k(t)$$
+$$\log \mathcal{R}_k(t) = \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t)$$
 
 where:
 
-- $R_{\text{baseline}}(t)$ is the jurisdiction-level reproduction number (shared across all subpopulations)
+- $\mathcal{R}_{\text{baseline}}(t)$ is the jurisdiction-level reproduction number (shared across all subpopulations)
 - $\delta_k(t)$ is the deviation for subpopulation $k$, constrained so that $\sum_k \delta_k(t) = 0$
 
-The sum-to-zero constraint ensures $R_{\text{baseline}}(t)$ represents the geometric mean of subpopulation $R$ values—a natural "center" for the hierarchy.
+The sum-to-zero constraint ensures $\mathcal{R}_{\text{baseline}}(t)$ represents the geometric mean of subpopulation $\mathcal{R}$ values—a natural "center" for the hierarchy.
 
-Each subpopulation runs its own renewal equation with its own $R_k(t)$, then results are aggregated for jurisdiction-level quantities (like total hospital admissions).
+Each subpopulation runs its own renewal equation with its own $\mathcal{R}_k(t)$, then results are aggregated for jurisdiction-level quantities (like total hospital admissions).
 
 ## Model Inputs
 
@@ -359,7 +359,7 @@ i0_df = pd.DataFrame(i0_data)
 
 ### Temporal Processes
 
-The temporal process determines how $R_{\text{baseline}}(t)$ and the deviations $\delta_k(t)$ evolve over time. PyRenew provides three options:
+The temporal process determines how $\mathcal{R}_{\text{baseline}}(t)$ and the deviations $\delta_k(t)$ evolve over time. PyRenew provides three options:
 
 | Process | What It Does | Epidemiological Interpretation |
 |---------|--------------|-------------------------------|

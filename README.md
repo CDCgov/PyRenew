@@ -4,10 +4,10 @@ The PyRenew package is a flexible tool for simulation and statistical inference 
 Built on top of the [numpyro](https://num.pyro.ai/) Python library, `pyrenew` provides core components for model building.
 
 A renewal model estimates new infections from recent past infections using a generation interval (the time between successive infections in a transmission chain).
-From this, it infers $R_t$, the time-varying reproduction number, which indicates whether the number of infectious individuals is increasing or decreasing.
+From this, it infers $\mathcal{R}(t)$, the time-varying reproduction number, which indicates whether the number of infectious individuals is increasing or decreasing.
 The core renewal equation is:
 
-$$I(t) = R_t \sum_{s} I(t-s) \, w(s)$$
+$$I(t) = \mathcal{R}(t) \sum_{s} I(t-s) \, w(s)$$
 
 where $w(s)$ is the generation interval distribution: the probability that $s$ time units separate infection in an index case and a secondary case.
 
