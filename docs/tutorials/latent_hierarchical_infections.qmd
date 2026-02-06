@@ -96,8 +96,8 @@ We define subpopulations as fractions of the total jurisdiction population:
 # observation process (via subpop_indices), not by the latent process.
 subpop_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07, 0.26])
 
-K = len(subpop_fractions)
-print(f"Number of subpopulations (K): {K}")
+n_subpops = len(subpop_fractions)
+print(f"Number of subpopulations: {n_subpops}")
 print(f"Total population fraction: {float(jnp.sum(subpop_fractions)):.2f}")
 ```
 
@@ -149,8 +149,8 @@ To illustrate, we sample infection trajectories using each generation interval w
 # | fig-cap: Effect of generation interval and initial_log_rt on infection dynamics. Solid lines start at Rt=1; dashed lines show initial growth (Rt≈1.22) or decline (Rt≈0.82).
 
 # Create models with different generation intervals
-baseline_temporal = DifferencedAR1(autoreg=0.9, innovation_sd=0.05)
-subpop_temporal = AR1(autoreg=0.8, innovation_sd=0.05)
+baseline_rt_process = DifferencedAR1(autoreg=0.9, innovation_sd=0.05)
+subpop_rt_deviation_process = AR1(autoreg=0.8, innovation_sd=0.05)
 
 n_days_demo = 28
 gi_data = []
@@ -171,8 +171,8 @@ for name, gi_rv in gi_configs.items():
         gen_int_rv=gi_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-        baseline_temporal=baseline_temporal,
-        subpop_temporal=subpop_temporal,
+        baseline_rt_process=baseline_rt_process,
+        subpop_rt_deviation_process=subpop_rt_deviation_process,
         n_initialization_points=n_init_gi,
     )
     with numpyro.handlers.seed(rng_seed=42):
@@ -201,8 +201,8 @@ for init_rt_name, init_rt_val in [
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", init_rt_val),
-        baseline_temporal=baseline_temporal,
-        subpop_temporal=subpop_temporal,
+        baseline_rt_process=baseline_rt_process,
+        subpop_rt_deviation_process=subpop_rt_deviation_process,
         n_initialization_points=n_init_gi,
     )
     with numpyro.handlers.seed(rng_seed=42):
@@ -324,8 +324,8 @@ for name, i0_val in i0_configs.items():
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", i0_val),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-        baseline_temporal=baseline_temporal,
-        subpop_temporal=subpop_temporal,
+        baseline_rt_process=baseline_rt_process,
+        subpop_rt_deviation_process=subpop_rt_deviation_process,
         n_initialization_points=len(gen_int_pmf),
     )
     with numpyro.handlers.seed(rng_seed=42):
@@ -388,10 +388,10 @@ Now let's assemble all the inputs:
 ```{python}
 # | label: temporal-config
 # Baseline Rt: DifferencedAR1 allows trends while stabilizing growth rate
-baseline_temporal = DifferencedAR1(autoreg=0.9, innovation_sd=0.05)
+baseline_rt_process = DifferencedAR1(autoreg=0.9, innovation_sd=0.05)
 
 # Subpopulation deviations: AR1 shrinks differences back toward zero
-subpop_temporal = AR1(autoreg=0.8, innovation_sd=0.05)
+subpop_rt_deviation_process = AR1(autoreg=0.8, innovation_sd=0.05)
 ```
 
 **Why these choices?**
@@ -407,8 +407,8 @@ latent_infections = HierarchicalInfections(
     gen_int_rv=gen_int_rv,
     I0_rv=I0_rv,
     initial_log_rt_rv=initial_log_rt_rv,
-    baseline_temporal=baseline_temporal,
-    subpop_temporal=subpop_temporal,
+    baseline_rt_process=baseline_rt_process,
+    subpop_rt_deviation_process=subpop_rt_deviation_process,
     n_initialization_points=len(gen_int_pmf),
 )
 
@@ -467,8 +467,8 @@ n_samples = 200
 predictive = Predictive(sample_model, num_samples=n_samples)
 prior_samples = predictive(random.PRNGKey(42))
 
-print(f"Rt baseline samples: {prior_samples['rt_baseline'].shape}")
-print(f"Infection samples: {prior_samples['infections_aggregate'].shape}")
+print(f"Rt baseline samples: {prior_samples['latent_infections/rt_baseline'].shape}")
+print(f"Infection samples: {prior_samples['latent_infections/infections_aggregate'].shape}")
 ```
 
 ### Visualizing the Prior: Baseline Rt Trajectories
@@ -476,7 +476,7 @@ print(f"Infection samples: {prior_samples['infections_aggregate'].shape}")
 ```{python}
 # | label: rt-trajectories-data
 # Extract post-initialization Rt trajectories
-rt_samples = np.array(prior_samples["rt_baseline"])[:, n_init:, 0]
+rt_samples = np.array(prior_samples["latent_infections/rt_baseline"])[:, n_init:, 0]
 
 # Build long-format dataframe for plotting
 rt_data = []
@@ -556,8 +556,8 @@ for name, temporal in temporal_configs.items():
         gen_int_rv=gen_int_rv,
         I0_rv=I0_rv,
         initial_log_rt_rv=initial_log_rt_rv,
-        baseline_temporal=temporal,
-        subpop_temporal=AR1(autoreg=0.8, innovation_sd=0.05),
+        baseline_rt_process=temporal,
+        subpop_rt_deviation_process=AR1(autoreg=0.8, innovation_sd=0.05),
         n_initialization_points=len(gen_int_pmf),
     )
 
@@ -570,7 +570,7 @@ for name, temporal in temporal_configs.items():
     samples = Predictive(make_sampler(model), num_samples=n_samples)(
         random.PRNGKey(42)
     )
-    process_samples[name] = np.array(samples["rt_baseline"])[:, n_init:, 0]
+    process_samples[name] = np.array(samples["latent_infections/rt_baseline"])[:, n_init:, 0]
 ```
 
 ```{python}
@@ -649,13 +649,13 @@ subpop_configs = {
 }
 
 deviation_samples = {}
-for name, subpop_temporal in subpop_configs.items():
+for name, subpop_rt_deviation_process in subpop_configs.items():
     model = HierarchicalInfections(
         gen_int_rv=gen_int_rv,
         I0_rv=I0_rv,
         initial_log_rt_rv=initial_log_rt_rv,
-        baseline_temporal=DifferencedAR1(autoreg=0.9, innovation_sd=0.05),
-        subpop_temporal=subpop_temporal,
+        baseline_rt_process=DifferencedAR1(autoreg=0.9, innovation_sd=0.05),
+        subpop_rt_deviation_process=subpop_rt_deviation_process,
         n_initialization_points=len(gen_int_pmf),
     )
 
@@ -675,7 +675,7 @@ for name, subpop_temporal in subpop_configs.items():
 # Plot deviations for first subpopulation
 dev_data = []
 for name in subpop_configs.keys():
-    devs = np.array(deviation_samples[name]["subpop_deviations"])[
+    devs = np.array(deviation_samples[name]["latent_infections/subpop_deviations"])[
         :, n_init:, 0
     ]
     for i in range(n_samples):
@@ -742,8 +742,8 @@ for name, cfg in configs.items():
         gen_int_rv=gen_int_rv,
         I0_rv=I0_rv,
         initial_log_rt_rv=initial_log_rt_rv,
-        baseline_temporal=cfg["baseline"],
-        subpop_temporal=cfg["subpop"],
+        baseline_rt_process=cfg["baseline"],
+        subpop_rt_deviation_process=cfg["subpop"],
         n_initialization_points=len(gen_int_pmf),
     )
 
@@ -763,7 +763,7 @@ for name, cfg in configs.items():
 # Build comparison dataframe
 tuning_data = []
 for name, samples in tuning_samples.items():
-    rt = np.array(samples["rt_baseline"])[:, n_init:, 0]
+    rt = np.array(samples["latent_infections/rt_baseline"])[:, n_init:, 0]
     for i in range(n_samples):
         for d in range(n_days):
             tuning_data.append(
@@ -819,7 +819,7 @@ with numpyro.handlers.seed(rng_seed=123):
             subpop_fractions=subpop_fractions,
         )
 
-deviations = trace["subpop_deviations"]["value"]
+deviations = trace["latent_infections/subpop_deviations"]["value"]
 deviation_sums = jnp.sum(deviations, axis=1)
 print(
     f"Max |sum of deviations|: {float(jnp.max(jnp.abs(deviation_sums))):.2e}"
@@ -884,8 +884,8 @@ latent = HierarchicalInfections(
     gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
     I0_rv=DeterministicVariable("I0", 0.001),
     initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-    baseline_temporal=DifferencedAR1(autoreg=0.9, innovation_sd=0.05),
-    subpop_temporal=AR1(autoreg=0.8, innovation_sd=0.05),
+    baseline_rt_process=DifferencedAR1(autoreg=0.9, innovation_sd=0.05),
+    subpop_rt_deviation_process=AR1(autoreg=0.8, innovation_sd=0.05),
     n_initialization_points=len(gen_int_pmf),
 )
 

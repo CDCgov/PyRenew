@@ -23,7 +23,6 @@ jupyter:
 # | label: setup
 # | output: false
 import numpyro
-from numpyro.infer.reparam import LocScaleReparam
 
 # to run samplers in parallel you must run `set_host_device_count` before importing jax
 numpyro.set_host_device_count(4)
@@ -137,7 +136,7 @@ flowchart TB
 
     subgraph Infections["Infection Trajectories"]
         J["Jurisdiction total<br/>(summed across subpopulations)"]
-        S["Per-subpopulation infections<br/>(all K subpopulations)"]
+        S["Per-subpopulation infections<br/>(all subpopulations)"]
     end
 
     subgraph Obs["Observation Processes"]
@@ -165,7 +164,7 @@ Different observation processes observe different levels of the model hierarchy.
 | Resolution | Receives | Example signals |
 |----------------------|-------------------|-------------------------------|
 | `"aggregate"` | Aggregated infections (sum across all subpopulations), shape `(T,)` | Hospital admissions, case counts |
-| `"subpop"` | Infection matrix for all K subpopulations, shape `(T, K)` | Wastewater, site-specific surveillance |
+| `"subpop"` | Infection matrix for all subpopulations, shape `(T, n_subpops)` | Wastewater, site-specific surveillance |
 
 The `PyrenewBuilder` routes latent infections to observation processes based on each process's declared resolution.
 
@@ -218,18 +217,18 @@ initial_log_rt_rv = DeterministicVariable("initial_log_rt", 0.0)
 
 We configure two temporal processes:
 
--   **Jurisdiction-level** (`baseline_temporal`): AR(1) process for the baseline $R(t)$
--   **Subpopulation-level** (`subpop_temporal`): RandomWalk for subpopulation deviations
+-   **Jurisdiction-level** (`baseline_rt_process`): AR(1) process for the baseline $R(t)$
+-   **Subpopulation-level** (`subpop_rt_deviation_process`): RandomWalk for subpopulation deviations
 
 The RandomWalk allows flexible evolution of subpopulation-specific transmission without mean reversion.
 
 ```{python}
 # | label: temporal-processes
 # AR1 provides mean-reverting behavior for baseline Rt
-baseline_temporal = AR1(autoreg=0.9, innovation_sd=0.05)
+baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
 
 # RandomWalk allows flexible subpopulation deviations
-subpop_temporal = RandomWalk(innovation_sd=0.025)
+subpop_rt_deviation_process = RandomWalk(innovation_sd=0.025)
 ```
 
 ## Observation Processes
@@ -246,7 +245,7 @@ Observation processes transform latent infections into observable signals and de
 Each observation process requires a `name` parameter—a short, meaningful identifier like `"hospital"` or `"wastewater"`. This name serves as the single identifier for the signal throughout the model:
 
 -   **Numpyro sites**: Prefixes all sample and deterministic sites (e.g., `hospital_obs`, `hospital_predicted`)
--   **Data binding**: Becomes the keyword argument for passing data to `model.fit()` (e.g., `hospital={...}`)
+-   **Data binding**: Becomes the keyword argument for passing data to `model.run()` (e.g., `hospital={...}`)
 
 This unified naming provides several benefits:
 
@@ -529,14 +528,14 @@ builder.configure_latent(
     gen_int_rv=gen_int_rv,
     I0_rv=I0_rv,
     initial_log_rt_rv=initial_log_rt_rv,
-    baseline_temporal=baseline_temporal,
-    subpop_temporal=subpop_temporal,
+    baseline_rt_process=baseline_rt_process,
+    subpop_rt_deviation_process=subpop_rt_deviation_process,
 )
 ```
 
 ### Specifying the Observation Processes, Data
 
-Each observation process's `name` attribute becomes the keyword used to pass that observation's data to `model.fit()` (e.g., `hospital={...}`, `wastewater={...}`).
+Each observation process's `name` attribute becomes the keyword used to pass that observation's data to `model.run()` (e.g., `hospital={...}`, `wastewater={...}`).
 
 ```{python}
 # | label: add-observations-build
@@ -551,9 +550,9 @@ print(f"  Latent process: {type(model.latent).__name__}")
 print(f"  Observation processes: {list(model.observations.keys())}")
 ```
 
-## Fitting the Model to Data:  `model.fit()`
+## Fitting the Model to Data:  `model.run()`
 
-When you call `model.fit()`, you supply two types of information:
+When you call `model.run()`, you supply two types of information:
 
 - **Observation data** — one data dictionary per registered observation process
 - **Population structure** — how the jurisdiction is divided into subpopulations
@@ -573,7 +572,7 @@ The model provides helper methods to align your data with this shared axis:
 
 ### Observation Data by Signal Type
 
-Each observation process's `name` attribute becomes the keyword argument for passing data to `model.fit()`:
+Each observation process's `name` attribute becomes the keyword argument for passing data to `model.run()`:
 
 ```python
 builder.add_observation(hosp_obs)   # hosp_obs.name="hospital" → hospital={...}
@@ -608,70 +607,73 @@ wastewater={
 
 The `shift_times` method adds `n_init` to convert from natural coordinates (0 = first observation day) to the shared time axis.
 
-**Understanding `subpop_indices`**: The latent process generates infections for all K subpopulations as a matrix of shape `(T, K)`. Each observation selects which column (subpopulation) it came from using `subpop_indices`. This is how observation processes "know" which subpopulations they observe—the user specifies this mapping at sample/fit time.
+**Understanding `subpop_indices`**: The latent process generates infections for all subpopulations as a matrix of shape `(T, n_subpops)`. Each observation selects which column (subpopulation) it came from using `subpop_indices`. This is how observation processes "know" which subpopulations they observe—the user specifies this mapping at sample/run time.
 
 A **subpopulation** is a portion of the jurisdiction's population (e.g., a catchment area). A **sensor** is a measurement source — typically a WWTP/lab pair — that produces observations. Multiple sensors can observe the same subpopulation (e.g., different labs processing samples from the same catchment), so `subpop_indices` and `sensor_indices` may differ.
 
--   `subpop_indices` links each observation to the appropriate infection column (0-indexed into the K subpopulations)
+-   `subpop_indices` links each observation to the appropriate infection column (0-indexed into the subpopulations)
 -   `sensor_indices` selects which sensor's noise parameters (mode and sd) to apply
 
 **Example**: A jurisdiction has 6 subpopulations (indices 0-5), where 5 have wastewater monitoring and 1 does not. The `subpop_fractions` array has 6 elements. If subpopulation 2 lacks wastewater monitoring, wastewater observations would have `subpop_indices` values only in {0, 1, 3, 4, 5}—never 2. The monitored subpopulations need not be contiguous. The latent process still generates infections for all 6 subpopulations; the wastewater observation just doesn't see subpopulation 2.
 
 ### Population Structure
 
-Population structure is specified via a single array of fractions for all K subpopulations:
+Population structure is specified via a single array of fractions for all subpopulations:
 
 ```python
-model.fit(
-    subpop_fractions=jnp.array([0.10, 0.14, 0.21, 0.22, 0.07, 0.26]),  # 6 subpopulations
-    ...
+model.run(
+    ...,
+    subpop_fractions=jnp.array([...]),  # one fraction per subpopulation, must sum to 1
 )
 ```
 
 This specifies 6 subpopulations with their population fractions. The fractions must sum to 1.0. The latent process generates infections for all 6 subpopulations.
 
-Which subpopulations each observation process "sees" is determined by the `subpop_indices` in the observation data, not by the population structure. For example, if wastewater monitoring covers only 5 of the 6 subpopulations (say, all except subpopulation 2), the wastewater observation data would have `subpop_indices` values in {0, 1, 3, 4, 5} but never 2. The monitored subpopulations can be any subset of {0, ..., K-1}.
+Which subpopulations each observation process "sees" is determined by the `subpop_indices` in the observation data, not by the population structure. For example, if wastewater monitoring covers only 5 of the 6 subpopulations (say, all except subpopulation 2), the wastewater observation data would have `subpop_indices` values in {0, 1, 3, 4, 5} but never 2. The monitored subpopulations can be any subset of {0, ..., n_subpops-1}.
 
 
-### Example `model.fit()` Call
+### Example `model.run()` Call
 
 ```python
-model.fit(
+model.run(
+    num_warmup=500,
+    num_samples=500,
+    mcmc_args={"num_chains": 4, "progress_bar": False},
+    # Model arguments (passed through to sample())
     n_days_post_init=n_days,
     population_size=population_size,
-    # Population structure (all K subpopulations)
     subpop_fractions=subpop_fractions,
-    # Observation data (keyed by names from add_observation)
     hospital={"obs": model.pad_observations(hosp_counts)},
     wastewater={
         "obs": ww_conc,
         "times": model.shift_times(ww_times),
-        "subpop_indices": ww_subpop_indices,  # selects which of K subpops each obs came from
+        "subpop_indices": ww_subpop_indices,
         "sensor_indices": ww_sensor_indices,
         "n_sensors": n_ww_sensors,
     },
 )
+samples = model.mcmc.get_samples()
 ```
 
 ## Running the Model
 
-First we declare the population structure. We have 6 subpopulations, where 5 have wastewater monitoring and 1 does not. The subpopulations with wastewater monitoring need not be contiguous indices—they could be any subset of {0, 1, ..., K-1}.
+First we declare the population structure. We have 6 subpopulations, where 5 have wastewater monitoring and 1 does not. The subpopulations with wastewater monitoring need not be contiguous indices—they could be any subset of {0, 1, ..., n_subpops-1}.
 
 ```{python}
 # | label: population-structure
 # All 6 subpopulations with their population fractions
 subpop_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07, 0.26])
 
-K = len(subpop_fractions)
+n_subpops = len(subpop_fractions)
 
 # Which subpopulations have wastewater monitoring?
 # These indices will be used in subpop_indices for wastewater observations.
-# They can be any subset of {0, 1, ..., K-1}, not necessarily contiguous.
+# They can be any subset of {0, 1, ..., n_subpops-1}, not necessarily contiguous.
 ww_monitored_subpops = jnp.array(
     [0, 1, 2, 3, 4]
 )  # subpop 5 has no wastewater monitoring
 
-print(f"Total subpopulations (K): {K}")
+print(f"Total subpopulations: {n_subpops}")
 print(
     f"Subpopulations with wastewater monitoring: {list(ww_monitored_subpops)}"
 )
@@ -747,7 +749,7 @@ def prepare_observation_data(
 
 ### Fit: 90 Days
 
-Putting this altogether, we align the data with the model time and call `model.fit()`.
+Putting this altogether, we align the data with the model time and call `model.run()`.
 We run 4 sampler chains.
 
 ```{python}
@@ -760,32 +762,23 @@ obs_data_90 = prepare_observation_data(
     model, n_days_90, hosp_admits, ca_ww_data, ww_monitored_subpops
 )
 
-# Try non-centered reparameterization for hierarchical parameters
-reparam_config = {
-    "log_rt_baseline_noise": LocScaleReparam(centered=0),
-    "subpop_deviations_increments": LocScaleReparam(centered=0),
-    "ww_site_mode": LocScaleReparam(centered=0),
-}
-
 print(f"Fitting model with {n_days_90} days of data...")
 print("  This may take a few minutes...")
 
 start_time = time.time()
-mcmc_90 = model.fit(
+model.run(
+    num_warmup=500,
+    num_samples=500,
+    rng_key=make_rng_key(),
+    mcmc_args={"num_chains": 4, "progress_bar": False},
     n_days_post_init=n_days_90,
     population_size=population_size,
     subpop_fractions=subpop_fractions,
-    num_warmup=500,
-    num_samples=500,
-    num_chains=4,
-    rng_key=make_rng_key(),
-    reparam_config=reparam_config,
     **obs_data_90,
-    progress_bar=False,
 )
 # JAX uses asynchronous dispatch, so we must block until sampling completes
 # to get accurate timing
-samples_90 = mcmc_90.get_samples()
+samples_90 = model.mcmc.get_samples()
 jax.block_until_ready(samples_90)
 elapsed_90 = time.time() - start_time
 print(f"Elapsed time: {elapsed_90:.1f} seconds")
@@ -942,19 +935,18 @@ print(f"Fitting model with {n_days_180} days of data...")
 print("  This may take a few minutes...")
 
 start_time = time.time()
-mcmc_180 = model.fit(
+model.run(
+    num_warmup=1000,
+    num_samples=500,
+    rng_key=make_rng_key(),
+    mcmc_args={"num_chains": 4, "progress_bar": False},
     n_days_post_init=n_days_180,
     population_size=population_size,
     subpop_fractions=subpop_fractions,
-    num_warmup=1000,
-    num_samples=500,
-    num_chains=4,
-    rng_key=make_rng_key(),
     **obs_data_180,
-    progress_bar=False,
 )
 # Block until sampling completes for accurate timing
-samples_180 = mcmc_180.get_samples()
+samples_180 = model.mcmc.get_samples()
 jax.block_until_ready(samples_180)
 elapsed_180 = time.time() - start_time
 print(f"Elapsed time: {elapsed_180:.1f} seconds")
@@ -1110,7 +1102,7 @@ This tutorial demonstrated composing a multi-signal renewal model using `Pyrenew
 
 1.  **Configure latent process** (`configure_latent`): generation interval, initial infections, temporal dynamics
 2.  **Add observation processes** (`add_observation`): each declares its infection resolution and gets a name for data binding
-3.  **Build and fit** (`build`, `model.fit`): the model routes infections to observations based on resolution and runs NUTS inference
+3.  **Build and run** (`build`, `model.run`): the model routes infections to observations based on resolution and runs NUTS inference
 
 ### Key Concepts
 

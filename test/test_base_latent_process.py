@@ -19,7 +19,7 @@ class TestPopulationStructureParsing:
             subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
         )
 
-        assert pop.K == 3
+        assert pop.n_subpops == 3
         assert jnp.allclose(pop.fractions, jnp.array([0.3, 0.25, 0.45]))
 
     def test_rejects_fractions_not_summing_to_one(self):
@@ -101,8 +101,8 @@ class TestGetRequiredLookback:
             gen_int_rv=gen_int,
             I0_rv=DeterministicVariable("I0", 0.001),
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_temporal=RandomWalk(),
-            subpop_temporal=RandomWalk(),
+            baseline_rt_process=RandomWalk(),
+            subpop_rt_deviation_process=RandomWalk(),
             n_initialization_points=3,
         )
 
@@ -118,7 +118,6 @@ class TestValidateOutputShapes:
 
         pop = PopulationStructure(
             fractions=jnp.array([0.5, 0.5]),
-            K=2,
         )
 
         # Create arrays with wrong shapes

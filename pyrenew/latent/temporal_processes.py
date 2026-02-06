@@ -68,6 +68,8 @@ import numpyro.distributions as dist
 from jax.typing import ArrayLike
 
 from pyrenew.process import ARProcess, DifferencedProcess
+from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
+from pyrenew.randomvariable import DistributionalVariable
 
 
 @runtime_checkable
@@ -302,7 +304,7 @@ class DifferencedAR1(TemporalProcess):
             )
 
         trajectories = self.process(
-            n=n_timepoints + 1,
+            n=n_timepoints,
             init_vals=initial_value[jnp.newaxis, :],
             autoreg=jnp.full((1, n_processes), self.autoreg),
             noise_sd=self.innovation_sd,
@@ -310,7 +312,7 @@ class DifferencedAR1(TemporalProcess):
             noise_name=f"{name_prefix}_noise",
         )
 
-        return trajectories[:n_timepoints, :]
+        return trajectories
 
 
 class RandomWalk(TemporalProcess):
@@ -322,8 +324,7 @@ class RandomWalk(TemporalProcess):
     have no prior expectation that Rt will return to a baseline.
 
     This class wraps :class:`pyrenew.process.RandomWalk` with a simplified,
-    protocol-compliant interface. The vectorized mode uses a non-centered
-    parameterization to avoid funnel problems in inference.
+    protocol-compliant interface that handles vectorization automatically.
 
     Parameters
     ----------
@@ -336,6 +337,10 @@ class RandomWalk(TemporalProcess):
     Unlike AR(1), variance grows over time — the process can wander arbitrarily
     far from its starting point. For long time horizons, consider AR(1) if you
     want Rt to stay bounded near a baseline.
+
+    For non-centered parameterization (to avoid funnel problems in inference),
+    apply ``LocScaleReparam(centered=0)`` to the step sample site
+    (``{name_prefix}_step``) via ``numpyro.handlers.reparam``.
     """
 
     def __init__(self, innovation_sd: float = 1.0):
@@ -391,23 +396,17 @@ class RandomWalk(TemporalProcess):
         elif jnp.isscalar(initial_value):
             initial_value = jnp.full(n_processes, initial_value)
 
-        # Non-centered parameterization to avoid funnel problems
-        with numpyro.plate(f"{name_prefix}_time", n_timepoints - 1):
-            with numpyro.plate(f"{name_prefix}_proc", n_processes):
-                increments_raw = numpyro.sample(
-                    f"{name_prefix}_increments_raw",
-                    dist.Normal(0, 1),
-                )
-
-        # Transpose: (n_processes, n_timepoints-1) -> (n_timepoints-1, n_processes)
-        increments = numpyro.deterministic(
-            f"{name_prefix}_increments",
-            (increments_raw * self.innovation_sd).T,
+        rw = ProcessRandomWalk(
+            step_rv=DistributionalVariable(
+                name=f"{name_prefix}_step",
+                distribution=dist.Normal(
+                    jnp.zeros(n_processes),
+                    self.innovation_sd,
+                ),
+            ),
         )
 
-        cumulative = jnp.cumsum(increments, axis=0)
-
-        return jnp.concatenate(
-            [initial_value[jnp.newaxis, :], initial_value + cumulative],
-            axis=0,
+        return rw.sample(
+            init_vals=initial_value[jnp.newaxis, :],
+            n=n_timepoints,
         )

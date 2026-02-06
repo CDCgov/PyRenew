@@ -26,7 +26,7 @@ class LatentSample(NamedTuple):
         Shape: (n_total_days,)
     all_subpops : ArrayLike
         Infections for all subpopulations.
-        Shape: (n_total_days, K)
+        Shape: (n_total_days, n_subpops)
     """
 
     aggregate: ArrayLike
@@ -41,13 +41,16 @@ class PopulationStructure:
     Attributes
     ----------
     fractions : ArrayLike
-        Population fractions for all subpopulations. Shape: (K,)
-    K : int
-        Total number of subpopulations
+        Population fractions for all subpopulations.
+        Shape: (n_subpops,)
     """
 
     fractions: ArrayLike
-    K: int
+
+    @property
+    def n_subpops(self) -> int:
+        """Total number of subpopulations."""
+        return len(self.fractions)
 
 
 class BaseLatentInfectionProcess(RandomVariable):
@@ -153,9 +156,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         if fractions.ndim != 1:
             raise ValueError("subpop_fractions must be a 1D array")
 
-        K = len(fractions)
-
-        if K == 0:
+        if len(fractions) == 0:
             raise ValueError("Must have at least one subpopulation")
 
         # Only validate when results are concrete (not during JAX tracing)
@@ -174,7 +175,6 @@ class BaseLatentInfectionProcess(RandomVariable):
 
         return PopulationStructure(
             fractions=fractions,
-            K=K,
         )
 
     @staticmethod
@@ -196,7 +196,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         n_total_days : int
             Expected number of days (n_initialization_points + n_days_post_init)
         pop : PopulationStructure
-            Population structure with K
+            Population structure
 
         Raises
         ------
@@ -205,7 +205,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         """
         expected = {
             "infections_aggregate": (n_total_days,),
-            "infections_all": (n_total_days, pop.K),
+            "infections_all": (n_total_days, pop.n_subpops),
         }
 
         actual = {
@@ -309,8 +309,8 @@ class BaseLatentInfectionProcess(RandomVariable):
         n_days_post_init : int
             Number of days to simulate after initialization period
         subpop_fractions : ArrayLike
-            Population fractions for all subpopulations. Shape: (K,).
-            Must sum to 1.0.
+            Population fractions for all subpopulations.
+            Shape: (n_subpops,). Must sum to 1.0.
         **kwargs
             Additional parameters required by specific implementations
 
@@ -319,7 +319,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         LatentSample
             Named tuple with fields:
             - aggregate: shape (n_total_days,)
-            - all_subpops: shape (n_total_days, K)
+            - all_subpops: shape (n_total_days, n_subpops)
 
             where n_total_days = n_initialization_points + n_days_post_init
         """

@@ -9,10 +9,8 @@ from __future__ import annotations
 from typing import Any
 
 import jax.numpy as jnp
-import jax.random as random
 import numpyro
 import numpyro.handlers
-from numpyro.infer import MCMC, NUTS
 
 from pyrenew.latent.base import BaseLatentInfectionProcess
 from pyrenew.metaclass import Model
@@ -71,40 +69,34 @@ class MultiSignalModel(Model):
         """
         self.latent = latent_process
         self.observations = observations
-        self._validate()
+        self.validate()
 
-    def _validate(self) -> None:
+    _SUPPORTED_RESOLUTIONS = {"aggregate", "subpop"}
+
+    def validate(self) -> None:
         """
         Validate that observation processes are compatible with latent process.
 
-        Checks that each observation implements infection_resolution().
+        Checks that each observation implements infection_resolution()
+        and returns a supported resolution.
 
         Raises
         ------
         ValueError
             If an observation doesn't implement infection_resolution()
+            or returns an unsupported resolution.
         """
         for name, obs in self.observations.items():
-            try:
-                obs.infection_resolution()
-            except (NotImplementedError, AttributeError):
+            if not hasattr(obs, "infection_resolution"):
                 raise ValueError(
                     f"Observation '{name}' must implement infection_resolution()"
                 )
-
-    def validate(self) -> None:
-        """
-        Validate the model configuration.
-
-        This method is required by PyRenew's Model base class.
-        Validation is performed in __init__ via _validate().
-
-        Raises
-        ------
-        ValueError
-            If validation fails
-        """
-        self._validate()
+            resolution = obs.infection_resolution()
+            if resolution not in self._SUPPORTED_RESOLUTIONS:
+                raise ValueError(
+                    f"Observation '{name}' returned invalid infection_resolution "
+                    f"'{resolution}'. Expected one of {self._SUPPORTED_RESOLUTIONS}."
+                )
 
     def pad_observations(
         self,
@@ -184,7 +176,7 @@ class MultiSignalModel(Model):
         n_days_post_init : int
             Number of days to simulate after initialization period
         subpop_fractions : ArrayLike
-            Population fractions for all subpopulations. Shape: (K,).
+            Population fractions for all subpopulations. Shape: (n_subpops,).
         **observation_data
             Data for each observation process, keyed by observation name.
             Each value should be a dict of kwargs for that observation's sample().
@@ -251,10 +243,10 @@ class MultiSignalModel(Model):
                         f"Observation '{name}': subpop_indices cannot be negative"
                     )
                 max_idx = jnp.max(subpop_indices)
-                if max_idx >= pop.K:
+                if max_idx >= pop.n_subpops:
                     raise ValueError(
                         f"Observation '{name}': subpop_indices contains "
-                        f"{int(max_idx)} >= {pop.K} (K)"
+                        f"{int(max_idx)} >= {pop.n_subpops} (n_subpops)"
                     )
 
     def sample(
@@ -278,7 +270,7 @@ class MultiSignalModel(Model):
             Total population size. Used to convert infection proportions
             (from latent process) to infection counts (for observation processes).
         subpop_fractions : ArrayLike
-            Population fractions for all subpopulations. Shape: (K,).
+            Population fractions for all subpopulations. Shape: (n_subpops,).
         **observation_data
             Data for each observation process, keyed by observation name
             (the ``name`` attribute of each observation process).
@@ -286,12 +278,11 @@ class MultiSignalModel(Model):
 
         Returns
         -------
-        tuple
-            Two arrays of infection counts (scaled by population_size):
-            - inf_aggregate: shape (n_total_days,) - aggregate infections
-            - inf_all: shape (n_total_days, K) - all subpopulation infections
-
-            where n_total_days = n_initialization_points + n_days_post_init
+        None
+            All quantities are recorded as NumPyro deterministic sites
+            (``latent_infections``, ``latent_infections_by_subpop``) and
+            observation sites. Use ``numpyro.infer.Predictive`` for forward
+            sampling.
         """
         # Generate latent infections (proportions)
         latent_sample = self.latent.sample(
@@ -320,7 +311,7 @@ class MultiSignalModel(Model):
             if resolution not in latent_map:
                 raise ValueError(
                     f"Observation '{name}' returned invalid infection_resolution "
-                    f"'{resolution}'. Expected 'aggregate' or 'subpop'."
+                    f"'{resolution}'. Expected one of {self._SUPPORTED_RESOLUTIONS}."
                 )
             latent_infections = latent_map[resolution]
 
@@ -333,92 +324,4 @@ class MultiSignalModel(Model):
                 **obs_data,
             )
 
-        # Return scaled infection counts
-        return inf_aggregate, inf_all
-
-    def fit(
-        self,
-        n_days_post_init: int,
-        population_size: float,
-        *,
-        subpop_fractions=None,
-        num_warmup: int = 500,
-        num_samples: int = 500,
-        num_chains: int = 1,
-        rng_key: random.PRNGKey = None,
-        reparam_config: dict[str, Any] | None = None,
-        progress_bar: bool = True,
-        **observation_data,
-    ):
-        """
-        Fit the model to observed data via MCMC.
-
-        Validates observation data, runs NUTS sampler, and returns
-        posterior samples.
-
-        Parameters
-        ----------
-        n_days_post_init : int
-            Number of days to simulate after initialization period
-        population_size : float
-            Total population size for scaling infections
-        subpop_fractions : ArrayLike
-            Population fractions for all subpopulations. Shape: (K,).
-        num_warmup : int
-            Number of MCMC warmup iterations (default: 500)
-        num_samples : int
-            Number of MCMC samples to draw (default: 500)
-        num_chains : int
-            Number of MCMC chains (default: 1)
-        rng_key : jax.random.PRNGKey, optional
-            Random key for reproducibility. Defaults to PRNGKey(0).
-        reparam_config : dict, optional
-            Reparameterization configuration for numpyro.handlers.reparam.
-            Maps sample site names to reparameterizers (e.g., LocScaleReparam).
-            Use non-centered parameterization (centered=0) for sparse data,
-            centered (centered=1) for abundant data. Default None (no reparam).
-        progress_bar : bool
-            Whether to show progress bar during MCMC (default: True).
-            Set to False if experiencing tqdm widget errors in Jupyter notebooks
-            with parallel chains.
-        **observation_data
-            Data for each observation process, keyed by observation name.
-            Each value should be a dict with 'counts', 'times', etc.
-
-        Returns
-        -------
-        numpyro.infer.MCMC
-            The MCMC object after sampling. Use `mcmc.get_samples()` to get
-            posterior samples as a dict, or access other MCMC diagnostics.
-        """
-        self.validate_data(
-            n_days_post_init=n_days_post_init,
-            subpop_fractions=subpop_fractions,
-            **observation_data,
-        )
-
-        if rng_key is None:
-            rng_key = random.PRNGKey(0)
-
-        # Apply reparameterization if config provided
-        sample_fn = self.sample
-        if reparam_config is not None:
-            sample_fn = numpyro.handlers.reparam(self.sample, config=reparam_config)
-
-        kernel = NUTS(sample_fn)
-        mcmc = MCMC(
-            kernel,
-            num_warmup=num_warmup,
-            num_samples=num_samples,
-            num_chains=num_chains,
-            progress_bar=progress_bar,
-        )
-        mcmc.run(
-            rng_key,
-            n_days_post_init=n_days_post_init,
-            population_size=population_size,
-            subpop_fractions=subpop_fractions,
-            **observation_data,
-        )
-
-        return mcmc
+        return None

@@ -185,14 +185,7 @@ class PyrenewBuilder:
 
         # Add lookback from each observation process
         for name, obs_process in self.observations.items():
-            try:
-                lookback = obs_process.lookback_days()
-                lookbacks.append(lookback)
-            except (NotImplementedError, AttributeError) as e:
-                raise ValueError(
-                    f"Observation process '{name}' must implement "
-                    f"lookback_days(). Error: {e}"
-                ) from e
+            lookbacks.append(obs_process.lookback_days())
 
         # Formula: max(all lookbacks)
         # For generation interval (1-indexed): L-element PMF has max lag L days → need L init points

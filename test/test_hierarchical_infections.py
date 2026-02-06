@@ -37,8 +37,8 @@ def process(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-        baseline_temporal=RandomWalk(),
-        subpop_temporal=RandomWalk(),
+        baseline_rt_process=RandomWalk(),
+        subpop_rt_deviation_process=RandomWalk(),
         n_initialization_points=3,
     )
 
@@ -102,7 +102,7 @@ class TestHierarchicalInfectionsSample:
                     subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
                 )
 
-        deviations = trace["subpop_deviations"]["value"]
+        deviations = trace["latent_infections/subpop_deviations"]["value"]
         deviation_sums = jnp.sum(deviations, axis=1)
 
         assert jnp.allclose(deviation_sums, 0.0, atol=1e-6)
@@ -118,8 +118,8 @@ class TestHierarchicalInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=None,
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_temporal=RandomWalk(),
-                subpop_temporal=RandomWalk(),
+                baseline_rt_process=RandomWalk(),
+                subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=3,
             )
 
@@ -130,32 +130,32 @@ class TestHierarchicalInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=None,
-                baseline_temporal=RandomWalk(),
-                subpop_temporal=RandomWalk(),
+                baseline_rt_process=RandomWalk(),
+                subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=3,
             )
 
-    def test_rejects_missing_baseline_temporal(self, gen_int_rv):
-        """Test that None baseline_temporal is rejected."""
-        with pytest.raises(ValueError, match="baseline_temporal is required"):
+    def test_rejects_missing_baseline_rt_process(self, gen_int_rv):
+        """Test that None baseline_rt_process is rejected."""
+        with pytest.raises(ValueError, match="baseline_rt_process is required"):
             HierarchicalInfections(
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_temporal=None,
-                subpop_temporal=RandomWalk(),
+                baseline_rt_process=None,
+                subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=3,
             )
 
-    def test_rejects_missing_subpop_temporal(self, gen_int_rv):
-        """Test that None subpop_temporal is rejected."""
-        with pytest.raises(ValueError, match="subpop_temporal is required"):
+    def test_rejects_missing_subpop_rt_deviation_process(self, gen_int_rv):
+        """Test that None subpop_rt_deviation_process is rejected."""
+        with pytest.raises(ValueError, match="subpop_rt_deviation_process is required"):
             HierarchicalInfections(
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_temporal=RandomWalk(),
-                subpop_temporal=None,
+                baseline_rt_process=RandomWalk(),
+                subpop_rt_deviation_process=None,
                 n_initialization_points=3,
             )
 
@@ -166,8 +166,8 @@ class TestHierarchicalInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", -0.1),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_temporal=RandomWalk(),
-                subpop_temporal=RandomWalk(),
+                baseline_rt_process=RandomWalk(),
+                subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=3,
             )
 
@@ -180,8 +180,8 @@ class TestHierarchicalInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_temporal=RandomWalk(),
-                subpop_temporal=RandomWalk(),
+                baseline_rt_process=RandomWalk(),
+                subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=2,  # gen_int has length 3
             )
 
@@ -208,8 +208,8 @@ class TestHierarchicalInfectionsPerSubpopI0:
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", jnp.array([0.001, 0.002, 0.0015])),
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_temporal=RandomWalk(),
-            subpop_temporal=RandomWalk(),
+            baseline_rt_process=RandomWalk(),
+            subpop_rt_deviation_process=RandomWalk(),
             n_initialization_points=3,
         )
 

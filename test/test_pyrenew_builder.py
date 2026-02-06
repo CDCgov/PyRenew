@@ -33,8 +33,8 @@ def simple_builder():
         gen_int_rv=gen_int,
         I0_rv=DeterministicVariable("I0", 0.001),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-        baseline_temporal=RandomWalk(),
-        subpop_temporal=RandomWalk(),
+        baseline_rt_process=RandomWalk(),
+        subpop_rt_deviation_process=RandomWalk(),
     )
 
     delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
@@ -63,8 +63,8 @@ class TestPyrenewBuilderConfiguration:
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_temporal=RandomWalk(),
-                subpop_temporal=RandomWalk(),
+                baseline_rt_process=RandomWalk(),
+                subpop_rt_deviation_process=RandomWalk(),
                 subpop_fractions=jnp.array([0.5, 0.5]),  # Should fail
             )
 
@@ -79,8 +79,8 @@ class TestPyrenewBuilderConfiguration:
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_temporal=RandomWalk(),
-                subpop_temporal=RandomWalk(),
+                baseline_rt_process=RandomWalk(),
+                subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=10,  # Should fail
             )
 
@@ -94,8 +94,8 @@ class TestPyrenewBuilderConfiguration:
             gen_int_rv=gen_int,
             I0_rv=DeterministicVariable("I0", 0.001),
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_temporal=RandomWalk(),
-            subpop_temporal=RandomWalk(),
+            baseline_rt_process=RandomWalk(),
+            subpop_rt_deviation_process=RandomWalk(),
         )
 
         with pytest.raises(RuntimeError, match="already configured"):
@@ -104,8 +104,8 @@ class TestPyrenewBuilderConfiguration:
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_temporal=RandomWalk(),
-                subpop_temporal=RandomWalk(),
+                baseline_rt_process=RandomWalk(),
+                subpop_rt_deviation_process=RandomWalk(),
             )
 
     def test_rejects_duplicate_observation_name(self, simple_builder):
@@ -171,49 +171,21 @@ class TestMultiSignalModelSampling:
         n_total = model.latent.n_initialization_points + n_days
 
         with numpyro.handlers.seed(rng_seed=42):
-            inf_aggregate, inf_all = model.sample(
-                n_days_post_init=n_days,
-                population_size=1_000_000,
-                subpop_fractions=SUBPOP_FRACTIONS,
-                hospital={"obs": None},
-            )
+            with numpyro.handlers.trace() as tr:
+                model.sample(
+                    n_days_post_init=n_days,
+                    population_size=1_000_000,
+                    subpop_fractions=SUBPOP_FRACTIONS,
+                    hospital={"obs": None},
+                )
 
+        inf_aggregate = tr["latent_infections"]["value"]
+        inf_all = tr["latent_infections_by_subpop"]["value"]
         assert inf_aggregate.shape == (n_total,)
         assert inf_all.shape == (n_total, 3)  # K=3
 
-    def test_fit_with_reparam_config(self, simple_builder):
-        """Test that fit() works with reparameterization config."""
-        from numpyro.infer.reparam import LocScaleReparam
-
-        model = simple_builder.build()
-        n_days = 10
-
-        # Create dense observations with NaN padding for initialization period
-        obs_values = jnp.array([10.0, 12.0, 15.0, 14.0, 11.0])
-        obs = model.pad_observations(obs_values)
-        # Pad with NaN for remaining days
-        obs = jnp.concatenate([obs, jnp.full(n_days - len(obs_values), jnp.nan)])
-
-        # Test with reparam_config
-        reparam_config = {
-            "log_rt_baseline_innovations": LocScaleReparam(centered=0),
-        }
-
-        mcmc = model.fit(
-            n_days_post_init=n_days,
-            population_size=1_000_000,
-            subpop_fractions=SUBPOP_FRACTIONS,
-            num_warmup=2,
-            num_samples=2,
-            reparam_config=reparam_config,
-            hospital={"obs": obs},
-        )
-
-        samples = mcmc.get_samples()
-        assert "latent_infections" in samples
-
-    def test_fit_with_population_structure(self, simple_builder):
-        """Test that fit() works with population structure at sample time."""
+    def test_run_with_population_structure(self, simple_builder):
+        """Test that run() works with population structure at sample time."""
         model = simple_builder.build()
         n_days = 10
         n_total = model.latent.n_initialization_points + n_days
@@ -224,16 +196,16 @@ class TestMultiSignalModelSampling:
         # Pad with NaN for remaining days
         obs = jnp.concatenate([obs, jnp.full(n_days - len(obs_values), jnp.nan)])
 
-        mcmc = model.fit(
+        model.run(
+            num_warmup=5,
+            num_samples=5,
             n_days_post_init=n_days,
             population_size=1_000_000,
             subpop_fractions=SUBPOP_FRACTIONS,
-            num_warmup=5,
-            num_samples=5,
             hospital={"obs": obs},
         )
 
-        samples = mcmc.get_samples()
+        samples = model.mcmc.get_samples()
         assert "latent_infections" in samples
         assert samples["latent_infections"].shape == (5, n_total)
 
@@ -351,70 +323,6 @@ class TestMultiSignalModelValidation:
 class TestPyrenewBuilderErrorHandling:
     """Test PyrenewBuilder error handling."""
 
-    def test_compute_n_init_rejects_obs_without_lookback_days(self):
-        """Test that observation without lookback_days() raises error."""
-        from pyrenew.observation.base import BaseObservationProcess
-
-        class BadObservationNoLookback(BaseObservationProcess):
-            """Observation that has no lookback_days method."""
-
-            def __init__(self):
-                """Initialize without temporal_pmf_rv."""
-                self.name = "bad"
-                self.temporal_pmf_rv = None
-
-            def sample(self, **kwargs):
-                """Sample stub."""
-                pass
-
-            def validate(self):
-                """Validate stub."""
-                pass
-
-            def lookback_days(self):
-                """Raise NotImplementedError to simulate missing implementation."""
-                raise NotImplementedError("Not implemented")
-
-            def infection_resolution(self):
-                """
-                Return aggregate.
-
-                Returns
-                -------
-                str
-                    The string "aggregate".
-                """
-                return "aggregate"
-
-            def _predicted_obs(self, infections):
-                """
-                Predicted obs stub.
-
-                Returns
-                -------
-                ArrayLike
-                    The infections array unchanged.
-                """
-                return infections
-
-        builder = PyrenewBuilder()
-        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
-
-        builder.configure_latent(
-            HierarchicalInfections,
-            gen_int_rv=gen_int,
-            I0_rv=DeterministicVariable("I0", 0.001),
-            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_temporal=RandomWalk(),
-            subpop_temporal=RandomWalk(),
-        )
-
-        bad_obs = BadObservationNoLookback()
-        builder.add_observation(bad_obs)
-
-        with pytest.raises(ValueError, match="must implement lookback_days"):
-            builder.compute_n_initialization_points()
-
     def test_build_raises_on_construction_error(self):
         """Test that build() raises TypeError on latent construction failure."""
         builder = PyrenewBuilder()
@@ -426,8 +334,8 @@ class TestPyrenewBuilderErrorHandling:
             gen_int_rv=gen_int,
             I0_rv=DeterministicVariable("I0", 0.001),
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_temporal=RandomWalk(),
-            subpop_temporal=RandomWalk(),
+            baseline_rt_process=RandomWalk(),
+            subpop_rt_deviation_process=RandomWalk(),
             invalid_extra_param="this will cause TypeError",  # Invalid param
         )
 
@@ -479,8 +387,8 @@ class TestMultiSignalModelObservationValidation:
                 return 1
 
             def infection_resolution(self):
-                """Raise NotImplementedError to simulate missing implementation."""
-                raise NotImplementedError("Not implemented")
+                """Return an invalid resolution to simulate bad implementation."""
+                return "invalid_resolution"
 
             def _predicted_obs(self, infections):
                 """
@@ -501,14 +409,14 @@ class TestMultiSignalModelObservationValidation:
             gen_int_rv=gen_int,
             I0_rv=DeterministicVariable("I0", 0.001),
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_temporal=RandomWalk(),
-            subpop_temporal=RandomWalk(),
+            baseline_rt_process=RandomWalk(),
+            subpop_rt_deviation_process=RandomWalk(),
         )
 
         bad_obs = BadObservation()
         builder.add_observation(bad_obs)
 
-        with pytest.raises(ValueError, match="must implement infection_resolution"):
+        with pytest.raises(ValueError, match="invalid infection_resolution"):
             builder.build()
 
 
