@@ -23,7 +23,7 @@ resulting in programs which clearly express the model structure and choices, all
 The fundamental building block is the `RandomVariable` abstract base class, which allows for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.
 
 We use `RandomVariable`s to build probabilistic models. We represent complete models as concrete subclasses of the `Model` abstract base class.
-The `PyrenewBuilder` class orchestrates the composition process.
+The `PyrenewBuilder` class orchestrates the composition of `RandomVariables` into a `Model`.
 
 PyRenew's strength lies in multi-signal integration for information pooling across diverse observed data streams
 such as hospital admissions, wastewater concentrations, and emergency department visits
