@@ -1,5 +1,7 @@
 nav:
   - random_variables.md
+  - building_multisignal_models.md
   - observation_processes_counts.md
   - observation_processes_measurements.md
+  - latent_hierarchical_infections.md
   - periodic_effects.md

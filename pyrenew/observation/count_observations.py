@@ -74,14 +74,17 @@ class _CountBase(BaseObservationProcess):
 
     def lookback_days(self) -> int:
         """
-        Return delay PMF length.
+        Return required lookback days for this observation.
+
+        Delay PMFs are 0-indexed (delay can be 0), so a PMF of length L
+        covers delays 0 to L-1, requiring L-1 initialization points.
 
         Returns
         -------
         int
-            Length of delay distribution PMF.
+            Length of delay distribution PMF minus 1.
         """
-        return len(self.temporal_pmf_rv())
+        return len(self.temporal_pmf_rv()) - 1
 
     def infection_resolution(self) -> str:
         """
@@ -118,20 +121,17 @@ class _CountBase(BaseObservationProcess):
         delay_pmf = self.temporal_pmf_rv()
         ascertainment_rate = self.ascertainment_rate_rv()
 
-        is_1d = infections.ndim == 1
-        if is_1d:
-            predicted_counts = self._convolve_with_alignment(
+        if infections.ndim == 1:
+            return self._convolve_with_alignment(
                 infections, delay_pmf, ascertainment_rate
             )[0]
-        else:
-            predicted_counts = jax.vmap(
-                lambda col: self._convolve_with_alignment(
-                    col, delay_pmf, ascertainment_rate
-                )[0],
-                in_axes=1,
-                out_axes=1,
-            )(infections)
-        return predicted_counts
+        return jax.vmap(
+            lambda col: self._convolve_with_alignment(
+                col, delay_pmf, ascertainment_rate
+            )[0],
+            in_axes=1,
+            out_axes=1,
+        )(infections)
 
 
 class Counts(_CountBase):
@@ -153,10 +153,6 @@ class Counts(_CountBase):
         Delay distribution PMF (must sum to ~1.0).
     noise : CountNoise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
-
-    Notes
-    -----
-    Output preserves input timeline. First len(delay_pmf)-1 days return ``NaN``.
     """
 
     def infection_resolution(self) -> str:
@@ -183,46 +179,57 @@ class Counts(_CountBase):
         self,
         infections: ArrayLike,
         obs: ArrayLike | None = None,
-        times: ArrayLike | None = None,
     ) -> ObservationSample:
         """
-        Sample aggregated counts with dense or sparse observations.
+        Sample aggregated counts.
 
-        Validation is performed before JAX tracing at runtime,
-        prior to calling this method.
+        Both infections and obs use a shared time axis [0, n_total) where
+        n_total = n_init + n_days. NaN in obs marks unobserved timepoints
+        (initialization period or missing data).
 
         Parameters
         ----------
         infections : ArrayLike
             Aggregate infections from the infection process.
-            Shape: (n_days,)
+            Shape: (n_total,) where n_total = n_init + n_days.
         obs : ArrayLike | None
-            Observed counts. Dense: (n_days,), Sparse: (n_obs,), None: prior.
-        times : ArrayLike | None
-            Day indices relative to the infections vector for sparse observations. None for dense observations.
+            Observed counts on shared time axis. Shape: (n_total,).
+            Use NaN for initialization period and any missing observations.
+            None for prior predictive sampling.
 
         Returns
         -------
         ObservationSample
             Named tuple with `observed` (sampled/conditioned counts) and
-            `predicted` (predicted counts before noise).
+            `predicted` (predicted counts before noise, shape: n_total).
         """
         predicted_counts = self._predicted_obs(infections)
         self._deterministic("predicted", predicted_counts)
 
-        # Only use sparse indexing when conditioning on observations
-        if times is not None and obs is not None:
-            predicted_obs = predicted_counts[times]
+        # Compute mask: True where observation contributes to likelihood.
+        # NaN in predictions (initialization period) or obs (missing data)
+        # are excluded via mask.
+        valid_pred = ~jnp.isnan(predicted_counts)
+        if obs is not None:
+            valid_obs = ~jnp.isnan(obs)
+            mask = valid_pred & valid_obs
         else:
-            observable = ~jnp.isnan(predicted_counts)
-            predicted_obs = predicted_counts[observable]
-            if obs is not None:
-                obs = obs[observable]
+            mask = valid_pred
+
+        # JAX evaluates log_prob for all array elements even when mask
+        # excludes them from the likelihood sum. Replace NaN with safe values
+        # to avoid NaN propagation in JAX's computation graph. These values
+        # do not affect inference since mask=False excludes them.
+        safe_predicted = jnp.where(jnp.isnan(predicted_counts), 1.0, predicted_counts)
+        safe_obs = None
+        if obs is not None:
+            safe_obs = jnp.where(jnp.isnan(obs), safe_predicted, obs)
 
         observed = self.noise.sample(
             name=self._sample_site_name("obs"),
-            predicted=predicted_obs,
-            obs=obs,
+            predicted=safe_predicted,
+            obs=safe_obs,
+            mask=mask,
         )
 
         return ObservationSample(observed=observed, predicted=predicted_counts)
@@ -271,26 +278,27 @@ class CountsBySubpop(_CountBase):
     def sample(
         self,
         infections: ArrayLike,
-        subpop_indices: ArrayLike,
         times: ArrayLike,
+        subpop_indices: ArrayLike,
         obs: ArrayLike | None = None,
     ) -> ObservationSample:
         """
-        Sample subpopulation-level counts with flexible indexing.
+        Sample subpopulation-level counts.
 
-        Validation is performed before JAX tracing at runtime,
-        prior to calling this method.
+        Times are on the shared time axis [0, n_total) where
+        n_total = n_init + n_days. This method performs direct indexing
+        without any offset adjustment.
 
         Parameters
         ----------
         infections : ArrayLike
             Subpopulation-level infections from the infection process.
-            Shape: (n_days, n_subpops)
+            Shape: (n_total, n_subpops)
+        times : ArrayLike
+            Day index for each observation on the shared time axis.
+            Must be in range [0, n_total). Shape: (n_obs,)
         subpop_indices : ArrayLike
             Subpopulation index for each observation (0-indexed).
-            Shape: (n_obs,)
-        times : ArrayLike
-            Day index for each observation (0-indexed).
             Shape: (n_obs,)
         obs : ArrayLike | None
             Observed counts (n_obs,), or None for prior sampling.
@@ -299,12 +307,12 @@ class CountsBySubpop(_CountBase):
         -------
         ObservationSample
             Named tuple with `observed` (sampled/conditioned counts) and
-            `predicted` (predicted counts before noise, shape: n_days x n_subpops).
+            `predicted` (predicted counts before noise, shape: n_total x n_subpops).
         """
-        # Compute predicted counts for all subpops
         predicted_counts = self._predicted_obs(infections)
-
         self._deterministic("predicted", predicted_counts)
+
+        # Direct indexing on shared time axis - no offset needed
         predicted_obs = predicted_counts[times, subpop_indices]
 
         observed = self.noise.sample(
