@@ -107,13 +107,15 @@ class BaseObservationProcess(RandomVariable):
         -------
         int
             Number of days of infection history required.
-            Typically the length of the delay or shedding PMF.
 
         Notes
         -----
+        Delay/shedding PMFs are 0-indexed (effect can occur on day 0), so a
+        PMF of length L covers lags 0 to L-1, requiring L-1 initialization
+        points. Implementations should return ``len(pmf) - 1``.
+
         This is used by model builders to automatically compute
-        n_initialization_points as:
-        ``max(gen_int_length, max(all lookbacks)) - 1``
+        n_initialization_points as ``max(gen_int_length, max(all lookbacks))``.
         """
         pass  # pragma: no cover
 

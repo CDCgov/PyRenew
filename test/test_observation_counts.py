@@ -88,14 +88,13 @@ class TestCountsBasics:
                 obs=None,
             )
 
-        # Timeline alignment: predicted length equals input length
+        # Timeline alignment: both predicted and observed have same length as input
         assert result.predicted.shape[0] == len(infections)
-        # observed excludes NaN entries (first len(pmf) - 1)
-        assert result.observed.shape[0] == len(infections) - (len(short_delay_pmf) - 1)
-        # first len(pmf) - 1 entries NaN, others not
+        assert result.observed.shape[0] == len(infections)
+        # First len(pmf) - 1 entries in predicted are NaN (initialization period)
         assert jnp.all(jnp.isnan(result.predicted[:1]))
         assert jnp.all(~jnp.isnan(result.predicted[1:]))
-        assert jnp.all(~jnp.isnan(result.observed))
+        # Observed is sampled for all entries (masked entries don't affect likelihood)
         assert jnp.all(result.observed >= 0)
 
     def test_ascertainment_scaling(self, counts_factory, simple_delay_pmf):
@@ -236,87 +235,48 @@ class TestCountsEdgeCases:
                 obs=None,
             )
 
-        # Timeline alignment maintained
         assert jnp.all(~jnp.isnan(result.observed))
         assert jnp.all(result.observed >= 0)
 
 
-class TestCountsSparseObservations:
-    """Test sparse observation support."""
+class TestCountsDenseObservations:
+    """Test dense observation support with NaN padding."""
 
-    def test_sparse_observations(self, counts_process):
-        """Test with sparse (irregular) observations."""
+    def test_dense_observations_with_nan_padding(self, counts_process):
+        """Test with dense observations including NaN padding."""
         n_days = 30
         infections = jnp.ones(n_days) * 100
 
-        # Sparse observations: only days 5, 10, 15, 20
-        times = jnp.array([5, 10, 15, 20])
-        counts_data = jnp.array([10, 12, 8, 15])
+        # Dense observations with NaN for "missing" days
+        obs = jnp.ones(n_days) * 10.0
+        obs = obs.at[:5].set(jnp.nan)  # First 5 days "missing"
 
         with numpyro.handlers.seed(rng_seed=42):
             result = counts_process.sample(
                 infections=infections,
-                obs=counts_data,
-                times=times,
+                obs=obs,
             )
 
-        assert result.observed.shape == times.shape
-        assert jnp.allclose(result.observed, counts_data)
+        # With masking, observed has same shape as input (masked entries
+        # are sampled but don't contribute to likelihood)
+        assert result.observed.shape[0] == n_days
+        assert result.predicted.shape[0] == n_days
 
-    def test_sparse_vs_dense_sampling(self, counts_process):
-        """Test that sparse sampling gives different output shape than dense."""
+    def test_prior_sampling_dense(self, counts_process):
+        """Test prior sampling produces dense output."""
         n_days = 30
         infections = jnp.ones(n_days) * 100
 
-        # Dense: prior sampling (obs=None, no times)
         with numpyro.handlers.seed(rng_seed=42):
-            dense_result = counts_process.sample(
+            result = counts_process.sample(
                 infections=infections,
                 obs=None,
             )
 
-        # Sparse with observed data: only some days
-        times = jnp.array([5, 10, 15, 20])
-        sparse_obs_data = jnp.array([10, 12, 8, 15])
-        with numpyro.handlers.seed(rng_seed=42):
-            sparse_result = counts_process.sample(
-                infections=infections,
-                obs=sparse_obs_data,
-                times=times,
-            )
-
-        # Dense prior produces full length output
-        assert dense_result.observed.shape == (n_days,)
-
-        # Sparse observations produce output matching times shape
-        assert sparse_result.observed.shape == times.shape
-        assert jnp.allclose(sparse_result.observed, sparse_obs_data)
-
-    def test_prior_sampling_ignores_times(self, counts_process):
-        """Test that times parameter is ignored when obs=None (prior sampling)."""
-        n_days = 30
-        infections = jnp.ones(n_days) * 100
-        times = jnp.array([5, 10, 15, 20])
-
-        # When obs=None, times is ignored - output is dense
-        with numpyro.handlers.seed(rng_seed=42):
-            result_with_times = counts_process.sample(
-                infections=infections,
-                obs=None,
-                times=times,
-            )
-
-        with numpyro.handlers.seed(rng_seed=42):
-            result_without_times = counts_process.sample(
-                infections=infections,
-                obs=None,
-            )
-
-        # Both should produce dense output of shape (n_days,)
-        assert result_with_times.observed.shape == (n_days,)
-        assert result_without_times.observed.shape == (n_days,)
-        # With same seed, outputs should be identical
-        assert jnp.allclose(result_with_times.observed, result_without_times.observed)
+        # Prior sampling: observed excludes NaN predictions (init period)
+        assert result.observed.shape[0] == n_days  # simple_delay_pmf has no init
+        assert result.predicted.shape == (n_days,)
+        assert jnp.all(~jnp.isnan(result.observed))
 
 
 class TestCountsBySubpop:
@@ -333,14 +293,15 @@ class TestCountsBySubpop:
         )
 
         infections = jnp.ones((30, 3)) * 500  # 30 days, 3 subpops
+        # Times on shared axis (must be >= len(delay_pmf) - 1 to avoid NaN)
         times = jnp.array([10, 15, 10, 15])
         subpop_indices = jnp.array([0, 0, 1, 1])
 
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
-                subpop_indices=subpop_indices,
                 times=times,
+                subpop_indices=subpop_indices,
                 obs=None,
             )
 
@@ -358,6 +319,57 @@ class TestCountsBySubpop:
         )
 
         assert process.infection_resolution() == "subpop"
+
+    def test_non_contiguous_subpop_indices(self):
+        """Test that non-contiguous subpop_indices work correctly.
+
+        This verifies that observation processes can observe any subset
+        of subpopulations, not just contiguous indices starting from 0.
+        For example, with K=5 subpopulations, observations might only
+        cover indices {0, 2, 4} while indices {1, 3} are unobserved.
+        """
+        delay_pmf = jnp.array([0.3, 0.4, 0.3])
+        process = CountsBySubpop(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
+            noise=PoissonNoise(),
+        )
+
+        # 5 subpopulations with distinct infection levels
+        # Subpop 0: 100, Subpop 1: 200, Subpop 2: 300, Subpop 3: 400, Subpop 4: 500
+        n_days = 20
+        infections = jnp.zeros((n_days, 5))
+        for k in range(5):
+            infections = infections.at[:, k].set((k + 1) * 100.0)
+
+        # Observe only subpops 0, 2, 4 (non-contiguous, skipping 1 and 3)
+        times = jnp.array([10, 10, 10])
+        subpop_indices = jnp.array([0, 2, 4])  # Non-contiguous!
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                infections=infections,
+                times=times,
+                subpop_indices=subpop_indices,
+                obs=None,
+            )
+
+        # Verify correct shape
+        assert result.observed.shape == (3,)
+
+        # Verify the predicted values correspond to the correct subpopulations
+        # predicted[t, k] should reflect infections from subpop k
+        # At time 10, predicted counts should be proportional to infection levels
+        predicted_at_obs = result.predicted[10, subpop_indices]
+
+        # Subpop 0 has 100 infections, subpop 2 has 300, subpop 4 has 500
+        # So predicted[10, 0] < predicted[10, 2] < predicted[10, 4]
+        assert predicted_at_obs[0] < predicted_at_obs[1] < predicted_at_obs[2]
+
+        # Verify the ratios match the infection ratios (100:300:500 = 1:3:5)
+        assert jnp.isclose(predicted_at_obs[1] / predicted_at_obs[0], 3.0, atol=0.01)
+        assert jnp.isclose(predicted_at_obs[2] / predicted_at_obs[0], 5.0, atol=0.01)
 
 
 class TestPoissonNoise:
@@ -449,14 +461,15 @@ class TestValidationMethods:
             process.validate()
 
     def test_lookback_days(self, simple_delay_pmf, long_delay_pmf):
-        """Test lookback_days returns PMF length."""
+        """Test lookback_days returns PMF length minus 1 (0-indexed delays)."""
         process_short = Counts(
             name="test_short",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
         )
-        assert process_short.lookback_days() == 1
+        # simple_delay_pmf has length 1, lookback = 1 - 1 = 0
+        assert process_short.lookback_days() == 0
 
         process_long = Counts(
             name="test_long",
@@ -464,7 +477,8 @@ class TestValidationMethods:
             delay_distribution_rv=DeterministicPMF("delay", long_delay_pmf),
             noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
         )
-        assert process_long.lookback_days() == 10
+        # long_delay_pmf has length 10, lookback = 10 - 1 = 9
+        assert process_long.lookback_days() == 9
 
     def test_infection_resolution_counts(self, simple_delay_pmf):
         """Test that Counts returns 'aggregate' resolution."""
@@ -492,6 +506,38 @@ class TestNoiseRepr:
         repr_str = repr(noise)
         assert "NegativeBinomialNoise" in repr_str
         assert "concentration_rv" in repr_str
+
+
+class TestCountsRepr:
+    """Test Counts and CountsBySubpop __repr__ methods."""
+
+    def test_counts_repr(self, simple_delay_pmf):
+        """Test Counts __repr__ method."""
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+        repr_str = repr(process)
+        assert "Counts" in repr_str
+        assert "name='test'" in repr_str
+        assert "ascertainment_rate_rv" in repr_str
+        assert "delay_distribution_rv" in repr_str
+        assert "noise" in repr_str
+
+    def test_counts_by_subpop_repr(self, simple_delay_pmf):
+        """Test CountsBySubpop __repr__ method."""
+        process = CountsBySubpop(
+            name="test_subpop",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.02),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        repr_str = repr(process)
+        assert "CountsBySubpop" in repr_str
+        assert "name='test_subpop'" in repr_str
+        assert "ascertainment_rate_rv" in repr_str
 
 
 class TestNoiseValidation:
