@@ -552,7 +552,7 @@ The prior predictive distribution changes dramatically based on your temporal pr
 # | label: temporal-process-samples
 temporal_configs = {
     "AR(1)": AR1(autoreg=0.9, innovation_sd=0.05),
-    "DifferencedAR1": DifferencedAR1(autoreg=0.9, innovation_sd=0.05),
+    "DifferencedAR1": DifferencedAR1(autoreg=0.5, innovation_sd=0.05),
     "RandomWalk": RandomWalk(innovation_sd=0.05),
 }
 
@@ -619,7 +619,7 @@ comparison_df["process"] = pd.Categorical(
         x="Days",
         y="Rt (baseline)",
         title="Prior Predictive by Temporal Process",
-        subtitle="Same innovation_sd=0.05; AR processes have autoreg=0.9",
+        subtitle="Same innovation_sd=0.05; AR(1) autoreg=0.9, DifferencedAR1 autoreg=0.5",
     )
     + p9.theme_minimal()
     + p9.theme(figure_size=(12, 4))

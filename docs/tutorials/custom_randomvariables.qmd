@@ -2,33 +2,21 @@
 title: Defining Custom PyRenew RandomVariables
 format: gfm
 engine: jupyter
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .qmd
+      format_name: quarto
+      format_version: '1.0'
+      jupytext_version: 1.18.1
+  kernelspec:
+    display_name: Python 3 (ipykernel)
+    language: python
+    name: python3
 ---
 
-This tutorial illustrates how define new `RandomVariable` classes in order to extend existing models and build new ones,
-according to [PyRenew principles](../developer_documentation.md){pyrenew-principles}.
-
-An example of a custom `RandomVariable` class is the `InfectionsWithFeedback` class which models
-the number of infections at time $t$ as a function of the number of infections at time $t - \tau$ as follows:
-
-$$I(t) = \mathcal{R}(t) \sum_{\tau = 1}^{T_g} I(t-\tau) g(\tau)$$
-
-where $\mathcal{R}(t)$ is the reproduction number at time $t$,
-and $g(\tau)$
-is the distribution of times from incident infection to secondary infection, i.e., the infectiousness profile.
-
-The reproduction number at time $t$ is a function of the unadjusted reproduction number at time $t$
-$\mathcal{R}^\mathrm{u}(t)$ and a damping factor which provides feedback from recent transmission:
-
-$$\mathcal{R}(t) = \mathcal{R}^u(t)\exp\left(-\gamma(t)\sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)$$
-
-where $\gamma \geq 0$ scales the feedback strength
-and the function $f(\tau)$ is the time-scale over which past infections influence
-the current time-varying reproductive number $\mathcal{R}(t)$.
-Because $\gamma$ is constrained to be positive, this provides a negative feedback mechanism.
-
-
 ```{python}
-# | label: setup
+#| label: setup
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -68,7 +56,7 @@ set to 0.01 to create moderate damping.
 on $\log(\mathcal{R}^\mathrm{u}(t))$, (as in the basic renewal model).
 
 ```{python}
-# | label: model-components
+#| label: model-components
 gen_int_array = jnp.array([0.25, 0.25, 0.25, 0.25])
 gen_int = DeterministicPMF(name="gen_int", value=gen_int_array)
 feedback_strength = DeterministicVariable(name="feedback_strength", value=0.01)
@@ -117,7 +105,7 @@ class MyRt(RandomVariable):
 We build the model from these components and then simulate data from it without observed infections.
 
 ```{python}
-# | label: build1
+#| label: build1
 model0 = RtInfectionsRenewalModel(
     gen_int_rv=gen_int,
     I0_rv=I0,
@@ -128,15 +116,15 @@ model0 = RtInfectionsRenewalModel(
 ```
 
 ```{python}
-# | label: simulate1
+#| label: simulate1
 # Sampling and fitting model 0 (with no obs for infections)
 with numpyro.handlers.seed(rng_seed=223):
     model0_samp = model0.sample(n_datapoints=30)
 ```
 
 ```{python}
-# | label: fig-simulate1
-# | fig-cap: Simulated infections with no observation process
+#| label: fig-simulate1
+#| fig-cap: Simulated infections with no observation process
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots()
@@ -188,7 +176,7 @@ but omits the tedious checks on its inputs.
 Although returning a `namedtuple` is not strictly required, they are the recommended return type, as they make the code more readable. The following code-chunk shows how to create a `namedtuple` for the `InfectionsWithFeedback` class:
 
 ```{python}
-# | label: data-class
+#| label: data-class
 from collections import namedtuple
 
 # Creating a tuple to store the output
@@ -202,8 +190,8 @@ InfFeedbackSample = namedtuple(
 The next step is to create the actual class. The bulk of its implementation lies in the function `pyrenew.latent.compute_infections_from_rt_with_feedback()`. We will also use the `pyrenew.arrayutils.pad_edges_to_match()` function to ensure the passed vectors match their lengths. The following code-chunk shows most of the implementation of the `InfectionsWithFeedback` class:
 
 ```{python}
-# | label: new-model-def
-# | code-line-numbers: true
+#| label: new-model-def
+#| code-line-numbers: true
 # Creating the class
 from pyrenew.metaclass import RandomVariable
 from pyrenew.latent import compute_infections_from_rt_with_feedback
@@ -296,7 +284,7 @@ To check our work, we build a second model using our new class `InfFeedback` and
 Since class `InfFeedback` exactly follows the `InfectionsWithFeedback` class, if correctly implemented, the two models should provide exactly the same predictions.
 
 ```{python}
-# | label: simulation2
+#| label: simulation2
 latent_infections2 = InfFeedback(
     infection_feedback_strength=feedback_strength,
     infection_feedback_pmf=gen_int,
@@ -318,8 +306,8 @@ with numpyro.handlers.seed(rng_seed=223):
 Comparing `model0` with `model1`, these two should match:
 
 ```{python}
-# | label: fig-model0-vs-model1
-# | fig-cap: Comparing latent infections from model 0 and model 1
+#| label: fig-model0-vs-model1
+#| fig-cap: Comparing latent infections from model 0 and model 1
 import matplotlib.pyplot as plt
 
 fig, ax = plt.subplots(ncols=2)

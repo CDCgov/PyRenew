@@ -20,8 +20,8 @@ jupyter:
 ---
 
 ```{python}
-# | label: setup
-# | output: false
+#| label: setup
+#| output: false
 import numpyro
 
 # to run samplers in parallel you must run `set_host_device_count` before importing jax
@@ -30,12 +30,13 @@ numpyro.enable_x64()
 ```
 
 ```{python}
-# | label: imports-base
+#| label: imports-base
 import arviz as az
 import jax
 import jax.numpy as jnp
 import jax.random as random
 import numpy as np
+import numpyro.distributions as dist
 import plotnine as p9
 import pandas as pd
 import time
@@ -51,7 +52,7 @@ def make_rng_key():
 ```
 
 ```{python}
-# | label: imports-pyrenew
+#| label: imports-pyrenew
 from jax.typing import ArrayLike
 
 from pyrenew import datasets
@@ -60,6 +61,7 @@ from pyrenew.deterministic import (
     DeterministicVariable,
 )
 from pyrenew.metaclass import RandomVariable
+from pyrenew.randomvariable import DistributionalVariable
 
 from pyrenew.latent import (
     HierarchicalInfections,
@@ -149,8 +151,8 @@ flowchart TB
         WW["Measured viral concentrations"]
     end
 
-    L --> J
     L --> S
+    S -->|"weighted sum"| J
     J --> C
     S -->|"select monitored subpopulations"| W
     C -->|"delay + ascertainment + noise"| HA
@@ -185,7 +187,7 @@ Latent infection processes implement the renewal equation to generate infection 
 The generation interval PMF specifies the probability that a secondary infection occurs $d$ days after the primary infection.
 
 ```{python}
-# | label: gen-interval
+#| label: gen-interval
 covid_gen_int = [0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02]
 gen_int_pmf = jnp.array(covid_gen_int)
 gen_int_rv = DeterministicPMF("gen_int", gen_int_pmf)
@@ -197,20 +199,20 @@ print(f"Generation interval length: {len(gen_int_pmf)} days")
 
 ### I0: Initial Infections
 
-The initial infections RV `I0_rv` specifies the **proportion of the population infected** at the first observation time. This must be a value in the interval (0, 1].
+The initial infections RV `I0_rv` specifies the **proportion of the population infected** at the first observation time. This must be a value in the interval (0, 1]. We use a Beta prior centered near a small value:
 
 ```{python}
-# | label: initial-infections
-I0_rv = DeterministicVariable("I0", 0.01)
+#| label: initial-infections
+I0_rv = DistributionalVariable("I0", dist.Beta(1, 100))
 ```
 
 ### Initial Log Rt
 
-We set the initial log(Rt) to 0.0, meaning Rt starts at 1.0.
+We place a prior on the initial log(Rt), centered at 0.0 (Rt = 1.0) with moderate uncertainty:
 
 ```{python}
-# | label: initial-log-rt
-initial_log_rt_rv = DeterministicVariable("initial_log_rt", 0.0)
+#| label: initial-log-rt
+initial_log_rt_rv = DistributionalVariable("initial_log_rt", dist.Normal(0.0, 0.5))
 ```
 
 ### Temporal Processes for $R(t)$
@@ -223,7 +225,7 @@ We configure two temporal processes:
 The RandomWalk allows flexible evolution of subpopulation-specific transmission without mean reversion.
 
 ```{python}
-# | label: temporal-processes
+#| label: temporal-processes
 # AR1 provides mean-reverting behavior for baseline Rt
 baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
 
@@ -259,7 +261,7 @@ In this example we use a dataset consisting of hospital admissions for COVID-19 
 for the first 10 months of 2023 (as reported to the CDC).
 
 ```{python}
-# | label: load-hospital-data
+#| label: load-hospital-data
 # Load daily hospital admissions for California
 ca_hosp_data = datasets.load_hospital_data_for_state("CA", "2023-11-06.csv")
 
@@ -279,7 +281,7 @@ print(
 The hospital admissions data is aggregated at the jurisdiction level, therefore we specify a `Counts` observation process.
 
 ```{python}
-# | label: hospital-obs-process
+#| label: hospital-obs-process
 # Infection-to-hospitalization delay (COVID-19, from literature)
 inf_to_hosp_pmf = jnp.array(
     [
@@ -358,7 +360,7 @@ implementations subclass it and implement `_predicted_obs()` to transform infect
 into predicted values. See `observation_processes_measurements.qmd` for a detailed tutorial.
 
 ```{python}
-# | label: wastewater-class
+#| label: wastewater-class
 class Wastewater(Measurements):
     """
     Wastewater viral concentration observation process.
@@ -415,7 +417,7 @@ For the wastewater data, we use a simulated dataset for California with realisti
 that covers the same time period.
 
 ```{python}
-# | label: load-wastewater-data
+#| label: load-wastewater-data
 # Load wastewater data for California
 ca_ww_data = datasets.load_wastewater_data_for_state("CA", "fake_nwss.csv")
 
@@ -445,7 +447,7 @@ Wastewater observations are site-level: each measurement is associated with a sp
 Here we specify HierarchicalNormalPrior for the site-level mode and GammaGroupSdPrior for the standard deviation.
 
 ```{python}
-# | label: wastewater-obs-process
+#| label: wastewater-obs-process
 # Viral shedding kinetics PMF (days post-infection)
 shedding_pmf = jnp.array(
     [
@@ -501,7 +503,7 @@ print(f"  Shedding PMF length: {len(shedding_pmf)} days")
 We instantiate a `PyrenewBuilder` object which handles the composition of the latent infection process and the observation process.
 
 ```{python}
-# | label: model-builder-init
+#| label: model-builder-init
 # Build the multi-signal model
 builder = PyrenewBuilder()
 ```
@@ -519,7 +521,7 @@ Methods `configure_latent` and `add_observation` can be called in any order. Met
 We use `configure_latent` to specify the **model structure**: generation interval, initial infections, and temporal dynamics.
 
 ```{python}
-# | label: configure-latent
+#| label: configure-latent
 print("Latent process configuration:")
 print(f"  Generation interval length: {len(gen_int_rv())} days")
 
@@ -538,7 +540,7 @@ builder.configure_latent(
 Each observation process's `name` attribute becomes the keyword used to pass that observation's data to `model.run()` (e.g., `hospital={...}`, `wastewater={...}`).
 
 ```{python}
-# | label: add-observations-build
+#| label: add-observations-build
 builder.add_observation(hosp_obs)  # Uses hosp_obs.name = "hospital"
 builder.add_observation(ww_obs)  # Uses ww_obs.name = "wastewater"
 model = builder.build()
@@ -660,7 +662,7 @@ samples = model.mcmc.get_samples()
 First we declare the population structure. We have 6 subpopulations, where 5 have wastewater monitoring and 1 does not. The subpopulations with wastewater monitoring need not be contiguous indices—they could be any subset of {0, 1, ..., n_subpops-1}.
 
 ```{python}
-# | label: population-structure
+#| label: population-structure
 # All 6 subpopulations with their population fractions
 subpop_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07, 0.26])
 
@@ -686,7 +688,7 @@ print(f"Total population: {float(jnp.sum(subpop_fractions)):.0%}")
 We define a function to prepare observation data using the model's helper methods to align with the shared time axis.
 
 ```{python}
-# | label: prepare-observation-data
+#| label: prepare-observation-data
 def prepare_observation_data(
     model, n_days_fit, hosp_admits, ww_data, ww_monitored_subpops
 ):
@@ -753,7 +755,7 @@ Putting this altogether, we align the data with the model time and call `model.r
 We run 4 sampler chains.
 
 ```{python}
-# | label: fit-90-days
+#| label: fit-90-days
 # Clear JAX caches to avoid interference from earlier cells
 jax.clear_caches()
 
@@ -785,7 +787,7 @@ print(f"Elapsed time: {elapsed_90:.1f} seconds")
 ```
 
 ```{python}
-# | label: posterior-shape-90
+#| label: posterior-shape-90
 lat_inf_90 = samples_90["latent_infections"]
 print(f"Posterior samples shape: {lat_inf_90.shape}")
 print(f"Mean latent infections: {np.mean(lat_inf_90):,.0f}")
@@ -794,7 +796,7 @@ print(f"Mean latent infections: {np.mean(lat_inf_90):,.0f}")
 We check that the chains have converged and the number of effective samples.
 
 ```{python}
-# | label: arviz-diagnostics-90
+#| label: arviz-diagnostics-90
 # ArviZ diagnostics for 90-day fit
 def filter_samples_for_arviz(samples, n_init, num_chains=4):
     """Slice time-series samples to exclude initialization period and reshape for chains."""
@@ -827,7 +829,7 @@ az.summary(idata_90, var_names=["~latent_infections", "~expected"])
 We extract the posterior quantiles and print summary statistics.
 
 ```{python}
-# | label: extract-quantiles-90
+#| label: extract-quantiles-90
 def extract_posterior_quantiles(samples, n_init, n_days):
     """Extract posterior quantiles for latent infections."""
     latent_inf = np.array(samples["latent_infections"])[
@@ -852,8 +854,8 @@ print(f"  Median infections (day 45): {quantiles_90['q50'][45]:,.0f}")
 Finally, we visualize the posterior latent infections alongside observed hospitalizations. Note that **hospital admissions lag behind infections** by the infection-to-hospitalization delay (mode ~10 days in our delay PMF). When comparing the two panels, peaks in the infection curve should precede corresponding peaks in hospitalizations by roughly 10-14 days.
 
 ```{python}
-# | label: fig-posterior-90
-# | fig-cap: Posterior latent infections and observed hospitalizations (90 days).
+#| label: fig-posterior-90
+#| fig-cap: Posterior latent infections and observed hospitalizations (90 days).
 # Visualize posterior latent infections and observed hospitalizations (90 days)
 # Create separate dataframes for faceted plot
 infections_df_90 = pd.DataFrame(
@@ -886,7 +888,7 @@ hosp_df_90 = pd.DataFrame(
 plot_df_90 = pd.concat([infections_df_90, hosp_df_90], ignore_index=True)
 plot_df_90["signal"] = pd.Categorical(
     plot_df_90["signal"],
-    categories=["Latent Infections", "Hospital Admissions (14-day MA)"],
+    categories=["Hospital Admissions (14-day MA)", "Latent Infections"],
     ordered=True,
 )
 
@@ -909,6 +911,7 @@ plot_df_90["signal"] = pd.Categorical(
         size=1,
     )
     + p9.facet_wrap("~signal", ncol=1, scales="free_y")
+    + p9.scale_y_log10()
     + p9.labs(
         x="Day",
         y="Count",
@@ -922,7 +925,7 @@ plot_df_90["signal"] = pd.Categorical(
 ### Fit: 180 Days
 
 ```{python}
-# | label: fit-180-days
+#| label: fit-180-days
 # Clear JAX caches to avoid interference
 jax.clear_caches()
 
@@ -953,7 +956,7 @@ print(f"Elapsed time: {elapsed_180:.1f} seconds")
 ```
 
 ```{python}
-# | label: posterior-shape-180
+#| label: posterior-shape-180
 lat_inf_180 = samples_180["latent_infections"]
 print(f"Posterior samples shape: {lat_inf_180.shape}")
 print(f"Mean latent infections: {np.mean(lat_inf_180):,.0f}")
@@ -962,7 +965,7 @@ print(f"Mean latent infections: {np.mean(lat_inf_180):,.0f}")
 We check the model fit, as before.
 
 ```{python}
-# | label: arviz-diagnostics-180
+#| label: arviz-diagnostics-180
 # ArviZ diagnostics for 180-day fit
 samples_180_filtered = filter_samples_for_arviz(
     samples_180, n_init, num_chains=2
@@ -972,7 +975,7 @@ az.summary(idata_180, var_names=["~latent_infections", "~expected"])
 ```
 
 ```{python}
-# | label: extract-quantiles-180
+#| label: extract-quantiles-180
 quantiles_180 = extract_posterior_quantiles(samples_180, n_init, n_days_180)
 
 ci_width_180 = quantiles_180["q95"] - quantiles_180["q05"]
@@ -982,8 +985,8 @@ print(f"  Median infections (day 90): {quantiles_180['q50'][90]:,.0f}")
 ```
 
 ```{python}
-# | label: fig-posterior-180
-# | fig-cap: Posterior latent infections and observed hospitalizations (180 days).
+#| label: fig-posterior-180
+#| fig-cap: Posterior latent infections and observed hospitalizations (180 days).
 # Visualize posterior latent infections and observed hospitalizations (180 days)
 infections_df_180 = pd.DataFrame(
     {
@@ -1015,7 +1018,7 @@ hosp_df_180 = pd.DataFrame(
 plot_df_180 = pd.concat([infections_df_180, hosp_df_180], ignore_index=True)
 plot_df_180["signal"] = pd.Categorical(
     plot_df_180["signal"],
-    categories=["Latent Infections", "Hospital Admissions (14-day MA)"],
+    categories=["Hospital Admissions (14-day MA)", "Latent Infections"],
     ordered=True,
 )
 
@@ -1038,6 +1041,7 @@ plot_df_180["signal"] = pd.Categorical(
         size=1,
     )
     + p9.facet_wrap("~signal", ncol=1, scales="free_y")
+    + p9.scale_y_log10()
     + p9.labs(
         x="Day",
         y="Count",
@@ -1053,7 +1057,7 @@ plot_df_180["signal"] = pd.Categorical(
 Comparing the two fits reveals where uncertainty reduction occurs—and why it matters for forecasting.
 
 ```{python}
-# | label: compare-fits
+#| label: compare-fits
 # Compare CI widths for the overlapping 90-day period
 ci_width_90_overlap = quantiles_90["q95"] - quantiles_90["q05"]
 ci_width_180_overlap = (
