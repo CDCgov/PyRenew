@@ -106,9 +106,9 @@ The builder computes initialization requirements, wires components together, and
 
 Before diving into multi-signal models, you may want to review these foundational tutorials:
 
--   **[Hierarchical Latent Infections](latent_hierarchical_infections.qmd)**: Understanding temporal process choices for $R(t)$
--   **[Observation Processes: Counts](observation_processes_counts.qmd)**: Modeling count data (admissions, deaths)
--   **[Observation Processes: Measurements](observation_processes_measurements.qmd)**: Modeling continuous data (wastewater)
+-   **[Hierarchical Latent Infections](latent_hierarchical_infections.md)**: Understanding temporal process choices for $R(t)$
+-   **[Observation Processes: Counts](observation_processes_counts.md)**: Modeling count data (admissions, deaths)
+-   **[Observation Processes: Measurements](observation_processes_measurements.md)**: Modeling continuous data (wastewater)
 
 This tutorial shows how to combine these components into a complete multi-signal model.
 
@@ -359,7 +359,7 @@ print(f"  Delay PMF length: {len(inf_to_hosp_pmf)} days")
 
 The `Measurements` base class handles continuous observation processes. Domain-specific
 implementations subclass it and implement `_predicted_obs()` to transform infections
-into predicted values. See `observation_processes_measurements.qmd` for a detailed tutorial.
+into predicted values. See `observation_processes_measurements.md` for a detailed tutorial.
 
 ```{python}
 # | label: wastewater-class
@@ -1119,6 +1119,6 @@ This tutorial demonstrated composing a multi-signal renewal model using `Pyrenew
 
 ### Next Steps
 
--   Explore different temporal processes for $R(t)$ in the [Hierarchical Latent Infections](latent_hierarchical_infections.qmd) tutorial
--   Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.qmd)
--   Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.qmd)
+-   Explore different temporal processes for $R(t)$ in the [Hierarchical Latent Infections](latent_hierarchical_infections.md) tutorial
+-   Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.md)
+-   Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.md)
