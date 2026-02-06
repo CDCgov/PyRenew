@@ -361,19 +361,21 @@ rates_df = pd.DataFrame(
         "day": np.arange(n_days),
         "rate": np.array(daily_rates),
         "dow": [day_labels[i % 7] for i in range(n_days)],
-        "is_weekend": [i % 7 >= 5 for i in range(n_days)],
+        "day_type": [
+            "Weekend" if i % 7 >= 5 else "Weekday" for i in range(n_days)
+        ],
     }
 )
 
 (
-    p9.ggplot(rates_df, p9.aes(x="day", y="rate", fill="is_weekend"))
+    p9.ggplot(rates_df, p9.aes(x="day", y="rate", fill="day_type"))
     + p9.geom_col(alpha=0.7, color="black", size=0.3)
-    + p9.scale_fill_manual(values=["steelblue", "salmon"])
+    + p9.scale_fill_manual(values={"Weekday": "steelblue", "Weekend": "salmon"})
     + p9.labs(
         x="Day",
         y="Daily Ascertainment Rate",
         title="Ascertainment Rate with Day-of-Week Effects",
-        fill="Weekend",
+        fill="",
     )
     + p9.theme_grey()
     + p9.theme(plot_title=p9.element_text(size=14, weight="bold"))
@@ -385,10 +387,21 @@ reflecting reduced reporting on weekends.
 
 ### Applying to a simulated observation process
 
-We now show how a daily ascertainment rate interacts with
-the delay convolution in a `Counts` observation process.
-We generate infections with a simple epidemic curve, then produce
-hospital admissions with and without day-of-week effects.
+We now use the `AscertainmentWithDayOfWeek` instance defined above
+to generate day-of-week multipliers within a realistic observation
+pipeline, showing how a custom `RandomVariable` integrates into a
+data-generating process.
+
+In a hospital surveillance system, the observation pipeline is:
+
+1. **Infections** occur over time (the latent process).
+2. **Delay**: each infection leads to a hospital admission after some delay, modeled as a convolution with a delay PMF.
+3. **Reporting**: the admission is *reported* with day-of-week effects — fewer reports on weekends, more on weekdays.
+4. **Noise**: observed counts include measurement noise.
+
+The day-of-week effect is a *reporting* artifact, so it is
+applied **after** the delay convolution.
+We walk through each step explicitly to make the pipeline clear.
 
 ```{python}
 # | label: simulate-infections
@@ -397,62 +410,65 @@ n_days = 60
 infections = 500.0 * jnp.exp(-((jnp.arange(n_days) - 25.0) ** 2) / 200.0)
 ```
 
-First, we create an observation process with a *fixed* ascertainment rate (no day-of-week):
+We convolve infections with the delay PMF and apply a baseline
+ascertainment rate to get the expected admissions before noise:
 
 ```{python}
-# | label: obs-no-dow
-delay_rv = DeterministicPMF("delay", hosp_delay_pmf)
-concentration_rv = DeterministicVariable("concentration", 50.0)
-
-hosp_process = Counts(
-    name="hospital",
-    ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
-    delay_distribution_rv=delay_rv,
-    noise=NegativeBinomialNoise(concentration_rv),
-)
+# | label: delay-convolve
+baseline_rate = 0.01
+expected_admissions = jnp.convolve(
+    baseline_rate * infections,
+    hosp_delay_pmf,
+    mode="full",
+)[:n_days]
 ```
 
-Next, we simulate hospital admissions *with* day-of-week effects by
-applying our custom RV to the infections before passing through the
-observation process. This demonstrates how custom RandomVariables
-compose with existing PyRenew components.
+Now we simulate observed admissions with and without day-of-week effects.
+Without effects, we add noise directly to the smooth expected curve.
+With effects, we first call our custom `ascertainment_rv` to get a
+day-of-week multiplier, apply it to the expected admissions
+(post-convolution, at the reporting stage), then add noise.
 
 ```{python}
 # | label: simulate-with-dow
 n_samples = 20
+concentration = 50.0
 
 results = []
 for seed in range(n_samples):
-    # Without day-of-week
     with numpyro.handlers.seed(rng_seed=seed):
-        obs_no_dow = hosp_process.sample(infections=infections, obs=None)
-
-    # With day-of-week: modulate infections before observation
-    with numpyro.handlers.seed(rng_seed=seed + 1000):
-        (daily_rates,) = ascertainment_rv(n_days=n_days)
-        # Scale factor relative to baseline
-        dow_multiplier = daily_rates / daily_rates.mean()
-
-        # Apply day-of-week modulation to predicted counts
-        obs_with_dow = hosp_process.sample(
-            infections=infections * dow_multiplier,
-            obs=None,
+        # Without day-of-week: noise on the smooth expected curve
+        obs_no_dow = numpyro.sample(
+            "obs_no_dow",
+            dist.NegativeBinomial2(expected_admissions, concentration),
         )
 
-    lookback = hosp_process.lookback_days() - 1
-    for i in range(lookback, n_days):
+    with numpyro.handlers.seed(rng_seed=seed + 1000):
+        # Sample day-of-week multiplier from the custom RV
+        (daily_rates,) = ascertainment_rv(n_days=n_days)
+        dow_multiplier = daily_rates / daily_rates.mean()
+
+        # Apply day-of-week *after* the delay convolution
+        obs_with_dow = numpyro.sample(
+            "obs_with_dow",
+            dist.NegativeBinomial2(
+                expected_admissions * dow_multiplier, concentration
+            ),
+        )
+
+    for i in range(n_days):
         results.append(
             {
-                "day": i - lookback,
-                "admissions": float(obs_no_dow.observed[i]),
+                "day": i,
+                "admissions": float(obs_no_dow[i]),
                 "type": "No day-of-week effect",
                 "sample": seed,
             }
         )
         results.append(
             {
-                "day": i - lookback,
-                "admissions": float(obs_with_dow.observed[i]),
+                "day": i,
+                "admissions": float(obs_with_dow[i]),
                 "type": "With day-of-week effect",
                 "sample": seed,
             }
@@ -480,8 +496,10 @@ results_df = pd.DataFrame(results)
 )
 ```
 
-The day-of-week effects introduce a visible weekly oscillation in the
-admissions signal, consistent with real-world hospital reporting patterns.
+The left panel shows smooth variation from noise alone.
+The right panel shows the additional weekly oscillation introduced by
+day-of-week reporting effects — the sawtooth pattern of weekend dips
+and weekday peaks that is characteristic of real hospital admissions data.
 
 ## Summary
 
