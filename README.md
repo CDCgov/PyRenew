@@ -20,8 +20,9 @@ where $\alpha$ is the ascertainment rate and $\pi(s)$ is the delay distribution 
 
 The Pyrenew package provides configurable classes which encapsulate these components and methods to orchestrate the configuration and composition of these processes
 resulting in programs which clearly express the model structure and choices, allowing for both ease of model specification and dissemination.
-The fundamental building blocks are the `Model` abstract base class, from which we can draw samples,
-and the `RandomVariable` abstract base class which allows for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.
+The fundamental building block is the `RandomVariable` abstract base class, which allows for sampling from distributions, computing a mechanistic equation, or simply returning a fixed value.
+
+We use `RandomVariable`s to build probabilistic models. We represent complete models as concrete subclasses of the `Model` abstract base class.
 The `PyrenewBuilder` class orchestrates the composition process.
 
 PyRenew's strength lies in multi-signal integration for information pooling across diverse observed data streams
