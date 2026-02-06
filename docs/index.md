@@ -25,11 +25,13 @@ where $\alpha$ is the ascertainment rate and $\pi(s)$ is the delay distribution 
 
 PyRenew's building blocks are:
 
-- **`RandomVariable`** -- a metaclass for quantities that models can sample from, including stochastic draws via `numpyro.sample()`, mechanistic computations, and fixed values.
-- **`Model`** -- a metaclass that defines model structure through a `sample()` method and provides functionality for fitting and simulation.
+- **`RandomVariable`** -- an abstract base class for quantities that models can sample from, including stochastic draws via `numpyro.sample()`, mechanistic computations, and fixed values.
+- **`Model`** -- an abstract base class that defines model structure through a `sample()` method and provides functionality for fitting and simulation.
 - **`PyrenewBuilder`** -- an orchestrator that composes `RandomVariable` components into a complete renewal model, auto-computing derived quantities like the number of initialization points.
 
-This compositional design allows each component (generation interval, reproduction number process, observation process) to be specified independently and swapped freely.
+Components (generation interval, reproduction number process, observation process) are specified independently, so each can be swapped without changing the rest of the model.
+This makes it straightforward to move a quantity between "known" and "inferred" and keeps modeling choices explicit and reviewable.
+
 
 ## Multi-signal models
 
@@ -44,7 +46,7 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 
 ## Tutorials
 
-- [The RandomVariable metaclass](tutorials/random_variables.md) -- PyRenew's core abstraction and its concrete implementations.
+- [The RandomVariable abstract base class](tutorials/random_variables.md) -- PyRenew's core abstraction and its concrete implementations.
 - [Observation processes: count data](tutorials/observation_processes_counts.md) -- connecting latent infections to observed counts.
 - [Observation processes: measurements](tutorials/observation_processes_measurements.md) -- connecting latent infections to continuous measurements.
 - [Building multi-signal models](tutorials/building_multisignal_models.md) -- composing a renewal model from PyRenew components using `PyrenewBuilder`.
