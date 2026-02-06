@@ -4,12 +4,7 @@ format:
   gfm:
     fig-width: 16
     fig-height: 10
-  html:
-    toc: true
-    embed-resources: true
-    self-contained-math: true
     code-fold: true
-    code-tools: true
 engine: jupyter
 ---
 
@@ -159,7 +154,7 @@ class MyMeasurement(Measurements):
         self._validate_pmf(pmf, "temporal_pmf_rv")
 
     def lookback_days(self):
-        return len(self.temporal_pmf_rv())
+        return len(self.temporal_pmf_rv()) - 1
 ```
 
 
@@ -246,8 +241,8 @@ class Wastewater(Measurements):
         self.noise.validate()
 
     def lookback_days(self) -> int:
-        """Return shedding PMF length."""
-        return len(self.temporal_pmf_rv())
+        """Return required lookback (PMF length minus 1)."""
+        return len(self.temporal_pmf_rv()) - 1
 
     def _predicted_obs(self, infections: ArrayLike) -> ArrayLike:
         """
@@ -402,13 +397,13 @@ print(f"Required lookback: {ww_process.lookback_days()} days")
 
 ### Timeline alignment
 
-The observation process maintains alignment: day $t$ in output corresponds to day $t$ in input. The first `lookback_days() - 1` days have incomplete history and are marked invalid.
+The observation process maintains alignment: day $t$ in output corresponds to day $t$ in input. A temporal PMF of length $L$ covers lags 0 to $L-1$, requiring $L-1$ days of prior history. The method `lookback_days()` returns $L-1$; the first valid observation day is at index `lookback_days()`.
 
 ```{python}
 # | label: helper-function
 def first_valid_observation_day(obs_process) -> int:
     """Return the first day index with complete infection history."""
-    return obs_process.lookback_days() - 1
+    return obs_process.lookback_days()
 ```
 
 ### Simulating from observations from a single-day infection spike

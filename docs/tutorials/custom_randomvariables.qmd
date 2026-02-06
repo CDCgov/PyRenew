@@ -2,30 +2,18 @@
 title: Defining Custom PyRenew RandomVariables
 format: gfm
 engine: jupyter
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .qmd
+      format_name: quarto
+      format_version: '1.0'
+      jupytext_version: 1.18.1
+  kernelspec:
+    display_name: Python 3 (ipykernel)
+    language: python
+    name: python3
 ---
-
-This tutorial illustrates how define new `RandomVariable` classes in order to extend existing models and build new ones,
-according to [PyRenew principles](../developer_documentation.md){pyrenew-principles}.
-
-An example of a custom `RandomVariable` class is the `InfectionsWithFeedback` class which models
-the number of infections at time $t$ as a function of the number of infections at time $t - \tau$ as follows:
-
-$$I(t) = \mathcal{R}(t) \sum_{\tau = 1}^{T_g} I(t-\tau) g(\tau)$$
-
-where $\mathcal{R}(t)$ is the reproduction number at time $t$,
-and $g(\tau)$
-is the distribution of times from incident infection to secondary infection, i.e., the infectiousness profile.
-
-The reproduction number at time $t$ is a function of the unadjusted reproduction number at time $t$
-$\mathcal{R}^\mathrm{u}(t)$ and a damping factor which provides feedback from recent transmission:
-
-$$\mathcal{R}(t) = \mathcal{R}^u(t)\exp\left(-\gamma(t)\sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)$$
-
-where $\gamma \geq 0$ scales the feedback strength
-and the function $f(\tau)$ is the time-scale over which past infections influence
-the current time-varying reproductive number $\mathcal{R}(t)$.
-Because $\gamma$ is constrained to be positive, this provides a negative feedback mechanism.
-
 
 ```{python}
 # | label: setup
