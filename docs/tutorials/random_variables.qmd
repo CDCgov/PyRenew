@@ -370,7 +370,9 @@ rates_df = pd.DataFrame(
 (
     p9.ggplot(rates_df, p9.aes(x="day", y="rate", fill="day_type"))
     + p9.geom_col(alpha=0.7, color="black", size=0.3)
-    + p9.scale_fill_manual(values={"Weekday": "steelblue", "Weekend": "salmon"})
+    + p9.scale_fill_manual(
+        values={"Weekday": "steelblue", "Weekend": "salmon"}
+    )
     + p9.labs(
         x="Day",
         y="Daily Ascertainment Rate",
