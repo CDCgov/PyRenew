@@ -228,3 +228,44 @@ def test_transforms_variable_naming():
 
     assert "transformed_rv_0" in mymodel3.mcmc.get_samples()
     assert "transformed_rv_1" in mymodel3.mcmc.get_samples()
+
+
+def test_posterior_predictive():
+    """
+    Test that Model.posterior_predictive() returns samples
+    after running MCMC, and raises before running.
+    """
+    rv = DistributionalVariable(name="test_normal", distribution=dist.Normal(0, 1))
+    model = MyModel(rv)
+
+    with pytest.raises(ValueError, match="No posterior samples available"):
+        model.posterior_predictive(rng_key=jax.random.key(0))
+
+    model.run(num_samples=5, num_warmup=5, rng_key=jax.random.key(1))
+    result = model.posterior_predictive(rng_key=jax.random.key(2))
+    assert isinstance(result, dict)
+
+    # Also test with rng_key=None (auto-generated)
+    result_auto_key = model.posterior_predictive()
+    assert isinstance(result_auto_key, dict)
+
+
+def test_prior_predictive():
+    """
+    Test that Model.prior_predictive() returns samples
+    without needing to run MCMC first.
+    """
+    rv = DistributionalVariable(name="test_normal", distribution=dist.Normal(0, 1))
+    model = MyModel(rv)
+
+    result = model.prior_predictive(
+        rng_key=jax.random.key(0),
+        numpyro_predictive_args={"num_samples": 5},
+    )
+    assert isinstance(result, dict)
+
+    # Also test with rng_key=None (auto-generated)
+    result_auto_key = model.prior_predictive(
+        numpyro_predictive_args={"num_samples": 5},
+    )
+    assert isinstance(result_auto_key, dict)
