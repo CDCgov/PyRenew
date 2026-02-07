@@ -10,29 +10,15 @@ protocol.
 **Relationship to pyrenew.process:**
 
 This module provides **high-level, domain-specific wrappers** around the
-low-level building blocks in :mod:`pyrenew.process`. The key differences:
+low-level building blocks in [pyrenew.process][]. The key differences:
 
-.. list-table::
-   :header-rows: 1
-
-   * - Aspect
-     - ``pyrenew.process``
-     - ``pyrenew.latent.temporal_processes``
-   * - Abstraction level
-     - Low-level composable primitives
-     - High-level domain-specific API
-   * - Interface
-     - Varied signatures per class
-     - Unified ``TemporalProcess`` protocol
-   * - Target use
-     - General time-series modeling
-     - Rt dynamics, hierarchical infections
-   * - Vectorization
-     - Caller manages array shapes
-     - Automatic via ``n_processes`` parameter
-   * - Validation
-     - Minimal constraints
-     - Validates positive innovation_sd
+| Aspect | ``pyrenew.process`` | ``pyrenew.latent.temporal_processes`` |
+| --- | --- | --- |
+| Abstraction level | Low-level composable primitives | High-level domain-specific API |
+| Interface | Varied signatures per class | Unified ``TemporalProcess`` protocol |
+| Target use | General time-series modeling | Rt dynamics, hierarchical infections |
+| Vectorization | Caller manages array shapes | Automatic via ``n_processes`` parameter |
+| Validation | Minimal constraints | Validates positive innovation_sd |
 
 **When to use which:**
 
@@ -48,11 +34,11 @@ low-level building blocks in :mod:`pyrenew.process`. The key differences:
 **Temporal processes provided:**
 
 - ``AR1``: Autoregressive process with mean reversion. Keeps Rt bounded
-  near a baseline. Wraps :class:`pyrenew.process.ARProcess`.
+  near a baseline. Wraps [pyrenew.process.ARProcess][].
 - ``DifferencedAR1``: AR(1) on first differences. Allows persistent trends
-  while stabilizing the growth rate. Wraps :class:`pyrenew.process.DifferencedProcess`.
+  while stabilizing the growth rate. Wraps [pyrenew.process.DifferencedProcess][].
 - ``RandomWalk``: No mean reversion. Rt can drift without bound.
-  Wraps :class:`pyrenew.process.RandomWalk`.
+  Wraps [pyrenew.process.RandomWalk][].
 
 All implementations satisfy the ``TemporalProcess`` protocol and can be
 used interchangeably in hierarchical infection models.
@@ -121,7 +107,7 @@ class AR1(TemporalProcess):
     toward a mean level. Keeps Rt bounded near a baseline — values that
     drift away are "pulled back" over time.
 
-    This class wraps :class:`pyrenew.process.ARProcess` with a simplified,
+    This class wraps [pyrenew.process.ARProcess][] with a simplified,
     protocol-compliant interface that handles vectorization automatically.
 
     Parameters
@@ -219,8 +205,8 @@ class DifferencedAR1(TemporalProcess):
     the rate of change reverting toward a mean. Unlike AR(1), this allows
     Rt to trend persistently upward or downward while the growth rate stabilizes.
 
-    This class wraps :class:`pyrenew.process.DifferencedProcess` with
-    :class:`pyrenew.process.ARProcess` as the fundamental process, providing
+    This class wraps [pyrenew.process.DifferencedProcess][] with
+    [pyrenew.process.ARProcess][] as the fundamental process, providing
     a simplified, protocol-compliant interface.
 
     Parameters
@@ -323,7 +309,7 @@ class RandomWalk(TemporalProcess):
     toward a mean. Allows Rt to drift without bound — suitable when you
     have no prior expectation that Rt will return to a baseline.
 
-    This class wraps :class:`pyrenew.process.RandomWalk` with a simplified,
+    This class wraps [pyrenew.process.RandomWalk][] with a simplified,
     protocol-compliant interface that handles vectorization automatically.
 
     Parameters
