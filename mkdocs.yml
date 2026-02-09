@@ -45,6 +45,8 @@ plugins:
       enable_inventory: true
 
 markdown_extensions:
+  - toc:
+      toc_depth: 2
   - footnotes
   - md_in_html
   - pymdownx.snippets
