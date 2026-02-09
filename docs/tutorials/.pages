@@ -1,11 +1,7 @@
 nav:
-  - getting_started.md
+  - random_variables.md
   - building_multisignal_models.md
   - observation_processes_counts.md
   - observation_processes_measurements.md
   - latent_hierarchical_infections.md
-  - custom_randomvariables.md
-  - basic_renewal_model.md
-  - hospital_admissions_model.md
-  - day_of_the_week.md
   - periodic_effects.md

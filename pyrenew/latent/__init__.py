@@ -11,7 +11,6 @@ from pyrenew.latent.hierarchical_priors import (
     HierarchicalNormalPrior,
     StudentTGroupModePrior,
 )
-from pyrenew.latent.hospitaladmissions import HospitalAdmissions
 from pyrenew.latent.infection_functions import (
     compute_infections_from_rt,
     compute_infections_from_rt_with_feedback,
@@ -36,7 +35,6 @@ from pyrenew.latent.temporal_processes import (
 )
 
 __all__ = [
-    "HospitalAdmissions",
     "Infections",
     "logistic_susceptibility_adjustment",
     "compute_infections_from_rt",
@@ -51,7 +49,7 @@ __all__ = [
     "BaseLatentInfectionProcess",
     "LatentSample",
     "PopulationStructure",
-    # Hierarchical infection processes
+    # Hierarchical infect1<ion processes
     "HierarchicalInfections",
     # Hierarchical priors
     "HierarchicalNormalPrior",

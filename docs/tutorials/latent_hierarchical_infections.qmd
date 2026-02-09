@@ -909,4 +909,4 @@ and call the `configure_latent` method
 to specify the latent process model structure: generation interval, initial infections, and temporal dynamics.
 See tutorial:
 
-- [Building Multi-Signal Renewal Models](building_multisignal_models.qmd)
+- [Building Multi-Signal Renewal Models](building_multisignal_models.md)

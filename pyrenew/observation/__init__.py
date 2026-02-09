@@ -30,13 +30,11 @@ from pyrenew.observation.noise import (
     PoissonNoise,
     VectorizedRV,
 )
-from pyrenew.observation.poisson import PoissonObservation
 from pyrenew.observation.types import ObservationSample
 
 __all__ = [
     # Existing (kept for backward compatibility)
     "NegativeBinomialObservation",
-    "PoissonObservation",
     # Base classes and types
     "BaseObservationProcess",
     "ObservationSample",
