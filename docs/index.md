@@ -54,7 +54,6 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 
 ## Resources
 
-- [Model equations](https://github.com/CDCgov/PyRenew/blob/main/equations.md) -- the mathematics of the multi-signal renewal processes PyRenew supports.
 - [Developer documentation](developer_documentation.md)
 
 ### Models implemented with PyRenew
