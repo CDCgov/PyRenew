@@ -10,7 +10,7 @@ Built on top of [NumPyro](https://num.pyro.ai/), PyRenew provides configurable c
 A renewal model estimates new infections from recent past infections using a generation interval distribution $w(s)$: the probability that $s$ time units separate infection in an index case and a secondary case.
 The core renewal equation is:
 
-$$I(t) = R_t \sum_{s} I(t-s) \, w(s)$$
+$$I(t) = \mathcal{R}(t) \sum_{s} I(t-s) \, w(s)$$
 
 where $R_t$ is the time-varying reproduction number.
 
