@@ -13,7 +13,7 @@ wheels = [
 
 [[package]]
 name = "arviz"
-version = "0.23.1"
+version = "0.23.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "h5netcdf" },
@@ -22,15 +22,16 @@ dependencies = [
     { name = "numpy" },
     { name = "packaging" },
     { name = "pandas" },
+    { name = "platformdirs" },
     { name = "scipy" },
     { name = "setuptools" },
     { name = "typing-extensions" },
     { name = "xarray" },
     { name = "xarray-einstats" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/da/02/b4ccea40a0a9cf4ae4dde0937b1eeecd1f6540be7fd3f12399c9d3554868/arviz-0.23.1.tar.gz", hash = "sha256:2a91f4c84a85ef6b41d62fa337aa059a6c83ba10db4603e359a95981eb69c10d", size = 1592841, upload-time = "2026-01-16T15:07:24.374Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f3/c9/9c853633715f972eecc20995763c6e3005a3afcdcf47e39d20cd1c2889cd/arviz-0.23.4.tar.gz", hash = "sha256:611be826995066036c9443ea98d11486c279ef3da3b6cdc5c0816fab434115b9", size = 1592968, upload-time = "2026-02-04T17:57:53.664Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5c/45/2bd99d76ee0c6cb304a7542db7f0e13a844f2c2c5febf9cf6dd7b19405c2/arviz-0.23.1-py3-none-any.whl", hash = "sha256:2b52c6327a158cbef9970647c8056e453c7e788e97a4446afb1f6a3ba2e0cbe0", size = 1673608, upload-time = "2026-01-16T15:07:22.106Z" },
+    { url = "https://files.pythonhosted.org/packages/44/1f/227f9cb7edcd3e14ab05928f3db00e9d595c0f269c87bf35f565ce44941b/arviz-0.23.4-py3-none-any.whl", hash = "sha256:c46c7faf8a06abadc9b5b64000584062ecbc20c2298e2bd6dfba04bb01a684ca", size = 1673773, upload-time = "2026-02-04T17:57:51.778Z" },
 ]
 
 [[package]]
