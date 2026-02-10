@@ -17,16 +17,17 @@ from pyrenew.randomvariable import DistributionalVariable
 class TestHierarchicalNormalPrior:
     """Test HierarchicalNormalPrior."""
 
-    def test_sample_shape(self):
-        """Test that sample returns correct shape."""
+    def test_sample_shape_and_centering(self):
+        """Test that sample returns correct shape and is centered near zero."""
         prior = HierarchicalNormalPrior(
             "effect", sd_rv=DeterministicVariable("sd", 1.0)
         )
 
         with numpyro.handlers.seed(rng_seed=42):
-            samples = prior.sample(n_groups=5)
+            samples = prior.sample(n_groups=1000)
 
-        assert samples.shape == (5,)
+        assert samples.shape == (1000,)
+        assert jnp.abs(jnp.mean(samples)) < 0.2
 
     def test_smaller_sd_produces_tighter_distribution(self):
         """Test that smaller sd produces samples closer to zero."""
@@ -43,7 +44,6 @@ class TestHierarchicalNormalPrior:
         with numpyro.handlers.seed(rng_seed=43):
             samples_wide = prior_wide.sample(n_groups=n_samples)
 
-        # Tight prior should have smaller standard deviation
         assert jnp.std(samples_tight) < jnp.std(samples_wide)
 
     def test_rejects_non_random_variable_sd(self):
@@ -61,20 +61,12 @@ class TestHierarchicalNormalPrior:
 
         assert samples.shape == (5,)
 
-    def test_validate_method(self):
-        """Test that validate() method runs without error."""
-        prior = HierarchicalNormalPrior(
-            "effect", sd_rv=DeterministicVariable("sd", 1.0)
-        )
-        # Should not raise - validate is a no-op
-        prior.validate()
-
 
 class TestGammaGroupSdPrior:
     """Test GammaGroupSdPrior."""
 
-    def test_sample_shape(self):
-        """Test that sample returns correct shape."""
+    def test_sample_shape_and_positivity(self):
+        """Test that sample returns correct shape with positive values."""
         prior = GammaGroupSdPrior(
             "sd",
             sd_mean_rv=DeterministicVariable("sd_mean", 0.5),
@@ -82,9 +74,10 @@ class TestGammaGroupSdPrior:
         )
 
         with numpyro.handlers.seed(rng_seed=42):
-            samples = prior.sample(n_groups=5)
+            samples = prior.sample(n_groups=100)
 
-        assert samples.shape == (5,)
+        assert samples.shape == (100,)
+        assert jnp.all(samples > 0)
 
     def test_respects_sd_min(self):
         """Test that sd_min is enforced as lower bound."""
@@ -128,22 +121,12 @@ class TestGammaGroupSdPrior:
                 sd_min=-0.1,
             )
 
-    def test_validate_method(self):
-        """Test that validate() method runs without error."""
-        prior = GammaGroupSdPrior(
-            "sd",
-            sd_mean_rv=DeterministicVariable("sd_mean", 0.5),
-            sd_concentration_rv=DeterministicVariable("sd_conc", 4.0),
-        )
-        # Should not raise - validate is a no-op
-        prior.validate()
-
 
 class TestStudentTGroupModePrior:
     """Test StudentTGroupModePrior."""
 
-    def test_sample_shape(self):
-        """Test that sample returns correct shape."""
+    def test_sample_shape_and_centering(self):
+        """Test that sample returns correct shape and is centered near zero."""
         prior = StudentTGroupModePrior(
             "mode",
             sd_rv=DeterministicVariable("sd", 1.0),
@@ -151,13 +134,13 @@ class TestStudentTGroupModePrior:
         )
 
         with numpyro.handlers.seed(rng_seed=42):
-            samples = prior.sample(n_groups=5)
+            samples = prior.sample(n_groups=1000)
 
-        assert samples.shape == (5,)
+        assert samples.shape == (1000,)
+        assert jnp.abs(jnp.mean(samples)) < 0.3
 
     def test_heavier_tails_than_normal(self):
         """Test Student-t produces more extreme values than Normal."""
-        # df=2 gives very heavy tails
         student_prior = StudentTGroupModePrior(
             "s",
             sd_rv=DeterministicVariable("sd_s", 1.0),
@@ -173,7 +156,6 @@ class TestStudentTGroupModePrior:
         with numpyro.handlers.seed(rng_seed=42):
             normal_samples = normal_prior.sample(n_groups=n_samples)
 
-        # Student-t should have more extreme values (higher max absolute value)
         assert jnp.max(jnp.abs(student_samples)) > jnp.max(jnp.abs(normal_samples))
 
     def test_rejects_non_random_variable_params(self):
@@ -191,16 +173,6 @@ class TestStudentTGroupModePrior:
                 sd_rv=DeterministicVariable("sd", 1.0),
                 df_rv=4.0,
             )
-
-    def test_validate_method(self):
-        """Test that validate() method runs without error."""
-        prior = StudentTGroupModePrior(
-            "mode",
-            sd_rv=DeterministicVariable("sd", 1.0),
-            df_rv=DeterministicVariable("df", 4.0),
-        )
-        # Should not raise - validate is a no-op
-        prior.validate()
 
 
 if __name__ == "__main__":
