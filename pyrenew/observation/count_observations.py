@@ -175,6 +175,41 @@ class Counts(_CountBase):
             f"noise={self.noise!r})"
         )
 
+    def validate_data(
+        self,
+        n_total: int,
+        n_subpops: int,
+        obs: ArrayLike | None = None,
+        **kwargs,
+    ) -> None:
+        """
+        Validate aggregated count observation data.
+
+        Parameters
+        ----------
+        n_total : int
+            Total number of time steps (n_init + n_days_post_init).
+        n_subpops : int
+            Number of subpopulations (unused for aggregate observations).
+        obs : ArrayLike | None
+            Observed counts on shared time axis. Shape: (n_total,).
+        **kwargs
+            Additional keyword arguments (ignored).
+
+        Raises
+        ------
+        ValueError
+            If obs length doesn't match n_total.
+        """
+        if obs is not None:
+            obs = jnp.asarray(obs)
+            if obs.shape[0] != n_total:
+                raise ValueError(
+                    f"Observation '{self.name}': obs length {obs.shape[0]} "
+                    f"must equal n_total ({n_total}). "
+                    f"Pad with NaN for initialization period."
+                )
+
     def sample(
         self,
         infections: ArrayLike,
@@ -274,6 +309,46 @@ class CountsBySubpop(_CountBase):
             The string "subpop".
         """
         return "subpop"
+
+    def validate_data(
+        self,
+        n_total: int,
+        n_subpops: int,
+        times: ArrayLike | None = None,
+        subpop_indices: ArrayLike | None = None,
+        obs: ArrayLike | None = None,
+        **kwargs,
+    ) -> None:
+        """
+        Validate subpopulation-level count observation data.
+
+        Parameters
+        ----------
+        n_total : int
+            Total number of time steps (n_init + n_days_post_init).
+        n_subpops : int
+            Number of subpopulations.
+        times : ArrayLike | None
+            Day index for each observation on the shared time axis.
+        subpop_indices : ArrayLike | None
+            Subpopulation index for each observation (0-indexed).
+        obs : ArrayLike | None
+            Observed counts (n_obs,).
+        **kwargs
+            Additional keyword arguments (ignored).
+
+        Raises
+        ------
+        ValueError
+            If times or subpop_indices are out of bounds, or if
+            obs and times have mismatched lengths.
+        """
+        if times is not None:
+            self._validate_times(times, n_total)
+            if obs is not None:
+                self._validate_obs_times_length(obs, times)
+        if subpop_indices is not None:
+            self._validate_subpop_indices(subpop_indices, n_subpops)
 
     def sample(
         self,

@@ -313,6 +313,120 @@ class BaseObservationProcess(RandomVariable):
         pass  # pragma: no cover
 
     @abstractmethod
+    def validate_data(
+        self,
+        n_total: int,
+        n_subpops: int,
+        **obs_data,
+    ) -> None:
+        """
+        Validate observation data before running inference.
+
+        Each observation process validates its own data requirements.
+        Called by the model's ``validate_data()`` method with concrete
+        (non-traced) values before JAX tracing begins.
+
+        Parameters
+        ----------
+        n_total : int
+            Total number of time steps (n_init + n_days_post_init).
+        n_subpops : int
+            Number of subpopulations.
+        **obs_data
+            Observation-specific data kwargs (same as passed to ``sample()``,
+            minus ``infections`` which comes from the latent process).
+
+        Raises
+        ------
+        ValueError
+            If any data fails validation.
+        """
+        pass  # pragma: no cover
+
+    def _validate_times(self, times: ArrayLike, n_total: int) -> None:
+        """
+        Validate a times index array.
+
+        Checks that all values are non-negative and within ``[0, n_total)``.
+
+        Parameters
+        ----------
+        times : ArrayLike
+            Time indices on the shared time axis.
+        n_total : int
+            Total number of time steps.
+
+        Raises
+        ------
+        ValueError
+            If times contains negative values or values >= n_total.
+        """
+        times = jnp.asarray(times)
+        if jnp.any(times < 0):
+            raise ValueError(f"Observation '{self.name}': times cannot be negative")
+        max_time = jnp.max(times)
+        if max_time >= n_total:
+            raise ValueError(
+                f"Observation '{self.name}': times index {int(max_time)} "
+                f">= n_total ({n_total}). "
+                f"Times must be on shared axis [0, {n_total})."
+            )
+
+    def _validate_subpop_indices(
+        self, subpop_indices: ArrayLike, n_subpops: int
+    ) -> None:
+        """
+        Validate a subpopulation index array.
+
+        Checks that all values are non-negative and within ``[0, n_subpops)``.
+
+        Parameters
+        ----------
+        subpop_indices : ArrayLike
+            Subpopulation indices (0-indexed).
+        n_subpops : int
+            Number of subpopulations.
+
+        Raises
+        ------
+        ValueError
+            If subpop_indices contains negative values or values >= n_subpops.
+        """
+        subpop_indices = jnp.asarray(subpop_indices)
+        if jnp.any(subpop_indices < 0):
+            raise ValueError(
+                f"Observation '{self.name}': subpop_indices cannot be negative"
+            )
+        max_idx = jnp.max(subpop_indices)
+        if max_idx >= n_subpops:
+            raise ValueError(
+                f"Observation '{self.name}': subpop_indices contains "
+                f"{int(max_idx)} >= {n_subpops} (n_subpops)"
+            )
+
+    def _validate_obs_times_length(self, obs: ArrayLike, times: ArrayLike) -> None:
+        """
+        Validate that obs and times arrays have matching lengths.
+
+        Parameters
+        ----------
+        obs : ArrayLike
+            Observed data array.
+        times : ArrayLike
+            Times index array.
+
+        Raises
+        ------
+        ValueError
+            If obs and times have different lengths.
+        """
+        if len(obs) != len(times):
+            raise ValueError(
+                f"Observation '{self.name}': obs length {len(obs)} "
+                f"must match times length {len(times)}"
+            )
+
+    @abstractmethod
     def sample(
         self,
         obs: ArrayLike | None = None,
