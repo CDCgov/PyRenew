@@ -410,6 +410,10 @@ class TestCountBaseInternalMethods:
                 """Sample method stub."""
                 pass
 
+            def validate_data(self, n_total, n_subpops, **obs_data):
+                """Validate data stub."""
+                pass
+
         process = IncompleteCountProcess(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
