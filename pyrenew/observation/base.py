@@ -313,6 +313,165 @@ class BaseObservationProcess(RandomVariable):
         pass  # pragma: no cover
 
     @abstractmethod
+    def validate_data(
+        self,
+        n_total: int,
+        n_subpops: int,
+        **obs_data,
+    ) -> None:
+        """
+        Validate observation data before running inference.
+
+        Each observation process validates its own data requirements.
+        Called by the model's ``validate_data()`` method with concrete
+        (non-traced) values before JAX tracing begins.
+
+        Parameters
+        ----------
+        n_total : int
+            Total number of time steps (n_init + n_days_post_init).
+        n_subpops : int
+            Number of subpopulations.
+        **obs_data
+            Observation-specific data kwargs (same as passed to ``sample()``,
+            minus ``infections`` which comes from the latent process).
+
+        Raises
+        ------
+        ValueError
+            If any data fails validation.
+        """
+        pass  # pragma: no cover
+
+    def _validate_index_array(
+        self, indices: ArrayLike, upper_bound: int, param_name: str
+    ) -> None:
+        """
+        Validate an index array has non-negative values within bounds.
+
+        Checks that all values are non-negative integers in ``[0, upper_bound)``.
+
+        Parameters
+        ----------
+        indices : ArrayLike
+            Index array to validate.
+        upper_bound : int
+            Exclusive upper bound for valid indices.
+        param_name : str
+            Name of the parameter (for error messages).
+
+        Raises
+        ------
+        ValueError
+            If indices contains negative values or values >= upper_bound.
+        """
+        indices = jnp.asarray(indices)
+        if jnp.any(indices < 0):
+            raise ValueError(
+                f"Observation '{self.name}': {param_name} cannot be negative"
+            )
+        max_val = jnp.max(indices)
+        if max_val >= upper_bound:
+            raise ValueError(
+                f"Observation '{self.name}': {param_name} contains "
+                f"{int(max_val)} >= {upper_bound} ({param_name} upper bound)"
+            )
+
+    def _validate_times(self, times: ArrayLike, n_total: int) -> None:
+        """
+        Validate a times index array.
+
+        Checks that all values are non-negative and within ``[0, n_total)``.
+
+        Parameters
+        ----------
+        times : ArrayLike
+            Time indices on the shared time axis.
+        n_total : int
+            Total number of time steps.
+
+        Raises
+        ------
+        ValueError
+            If times contains negative values or values >= n_total.
+        """
+        self._validate_index_array(times, n_total, "times")
+
+    def _validate_subpop_indices(
+        self, subpop_indices: ArrayLike, n_subpops: int
+    ) -> None:
+        """
+        Validate a subpopulation index array.
+
+        Checks that all values are non-negative and within ``[0, n_subpops)``.
+
+        Parameters
+        ----------
+        subpop_indices : ArrayLike
+            Subpopulation indices (0-indexed).
+        n_subpops : int
+            Number of subpopulations.
+
+        Raises
+        ------
+        ValueError
+            If subpop_indices contains negative values or values >= n_subpops.
+        """
+        self._validate_index_array(subpop_indices, n_subpops, "subpop_indices")
+
+    def _validate_obs_times_shape(self, obs: ArrayLike, times: ArrayLike) -> None:
+        """
+        Validate that obs and times arrays have matching shapes.
+
+        Parameters
+        ----------
+        obs : ArrayLike
+            Observed data array.
+        times : ArrayLike
+            Times index array.
+
+        Raises
+        ------
+        ValueError
+            If obs and times have different shapes.
+        """
+        obs = jnp.asarray(obs)
+        times = jnp.asarray(times)
+        if obs.shape != times.shape:
+            raise ValueError(
+                f"Observation '{self.name}': obs shape {obs.shape} "
+                f"must match times shape {times.shape}"
+            )
+
+    def _validate_obs_dense(self, obs: ArrayLike, n_total: int) -> None:
+        """
+        Validate that obs covers the full shared time axis.
+
+        For dense observations on the shared time axis ``[0, n_total)``,
+        obs must have length equal to ``n_total``. Use NaN to mark
+        unobserved timepoints (initialization period or missing data).
+
+        Parameters
+        ----------
+        obs : ArrayLike
+            Observed data array on the shared time axis.
+        n_total : int
+            Total number of time steps (n_init + n_days_post_init).
+
+        Raises
+        ------
+        ValueError
+            If obs length doesn't equal n_total.
+        """
+        obs = jnp.asarray(obs)
+        if obs.shape[0] != n_total:
+            raise ValueError(
+                f"Observation '{self.name}': obs length {obs.shape[0]} "
+                f"must equal n_total ({n_total}). "
+                f"Pad with NaN for initialization period."
+            )
+
+    @abstractmethod
     def sample(
         self,
         obs: ArrayLike | None = None,

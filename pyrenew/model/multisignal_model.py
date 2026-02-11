@@ -202,52 +202,11 @@ class MultiSignalModel(Model):
                     f"Available: {list(self.observations.keys())}"
                 )
 
-            obs = obs_data.get("obs")
-            times = obs_data.get("times")
-
-            if times is not None:
-                # Sparse observations: times on shared axis [0, n_total)
-                times = jnp.asarray(times)
-                if jnp.any(times < 0):
-                    raise ValueError(f"Observation '{name}': times cannot be negative")
-                max_time = jnp.max(times)
-                if max_time >= n_total:
-                    raise ValueError(
-                        f"Observation '{name}': times index {int(max_time)} "
-                        f">= n_total ({n_total} = {n_init} init + "
-                        f"{n_days_post_init} days). "
-                        f"Times must be on shared axis [0, {n_total})."
-                    )
-                if obs is not None and len(obs) != len(times):
-                    raise ValueError(
-                        f"Observation '{name}': obs length {len(obs)} "
-                        f"must match times length {len(times)}"
-                    )
-            elif obs is not None:
-                # Dense observations: length must equal n_total
-                obs = jnp.asarray(obs)
-                if obs.shape[0] != n_total:
-                    raise ValueError(
-                        f"Observation '{name}': obs length {obs.shape[0]} "
-                        f"must equal n_total ({n_total} = {n_init} init + "
-                        f"{n_days_post_init} days). "
-                        f"Pad with NaN for initialization period."
-                    )
-
-            # Validate subpop_indices if present
-            subpop_indices = obs_data.get("subpop_indices")
-            if subpop_indices is not None:
-                subpop_indices = jnp.asarray(subpop_indices)
-                if jnp.any(subpop_indices < 0):
-                    raise ValueError(
-                        f"Observation '{name}': subpop_indices cannot be negative"
-                    )
-                max_idx = jnp.max(subpop_indices)
-                if max_idx >= pop.n_subpops:
-                    raise ValueError(
-                        f"Observation '{name}': subpop_indices contains "
-                        f"{int(max_idx)} >= {pop.n_subpops} (n_subpops)"
-                    )
+            self.observations[name].validate_data(
+                n_total=n_total,
+                n_subpops=pop.n_subpops,
+                **obs_data,
+            )
 
     def sample(
         self,

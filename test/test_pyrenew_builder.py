@@ -8,7 +8,7 @@ import pytest
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import HierarchicalInfections, RandomWalk
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
-from pyrenew.observation import Counts, NegativeBinomialNoise
+from pyrenew.observation import Counts, CountsBySubpop, NegativeBinomialNoise
 
 # Standard population structure for tests (3 subpopulations)
 SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
@@ -44,6 +44,53 @@ def simple_builder():
         noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
     )
     builder.add_observation(obs)
+
+    return builder
+
+
+@pytest.fixture
+def validation_builder():
+    """
+    Create a builder with both aggregate and subpop observations.
+
+    Used for testing validate_data() delegation to different
+    observation types.
+
+    Returns
+    -------
+    PyrenewBuilder
+        Builder with Counts ("hospital") and CountsBySubpop
+        ("hospital_subpop") observations.
+    """
+    builder = PyrenewBuilder()
+    gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+
+    builder.configure_latent(
+        HierarchicalInfections,
+        gen_int_rv=gen_int,
+        I0_rv=DeterministicVariable("I0", 0.001),
+        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        baseline_rt_process=RandomWalk(),
+        subpop_rt_deviation_process=RandomWalk(),
+    )
+
+    delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
+    builder.add_observation(
+        Counts(
+            name="hospital",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=delay,
+            noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+        )
+    )
+    builder.add_observation(
+        CountsBySubpop(
+            name="hospital_subpop",
+            ascertainment_rate_rv=DeterministicVariable("ihr_subpop", 0.01),
+            delay_distribution_rv=delay,
+            noise=NegativeBinomialNoise(DeterministicVariable("conc_subpop", 10.0)),
+        )
+    )
 
     return builder
 
@@ -220,40 +267,57 @@ class TestMultiSignalModelSampling:
 class TestMultiSignalModelValidation:
     """Test data validation."""
 
-    def test_validate_data_rejects_out_of_bounds_times(self, simple_builder):
-        """Test that times exceeding n_total_days raises error."""
-        model = simple_builder.build()
+    def test_validate_data_accepts_valid_data(self, validation_builder):
+        """Test that validate_data accepts valid dense and sparse data."""
+        model = validation_builder.build()
         n_total = model.latent.n_initialization_points + 30
 
-        with pytest.raises(ValueError, match="times index"):
+        model.validate_data(
+            n_days_post_init=30,
+            subpop_fractions=SUBPOP_FRACTIONS,
+            hospital={
+                "obs": jnp.full(n_total, jnp.nan),
+            },
+            hospital_subpop={
+                "obs": jnp.array([10, 20]),
+                "times": jnp.array([5, 10]),
+            },
+        )
+
+    def test_validate_data_rejects_out_of_bounds_times(self, validation_builder):
+        """Test that times exceeding n_total_days raises error."""
+        model = validation_builder.build()
+        n_total = model.latent.n_initialization_points + 30
+
+        with pytest.raises(ValueError, match="times"):
             model.validate_data(
                 n_days_post_init=30,
                 subpop_fractions=SUBPOP_FRACTIONS,
-                hospital={
+                hospital_subpop={
                     "obs": jnp.array([10]),
                     "times": jnp.array([n_total + 10]),
                 },
             )
 
-    def test_validate_data_rejects_negative_times(self, simple_builder):
+    def test_validate_data_rejects_negative_times(self, validation_builder):
         """Test that negative times raises error."""
-        model = simple_builder.build()
+        model = validation_builder.build()
 
-        with pytest.raises(ValueError, match="times cannot be negative"):
+        with pytest.raises(ValueError, match="times.*negative"):
             model.validate_data(
                 n_days_post_init=30,
                 subpop_fractions=SUBPOP_FRACTIONS,
-                hospital={
+                hospital_subpop={
                     "obs": jnp.array([10]),
                     "times": jnp.array([-1]),
                 },
             )
 
-    def test_validate_data_rejects_unknown_observation(self, simple_builder):
+    def test_validate_data_rejects_unknown_observation(self, validation_builder):
         """Test that unknown observation name raises error."""
-        model = simple_builder.build()
+        model = validation_builder.build()
 
-        with pytest.raises(ValueError, match="Unknown observation"):
+        with pytest.raises(ValueError, match="Unknown"):
             model.validate_data(
                 n_days_post_init=30,
                 subpop_fractions=SUBPOP_FRACTIONS,
@@ -263,45 +327,69 @@ class TestMultiSignalModelValidation:
                 },
             )
 
-    def test_validate_data_rejects_mismatched_obs_times_length(self, simple_builder):
+    def test_validate_data_rejects_mismatched_obs_times_length(
+        self, validation_builder
+    ):
         """Test that mismatched obs and times lengths raises error."""
-        model = simple_builder.build()
+        model = validation_builder.build()
 
-        with pytest.raises(ValueError, match=r"obs length.*must match times length"):
+        with pytest.raises(ValueError, match="obs.*times"):
             model.validate_data(
                 n_days_post_init=30,
                 subpop_fractions=SUBPOP_FRACTIONS,
-                hospital={
-                    "obs": jnp.array([10, 20, 30]),
-                    "times": jnp.array([5, 10]),
+                hospital_subpop={
+                    "obs": jnp.array([10, 20, 30]),  # 3 elements
+                    "times": jnp.array([5, 10]),  # 2 elements
                 },
             )
 
-    def test_validate_data_rejects_negative_subpop_indices(self, simple_builder):
-        """Test that negative subpop_indices raises error."""
+    def test_validate_method_calls_internal_validate(self, simple_builder):
+        """Test that validate() method calls _validate()."""
         model = simple_builder.build()
+        # Should not raise
+        model.validate()
 
-        with pytest.raises(ValueError, match="subpop_indices cannot be negative"):
+    def test_validate_data_rejects_negative_subpop_indices(self, validation_builder):
+        """Test that negative subpop_indices raises error."""
+        model = validation_builder.build()
+
+        with pytest.raises(ValueError, match="subpop_indices.*negative"):
             model.validate_data(
                 n_days_post_init=30,
                 subpop_fractions=SUBPOP_FRACTIONS,
-                hospital={
+                hospital_subpop={
                     "subpop_indices": jnp.array([-1, 0, 1]),
                     "times": jnp.array([5, 6, 7]),
                 },
             )
 
-    def test_validate_data_rejects_out_of_bounds_subpop_indices(self, simple_builder):
+    def test_validate_data_rejects_out_of_bounds_subpop_indices(
+        self, validation_builder
+    ):
         """Test that subpop_indices >= K raises error."""
-        model = simple_builder.build()
+        model = validation_builder.build()
 
-        with pytest.raises(ValueError, match="subpop_indices contains"):
+        # K is 3 (from SUBPOP_FRACTIONS = [0.3, 0.25, 0.45])
+        with pytest.raises(ValueError, match="subpop_indices"):
+            model.validate_data(
+                n_days_post_init=30,
+                subpop_fractions=SUBPOP_FRACTIONS,
+                hospital_subpop={
+                    "subpop_indices": jnp.array([0, 1, 5]),  # 5 >= 3
+                    "times": jnp.array([5, 6, 7]),
+                },
+            )
+
+    def test_validate_data_rejects_wrong_length_dense_obs(self, validation_builder):
+        """Test that dense obs with wrong length raises error."""
+        model = validation_builder.build()
+
+        with pytest.raises(ValueError, match="obs.*n_total"):
             model.validate_data(
                 n_days_post_init=30,
                 subpop_fractions=SUBPOP_FRACTIONS,
                 hospital={
-                    "subpop_indices": jnp.array([0, 1, 5]),
-                    "times": jnp.array([5, 6, 7]),
+                    "obs": jnp.array([10, 20, 30]),  # wrong length
                 },
             )
 
