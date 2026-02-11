@@ -48,9 +48,7 @@ def counts_proc():
     return Counts(
         name="hosp",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
-        delay_distribution_rv=DeterministicPMF(
-            "delay", jnp.array([0.3, 0.5, 0.2])
-        ),
+        delay_distribution_rv=DeterministicPMF("delay", jnp.array([0.3, 0.5, 0.2])),
         noise=PoissonNoise(),
     )
 
@@ -61,9 +59,7 @@ def subpop_proc():
     return CountsBySubpop(
         name="subpop_hosp",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.02),
-        delay_distribution_rv=DeterministicPMF(
-            "delay", jnp.array([0.4, 0.4, 0.2])
-        ),
+        delay_distribution_rv=DeterministicPMF("delay", jnp.array([0.4, 0.4, 0.2])),
         noise=PoissonNoise(),
     )
 
@@ -82,9 +78,7 @@ def measurements_proc():
     noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
     return StubMeasurements(
         name="ww",
-        temporal_pmf_rv=DeterministicPMF(
-            "shedding", jnp.array([0.3, 0.4, 0.3])
-        ),
+        temporal_pmf_rv=DeterministicPMF("shedding", jnp.array([0.3, 0.4, 0.3])),
         noise=noise,
     )
 
@@ -192,36 +186,26 @@ class TestValidateSubpopIndices:
 
     def test_valid_subpop_indices(self, counts_proc):
         """Valid subpop indices should not raise."""
-        counts_proc._validate_subpop_indices(
-            jnp.array([0, 1, 2]), n_subpops=3
-        )
+        counts_proc._validate_subpop_indices(jnp.array([0, 1, 2]), n_subpops=3)
 
     def test_non_contiguous_subpop_indices(self, counts_proc):
         """Non-contiguous but valid subpop indices should not raise."""
-        counts_proc._validate_subpop_indices(
-            jnp.array([0, 2, 4]), n_subpops=5
-        )
+        counts_proc._validate_subpop_indices(jnp.array([0, 2, 4]), n_subpops=5)
 
     def test_negative_subpop_index_raises(self, counts_proc):
         """Negative subpop index should raise ValueError."""
         with pytest.raises(ValueError, match="cannot be negative"):
-            counts_proc._validate_subpop_indices(
-                jnp.array([0, -1]), n_subpops=3
-            )
+            counts_proc._validate_subpop_indices(jnp.array([0, -1]), n_subpops=3)
 
     def test_subpop_index_at_n_subpops_raises(self, counts_proc):
         """Subpop index equal to n_subpops should raise."""
         with pytest.raises(ValueError, match="upper bound"):
-            counts_proc._validate_subpop_indices(
-                jnp.array([0, 3]), n_subpops=3
-            )
+            counts_proc._validate_subpop_indices(jnp.array([0, 3]), n_subpops=3)
 
     def test_subpop_index_above_n_subpops_raises(self, counts_proc):
         """Subpop index well above n_subpops should raise."""
         with pytest.raises(ValueError, match="upper bound"):
-            counts_proc._validate_subpop_indices(
-                jnp.array([10]), n_subpops=3
-            )
+            counts_proc._validate_subpop_indices(jnp.array([10]), n_subpops=3)
 
 
 # ===================================================================
@@ -366,17 +350,13 @@ class TestCountsBySubpopValidateData:
         """validate_data with out-of-bounds times should raise."""
         times = jnp.array([5, 30])  # 30 == n_total, out of bounds
         with pytest.raises(ValueError, match="upper bound"):
-            subpop_proc.validate_data(
-                n_total=30, n_subpops=3, times=times
-            )
+            subpop_proc.validate_data(n_total=30, n_subpops=3, times=times)
 
     def test_negative_times_raises(self, subpop_proc):
         """validate_data with negative times should raise."""
         times = jnp.array([-1, 5])
         with pytest.raises(ValueError, match="cannot be negative"):
-            subpop_proc.validate_data(
-                n_total=30, n_subpops=3, times=times
-            )
+            subpop_proc.validate_data(n_total=30, n_subpops=3, times=times)
 
     def test_invalid_subpop_indices_raises(self, subpop_proc):
         """validate_data with out-of-bounds subpop_indices should raise."""
@@ -399,9 +379,7 @@ class TestCountsBySubpopValidateData:
         times = jnp.array([5, 10, 15])
         obs = jnp.array([1.0, 2.0])  # length 2 != length 3
         with pytest.raises(ValueError, match="must match times shape"):
-            subpop_proc.validate_data(
-                n_total=30, n_subpops=3, times=times, obs=obs
-            )
+            subpop_proc.validate_data(n_total=30, n_subpops=3, times=times, obs=obs)
 
     def test_obs_without_times_skips_shape_check(self, subpop_proc):
         """validate_data with obs but no times should not check shapes."""
@@ -454,17 +432,13 @@ class TestMeasurementsValidateData:
         """validate_data with out-of-bounds times should raise."""
         times = jnp.array([5, 30])
         with pytest.raises(ValueError, match="upper bound"):
-            measurements_proc.validate_data(
-                n_total=30, n_subpops=3, times=times
-            )
+            measurements_proc.validate_data(n_total=30, n_subpops=3, times=times)
 
     def test_negative_times_raises(self, measurements_proc):
         """validate_data with negative times should raise."""
         times = jnp.array([-1, 5])
         with pytest.raises(ValueError, match="cannot be negative"):
-            measurements_proc.validate_data(
-                n_total=30, n_subpops=3, times=times
-            )
+            measurements_proc.validate_data(n_total=30, n_subpops=3, times=times)
 
     def test_invalid_subpop_indices_raises(self, measurements_proc):
         """validate_data with out-of-bounds subpop_indices should raise."""
@@ -529,9 +503,7 @@ class TestMeasurementsValidateData:
         """validate_data with matching obs/times shapes should not raise."""
         times = jnp.array([5, 10])
         obs = jnp.array([1.0, 2.0])
-        measurements_proc.validate_data(
-            n_total=30, n_subpops=3, times=times, obs=obs
-        )
+        measurements_proc.validate_data(n_total=30, n_subpops=3, times=times, obs=obs)
 
     def test_non_contiguous_subpop_indices_valid(self, measurements_proc):
         """validate_data with non-contiguous but valid subpop_indices passes."""
@@ -542,6 +514,4 @@ class TestMeasurementsValidateData:
 
     def test_extra_kwargs_ignored(self, measurements_proc):
         """validate_data should ignore extra keyword arguments."""
-        measurements_proc.validate_data(
-            n_total=30, n_subpops=3, foo="bar"
-        )
+        measurements_proc.validate_data(n_total=30, n_subpops=3, foo="bar")
