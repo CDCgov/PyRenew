@@ -6,7 +6,6 @@ Abstract base for any population-level continuous measurements (wastewater,
 air quality, serology, etc.) with signal-specific processing.
 """
 
-import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 from pyrenew.metaclass import RandomVariable
@@ -147,21 +146,11 @@ class Measurements(BaseObservationProcess):
         if times is not None:
             self._validate_times(times, n_total)
             if obs is not None:
-                self._validate_obs_times_length(obs, times)
+                self._validate_obs_times_shape(obs, times)
         if subpop_indices is not None:
             self._validate_subpop_indices(subpop_indices, n_subpops)
         if sensor_indices is not None and n_sensors is not None:
-            sensor_indices = jnp.asarray(sensor_indices)
-            if jnp.any(sensor_indices < 0):
-                raise ValueError(
-                    f"Observation '{self.name}': sensor_indices cannot be negative"
-                )
-            max_sensor = jnp.max(sensor_indices)
-            if max_sensor >= n_sensors:
-                raise ValueError(
-                    f"Observation '{self.name}': sensor_indices contains "
-                    f"{int(max_sensor)} >= {n_sensors} (n_sensors)"
-                )
+            self._validate_index_array(sensor_indices, n_sensors, "sensor_indices")
 
     def sample(
         self,

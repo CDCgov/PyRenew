@@ -202,13 +202,7 @@ class Counts(_CountBase):
             If obs length doesn't match n_total.
         """
         if obs is not None:
-            obs = jnp.asarray(obs)
-            if obs.shape[0] != n_total:
-                raise ValueError(
-                    f"Observation '{self.name}': obs length {obs.shape[0]} "
-                    f"must equal n_total ({n_total}). "
-                    f"Pad with NaN for initialization period."
-                )
+            self._validate_obs_dense(obs, n_total)
 
     def sample(
         self,
@@ -346,7 +340,7 @@ class CountsBySubpop(_CountBase):
         if times is not None:
             self._validate_times(times, n_total)
             if obs is not None:
-                self._validate_obs_times_length(obs, times)
+                self._validate_obs_times_shape(obs, times)
         if subpop_indices is not None:
             self._validate_subpop_indices(subpop_indices, n_subpops)
 
