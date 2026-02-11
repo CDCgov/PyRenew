@@ -209,6 +209,9 @@ def test_base_count_observation_infection_resolution_raises():
         def sample(self, *args, **kwargs):  # numpydoc ignore=GL08
             pass
 
+        def validate_data(self, n_total, n_subpops, **obs_data):  # numpydoc ignore=GL08
+            pass
+
     obs = _MinimalCounts(
         name="test_base",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),

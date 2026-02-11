@@ -24,17 +24,6 @@ class ConcreteMeasurements(Measurements):
         pmf = self.temporal_pmf_rv()
         self._validate_pmf(pmf, "temporal_pmf_rv")
 
-    def lookback_days(self) -> int:
-        """
-        Return required lookback days for this observation.
-
-        Returns
-        -------
-        int
-            Length of temporal PMF minus 1.
-        """
-        return len(self.temporal_pmf_rv()) - 1
-
     def _predicted_obs(self, infections):
         """
         Simple predicted signal: log(convolution * scale).
