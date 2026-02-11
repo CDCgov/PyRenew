@@ -30,12 +30,6 @@ def test_infections_as_deterministic():
         gen_int=gen_int,
     )
     with numpyro.handlers.seed(rng_seed=223):
-        Infections()(
-            Rt=sim_rt,
-            I0=jnp.zeros(gen_int.size),
-            gen_int=gen_int,
-        )
-
         inf_sampled1 = inf1(**obs)
         inf_sampled2 = inf1(**obs)
 

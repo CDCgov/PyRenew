@@ -266,6 +266,8 @@ class TestCountsDenseObservations:
 
         assert result.observed.shape[0] == n_days
         assert result.predicted.shape[0] == n_days
+        # Predicted values should be non-NaN (predictions exist for all days)
+        assert jnp.all(~jnp.isnan(result.predicted))
 
 
 class TestCountsBySubpop:

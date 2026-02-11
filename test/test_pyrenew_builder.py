@@ -344,7 +344,7 @@ class TestMultiSignalModelValidation:
             )
 
     def test_validate_method_calls_internal_validate(self, simple_builder):
-        """Test that validate() method calls _validate()."""
+        """Test that validate() succeeds on a valid model."""
         model = simple_builder.build()
         # Should not raise
         model.validate()
@@ -392,6 +392,37 @@ class TestMultiSignalModelValidation:
                     "obs": jnp.array([10, 20, 30]),  # wrong length
                 },
             )
+
+
+class TestMultiSignalModelHelpers:
+    """Test MultiSignalModel helper methods."""
+
+    def test_pad_observations_prepends_nans(self, simple_builder):
+        """Test that pad_observations prepends correct NaN padding."""
+        model = simple_builder.build()
+        n_init = model.latent.n_initialization_points
+
+        obs = jnp.array([10, 20, 30])
+        padded = model.pad_observations(obs)
+
+        # Shape should include initialization period
+        assert padded.shape == (n_init + 3,)
+        # First n_init values should be NaN
+        assert jnp.all(jnp.isnan(padded[:n_init]))
+        # Remaining values should match input
+        assert jnp.array_equal(padded[n_init:], jnp.array([10.0, 20.0, 30.0]))
+        # Integer input should be converted to float
+        assert jnp.issubdtype(padded.dtype, jnp.floating)
+
+    def test_shift_times_adds_offset(self, simple_builder):
+        """Test that shift_times shifts by n_initialization_points."""
+        model = simple_builder.build()
+        n_init = model.latent.n_initialization_points
+
+        times = jnp.array([0, 5, 10])
+        shifted = model.shift_times(times)
+
+        assert jnp.array_equal(shifted, times + n_init)
 
 
 if __name__ == "__main__":

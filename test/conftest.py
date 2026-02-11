@@ -51,19 +51,6 @@ def short_delay_pmf():
 
 
 @pytest.fixture
-def realistic_delay_pmf():
-    """
-    Realistic 10-day delay PMF (shifted gamma-like).
-
-    Returns
-    -------
-    jnp.ndarray
-        A 10-element PMF array with gamma-like shape.
-    """
-    return jnp.array([0.01, 0.05, 0.10, 0.15, 0.20, 0.20, 0.15, 0.08, 0.04, 0.02])
-
-
-@pytest.fixture
 def long_delay_pmf():
     """
     Long 10-day delay PMF for edge case testing.
@@ -251,29 +238,3 @@ def counts_factory():
 # =============================================================================
 # Infection Fixtures
 # =============================================================================
-
-
-@pytest.fixture
-def constant_infections():
-    """
-    Constant infections array (30 days, 100 infections/day).
-
-    Returns
-    -------
-    jnp.ndarray
-        A 1D array of shape (30,) with constant value 100.
-    """
-    return jnp.ones(30) * 100
-
-
-@pytest.fixture
-def constant_infections_2d():
-    """
-    Constant infections array for 2 subpopulations.
-
-    Returns
-    -------
-    jnp.ndarray
-        A 2D array of shape (30, 2) with constant value 100.
-    """
-    return jnp.ones((30, 2)) * 100
