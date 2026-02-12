@@ -62,7 +62,6 @@ class StandardNormalRandomWalk(RandomWalk):
     def __init__(
         self,
         name: str,
-        step_rv_name: str,
         **kwargs,
     ):
         """
@@ -72,10 +71,8 @@ class StandardNormalRandomWalk(RandomWalk):
         ----------
         name : str
             A name for this random variable.
-        step_rv_name
-            Name for the DistributionalVariable
-            from which the Normal(0, 1)
-            steps are sampled.
+            The internal step distribution is named
+            ``f"{name}_step"``.
         **kwargs
             Additional keyword arguments passed
             to the parent class constructor.
@@ -87,7 +84,7 @@ class StandardNormalRandomWalk(RandomWalk):
         super().__init__(
             name=name,
             step_rv=DistributionalVariable(
-                name=step_rv_name, distribution=dist.Normal(0.0, 1.0)
+                name=f"{name}_step", distribution=dist.Normal(0.0, 1.0)
             ),
             **kwargs,
         )

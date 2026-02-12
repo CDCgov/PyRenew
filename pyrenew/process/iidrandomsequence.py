@@ -109,7 +109,6 @@ class StandardNormalSequence(IIDRandomSequence):
     def __init__(
         self,
         name: str,
-        element_rv_name: str,
         element_shape: tuple = None,
         **kwargs,
     ):
@@ -120,11 +119,8 @@ class StandardNormalSequence(IIDRandomSequence):
         ----------
         name : str
             A name for this random variable.
-        element_rv_name
-            Name for the internal element_rv, here a
-            DistributionalVariable encoding a
-            standard Normal (mean = 0, sd = 1)
-            distribution.
+            The internal element distribution is named
+            ``f"{name}_element"``.
         element_shape
             Shape for each element in the sequence.
             If None, elements are scalars. Default
@@ -139,6 +135,6 @@ class StandardNormalSequence(IIDRandomSequence):
         super().__init__(
             name=name,
             element_rv=DistributionalVariable(
-                name=element_rv_name, distribution=dist.Normal(0, 1)
+                name=f"{name}_element", distribution=dist.Normal(0, 1)
             ).expand_by(element_shape),
         )

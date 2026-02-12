@@ -31,7 +31,7 @@ def test_rw_can_be_sampled(element_rv, init_value):
         rw = RandomWalk(name="test_rw", step_rv=element_rv)
     elif element_rv == "test standard normal":
         rw = StandardNormalRandomWalk(
-            name="test_std_norm_rw", step_rv_name="std_normal_step"
+            name="test_std_norm_rw",
         )
     else:
         raise ValueError("Unexpected element_rv")
@@ -78,7 +78,7 @@ def test_normal_rw_samples_correctly_distributed(step_mean, step_sd):
     rw_init_val = jnp.array([532.0])
     if step_mean == 0 and step_sd == 1:
         rw_normal = StandardNormalRandomWalk(
-            name="test_std_norm_rw", step_rv_name="test_standard_normal"
+            name="test_std_norm_rw",
         )
     else:
         rw_normal = RandomWalk(

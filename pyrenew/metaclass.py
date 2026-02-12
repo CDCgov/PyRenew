@@ -62,7 +62,7 @@ class RandomVariable(metaclass=ABCMeta):
 
         Raises
         ------
-        TypeError
+        ValueError
             If ``name`` is not a non-empty string.
         """
         if not isinstance(name, str) or len(name) == 0:

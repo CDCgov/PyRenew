@@ -65,7 +65,6 @@ def test_standard_normal_sequence(shape, n):
     """
     norm_seq = StandardNormalSequence(
         name="test_std_norm_seq",
-        element_rv_name="test_norm_elements",
         element_shape=shape,
     )
 

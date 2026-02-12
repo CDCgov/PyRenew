@@ -113,14 +113,12 @@ def hierarchical_normal_noise():
     sensor_mode_rv = VectorizedRV(
         name="sensor_mode_rv",
         rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5)),
-        plate_name="sensor_mode",
     )
     sensor_sd_rv = VectorizedRV(
         name="sensor_sd_rv",
         rv=DistributionalVariable(
             "ww_sensor_sd", dist.TruncatedNormal(0.3, 0.15, low=0.10)
         ),
-        plate_name="sensor_sd",
     )
     return HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
@@ -138,14 +136,12 @@ def hierarchical_normal_noise_tight():
     sensor_mode_rv = VectorizedRV(
         name="sensor_mode_rv",
         rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.01)),
-        plate_name="sensor_mode",
     )
     sensor_sd_rv = VectorizedRV(
         name="sensor_sd_rv",
         rv=DistributionalVariable(
             "ww_sensor_sd", dist.TruncatedNormal(0.01, 0.005, low=0.001)
         ),
-        plate_name="sensor_sd",
     )
     return HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 

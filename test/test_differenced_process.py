@@ -87,7 +87,7 @@ def test_differencing_order_value_validation(wrong_value, right_value):
         ],
         [
             StandardNormalSequence(
-                name="test_std_norm_seq", element_rv_name="test_stand_norm"
+                name="test_std_norm_seq",
             ),
             5,
             jnp.array([0.23, 5.2, 1, 0.2, 3]),

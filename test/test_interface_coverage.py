@@ -97,12 +97,10 @@ def _make_measurements():
     sensor_mode_rv = VectorizedRV(
         name="sensor_mode_rv",
         rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
-        plate_name="sensor_mode",
     )
     sensor_sd_rv = VectorizedRV(
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.1)),
-        plate_name="sensor_sd",
     )
     return ConcreteMeasurements(
         name="test_ww",
@@ -122,12 +120,10 @@ def _make_hierarchical_normal_noise():
     sensor_mode_rv = VectorizedRV(
         name="sensor_mode_rv",
         rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
-        plate_name="sensor_mode",
     )
     sensor_sd_rv = VectorizedRV(
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.1)),
-        plate_name="sensor_sd",
     )
     return HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
@@ -362,7 +358,7 @@ class _MinimalRV(RandomVariable):
 )
 def test_random_variable_rejects_invalid_name(bad_name):
     """RandomVariable.__init__ rejects non-string and empty names."""
-    with pytest.raises(TypeError, match="name must be a non-empty string"):
+    with pytest.raises(ValueError, match="name must be a non-empty string"):
         _MinimalRV(name=bad_name)
 
 
@@ -419,7 +415,7 @@ def test_random_variable_rejects_invalid_name(bad_name):
             id="IIDRandomSequence",
         ),
         pytest.param(
-            StandardNormalSequence(name="test_sns", element_rv_name="el"),
+            StandardNormalSequence(name="test_sns"),
             "test_sns",
             id="StandardNormalSequence",
         ),
@@ -432,7 +428,7 @@ def test_random_variable_rejects_invalid_name(bad_name):
             id="ProcessRandomWalk",
         ),
         pytest.param(
-            StandardNormalRandomWalk(name="test_snrw", step_rv_name="step"),
+            StandardNormalRandomWalk(name="test_snrw"),
             "test_snrw",
             id="StandardNormalRandomWalk",
         ),
@@ -507,7 +503,6 @@ def test_random_variable_rejects_invalid_name(bad_name):
             VectorizedRV(
                 name="test_vec",
                 rv=DistributionalVariable("inner", dist.Normal(0, 1)),
-                plate_name="plate",
             ),
             "test_vec",
             id="VectorizedRV",
@@ -574,7 +569,7 @@ def test_hierarchical_infections_name(gen_int_rv):
             id="ProcessRandomWalk",
         ),
         pytest.param(
-            StandardNormalRandomWalk(name="test_snrw", step_rv_name="step"),
+            StandardNormalRandomWalk(name="test_snrw"),
             [("fundamental_process", "test_snrw_iid_seq")],
             id="StandardNormalRandomWalk",
         ),
