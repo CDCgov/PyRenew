@@ -405,3 +405,60 @@ def test_compute_delay_ascertained_incidence_manual(
     print(expected_padded)
     assert offset_padded == 0
     assert_array_equal(result_padded, expected_padded)
+
+
+@pytest.mark.parametrize(
+    ["reporting_delay_pmf", "n_timepoints", "right_truncation_offset", "expected"],
+    [
+        [
+            jnp.array([0.2, 0.3, 0.5]),
+            5,
+            0,
+            jnp.array([1.0, 1.0, 1.0, 0.5, 0.2]),
+        ],
+        [
+            jnp.array([0.2, 0.3, 0.5]),
+            5,
+            1,
+            jnp.array([1.0, 1.0, 1.0, 1.0, 0.5]),
+        ],
+        [
+            jnp.array([0.2, 0.3, 0.5]),
+            5,
+            10,
+            jnp.array([1.0, 1.0, 1.0, 1.0, 1.0]),
+        ],
+        [
+            jnp.array([0.2, 0.3, 0.5]),
+            2,
+            0,
+            jnp.array([0.5, 0.2]),
+        ],
+        [
+            jnp.array([1.0]),
+            3,
+            0,
+            jnp.array([1.0, 1.0, 1.0]),
+        ],
+    ],
+)
+def test_compute_prop_already_reported(
+    reporting_delay_pmf,
+    n_timepoints,
+    right_truncation_offset,
+    expected,
+):
+    """
+    Test compute_prop_already_reported against hand-calculated values.
+
+    PMF [0.2, 0.3, 0.5] has CDF [0.2, 0.5, 1.0].
+
+    offset=0: tail = flip(CDF[0:]) = [1.0, 0.5, 0.2]
+    offset=1: tail = flip(CDF[1:]) = [1.0, 0.5]
+    offset=10: tail = flip(CDF[10:]) = [] (empty, all padded to 1.0)
+    """
+    result = pc.compute_prop_already_reported(
+        reporting_delay_pmf, n_timepoints, right_truncation_offset
+    )
+    assert result.shape == (n_timepoints,)
+    assert_array_equal(result, expected)

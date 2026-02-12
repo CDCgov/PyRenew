@@ -423,5 +423,138 @@ class TestBaseObservationProcessValidation:
             process._validate_pmf(bad_pmf, "test_pmf")
 
 
+class TestRightTruncation:
+    """Test right-truncation adjustment in count observation processes."""
+
+    def test_no_truncation_rv_unchanged(self, simple_delay_pmf):
+        """Test that right_truncation_rv=None produces unchanged behavior."""
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        infections = jnp.ones(20) * 1000
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                infections=infections, obs=None, right_truncation_offset=3
+            )
+
+        assert result.predicted.shape == infections.shape
+        assert jnp.allclose(result.predicted, 10.0)
+
+    def test_truncation_rv_without_offset_unchanged(self, simple_delay_pmf):
+        """Test that right_truncation_offset=None skips adjustment."""
+        rt_pmf = jnp.array([0.2, 0.3, 0.5])
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            right_truncation_rv=DeterministicPMF("rt_delay", rt_pmf),
+        )
+        infections = jnp.ones(20) * 1000
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                infections=infections, obs=None, right_truncation_offset=None
+            )
+
+        assert jnp.allclose(result.predicted, 10.0)
+
+    def test_truncation_reduces_recent_counts(self, simple_delay_pmf):
+        """Test that right-truncation reduces predicted counts for recent timepoints."""
+        rt_pmf = jnp.array([0.2, 0.3, 0.5])
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            right_truncation_rv=DeterministicPMF("rt_delay", rt_pmf),
+        )
+        infections = jnp.ones(10) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                infections=infections, obs=None, right_truncation_offset=0
+            )
+
+        assert jnp.isclose(result.predicted[0], 100.0)
+        assert jnp.isclose(result.predicted[-2], 50.0)
+        assert jnp.isclose(result.predicted[-1], 20.0)
+
+    def test_deterministic_site_recorded(self, simple_delay_pmf):
+        """Test that prop_already_reported deterministic site is recorded."""
+        rt_pmf = jnp.array([0.2, 0.3, 0.5])
+        process = Counts(
+            name="hosp",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            right_truncation_rv=DeterministicPMF("rt_delay", rt_pmf),
+        )
+        infections = jnp.ones(10) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                process.sample(
+                    infections=infections, obs=None, right_truncation_offset=0
+                )
+
+        assert "hosp_prop_already_reported" in trace
+        prop = trace["hosp_prop_already_reported"]["value"]
+        assert prop.shape == (10,)
+        assert jnp.all(prop <= 1.0)
+        assert jnp.all(prop > 0.0)
+
+    def test_validate_catches_invalid_rt_pmf(self, simple_delay_pmf):
+        """Test that validate() rejects invalid right-truncation PMFs."""
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            right_truncation_rv=DeterministicVariable(
+                "rt_delay", jnp.array([0.3, 0.3])
+            ),
+        )
+        with pytest.raises(ValueError, match="must sum to 1.0"):
+            process.validate()
+
+    def test_counts_by_subpop_2d_broadcasting(self):
+        """Test right-truncation with CountsBySubpop 2D infections."""
+        rt_pmf = jnp.array([0.2, 0.3, 0.5])
+        delay_pmf = jnp.array([1.0])
+        process = CountsBySubpop(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
+            noise=PoissonNoise(),
+            right_truncation_rv=DeterministicPMF("rt_delay", rt_pmf),
+        )
+
+        n_days = 10
+        n_subpops = 3
+        infections = jnp.ones((n_days, n_subpops)) * 100
+        times = jnp.array([0, 8, 9])
+        subpop_indices = jnp.array([0, 1, 2])
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                infections=infections,
+                times=times,
+                subpop_indices=subpop_indices,
+                obs=None,
+                right_truncation_offset=0,
+            )
+
+        assert result.predicted.shape == (n_days, n_subpops)
+        assert jnp.isclose(result.predicted[0, 0], 100.0)
+        assert jnp.isclose(result.predicted[-2, 0], 50.0)
+        assert jnp.isclose(result.predicted[-1, 0], 20.0)
+        assert jnp.allclose(result.predicted[:, 0], result.predicted[:, 1])
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
