@@ -66,7 +66,7 @@ class RandomVariable(metaclass=ABCMeta):
             If ``name`` is not a non-empty string.
         """
         if not isinstance(name, str) or len(name) == 0:
-            raise TypeError(
+            raise ValueError(
                 f"name must be a non-empty string. Got {type(name).__name__}: {name!r}"
             )
         self.name = name
