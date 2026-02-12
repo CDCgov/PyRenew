@@ -17,6 +17,7 @@ def test_periodiceffect() -> None:
     rv = DeterministicVariable(name="weekly-sample", value=x)
 
     params = {
+        "name": "test_periodic",
         "offset": 0,
         "quantity_to_broadcast": rv,
     }
@@ -59,11 +60,13 @@ def test_weeklyeffect() -> None:
     rv = DeterministicVariable(name="weekly-sample", value=x)
 
     params = {
+        "name": "test_periodic",
         "offset": 2,
         "quantity_to_broadcast": rv,
     }
 
     params2 = {
+        "name": "test_dow",
         "offset": 2,
         "quantity_to_broadcast": rv,
     }

@@ -5,19 +5,20 @@ from __future__ import annotations
 from jax.typing import ArrayLike
 
 from pyrenew.deterministic.deterministic import DeterministicVariable
+from pyrenew.metaclass import RandomVariable
 
 
 class NullVariable(DeterministicVariable):
     """A null (degenerate) random variable. Sampling returns None."""
 
     def __init__(self) -> None:
-        """Default constructor
+        """Default constructor.
 
         Returns
         -------
         None
         """
-
+        RandomVariable.__init__(self, name="null")
         self.validate()
 
         return None
@@ -56,13 +57,13 @@ class NullObservation(NullVariable):
     """A null observation random variable. Sampling returns None."""
 
     def __init__(self) -> None:
-        """Default constructor
+        """Default constructor.
 
         Returns
         -------
         None
         """
-
+        RandomVariable.__init__(self, name="null_observation")
         self.validate()
 
         return None

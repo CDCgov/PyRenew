@@ -41,7 +41,7 @@ class TransformedVariable(RandomVariable):
         -------
         None
         """
-        self.name = name
+        super().__init__(name=name)
         self.base_rv = base_rv
 
         if not isinstance(transforms, tuple):

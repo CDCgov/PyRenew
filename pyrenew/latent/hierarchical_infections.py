@@ -112,10 +112,10 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             If required parameters are missing or invalid
         """
         super().__init__(
+            name=name,
             gen_int_rv=gen_int_rv,
             n_initialization_points=n_initialization_points,
         )
-        self.name = name
 
         if I0_rv is None:
             raise ValueError("I0_rv is required")

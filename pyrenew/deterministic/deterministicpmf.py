@@ -41,6 +41,7 @@ class DeterministicPMF(RandomVariable):
         -------
         None
         """
+        super().__init__(name=name)
         value = validate_discrete_dist_vector(
             discrete_dist=value,
             tol=tol,

@@ -19,19 +19,18 @@ class SimpleRt(RandomVariable):
 
     def __init__(self, name: str = "Rt_rv"):
         """
-        Default constructor
+        Default constructor.
 
         Parameters
         ----------
-        name
+        name : str
            Name assigned to the RandomVariable.
-           If None, then defaults to "Rt_rv"
 
         Returns
         -------
         None
         """
-        self.name = name
+        super().__init__(name=name)
         name = "Rt_rv"
         self.rt_rv_ = TransformedVariable(
             name=f"{name}_log_rt_random_walk",

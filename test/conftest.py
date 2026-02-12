@@ -111,14 +111,14 @@ def hierarchical_normal_noise():
         Noise model for continuous measurements.
     """
     sensor_mode_rv = VectorizedRV(
-        DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5)),
-        plate_name="sensor_mode",
+        name="sensor_mode_rv",
+        rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5)),
     )
     sensor_sd_rv = VectorizedRV(
-        DistributionalVariable(
+        name="sensor_sd_rv",
+        rv=DistributionalVariable(
             "ww_sensor_sd", dist.TruncatedNormal(0.3, 0.15, low=0.10)
         ),
-        plate_name="sensor_sd",
     )
     return HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
@@ -134,14 +134,14 @@ def hierarchical_normal_noise_tight():
         Noise model with very small variance.
     """
     sensor_mode_rv = VectorizedRV(
-        DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.01)),
-        plate_name="sensor_mode",
+        name="sensor_mode_rv",
+        rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.01)),
     )
     sensor_sd_rv = VectorizedRV(
-        DistributionalVariable(
+        name="sensor_sd_rv",
+        rv=DistributionalVariable(
             "ww_sensor_sd", dist.TruncatedNormal(0.01, 0.005, low=0.001)
         ),
-        plate_name="sensor_sd",
     )
     return HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 

@@ -18,7 +18,7 @@ from pyrenew.randomvariable import DistributionalVariable
     [
         [
             ARProcess,
-            dict(),
+            dict(name="test_ar"),
             dict(
                 noise_name="ar_noise",
                 n=100,

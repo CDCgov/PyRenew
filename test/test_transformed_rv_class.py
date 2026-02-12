@@ -22,6 +22,17 @@ class LengthTwoRV(RandomVariable):
     with sample_length 2
     """
 
+    def __init__(self, name: str = "length_two_rv") -> None:
+        """
+        Default constructor.
+
+        Parameters
+        ----------
+        name : str
+            A name for this random variable.
+        """
+        super().__init__(name=name)
+
     def sample(self, **kwargs):
         """
         Sampling method
@@ -74,6 +85,17 @@ class NamedBaseRV(RandomVariable):
     Class for a RandomVariable
     returning NamedTuples "rv1", and "rv2"
     """
+
+    def __init__(self, name: str = "named_base_rv") -> None:
+        """
+        Default constructor.
+
+        Parameters
+        ----------
+        name : str
+            A name for this random variable.
+        """
+        super().__init__(name=name)
 
     def sample(self, **kwargs):
         """
