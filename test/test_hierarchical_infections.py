@@ -6,85 +6,19 @@ import jax.numpy as jnp
 import numpyro
 import pytest
 
-from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import HierarchicalInfections, RandomWalk
-
-
-@pytest.fixture
-def gen_int_rv():
-    """
-    Create a generation interval random variable.
-
-    Returns
-    -------
-    DeterministicPMF
-        Generation interval PMF.
-    """
-    return DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
-
-
-@pytest.fixture
-def process(gen_int_rv):
-    """
-    Create a HierarchicalInfections with the new keyword-only API.
-
-    Returns
-    -------
-    HierarchicalInfections
-        Configured infection process.
-    """
-    return HierarchicalInfections(
-        gen_int_rv=gen_int_rv,
-        I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
-        baseline_rt_process=RandomWalk(),
-        subpop_rt_deviation_process=RandomWalk(),
-        n_initialization_points=3,
-    )
 
 
 class TestHierarchicalInfectionsSample:
     """Test sample method with population structure at sample time."""
 
-    def test_sample_returns_correct_shapes(self, process):
-        """Test that sample returns correct output shapes."""
-        with numpyro.handlers.seed(rng_seed=42):
-            result = process.sample(
-                n_days_post_init=30,
-                subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
-            )
-
-        inf_juris, inf_all = result
-        n_total = process.n_initialization_points + 30
-
-        assert inf_juris.shape == (n_total,)
-        assert inf_all.shape == (n_total, 3)
-
-    def test_same_model_different_jurisdictions(self, process):
-        """Test that one model can fit different population structures."""
-        # Jurisdiction A: 3 subpopulations
-        with numpyro.handlers.seed(rng_seed=42):
-            _, inf_all_a = process.sample(
-                n_days_post_init=30,
-                subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
-            )
-
-        # Jurisdiction B: 5 subpopulations (different structure)
-        with numpyro.handlers.seed(rng_seed=42):
-            _, inf_all_b = process.sample(
-                n_days_post_init=30,
-                subpop_fractions=jnp.array([0.15, 0.20, 0.25, 0.10, 0.30]),
-            )
-
-        assert inf_all_a.shape[1] == 3  # K=3
-        assert inf_all_b.shape[1] == 5  # K=5
-
-    def test_jurisdiction_total_is_weighted_sum(self, process):
+    def test_jurisdiction_total_is_weighted_sum(self, hierarchical_infections):
         """Test that jurisdiction total equals weighted sum of subpopulations."""
         fractions = jnp.array([0.3, 0.25, 0.45])
 
         with numpyro.handlers.seed(rng_seed=42):
-            inf_juris, inf_all = process.sample(
+            inf_juris, inf_all = hierarchical_infections.sample(
                 n_days_post_init=30,
                 subpop_fractions=fractions,
             )
@@ -93,11 +27,11 @@ class TestHierarchicalInfectionsSample:
 
         assert jnp.allclose(inf_juris, expected, atol=1e-6)
 
-    def test_deviations_sum_to_zero(self, process):
+    def test_deviations_sum_to_zero(self, hierarchical_infections):
         """Test that subpopulation deviations sum to zero (identifiability)."""
         with numpyro.handlers.seed(rng_seed=42):
             with numpyro.handlers.trace() as trace:
-                process.sample(
+                hierarchical_infections.sample(
                     n_days_post_init=30,
                     subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
                 )
@@ -106,6 +40,49 @@ class TestHierarchicalInfectionsSample:
         deviation_sums = jnp.sum(deviations, axis=1)
 
         assert jnp.allclose(deviation_sums, 0.0, atol=1e-6)
+
+    def test_infections_are_positive(self, hierarchical_infections):
+        """Test that all infections are positive (epidemiological invariant)."""
+        with numpyro.handlers.seed(rng_seed=42):
+            inf_juris, inf_all = hierarchical_infections.sample(
+                n_days_post_init=30,
+                subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
+            )
+
+        assert jnp.all(inf_juris > 0)
+        assert jnp.all(inf_all > 0)
+
+    @pytest.mark.parametrize(
+        "fractions",
+        [
+            jnp.array([1.0]),
+            jnp.array([0.3, 0.25, 0.45]),
+            jnp.array([0.10, 0.14, 0.21, 0.22, 0.07, 0.26]),
+        ],
+        ids=["K=1", "K=3", "K=6"],
+    )
+    def test_shape_and_positivity_across_subpop_counts(
+        self, hierarchical_infections, fractions
+    ):
+        """Test correct shapes and positivity for varying numbers of subpops."""
+        n_days_post_init = 30
+        n_total = hierarchical_infections.n_initialization_points + n_days_post_init
+        n_subpops = len(fractions)
+
+        with numpyro.handlers.seed(rng_seed=42):
+            inf_juris, inf_all = hierarchical_infections.sample(
+                n_days_post_init=n_days_post_init,
+                subpop_fractions=fractions,
+            )
+
+        assert inf_juris.shape == (n_total,)
+        assert inf_all.shape == (n_total, n_subpops)
+        assert jnp.all(inf_juris > 0)
+        assert jnp.all(inf_all > 0)
+
+        # Weighted sum property
+        expected = jnp.sum(inf_all * fractions[jnp.newaxis, :], axis=1)
+        assert jnp.allclose(inf_juris, expected, atol=1e-6)
 
 
 class TestHierarchicalInfectionsValidation:
@@ -120,7 +97,7 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
-                n_initialization_points=3,
+                n_initialization_points=7,
             )
 
     def test_rejects_missing_initial_log_rt_rv(self, gen_int_rv):
@@ -132,7 +109,7 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=None,
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
-                n_initialization_points=3,
+                n_initialization_points=7,
             )
 
     def test_rejects_missing_baseline_rt_process(self, gen_int_rv):
@@ -144,7 +121,7 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=None,
                 subpop_rt_deviation_process=RandomWalk(),
-                n_initialization_points=3,
+                n_initialization_points=7,
             )
 
     def test_rejects_missing_subpop_rt_deviation_process(self, gen_int_rv):
@@ -156,7 +133,7 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=None,
-                n_initialization_points=3,
+                n_initialization_points=7,
             )
 
     def test_rejects_invalid_I0(self, gen_int_rv):
@@ -168,7 +145,7 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
-                n_initialization_points=3,
+                n_initialization_points=7,
             )
 
     def test_rejects_insufficient_n_initialization_points(self, gen_int_rv):
@@ -182,48 +159,45 @@ class TestHierarchicalInfectionsValidation:
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
-                n_initialization_points=2,  # gen_int has length 3
+                n_initialization_points=2,
             )
 
-    def test_rejects_fractions_not_summing_to_one(self, process):
+    def test_rejects_fractions_not_summing_to_one(self, hierarchical_infections):
         """Test that fractions not summing to 1 raises error at sample time."""
         with pytest.raises(ValueError, match="must sum to 1.0"):
             with numpyro.handlers.seed(rng_seed=42):
-                process.sample(
+                hierarchical_infections.sample(
                     n_days_post_init=30,
-                    subpop_fractions=jnp.array([0.3, 0.25, 0.40]),  # Sum is 0.95
+                    subpop_fractions=jnp.array([0.3, 0.25, 0.40]),
                 )
-
-    def test_validate_method(self, process):
-        """Test that validate() method runs without error."""
-        process.validate()
 
 
 class TestHierarchicalInfectionsPerSubpopI0:
     """Test per-subpopulation I0 values."""
 
     def test_per_subpop_I0_array(self, gen_int_rv):
-        """Test with per-subpopulation I0 values (array instead of scalar)."""
+        """Test with per-subpopulation I0 values and verify positivity."""
         process = HierarchicalInfections(
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", jnp.array([0.001, 0.002, 0.0015])),
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
             baseline_rt_process=RandomWalk(),
             subpop_rt_deviation_process=RandomWalk(),
-            n_initialization_points=3,
+            n_initialization_points=7,
         )
 
         with numpyro.handlers.seed(rng_seed=42):
-            result = process.sample(
+            inf_juris, inf_all = process.sample(
                 n_days_post_init=30,
                 subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
             )
 
-        inf_juris, inf_all = result
         n_total = process.n_initialization_points + 30
 
         assert inf_juris.shape == (n_total,)
         assert inf_all.shape == (n_total, 3)
+        assert jnp.all(inf_juris > 0)
+        assert jnp.all(inf_all > 0)
 
 
 if __name__ == "__main__":
