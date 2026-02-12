@@ -51,7 +51,7 @@ class DynamicDistributionalVariable(RandomVariable):
         None
         """
 
-        self.name = name
+        super().__init__(name=name)
         self.validate(distribution_constructor)
         self.distribution_constructor = distribution_constructor
         if reparam is not None:
@@ -191,7 +191,7 @@ class StaticDistributionalVariable(RandomVariable):
         None
         """
 
-        self.name = name
+        super().__init__(name=name)
         self.validate(distribution)
         self.distribution = distribution
         if reparam is not None:

@@ -28,9 +28,11 @@ def test_rw_can_be_sampled(element_rv, init_value):
     init_rv = DeterministicVariable(name="init_rv_fixed", value=init_value)
 
     if isinstance(element_rv, RandomVariable):
-        rw = RandomWalk(element_rv)
+        rw = RandomWalk(name="test_rw", step_rv=element_rv)
     elif element_rv == "test standard normal":
-        rw = StandardNormalRandomWalk("std_normal_step")
+        rw = StandardNormalRandomWalk(
+            name="test_std_norm_rw", step_rv_name="std_normal_step"
+        )
     else:
         raise ValueError("Unexpected element_rv")
 
@@ -75,9 +77,12 @@ def test_normal_rw_samples_correctly_distributed(step_mean, step_sd):
     n_samples = 10000
     rw_init_val = jnp.array([532.0])
     if step_mean == 0 and step_sd == 1:
-        rw_normal = StandardNormalRandomWalk("test standard normal")
+        rw_normal = StandardNormalRandomWalk(
+            name="test_std_norm_rw", step_rv_name="test_standard_normal"
+        )
     else:
         rw_normal = RandomWalk(
+            name="test_rw",
             step_rv=DistributionalVariable(
                 name="rw_step_dist",
                 distribution=dist.Normal(loc=step_mean, scale=step_sd),

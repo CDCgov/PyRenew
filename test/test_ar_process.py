@@ -93,7 +93,7 @@ def test_ar_can_be_sampled(init_vals, autoreg, noise_sd, n):
     can be initialized and sampled from,
     and that output shapes are as expected.
     """
-    ar = ARProcess()
+    ar = ARProcess(name="test_ar")
     with numpyro.handlers.seed(rng_seed=62):
         # can sample
 
@@ -192,7 +192,7 @@ def test_ar_shape_validation(init_vals, autoreg, noise_sd, n, error_match):
     """
     # vector valued noise raises
     # error
-    ar = ARProcess()
+    ar = ARProcess(name="test_ar")
 
     # bad dimensionality raises error
     with pytest.raises(ValueError, match=error_match):
@@ -229,7 +229,7 @@ def test_ar_process_asymptotics(ar_inits, autoreg, noise_sd, n):
     start away from the stationary
     distribution and converge to it.
     """
-    ar = ARProcess()
+    ar = ARProcess(name="test_ar")
     order = jnp.shape(ar_inits)[0]
     non_time_dims = jnp.broadcast_shapes(
         jnp.atleast_1d(autoreg).shape[1:],

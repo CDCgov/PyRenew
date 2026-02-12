@@ -25,7 +25,9 @@ class TestVectorizedRV:
     def test_init_and_sample(self):
         """Test VectorizedRV initialization and sampling."""
         rv = DistributionalVariable("test", dist.Normal(0, 1.0))
-        vectorized = VectorizedRV(rv, plate_name="test_plate")
+        vectorized = VectorizedRV(
+            name="test_vectorized", rv=rv, plate_name="test_plate"
+        )
 
         with numpyro.handlers.seed(rng_seed=42):
             samples = vectorized.sample(n_groups=5)
@@ -236,11 +238,13 @@ class TestConcreteMeasurements:
 
         # Use wide priors to ensure sensors get distinguishable biases
         sensor_mode_rv = VectorizedRV(
-            DistributionalVariable("mode", dist.Normal(0, 2.0)),
+            name="sensor_mode_rv",
+            rv=DistributionalVariable("mode", dist.Normal(0, 2.0)),
             plate_name="sensor_mode",
         )
         sensor_sd_rv = VectorizedRV(
-            DistributionalVariable("sd", dist.TruncatedNormal(0.1, 0.05, low=0.01)),
+            name="sensor_sd_rv",
+            rv=DistributionalVariable("sd", dist.TruncatedNormal(0.1, 0.05, low=0.01)),
             plate_name="sensor_sd",
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)

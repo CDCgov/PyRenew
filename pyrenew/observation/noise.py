@@ -45,23 +45,28 @@ class VectorizedRV(RandomVariable):
 
     Parameters
     ----------
+    name : str
+        A name for this random variable.
     rv : RandomVariable
         The underlying RandomVariable to wrap.
     plate_name : str
         Name for the numpyro plate used for vectorization.
     """
 
-    def __init__(self, rv: RandomVariable, plate_name: str) -> None:
+    def __init__(self, name: str, rv: RandomVariable, plate_name: str) -> None:
         """
         Initialize VectorizedRV wrapper.
 
         Parameters
         ----------
+        name : str
+            A name for this random variable.
         rv : RandomVariable
             The underlying RandomVariable to wrap.
         plate_name : str
             Name for the numpyro plate used for vectorization.
         """
+        super().__init__(name=name)
         self.rv = rv
         self.plate_name = plate_name
 

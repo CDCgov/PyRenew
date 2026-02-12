@@ -31,6 +31,11 @@ class Infections(RandomVariable):
     This class samples infections given $\mathcal{R}(t)$,
     initial infections, and generation interval.
 
+    Parameters
+    ----------
+    name : str
+        A name for this random variable.
+
     Notes
     -----
     The mathematical model is given by:
@@ -43,6 +48,17 @@ class Infections(RandomVariable):
     $\mathcal{R}(t)$ is the reproduction number at time $t$, and
     $g(t-\tau)$ is the generation interval.
     """
+
+    def __init__(self, name: str) -> None:
+        """
+        Default constructor.
+
+        Parameters
+        ----------
+        name : str
+            A name for this random variable.
+        """
+        super().__init__(name=name)
 
     @staticmethod
     def validate() -> None:  # numpydoc ignore=GL08

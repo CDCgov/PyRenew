@@ -47,7 +47,7 @@ class HierarchicalNormalPrior(RandomVariable):
                 "Use DeterministicVariable(name, value) to wrap a fixed value."
             )
 
-        self.name = name
+        super().__init__(name=name)
         self.sd_rv = sd_rv
 
     def validate(self):
@@ -130,7 +130,7 @@ class GammaGroupSdPrior(RandomVariable):
         if sd_min < 0:
             raise ValueError(f"sd_min must be non-negative, got {sd_min}")
 
-        self.name = name
+        super().__init__(name=name)
         self.sd_mean_rv = sd_mean_rv
         self.sd_concentration_rv = sd_concentration_rv
         self.sd_min = sd_min
@@ -215,7 +215,7 @@ class StudentTGroupModePrior(RandomVariable):
                 "Use DeterministicVariable(name, value) to wrap a fixed value."
             )
 
-        self.name = name
+        super().__init__(name=name)
         self.sd_rv = sd_rv
         self.df_rv = df_rv
 

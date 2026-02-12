@@ -63,14 +63,17 @@ class InfectionsWithFeedback(RandomVariable):
 
     def __init__(
         self,
+        name: str,
         infection_feedback_strength: RandomVariable,
         infection_feedback_pmf: RandomVariable,
     ) -> None:
         """
-        Default constructor for Infections class.
+        Default constructor for InfectionsWithFeedback class.
 
         Parameters
         ----------
+        name : str
+            A name for this random variable.
         infection_feedback_strength
             Infection feedback strength.
         infection_feedback_pmf
@@ -81,6 +84,7 @@ class InfectionsWithFeedback(RandomVariable):
         None
         """
 
+        super().__init__(name=name)
         self.validate(infection_feedback_strength, infection_feedback_pmf)
 
         self.infection_feedback_strength = infection_feedback_strength

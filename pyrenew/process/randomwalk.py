@@ -19,18 +19,20 @@ class RandomWalk(DifferencedProcess):
 
     def __init__(
         self,
+        name: str,
         step_rv: RandomVariable,
         **kwargs,
     ):
         """
-        Default constructor
+        Default constructor.
 
         Parameters
         ----------
+        name : str
+            A name for this random variable.
         step_rv
             RandomVariable representing a single step
             (difference) in the random walk.
-
         **kwargs
             Additional keyword arguments passed to the parent
             class constructor.
@@ -40,7 +42,10 @@ class RandomWalk(DifferencedProcess):
         None
         """
         super().__init__(
-            fundamental_process=IIDRandomSequence(element_rv=step_rv),
+            name=name,
+            fundamental_process=IIDRandomSequence(
+                name=f"{name}_iid_seq", element_rv=step_rv
+            ),
             differencing_order=1,
             **kwargs,
         )
@@ -56,13 +61,17 @@ class StandardNormalRandomWalk(RandomWalk):
 
     def __init__(
         self,
+        name: str,
         step_rv_name: str,
         **kwargs,
     ):
         """
-        Default constructor
+        Default constructor.
+
         Parameters
         ----------
+        name : str
+            A name for this random variable.
         step_rv_name
             Name for the DistributionalVariable
             from which the Normal(0, 1)
@@ -70,11 +79,13 @@ class StandardNormalRandomWalk(RandomWalk):
         **kwargs
             Additional keyword arguments passed
             to the parent class constructor.
-        Return
-        ------
+
+        Returns
+        -------
         None
         """
         super().__init__(
+            name=name,
             step_rv=DistributionalVariable(
                 name=step_rv_name, distribution=dist.Normal(0.0, 1.0)
             ),

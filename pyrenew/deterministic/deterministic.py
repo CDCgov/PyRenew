@@ -32,7 +32,7 @@ class DeterministicVariable(RandomVariable):
         -------
         None
         """
-        self.name = name
+        super().__init__(name=name)
         self.validate(value)
         self.value = value
 
