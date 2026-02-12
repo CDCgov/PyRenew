@@ -35,9 +35,9 @@ class InfectionInitializationProcess(RandomVariable):
         """
         InfectionInitializationProcess.validate(I_pre_init_rv, infection_init_method)
 
+        super().__init__(name=name)
         self.I_pre_init_rv = I_pre_init_rv
         self.infection_init_method = infection_init_method
-        self.name = name
 
     @staticmethod
     def validate(

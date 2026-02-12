@@ -18,14 +18,17 @@ class IIDRandomSequence(RandomVariable):
 
     def __init__(
         self,
+        name: str,
         element_rv: RandomVariable,
         **kwargs,
     ) -> None:
         """
-        Default constructor
+        Default constructor.
 
         Parameters
         ----------
+        name : str
+            A name for this random variable.
         element_rv
             RandomVariable representing a single element
             in the sequence.
@@ -34,7 +37,7 @@ class IIDRandomSequence(RandomVariable):
         -------
         None
         """
-        super().__init__(**kwargs)
+        super().__init__(name=name, **kwargs)
         self.element_rv = element_rv
 
     def sample(self, n: int, *args, vectorize: bool = False, **kwargs) -> ArrayLike:
@@ -105,20 +108,19 @@ class StandardNormalSequence(IIDRandomSequence):
 
     def __init__(
         self,
-        element_rv_name: str,
+        name: str,
         element_shape: tuple = None,
         **kwargs,
     ):
         """
-        Default constructor
+        Default constructor.
 
         Parameters
         ----------
-        element_rv_name
-            Name for the internal element_rv, here a
-            DistributionalVariable encoding a
-            standard Normal (mean = 0, sd = 1)
-            distribution.
+        name : str
+            A name for this random variable.
+            The internal element distribution is named
+            ``f"{name}_element"``.
         element_shape
             Shape for each element in the sequence.
             If None, elements are scalars. Default
@@ -131,7 +133,8 @@ class StandardNormalSequence(IIDRandomSequence):
         if element_shape is None:
             element_shape = ()
         super().__init__(
+            name=name,
             element_rv=DistributionalVariable(
-                name=element_rv_name, distribution=dist.Normal(0, 1)
-            ).expand_by(element_shape)
+                name=f"{name}_element", distribution=dist.Normal(0, 1)
+            ).expand_by(element_shape),
         )

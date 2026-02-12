@@ -71,7 +71,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
             periodic_diff_sd_rv=periodic_diff_sd_rv,
         )
 
-        self.name = name
+        super().__init__(name=name)
         self.period_size = period_size
         self.offset = offset
         self.log_rt_rv = log_rt_rv
@@ -80,7 +80,8 @@ class RtPeriodicDiffARProcess(RandomVariable):
         self.ar_process_suffix = ar_process_suffix
 
         self.ar_diff = DifferencedProcess(
-            fundamental_process=ARProcess(),
+            name=f"{name}_diff",
+            fundamental_process=ARProcess(name=f"{name}_diff_fundamental"),
             differencing_order=1,
         )
 

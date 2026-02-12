@@ -69,7 +69,9 @@ class TestBaseLatentInfectionProcessInit:
                 def sample(self, n_days_post_init, **kwargs):
                     pass
 
-            ConcreteLatent(gen_int_rv=None, n_initialization_points=3)
+            ConcreteLatent(
+                name="test_latent", gen_int_rv=None, n_initialization_points=3
+            )
 
     def test_rejects_insufficient_n_initialization_points(self):
         """Test that n_initialization_points < gen_int length is rejected."""
@@ -85,6 +87,7 @@ class TestBaseLatentInfectionProcessInit:
                     pass
 
             ConcreteLatent(
+                name="test_latent",
                 gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
                 n_initialization_points=2,
             )

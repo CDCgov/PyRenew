@@ -141,7 +141,7 @@ class AR1(TemporalProcess):
             raise ValueError(f"innovation_sd must be positive, got {innovation_sd}")
         self.autoreg = autoreg
         self.innovation_sd = innovation_sd
-        self.ar_process = ARProcess()
+        self.ar_process = ARProcess(name="ar1")
 
     def __repr__(self) -> str:
         """Return string representation."""
@@ -243,7 +243,9 @@ class DifferencedAR1(TemporalProcess):
         self.autoreg = autoreg
         self.innovation_sd = innovation_sd
         self.process = DifferencedProcess(
-            fundamental_process=ARProcess(), differencing_order=1
+            name="diff_ar1",
+            fundamental_process=ARProcess(name="diff_ar1_fundamental"),
+            differencing_order=1,
         )
 
     def __repr__(self) -> str:
@@ -383,6 +385,7 @@ class RandomWalk(TemporalProcess):
             initial_value = jnp.full(n_processes, initial_value)
 
         rw = ProcessRandomWalk(
+            name=f"{name_prefix}_random_walk",
             step_rv=DistributionalVariable(
                 name=f"{name_prefix}_step",
                 distribution=dist.Normal(

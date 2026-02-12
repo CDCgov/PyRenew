@@ -263,7 +263,7 @@ class AscertainmentWithDayOfWeek(RandomVariable):
             (0 = Monday, 6 = Sunday).
         """
         self.validate(dow_concentration, first_day_offset)
-        self.name = name
+        super().__init__(name=name)
         self.baseline_rate_rv = baseline_rate_rv
         self.dow_concentration = jnp.asarray(dow_concentration)
         self.first_day_offset = first_day_offset

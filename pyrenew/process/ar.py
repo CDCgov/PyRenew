@@ -19,7 +19,23 @@ class ARProcess(RandomVariable):
     """
     RandomVariable representing an
     an AR(p) process.
+
+    Parameters
+    ----------
+    name : str
+        A name for this random variable.
     """
+
+    def __init__(self, name: str) -> None:
+        """
+        Default constructor.
+
+        Parameters
+        ----------
+        name : str
+            A name for this random variable.
+        """
+        super().__init__(name=name)
 
     def sample(
         self,

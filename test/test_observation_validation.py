@@ -110,12 +110,12 @@ def measurements_proc():
         A StubMeasurements observation process.
     """
     sensor_mode_rv = VectorizedRV(
-        DistributionalVariable("mode", dist.Normal(0, 0.5)),
-        plate_name="sensor_mode",
+        name="sensor_mode_rv",
+        rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
     )
     sensor_sd_rv = VectorizedRV(
-        DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
-        plate_name="sensor_sd",
+        name="sensor_sd_rv",
+        rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
     )
     noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
     return StubMeasurements(

@@ -76,7 +76,7 @@ class BaseObservationProcess(RandomVariable):
         Subclasses should call ``super().__init__(name, temporal_pmf_rv)``
         in their constructors and may add additional parameters.
         """
-        self.name = name
+        super().__init__(name=name)
         self.temporal_pmf_rv = temporal_pmf_rv
 
     @abstractmethod
