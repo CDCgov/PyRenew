@@ -91,13 +91,15 @@ The sensor-level RVs must implement `sample(n_groups=...)`. Use `VectorizedRV` t
 ```{python}
 # | label: noise-model-general
 # Sensor modes: zero-centered, allowing positive or negative bias
-sensor_mode_rv = VectorizedRV("vec_sensor_mode",
+sensor_mode_rv = VectorizedRV(
+    "vec_sensor_mode",
     DistributionalVariable("sensor_mode", dist.Normal(0, 0.5)),
     plate_name="sensor_mode",
 )
 
 # Sensor SDs: must be positive, truncated normal is a common choice
-sensor_sd_rv = VectorizedRV("vec_sensor_df",
+sensor_sd_rv = VectorizedRV(
+    "vec_sensor_df",
     DistributionalVariable(
         "sensor_sd", dist.TruncatedNormal(loc=0.3, scale=0.15, low=0.05)
     ),
@@ -359,13 +361,15 @@ For wastewater, a "sensor" is a WWTP/lab pair—the combination of treatment pla
 ```{python}
 # | label: ww-noise-model
 # Sensor-level mode: systematic differences between WWTP/lab pairs
-ww_sensor_mode_rv = VectorizedRV("vec_ww_sensor_mode",
+ww_sensor_mode_rv = VectorizedRV(
+    "vec_ww_sensor_mode",
     DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5)),
     plate_name="ww_sensor_mode",
 )
 
 # Sensor-level SD: measurement variability within each WWTP/lab pair
-ww_sensor_sd_rv = VectorizedRV("vec_ww_sensor_sd",
+ww_sensor_sd_rv = VectorizedRV(
+    "vec_ww_sensor_sd",
     DistributionalVariable(
         "ww_sensor_sd", dist.TruncatedNormal(loc=0.3, scale=0.15, low=0.10)
     ),
