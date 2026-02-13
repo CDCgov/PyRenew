@@ -279,6 +279,4 @@ def compute_prop_already_reported(
     cdf = jnp.cumsum(reporting_delay_pmf)
     tail = jnp.flip(cdf[right_truncation_offset:])
     n_pad = n_timepoints - tail.shape[0]
-    if n_pad > 0:
-        return jnp.concatenate([jnp.ones(n_pad), tail])
-    return tail[-n_timepoints:]
+    return jnp.concatenate([jnp.ones(n_pad), tail])

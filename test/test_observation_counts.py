@@ -522,6 +522,26 @@ class TestRightTruncation:
         with pytest.raises(ValueError, match="must sum to 1.0"):
             process.validate()
 
+    def test_short_observation_window_raises(self, simple_delay_pmf):
+        """Test that observation window shorter than delay support raises."""
+        rt_pmf = jnp.array([0.2, 0.3, 0.5])
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            right_truncation_rv=DeterministicPMF("rt_delay", rt_pmf),
+        )
+        infections = jnp.ones(2) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(ValueError, match="Observation window length"):
+                process.sample(
+                    infections=infections,
+                    obs=None,
+                    right_truncation_offset=0,
+                )
+
     def test_counts_by_subpop_2d_broadcasting(self):
         """Test right-truncation with CountsBySubpop 2D infections."""
         rt_pmf = jnp.array([0.2, 0.3, 0.5])

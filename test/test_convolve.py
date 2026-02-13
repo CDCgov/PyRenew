@@ -429,12 +429,6 @@ def test_compute_delay_ascertained_incidence_manual(
             jnp.array([1.0, 1.0, 1.0, 1.0, 1.0]),
         ],
         [
-            jnp.array([0.2, 0.3, 0.5]),
-            2,
-            0,
-            jnp.array([0.5, 0.2]),
-        ],
-        [
             jnp.array([1.0]),
             3,
             0,
