@@ -241,3 +241,42 @@ def compute_delay_ascertained_incidence(
         )
         offset = 0
     return (delay_obs_incidence, offset)
+
+
+def compute_prop_already_reported(
+    reporting_delay_pmf: ArrayLike,
+    n_timepoints: int,
+    right_truncation_offset: int,
+) -> ArrayLike:
+    """
+    Compute the proportion of events already reported at each timepoint,
+    given a reporting delay PMF and a right-truncation offset.
+
+    For right-truncated data, recent timepoints have lower expected counts
+    because not all events have been reported yet. This function computes
+    the cumulative proportion reported for each timepoint.
+
+    Parameters
+    ----------
+    reporting_delay_pmf : ArrayLike
+        PMF of reporting delays. The i-th entry is the probability that
+        an event is reported with a delay of i time units.
+    n_timepoints : int
+        Number of timepoints in the output array.
+    right_truncation_offset : int
+        Number of additional timepoints beyond the last observation
+        for which reports could still arrive. An offset of 0 means
+        the last timepoint has only had time for delay-0 reports.
+
+    Returns
+    -------
+    ArrayLike
+        Array of shape (n_timepoints,) where each entry is the
+        proportion of events already reported at that timepoint.
+        Earlier timepoints are 1.0 (fully reported); recent
+        timepoints approach reporting_delay_pmf[0] (minimally reported).
+    """
+    cdf = jnp.cumsum(reporting_delay_pmf)
+    tail = jnp.flip(cdf[right_truncation_offset:])
+    n_pad = n_timepoints - tail.shape[0]
+    return jnp.concatenate([jnp.ones(n_pad), tail])

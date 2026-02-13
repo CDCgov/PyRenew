@@ -4,4 +4,5 @@ nav:
   - observation_processes_counts.md
   - observation_processes_measurements.md
   - latent_hierarchical_infections.md
+  - right_truncation.md
   - periodic_effects.md
