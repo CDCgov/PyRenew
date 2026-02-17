@@ -1,12 +1,52 @@
 ---
-title: "Right-truncation adjustment for count data"
+title: Right-truncation adjustment for count data
 format:
   gfm:
     fig-width: 16
     fig-height: 10
     code-fold: true
 engine: jupyter
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .qmd
+      format_name: quarto
+      format_version: '1.0'
+      jupytext_version: 1.18.1
+  kernelspec:
+    display_name: Python 3 (ipykernel)
+    language: python
+    name: python3
 ---
+
+```{python}
+#| label: setup
+#| output: false
+import jax.numpy as jnp
+import numpy as np
+import numpyro
+import pandas as pd
+
+from pyrenew.observation import Counts, NegativeBinomialNoise
+from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
+from pyrenew.convolve import compute_prop_already_reported
+from pyrenew import datasets
+
+import plotnine as p9
+from plotnine.exceptions import PlotnineWarning
+import warnings
+warnings.filterwarnings("ignore", category=PlotnineWarning)
+
+tutorial_theme = p9.theme_grey() + p9.theme(
+    plot_title=p9.element_text(size=16, weight="bold"),
+    plot_subtitle=p9.element_text(size=12),
+    axis_title=p9.element_text(size=12),
+    axis_text=p9.element_text(size=10),
+    legend_title=p9.element_text(size=11),
+    legend_text=p9.element_text(size=10),
+    strip_text=p9.element_text(size=11),
+)
+```
 
 Right-truncation occurs when recent observations are incomplete because not all events have been reported yet.
 In hospital surveillance, an admission that occurred $d$ days ago may not yet appear in the data if the reporting delay exceeds $d$ days.
@@ -24,30 +64,14 @@ The predicted observation rate becomes:
 
 $$\lambda(t) = F(k_t) \cdot \mu(t)$$
 
-where $F$ is the CDF of the reporting delay and $k_t = (T - t) + \text{offset}$ is the number of days between timepoint $t$ and the data pull date.
-Here $T$ is the last observation day and $\text{offset}$ is the number of additional days between day $T$ and the data pull (the `right_truncation_offset` parameter).
+where $F$ is the CDF of the reporting delay and $k_t$ is the number of days between timepoint $t$ and the **data pull date** (the date on which the dataset was extracted from the surveillance system).
+Concretely, let $T$ denote the last observation day and let $\text{offset} = \text{data pull date} - T$ be the number of additional days between day $T$ and the data pull (the `right_truncation_offset` parameter).
+Then:
 
-Timepoints far in the past have large $k_t$, so $F(k_t) = 1$ (fully reported).
-Recent timepoints have small $k_t$ and $F(k_t) < 1$, reducing the predicted counts to reflect incomplete reporting.
+$$k_t = (T - t) + \text{offset} = (T - t) + (\text{data pull date} - T) = \text{data pull date} - t$$
 
-```{python}
-# | label: setup
-# | output: false
-import jax.numpy as jnp
-import numpy as np
-import numpyro
-import plotnine as p9
-import pandas as pd
-import warnings
-from plotnine.exceptions import PlotnineWarning
-
-warnings.filterwarnings("ignore", category=PlotnineWarning)
-
-from pyrenew.observation import Counts, NegativeBinomialNoise
-from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
-from pyrenew.convolve import compute_prop_already_reported
-from pyrenew import datasets
-```
+Because $k_t$ depends only on the data pull date and the timepoint $t$, its behavior is straightforward: timepoints far in the past (small $t$) have large $k_t$, so $F(k_t) \approx 1$ and counts are fully reported.
+Recent timepoints (large $t$, close to the data pull date) have small $k_t$ and $F(k_t) < 1$, reducing the predicted counts to reflect incomplete reporting.
 
 ## Reporting delay and proportion already reported
 
@@ -55,7 +79,7 @@ The reporting delay PMF specifies how quickly events are reported.
 Given this PMF and the number of days between each timepoint and the data pull date, `compute_prop_already_reported` returns the proportion of events already reported at each timepoint.
 
 ```{python}
-# | label: reporting-delay-pmf
+#| label: reporting-delay-pmf
 reporting_delay_pmf = jnp.array([0.4, 0.3, 0.15, 0.08, 0.04, 0.02, 0.01])
 
 days_pmf = np.arange(len(reporting_delay_pmf))
@@ -67,7 +91,7 @@ print(f"CDF: {np.round(cdf, 2)}")
 ```
 
 ```{python}
-# | label: plot-reporting-delay
+#| label: plot-reporting-delay
 delay_df = pd.DataFrame(
     {"day": days_pmf, "probability": np.array(reporting_delay_pmf)}
 )
@@ -80,8 +104,7 @@ delay_df = pd.DataFrame(
         y="Probability",
         title="Reporting Delay Distribution",
     )
-    + p9.theme_grey()
-    + p9.theme(plot_title=p9.element_text(size=14, weight="bold"))
+    + tutorial_theme
 )
 ```
 
@@ -90,7 +113,7 @@ An offset of 0 means the data was pulled on the same day as the last observation
 An offset of 3 means three additional days have passed, allowing more reports to trickle in.
 
 ```{python}
-# | label: compute-proportions
+#| label: compute-proportions
 n_example = 20
 offsets = [0, 2, 4]
 
@@ -110,7 +133,7 @@ for offset in offsets:
 ```
 
 ```{python}
-# | label: plot-proportions
+#| label: plot-proportions
 prop_df = pd.DataFrame(prop_results)
 prop_df["offset"] = pd.Categorical(
     prop_df["offset"],
@@ -130,8 +153,7 @@ prop_df["offset"] = pd.Categorical(
         title="Right-Truncation Adjustment by Offset",
         color="",
     )
-    + p9.theme_grey()
-    + p9.theme(plot_title=p9.element_text(size=14, weight="bold"))
+    + tutorial_theme
 )
 ```
 
@@ -143,7 +165,7 @@ Larger offsets mean more time has elapsed for reports to arrive, shifting the tr
 We construct two `Counts` observation processes: one without right-truncation (the default) and one with a `right_truncation_rv` that supplies the reporting delay PMF.
 
 ```{python}
-# | label: create-processes
+#| label: create-processes
 hosp_delay_pmf = jnp.array(
     datasets.load_infection_admission_interval()["probability_mass"].to_numpy()
 )
@@ -172,7 +194,7 @@ process_with_trunc = Counts(
 We simulate an epidemic that is still growing at the end of the observation window.
 
 ```{python}
-# | label: simulate-and-sample
+#| label: simulate-and-sample
 day_one = process_no_trunc.lookback_days()
 n_total = 80
 n_plot_days = n_total - day_one
@@ -186,10 +208,10 @@ with numpyro.handlers.seed(rng_seed=0):
     )
 ```
 
-The two panels below show predicted admissions with and without right-truncation, stacked so the time axes align.
+The plot below overlays predicted admissions with and without right-truncation so the early agreement and late divergence are easy to see.
 
 ```{python}
-# | label: plot-predicted-comparison
+#| label: plot-predicted-comparison
 pred_rows = []
 for i in range(n_plot_days):
     pred_rows.append(
@@ -214,22 +236,24 @@ pred_df["type"] = pd.Categorical(
 )
 
 (
-    p9.ggplot(pred_df, p9.aes(x="day", y="admissions"))
-    + p9.geom_line(size=1, color="steelblue")
-    + p9.facet_wrap("~ type", ncol=1)
+    p9.ggplot(pred_df, p9.aes(x="day", y="admissions", color="type", linetype="type"))
+    + p9.geom_line(size=1)
+    + p9.scale_color_manual(values=["steelblue", "#e41a1c"])
+    + p9.scale_linetype_manual(values=["solid", "dashed"])
     + p9.labs(
         x="Day",
         y="Predicted Admissions",
         title="Predicted Hospital Admissions",
+        color="",
+        linetype="",
     )
-    + p9.theme_grey()
-    + p9.theme(plot_title=p9.element_text(size=14, weight="bold"))
+    + tutorial_theme
 )
 ```
 
-The top panel shows admissions under complete reporting — they track the epidemic's growth.
-The bottom panel shows what the data system actually delivers: recent counts are depressed because reports have not yet arrived.
-Without the right-truncation adjustment, a model fit to the bottom curve would infer that the epidemic is slowing down — a dangerous misinterpretation during an active outbreak.
+The two curves agree perfectly in the early period when all reports have arrived.
+Near the right edge the truncated curve turns downward — recent counts are depressed because reports have not yet arrived.
+Without the right-truncation adjustment, a model fit to the dashed curve would infer that the epidemic is slowing down — a dangerous misinterpretation during an active outbreak.
 
 
 ## Sampled observations
@@ -238,7 +262,7 @@ Right-truncation also affects the sampled (noisy) observations, not just the pre
 The noise model draws from a distribution centered on the adjusted predictions.
 
 ```{python}
-# | label: sample-noisy-comparison
+#| label: sample-noisy-comparison
 n_samples = 30
 noisy_results = []
 for seed in range(n_samples):
@@ -268,7 +292,7 @@ for seed in range(n_samples):
 ```
 
 ```{python}
-# | label: plot-noisy-comparison
+#| label: plot-noisy-comparison
 noisy_df = pd.DataFrame(noisy_results)
 mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
 
@@ -289,8 +313,7 @@ mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
         y="Hospital Admissions",
         title="Sampled Observations: With vs. Without Right-Truncation",
     )
-    + p9.theme_grey()
-    + p9.theme(plot_title=p9.element_text(size=14, weight="bold"))
+    + tutorial_theme
 )
 ```
 
@@ -309,3 +332,7 @@ Right-truncation adjustment is enabled by passing a `right_truncation_rv` (repor
 
 When either is `None`, the adjustment is disabled and the process behaves identically to one without right-truncation.
 This makes it straightforward to compare models with and without the adjustment, or to supply the reporting delay as either a fixed PMF or an inferred distribution.
+
+In practice, right-truncation adjustment should be enabled when **fitting** to observed data, so the model correctly attributes low recent counts to incomplete reporting rather than a true decline.
+However, it should be **disabled when forecasting**: future timepoints have not yet occurred, so there is no reporting delay to account for — applying the adjustment would nonsensically shrink forecasted counts toward zero.
+A typical workflow is to fit with `right_truncation_offset` set to the actual offset, then generate forecasts with `right_truncation_offset=None`.
