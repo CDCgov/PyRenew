@@ -20,8 +20,8 @@ jupyter:
 ---
 
 ```{python}
-#| label: setup
-#| output: false
+# | label: setup
+# | output: false
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -103,7 +103,7 @@ The reporting delay PMF specifies how quickly events are reported.
 Given this PMF and the number of days between each timepoint and the data pull date, `compute_prop_already_reported` returns the proportion of events already reported at each timepoint.
 
 ```{python}
-#| label: reporting-delay-pmf
+# | label: reporting-delay-pmf
 reporting_delay_pmf = jnp.array([0.4, 0.3, 0.15, 0.08, 0.04, 0.02, 0.01])
 
 days_pmf = np.arange(len(reporting_delay_pmf))
@@ -115,7 +115,7 @@ print(f"CDF: {np.round(cdf, 2)}")
 ```
 
 ```{python}
-#| label: plot-reporting-delay
+# | label: plot-reporting-delay
 delay_df = pd.DataFrame(
     {"day": days_pmf, "probability": np.array(reporting_delay_pmf)}
 )
@@ -137,7 +137,7 @@ An offset of 0 means the data was pulled on the same day as the last observation
 An offset of 3 means three additional days have passed, allowing more reports to trickle in.
 
 ```{python}
-#| label: compute-proportions
+# | label: compute-proportions
 n_example = 20
 offsets = [0, 2, 4]
 
@@ -157,7 +157,7 @@ for offset in offsets:
 ```
 
 ```{python}
-#| label: plot-proportions
+# | label: plot-proportions
 prop_df = pd.DataFrame(prop_results)
 prop_df["offset"] = pd.Categorical(
     prop_df["offset"],
@@ -189,7 +189,7 @@ Larger offsets mean more time has elapsed for reports to arrive, shifting the tr
 We construct two `Counts` observation processes: one without right-truncation (the default) and one with a `right_truncation_rv` that supplies the reporting delay PMF.
 
 ```{python}
-#| label: create-processes
+# | label: create-processes
 hosp_delay_pmf = jnp.array(
     datasets.load_infection_admission_interval()["probability_mass"].to_numpy()
 )
@@ -218,7 +218,7 @@ process_with_trunc = Counts(
 We simulate an epidemic that is still growing at the end of the observation window.
 
 ```{python}
-#| label: simulate-and-sample
+# | label: simulate-and-sample
 day_one = process_no_trunc.lookback_days()
 n_total = 80
 n_plot_days = n_total - day_one
@@ -235,7 +235,7 @@ with numpyro.handlers.seed(rng_seed=0):
 The plot below overlays predicted admissions with and without right-truncation so the early agreement and late divergence are easy to see.
 
 ```{python}
-#| label: plot-predicted-comparison
+# | label: plot-predicted-comparison
 pred_rows = []
 for i in range(n_plot_days):
     pred_rows.append(
@@ -288,7 +288,7 @@ Right-truncation also affects the sampled (noisy) observations, not just the pre
 The noise model draws from a distribution centered on the adjusted predictions.
 
 ```{python}
-#| label: sample-noisy-comparison
+# | label: sample-noisy-comparison
 n_samples = 30
 noisy_results = []
 for seed in range(n_samples):
@@ -318,7 +318,7 @@ for seed in range(n_samples):
 ```
 
 ```{python}
-#| label: plot-noisy-comparison
+# | label: plot-noisy-comparison
 noisy_df = pd.DataFrame(noisy_results)
 mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
 
