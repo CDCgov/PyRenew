@@ -168,10 +168,15 @@ class _CountBase(BaseObservationProcess):
         -------
         ArrayLike
             Adjusted predicted counts, same shape as input.
+
+        Notes
+        -----
+        Assumes a single truncation PMF shared across all subpopulations.
+        The 1D proportion array is broadcast to match 2D predicted counts.
         """
-        rt_pmf = self.right_truncation_rv()
+        trunc_pmf = self.right_truncation_rv()
         n_timepoints = predicted.shape[0]
-        delay_support = rt_pmf.shape[0] - right_truncation_offset
+        delay_support = trunc_pmf.shape[0] - right_truncation_offset
         if n_timepoints < delay_support:
             raise ValueError(
                 f"Observation window length ({n_timepoints}) must be >= "
@@ -179,7 +184,7 @@ class _CountBase(BaseObservationProcess):
                 f"({delay_support})."
             )
         prop = compute_prop_already_reported(
-            rt_pmf, n_timepoints, right_truncation_offset
+            trunc_pmf, n_timepoints, right_truncation_offset
         )
         self._deterministic("prop_already_reported", prop)
         if predicted.ndim == 2:
