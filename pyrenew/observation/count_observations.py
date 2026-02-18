@@ -162,8 +162,7 @@ class _CountBase(BaseObservationProcess):
             Predicted counts. Shape: (n_timepoints,) or
             (n_timepoints, n_subpops).
         right_truncation_offset : int
-            Number of additional timepoints beyond the last observation
-            for which reports could still arrive.
+            Number of additional reporting days that have occurred since the last observation. 0 implies only 0-delay reports have arrived for the last observed timepoint, 1 implies 0 and 1 delay reports have arrived, et cetera.
 
         Returns
         -------
