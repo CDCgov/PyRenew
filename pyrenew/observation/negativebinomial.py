@@ -43,7 +43,7 @@ class NegativeBinomialObservation(RandomVariable):
 
         NegativeBinomialObservation.validate(concentration_rv)
 
-        self.name = name
+        super().__init__(name=name)
         self.concentration_rv = concentration_rv
         self.eps = eps
 

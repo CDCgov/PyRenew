@@ -42,13 +42,34 @@ def _assert_type(arg_name: str, value, expected_type) -> None:
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
+
+    Parameters
+    ----------
+    name : str
+        A non-empty string identifying this random variable.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, name: str, **kwargs):
         """
-        Default constructor
+        Default constructor.
+
+        Parameters
+        ----------
+        name : str
+            A non-empty string identifying this random variable.
+        **kwargs
+            Additional keyword arguments.
+
+        Raises
+        ------
+        ValueError
+            If ``name`` is not a non-empty string.
         """
-        pass
+        if not isinstance(name, str) or len(name) == 0:
+            raise ValueError(
+                f"name must be a non-empty string. Got {type(name).__name__}: {name!r}"
+            )
+        self.name = name
 
     @abstractmethod
     def sample(

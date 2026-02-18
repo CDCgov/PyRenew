@@ -25,6 +25,7 @@ def test_infections_with_feedback_plate_compatibility():
 
     # Test the InfectionsWithFeedback class
     InfectionsWithFeedback = latent.InfectionsWithFeedback(
+        name="test_inf_feedback",
         infection_feedback_strength=inf_feed_strength,
         infection_feedback_pmf=inf_feedback_pmf,
     )

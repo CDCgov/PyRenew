@@ -12,6 +12,7 @@ class PeriodicEffect(RandomVariable):
 
     def __init__(
         self,
+        name: str,
         offset: int,
         quantity_to_broadcast: RandomVariable,
     ):
@@ -20,6 +21,8 @@ class PeriodicEffect(RandomVariable):
 
         Parameters
         ----------
+        name : str
+            A name for this random variable.
         offset
             Relative point at which data starts, must be between 0 and
             period_size - 1.
@@ -31,6 +34,7 @@ class PeriodicEffect(RandomVariable):
         None
         """
 
+        super().__init__(name=name)
         PeriodicEffect.validate(quantity_to_broadcast)
 
         self.offset = offset
@@ -86,6 +90,7 @@ class DayOfWeekEffect(PeriodicEffect):
 
     def __init__(
         self,
+        name: str,
         offset: int,
         quantity_to_broadcast: RandomVariable,
     ):
@@ -94,6 +99,8 @@ class DayOfWeekEffect(PeriodicEffect):
 
         Parameters
         ----------
+        name : str
+            A name for this random variable.
         offset
             Relative point at which data starts, must be between 0 and
             6.
@@ -108,6 +115,7 @@ class DayOfWeekEffect(PeriodicEffect):
         DayOfWeekEffect.validate(offset)
 
         super().__init__(
+            name=name,
             offset=offset,
             quantity_to_broadcast=quantity_to_broadcast,
         )

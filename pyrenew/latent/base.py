@@ -99,6 +99,7 @@ class BaseLatentInfectionProcess(RandomVariable):
     def __init__(
         self,
         *,
+        name: str,
         gen_int_rv: RandomVariable,
         n_initialization_points: int,
     ) -> None:
@@ -107,6 +108,8 @@ class BaseLatentInfectionProcess(RandomVariable):
 
         Parameters
         ----------
+        name : str
+            A name for this random variable.
         gen_int_rv : RandomVariable
             Generation interval PMF
         n_initialization_points : int
@@ -119,6 +122,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         ValueError
             If gen_int_rv is None or n_initialization_points is insufficient.
         """
+        super().__init__(name=name)
         if gen_int_rv is None:
             raise ValueError("gen_int_rv is required")
         self.gen_int_rv = gen_int_rv

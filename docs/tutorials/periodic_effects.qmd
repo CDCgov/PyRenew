@@ -79,6 +79,7 @@ mysimplex = dist.TransformedDistribution(
 
 # Constructing the day of week effect
 dayofweek = process.DayOfWeekEffect(
+    name="dayofweek",
     offset=0,
     quantity_to_broadcast=randomvariable.DistributionalVariable(
         name="simp", distribution=mysimplex

@@ -93,11 +93,12 @@ def test_infectionsrtfeedback(Rt, I0, inf_feed_strength):
 
     # Test the InfectionsWithFeedback class
     InfectionsWithFeedback = latent.InfectionsWithFeedback(
+        name="test_inf_feedback",
         infection_feedback_strength=inf_feed_strength,
         infection_feedback_pmf=inf_feedback_pmf,
     )
 
-    infections = latent.Infections()
+    infections = latent.Infections(name="test_infections")
 
     with numpyro.handlers.seed(rng_seed=0):
         samp1 = InfectionsWithFeedback(
@@ -149,11 +150,12 @@ def test_infectionsrtfeedback_feedback(Rt, I0):
 
     # Test the InfectionsWithFeedback class
     InfectionsWithFeedback = latent.InfectionsWithFeedback(
+        name="test_inf_feedback",
         infection_feedback_strength=inf_feed_strength,
         infection_feedback_pmf=inf_feedback_pmf,
     )
 
-    infections = latent.Infections()
+    infections = latent.Infections(name="test_infections")
 
     with numpyro.handlers.seed(rng_seed=0):
         samp1 = InfectionsWithFeedback(
@@ -206,11 +208,12 @@ def test_infections_with_feedback_invalid_inputs():
 
     # Test the InfectionsWithFeedback class
     InfectionsWithFeedback = latent.InfectionsWithFeedback(
+        name="test_inf_feedback",
         infection_feedback_strength=inf_feed_strength,
         infection_feedback_pmf=inf_feedback_pmf,
     )
 
-    infections = latent.Infections()
+    infections = latent.Infections(name="test_infections")
 
     with numpyro.handlers.seed(rng_seed=0):
         with pytest.raises(
