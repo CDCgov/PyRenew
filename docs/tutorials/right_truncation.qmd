@@ -38,7 +38,7 @@ import warnings
 
 warnings.filterwarnings("ignore", category=PlotnineWarning)
 
-theme_cowplot = p9.theme_bw() + p9.theme(
+theme_tutorial = p9.theme_bw() + p9.theme(
     text=p9.element_text(size=14),
     line=p9.element_line(size=0.25),
     plot_title=p9.element_text(
@@ -113,7 +113,7 @@ delay_df = pd.DataFrame(
         y="Probability",
         title="Reporting Delay Distribution",
     )
-    + theme_cowplot
+    + theme_tutorial
 )
 ```
 
@@ -162,7 +162,7 @@ prop_df["offset"] = pd.Categorical(
         title="Right-Truncation Adjustment by Offset",
         color="",
     )
-    + theme_cowplot
+    + theme_tutorial
 )
 ```
 
@@ -258,7 +258,7 @@ pred_df["type"] = pd.Categorical(
         color="",
         linetype="",
     )
-    + theme_cowplot
+    + theme_tutorial
 )
 ```
 
@@ -324,7 +324,7 @@ mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
         y="Hospital Admissions",
         title="Sampled Observations:\nWith vs. Without Right-Truncation",
     )
-    + theme_cowplot
+    + theme_tutorial
 )
 ```
 
