@@ -653,6 +653,42 @@ class TestDayOfWeek:
         assert jnp.isclose(result.predicted[4], 50.0)
         assert jnp.isclose(result.predicted[7], 200.0)
 
+    def test_dow_effect_with_multiday_delay(self, short_delay_pmf):
+        """Test that DOW ratios are correct with a multi-day delay PMF.
+
+        With a 2-day delay, the first element is NaN (init period).
+        Post-init predicted values should satisfy:
+        predicted_with_dow[t] / predicted_no_dow[t] == dow_effect[t % 7].
+        """
+        dow_effect = jnp.array([2.0, 1.5, 1.0, 1.0, 0.5, 0.5, 0.5])
+        process_no_dow = Counts(
+            name="base",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", short_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        process_with_dow = Counts(
+            name="dow",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", short_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones(21) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result_no = process_no_dow.sample(infections=infections, obs=None)
+        with numpyro.handlers.seed(rng_seed=42):
+            result_yes = process_with_dow.sample(
+                infections=infections, obs=None, first_day_dow=0
+            )
+
+        day_one = 1
+        for t in range(day_one, 14):
+            expected_ratio = float(dow_effect[t % 7])
+            actual_ratio = float(result_yes.predicted[t] / result_no.predicted[t])
+            assert jnp.isclose(actual_ratio, expected_ratio, atol=1e-5)
+
     def test_dow_offset_shifts_pattern(self, simple_delay_pmf):
         """Test that first_day_dow offsets the weekly pattern correctly.
 
