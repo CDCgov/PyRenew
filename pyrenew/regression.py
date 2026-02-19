@@ -5,7 +5,7 @@ Helper classes for regression problems
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import numpyro
 import numpyro.distributions as dist
@@ -16,14 +16,14 @@ import pyrenew.transformation as t
 
 class AbstractRegressionPrediction(metaclass=ABCMeta):  # numpydoc ignore=GL08
     @abstractmethod
-    def predict(self):
+    def predict(self) -> ArrayLike:
         """
         Make a regression prediction
         """
         pass
 
     @abstractmethod
-    def sample(self, obs=None):
+    def sample(self, obs: ArrayLike | None = None) -> ArrayLike:
         """
         Observe or sample from the regression
         problem according to the specified
@@ -38,12 +38,12 @@ class GLMPredictionSample(NamedTuple):
 
     Attributes
     ----------
-    prediction : ArrayLike | None, optional
+    prediction
         Transformed predictions. Defaults to None.
-    intercept : ArrayLike | None, optional
+    intercept
         Sampled intercept from intercept priors.
         Defaults to None.
-    coefficients : ArrayLike | None, optional
+    coefficients
         Prediction coefficients generated
         from coefficients priors. Defaults to None.
     """
@@ -52,7 +52,7 @@ class GLMPredictionSample(NamedTuple):
     intercept: ArrayLike | None = None
     coefficients: ArrayLike | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             f"GLMPredictionSample("
             f"prediction={self.prediction}, "
@@ -73,8 +73,8 @@ class GLMPrediction(AbstractRegressionPrediction):
         intercept_prior: dist.Distribution,
         coefficient_priors: dist.Distribution,
         transform: t.Transform = None,
-        intercept_suffix="_intercept",
-        coefficient_suffix="_coefficients",
+        intercept_suffix: str = "_intercept",
+        coefficient_suffix: str = "_coefficients",
     ) -> None:
         """
         Default class constructor for GLMPrediction
@@ -187,11 +187,11 @@ class GLMPrediction(AbstractRegressionPrediction):
             coefficients=coefficients,
         )
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> GLMPredictionSample:
         """
         Alias for `sample()`.
         """
         return self.sample(*args, **kwargs)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "GLMPrediction " + str(self.name)

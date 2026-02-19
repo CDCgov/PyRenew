@@ -37,7 +37,7 @@ class PyrenewBuilder:
     with different population structures.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """
         Initialize a new model builder.
 
@@ -53,14 +53,14 @@ class PyrenewBuilder:
     def configure_latent(
         self,
         latent_class: type[BaseLatentInfectionProcess],
-        **params,
+        **params: Any,
     ) -> PyrenewBuilder:
         """
         Configure the latent infection process.
 
         Parameters
         ----------
-        latent_class : Type[BaseLatentInfectionProcess]
+        latent_class
             Class to use for latent infections (e.g., HierarchicalInfections,
             PartitionedInfections, or a custom implementation)
         **params
@@ -123,7 +123,7 @@ class PyrenewBuilder:
 
         Parameters
         ----------
-        obs_process : BaseObservationProcess
+        obs_process
             Configured observation process instance (e.g., Counts,
             Wastewater, CountsBySubpop). Must have a ``name`` attribute.
 
@@ -195,7 +195,7 @@ class PyrenewBuilder:
 
         return n_init
 
-    def build(self):
+    def build(self) -> MultiSignalModel:
         """
         Build the multi-signal model with computed n_initialization_points.
 

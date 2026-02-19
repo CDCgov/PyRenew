@@ -16,10 +16,10 @@ class ObservationSample(NamedTuple):
 
     Attributes
     ----------
-    observed : ArrayLike
+    observed
         Sampled or conditioned observations. Shape depends on the
         observation process and indexing.
-    predicted : ArrayLike
+    predicted
         Predicted values before noise is applied. Useful for
         diagnostics and posterior predictive checks.
     """

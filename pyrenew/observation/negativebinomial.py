@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
@@ -69,7 +71,7 @@ class NegativeBinomialObservation(RandomVariable):
         self,
         mu: ArrayLike,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> ArrayLike:
         """
         Sample from the negative binomial distribution

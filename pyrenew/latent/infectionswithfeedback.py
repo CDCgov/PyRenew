@@ -1,6 +1,6 @@
 # numpydoc ignore=GL08
 
-from typing import NamedTuple
+from typing import Any, NamedTuple
 
 import jax.numpy as jnp
 from numpy.typing import ArrayLike
@@ -15,16 +15,16 @@ class InfectionsRtFeedbackSample(NamedTuple):
 
     Attributes
     ----------
-    post_initialization_infections : ArrayLike | None, optional
+    post_initialization_infections
         The estimated latent infections. Defaults to None.
-    rt : ArrayLike | None, optional
+    rt
         The adjusted reproduction number. Defaults to None.
     """
 
     post_initialization_infections: ArrayLike | None = None
     rt: ArrayLike | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections}, rt={self.rt})"
 
 
@@ -72,7 +72,7 @@ class InfectionsWithFeedback(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
         infection_feedback_strength
             Infection feedback strength.
@@ -121,7 +121,7 @@ class InfectionsWithFeedback(RandomVariable):
         Rt: ArrayLike,
         I0: ArrayLike,
         gen_int: ArrayLike,
-        **kwargs,
+        **kwargs: Any,
     ) -> InfectionsRtFeedbackSample:
         """
         Samples infections given Rt, initial infections, and generation

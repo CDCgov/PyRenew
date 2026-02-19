@@ -22,7 +22,7 @@ class ARProcess(RandomVariable):
 
     Parameters
     ----------
-    name : str
+    name
         A name for this random variable.
     """
 
@@ -32,7 +32,7 @@ class ARProcess(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
         """
         super().__init__(name=name)
@@ -155,7 +155,7 @@ class ARProcess(RandomVariable):
 
         inits_flipped = jnp.flip(inits_broadcast, axis=0)
 
-        def transition(recent_vals, _):  # numpydoc ignore=GL08
+        def transition(recent_vals: ArrayLike, _: None) -> tuple[ArrayLike, ArrayLike]:  # numpydoc ignore=GL08
             with numpyro.handlers.reparam(config={noise_name: LocScaleReparam(0)}):
                 next_noise = numpyro.sample(
                     noise_name,
@@ -195,7 +195,7 @@ class ARProcess(RandomVariable):
         return ts_with_inits[:n]
 
     @staticmethod
-    def validate():  # numpydoc ignore=RT01
+    def validate() -> None:  # numpydoc ignore=RT01
         """
         Validates input parameters, implementation pending.
         """

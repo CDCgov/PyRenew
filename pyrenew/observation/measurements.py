@@ -6,6 +6,8 @@ Abstract base for any population-level continuous measurements (wastewater,
 air quality, serology, etc.) with signal-specific processing.
 """
 
+from typing import Any
+
 from jax.typing import ArrayLike
 
 from pyrenew.metaclass import RandomVariable
@@ -23,12 +25,12 @@ class Measurements(BaseObservationProcess):
 
     Parameters
     ----------
-    name : str
+    name
         Unique name for this observation process. Used to prefix all
         numpyro sample and deterministic site names.
-    temporal_pmf_rv : RandomVariable
+    temporal_pmf_rv
         Temporal distribution PMF (e.g., shedding kinetics for wastewater).
-    noise : MeasurementNoise
+    noise
         Noise model for continuous measurements
         (e.g., HierarchicalNormalNoise).
 
@@ -57,12 +59,12 @@ class Measurements(BaseObservationProcess):
 
         Parameters
         ----------
-        name : str
+        name
             Unique name for this observation process. Used to prefix all
             numpyro sample and deterministic site names.
-        temporal_pmf_rv : RandomVariable
+        temporal_pmf_rv
             Temporal distribution PMF (e.g., shedding kinetics).
-        noise : MeasurementNoise
+        noise
             Noise model (e.g., HierarchicalNormalNoise with sensor effects).
         """
         super().__init__(name=name, temporal_pmf_rv=temporal_pmf_rv)
@@ -113,26 +115,26 @@ class Measurements(BaseObservationProcess):
         sensor_indices: ArrayLike | None = None,
         n_sensors: int | None = None,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         """
         Validate measurement observation data.
 
         Parameters
         ----------
-        n_total : int
+        n_total
             Total number of time steps (n_init + n_days_post_init).
-        n_subpops : int
+        n_subpops
             Number of subpopulations.
-        times : ArrayLike | None
+        times
             Day index for each observation on the shared time axis.
-        subpop_indices : ArrayLike | None
+        subpop_indices
             Subpopulation index for each observation (0-indexed).
-        sensor_indices : ArrayLike | None
+        sensor_indices
             Sensor index for each observation (0-indexed).
-        n_sensors : int | None
+        n_sensors
             Total number of measurement sensors.
-        obs : ArrayLike | None
+        obs
             Observed measurements (n_obs,).
         **kwargs
             Additional keyword arguments (ignored).
@@ -173,21 +175,21 @@ class Measurements(BaseObservationProcess):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Infections from the infection process.
             Shape: (n_total, n_subpops)
-        times : ArrayLike
+        times
             Day index for each observation on the shared time axis.
             Must be in range [0, n_total). Shape: (n_obs,)
-        subpop_indices : ArrayLike
+        subpop_indices
             Subpopulation index for each observation (0-indexed).
             Shape: (n_obs,)
-        sensor_indices : ArrayLike
+        sensor_indices
             Sensor index for each observation (0-indexed).
             Shape: (n_obs,)
-        n_sensors : int
+        n_sensors
             Total number of measurement sensors.
-        obs : ArrayLike | None
+        obs
             Observed measurements (n_obs,), or None for prior sampling.
 
         Returns

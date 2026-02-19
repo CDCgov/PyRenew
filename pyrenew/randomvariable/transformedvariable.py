@@ -1,5 +1,7 @@
 # numpydoc ignore=GL08
 
+from typing import Any
+
 import numpyro
 
 from pyrenew.metaclass import RandomVariable
@@ -20,7 +22,7 @@ class TransformedVariable(RandomVariable):
         name: str,
         base_rv: RandomVariable,
         transforms: Transform | tuple[Transform],
-    ):
+    ) -> None:
         """
         Default constructor
 
@@ -49,7 +51,7 @@ class TransformedVariable(RandomVariable):
         self.transforms = transforms
         self.validate()
 
-    def sample(self, record=False, **kwargs) -> tuple:
+    def sample(self, record: bool = False, **kwargs: Any) -> tuple:
         """
         Sample method. Call self.base_rv.sample()
         and then apply the transforms specified
@@ -95,7 +97,7 @@ class TransformedVariable(RandomVariable):
 
         return transformed_values
 
-    def sample_length(self):
+    def sample_length(self) -> int:
         """
         Sample length for a transformed
         random variable must be equal to the
@@ -109,7 +111,7 @@ class TransformedVariable(RandomVariable):
         """
         return len(self.transforms)
 
-    def validate(self):
+    def validate(self) -> None:
         """
         Perform validation checks on a
         TransformedVariable instance,
