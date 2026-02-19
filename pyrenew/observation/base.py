@@ -185,6 +185,36 @@ class BaseObservationProcess(RandomVariable):
         if jnp.any(pmf < 0):
             raise ValueError(f"{param_name} must have non-negative values")
 
+    def _validate_dow_effect(
+        self,
+        dow_effect: ArrayLike,
+        param_name: str,
+    ) -> None:
+        """
+        Validate a day-of-week effect vector.
+
+        Checks that the vector has exactly 7 non-negative elements
+        (one per day, 0=Monday through 6=Sunday, ISO convention).
+
+        Parameters
+        ----------
+        dow_effect : ArrayLike
+            Day-of-week multiplicative effects to validate.
+        param_name : str
+            Name of the parameter (for error messages).
+
+        Raises
+        ------
+        ValueError
+            If shape is not (7,) or any values are negative.
+        """
+        if dow_effect.shape != (7,):
+            raise ValueError(
+                f"{param_name} must return shape (7,), got {dow_effect.shape}"
+            )
+        if jnp.any(dow_effect < 0):
+            raise ValueError(f"{param_name} must have non-negative values")
+
     def _convolve_with_alignment(
         self,
         latent_incidence: ArrayLike,

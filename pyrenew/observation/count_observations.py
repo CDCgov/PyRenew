@@ -11,11 +11,13 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
+from pyrenew.arrayutils import tile_until_n
 from pyrenew.convolve import compute_prop_already_reported
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.noise import CountNoise
 from pyrenew.observation.types import ObservationSample
+from pyrenew.time import validate_dow
 
 
 class _CountBase(BaseObservationProcess):
@@ -32,6 +34,7 @@ class _CountBase(BaseObservationProcess):
         delay_distribution_rv: RandomVariable,
         noise: CountNoise,
         right_truncation_rv: RandomVariable | None = None,
+        day_of_week_rv: RandomVariable | None = None,
     ) -> None:
         """
         Initialize count observation base.
@@ -52,11 +55,22 @@ class _CountBase(BaseObservationProcess):
             When provided (along with ``right_truncation_offset`` at sample
             time), predicted counts are scaled down for recent timepoints
             to account for incomplete reporting.
+        day_of_week_rv : RandomVariable | None
+            Optional day-of-week multiplicative effect. Must sample to
+            shape (7,) with non-negative values, where entry j is the
+            multiplier for day-of-week j (0=Monday, 6=Sunday, ISO
+            convention). An effect of 1.0 means no adjustment for that
+            day. Values summing to 7.0 preserve weekly totals and keep
+            the ascertainment rate interpretable; other sums rescale
+            overall predicted counts. When provided (along with
+            ``first_day_dow`` at sample time), predicted counts are
+            scaled by a periodic weekly pattern.
         """
         super().__init__(name=name, temporal_pmf_rv=delay_distribution_rv)
         self.ascertainment_rate_rv = ascertainment_rate_rv
         self.noise = noise
         self.right_truncation_rv = right_truncation_rv
+        self.day_of_week_rv = day_of_week_rv
 
     def validate(self) -> None:
         """
@@ -83,6 +97,10 @@ class _CountBase(BaseObservationProcess):
         if self.right_truncation_rv is not None:
             rt_pmf = self.right_truncation_rv()
             self._validate_pmf(rt_pmf, "right_truncation_rv")
+
+        if self.day_of_week_rv is not None:
+            dow_effect = self.day_of_week_rv()
+            self._validate_dow_effect(dow_effect, "day_of_week_rv")
 
     def lookback_days(self) -> int:
         """
@@ -191,6 +209,42 @@ class _CountBase(BaseObservationProcess):
             prop = prop[:, None]
         return predicted * prop
 
+    def _apply_day_of_week(
+        self,
+        predicted: ArrayLike,
+        first_day_dow: int,
+    ) -> ArrayLike:
+        """
+        Apply day-of-week multiplicative adjustment to predicted counts.
+
+        Tiles a 7-element effect vector across the full time axis,
+        aligned to the calendar via ``first_day_dow``. NaN values
+        in the initialization period propagate unchanged (NaN * effect = NaN),
+        which is correct since masked days are excluded from the likelihood.
+
+        Parameters
+        ----------
+        predicted : ArrayLike
+            Predicted counts. Shape: (n_timepoints,) or
+            (n_timepoints, n_subpops).
+        first_day_dow : int
+            Day of the week for element 0 of the time axis
+            (0=Monday, 6=Sunday, ISO convention).
+
+        Returns
+        -------
+        ArrayLike
+            Adjusted predicted counts, same shape as input.
+        """
+        validate_dow(first_day_dow, "first_day_dow")
+        dow_effect = self.day_of_week_rv()
+        n_timepoints = predicted.shape[0]
+        daily_effect = tile_until_n(dow_effect, n_timepoints, offset=first_day_dow)
+        self._deterministic("day_of_week_effect", daily_effect)
+        if predicted.ndim == 2:
+            daily_effect = daily_effect[:, None]
+        return predicted * daily_effect
+
 
 class Counts(_CountBase):
     """
@@ -231,7 +285,8 @@ class Counts(_CountBase):
             f"ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
             f"delay_distribution_rv={self.temporal_pmf_rv!r}, "
             f"noise={self.noise!r}, "
-            f"right_truncation_rv={self.right_truncation_rv!r})"
+            f"right_truncation_rv={self.right_truncation_rv!r}, "
+            f"day_of_week_rv={self.day_of_week_rv!r})"
         )
 
     def validate_data(
@@ -268,6 +323,7 @@ class Counts(_CountBase):
         infections: ArrayLike,
         obs: ArrayLike | None = None,
         right_truncation_offset: int | None = None,
+        first_day_dow: int | None = None,
     ) -> ObservationSample:
         """
         Sample aggregated counts.
@@ -288,6 +344,12 @@ class Counts(_CountBase):
         right_truncation_offset : int | None
             If provided (and ``right_truncation_rv`` was set at construction),
             apply right-truncation adjustment to predicted counts.
+        first_day_dow : int | None
+            Day of the week for the first timepoint on the shared time
+            axis (0=Monday, 6=Sunday, ISO convention). Required when
+            ``day_of_week_rv`` was set at construction. Use
+            ``model.compute_first_day_dow(obs_start_dow)`` to convert
+            from the day of the week of the first observation.
 
         Returns
         -------
@@ -296,6 +358,8 @@ class Counts(_CountBase):
             `predicted` (predicted counts before noise, shape: n_total).
         """
         predicted_counts = self._predicted_obs(infections)
+        if self.day_of_week_rv is not None and first_day_dow is not None:
+            predicted_counts = self._apply_day_of_week(predicted_counts, first_day_dow)
         if self.right_truncation_rv is not None and right_truncation_offset is not None:
             predicted_counts = self._apply_right_truncation(
                 predicted_counts, right_truncation_offset
@@ -358,7 +422,8 @@ class CountsBySubpop(_CountBase):
             f"ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
             f"delay_distribution_rv={self.temporal_pmf_rv!r}, "
             f"noise={self.noise!r}, "
-            f"right_truncation_rv={self.right_truncation_rv!r})"
+            f"right_truncation_rv={self.right_truncation_rv!r}, "
+            f"day_of_week_rv={self.day_of_week_rv!r})"
         )
 
     def infection_resolution(self) -> str:
@@ -419,6 +484,7 @@ class CountsBySubpop(_CountBase):
         subpop_indices: ArrayLike,
         obs: ArrayLike | None = None,
         right_truncation_offset: int | None = None,
+        first_day_dow: int | None = None,
     ) -> ObservationSample:
         """
         Sample subpopulation-level counts.
@@ -443,6 +509,12 @@ class CountsBySubpop(_CountBase):
         right_truncation_offset : int | None
             If provided (and ``right_truncation_rv`` was set at construction),
             apply right-truncation adjustment to predicted counts.
+        first_day_dow : int | None
+            Day of the week for the first timepoint on the shared time
+            axis (0=Monday, 6=Sunday, ISO convention). Required when
+            ``day_of_week_rv`` was set at construction. Use
+            ``model.compute_first_day_dow(obs_start_dow)`` to convert
+            from the day of the week of the first observation.
 
         Returns
         -------
@@ -451,6 +523,8 @@ class CountsBySubpop(_CountBase):
             `predicted` (predicted counts before noise, shape: n_total x n_subpops).
         """
         predicted_counts = self._predicted_obs(infections)
+        if self.day_of_week_rv is not None and first_day_dow is not None:
+            predicted_counts = self._apply_day_of_week(predicted_counts, first_day_dow)
         if self.right_truncation_rv is not None and right_truncation_offset is not None:
             predicted_counts = self._apply_right_truncation(
                 predicted_counts, right_truncation_offset
