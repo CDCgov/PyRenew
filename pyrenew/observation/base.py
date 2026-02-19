@@ -9,6 +9,7 @@ with temporal distributions to connect infections to observed data.
 from __future__ import annotations
 
 from abc import abstractmethod
+from typing import Any
 
 import jax.numpy as jnp
 import numpyro
@@ -62,11 +63,11 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Unique name for this observation process. Used to prefix all
             numpyro sample and deterministic site names, enabling multiple
             observations of the same type in a single model.
-        temporal_pmf_rv : RandomVariable
+        temporal_pmf_rv
             The temporal distribution PMF (e.g., delay or shedding distribution).
             Must sample to a 1D array that sums to ~1.0 with non-negative values.
             Subclasses may have additional parameters.
@@ -160,11 +161,11 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        pmf : ArrayLike
+        pmf
             The PMF array to validate
-        param_name : str
+        param_name
             Name of the parameter (for error messages)
-        atol : float, default 1e-6
+        atol
             Absolute tolerance for sum-to-one check
 
         Raises
@@ -200,12 +201,12 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        latent_incidence : ArrayLike
+        latent_incidence
             Latent incidence time series (infections, prevalence, etc.).
             Shape: (n_days,)
-        pmf : ArrayLike
+        pmf
             Delay or shedding PMF. Shape: (n_pmf,)
-        p_observed : float, default 1.0
+        p_observed
             Observation probability multiplier. Scales the convolution result.
 
         Returns
@@ -249,10 +250,10 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        suffix : str
+        suffix
             Suffix for the site name. Will be prefixed with ``self.name``.
             For example, suffix="predicted" becomes "{name}_predicted".
-        value : ArrayLike
+        value
             Value to track. Can be any shape.
         """
         numpyro.deterministic(self._sample_site_name(suffix), value)
@@ -263,7 +264,7 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        suffix : str
+        suffix
             Suffix for the site name (e.g., "obs").
 
         Returns
@@ -288,7 +289,7 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Infections from the infection process.
             Shape: (n_days,) for aggregate observations
             Shape: (n_days, n_subpops) for subpop-level observations
@@ -308,7 +309,7 @@ class BaseObservationProcess(RandomVariable):
 
         See Also
         --------
-        sample : Uses this method then applies noise model
+        sample
         """
         pass  # pragma: no cover
 
@@ -317,7 +318,7 @@ class BaseObservationProcess(RandomVariable):
         self,
         n_total: int,
         n_subpops: int,
-        **obs_data,
+        **obs_data: Any,
     ) -> None:
         """
         Validate observation data before running inference.
@@ -328,9 +329,9 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        n_total : int
+        n_total
             Total number of time steps (n_init + n_days_post_init).
-        n_subpops : int
+        n_subpops
             Number of subpopulations.
         **obs_data
             Observation-specific data kwargs (same as passed to ``sample()``,
@@ -353,11 +354,11 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        indices : ArrayLike
+        indices
             Index array to validate.
-        upper_bound : int
+        upper_bound
             Exclusive upper bound for valid indices.
-        param_name : str
+        param_name
             Name of the parameter (for error messages).
 
         Raises
@@ -385,9 +386,9 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        times : ArrayLike
+        times
             Time indices on the shared time axis.
-        n_total : int
+        n_total
             Total number of time steps.
 
         Raises
@@ -407,9 +408,9 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        subpop_indices : ArrayLike
+        subpop_indices
             Subpopulation indices (0-indexed).
-        n_subpops : int
+        n_subpops
             Number of subpopulations.
 
         Raises
@@ -425,9 +426,9 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        obs : ArrayLike
+        obs
             Observed data array.
-        times : ArrayLike
+        times
             Times index array.
 
         Raises
@@ -453,9 +454,9 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        obs : ArrayLike
+        obs
             Observed data array on the shared time axis.
-        n_total : int
+        n_total
             Total number of time steps (n_init + n_days_post_init).
 
         Raises
@@ -475,7 +476,7 @@ class BaseObservationProcess(RandomVariable):
     def sample(
         self,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> ArrayLike:
         """
         Sample from the observation process.
@@ -486,7 +487,7 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        obs : ArrayLike | None
+        obs
             Observed data for conditioning, or None for prior predictive sampling.
         **kwargs
             Subclass-specific parameters (e.g., infections from the infection process).

@@ -14,13 +14,13 @@ class PeriodicProcessSample(NamedTuple):
 
     Attributes
     ----------
-    value : ArrayLike
+    value
         The sampled quantity.
     """
 
     value: ArrayLike | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"PeriodicProcessSample(value={self})"
 
 
@@ -72,7 +72,7 @@ def repeat_until_n(
     period_size: int,
     n_timepoints: int,
     offset: int = 0,
-):
+) -> ArrayLike:
     """
     Repeat each entry in `data` a given number of times (`period_size`)
     until an array of length `n_timepoints` has been produced.

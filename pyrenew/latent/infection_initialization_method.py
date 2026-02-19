@@ -10,7 +10,7 @@ from pyrenew.metaclass import RandomVariable
 class InfectionInitializationMethod(metaclass=ABCMeta):
     """Method for initializing infections in a renewal process."""
 
-    def __init__(self, n_timepoints: int):
+    def __init__(self, n_timepoints: int) -> None:
         """Default constructor for
         [`pyrenew.latent.infection_initialization_method.InfectionInitializationMethod`][].
 
@@ -51,7 +51,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
             raise ValueError(f"n_timepoints must be positive. Got {n_timepoints}")
 
     @abstractmethod
-    def initialize_infections(self, I_pre_init: ArrayLike):
+    def initialize_infections(self, I_pre_init: ArrayLike) -> ArrayLike:
         """Generate the number of initialized infections at each time point.
 
         Parameters
@@ -65,7 +65,7 @@ class InfectionInitializationMethod(metaclass=ABCMeta):
             An array of length ``n_timepoints`` with the number of initialized infections at each time point.
         """
 
-    def __call__(self, I_pre_init: ArrayLike):
+    def __call__(self, I_pre_init: ArrayLike) -> ArrayLike:
         return self.initialize_infections(I_pre_init)
 
 
@@ -76,7 +76,7 @@ class InitializeInfectionsZeroPad(InfectionInitializationMethod):
     zeros at the beginning of the time series.
     """
 
-    def initialize_infections(self, I_pre_init: ArrayLike):
+    def initialize_infections(self, I_pre_init: ArrayLike) -> ArrayLike:
         """Pad the initial infections with zeros at the beginning of the time series.
 
         Parameters
@@ -150,7 +150,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
         n_timepoints: int,
         rate_rv: RandomVariable,
         t_pre_init: int | None = None,
-    ):
+    ) -> None:
         """Default constructor for the [`pyrenew.latent.infection_initialization_method.InitializeInfectionsExponentialGrowth`][] class.
 
         Parameters
@@ -168,7 +168,7 @@ class InitializeInfectionsExponentialGrowth(InfectionInitializationMethod):
             t_pre_init = n_timepoints - 1
         self.t_pre_init = t_pre_init
 
-    def initialize_infections(self, I_pre_init: ArrayLike):
+    def initialize_infections(self, I_pre_init: ArrayLike) -> ArrayLike:
         """Generate initial infections according to exponential growth.
 
         Parameters
