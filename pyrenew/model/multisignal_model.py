@@ -131,6 +131,30 @@ class MultiSignalModel(Model):
         padding = jnp.full(pad_shape, jnp.nan)
         return jnp.concatenate([padding, obs], axis=axis)
 
+    def compute_first_day_dow(self, obs_start_dow: int) -> int:
+        """
+        Compute the day of the week for the start of the shared time axis.
+
+        The shared time axis begins ``n_init`` days before the first
+        observation. This method converts the known day of the week of
+        the first observation into the day of the week of the shared
+        time axis start (element 0), accounting for the initialization
+        period offset.
+
+        Parameters
+        ----------
+        obs_start_dow : int
+            Day of the week of the first observation day
+            (0=Monday, 6=Sunday, ISO convention).
+
+        Returns
+        -------
+        int
+            Day of the week for element 0 of the shared time axis.
+        """
+        n_init = self.latent.n_initialization_points
+        return (obs_start_dow - n_init % 7) % 7
+
     def shift_times(self, times: jnp.ndarray) -> jnp.ndarray:
         """
         Shift time indices from natural coordinates to shared time axis.
