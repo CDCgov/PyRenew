@@ -2,8 +2,6 @@
 title: "Observation processes for continuous measurements"
 format:
   gfm:
-    fig-width: 16
-    fig-height: 10
     code-fold: true
 engine: jupyter
 ---
@@ -17,11 +15,11 @@ import jax
 import jax.numpy as jnp
 import numpy as np
 import numpyro
-import matplotlib.pyplot as plt
 import pandas as pd
 import plotnine as p9
 
 import numpyro.distributions as dist
+from _tutorial_theme import theme_tutorial
 
 from pyrenew.observation import (
     Measurements,
@@ -320,8 +318,7 @@ shedding_df = pd.DataFrame(
         y="Fraction of total shedding",
         title="Viral Shedding Kinetics",
     )
-    + p9.theme_grey()
-    + p9.theme(plot_title=p9.element_text(size=14, weight="bold"))
+    + theme_tutorial
     + p9.annotate(
         "text",
         x=mode_shedding_day + 2,
@@ -463,8 +460,7 @@ plot_infections = (
         alpha=0.5,
     )
     + p9.labs(x="Day", y="Daily Infections", title="Infections (Input)")
-    + p9.theme_grey()
-    + p9.theme(plot_title=p9.element_text(size=13, weight="bold"))
+    + theme_tutorial
     + p9.annotate(
         "text",
         x=rel_spike_day,
@@ -585,7 +581,7 @@ max_conc = ww_samples_df["log_concentration"].max()
         title=f"Observation Noise: {n_samples} Samples from Same Infections",
         subtitle="Blue: one realization | Orange: other samples | Dark red: sample mean",
     )
-    + p9.theme_grey()
+    + theme_tutorial
 )
 ```
 
@@ -645,7 +641,7 @@ multi_sensor_df = pd.DataFrame(
         title="Four Sensors Observing the Same Infection Spike",
         color="Sensor",
     )
-    + p9.theme_grey()
+    + theme_tutorial
 )
 ```
 
@@ -714,7 +710,7 @@ multi_subpop_df = pd.DataFrame(
         title="Two Subpopulations with Different Infection Dynamics",
         color="Subpopulation",
     )
-    + p9.theme_grey()
+    + theme_tutorial
 )
 ```
 
