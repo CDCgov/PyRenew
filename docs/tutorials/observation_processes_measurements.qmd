@@ -160,7 +160,7 @@ class MyMeasurement(Measurements):
 ## Measurement Example: Wastewater
 
 To illustrate the framework, we specify a wastewater viral concentration observation process,
-based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-hew) family of models.
+based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-multisignal) family of models.
 
 **The wastewater signal**
 
