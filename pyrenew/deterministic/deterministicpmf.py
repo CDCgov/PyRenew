@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from jax.typing import ArrayLike
 
 from pyrenew.deterministic.deterministic import DeterministicVariable
@@ -74,7 +72,7 @@ class DeterministicPMF(RandomVariable):
 
     def sample(
         self,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Retrieves the deterministic PMF

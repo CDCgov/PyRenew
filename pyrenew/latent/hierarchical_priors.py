@@ -5,7 +5,6 @@ All classes in this module implement the group-level RV interface:
 ``sample(n_groups, **kwargs) -> ArrayLike`` with shape ``(n_groups,)``.
 """
 
-from typing import Any
 
 import jax.numpy as jnp
 import numpyro
@@ -57,7 +56,7 @@ class HierarchicalNormalPrior(RandomVariable):
         """Validate the random variable (no-op for this class)."""
         pass
 
-    def sample(self, n_groups: int, **kwargs: Any) -> ArrayLike:
+    def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample group-level effects.
 
@@ -142,7 +141,7 @@ class GammaGroupSdPrior(RandomVariable):
         """Validate the random variable (no-op for this class)."""
         pass
 
-    def sample(self, n_groups: int, **kwargs: Any) -> ArrayLike:
+    def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample group-level standard deviations.
 
@@ -226,7 +225,7 @@ class StudentTGroupModePrior(RandomVariable):
         """Validate the random variable (no-op for this class)."""
         pass
 
-    def sample(self, n_groups: int, **kwargs: Any) -> ArrayLike:
+    def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample group-level modes.
 

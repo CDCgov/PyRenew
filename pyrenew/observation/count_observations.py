@@ -7,8 +7,6 @@ Ascertainment x delay convolution with pluggable noise (Poisson, Negative Binomi
 
 from __future__ import annotations
 
-from typing import Any
-
 import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
@@ -241,7 +239,7 @@ class Counts(_CountBase):
         n_total: int,
         n_subpops: int,
         obs: ArrayLike | None = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> None:
         """
         Validate aggregated count observation data.
@@ -381,7 +379,7 @@ class CountsBySubpop(_CountBase):
         times: ArrayLike | None = None,
         subpop_indices: ArrayLike | None = None,
         obs: ArrayLike | None = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> None:
         """
         Validate subpopulation-level count observation data.

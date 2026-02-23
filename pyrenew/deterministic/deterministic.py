@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 import numpyro
 from jax.typing import ArrayLike
 
@@ -71,7 +69,7 @@ class DeterministicVariable(RandomVariable):
     def sample(
         self,
         record: bool = False,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Retrieve the value of the deterministic Rv

@@ -5,7 +5,7 @@ Helper classes for regression problems
 from __future__ import annotations
 
 from abc import ABCMeta, abstractmethod
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import numpyro
 import numpyro.distributions as dist
@@ -187,7 +187,7 @@ class GLMPrediction(AbstractRegressionPrediction):
             coefficients=coefficients,
         )
 
-    def __call__(self, *args: Any, **kwargs: Any) -> GLMPredictionSample:
+    def __call__(self, *args: object, **kwargs: object) -> GLMPredictionSample:
         """
         Alias for `sample()`.
         """

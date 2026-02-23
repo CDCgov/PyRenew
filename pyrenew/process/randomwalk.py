@@ -1,6 +1,5 @@
 # numpydoc ignore=GL08
 
-from typing import Any
 
 import numpyro.distributions as dist
 
@@ -23,7 +22,7 @@ class RandomWalk(DifferencedProcess):
         self,
         name: str,
         step_rv: RandomVariable,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> None:
         """
         Default constructor.
@@ -64,7 +63,7 @@ class StandardNormalRandomWalk(RandomWalk):
     def __init__(
         self,
         name: str,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> None:
         """
         Default constructor.

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
@@ -69,7 +69,7 @@ class Infections(RandomVariable):
         Rt: ArrayLike,
         I0: ArrayLike,
         gen_int: ArrayLike,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> InfectionsSample:
         r"""
         Sample infections given

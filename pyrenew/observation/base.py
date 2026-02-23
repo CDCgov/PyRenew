@@ -9,7 +9,6 @@ with temporal distributions to connect infections to observed data.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
 
 import jax.numpy as jnp
 import numpyro
@@ -318,7 +317,7 @@ class BaseObservationProcess(RandomVariable):
         self,
         n_total: int,
         n_subpops: int,
-        **obs_data: Any,
+        **obs_data: object,
     ) -> None:
         """
         Validate observation data before running inference.
@@ -476,7 +475,7 @@ class BaseObservationProcess(RandomVariable):
     def sample(
         self,
         obs: ArrayLike | None = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample from the observation process.

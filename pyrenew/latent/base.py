@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import jax.numpy as jnp
 from jax.typing import ArrayLike
@@ -310,7 +310,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         n_days_post_init: int,
         *,
         subpop_fractions: ArrayLike = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> LatentSample:
         """
         Sample latent infections for all subpopulations.

@@ -5,7 +5,6 @@ Hierarchical latent infection process with subpopulation-specific renewal models
 from __future__ import annotations
 
 from functools import partial
-from typing import Any
 
 import jax
 import jax.numpy as jnp
@@ -157,7 +156,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         n_days_post_init: int,
         *,
         subpop_fractions: ArrayLike = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> LatentSample:
         """
         Sample hierarchical infections for all subpopulations.

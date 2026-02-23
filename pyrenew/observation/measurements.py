@@ -6,7 +6,6 @@ Abstract base for any population-level continuous measurements (wastewater,
 air quality, serology, etc.) with signal-specific processing.
 """
 
-from typing import Any
 
 from jax.typing import ArrayLike
 
@@ -115,7 +114,7 @@ class Measurements(BaseObservationProcess):
         sensor_indices: ArrayLike | None = None,
         n_sensors: int | None = None,
         obs: ArrayLike | None = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> None:
         """
         Validate measurement observation data.

@@ -36,7 +36,7 @@ class DifferencedProcess(RandomVariable):
         name: str,
         fundamental_process: RandomVariable,
         differencing_order: int,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> None:
         """
         Default constructor.
@@ -110,9 +110,9 @@ class DifferencedProcess(RandomVariable):
         self,
         init_vals: ArrayLike,
         n: int,
-        *args: Any,
+        *args: object,
         fundamental_process_init_vals: ArrayLike = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> jnp.ndarray:
         """
         Sample from the process

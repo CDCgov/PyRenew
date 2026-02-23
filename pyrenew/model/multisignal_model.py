@@ -215,7 +215,7 @@ class MultiSignalModel(Model):
         population_size: float,
         *,
         subpop_fractions: ArrayLike | None = None,
-        **observation_data: Any,
+        **observation_data: object,
     ) -> None:
         """
         Sample from the joint generative model.

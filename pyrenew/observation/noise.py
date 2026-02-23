@@ -25,7 +25,6 @@ separating the noise distribution from the observation structure.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any
 
 import jax.numpy as jnp
 import numpyro
@@ -73,7 +72,7 @@ class VectorizedRV(RandomVariable):
         """Validate the underlying RV."""
         self.rv.validate()
 
-    def sample(self, n_groups: int, **kwargs: Any) -> ArrayLike:
+    def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample n_groups values using numpyro.plate.
 
@@ -303,7 +302,7 @@ class MeasurementNoise(ABC):
         name: str,
         predicted: ArrayLike,
         obs: ArrayLike | None = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample continuous observations given predicted values.

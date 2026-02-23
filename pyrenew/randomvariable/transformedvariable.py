@@ -1,6 +1,5 @@
 # numpydoc ignore=GL08
 
-from typing import Any
 
 import numpyro
 
@@ -51,7 +50,7 @@ class TransformedVariable(RandomVariable):
         self.transforms = transforms
         self.validate()
 
-    def sample(self, record: bool = False, **kwargs: Any) -> tuple:
+    def sample(self, record: bool = False, **kwargs: object) -> tuple:
         """
         Sample method. Call self.base_rv.sample()
         and then apply the transforms specified

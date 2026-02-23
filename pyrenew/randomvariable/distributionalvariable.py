@@ -1,7 +1,7 @@
 # numpydoc ignore=GL08
 
 from collections.abc import Callable
-from typing import Any, Self
+from typing import Self
 
 import numpyro
 import numpyro.distributions as dist
@@ -95,9 +95,9 @@ class DynamicDistributionalVariable(RandomVariable):
 
     def sample(
         self,
-        *args: Any,
+        *args: object,
         obs: ArrayLike = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample from the distributional rv.
@@ -218,7 +218,7 @@ class StaticDistributionalVariable(RandomVariable):
     def sample(
         self,
         obs: ArrayLike | None = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample from the distribution.

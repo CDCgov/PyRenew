@@ -1,6 +1,6 @@
 # numpydoc ignore=GL08
 
-from typing import Any, NamedTuple
+from typing import NamedTuple
 
 import jax.numpy as jnp
 from numpy.typing import ArrayLike
@@ -121,7 +121,7 @@ class InfectionsWithFeedback(RandomVariable):
         Rt: ArrayLike,
         I0: ArrayLike,
         gen_int: ArrayLike,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> InfectionsRtFeedbackSample:
         """
         Samples infections given Rt, initial infections, and generation

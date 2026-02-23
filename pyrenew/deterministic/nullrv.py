@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
-
 from jax.typing import ArrayLike
 
 from pyrenew.deterministic.deterministic import DeterministicVariable
@@ -38,7 +36,7 @@ class NullVariable(DeterministicVariable):
 
     def sample(
         self,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> None:
         """Retrieve the value of the Null (None)
 
@@ -85,7 +83,7 @@ class NullObservation(NullVariable):
         self,
         mu: ArrayLike,
         obs: ArrayLike | None = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> None:
         """
         Retrieve the value of the Null (None)

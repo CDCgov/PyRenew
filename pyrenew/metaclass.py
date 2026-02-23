@@ -3,7 +3,6 @@ pyrenew helper classes
 """
 
 from abc import ABCMeta, abstractmethod
-from typing import Any
 
 import jax.random as jr
 import numpy as np
@@ -50,7 +49,7 @@ class RandomVariable(metaclass=ABCMeta):
         A non-empty string identifying this random variable.
     """
 
-    def __init__(self, name: str, **kwargs: Any) -> None:
+    def __init__(self, name: str, **kwargs: object) -> None:
         """
         Default constructor.
 
@@ -75,7 +74,7 @@ class RandomVariable(metaclass=ABCMeta):
     @abstractmethod
     def sample(
         self,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> tuple:
         """
         Sample method of the process
@@ -96,13 +95,13 @@ class RandomVariable(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def validate(**kwargs: Any) -> None:
+    def validate(**kwargs: object) -> None:
         """
         Validation of kwargs to be implemented in subclasses.
         """
         pass
 
-    def __call__(self, **kwargs: Any) -> tuple:
+    def __call__(self, **kwargs: object) -> tuple:
         """
         Alias for `sample`.
         """
@@ -117,7 +116,7 @@ class Model(metaclass=ABCMeta):
     mcmc = None
 
     @abstractmethod
-    def __init__(self, **kwargs: Any) -> None:  # numpydoc ignore=GL08
+    def __init__(self, **kwargs: object) -> None:  # numpydoc ignore=GL08
         pass
 
     @staticmethod
@@ -128,7 +127,7 @@ class Model(metaclass=ABCMeta):
     @abstractmethod
     def sample(
         self,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> tuple:
         """
         Sample method of the model.
@@ -147,7 +146,7 @@ class Model(metaclass=ABCMeta):
         """
         pass
 
-    def model(self, **kwargs: Any) -> tuple:
+    def model(self, **kwargs: object) -> tuple:
         """
         Alias for the sample method.
 
@@ -222,7 +221,7 @@ class Model(metaclass=ABCMeta):
         rng_key: ArrayLike | None = None,
         nuts_args: dict = None,
         mcmc_args: dict = None,
-        **kwargs: Any,
+        **kwargs: object,
     ) -> None:
         """
         Runs the model
@@ -283,7 +282,7 @@ class Model(metaclass=ABCMeta):
         self,
         rng_key: ArrayLike | None = None,
         numpyro_predictive_args: dict = {},
-        **kwargs: Any,
+        **kwargs: object,
     ) -> dict:
         """
         A wrapper of [`numpyro.infer.util.Predictive`][] to generate
@@ -326,7 +325,7 @@ class Model(metaclass=ABCMeta):
         self,
         rng_key: ArrayLike | None = None,
         numpyro_predictive_args: dict = {},
-        **kwargs: Any,
+        **kwargs: object,
     ) -> dict:
         """
         A wrapper for [`numpyro.infer.util.Predictive`][]

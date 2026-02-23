@@ -53,7 +53,7 @@ class PyrenewBuilder:
     def configure_latent(
         self,
         latent_class: type[BaseLatentInfectionProcess],
-        **params: Any,
+        **params: object,
     ) -> PyrenewBuilder:
         """
         Configure the latent infection process.

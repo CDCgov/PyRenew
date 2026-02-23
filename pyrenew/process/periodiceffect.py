@@ -1,6 +1,5 @@
 # numpydoc ignore=GL08
 
-from typing import Any
 
 from jax.typing import ArrayLike
 
@@ -63,7 +62,7 @@ class PeriodicEffect(RandomVariable):
 
         return None
 
-    def sample(self, duration: int, **kwargs: Any) -> ArrayLike:
+    def sample(self, duration: int, **kwargs: object) -> ArrayLike:
         """
         Sample from the process.
 
