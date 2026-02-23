@@ -45,12 +45,11 @@ The `Measurements` class models continuous signals derived from infections. Unli
 
 All measurement observation processes follow the same pattern:
 
-$$\text{observed} \sim \text{Noise}\bigl(\text{predicted}(\text{infections})\bigr)$$
+$$y_t \sim \text{Noise}(\mu(t))$$
 
-where:
+where $\mu(t)$ is the predicted measurement value on day $t$, computed from infections via a domain-specific transformation, and the noise model adds stochastic variation around predictions.
 
-1. **`_predicted_obs(infections)`**: Transforms infections into predicted measurement values (you implement this)
-2. **Noise model**: Adds stochastic variation around predictions (provided by PyRenew)
+Subclasses implement `_predicted_obs()` to compute $\mu(t)$ from infections. PyRenew provides the noise model.
 
 The `Measurements` base class provides:
 
@@ -159,7 +158,7 @@ class MyMeasurement(Measurements):
 ## Measurement Example: Wastewater
 
 To illustrate the framework, we specify a wastewater viral concentration observation process,
-based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-hew) family of models.
+based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-multisignal) family of models.
 
 **The wastewater signal**
 
@@ -172,18 +171,18 @@ The predicted concentration depends on:
 
 The predicted log-concentration on day $t$ is:
 
-$$\log(\lambda_t) = \log\left(\frac{G}{V} \cdot \sum_{d=0}^{D} I_{t-d} \cdot p_d\right)$$
+$$\log(\mu(t)) = \log\left(\frac{G}{V} \cdot \sum_{s} I(t-s) \, \pi(s)\right)$$
 
 where:
 
-- $I_{t-d}$ is infections on day $t-d$
-- $p_d$ is the shedding kinetics PMF (fraction shed on day $d$ post-infection)
+- $I(t-s)$ is infections on day $t-s$
+- $\pi(s)$ is the shedding kinetics PMF (fraction shed on day $s$ post-infection)
 - $G$ is genome copies shed per infection
 - $V$ is wastewater volume per person per day
 
 Observations are log-concentrations with normal noise:
 
-$$y_t \sim \text{Normal}(\log(\lambda_t) + \text{sensor\_mode}, \text{sensor\_sd})$$
+$$y_t \sim \text{Normal}(\log(\mu(t)) + \text{sensor\_mode}, \text{sensor\_sd})$$
 
 ### Implementing the Wastewater class
 
