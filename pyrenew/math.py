@@ -146,7 +146,7 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     mean_gi = jnp.dot(g, _positive_ints_like(g))
     init_r = (R - 1) / (R * mean_gi)
 
-    def _r_next(r: float, _: None) -> tuple[ArrayLike, None]:  # numpydoc ignore=GL08
+    def _r_next(r: ArrayLike, _: None) -> tuple[ArrayLike, None]:  # numpydoc ignore=GL08
         return (
             r - ((R * neg_MGF(r, g) - 1) / (R * neg_MGF_del_r(r, g))),
             None,
