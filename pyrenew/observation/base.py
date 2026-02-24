@@ -317,7 +317,7 @@ class BaseObservationProcess(RandomVariable):
         self,
         n_total: int,
         n_subpops: int,
-        **obs_data: object,
+        **obs_data: dict[str, object],
     ) -> None:
         """
         Validate observation data before running inference.
