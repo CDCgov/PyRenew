@@ -6,11 +6,10 @@ Combines a latent infection process with multiple observation processes.
 
 from __future__ import annotations
 
-from typing import Any
-
 import jax.numpy as jnp
 import numpyro
 import numpyro.handlers
+from jax.typing import ArrayLike
 
 from pyrenew.latent.base import BaseLatentInfectionProcess
 from pyrenew.metaclass import Model
@@ -31,10 +30,10 @@ class MultiSignalModel(Model):
 
     Parameters
     ----------
-    latent_process : BaseLatentInfectionProcess
+    latent_process
         Latent infection process generating infections at jurisdiction and/or
         subpopulation levels
-    observations : Dict[str, BaseObservationProcess]
+    observations
         Dictionary mapping names to observation process instances. Names are
         used when passing observation data to sample().
 
@@ -50,7 +49,7 @@ class MultiSignalModel(Model):
         self,
         latent_process: BaseLatentInfectionProcess,
         observations: dict[str, BaseObservationProcess],
-    ):
+    ) -> None:
         """
         Initialize multi-signal model.
 
@@ -113,10 +112,10 @@ class MultiSignalModel(Model):
 
         Parameters
         ----------
-        obs : ArrayLike
+        obs
             Observations in natural coordinates (index 0 = first observation day).
             Integer arrays are converted to float (required for NaN).
-        axis : int, default 0
+        axis
             Axis along which to pad (typically 0 for time axis).
 
         Returns
@@ -166,7 +165,7 @@ class MultiSignalModel(Model):
 
         Parameters
         ----------
-        times : ArrayLike
+        times
             Time indices in natural coordinates (0 = first observation day).
 
         Returns
@@ -180,8 +179,8 @@ class MultiSignalModel(Model):
     def validate_data(
         self,
         n_days_post_init: int,
-        subpop_fractions=None,
-        **observation_data: dict[str, Any],
+        subpop_fractions: ArrayLike | None = None,
+        **observation_data: dict[str, object],
     ) -> None:
         """
         Validate observation data before running MCMC.
@@ -197,9 +196,9 @@ class MultiSignalModel(Model):
 
         Parameters
         ----------
-        n_days_post_init : int
+        n_days_post_init
             Number of days to simulate after initialization period
-        subpop_fractions : ArrayLike
+        subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
         **observation_data
             Data for each observation process, keyed by observation name.
@@ -237,9 +236,9 @@ class MultiSignalModel(Model):
         n_days_post_init: int,
         population_size: float,
         *,
-        subpop_fractions=None,
-        **observation_data,
-    ):
+        subpop_fractions: ArrayLike | None = None,
+        **observation_data: dict[str, object],
+    ) -> None:
         """
         Sample from the joint generative model.
 
@@ -247,12 +246,12 @@ class MultiSignalModel(Model):
 
         Parameters
         ----------
-        n_days_post_init : int
+        n_days_post_init
             Number of days to simulate after initialization period
-        population_size : float
+        population_size
             Total population size. Used to convert infection proportions
             (from latent process) to infection counts (for observation processes).
-        subpop_fractions : ArrayLike
+        subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
         **observation_data
             Data for each observation process, keyed by observation name

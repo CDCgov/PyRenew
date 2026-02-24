@@ -258,12 +258,12 @@ def compute_prop_already_reported(
 
     Parameters
     ----------
-    reporting_delay_pmf : ArrayLike
+    reporting_delay_pmf
         PMF of reporting delays. The i-th entry is the probability that
         an event is reported with a delay of i time units.
-    n_timepoints : int
+    n_timepoints
         Number of timepoints in the output array.
-    right_truncation_offset : int
+    right_truncation_offset
         Number of additional timepoints beyond the last observation
         for which reports could still arrive. An offset of 0 means
         the last timepoint has only had time for delay-0 reports.

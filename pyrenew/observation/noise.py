@@ -45,10 +45,10 @@ class VectorizedRV(RandomVariable):
 
     Parameters
     ----------
-    name : str
+    name
         A name for this random variable.
         The numpyro plate is named ``f"{name}_plate"``.
-    rv : RandomVariable
+    rv
         The underlying RandomVariable to wrap.
     """
 
@@ -58,27 +58,27 @@ class VectorizedRV(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
             The numpyro plate is named ``f"{name}_plate"``.
-        rv : RandomVariable
+        rv
             The underlying RandomVariable to wrap.
         """
         super().__init__(name=name)
         self.rv = rv
         self.plate_name = f"{name}_plate"
 
-    def validate(self):  # pragma: no cover
+    def validate(self) -> None:  # pragma: no cover
         """Validate the underlying RV."""
         self.rv.validate()
 
-    def sample(self, n_groups: int, **kwargs):
+    def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample n_groups values using numpyro.plate.
 
         Parameters
         ----------
-        n_groups : int
+        n_groups
             Number of group-level values to sample.
 
         Returns
@@ -110,13 +110,13 @@ class CountNoise(ABC):
 
         Parameters
         ----------
-        name : str
+        name
             Numpyro sample site name.
-        predicted : ArrayLike
+        predicted
             Predicted count values (non-negative).
-        obs : ArrayLike | None
+        obs
             Observed counts for conditioning, or None for prior sampling.
-        mask : ArrayLike | None
+        mask
             Boolean mask indicating which observations to include in the
             likelihood. If None, all observations are included. If provided,
             observations where mask is False are excluded from the likelihood.
@@ -177,13 +177,13 @@ class PoissonNoise(CountNoise):
 
         Parameters
         ----------
-        name : str
+        name
             Numpyro sample site name.
-        predicted : ArrayLike
+        predicted
             Predicted count values.
-        obs : ArrayLike | None
+        obs
             Observed counts for conditioning.
-        mask : ArrayLike | None
+        mask
             Boolean mask indicating which observations to include in the
             likelihood. If None, all observations are included.
 
@@ -208,7 +208,7 @@ class NegativeBinomialNoise(CountNoise):
 
     Parameters
     ----------
-    concentration_rv : RandomVariable
+    concentration_rv
         Concentration parameter (must be > 0).
         Higher values reduce overdispersion.
 
@@ -224,7 +224,7 @@ class NegativeBinomialNoise(CountNoise):
 
         Parameters
         ----------
-        concentration_rv : RandomVariable
+        concentration_rv
             Concentration parameter (must be > 0).
             Higher values reduce overdispersion.
         """
@@ -262,13 +262,13 @@ class NegativeBinomialNoise(CountNoise):
 
         Parameters
         ----------
-        name : str
+        name
             Numpyro sample site name.
-        predicted : ArrayLike
+        predicted
             Predicted count values.
-        obs : ArrayLike | None
+        obs
             Observed counts for conditioning.
-        mask : ArrayLike | None
+        mask
             Boolean mask indicating which observations to include in the
             likelihood. If None, all observations are included.
 
@@ -302,18 +302,18 @@ class MeasurementNoise(ABC):
         name: str,
         predicted: ArrayLike,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample continuous observations given predicted values.
 
         Parameters
         ----------
-        name : str
+        name
             Numpyro sample site name.
-        predicted : ArrayLike
+        predicted
             Predicted measurement values.
-        obs : ArrayLike | None
+        obs
             Observed measurements for conditioning, or None for prior sampling.
         **kwargs
             Additional context (e.g., sensor indices).
@@ -347,10 +347,10 @@ class HierarchicalNormalNoise(MeasurementNoise):
 
     Parameters
     ----------
-    sensor_mode_rv : RandomVariable
+    sensor_mode_rv
         Prior for sensor-level modes.
         Must implement ``sample(n_groups=...) -> ArrayLike``.
-    sensor_sd_rv : RandomVariable
+    sensor_sd_rv
         Prior for sensor-level SDs (must be > 0).
         Must implement ``sample(n_groups=...) -> ArrayLike``.
 
@@ -369,10 +369,10 @@ class HierarchicalNormalNoise(MeasurementNoise):
 
         Parameters
         ----------
-        sensor_mode_rv : RandomVariable
+        sensor_mode_rv
             Prior for sensor-level modes.
             Must implement ``sample(n_groups=...) -> ArrayLike``.
-        sensor_sd_rv : RandomVariable
+        sensor_sd_rv
             Prior for sensor-level SDs (must be > 0).
             Must implement ``sample(n_groups=...) -> ArrayLike``.
         """
@@ -411,18 +411,18 @@ class HierarchicalNormalNoise(MeasurementNoise):
 
         Parameters
         ----------
-        name : str
+        name
             Numpyro sample site name.
-        predicted : ArrayLike
+        predicted
             Predicted measurement values.
             Shape: (n_obs,)
-        obs : ArrayLike | None
+        obs
             Observed measurements for conditioning.
             Shape: (n_obs,)
-        sensor_indices : ArrayLike
+        sensor_indices
             Sensor index for each observation (0-indexed).
             Shape: (n_obs,)
-        n_sensors : int
+        n_sensors
             Total number of sensors.
 
         Returns

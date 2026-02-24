@@ -11,6 +11,9 @@ def add_markdown_to_divs(html: str) -> str:  # numpydoc ignore=GL08
     for div in soup.find_all("div"):
         if "markdown" not in div.attrs:
             div["markdown"] = "1"
+    for img in soup.find_all("img"):
+        img.attrs.pop("width", None)
+        img.attrs.pop("height", None)
     return soup.decode(formatter=None)
 
 

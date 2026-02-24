@@ -41,16 +41,16 @@ class _CountBase(BaseObservationProcess):
 
         Parameters
         ----------
-        name : str
+        name
             Unique name for this observation process. Used to prefix all
             numpyro sample and deterministic site names.
-        ascertainment_rate_rv : RandomVariable
+        ascertainment_rate_rv
             Ascertainment rate in [0, 1] (e.g., IHR, IER).
-        delay_distribution_rv : RandomVariable
+        delay_distribution_rv
             Delay distribution PMF (must sum to ~1.0).
-        noise : CountNoise
+        noise
             Noise model for count observations (Poisson, NegBin, etc.).
-        right_truncation_rv : RandomVariable | None
+        right_truncation_rv
             Optional reporting delay PMF for right-truncation adjustment.
             When provided (along with ``right_truncation_offset`` at sample
             time), predicted counts are scaled down for recent timepoints
@@ -136,7 +136,7 @@ class _CountBase(BaseObservationProcess):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Infections from the infection process.
             Shape: (n_days,) for aggregate
             Shape: (n_days, n_subpops) for subpop-level
@@ -176,10 +176,10 @@ class _CountBase(BaseObservationProcess):
 
         Parameters
         ----------
-        predicted : ArrayLike
+        predicted
             Predicted counts. Shape: (n_timepoints,) or
             (n_timepoints, n_subpops).
-        right_truncation_offset : int
+        right_truncation_offset
             Number of additional reporting days that have occurred since the last observation. 0 implies only 0-delay reports have arrived for the last observed timepoint, 1 implies 0 and 1 delay reports have arrived, et cetera.
 
         Returns
@@ -255,15 +255,15 @@ class Counts(_CountBase):
 
     Parameters
     ----------
-    name : str
+    name
         Unique name for this observation process. Used to prefix all
         numpyro sample and deterministic site names (e.g., "hospital"
         produces sites "hospital_obs", "hospital_predicted").
-    ascertainment_rate_rv : RandomVariable
+    ascertainment_rate_rv
         Ascertainment rate in [0, 1] (e.g., IHR, IER).
-    delay_distribution_rv : RandomVariable
+    delay_distribution_rv
         Delay distribution PMF (must sum to ~1.0).
-    noise : CountNoise
+    noise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
     """
 
@@ -294,18 +294,18 @@ class Counts(_CountBase):
         n_total: int,
         n_subpops: int,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """
         Validate aggregated count observation data.
 
         Parameters
         ----------
-        n_total : int
+        n_total
             Total number of time steps (n_init + n_days_post_init).
-        n_subpops : int
+        n_subpops
             Number of subpopulations (unused for aggregate observations).
-        obs : ArrayLike | None
+        obs
             Observed counts on shared time axis. Shape: (n_total,).
         **kwargs
             Additional keyword arguments (ignored).
@@ -334,14 +334,14 @@ class Counts(_CountBase):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Aggregate infections from the infection process.
             Shape: (n_total,) where n_total = n_init + n_days.
-        obs : ArrayLike | None
+        obs
             Observed counts on shared time axis. Shape: (n_total,).
             Use NaN for initialization period and any missing observations.
             None for prior predictive sampling.
-        right_truncation_offset : int | None
+        right_truncation_offset
             If provided (and ``right_truncation_rv`` was set at construction),
             apply right-truncation adjustment to predicted counts.
         first_day_dow : int | None
@@ -404,14 +404,14 @@ class CountsBySubpop(_CountBase):
 
     Parameters
     ----------
-    name : str
+    name
         Unique name for this observation process. Used to prefix all
         numpyro sample and deterministic site names.
-    ascertainment_rate_rv : RandomVariable
+    ascertainment_rate_rv
         Ascertainment rate in [0, 1].
-    delay_distribution_rv : RandomVariable
+    delay_distribution_rv
         Delay distribution PMF (must sum to ~1.0).
-    noise : CountNoise
+    noise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
     """
 
@@ -444,22 +444,22 @@ class CountsBySubpop(_CountBase):
         times: ArrayLike | None = None,
         subpop_indices: ArrayLike | None = None,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """
         Validate subpopulation-level count observation data.
 
         Parameters
         ----------
-        n_total : int
+        n_total
             Total number of time steps (n_init + n_days_post_init).
-        n_subpops : int
+        n_subpops
             Number of subpopulations.
-        times : ArrayLike | None
+        times
             Day index for each observation on the shared time axis.
-        subpop_indices : ArrayLike | None
+        subpop_indices
             Subpopulation index for each observation (0-indexed).
-        obs : ArrayLike | None
+        obs
             Observed counts (n_obs,).
         **kwargs
             Additional keyword arguments (ignored).
@@ -495,18 +495,18 @@ class CountsBySubpop(_CountBase):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Subpopulation-level infections from the infection process.
             Shape: (n_total, n_subpops)
-        times : ArrayLike
+        times
             Day index for each observation on the shared time axis.
             Must be in range [0, n_total). Shape: (n_obs,)
-        subpop_indices : ArrayLike
+        subpop_indices
             Subpopulation index for each observation (0-indexed).
             Shape: (n_obs,)
-        obs : ArrayLike | None
+        obs
             Observed counts (n_obs,), or None for prior sampling.
-        right_truncation_offset : int | None
+        right_truncation_offset
             If provided (and ``right_truncation_rv`` was set at construction),
             apply right-truncation adjustment to predicted counts.
         first_day_dow : int | None

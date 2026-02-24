@@ -2,8 +2,6 @@
 title: Building Multi-Signal Renewal Models
 format:
   gfm:
-    fig-width: 16
-    fig-height: 10
     code-fold: true
 engine: jupyter
 jupyter:
@@ -43,6 +41,8 @@ import time
 import warnings
 
 warnings.filterwarnings("ignore")
+
+from _tutorial_theme import theme_tutorial
 
 
 def make_rng_key():
@@ -919,8 +919,7 @@ plot_df_90["signal"] = pd.Categorical(
         y="Count",
         title="Posterior Latent Infections vs Observed Hospitalizations (90 days)",
     )
-    + p9.theme_grey()
-    + p9.theme(figure_size=(12, 8))
+    + theme_tutorial
 )
 ```
 
@@ -1049,8 +1048,7 @@ plot_df_180["signal"] = pd.Categorical(
         y="Count",
         title="Posterior Latent Infections vs Observed Hospitalizations (180 days)",
     )
-    + p9.theme_grey()
-    + p9.theme(figure_size=(12, 8))
+    + theme_tutorial
 )
 ```
 

@@ -19,6 +19,9 @@ The `RtPeriodicDiff` and `RtWeeklyDiff` classes use `PeriodicBroadcaster` to rep
 import jax.numpy as jnp
 import numpy as np
 import numpyro
+import pandas as pd
+import plotnine as p9
+from _tutorial_theme import theme_tutorial
 from pyrenew import process, deterministic
 ```
 
@@ -43,18 +46,20 @@ rt_proc = process.RtWeeklyDiffARProcess(
 with numpyro.handlers.seed(rng_seed=20):
     sim_data = rt_proc(duration=30)
 
-# Plotting the Rt values
-import matplotlib.pyplot as plt
+rt_df = pd.DataFrame(
+    {"day": np.arange(len(sim_data)), "rt": np.array(sim_data)}
+)
+week_breaks = pd.DataFrame({"x": np.arange(0, 30, 7)})
 
-plt.step(np.arange(len(sim_data)), sim_data, where="post")
-plt.xlabel("Days")
-plt.ylabel("Rt")
-plt.title("Simulated Rt values")
-
-# Adding bands to mark weeks
-for i in range(0, 30, 7):
-    plt.axvline(i, color="black", linestyle="--", alpha=0.5)
-plt.show()
+(
+    p9.ggplot(rt_df, p9.aes(x="day", y="rt"))
+    + p9.geom_step(color="steelblue", size=1)
+    + p9.geom_vline(
+        p9.aes(xintercept="x"), data=week_breaks, linetype="dashed", alpha=0.5
+    )
+    + p9.labs(x="Days", y="Rt", title="Simulated Rt values")
+    + theme_tutorial
+)
 ```
 
 The implementation of the `RtWeeklyDiffARProcess` (which is an instance of `RtPeriodicDiffARProcess`),
@@ -93,16 +98,20 @@ We use the `sample` method to generate samples from the day of week effect:
 with numpyro.handlers.seed(rng_seed=20):
     sim_data = dayofweek(duration=30)
 
-# Plotting the effect values
-import matplotlib.pyplot as plt
+dow_df = pd.DataFrame(
+    {"day": np.arange(len(sim_data)), "effect": np.array(sim_data)}
+)
+week_breaks = pd.DataFrame({"x": np.arange(0, 30, 7)})
 
-plt.step(np.arange(len(sim_data)), sim_data, where="post")
-plt.xlabel("Days")
-plt.ylabel("Effect size")
-plt.title("Simulated Day of Week Effect values")
-
-# Adding bands to mark weeks
-for i in range(0, 30, 7):
-    plt.axvline(i, color="black", linestyle="--", alpha=0.5)
-plt.show()
+(
+    p9.ggplot(dow_df, p9.aes(x="day", y="effect"))
+    + p9.geom_step(color="steelblue", size=1)
+    + p9.geom_vline(
+        p9.aes(xintercept="x"), data=week_breaks, linetype="dashed", alpha=0.5
+    )
+    + p9.labs(
+        x="Days", y="Effect size", title="Simulated Day of Week Effect values"
+    )
+    + theme_tutorial
+)
 ```

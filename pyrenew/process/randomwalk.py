@@ -1,5 +1,6 @@
 # numpydoc ignore=GL08
 
+
 import numpyro.distributions as dist
 
 from pyrenew.metaclass import RandomVariable
@@ -21,14 +22,14 @@ class RandomWalk(DifferencedProcess):
         self,
         name: str,
         step_rv: RandomVariable,
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> None:
         """
         Default constructor.
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
         step_rv
             RandomVariable representing a single step
@@ -62,14 +63,14 @@ class StandardNormalRandomWalk(RandomWalk):
     def __init__(
         self,
         name: str,
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> None:
         """
         Default constructor.
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
             The internal step distribution is named
             ``f"{name}_step"``.
