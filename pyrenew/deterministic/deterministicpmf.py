@@ -72,7 +72,7 @@ class DeterministicPMF(RandomVariable):
 
     def sample(
         self,
-        **kwargs,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Retrieves the deterministic PMF

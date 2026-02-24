@@ -69,7 +69,7 @@ class NegativeBinomialObservation(RandomVariable):
         self,
         mu: ArrayLike,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample from the negative binomial distribution

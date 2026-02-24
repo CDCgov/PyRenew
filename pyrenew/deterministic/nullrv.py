@@ -36,7 +36,7 @@ class NullVariable(DeterministicVariable):
 
     def sample(
         self,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """Retrieve the value of the Null (None)
 
@@ -83,7 +83,7 @@ class NullObservation(NullVariable):
         self,
         mu: ArrayLike,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """
         Retrieve the value of the Null (None)

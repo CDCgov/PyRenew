@@ -1,6 +1,8 @@
 # numpydoc ignore=GL08
 
 
+from jax.typing import ArrayLike
+
 import pyrenew.arrayutils as au
 from pyrenew.metaclass import RandomVariable
 
@@ -15,13 +17,13 @@ class PeriodicEffect(RandomVariable):
         name: str,
         offset: int,
         quantity_to_broadcast: RandomVariable,
-    ):
+    ) -> None:
         """
         Default constructor for PeriodicEffect class.
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
         offset
             Relative point at which data starts, must be between 0 and
@@ -60,7 +62,7 @@ class PeriodicEffect(RandomVariable):
 
         return None
 
-    def sample(self, duration: int, **kwargs):
+    def sample(self, duration: int, **kwargs: object) -> ArrayLike:
         """
         Sample from the process.
 
@@ -93,13 +95,13 @@ class DayOfWeekEffect(PeriodicEffect):
         name: str,
         offset: int,
         quantity_to_broadcast: RandomVariable,
-    ):
+    ) -> None:
         """
         Default constructor for DayOfWeekEffect class.
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
         offset
             Relative point at which data starts, must be between 0 and
@@ -125,7 +127,7 @@ class DayOfWeekEffect(PeriodicEffect):
     @staticmethod
     def validate(
         offset: int,
-    ):
+    ) -> None:
         """
         Validate the input parameters.
 

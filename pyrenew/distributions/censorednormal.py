@@ -4,6 +4,7 @@ import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.util
+from jax.typing import ArrayLike
 from numpyro.distributions import constraints
 from numpyro.distributions.util import promote_shapes, validate_sample
 
@@ -27,12 +28,12 @@ class CensoredNormal(numpyro.distributions.Distribution):
 
     def __init__(
         self,
-        loc=0,
-        scale=1,
-        lower_limit=-jnp.inf,
-        upper_limit=jnp.inf,
-        validate_args=None,
-    ):
+        loc: ArrayLike = 0,
+        scale: ArrayLike = 1,
+        lower_limit: float = -jnp.inf,
+        upper_limit: float = jnp.inf,
+        validate_args: bool | None = None,
+    ) -> None:
         """
         Default constructor
 
@@ -69,10 +70,12 @@ class CensoredNormal(numpyro.distributions.Distribution):
         super().__init__(batch_shape=batch_shape, validate_args=validate_args)
 
     @constraints.dependent_property(is_discrete=False, event_dim=0)
-    def support(self):  # numpydoc ignore=GL08
+    def support(self) -> constraints.Constraint:  # numpydoc ignore=GL08
         return self._support
 
-    def sample(self, key, sample_shape=()):
+    def sample(
+        self, key: jax.random.PRNGKey, sample_shape: tuple[int, ...] = ()
+    ) -> ArrayLike:
         """
         Generates samples from the censored normal distribution.
 
@@ -86,7 +89,7 @@ class CensoredNormal(numpyro.distributions.Distribution):
         return jnp.clip(result, min=self.lower_limit, max=self.upper_limit)
 
     @validate_sample
-    def log_prob(self, value):
+    def log_prob(self, value: ArrayLike) -> ArrayLike:
         """
         Computes the log probability density of a given value(s) under
         the censored normal distribution.

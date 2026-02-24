@@ -1,5 +1,6 @@
 # numpydoc ignore=GL08
 
+
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
@@ -119,7 +120,7 @@ class RtPeriodicDiffARProcess(RandomVariable):
     def sample(
         self,
         duration: int,
-        **kwargs,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Samples the periodic $\\mathcal{R}(t)$

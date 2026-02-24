@@ -33,7 +33,7 @@ class Infections(RandomVariable):
 
     Parameters
     ----------
-    name : str
+    name
         A name for this random variable.
 
     Notes
@@ -55,7 +55,7 @@ class Infections(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
         """
         super().__init__(name=name)
@@ -69,7 +69,7 @@ class Infections(RandomVariable):
         Rt: ArrayLike,
         I0: ArrayLike,
         gen_int: ArrayLike,
-        **kwargs,
+        **kwargs: object,
     ) -> InfectionsSample:
         r"""
         Sample infections given

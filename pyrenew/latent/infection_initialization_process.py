@@ -14,7 +14,7 @@ class InfectionInitializationProcess(RandomVariable):
 
     def __init__(
         self,
-        name,
+        name: str,
         I_pre_init_rv: RandomVariable,
         infection_init_method: InfectionInitializationMethod,
     ) -> None:

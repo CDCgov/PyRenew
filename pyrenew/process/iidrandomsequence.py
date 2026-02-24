@@ -1,5 +1,6 @@
 # numpydoc ignore=GL08
 
+
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
@@ -20,14 +21,14 @@ class IIDRandomSequence(RandomVariable):
         self,
         name: str,
         element_rv: RandomVariable,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """
         Default constructor.
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
         element_rv
             RandomVariable representing a single element
@@ -40,7 +41,9 @@ class IIDRandomSequence(RandomVariable):
         super().__init__(name=name, **kwargs)
         self.element_rv = element_rv
 
-    def sample(self, n: int, *args, vectorize: bool = False, **kwargs) -> ArrayLike:
+    def sample(
+        self, n: int, *args: object, vectorize: bool = False, **kwargs: object
+    ) -> ArrayLike:
         """
         Sample an IID random sequence.
 
@@ -77,7 +80,7 @@ class IIDRandomSequence(RandomVariable):
             result = self.element_rv.expand_by((n,)).sample(*args, **kwargs)
         else:
 
-            def transition(_carry, _x):
+            def transition(_carry: None, _x: None) -> tuple[None, ArrayLike]:
                 # numpydoc ignore=GL08
                 el = self.element_rv.sample(*args, **kwargs)
                 return None, el
@@ -92,7 +95,7 @@ class IIDRandomSequence(RandomVariable):
         return result
 
     @staticmethod
-    def validate():
+    def validate() -> None:
         """
         Validates input parameters, implementation pending.
         """
@@ -110,14 +113,14 @@ class StandardNormalSequence(IIDRandomSequence):
         self,
         name: str,
         element_shape: tuple = None,
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> None:
         """
         Default constructor.
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
             The internal element distribution is named
             ``f"{name}_element"``.

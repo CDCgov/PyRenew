@@ -21,10 +21,10 @@ class LatentSample(NamedTuple):
 
     Attributes
     ----------
-    aggregate : ArrayLike
+    aggregate
         Total infections aggregated across all subpopulations.
         Shape: (n_total_days,)
-    all_subpops : ArrayLike
+    all_subpops
         Infections for all subpopulations.
         Shape: (n_total_days, n_subpops)
     """
@@ -40,7 +40,7 @@ class PopulationStructure:
 
     Attributes
     ----------
-    fractions : ArrayLike
+    fractions
         Population fractions for all subpopulations.
         Shape: (n_subpops,)
     """
@@ -78,9 +78,9 @@ class BaseLatentInfectionProcess(RandomVariable):
 
     Parameters
     ----------
-    gen_int_rv : RandomVariable
+    gen_int_rv
         Generation interval PMF
-    n_initialization_points : int
+    n_initialization_points
         Number of initialization days before day 0. Must be at least
         ``len(gen_int_rv())`` to provide enough history for the renewal
         equation convolution.
@@ -108,11 +108,11 @@ class BaseLatentInfectionProcess(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             A name for this random variable.
-        gen_int_rv : RandomVariable
+        gen_int_rv
             Generation interval PMF
-        n_initialization_points : int
+        n_initialization_points
             Number of initialization days before day 0. Must be at least
             ``len(gen_int_rv())`` to provide enough history for the renewal
             equation convolution.
@@ -145,7 +145,7 @@ class BaseLatentInfectionProcess(RandomVariable):
 
         Parameters
         ----------
-        subpop_fractions : ArrayLike
+        subpop_fractions
             Population fractions for all subpopulations. Must be a 1D array
             with at least one element. Values must be non-negative and sum to 1.
 
@@ -200,13 +200,13 @@ class BaseLatentInfectionProcess(RandomVariable):
 
         Parameters
         ----------
-        infections_aggregate : ArrayLike
+        infections_aggregate
             Aggregate infections (sum across subpopulations)
-        infections_all : ArrayLike
+        infections_all
             All subpopulation infections
-        n_total_days : int
+        n_total_days
             Expected number of days (n_initialization_points + n_days_post_init)
-        pop : PopulationStructure
+        pop
             Population structure
 
         Raises
@@ -241,7 +241,7 @@ class BaseLatentInfectionProcess(RandomVariable):
 
         Parameters
         ----------
-        I0 : ArrayLike
+        I0
             Initial infection prevalence (scalar or array)
 
         Raises
@@ -310,16 +310,16 @@ class BaseLatentInfectionProcess(RandomVariable):
         n_days_post_init: int,
         *,
         subpop_fractions: ArrayLike = None,
-        **kwargs,
+        **kwargs: object,
     ) -> LatentSample:
         """
         Sample latent infections for all subpopulations.
 
         Parameters
         ----------
-        n_days_post_init : int
+        n_days_post_init
             Number of days to simulate after initialization period
-        subpop_fractions : ArrayLike
+        subpop_fractions
             Population fractions for all subpopulations.
             Shape: (n_subpops,). Must sum to 1.0.
         **kwargs
