@@ -158,7 +158,7 @@ class MultiSignalModel(Model):
         self,
         n_days_post_init: int,
         subpop_fractions: ArrayLike | None = None,
-        **observation_data: dict[str, Any],
+        **observation_data: dict[str, object],
     ) -> None:
         """
         Validate observation data before running MCMC.
