@@ -6,8 +6,6 @@ Combines a latent infection process with multiple observation processes.
 
 from __future__ import annotations
 
-from typing import Any
-
 import jax.numpy as jnp
 import numpyro
 import numpyro.handlers
