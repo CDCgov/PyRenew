@@ -70,7 +70,7 @@ class DifferencedProcess(RandomVariable):
         super().__init__(name=name, **kwargs)
 
     @staticmethod
-    def assert_valid_differencing_order(differencing_order: Any) -> None:
+    def assert_valid_differencing_order(differencing_order: Any) -> None:  # noqa: ANN401
         """
         To be valid, a differencing order must
         be an integer and must be strictly positive.
