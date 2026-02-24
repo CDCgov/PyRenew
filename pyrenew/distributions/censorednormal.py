@@ -73,7 +73,9 @@ class CensoredNormal(numpyro.distributions.Distribution):
     def support(self) -> constraints.Constraint:  # numpydoc ignore=GL08
         return self._support
 
-    def sample(self, key: jax.random.PRNGKey, sample_shape: tuple[int, ...] = ()) -> ArrayLike:
+    def sample(
+        self, key: jax.random.PRNGKey, sample_shape: tuple[int, ...] = ()
+    ) -> ArrayLike:
         """
         Generates samples from the censored normal distribution.
 

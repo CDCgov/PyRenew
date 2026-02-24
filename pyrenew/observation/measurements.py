@@ -6,7 +6,6 @@ Abstract base for any population-level continuous measurements (wastewater,
 air quality, serology, etc.) with signal-specific processing.
 """
 
-
 from jax.typing import ArrayLike
 
 from pyrenew.metaclass import RandomVariable

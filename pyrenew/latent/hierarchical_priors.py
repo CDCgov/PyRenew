@@ -5,7 +5,6 @@ All classes in this module implement the group-level RV interface:
 ``sample(n_groups, **kwargs) -> ArrayLike`` with shape ``(n_groups,)``.
 """
 
-
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist

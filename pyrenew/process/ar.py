@@ -155,7 +155,9 @@ class ARProcess(RandomVariable):
 
         inits_flipped = jnp.flip(inits_broadcast, axis=0)
 
-        def transition(recent_vals: ArrayLike, _: None) -> tuple[ArrayLike, ArrayLike]:  # numpydoc ignore=GL08
+        def transition(
+            recent_vals: ArrayLike, _: None
+        ) -> tuple[ArrayLike, ArrayLike]:  # numpydoc ignore=GL08
             with numpyro.handlers.reparam(config={noise_name: LocScaleReparam(0)}):
                 next_noise = numpyro.sample(
                     noise_name,
