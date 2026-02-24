@@ -28,8 +28,8 @@ class CensoredNormal(numpyro.distributions.Distribution):
 
     def __init__(
         self,
-        loc: float = 0,
-        scale: float = 1,
+        loc: ArrayLike = 0,
+        scale: ArrayLike = 1,
         lower_limit: float = -jnp.inf,
         upper_limit: float = jnp.inf,
         validate_args: bool | None = None,
