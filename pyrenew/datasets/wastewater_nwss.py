@@ -21,9 +21,9 @@ def load_wastewater_data_for_state(
 
     Parameters
     ----------
-    state_abbr : str
+    state_abbr
         State abbreviation (e.g., "CA"). Default is "CA".
-    filename : str
+    filename
         CSV filename. Default is "fake_nwss.csv".
 
     Returns
