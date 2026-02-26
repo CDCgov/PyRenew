@@ -422,9 +422,7 @@ class TestMultiSignalModelHelpers:
             (6, (6 - 3 % 7) % 7),
         ],
     )
-    def test_compute_first_day_dow(
-        self, simple_builder, obs_start_dow, expected
-    ):
+    def test_compute_first_day_dow(self, simple_builder, obs_start_dow, expected):
         """Test that compute_first_day_dow offsets by n_initialization_points."""
         model = simple_builder.build()
         assert model.compute_first_day_dow(obs_start_dow) == expected
