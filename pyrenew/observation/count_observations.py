@@ -11,13 +11,12 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from pyrenew.arrayutils import tile_until_n
 from pyrenew.convolve import compute_prop_already_reported
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.noise import CountNoise
 from pyrenew.observation.types import ObservationSample
-from pyrenew.time import validate_dow
+from pyrenew.time import get_sequential_day_of_week_indices
 
 
 class CountBase(BaseObservationProcess):
@@ -41,16 +40,16 @@ class CountBase(BaseObservationProcess):
 
         Parameters
         ----------
-        name : str
+        name
             Unique name for this observation process. Used to prefix all
             numpyro sample and deterministic site names.
-        ascertainment_rate_rv : RandomVariable
+        ascertainment_rate_rv
             Ascertainment rate in [0, 1] (e.g., IHR, IER).
-        delay_distribution_rv : RandomVariable
+        delay_distribution_rv
             Delay distribution PMF (must sum to ~1.0).
-        noise : CountNoise
+        noise
             Noise model for count observations (Poisson, NegBin, etc.).
-        right_truncation_rv : RandomVariable | None
+        right_truncation_rv
             Optional reporting delay PMF for right-truncation adjustment.
             When provided (along with ``right_truncation_offset`` at sample
             time), predicted counts are scaled down for recent timepoints
@@ -125,7 +124,7 @@ class CountBase(BaseObservationProcess):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Infections from the infection process.
             Shape: (n_days,) for aggregate
             Shape: (n_days, n_subpops) for subpop-level
@@ -165,10 +164,10 @@ class CountBase(BaseObservationProcess):
 
         Parameters
         ----------
-        predicted : ArrayLike
+        predicted
             Predicted counts. Shape: (n_timepoints,) or
             (n_timepoints, n_subpops).
-        right_truncation_offset : int
+        right_truncation_offset
             Number of additional reporting days that have occurred since the last observation. 0 implies only 0-delay reports have arrived for the last observed timepoint, 1 implies 0 and 1 delay reports have arrived, et cetera.
 
         Returns
@@ -225,11 +224,12 @@ class CountBase(BaseObservationProcess):
         ArrayLike
             Adjusted predicted counts, same shape as input.
         """
-        validate_dow(first_day_dow, "first_day_dow")
         dow_effect = self.day_of_week_rv()
+        self._deterministic("day_of_week_effect", dow_effect)
         n_timepoints = predicted.shape[0]
-        daily_effect = tile_until_n(dow_effect, n_timepoints, offset=first_day_dow)
-        self._deterministic("day_of_week_effect", daily_effect)
+        daily_effect = dow_effect[
+            get_sequential_day_of_week_indices(first_day_dow, n_timepoints)
+        ]
         if predicted.ndim == 2:
             daily_effect = daily_effect[:, None]
         return predicted * daily_effect
@@ -244,15 +244,15 @@ class Counts(CountBase):
 
     Parameters
     ----------
-    name : str
+    name
         Unique name for this observation process. Used to prefix all
         numpyro sample and deterministic site names (e.g., "hospital"
         produces sites "hospital_obs", "hospital_predicted").
-    ascertainment_rate_rv : RandomVariable
+    ascertainment_rate_rv
         Ascertainment rate in [0, 1] (e.g., IHR, IER).
-    delay_distribution_rv : RandomVariable
+    delay_distribution_rv
         Delay distribution PMF (must sum to ~1.0).
-    noise : CountNoise
+    noise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
     """
 
@@ -283,18 +283,18 @@ class Counts(CountBase):
         n_total: int,
         n_subpops: int,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """
         Validate aggregated count observation data.
 
         Parameters
         ----------
-        n_total : int
+        n_total
             Total number of time steps (n_init + n_days_post_init).
-        n_subpops : int
+        n_subpops
             Number of subpopulations (unused for aggregate observations).
-        obs : ArrayLike | None
+        obs
             Observed counts on shared time axis. Shape: (n_total,).
         **kwargs
             Additional keyword arguments (ignored).
@@ -323,14 +323,14 @@ class Counts(CountBase):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Aggregate infections from the infection process.
             Shape: (n_total,) where n_total = n_init + n_days.
-        obs : ArrayLike | None
+        obs
             Observed counts on shared time axis. Shape: (n_total,).
             Use NaN for initialization period and any missing observations.
             None for prior predictive sampling.
-        right_truncation_offset : int | None
+        right_truncation_offset
             If provided (and ``right_truncation_rv`` was set at construction),
             apply right-truncation adjustment to predicted counts.
         first_day_dow : int | None
@@ -347,7 +347,11 @@ class Counts(CountBase):
             `predicted` (predicted counts before noise, shape: n_total).
         """
         predicted_counts = self._predicted_obs(infections)
-        if self.day_of_week_rv is not None and first_day_dow is not None:
+        if self.day_of_week_rv is not None:
+            if first_day_dow is None:
+                raise ValueError(
+                    "first_day_dow is required when day_of_week_rv is set."
+                )
             predicted_counts = self._apply_day_of_week(predicted_counts, first_day_dow)
         if self.right_truncation_rv is not None and right_truncation_offset is not None:
             predicted_counts = self._apply_right_truncation(
@@ -393,14 +397,14 @@ class CountsBySubpop(CountBase):
 
     Parameters
     ----------
-    name : str
+    name
         Unique name for this observation process. Used to prefix all
         numpyro sample and deterministic site names.
-    ascertainment_rate_rv : RandomVariable
+    ascertainment_rate_rv
         Ascertainment rate in [0, 1].
-    delay_distribution_rv : RandomVariable
+    delay_distribution_rv
         Delay distribution PMF (must sum to ~1.0).
-    noise : CountNoise
+    noise
         Noise model (PoissonNoise, NegativeBinomialNoise, etc.).
     """
 
@@ -433,22 +437,22 @@ class CountsBySubpop(CountBase):
         times: ArrayLike | None = None,
         subpop_indices: ArrayLike | None = None,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """
         Validate subpopulation-level count observation data.
 
         Parameters
         ----------
-        n_total : int
+        n_total
             Total number of time steps (n_init + n_days_post_init).
-        n_subpops : int
+        n_subpops
             Number of subpopulations.
-        times : ArrayLike | None
+        times
             Day index for each observation on the shared time axis.
-        subpop_indices : ArrayLike | None
+        subpop_indices
             Subpopulation index for each observation (0-indexed).
-        obs : ArrayLike | None
+        obs
             Observed counts (n_obs,).
         **kwargs
             Additional keyword arguments (ignored).
@@ -484,18 +488,18 @@ class CountsBySubpop(CountBase):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Subpopulation-level infections from the infection process.
             Shape: (n_total, n_subpops)
-        times : ArrayLike
+        times
             Day index for each observation on the shared time axis.
             Must be in range [0, n_total). Shape: (n_obs,)
-        subpop_indices : ArrayLike
+        subpop_indices
             Subpopulation index for each observation (0-indexed).
             Shape: (n_obs,)
-        obs : ArrayLike | None
+        obs
             Observed counts (n_obs,), or None for prior sampling.
-        right_truncation_offset : int | None
+        right_truncation_offset
             If provided (and ``right_truncation_rv`` was set at construction),
             apply right-truncation adjustment to predicted counts.
         first_day_dow : int | None
@@ -512,7 +516,11 @@ class CountsBySubpop(CountBase):
             `predicted` (predicted counts before noise, shape: n_total x n_subpops).
         """
         predicted_counts = self._predicted_obs(infections)
-        if self.day_of_week_rv is not None and first_day_dow is not None:
+        if self.day_of_week_rv is not None:
+            if first_day_dow is None:
+                raise ValueError(
+                    "first_day_dow is required when day_of_week_rv is set."
+                )
             predicted_counts = self._apply_day_of_week(predicted_counts, first_day_dow)
         if self.right_truncation_rv is not None and right_truncation_offset is not None:
             predicted_counts = self._apply_right_truncation(

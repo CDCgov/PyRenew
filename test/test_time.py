@@ -144,6 +144,38 @@ def test_align_observation_times_and_first_week():
     assert ptime.get_first_week_on_or_after_t0(-1) >= 0
 
 
+def test_get_sequential_day_of_week_indices_basic() -> None:
+    """Test that get_sequential_day_of_week_indices returns correct cycling indices."""
+    result = ptime.get_sequential_day_of_week_indices(0, 10)
+    expected = jnp.array([0, 1, 2, 3, 4, 5, 6, 0, 1, 2])
+    assert jnp.array_equal(result, expected)
+
+
+def test_get_sequential_day_of_week_indices_offset() -> None:
+    """Test that first_day_dow offsets the index sequence correctly."""
+    result = ptime.get_sequential_day_of_week_indices(3, 7)
+    expected = jnp.array([3, 4, 5, 6, 0, 1, 2])
+    assert jnp.array_equal(result, expected)
+
+
+def test_get_sequential_day_of_week_indices_zero_length() -> None:
+    """Test that n_timepoints=0 returns an empty array."""
+    result = ptime.get_sequential_day_of_week_indices(0, 0)
+    assert result.shape == (0,)
+
+
+def test_get_sequential_day_of_week_indices_negative_raises() -> None:
+    """Test that negative n_timepoints raises ValueError."""
+    with pytest.raises(ValueError, match="n_timepoints must be non-negative"):
+        ptime.get_sequential_day_of_week_indices(0, -1)
+
+
+def test_get_sequential_day_of_week_indices_invalid_dow_raises() -> None:
+    """Test that invalid first_day_dow raises ValueError."""
+    with pytest.raises(ValueError, match="Day-of-week"):
+        ptime.get_sequential_day_of_week_indices(7, 10)
+
+
 def test_validate_dow() -> None:
     """
     Test that validate_dow raises appropriate

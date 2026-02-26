@@ -95,9 +95,9 @@ class DynamicDistributionalVariable(RandomVariable):
 
     def sample(
         self,
-        *args,
+        *args: object,
         obs: ArrayLike = None,
-        **kwargs,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample from the distributional rv.
@@ -128,7 +128,7 @@ class DynamicDistributionalVariable(RandomVariable):
             )
         return sample
 
-    def expand_by(self, sample_shape) -> Self:
+    def expand_by(self, sample_shape: tuple) -> Self:
         """
         Expand the distribution by a given
         sample_shape, if possible. Returns a
@@ -218,7 +218,7 @@ class StaticDistributionalVariable(RandomVariable):
     def sample(
         self,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample from the distribution.
@@ -245,7 +245,7 @@ class StaticDistributionalVariable(RandomVariable):
             )
         return sample
 
-    def expand_by(self, sample_shape) -> Self:
+    def expand_by(self, sample_shape: tuple) -> Self:
         """
         Expand the distribution by the given sample_shape,
         if possible. Returns a new StaticDistributionalVariable

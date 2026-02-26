@@ -53,6 +53,37 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
     return None
 
 
+def get_sequential_day_of_week_indices(
+    first_day_dow: int, n_timepoints: int
+) -> jnp.ndarray:
+    """
+    Return day-of-week indices for a sequence of consecutive days.
+
+    Parameters
+    ----------
+    first_day_dow
+        Day of the week for the first timepoint
+        (0=Monday, 6=Sunday, ISO convention).
+    n_timepoints
+        Number of consecutive days.
+
+    Returns
+    -------
+    jnp.ndarray
+        Array of shape (n_timepoints,) with values in {0, ..., 6}.
+
+    Raises
+    ------
+    ValueError
+        If ``first_day_dow`` is not in {0, ..., 6} or
+        ``n_timepoints`` is negative.
+    """
+    validate_dow(first_day_dow, "first_day_dow")
+    if n_timepoints < 0:
+        raise ValueError("n_timepoints must be non-negative.")
+    return jnp.remainder(jnp.arange(n_timepoints) + first_day_dow, 7)
+
+
 def convert_date(date: dt.datetime | dt.date | np.datetime64) -> dt.date:
     """Normalize a date-like object to a python ``datetime.date``.
 

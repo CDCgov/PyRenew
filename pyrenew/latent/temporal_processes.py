@@ -80,15 +80,15 @@ class TemporalProcess(Protocol):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             Number of time points to generate
-        initial_value : float or ArrayLike, optional
+        initial_value
             Initial value(s) for the process(es).
             Scalar (broadcast to all processes) or array of shape (n_processes,).
             Defaults to 0.0.
-        n_processes : int, default 1
+        n_processes
             Number of parallel processes.
-        name_prefix : str, default "temporal"
+        name_prefix
             Prefix for numpyro sample site names to avoid collisions
 
         Returns
@@ -112,24 +112,24 @@ class AR1(TemporalProcess):
 
     Parameters
     ----------
-    autoreg : float
+    autoreg
         Autoregressive coefficient. For stationarity, |autoreg| < 1, but
         this is not enforced (use priors to constrain if needed).
-    innovation_sd : float, default 1.0
+    innovation_sd
         Standard deviation of noise at each time step. Larger values produce
         more volatile trajectories; smaller values produce smoother ones.
     """
 
-    def __init__(self, autoreg: float, innovation_sd: float = 1.0):
+    def __init__(self, autoreg: float, innovation_sd: float = 1.0) -> None:
         """
         Initialize AR(1) process.
 
         Parameters
         ----------
-        autoreg : float
+        autoreg
             Autoregressive coefficient. For stationarity, |autoreg| < 1,
             but this is not enforced (use priors to constrain if needed).
-        innovation_sd : float, default 1.0
+        innovation_sd
             Standard deviation of innovations
 
         Raises
@@ -159,13 +159,13 @@ class AR1(TemporalProcess):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             Number of time points to generate
-        initial_value : float or ArrayLike, optional
+        initial_value
             Initial value(s). Defaults to 0.0.
-        n_processes : int, default 1
+        n_processes
             Number of parallel processes.
-        name_prefix : str, default "ar1"
+        name_prefix
             Prefix for numpyro sample sites
 
         Returns
@@ -211,26 +211,26 @@ class DifferencedAR1(TemporalProcess):
 
     Parameters
     ----------
-    autoreg : float
+    autoreg
         Autoregressive coefficient for differences. For stationarity,
         |autoreg| < 1, but this is not enforced (use priors to constrain
         if needed).
-    innovation_sd : float, default 1.0
+    innovation_sd
         Standard deviation of noise added to changes. Larger values produce
         more erratic growth rates; smaller values produce smoother trends.
     """
 
-    def __init__(self, autoreg: float, innovation_sd: float = 1.0):
+    def __init__(self, autoreg: float, innovation_sd: float = 1.0) -> None:
         """
         Initialize differenced AR(1) process.
 
         Parameters
         ----------
-        autoreg : float
+        autoreg
             Autoregressive coefficient for differences. For stationarity,
             |autoreg| < 1, but this is not enforced (use priors to constrain
             if needed).
-        innovation_sd : float, default 1.0
+        innovation_sd
             Standard deviation of innovations
 
         Raises
@@ -264,13 +264,13 @@ class DifferencedAR1(TemporalProcess):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             Number of time points to generate
-        initial_value : float or ArrayLike, optional
+        initial_value
             Initial value(s). Defaults to 0.0.
-        n_processes : int, default 1
+        n_processes
             Number of parallel processes.
-        name_prefix : str, default "diff_ar1"
+        name_prefix
             Prefix for numpyro sample sites
 
         Returns
@@ -316,7 +316,7 @@ class RandomWalk(TemporalProcess):
 
     Parameters
     ----------
-    innovation_sd : float, default 1.0
+    innovation_sd
         Standard deviation of noise at each time step. Larger values produce
         faster drift; smaller values produce more gradual changes.
 
@@ -331,13 +331,13 @@ class RandomWalk(TemporalProcess):
     (``{name_prefix}_step``) via ``numpyro.handlers.reparam``.
     """
 
-    def __init__(self, innovation_sd: float = 1.0):
+    def __init__(self, innovation_sd: float = 1.0) -> None:
         """
         Initialize random walk process.
 
         Parameters
         ----------
-        innovation_sd : float, default 1.0
+        innovation_sd
             Standard deviation of innovations
 
         Raises
@@ -365,13 +365,13 @@ class RandomWalk(TemporalProcess):
 
         Parameters
         ----------
-        n_timepoints : int
+        n_timepoints
             Number of time points to generate
-        initial_value : float or ArrayLike, optional
+        initial_value
             Initial value(s). Defaults to 0.0.
-        n_processes : int, default 1
+        n_processes
             Number of parallel processes.
-        name_prefix : str, default "rw"
+        name_prefix
             Prefix for numpyro sample sites
 
         Returns
