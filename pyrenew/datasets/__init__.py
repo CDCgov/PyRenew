@@ -1,7 +1,5 @@
 # numpydoc ignore=GL08
 
-from pyrenew.datasets.ed_visits import load_ed_visits_data_for_state
-
 from pyrenew.datasets.generation_interval import load_generation_interval
 from pyrenew.datasets.hospital_admissions import (
     load_hospital_data_for_state,
