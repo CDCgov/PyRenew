@@ -253,11 +253,11 @@ def test_measurements_infection_resolution():
 
 
 def test_base_count_observation_infection_resolution_raises():
-    """Base _CountBase.infection_resolution() raises NotImplementedError."""
-    from pyrenew.observation.count_observations import _CountBase
+    """Subclass of CountBase without infection_resolution cannot be instantiated."""
+    from pyrenew.observation.count_observations import CountBase
 
-    class _MinimalCounts(_CountBase):
-        """Minimal subclass that inherits infection_resolution unchanged."""
+    class _MinimalCounts(CountBase):
+        """Minimal subclass missing infection_resolution."""
 
         def sample(self, *args, **kwargs):  # numpydoc ignore=GL08
             pass
@@ -265,14 +265,13 @@ def test_base_count_observation_infection_resolution_raises():
         def validate_data(self, n_total, n_subpops, **obs_data):  # numpydoc ignore=GL08
             pass
 
-    obs = _MinimalCounts(
-        name="test_base",
-        ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
-        delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
-        noise=PoissonNoise(),
-    )
-    with pytest.raises(NotImplementedError):
-        obs.infection_resolution()
+    with pytest.raises(TypeError, match="infection_resolution"):
+        _MinimalCounts(
+            name="test_base",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
+            noise=PoissonNoise(),
+        )
 
 
 # =============================================================================

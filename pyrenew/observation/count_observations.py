@@ -20,9 +20,9 @@ from pyrenew.observation.types import ObservationSample
 from pyrenew.time import validate_dow
 
 
-class _CountBase(BaseObservationProcess):
+class CountBase(BaseObservationProcess):
     """
-    Internal base for count observation processes.
+    Base class for count observation processes.
 
     Implements ascertainment x delay convolution with pluggable noise model.
     """
@@ -115,17 +115,6 @@ class _CountBase(BaseObservationProcess):
             Length of delay distribution PMF minus 1.
         """
         return len(self.temporal_pmf_rv()) - 1
-
-    def infection_resolution(self) -> str:
-        """
-        Return required infection resolution.
-
-        Returns
-        -------
-        str
-            "aggregate" or "subpop".
-        """
-        raise NotImplementedError("Subclasses must implement infection_resolution()")
 
     def _predicted_obs(
         self,
@@ -246,7 +235,7 @@ class _CountBase(BaseObservationProcess):
         return predicted * daily_effect
 
 
-class Counts(_CountBase):
+class Counts(CountBase):
     """
     Aggregated count observation.
 
@@ -395,7 +384,7 @@ class Counts(_CountBase):
         return ObservationSample(observed=observed, predicted=predicted_counts)
 
 
-class CountsBySubpop(_CountBase):
+class CountsBySubpop(CountBase):
     """
     Subpopulation-level count observation.
 
