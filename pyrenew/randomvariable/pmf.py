@@ -8,6 +8,7 @@ from abc import abstractmethod
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
+from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 
 
@@ -21,12 +22,15 @@ class PMFVector(RandomVariable):
     or stochastic in concrete subclasses.
     """
 
-    def __init__(self, values: ArrayLike, **kwargs) -> None:
+    def __init__(self, name: str, values: ArrayLike, **kwargs) -> None:
         """
         Default constructor.
 
         Parameters
         ----------
+        name
+            Name for the random variable.
+
         values
             Vector of values of the same shape as the
             output of [`self.sample`][], representing the
@@ -41,6 +45,7 @@ class PMFVector(RandomVariable):
         -------
         None
         """
+        self.name = name
         self.values = values
         super().__init__(**kwargs)
 
@@ -71,12 +76,15 @@ class DelayPMF(PMFVector):
     be either 0 or 1 time unit.
     """
 
-    def __init__(self, min_delay: int, max_delay: int, **kwargs) -> None:
+    def __init__(self, name: str, min_delay: int, max_delay: int, **kwargs) -> None:
         """
         Default constructor
 
         Parameters
         ----------
+        name
+            Name for the random variable.
+
         min_delay
             Shortest possible delay in time units.
             Will become the first value of [`self.values`][]
@@ -113,7 +121,7 @@ class DelayPMF(PMFVector):
         if not max_delay >= min_delay:
             raise ValueError("max_delay must be greater than or equal to min_delay")
 
-        super().__init__(values=jnp.arange(min_delay, max_delay + 1))
+        super().__init__(name=name, values=jnp.arange(min_delay, max_delay + 1))
 
     @property
     def min_delay(self) -> int:
@@ -158,12 +166,15 @@ class NonnegativeDelayPMF(DelayPMF):
     simplifies the computation of predicted observations.
     """
 
-    def __init__(self, max_delay: int) -> None:
+    def __init__(self, name: str, max_delay: int) -> None:
         """
         Default constructor.
 
         Parameters
         ----------
+        name
+            Name for the random variable.
+
         max_delay
             Longest possible delay in time units.
             Will become the final value of [`self.values`][]
@@ -180,7 +191,7 @@ class NonnegativeDelayPMF(DelayPMF):
         ValueError
             If max_delay does not satisfy the specified constraints.
         """
-        super().__init__(min_delay=0, max_delay=max_delay)
+        super().__init__(name=name, min_delay=0, max_delay=max_delay)
 
 
 class PositiveDelayPMF(DelayPMF):
@@ -197,12 +208,15 @@ class PositiveDelayPMF(DelayPMF):
     renewal equation.
     """
 
-    def __init__(self, max_delay: int) -> None:
+    def __init__(self, name: str, max_delay: int) -> None:
         """
         Default constructor.
 
         Parameters
         ----------
+        name
+            Name for the random variable.
+
         max_delay
             Longest possible delay in time units.
             Will become the final value of [`self.values`][]
@@ -220,7 +234,7 @@ class PositiveDelayPMF(DelayPMF):
             If max_delay does not satisfy the specified constraints.
         """
 
-        super().__init__(min_delay=1, max_delay=max_delay)
+        super().__init__(name=name, min_delay=1, max_delay=max_delay)
 
 
 class GenerationIntervalPMF(PositiveDelayPMF):
@@ -236,3 +250,61 @@ class AscertainmentDelayPMF(NonnegativeDelayPMF):
     represents the PMF of a delay from an event to when it is
     ascertained
     """
+
+
+class DeterministicGenerationIntervalPMF(GenerationIntervalPMF):
+    """
+    Subclass of [`pyrenew.randomvariable.GenerationIntervalPMF`]
+    where the PMF is treated as fixed.
+    """
+
+    def __init__(self, name: str, probabilities: ArrayLike, max_delay: int) -> None:
+        """
+        Default constructor.
+
+        Parameters
+        ----------
+        name
+            Name for the random variable.
+
+        probabilities
+            Vector of probabilities representing the pmf
+
+        max_delay
+            Longest possible delay in time units.
+            Will become the final value of [`self.values`][]
+            (corresponding to the final entry of the probability
+            vector returned by [`self.sample`][]). Must be an
+            integer greater than or equal to 1.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If max_delay does not satisfy the specified constraints.
+        """
+
+        self.base_variable_ = DeterministicVariable(
+            name="base_variable_", value=probabilities
+        )
+        super().__init__(name=name, max_delay=max_delay)
+
+    def sample(self, **kwargs) -> ArrayLike:
+        """
+        Retrieve the probability vector representing
+        the deterministic PMF.
+
+        Parameters
+        ----------
+        **kwargs
+            Keyword arguments passed to `self.base_variable_.sample()`.
+
+        Returns
+        -------
+        ArrayLike
+            The probability vector.
+        """
+        return self.base_variable_.sample(**kwargs)
