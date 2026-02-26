@@ -22,7 +22,7 @@ class PMFVector(RandomVariable):
     or stochastic in concrete subclasses.
     """
 
-    def __init__(self, name: str, values: ArrayLike, **kwargs) -> None:
+    def __init__(self, name: str, values: ArrayLike) -> None:
         """
         Default constructor.
 
@@ -37,24 +37,19 @@ class PMFVector(RandomVariable):
             values of the variable to which those probabilities
             correspond.
 
-        **kwargs
-            Additional keyword arguments passed to the parent
-            constructor.
-
         Returns
         -------
         None
         """
-        self.name = name
         self.values = values
-        super().__init__(**kwargs)
+        super().__init__(name=name)
 
     @abstractmethod
-    def sample(self, **kwargs) -> ArrayLike:
+    def sample(self, **kwargs: object) -> ArrayLike:
         """
         Sample a vector of probabilities.
         """
-        pass
+        raise NotImplementedError()
 
 
 class DelayPMF(PMFVector):
@@ -76,7 +71,7 @@ class DelayPMF(PMFVector):
     be either 0 or 1 time unit.
     """
 
-    def __init__(self, name: str, min_delay: int, max_delay: int, **kwargs) -> None:
+    def __init__(self, name: str, min_delay: int, max_delay: int) -> None:
         """
         Default constructor
 
@@ -98,10 +93,6 @@ class DelayPMF(PMFVector):
             (corresponding to the final entry of the probability
             vector returned by [`self.sample`][]). Must be an
             integer greater than or equal to `min_delay`.
-
-        **kwargs
-            Additional keyword arguments passed to the parent
-            constructor.
 
         Returns
         -------
@@ -268,7 +259,8 @@ class DeterministicGenerationIntervalPMF(GenerationIntervalPMF):
             Name for the random variable.
 
         probabilities
-            Vector of probabilities representing the pmf
+            Vector of probabilities representing the pmf.
+            Must have a first dimension of length
 
         max_delay
             Longest possible delay in time units.
@@ -286,13 +278,28 @@ class DeterministicGenerationIntervalPMF(GenerationIntervalPMF):
         ValueError
             If max_delay does not satisfy the specified constraints.
         """
+        probabilities = jnp.array(probabilities)
+        if not probabilities.shape[0] == max_delay:
+            raise ValueError(
+                f"When `max_delay` = {max_delay}, "
+                "first dimension of `probabilities` "
+                f"must be of length {max_delay}, with "
+                "one entry for each possible delay in "
+                f"{jnp.arange(1, max_delay + 1)}"
+            )
 
         self.base_variable_ = DeterministicVariable(
             name="base_variable_", value=probabilities
         )
         super().__init__(name=name, max_delay=max_delay)
 
-    def sample(self, **kwargs) -> ArrayLike:
+    def validate(self, **kwargs: object) -> None:
+        """
+        Empty validation
+        """
+        pass
+
+    def sample(self, **kwargs: object) -> ArrayLike:
         """
         Retrieve the probability vector representing
         the deterministic PMF.
