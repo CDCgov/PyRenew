@@ -576,5 +576,290 @@ class TestRightTruncation:
         assert jnp.allclose(result.predicted[:, 0], result.predicted[:, 1])
 
 
+class TestDayOfWeek:
+    """Test day-of-week multiplicative adjustment in count observations."""
+
+    def test_no_dow_rv_unchanged(self, simple_delay_pmf):
+        """Test that day_of_week_rv=None ignores first_day_dow."""
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        infections = jnp.ones(20) * 1000
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(infections=infections, obs=None, first_day_dow=3)
+
+        assert jnp.allclose(result.predicted, 10.0)
+
+    def test_dow_rv_without_offset_raises(self, simple_delay_pmf):
+        """Test that first_day_dow=None raises when day_of_week_rv is set."""
+        dow_effect = jnp.array([2.0, 0.5, 0.5, 0.5, 0.5, 1.5, 1.5])
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones(20) * 1000
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(ValueError, match="first_day_dow is required"):
+                process.sample(infections=infections, obs=None, first_day_dow=None)
+
+    def test_uniform_dow_effect_unchanged(self, simple_delay_pmf):
+        """Test that uniform effect [1,1,...,1] leaves predictions unchanged."""
+        dow_effect = jnp.ones(7)
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones(14) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(infections=infections, obs=None, first_day_dow=0)
+
+        assert jnp.allclose(result.predicted, 100.0)
+
+    def test_dow_effect_scales_predictions(self, simple_delay_pmf):
+        """Test that known day-of-week effects produce correct per-day scaling.
+
+        With constant infections of 100, ascertainment 1.0, no delay,
+        and first_day_dow=0 (Monday), element i of predicted should
+        equal 100 * dow_effect[i % 7].
+        """
+        dow_effect = jnp.array([2.0, 1.5, 1.0, 1.0, 0.5, 0.5, 0.5])
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones(14) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(infections=infections, obs=None, first_day_dow=0)
+
+        assert jnp.isclose(result.predicted[0], 200.0)
+        assert jnp.isclose(result.predicted[1], 150.0)
+        assert jnp.isclose(result.predicted[4], 50.0)
+        assert jnp.isclose(result.predicted[7], 200.0)
+
+    def test_dow_effect_with_multiday_delay(self, short_delay_pmf):
+        """Test that DOW ratios are correct with a multi-day delay PMF.
+
+        With a 2-day delay, the first element is NaN (init period).
+        Post-init predicted values should satisfy:
+        predicted_with_dow[t] / predicted_no_dow[t] == dow_effect[t % 7].
+        """
+        dow_effect = jnp.array([2.0, 1.5, 1.0, 1.0, 0.5, 0.5, 0.5])
+        process_no_dow = Counts(
+            name="base",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", short_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        process_with_dow = Counts(
+            name="dow",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", short_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones(21) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result_no = process_no_dow.sample(infections=infections, obs=None)
+        with numpyro.handlers.seed(rng_seed=42):
+            result_yes = process_with_dow.sample(
+                infections=infections, obs=None, first_day_dow=0
+            )
+
+        day_one = 1
+        for t in range(day_one, 14):
+            expected_ratio = float(dow_effect[t % 7])
+            actual_ratio = float(result_yes.predicted[t] / result_no.predicted[t])
+            assert jnp.isclose(actual_ratio, expected_ratio, atol=1e-5)
+
+    def test_dow_offset_shifts_pattern(self, simple_delay_pmf):
+        """Test that first_day_dow offsets the weekly pattern correctly.
+
+        Starting on Wednesday (dow=2) means element 0 gets
+        dow_effect[2], element 1 gets dow_effect[3], etc.
+        """
+        dow_effect = jnp.array([2.0, 1.5, 1.0, 0.8, 0.7, 0.5, 0.5])
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones(7) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(infections=infections, obs=None, first_day_dow=2)
+
+        assert jnp.isclose(result.predicted[0], 100.0)
+        assert jnp.isclose(result.predicted[1], 80.0)
+        assert jnp.isclose(result.predicted[5], 200.0)
+
+    def test_deterministic_site_recorded(self, simple_delay_pmf):
+        """Test that day_of_week_effect deterministic site is recorded."""
+        dow_effect = jnp.ones(7)
+        process = Counts(
+            name="ed",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones(10) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                process.sample(infections=infections, obs=None, first_day_dow=0)
+
+        assert "ed_day_of_week_effect" in trace
+        effect = trace["ed_day_of_week_effect"]["value"]
+        assert effect.shape == (7,)
+
+    def test_counts_by_subpop_2d_broadcasting(self):
+        """Test day-of-week with CountsBySubpop 2D infections."""
+        dow_effect = jnp.array([2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        delay_pmf = jnp.array([1.0])
+        process = CountsBySubpop(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+
+        n_days = 14
+        n_subpops = 3
+        infections = jnp.ones((n_days, n_subpops)) * 100
+        times = jnp.array([0, 1, 7])
+        subpop_indices = jnp.array([0, 1, 2])
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                infections=infections,
+                times=times,
+                subpop_indices=subpop_indices,
+                obs=None,
+                first_day_dow=0,
+            )
+
+        assert result.predicted.shape == (n_days, n_subpops)
+        assert jnp.isclose(result.predicted[0, 0], 200.0)
+        assert jnp.isclose(result.predicted[1, 0], 100.0)
+        assert jnp.isclose(result.predicted[7, 0], 200.0)
+        assert jnp.allclose(result.predicted[:, 0], result.predicted[:, 1])
+
+    def test_dow_with_right_truncation(self, simple_delay_pmf):
+        """Test that day-of-week and right-truncation compose correctly.
+
+        Day-of-week is applied first, then right-truncation scales
+        the adjusted predictions.
+        """
+        dow_effect = jnp.array([2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        rt_pmf = jnp.array([0.2, 0.3, 0.5])
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            right_truncation_rv=DeterministicPMF("rt_delay", rt_pmf),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones(10) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                infections=infections,
+                obs=None,
+                right_truncation_offset=0,
+                first_day_dow=0,
+            )
+
+        assert jnp.isclose(result.predicted[0], 200.0)
+        assert jnp.isclose(result.predicted[1], 100.0)
+        assert result.predicted[-1] < result.predicted[0]
+
+    def test_validate_catches_wrong_shape(self, simple_delay_pmf):
+        """Test that validate() rejects non-length-7 effect vectors."""
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", jnp.ones(5)),
+        )
+        with pytest.raises(ValueError, match="must return shape \\(7,\\)"):
+            process.validate()
+
+    def test_validate_catches_negative_values(self, simple_delay_pmf):
+        """Test that validate() rejects negative effect values."""
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable(
+                "dow", jnp.array([1.0, 1.0, 1.0, -0.5, 1.0, 1.0, 1.0])
+            ),
+        )
+        with pytest.raises(ValueError, match="must have non-negative values"):
+            process.validate()
+
+    def test_invalid_first_day_dow_raises(self, simple_delay_pmf):
+        """Test that out-of-range first_day_dow raises ValueError."""
+        dow_effect = jnp.ones(7)
+        process = Counts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones(14) * 100
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(ValueError, match="Day-of-week"):
+                process.sample(infections=infections, obs=None, first_day_dow=7)
+
+    def test_counts_by_subpop_dow_without_offset_raises(self):
+        """Test that first_day_dow=None raises for CountsBySubpop with day_of_week_rv."""
+        dow_effect = jnp.ones(7)
+        process = CountsBySubpop(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones((14, 2)) * 100
+        times = jnp.array([0, 1])
+        subpop_indices = jnp.array([0, 1])
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(ValueError, match="first_day_dow is required"):
+                process.sample(
+                    infections=infections,
+                    times=times,
+                    subpop_indices=subpop_indices,
+                    obs=None,
+                    first_day_dow=None,
+                )
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
