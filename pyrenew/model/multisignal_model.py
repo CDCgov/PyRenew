@@ -6,11 +6,10 @@ Combines a latent infection process with multiple observation processes.
 
 from __future__ import annotations
 
-from typing import Any
-
 import jax.numpy as jnp
 import numpyro
 import numpyro.handlers
+from jax.typing import ArrayLike
 
 from pyrenew.latent.base import BaseLatentInfectionProcess
 from pyrenew.metaclass import Model
@@ -31,10 +30,10 @@ class MultiSignalModel(Model):
 
     Parameters
     ----------
-    latent_process : BaseLatentInfectionProcess
+    latent_process
         Latent infection process generating infections at jurisdiction and/or
         subpopulation levels
-    observations : Dict[str, BaseObservationProcess]
+    observations
         Dictionary mapping names to observation process instances. Names are
         used when passing observation data to sample().
 
@@ -50,7 +49,7 @@ class MultiSignalModel(Model):
         self,
         latent_process: BaseLatentInfectionProcess,
         observations: dict[str, BaseObservationProcess],
-    ):
+    ) -> None:
         """
         Initialize multi-signal model.
 
@@ -113,10 +112,10 @@ class MultiSignalModel(Model):
 
         Parameters
         ----------
-        obs : ArrayLike
+        obs
             Observations in natural coordinates (index 0 = first observation day).
             Integer arrays are converted to float (required for NaN).
-        axis : int, default 0
+        axis
             Axis along which to pad (typically 0 for time axis).
 
         Returns
@@ -142,7 +141,7 @@ class MultiSignalModel(Model):
 
         Parameters
         ----------
-        times : ArrayLike
+        times
             Time indices in natural coordinates (0 = first observation day).
 
         Returns
@@ -156,8 +155,8 @@ class MultiSignalModel(Model):
     def validate_data(
         self,
         n_days_post_init: int,
-        subpop_fractions=None,
-        **observation_data: dict[str, Any],
+        subpop_fractions: ArrayLike | None = None,
+        **observation_data: dict[str, object],
     ) -> None:
         """
         Validate observation data before running MCMC.
@@ -173,9 +172,9 @@ class MultiSignalModel(Model):
 
         Parameters
         ----------
-        n_days_post_init : int
+        n_days_post_init
             Number of days to simulate after initialization period
-        subpop_fractions : ArrayLike
+        subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
         **observation_data
             Data for each observation process, keyed by observation name.
@@ -202,61 +201,20 @@ class MultiSignalModel(Model):
                     f"Available: {list(self.observations.keys())}"
                 )
 
-            obs = obs_data.get("obs")
-            times = obs_data.get("times")
-
-            if times is not None:
-                # Sparse observations: times on shared axis [0, n_total)
-                times = jnp.asarray(times)
-                if jnp.any(times < 0):
-                    raise ValueError(f"Observation '{name}': times cannot be negative")
-                max_time = jnp.max(times)
-                if max_time >= n_total:
-                    raise ValueError(
-                        f"Observation '{name}': times index {int(max_time)} "
-                        f">= n_total ({n_total} = {n_init} init + "
-                        f"{n_days_post_init} days). "
-                        f"Times must be on shared axis [0, {n_total})."
-                    )
-                if obs is not None and len(obs) != len(times):
-                    raise ValueError(
-                        f"Observation '{name}': obs length {len(obs)} "
-                        f"must match times length {len(times)}"
-                    )
-            elif obs is not None:
-                # Dense observations: length must equal n_total
-                obs = jnp.asarray(obs)
-                if obs.shape[0] != n_total:
-                    raise ValueError(
-                        f"Observation '{name}': obs length {obs.shape[0]} "
-                        f"must equal n_total ({n_total} = {n_init} init + "
-                        f"{n_days_post_init} days). "
-                        f"Pad with NaN for initialization period."
-                    )
-
-            # Validate subpop_indices if present
-            subpop_indices = obs_data.get("subpop_indices")
-            if subpop_indices is not None:
-                subpop_indices = jnp.asarray(subpop_indices)
-                if jnp.any(subpop_indices < 0):
-                    raise ValueError(
-                        f"Observation '{name}': subpop_indices cannot be negative"
-                    )
-                max_idx = jnp.max(subpop_indices)
-                if max_idx >= pop.n_subpops:
-                    raise ValueError(
-                        f"Observation '{name}': subpop_indices contains "
-                        f"{int(max_idx)} >= {pop.n_subpops} (n_subpops)"
-                    )
+            self.observations[name].validate_data(
+                n_total=n_total,
+                n_subpops=pop.n_subpops,
+                **obs_data,
+            )
 
     def sample(
         self,
         n_days_post_init: int,
         population_size: float,
         *,
-        subpop_fractions=None,
-        **observation_data,
-    ):
+        subpop_fractions: ArrayLike | None = None,
+        **observation_data: dict[str, object],
+    ) -> None:
         """
         Sample from the joint generative model.
 
@@ -264,12 +222,12 @@ class MultiSignalModel(Model):
 
         Parameters
         ----------
-        n_days_post_init : int
+        n_days_post_init
             Number of days to simulate after initialization period
-        population_size : float
+        population_size
             Total population size. Used to convert infection proportions
             (from latent process) to infection counts (for observation processes).
-        subpop_fractions : ArrayLike
+        subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
         **observation_data
             Data for each observation process, keyed by observation name

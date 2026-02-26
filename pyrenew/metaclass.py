@@ -10,7 +10,7 @@ from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_sample
 
 
-def _assert_type(arg_name: str, value, expected_type) -> None:
+def _assert_type(arg_name: str, value: object, expected_type: type) -> None:
     """
     Matches TypeError arising during validation
 
@@ -42,18 +42,39 @@ def _assert_type(arg_name: str, value, expected_type) -> None:
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
+
+    Parameters
+    ----------
+    name
+        A non-empty string identifying this random variable.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, name: str, **kwargs: object) -> None:
         """
-        Default constructor
+        Default constructor.
+
+        Parameters
+        ----------
+        name
+            A non-empty string identifying this random variable.
+        **kwargs
+            Additional keyword arguments.
+
+        Raises
+        ------
+        ValueError
+            If ``name`` is not a non-empty string.
         """
-        pass
+        if not isinstance(name, str) or len(name) == 0:
+            raise ValueError(
+                f"name must be a non-empty string. Got {type(name).__name__}: {name!r}"
+            )
+        self.name = name
 
     @abstractmethod
     def sample(
         self,
-        **kwargs,
+        **kwargs: object,
     ) -> tuple:
         """
         Sample method of the process
@@ -74,13 +95,13 @@ class RandomVariable(metaclass=ABCMeta):
 
     @staticmethod
     @abstractmethod
-    def validate(**kwargs) -> None:
+    def validate(**kwargs: object) -> None:
         """
         Validation of kwargs to be implemented in subclasses.
         """
         pass
 
-    def __call__(self, **kwargs):
+    def __call__(self, **kwargs: object) -> tuple:
         """
         Alias for `sample`.
         """
@@ -95,7 +116,7 @@ class Model(metaclass=ABCMeta):
     mcmc = None
 
     @abstractmethod
-    def __init__(self, **kwargs) -> None:  # numpydoc ignore=GL08
+    def __init__(self, **kwargs: object) -> None:  # numpydoc ignore=GL08
         pass
 
     @staticmethod
@@ -106,7 +127,7 @@ class Model(metaclass=ABCMeta):
     @abstractmethod
     def sample(
         self,
-        **kwargs,
+        **kwargs: object,
     ) -> tuple:
         """
         Sample method of the model.
@@ -125,7 +146,7 @@ class Model(metaclass=ABCMeta):
         """
         pass
 
-    def model(self, **kwargs) -> tuple:
+    def model(self, **kwargs: object) -> tuple:
         """
         Alias for the sample method.
 
@@ -143,8 +164,8 @@ class Model(metaclass=ABCMeta):
 
     def _init_model(
         self,
-        num_warmup,
-        num_samples,
+        num_warmup: int,
+        num_samples: int,
         nuts_args: dict = None,
         mcmc_args: dict = None,
     ) -> None:
@@ -195,12 +216,12 @@ class Model(metaclass=ABCMeta):
 
     def run(
         self,
-        num_warmup,
-        num_samples,
+        num_warmup: int,
+        num_samples: int,
         rng_key: ArrayLike | None = None,
         nuts_args: dict = None,
         mcmc_args: dict = None,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """
         Runs the model
@@ -261,7 +282,7 @@ class Model(metaclass=ABCMeta):
         self,
         rng_key: ArrayLike | None = None,
         numpyro_predictive_args: dict = {},
-        **kwargs,
+        **kwargs: object,
     ) -> dict:
         """
         A wrapper of [`numpyro.infer.util.Predictive`][] to generate
@@ -304,7 +325,7 @@ class Model(metaclass=ABCMeta):
         self,
         rng_key: ArrayLike | None = None,
         numpyro_predictive_args: dict = {},
-        **kwargs,
+        **kwargs: object,
     ) -> dict:
         """
         A wrapper for [`numpyro.infer.util.Predictive`][]

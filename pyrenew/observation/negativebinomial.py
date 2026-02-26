@@ -43,7 +43,7 @@ class NegativeBinomialObservation(RandomVariable):
 
         NegativeBinomialObservation.validate(concentration_rv)
 
-        self.name = name
+        super().__init__(name=name)
         self.concentration_rv = concentration_rv
         self.eps = eps
 
@@ -69,7 +69,7 @@ class NegativeBinomialObservation(RandomVariable):
         self,
         mu: ArrayLike,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample from the negative binomial distribution

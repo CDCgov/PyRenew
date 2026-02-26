@@ -32,7 +32,7 @@ class DeterministicVariable(RandomVariable):
         -------
         None
         """
-        self.name = name
+        super().__init__(name=name)
         self.validate(value)
         self.value = value
 
@@ -68,8 +68,8 @@ class DeterministicVariable(RandomVariable):
 
     def sample(
         self,
-        record=False,
-        **kwargs,
+        record: bool = False,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Retrieve the value of the deterministic Rv

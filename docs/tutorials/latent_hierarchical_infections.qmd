@@ -2,8 +2,6 @@
 title: 'Hierarchical Latent Infections: Understanding Temporal Process Choices'
 format:
   gfm:
-    fig-width: 16
-    fig-height: 10
     code-fold: true
 engine: jupyter
 jupyter:
@@ -32,6 +30,8 @@ import plotnine as p9
 import warnings
 
 warnings.filterwarnings("ignore")
+
+from _tutorial_theme import theme_tutorial
 ```
 
 ```{python}
@@ -246,8 +246,8 @@ gi_df = pd.DataFrame(gi_data)
         color="Configuration",
         linetype="Configuration",
     )
-    + p9.theme_minimal()
-    + p9.theme(figure_size=(10, 5), legend_position="right")
+    + theme_tutorial
+    + p9.theme(legend_position="right")
 )
 ```
 
@@ -279,8 +279,8 @@ gi_df_zoom = gi_df[(gi_df["day"] >= 14) & (gi_df["day"] <= 21)]
         color="Configuration",
         linetype="Configuration",
     )
-    + p9.theme_minimal()
-    + p9.theme(figure_size=(10, 5), legend_position="right")
+    + theme_tutorial
+    + p9.theme(legend_position="right")
 )
 ```
 
@@ -352,8 +352,7 @@ i0_df = pd.DataFrame(i0_data)
         title="Effect of Initial Infection Prevalence (I0)",
         subtitle="Same Rt trajectory, different starting prevalence",
     )
-    + p9.theme_minimal()
-    + p9.theme(figure_size=(10, 5))
+    + theme_tutorial
 )
 ```
 
@@ -518,7 +517,7 @@ n_extreme = np.sum(np.any(rt_samples > rt_cap, axis=1))
         title=f"Prior Predictive: Baseline Rt ({n_samples} samples)",
         subtitle=f"Red dashed line: Rt = 1. {n_extreme} samples exceed Rt = {rt_cap} (not shown in full).",
     )
-    + p9.theme_minimal()
+    + theme_tutorial
 )
 ```
 
@@ -621,8 +620,7 @@ comparison_df["process"] = pd.Categorical(
         title="Prior Predictive by Temporal Process",
         subtitle="Same innovation_sd=0.05; AR(1) autoreg=0.9, DifferencedAR1 autoreg=0.5",
     )
-    + p9.theme_minimal()
-    + p9.theme(figure_size=(12, 4))
+    + theme_tutorial
 )
 ```
 
@@ -715,8 +713,7 @@ dev_df = pd.DataFrame(dev_data)
         title="Subpopulation Deviation Trajectories (first subpop)",
         subtitle=f"{n_samples} prior samples; baseline uses DifferencedAR1",
     )
-    + p9.theme_minimal()
-    + p9.theme(figure_size=(10, 4))
+    + theme_tutorial
 )
 ```
 
@@ -801,8 +798,7 @@ tuning_df = pd.DataFrame(tuning_data)
         y="Rt (baseline)",
         title="Effect of Hyperparameter Tuning",
     )
-    + p9.theme_minimal()
-    + p9.theme(figure_size=(10, 4))
+    + theme_tutorial
 )
 ```
 

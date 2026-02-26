@@ -15,16 +15,16 @@ class InfectionsRtFeedbackSample(NamedTuple):
 
     Attributes
     ----------
-    post_initialization_infections : ArrayLike | None, optional
+    post_initialization_infections
         The estimated latent infections. Defaults to None.
-    rt : ArrayLike | None, optional
+    rt
         The adjusted reproduction number. Defaults to None.
     """
 
     post_initialization_infections: ArrayLike | None = None
     rt: ArrayLike | None = None
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections}, rt={self.rt})"
 
 
@@ -63,14 +63,17 @@ class InfectionsWithFeedback(RandomVariable):
 
     def __init__(
         self,
+        name: str,
         infection_feedback_strength: RandomVariable,
         infection_feedback_pmf: RandomVariable,
     ) -> None:
         """
-        Default constructor for Infections class.
+        Default constructor for InfectionsWithFeedback class.
 
         Parameters
         ----------
+        name
+            A name for this random variable.
         infection_feedback_strength
             Infection feedback strength.
         infection_feedback_pmf
@@ -81,6 +84,7 @@ class InfectionsWithFeedback(RandomVariable):
         None
         """
 
+        super().__init__(name=name)
         self.validate(infection_feedback_strength, infection_feedback_pmf)
 
         self.infection_feedback_strength = infection_feedback_strength
@@ -117,7 +121,7 @@ class InfectionsWithFeedback(RandomVariable):
         Rt: ArrayLike,
         I0: ArrayLike,
         gen_int: ArrayLike,
-        **kwargs,
+        **kwargs: object,
     ) -> InfectionsRtFeedbackSample:
         """
         Samples infections given Rt, initial infections, and generation

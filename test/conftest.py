@@ -10,7 +10,13 @@ import numpyro.distributions as dist
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.observation import Counts, NegativeBinomialNoise
+from pyrenew.latent import AR1, HierarchicalInfections, RandomWalk
+from pyrenew.observation import (
+    Counts,
+    HierarchicalNormalNoise,
+    NegativeBinomialNoise,
+    VectorizedRV,
+)
 from pyrenew.randomvariable import DistributionalVariable
 
 # =============================================================================
@@ -45,32 +51,6 @@ def short_delay_pmf():
 
 
 @pytest.fixture
-def medium_delay_pmf():
-    """
-    Medium 4-day delay PMF.
-
-    Returns
-    -------
-    jnp.ndarray
-        A 4-element PMF array.
-    """
-    return jnp.array([0.1, 0.3, 0.4, 0.2])
-
-
-@pytest.fixture
-def realistic_delay_pmf():
-    """
-    Realistic 10-day delay PMF (shifted gamma-like).
-
-    Returns
-    -------
-    jnp.ndarray
-        A 10-element PMF array with gamma-like shape.
-    """
-    return jnp.array([0.01, 0.05, 0.10, 0.15, 0.20, 0.20, 0.15, 0.08, 0.04, 0.02])
-
-
-@pytest.fixture
 def long_delay_pmf():
     """
     Long 10-day delay PMF for edge case testing.
@@ -81,19 +61,6 @@ def long_delay_pmf():
         A 10-element PMF array.
     """
     return jnp.array([0.05, 0.1, 0.15, 0.2, 0.2, 0.15, 0.1, 0.03, 0.01, 0.01])
-
-
-@pytest.fixture
-def simple_shedding_pmf():
-    """
-    Simple 1-day shedding PMF (no delay).
-
-    Returns
-    -------
-    jnp.ndarray
-        A single-element PMF array representing no shedding delay.
-    """
-    return jnp.array([1.0])
 
 
 @pytest.fixture
@@ -109,77 +76,98 @@ def short_shedding_pmf():
     return jnp.array([0.3, 0.4, 0.3])
 
 
-@pytest.fixture
-def medium_shedding_pmf():
-    """
-    Medium 5-day shedding PMF.
-
-    Returns
-    -------
-    jnp.ndarray
-        A 5-element PMF array.
-    """
-    return jnp.array([0.1, 0.3, 0.3, 0.2, 0.1])
-
-
 # =============================================================================
-# Sensor Prior Fixtures
+# Generation Interval Fixture
 # =============================================================================
 
 
 @pytest.fixture
-def sensor_mode_rv():
+def gen_int_rv():
     """
-    Standard normal prior for sensor modes.
+    COVID-like generation interval (7-day PMF).
 
     Returns
     -------
-    DistributionalVariable
-        A normal prior with standard deviation 0.5.
+    DeterministicPMF
+        Generation interval random variable.
     """
-    return DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5))
+    pmf = jnp.array([0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02])
+    return DeterministicPMF("gen_int", pmf)
+
+
+# =============================================================================
+# Noise Fixtures
+# =============================================================================
 
 
 @pytest.fixture
-def sensor_mode_rv_tight():
+def hierarchical_normal_noise():
     """
-    Tight normal prior for deterministic-like behavior.
+    Standard HierarchicalNormalNoise with VectorizedRV wrappers.
 
     Returns
     -------
-    DistributionalVariable
-        A normal prior with small standard deviation 0.01.
+    HierarchicalNormalNoise
+        Noise model for continuous measurements.
     """
-    return DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.01))
-
-
-@pytest.fixture
-def sensor_sd_rv():
-    """
-    Standard truncated normal prior for sensor standard deviations.
-
-    Returns
-    -------
-    DistributionalVariable
-        A truncated normal prior for sensor standard deviations.
-    """
-    return DistributionalVariable(
-        "ww_sensor_sd", dist.TruncatedNormal(0.3, 0.15, low=0.10)
+    sensor_mode_rv = VectorizedRV(
+        name="sensor_mode_rv",
+        rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5)),
     )
+    sensor_sd_rv = VectorizedRV(
+        name="sensor_sd_rv",
+        rv=DistributionalVariable(
+            "ww_sensor_sd", dist.TruncatedNormal(0.3, 0.15, low=0.10)
+        ),
+    )
+    return HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
 
 @pytest.fixture
-def sensor_sd_rv_tight():
+def hierarchical_normal_noise_tight():
     """
-    Tight truncated normal prior for deterministic-like behavior.
+    Tight HierarchicalNormalNoise for near-deterministic testing.
 
     Returns
     -------
-    DistributionalVariable
-        A truncated normal prior with small scale for tight behavior.
+    HierarchicalNormalNoise
+        Noise model with very small variance.
     """
-    return DistributionalVariable(
-        "ww_sensor_sd", dist.TruncatedNormal(0.01, 0.005, low=0.005)
+    sensor_mode_rv = VectorizedRV(
+        name="sensor_mode_rv",
+        rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.01)),
+    )
+    sensor_sd_rv = VectorizedRV(
+        name="sensor_sd_rv",
+        rv=DistributionalVariable(
+            "ww_sensor_sd", dist.TruncatedNormal(0.01, 0.005, low=0.001)
+        ),
+    )
+    return HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
+
+
+# =============================================================================
+# Hierarchical Infections Fixture
+# =============================================================================
+
+
+@pytest.fixture
+def hierarchical_infections(gen_int_rv):
+    """
+    Pre-configured HierarchicalInfections instance.
+
+    Returns
+    -------
+    HierarchicalInfections
+        Configured infection process with realistic parameters.
+    """
+    return HierarchicalInfections(
+        gen_int_rv=gen_int_rv,
+        I0_rv=DeterministicVariable("I0", 0.001),
+        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+        subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
+        n_initialization_points=7,
     )
 
 
@@ -203,42 +191,6 @@ def counts_process(simple_delay_pmf):
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
         noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
-    )
-
-
-@pytest.fixture
-def counts_process_medium_delay(medium_delay_pmf):
-    """
-    Counts observation process with medium delay.
-
-    Returns
-    -------
-    Counts
-        A Counts observation process with 4-day delay.
-    """
-    return Counts(
-        name="test_counts",
-        ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
-        delay_distribution_rv=DeterministicPMF("delay", medium_delay_pmf),
-        noise=NegativeBinomialNoise(DeterministicVariable("conc", 50.0)),
-    )
-
-
-@pytest.fixture
-def counts_process_realistic(realistic_delay_pmf):
-    """
-    Counts observation process with realistic delay and ascertainment.
-
-    Returns
-    -------
-    Counts
-        A Counts observation process with realistic parameters.
-    """
-    return Counts(
-        name="test_counts",
-        ascertainment_rate_rv=DeterministicVariable("ihr", 0.005),
-        delay_distribution_rv=DeterministicPMF("delay", realistic_delay_pmf),
-        noise=NegativeBinomialNoise(DeterministicVariable("conc", 100.0)),
     )
 
 
@@ -286,117 +238,3 @@ def counts_factory():
 # =============================================================================
 # Infection Fixtures
 # =============================================================================
-
-
-@pytest.fixture
-def constant_infections():
-    """
-    Constant infections array (30 days, 100 infections/day).
-
-    Returns
-    -------
-    jnp.ndarray
-        A 1D array of shape (30,) with constant value 100.
-    """
-    return jnp.ones(30) * 100
-
-
-@pytest.fixture
-def constant_infections_2d():
-    """
-    Constant infections array for 2 subpopulations.
-
-    Returns
-    -------
-    jnp.ndarray
-        A 2D array of shape (30, 2) with constant value 100.
-    """
-    return jnp.ones((30, 2)) * 100
-
-
-def make_infections(n_days, n_subpops=None, value=100.0):
-    """
-    Create infection arrays for testing.
-
-    Parameters
-    ----------
-    n_days : int
-        Number of days
-    n_subpops : int, optional
-        Number of subpopulations (None for 1D array)
-    value : float
-        Constant infection value
-
-    Returns
-    -------
-    jnp.ndarray
-        Infections array
-    """
-    if n_subpops is None:
-        return jnp.ones(n_days) * value
-    return jnp.ones((n_days, n_subpops)) * value
-
-
-def make_spike_infections(n_days, spike_day, spike_value=1000.0, n_subpops=None):
-    """
-    Create spike infection arrays for testing.
-
-    Parameters
-    ----------
-    n_days : int
-        Number of days
-    spike_day : int
-        Day of the spike
-    spike_value : float
-        Value at spike
-    n_subpops : int, optional
-        Number of subpopulations
-
-    Returns
-    -------
-    jnp.ndarray
-        Infections array with spike
-    """
-    if n_subpops is None:
-        infections = jnp.zeros(n_days)
-        return infections.at[spike_day].set(spike_value)
-    infections = jnp.zeros((n_days, n_subpops))
-    return infections.at[spike_day, :].set(spike_value)
-
-
-def create_mock_infections(
-    n_days: int,
-    peak_day: int = 10,
-    peak_value: float = 1000.0,
-    shape: str = "spike",
-) -> jnp.ndarray:
-    """
-    Create mock infection time series for testing.
-
-    Parameters
-    ----------
-    n_days : int
-        Number of days
-    peak_day : int
-        Day of peak infections
-    peak_value : float
-        Peak infection value
-    shape : str
-        Shape of the curve: "spike", "constant", or "decay"
-
-    Returns
-    -------
-    jnp.ndarray
-        Array of infections of shape (n_days,)
-    """
-    if shape == "spike":
-        infections = jnp.zeros(n_days)
-        infections = infections.at[peak_day].set(peak_value)
-    elif shape == "constant":
-        infections = jnp.ones(n_days) * peak_value
-    elif shape == "decay":
-        infections = peak_value * jnp.exp(-jnp.arange(n_days) / 20.0)
-    else:
-        raise ValueError(f"Unknown shape: {shape}")
-
-    return infections

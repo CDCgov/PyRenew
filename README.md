@@ -46,7 +46,6 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 ## Resources
 
 * [The PyRenew documentation suite](https://cdcgov.github.io/PyRenew) provides API reference documentation and  tutorials on implementing multisignal renewal models with PyRenew.
-* [The Model Equations Sheet](https://github.com/CDCgov/PyRenew/blob/main/equations.md) describes the mathematics of the multisignal renewal processes and models PyRenew supports.
 * Additional reading on renewal processes in epidemiology
   * [_Semi-mechanistic Bayesian modelling of COVID-19 with renewal processes_](https://academic.oup.com/jrsssa/article-pdf/186/4/601/54770289/qnad030.pdf)
   * [_Unifying incidence and prevalence under a time-varying general branching process_](https://link.springer.com/content/pdf/10.1007/s00285-023-01958-w.pdf)

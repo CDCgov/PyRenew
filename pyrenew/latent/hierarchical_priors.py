@@ -8,6 +8,7 @@ All classes in this module implement the group-level RV interface:
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
+from jax.typing import ArrayLike
 
 from pyrenew.metaclass import RandomVariable
 
@@ -20,9 +21,9 @@ class HierarchicalNormalPrior(RandomVariable):
 
     Parameters
     ----------
-    name : str
+    name
         Unique name for the sampled parameter in numpyro.
-    sd_rv : RandomVariable
+    sd_rv
         RandomVariable returning the standard deviation.
     """
 
@@ -36,9 +37,9 @@ class HierarchicalNormalPrior(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Unique name for the sampled parameter.
-        sd_rv : RandomVariable
+        sd_rv
             RandomVariable returning the standard deviation.
         """
         if not isinstance(sd_rv, RandomVariable):
@@ -47,20 +48,20 @@ class HierarchicalNormalPrior(RandomVariable):
                 "Use DeterministicVariable(name, value) to wrap a fixed value."
             )
 
-        self.name = name
+        super().__init__(name=name)
         self.sd_rv = sd_rv
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate the random variable (no-op for this class)."""
         pass
 
-    def sample(self, n_groups: int, **kwargs):
+    def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample group-level effects.
 
         Parameters
         ----------
-        n_groups : int
+        n_groups
             Number of groups.
 
         Returns
@@ -86,13 +87,13 @@ class GammaGroupSdPrior(RandomVariable):
 
     Parameters
     ----------
-    name : str
+    name
         Unique name for the sampled parameter in numpyro.
-    sd_mean_rv : RandomVariable
+    sd_mean_rv
         RandomVariable returning the mean of the Gamma distribution.
-    sd_concentration_rv : RandomVariable
+    sd_concentration_rv
         RandomVariable returning the concentration (shape) parameter of Gamma.
-    sd_min : float, default=0.05
+    sd_min
         Minimum SD value (lower bound).
     """
 
@@ -108,13 +109,13 @@ class GammaGroupSdPrior(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Unique name for the sampled parameter.
-        sd_mean_rv : RandomVariable
+        sd_mean_rv
             RandomVariable returning the mean of the Gamma distribution.
-        sd_concentration_rv : RandomVariable
+        sd_concentration_rv
             RandomVariable returning the concentration parameter.
-        sd_min : float, default=0.05
+        sd_min
             Minimum SD value (lower bound).
         """
         if not isinstance(sd_mean_rv, RandomVariable):
@@ -130,22 +131,22 @@ class GammaGroupSdPrior(RandomVariable):
         if sd_min < 0:
             raise ValueError(f"sd_min must be non-negative, got {sd_min}")
 
-        self.name = name
+        super().__init__(name=name)
         self.sd_mean_rv = sd_mean_rv
         self.sd_concentration_rv = sd_concentration_rv
         self.sd_min = sd_min
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate the random variable (no-op for this class)."""
         pass
 
-    def sample(self, n_groups: int, **kwargs):
+    def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample group-level standard deviations.
 
         Parameters
         ----------
-        n_groups : int
+        n_groups
             Number of groups.
 
         Returns
@@ -178,11 +179,11 @@ class StudentTGroupModePrior(RandomVariable):
 
     Parameters
     ----------
-    name : str
+    name
         Unique name for the sampled parameter in numpyro.
-    sd_rv : RandomVariable
+    sd_rv
         RandomVariable returning the scale parameter.
-    df_rv : RandomVariable
+    df_rv
         RandomVariable returning the degrees of freedom.
     """
 
@@ -197,11 +198,11 @@ class StudentTGroupModePrior(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Unique name for the sampled parameter.
-        sd_rv : RandomVariable
+        sd_rv
             RandomVariable returning the scale parameter.
-        df_rv : RandomVariable
+        df_rv
             RandomVariable returning the degrees of freedom.
         """
         if not isinstance(sd_rv, RandomVariable):
@@ -215,21 +216,21 @@ class StudentTGroupModePrior(RandomVariable):
                 "Use DeterministicVariable(name, value) to wrap a fixed value."
             )
 
-        self.name = name
+        super().__init__(name=name)
         self.sd_rv = sd_rv
         self.df_rv = df_rv
 
-    def validate(self):
+    def validate(self) -> None:
         """Validate the random variable (no-op for this class)."""
         pass
 
-    def sample(self, n_groups: int, **kwargs):
+    def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample group-level modes.
 
         Parameters
         ----------
-        n_groups : int
+        n_groups
             Number of groups.
 
         Returns

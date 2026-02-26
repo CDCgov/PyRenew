@@ -1,9 +1,6 @@
 ---
 title: "PyRenew's RandomVariable abstract base class"
-format:
-  gfm:
-    fig-width: 16
-    fig-height: 10
+format: gfm
 engine: jupyter
 jupyter:
   jupytext:
@@ -42,9 +39,9 @@ import numpyro.distributions as dist
 import pandas as pd
 import plotnine as p9
 import warnings
-from plotnine.exceptions import PlotnineWarning
 
-warnings.filterwarnings("ignore", category=PlotnineWarning)
+from plotnine.exceptions import PlotnineWarning
+from _tutorial_theme import theme_tutorial
 
 from pyrenew.metaclass import RandomVariable
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
@@ -57,6 +54,8 @@ from pyrenew.randomvariable import (
 from pyrenew.observation import Counts, NegativeBinomialNoise
 import pyrenew.transformation as transformation
 from pyrenew import datasets
+
+warnings.filterwarnings("ignore", category=PlotnineWarning)
 ```
 
 ## Concrete implementations
@@ -89,7 +88,7 @@ delay_pmf = DeterministicPMF(
 
 with numpyro.handlers.seed(rng_seed=0):
     pmf = delay_pmf()
-    print(f"Delay PMF: {np.round(pmf, 2)}, sum: {pmf.sum():.1f}")
+    print(f"Delay PMF: {np.round(np.array(pmf), 2)}, sum: {pmf.sum():.1f}")
 ```
 
 ### DistributionalVariable
@@ -148,7 +147,7 @@ dow_effect = TransformedVariable(
 
 with numpyro.handlers.seed(rng_seed=0):
     effect = dow_effect()
-    print(f"Day-of-week multipliers: {np.round(effect, 3)}")
+    print(f"Day-of-week multipliers: {np.round(np.array(effect), 3)}")
     print(f"Sum: {effect.sum():.1f}")
 ```
 
@@ -263,7 +262,7 @@ class AscertainmentWithDayOfWeek(RandomVariable):
             (0 = Monday, 6 = Sunday).
         """
         self.validate(dow_concentration, first_day_offset)
-        self.name = name
+        super().__init__(name=name)
         self.baseline_rate_rv = baseline_rate_rv
         self.dow_concentration = jnp.asarray(dow_concentration)
         self.first_day_offset = first_day_offset
@@ -373,8 +372,7 @@ rates_df = pd.DataFrame(
         title="Ascertainment Rate with Day-of-Week Effects",
         fill="",
     )
-    + p9.theme_grey()
-    + p9.theme(plot_title=p9.element_text(size=14, weight="bold"))
+    + theme_tutorial
 )
 ```
 
@@ -487,8 +485,7 @@ results_df = pd.DataFrame(results)
         y="Hospital Admissions",
         title="Simulated Hospital Admissions",
     )
-    + p9.theme_grey()
-    + p9.theme(plot_title=p9.element_text(size=14, weight="bold"))
+    + theme_tutorial
 )
 ```
 

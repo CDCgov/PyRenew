@@ -33,15 +33,18 @@ class DifferencedProcess(RandomVariable):
 
     def __init__(
         self,
+        name: str,
         fundamental_process: RandomVariable,
         differencing_order: int,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """
-        Default constructor
+        Default constructor.
 
         Parameters
         ----------
+        name
+            A name for this random variable.
         fundamental_process
             Stochastic process for the
             differences. Must accept an
@@ -64,10 +67,10 @@ class DifferencedProcess(RandomVariable):
         self.assert_valid_differencing_order(differencing_order)
         self.fundamental_process = fundamental_process
         self.differencing_order = differencing_order
-        super().__init__(**kwargs)
+        super().__init__(name=name, **kwargs)
 
     @staticmethod
-    def assert_valid_differencing_order(differencing_order: Any):
+    def assert_valid_differencing_order(differencing_order: Any) -> None:  # noqa: ANN401
         """
         To be valid, a differencing order must
         be an integer and must be strictly positive.
@@ -97,7 +100,7 @@ class DifferencedProcess(RandomVariable):
                 f"{differencing_order}"
             )
 
-    def validate(self):
+    def validate(self) -> None:
         """
         Empty validation method.
         """
@@ -107,9 +110,9 @@ class DifferencedProcess(RandomVariable):
         self,
         init_vals: ArrayLike,
         n: int,
-        *args,
+        *args: object,
         fundamental_process_init_vals: ArrayLike = None,
-        **kwargs,
+        **kwargs: object,
     ) -> jnp.ndarray:
         """
         Sample from the process

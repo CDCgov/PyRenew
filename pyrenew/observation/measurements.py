@@ -23,12 +23,12 @@ class Measurements(BaseObservationProcess):
 
     Parameters
     ----------
-    name : str
+    name
         Unique name for this observation process. Used to prefix all
         numpyro sample and deterministic site names.
-    temporal_pmf_rv : RandomVariable
+    temporal_pmf_rv
         Temporal distribution PMF (e.g., shedding kinetics for wastewater).
-    noise : MeasurementNoise
+    noise
         Noise model for continuous measurements
         (e.g., HierarchicalNormalNoise).
 
@@ -57,12 +57,12 @@ class Measurements(BaseObservationProcess):
 
         Parameters
         ----------
-        name : str
+        name
             Unique name for this observation process. Used to prefix all
             numpyro sample and deterministic site names.
-        temporal_pmf_rv : RandomVariable
+        temporal_pmf_rv
             Temporal distribution PMF (e.g., shedding kinetics).
-        noise : MeasurementNoise
+        noise
             Noise model (e.g., HierarchicalNormalNoise with sensor effects).
         """
         super().__init__(name=name, temporal_pmf_rv=temporal_pmf_rv)
@@ -104,6 +104,54 @@ class Measurements(BaseObservationProcess):
         """
         return "subpop"
 
+    def validate_data(
+        self,
+        n_total: int,
+        n_subpops: int,
+        times: ArrayLike | None = None,
+        subpop_indices: ArrayLike | None = None,
+        sensor_indices: ArrayLike | None = None,
+        n_sensors: int | None = None,
+        obs: ArrayLike | None = None,
+        **kwargs: object,
+    ) -> None:
+        """
+        Validate measurement observation data.
+
+        Parameters
+        ----------
+        n_total
+            Total number of time steps (n_init + n_days_post_init).
+        n_subpops
+            Number of subpopulations.
+        times
+            Day index for each observation on the shared time axis.
+        subpop_indices
+            Subpopulation index for each observation (0-indexed).
+        sensor_indices
+            Sensor index for each observation (0-indexed).
+        n_sensors
+            Total number of measurement sensors.
+        obs
+            Observed measurements (n_obs,).
+        **kwargs
+            Additional keyword arguments (ignored).
+
+        Raises
+        ------
+        ValueError
+            If times, subpop_indices, or sensor_indices are out of bounds,
+            or if obs and times have mismatched lengths.
+        """
+        if times is not None:
+            self._validate_times(times, n_total)
+            if obs is not None:
+                self._validate_obs_times_shape(obs, times)
+        if subpop_indices is not None:
+            self._validate_subpop_indices(subpop_indices, n_subpops)
+        if sensor_indices is not None and n_sensors is not None:
+            self._validate_index_array(sensor_indices, n_sensors, "sensor_indices")
+
     def sample(
         self,
         infections: ArrayLike,
@@ -125,21 +173,21 @@ class Measurements(BaseObservationProcess):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Infections from the infection process.
             Shape: (n_total, n_subpops)
-        times : ArrayLike
+        times
             Day index for each observation on the shared time axis.
             Must be in range [0, n_total). Shape: (n_obs,)
-        subpop_indices : ArrayLike
+        subpop_indices
             Subpopulation index for each observation (0-indexed).
             Shape: (n_obs,)
-        sensor_indices : ArrayLike
+        sensor_indices
             Sensor index for each observation (0-indexed).
             Shape: (n_obs,)
-        n_sensors : int
+        n_sensors
             Total number of measurement sensors.
-        obs : ArrayLike | None
+        obs
             Observed measurements (n_obs,), or None for prior sampling.
 
         Returns

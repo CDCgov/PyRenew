@@ -34,11 +34,14 @@ def test_differencing_order_type_validation(wrong_type_order):
         DifferencedProcess.assert_valid_differencing_order(wrong_type_order)
     with pytest.raises(ValueError, match=err_match):
         _ = DifferencedProcess(
+            name="test_diff",
             fundamental_process=None,
             differencing_order=wrong_type_order,
         )
     DifferencedProcess.assert_valid_differencing_order(1)
-    _ = DifferencedProcess(fundamental_process=None, differencing_order=1)
+    _ = DifferencedProcess(
+        name="test_diff", fundamental_process=None, differencing_order=1
+    )
 
 
 @pytest.mark.parametrize(
@@ -56,12 +59,14 @@ def test_differencing_order_value_validation(wrong_value, right_value):
     with pytest.raises(ValueError, match="greater than or equal to 1"):
         DifferencedProcess.assert_valid_differencing_order(wrong_value)
         _ = DifferencedProcess(
+            name="test_diff",
             fundamental_process=None,
             differencing_order=wrong_value,
         )
 
     DifferencedProcess.assert_valid_differencing_order(right_value)
     _ = DifferencedProcess(
+        name="test_diff",
         fundamental_process=None,
         differencing_order=right_value,
     )
@@ -72,13 +77,18 @@ def test_differencing_order_value_validation(wrong_value, right_value):
     [
         [
             IIDRandomSequence(
-                DistributionalVariable("element_dist", dist.Cauchy(0.02, 0.3)),
+                name="test_iid_seq",
+                element_rv=DistributionalVariable(
+                    "element_dist", dist.Cauchy(0.02, 0.3)
+                ),
             ),
             3,
             jnp.array([0.25, 0.67, 5]),
         ],
         [
-            StandardNormalSequence("test_stand_norm"),
+            StandardNormalSequence(
+                name="test_std_norm_seq",
+            ),
             5,
             jnp.array([0.23, 5.2, 1, 0.2, 3]),
         ],
@@ -94,6 +104,7 @@ def test_differenced_process_sample(
     requested.
     """
     proc = DifferencedProcess(
+        name="test_diff",
         differencing_order=differencing_order,
         fundamental_process=fundamental_process,
     )
@@ -134,6 +145,7 @@ def test_differenced_process_sample(
     [
         [
             IIDRandomSequence(
+                name="test_iid_zero",
                 element_rv=DeterministicVariable("zero", jnp.array(0.0)),
             ),
             jnp.array([0.0, 0, 0, 0, 0]),
@@ -142,6 +154,7 @@ def test_differenced_process_sample(
         ],
         [
             IIDRandomSequence(
+                name="test_iid_one",
                 element_rv=DeterministicVariable("zero", jnp.array(1.0)),
             ),
             jnp.array([0]),
@@ -150,6 +163,7 @@ def test_differenced_process_sample(
         ],
         [
             IIDRandomSequence(
+                name="test_iid_one",
                 element_rv=DeterministicVariable("zero", jnp.array(1.0)),
             ),
             jnp.array([0, 1]),
@@ -158,6 +172,7 @@ def test_differenced_process_sample(
         ],
         [
             IIDRandomSequence(
+                name="test_iid_one",
                 element_rv=DeterministicVariable("zero", jnp.array(1.0)),
             ),
             jnp.array([0, 1]),
@@ -166,6 +181,7 @@ def test_differenced_process_sample(
         ],
         [
             IIDRandomSequence(
+                name="test_iid_one",
                 element_rv=DeterministicVariable("zero", jnp.array(1.0)),
             ),
             jnp.array([0, 1]),
@@ -182,6 +198,7 @@ def test_manual_difference_process_sample(
     with manually computed solutions
     """
     proc = DifferencedProcess(
+        name="test_diff",
         differencing_order=len(inits),
         fundamental_process=fundamental_process,
     )

@@ -62,11 +62,11 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        name : str
+        name
             Unique name for this observation process. Used to prefix all
             numpyro sample and deterministic site names, enabling multiple
             observations of the same type in a single model.
-        temporal_pmf_rv : RandomVariable
+        temporal_pmf_rv
             The temporal distribution PMF (e.g., delay or shedding distribution).
             Must sample to a 1D array that sums to ~1.0 with non-negative values.
             Subclasses may have additional parameters.
@@ -76,7 +76,7 @@ class BaseObservationProcess(RandomVariable):
         Subclasses should call ``super().__init__(name, temporal_pmf_rv)``
         in their constructors and may add additional parameters.
         """
-        self.name = name
+        super().__init__(name=name)
         self.temporal_pmf_rv = temporal_pmf_rv
 
     @abstractmethod
@@ -160,11 +160,11 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        pmf : ArrayLike
+        pmf
             The PMF array to validate
-        param_name : str
+        param_name
             Name of the parameter (for error messages)
-        atol : float, default 1e-6
+        atol
             Absolute tolerance for sum-to-one check
 
         Raises
@@ -200,12 +200,12 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        latent_incidence : ArrayLike
+        latent_incidence
             Latent incidence time series (infections, prevalence, etc.).
             Shape: (n_days,)
-        pmf : ArrayLike
+        pmf
             Delay or shedding PMF. Shape: (n_pmf,)
-        p_observed : float, default 1.0
+        p_observed
             Observation probability multiplier. Scales the convolution result.
 
         Returns
@@ -249,10 +249,10 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        suffix : str
+        suffix
             Suffix for the site name. Will be prefixed with ``self.name``.
             For example, suffix="predicted" becomes "{name}_predicted".
-        value : ArrayLike
+        value
             Value to track. Can be any shape.
         """
         numpyro.deterministic(self._sample_site_name(suffix), value)
@@ -263,7 +263,7 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        suffix : str
+        suffix
             Suffix for the site name (e.g., "obs").
 
         Returns
@@ -288,7 +288,7 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        infections : ArrayLike
+        infections
             Infections from the infection process.
             Shape: (n_days,) for aggregate observations
             Shape: (n_days, n_subpops) for subpop-level observations
@@ -308,15 +308,174 @@ class BaseObservationProcess(RandomVariable):
 
         See Also
         --------
-        sample : Uses this method then applies noise model
+        sample
         """
         pass  # pragma: no cover
+
+    @abstractmethod
+    def validate_data(
+        self,
+        n_total: int,
+        n_subpops: int,
+        **obs_data: dict[str, object],
+    ) -> None:
+        """
+        Validate observation data before running inference.
+
+        Each observation process validates its own data requirements.
+        Called by the model's ``validate_data()`` method with concrete
+        (non-traced) values before JAX tracing begins.
+
+        Parameters
+        ----------
+        n_total
+            Total number of time steps (n_init + n_days_post_init).
+        n_subpops
+            Number of subpopulations.
+        **obs_data
+            Observation-specific data kwargs (same as passed to ``sample()``,
+            minus ``infections`` which comes from the latent process).
+
+        Raises
+        ------
+        ValueError
+            If any data fails validation.
+        """
+        pass  # pragma: no cover
+
+    def _validate_index_array(
+        self, indices: ArrayLike, upper_bound: int, param_name: str
+    ) -> None:
+        """
+        Validate an index array has non-negative values within bounds.
+
+        Checks that all values are non-negative integers in ``[0, upper_bound)``.
+
+        Parameters
+        ----------
+        indices
+            Index array to validate.
+        upper_bound
+            Exclusive upper bound for valid indices.
+        param_name
+            Name of the parameter (for error messages).
+
+        Raises
+        ------
+        ValueError
+            If indices contains negative values or values >= upper_bound.
+        """
+        indices = jnp.asarray(indices)
+        if jnp.any(indices < 0):
+            raise ValueError(
+                f"Observation '{self.name}': {param_name} cannot be negative"
+            )
+        max_val = jnp.max(indices)
+        if max_val >= upper_bound:
+            raise ValueError(
+                f"Observation '{self.name}': {param_name} contains "
+                f"{int(max_val)} >= {upper_bound} ({param_name} upper bound)"
+            )
+
+    def _validate_times(self, times: ArrayLike, n_total: int) -> None:
+        """
+        Validate a times index array.
+
+        Checks that all values are non-negative and within ``[0, n_total)``.
+
+        Parameters
+        ----------
+        times
+            Time indices on the shared time axis.
+        n_total
+            Total number of time steps.
+
+        Raises
+        ------
+        ValueError
+            If times contains negative values or values >= n_total.
+        """
+        self._validate_index_array(times, n_total, "times")
+
+    def _validate_subpop_indices(
+        self, subpop_indices: ArrayLike, n_subpops: int
+    ) -> None:
+        """
+        Validate a subpopulation index array.
+
+        Checks that all values are non-negative and within ``[0, n_subpops)``.
+
+        Parameters
+        ----------
+        subpop_indices
+            Subpopulation indices (0-indexed).
+        n_subpops
+            Number of subpopulations.
+
+        Raises
+        ------
+        ValueError
+            If subpop_indices contains negative values or values >= n_subpops.
+        """
+        self._validate_index_array(subpop_indices, n_subpops, "subpop_indices")
+
+    def _validate_obs_times_shape(self, obs: ArrayLike, times: ArrayLike) -> None:
+        """
+        Validate that obs and times arrays have matching shapes.
+
+        Parameters
+        ----------
+        obs
+            Observed data array.
+        times
+            Times index array.
+
+        Raises
+        ------
+        ValueError
+            If obs and times have different shapes.
+        """
+        obs = jnp.asarray(obs)
+        times = jnp.asarray(times)
+        if obs.shape != times.shape:
+            raise ValueError(
+                f"Observation '{self.name}': obs shape {obs.shape} "
+                f"must match times shape {times.shape}"
+            )
+
+    def _validate_obs_dense(self, obs: ArrayLike, n_total: int) -> None:
+        """
+        Validate that obs covers the full shared time axis.
+
+        For dense observations on the shared time axis ``[0, n_total)``,
+        obs must have length equal to ``n_total``. Use NaN to mark
+        unobserved timepoints (initialization period or missing data).
+
+        Parameters
+        ----------
+        obs
+            Observed data array on the shared time axis.
+        n_total
+            Total number of time steps (n_init + n_days_post_init).
+
+        Raises
+        ------
+        ValueError
+            If obs length doesn't equal n_total.
+        """
+        obs = jnp.asarray(obs)
+        if obs.shape[0] != n_total:
+            raise ValueError(
+                f"Observation '{self.name}': obs length {obs.shape[0]} "
+                f"must equal n_total ({n_total}). "
+                f"Pad with NaN for initialization period."
+            )
 
     @abstractmethod
     def sample(
         self,
         obs: ArrayLike | None = None,
-        **kwargs,
+        **kwargs: object,
     ) -> ArrayLike:
         """
         Sample from the observation process.
@@ -327,7 +486,7 @@ class BaseObservationProcess(RandomVariable):
 
         Parameters
         ----------
-        obs : ArrayLike | None
+        obs
             Observed data for conditioning, or None for prior predictive sampling.
         **kwargs
             Subclass-specific parameters (e.g., infections from the infection process).

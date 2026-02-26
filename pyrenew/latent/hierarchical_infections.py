@@ -44,21 +44,21 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
 
     Parameters
     ----------
-    gen_int_rv : RandomVariable
+    gen_int_rv
         Generation interval PMF
-    I0_rv : RandomVariable
+    I0_rv
         Initial infection prevalence (proportion of population) at first
         observation time. Must return values in the interval (0, 1).
         Returns scalar (same for all subpops) or (n_subpops,) array (per-subpop).
         Full I0 matrix generated via exponential backprojection during sampling.
-    baseline_rt_process : TemporalProcess
+    baseline_rt_process
         Temporal process for baseline Rt dynamics
-    subpop_rt_deviation_process : TemporalProcess
+    subpop_rt_deviation_process
         Temporal process for subpopulation deviations
-    initial_log_rt_rv : RandomVariable
+    initial_log_rt_rv
         Initial value for log(Rt) at time 0.  Can be estimated from data
         or given a prior distribution.
-    n_initialization_points : int
+    n_initialization_points
         Number of initialization days before day 0. Must be at least
         ``len(gen_int_rv())`` to provide enough history for the renewal
         equation convolution. When using PyrenewBuilder, this is computed
@@ -89,19 +89,19 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
 
         Parameters
         ----------
-        gen_int_rv : RandomVariable
+        gen_int_rv
             Generation interval PMF
-        I0_rv : RandomVariable
+        I0_rv
             Initial infection prevalence (proportion of population)
-        baseline_rt_process : TemporalProcess
+        baseline_rt_process
             Temporal process for baseline Rt dynamics
-        subpop_rt_deviation_process : TemporalProcess
+        subpop_rt_deviation_process
             Temporal process for subpopulation deviations
-        initial_log_rt_rv : RandomVariable
+        initial_log_rt_rv
             Initial value for log(Rt) at time 0.
-        n_initialization_points : int
+        n_initialization_points
             Number of initialization days before day 0.
-        name : str
+        name
             Name prefix for numpyro sample sites. All deterministic
             quantities are recorded under this scope (e.g.,
             ``"{name}/rt_baseline"``). Default: ``"latent_infections"``.
@@ -112,10 +112,10 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             If required parameters are missing or invalid
         """
         super().__init__(
+            name=name,
             gen_int_rv=gen_int_rv,
             n_initialization_points=n_initialization_points,
         )
-        self.name = name
 
         if I0_rv is None:
             raise ValueError("I0_rv is required")
@@ -156,7 +156,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         n_days_post_init: int,
         *,
         subpop_fractions: ArrayLike = None,
-        **kwargs,
+        **kwargs: object,
     ) -> LatentSample:
         """
         Sample hierarchical infections for all subpopulations.
@@ -166,9 +166,9 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
 
         Parameters
         ----------
-        n_days_post_init : int
+        n_days_post_init
             Number of days to simulate after initialization period
-        subpop_fractions : ArrayLike
+        subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
             Must sum to 1.0.
         **kwargs

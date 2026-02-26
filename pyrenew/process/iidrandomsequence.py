@@ -1,5 +1,6 @@
 # numpydoc ignore=GL08
 
+
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
@@ -18,14 +19,17 @@ class IIDRandomSequence(RandomVariable):
 
     def __init__(
         self,
+        name: str,
         element_rv: RandomVariable,
-        **kwargs,
+        **kwargs: object,
     ) -> None:
         """
-        Default constructor
+        Default constructor.
 
         Parameters
         ----------
+        name
+            A name for this random variable.
         element_rv
             RandomVariable representing a single element
             in the sequence.
@@ -34,10 +38,12 @@ class IIDRandomSequence(RandomVariable):
         -------
         None
         """
-        super().__init__(**kwargs)
+        super().__init__(name=name, **kwargs)
         self.element_rv = element_rv
 
-    def sample(self, n: int, *args, vectorize: bool = False, **kwargs) -> ArrayLike:
+    def sample(
+        self, n: int, *args: object, vectorize: bool = False, **kwargs: object
+    ) -> ArrayLike:
         """
         Sample an IID random sequence.
 
@@ -74,7 +80,7 @@ class IIDRandomSequence(RandomVariable):
             result = self.element_rv.expand_by((n,)).sample(*args, **kwargs)
         else:
 
-            def transition(_carry, _x):
+            def transition(_carry: None, _x: None) -> tuple[None, ArrayLike]:
                 # numpydoc ignore=GL08
                 el = self.element_rv.sample(*args, **kwargs)
                 return None, el
@@ -89,7 +95,7 @@ class IIDRandomSequence(RandomVariable):
         return result
 
     @staticmethod
-    def validate():
+    def validate() -> None:
         """
         Validates input parameters, implementation pending.
         """
@@ -105,20 +111,19 @@ class StandardNormalSequence(IIDRandomSequence):
 
     def __init__(
         self,
-        element_rv_name: str,
+        name: str,
         element_shape: tuple = None,
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> None:
         """
-        Default constructor
+        Default constructor.
 
         Parameters
         ----------
-        element_rv_name
-            Name for the internal element_rv, here a
-            DistributionalVariable encoding a
-            standard Normal (mean = 0, sd = 1)
-            distribution.
+        name
+            A name for this random variable.
+            The internal element distribution is named
+            ``f"{name}_element"``.
         element_shape
             Shape for each element in the sequence.
             If None, elements are scalars. Default
@@ -131,7 +136,8 @@ class StandardNormalSequence(IIDRandomSequence):
         if element_shape is None:
             element_shape = ()
         super().__init__(
+            name=name,
             element_rv=DistributionalVariable(
-                name=element_rv_name, distribution=dist.Normal(0, 1)
-            ).expand_by(element_shape)
+                name=f"{name}_element", distribution=dist.Normal(0, 1)
+            ).expand_by(element_shape),
         )

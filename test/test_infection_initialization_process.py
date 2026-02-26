@@ -38,9 +38,24 @@ def test_infection_initialization_process():
         InitializeInfectionsFromVec(n_timepoints),
     )
 
-    for model in [zero_pad_model, exp_model, vec_model]:
-        with numpyro.handlers.seed(rng_seed=1):
-            model()
+    with numpyro.handlers.seed(rng_seed=1):
+        zero_pad_result = zero_pad_model()
+        exp_result = exp_model()
+        vec_result = vec_model()
+
+    # All results should have shape (n_timepoints,)
+    assert zero_pad_result.shape == (n_timepoints,)
+    assert exp_result.shape == (n_timepoints,)
+    assert vec_result.shape == (n_timepoints,)
+
+    # Zero-pad: all but last element should be zero
+    assert jnp.all(zero_pad_result[:-1] == 0)
+
+    # Exponential growth: all values should be positive (LogNormal I0)
+    assert jnp.all(exp_result > 0)
+
+    # Vec (identity passthrough): should equal jnp.arange(n_timepoints)
+    assert jnp.array_equal(vec_result, jnp.arange(n_timepoints))
 
     # Check that the InfectionInitializationProcess class raises an error when the wrong type of I0 is passed
     with pytest.raises(TypeError):

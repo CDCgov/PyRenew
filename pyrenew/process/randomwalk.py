@@ -1,5 +1,6 @@
 # numpydoc ignore=GL08
 
+
 import numpyro.distributions as dist
 
 from pyrenew.metaclass import RandomVariable
@@ -19,18 +20,20 @@ class RandomWalk(DifferencedProcess):
 
     def __init__(
         self,
+        name: str,
         step_rv: RandomVariable,
-        **kwargs,
-    ):
+        **kwargs: object,
+    ) -> None:
         """
-        Default constructor
+        Default constructor.
 
         Parameters
         ----------
+        name
+            A name for this random variable.
         step_rv
             RandomVariable representing a single step
             (difference) in the random walk.
-
         **kwargs
             Additional keyword arguments passed to the parent
             class constructor.
@@ -40,7 +43,10 @@ class RandomWalk(DifferencedProcess):
         None
         """
         super().__init__(
-            fundamental_process=IIDRandomSequence(element_rv=step_rv),
+            name=name,
+            fundamental_process=IIDRandomSequence(
+                name=f"{name}_iid_seq", element_rv=step_rv
+            ),
             differencing_order=1,
             **kwargs,
         )
@@ -56,27 +62,30 @@ class StandardNormalRandomWalk(RandomWalk):
 
     def __init__(
         self,
-        step_rv_name: str,
-        **kwargs,
-    ):
+        name: str,
+        **kwargs: object,
+    ) -> None:
         """
-        Default constructor
+        Default constructor.
+
         Parameters
         ----------
-        step_rv_name
-            Name for the DistributionalVariable
-            from which the Normal(0, 1)
-            steps are sampled.
+        name
+            A name for this random variable.
+            The internal step distribution is named
+            ``f"{name}_step"``.
         **kwargs
             Additional keyword arguments passed
             to the parent class constructor.
-        Return
-        ------
+
+        Returns
+        -------
         None
         """
         super().__init__(
+            name=name,
             step_rv=DistributionalVariable(
-                name=step_rv_name, distribution=dist.Normal(0.0, 1.0)
+                name=f"{name}_step", distribution=dist.Normal(0.0, 1.0)
             ),
             **kwargs,
         )
