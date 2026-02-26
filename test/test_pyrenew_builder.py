@@ -417,9 +417,9 @@ class TestMultiSignalModelHelpers:
     @pytest.mark.parametrize(
         "obs_start_dow, expected",
         [
-            (0, (0 - 3 % 7) % 7),
-            (3, (3 - 3 % 7) % 7),
-            (6, (6 - 3 % 7) % 7),
+            (0, (0 - 3) % 7),
+            (3, (3 - 3) % 7),
+            (6, (6 - 3) % 7),
         ],
     )
     def test_compute_first_day_dow(self, simple_builder, obs_start_dow, expected):
