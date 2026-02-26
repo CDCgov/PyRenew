@@ -20,5 +20,4 @@ __all__ = [
     "load_hospital_data_for_state",
     "load_weekly_hospital_data_for_state",
     "load_wastewater_data_for_state",
-    "load_ed_visits_data_for_state",
 ]
