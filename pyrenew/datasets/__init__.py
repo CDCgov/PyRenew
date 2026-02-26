@@ -1,10 +1,7 @@
 # numpydoc ignore=GL08
 
 from pyrenew.datasets.generation_interval import load_generation_interval
-from pyrenew.datasets.hospital_admissions import (
-    load_hospital_data_for_state,
-    load_weekly_hospital_data_for_state,
-)
+from pyrenew.datasets.hospital_admissions import load_hospital_data_for_state
 from pyrenew.datasets.infection_admission_interval import (
     load_infection_admission_interval,
 )
@@ -16,6 +13,5 @@ __all__ = [
     "load_infection_admission_interval",
     "load_generation_interval",
     "load_hospital_data_for_state",
-    "load_weekly_hospital_data_for_state",
     "load_wastewater_data_for_state",
 ]
