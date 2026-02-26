@@ -414,6 +414,19 @@ class TestMultiSignalModelHelpers:
         # Integer input should be converted to float
         assert jnp.issubdtype(padded.dtype, jnp.floating)
 
+    @pytest.mark.parametrize(
+        "obs_start_dow, expected",
+        [
+            (0, (0 - 3) % 7),
+            (3, (3 - 3) % 7),
+            (6, (6 - 3) % 7),
+        ],
+    )
+    def test_compute_first_day_dow(self, simple_builder, obs_start_dow, expected):
+        """Test that compute_first_day_dow offsets by n_initialization_points."""
+        model = simple_builder.build()
+        assert model.compute_first_day_dow(obs_start_dow) == expected
+
     def test_shift_times_adds_offset(self, simple_builder):
         """Test that shift_times shifts by n_initialization_points."""
         model = simple_builder.build()
