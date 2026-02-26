@@ -236,11 +236,11 @@ class _CountBase(BaseObservationProcess):
             Adjusted predicted counts, same shape as input.
         """
         dow_effect = self.day_of_week_rv()
+        self._deterministic("day_of_week_effect", dow_effect)
         n_timepoints = predicted.shape[0]
         daily_effect = dow_effect[
             get_sequential_day_of_week_indices(first_day_dow, n_timepoints)
         ]
-        self._deterministic("day_of_week_effect", daily_effect)
         if predicted.ndim == 2:
             daily_effect = daily_effect[:, None]
         return predicted * daily_effect

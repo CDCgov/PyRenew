@@ -729,7 +729,7 @@ class TestDayOfWeek:
 
         assert "ed_day_of_week_effect" in trace
         effect = trace["ed_day_of_week_effect"]["value"]
-        assert effect.shape == (10,)
+        assert effect.shape == (7,)
 
     def test_counts_by_subpop_2d_broadcasting(self):
         """Test day-of-week with CountsBySubpop 2D infections."""
@@ -835,6 +835,30 @@ class TestDayOfWeek:
         with numpyro.handlers.seed(rng_seed=42):
             with pytest.raises(ValueError, match="Day-of-week"):
                 process.sample(infections=infections, obs=None, first_day_dow=7)
+
+    def test_counts_by_subpop_dow_without_offset_raises(self):
+        """Test that first_day_dow=None raises for CountsBySubpop with day_of_week_rv."""
+        dow_effect = jnp.ones(7)
+        process = CountsBySubpop(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
+            noise=PoissonNoise(),
+            day_of_week_rv=DeterministicVariable("dow", dow_effect),
+        )
+        infections = jnp.ones((14, 2)) * 100
+        times = jnp.array([0, 1])
+        subpop_indices = jnp.array([0, 1])
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(ValueError, match="first_day_dow is required"):
+                process.sample(
+                    infections=infections,
+                    times=times,
+                    subpop_indices=subpop_indices,
+                    obs=None,
+                    first_day_dow=None,
+                )
 
 
 if __name__ == "__main__":
