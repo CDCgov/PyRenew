@@ -4,6 +4,7 @@ Observation processes for connecting infections to observed data.
 
 ``BaseObservationProcess`` is the abstract base. Concrete subclasses:
 
+- ``CountBase``: Base class for count observations (ascertainment x delay convolution)
 - ``Counts``: Aggregate counts (admissions, deaths)
 - ``CountsBySubpop``: Subpopulation-level counts
 - ``Measurements``: Continuous subpopulation-level signals (e.g., wastewater)
@@ -19,7 +20,7 @@ to observation constructors to control the output distribution.
 """
 
 from pyrenew.observation.base import BaseObservationProcess
-from pyrenew.observation.count_observations import Counts, CountsBySubpop
+from pyrenew.observation.count_observations import CountBase, Counts, CountsBySubpop
 from pyrenew.observation.measurements import Measurements
 from pyrenew.observation.negativebinomial import NegativeBinomialObservation
 from pyrenew.observation.noise import (
@@ -46,6 +47,7 @@ __all__ = [
     "HierarchicalNormalNoise",
     "VectorizedRV",
     # Observation processes
+    "CountBase",
     "Counts",
     "CountsBySubpop",
     "Measurements",
