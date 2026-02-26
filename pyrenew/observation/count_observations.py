@@ -11,13 +11,12 @@ import jax
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
-from pyrenew.arrayutils import tile_until_n
 from pyrenew.convolve import compute_prop_already_reported
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.noise import CountNoise
 from pyrenew.observation.types import ObservationSample
-from pyrenew.time import validate_dow
+from pyrenew.time import get_sequential_day_of_week_indices
 
 
 class _CountBase(BaseObservationProcess):
@@ -236,10 +235,11 @@ class _CountBase(BaseObservationProcess):
         ArrayLike
             Adjusted predicted counts, same shape as input.
         """
-        validate_dow(first_day_dow, "first_day_dow")
         dow_effect = self.day_of_week_rv()
         n_timepoints = predicted.shape[0]
-        daily_effect = tile_until_n(dow_effect, n_timepoints, offset=first_day_dow)
+        daily_effect = dow_effect[
+            get_sequential_day_of_week_indices(first_day_dow, n_timepoints)
+        ]
         self._deterministic("day_of_week_effect", daily_effect)
         if predicted.ndim == 2:
             daily_effect = daily_effect[:, None]
@@ -358,7 +358,11 @@ class Counts(_CountBase):
             `predicted` (predicted counts before noise, shape: n_total).
         """
         predicted_counts = self._predicted_obs(infections)
-        if self.day_of_week_rv is not None and first_day_dow is not None:
+        if self.day_of_week_rv is not None:
+            if first_day_dow is None:
+                raise ValueError(
+                    "first_day_dow is required when day_of_week_rv is set."
+                )
             predicted_counts = self._apply_day_of_week(predicted_counts, first_day_dow)
         if self.right_truncation_rv is not None and right_truncation_offset is not None:
             predicted_counts = self._apply_right_truncation(
@@ -523,7 +527,11 @@ class CountsBySubpop(_CountBase):
             `predicted` (predicted counts before noise, shape: n_total x n_subpops).
         """
         predicted_counts = self._predicted_obs(infections)
-        if self.day_of_week_rv is not None and first_day_dow is not None:
+        if self.day_of_week_rv is not None:
+            if first_day_dow is None:
+                raise ValueError(
+                    "first_day_dow is required when day_of_week_rv is set."
+                )
             predicted_counts = self._apply_day_of_week(predicted_counts, first_day_dow)
         if self.right_truncation_rv is not None and right_truncation_offset is not None:
             predicted_counts = self._apply_right_truncation(

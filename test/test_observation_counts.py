@@ -594,8 +594,8 @@ class TestDayOfWeek:
 
         assert jnp.allclose(result.predicted, 10.0)
 
-    def test_dow_rv_without_offset_unchanged(self, simple_delay_pmf):
-        """Test that first_day_dow=None skips adjustment."""
+    def test_dow_rv_without_offset_raises(self, simple_delay_pmf):
+        """Test that first_day_dow=None raises when day_of_week_rv is set."""
         dow_effect = jnp.array([2.0, 0.5, 0.5, 0.5, 0.5, 1.5, 1.5])
         process = Counts(
             name="test",
@@ -607,9 +607,8 @@ class TestDayOfWeek:
         infections = jnp.ones(20) * 1000
 
         with numpyro.handlers.seed(rng_seed=42):
-            result = process.sample(infections=infections, obs=None, first_day_dow=None)
-
-        assert jnp.allclose(result.predicted, 10.0)
+            with pytest.raises(ValueError, match="first_day_dow is required"):
+                process.sample(infections=infections, obs=None, first_day_dow=None)
 
     def test_uniform_dow_effect_unchanged(self, simple_delay_pmf):
         """Test that uniform effect [1,1,...,1] leaves predictions unchanged."""

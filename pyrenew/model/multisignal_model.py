@@ -152,7 +152,7 @@ class MultiSignalModel(Model):
             Day of the week for element 0 of the shared time axis.
         """
         n_init = self.latent.n_initialization_points
-        return (obs_start_dow - n_init % 7) % 7
+        return (obs_start_dow - n_init) % 7
 
     def shift_times(self, times: jnp.ndarray) -> jnp.ndarray:
         """
