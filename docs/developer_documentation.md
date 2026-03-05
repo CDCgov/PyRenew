@@ -12,7 +12,7 @@
 
 ## Installation for Developers
 
-- `uv sync --extra dev`
+- `uv sync --group dev`
 - `pre-commit install`
 
 ## Coding Conventions
