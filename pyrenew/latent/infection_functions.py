@@ -151,7 +151,7 @@ def compute_infections_with_susceptible_depletion(
             "i...,i...->...", reversed_generation_interval_pmf, infection_history
         )
 
-        I_t = S_t * (1 - jnp.exp(-(Rt_t * infectiousness) / population))
+        I_t = S_t * (-jnp.expm1(-(Rt_t * infectiousness) / population))
 
         Rt_adj_t = jnp.where(infectiousness > 0, I_t / infectiousness, 0.0)
 

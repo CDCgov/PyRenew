@@ -44,7 +44,7 @@ def _infection_w_sus_depletion(
 
     for t in range(T):
         infectiousness = jnp.dot(Inf[t : t + len_gen], jnp.flip(gen_int))
-        Inf[t + len_gen] = S[t] * (1 - jnp.exp(-Rt[t] * infectiousness / pop))
+        Inf[t + len_gen] = S[t] * (-jnp.expm1(-Rt[t] * infectiousness / pop))
         S[t + 1] = S[t] - Inf[t + len_gen]
         R_adj[t] = np.where(infectiousness > 0, Inf[t + len_gen] / infectiousness, 0)
 
