@@ -14,6 +14,7 @@ from pyrenew.latent.hierarchical_priors import (
 from pyrenew.latent.infection_functions import (
     compute_infections_from_rt,
     compute_infections_from_rt_with_feedback,
+    compute_infections_with_susceptible_depletion,
     logistic_susceptibility_adjustment,
 )
 from pyrenew.latent.infection_initialization_method import (
@@ -26,6 +27,9 @@ from pyrenew.latent.infection_initialization_process import (
     InfectionInitializationProcess,
 )
 from pyrenew.latent.infections import Infections
+from pyrenew.latent.infections_with_susceptible_depletion import (
+    InfectionsWithSusceptibleDepletion,
+)
 from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
 from pyrenew.latent.temporal_processes import (
     AR1,
@@ -39,12 +43,14 @@ __all__ = [
     "logistic_susceptibility_adjustment",
     "compute_infections_from_rt",
     "compute_infections_from_rt_with_feedback",
+    "compute_infections_with_susceptible_depletion",
     "InfectionInitializationMethod",
     "InitializeInfectionsExponentialGrowth",
     "InitializeInfectionsFromVec",
     "InitializeInfectionsZeroPad",
     "InfectionInitializationProcess",
     "InfectionsWithFeedback",
+    "InfectionsWithSusceptibleDepletion",
     # Base classes and types
     "BaseLatentInfectionProcess",
     "LatentSample",
