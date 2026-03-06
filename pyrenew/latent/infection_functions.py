@@ -87,7 +87,8 @@ def compute_infections_with_susceptible_depletion(
     I0: ArrayLike,
     Rt_raw: ArrayLike,
     reversed_generation_interval_pmf: ArrayLike,
-    S0: float,
+    S0: ArrayLike,
+    population: ArrayLike,
 ) -> tuple:
     """
     Generate infections according to a
@@ -113,27 +114,30 @@ def compute_infections_with_susceptible_depletion(
         an infection two time units in the past, etc.
     S0
         Initial susceptible population.
+    population
+        Total population size.
 
     Returns
     -------
     tuple
-        A tuple ``(infections, Rt_adjusted)``,
-        where `Rt_adjusted` is the susceptible-depletion-adjusted
-        timeseries of the effective reproduction number $\mathcal{R}(t)$
-        and `infections` is the incident infection timeseries.
+        A tuple ``(infections, Rt_adjusted, S_latest)``,
+        where `infections` is the incident infection timeseries,
+        `Rt_adjusted` is the susceptible-depletion-adjusted
+        timeseries of the effective reproduction number $\\mathcal{R}(t)$,
+        and `S_latest` is the latest susceptible population.
 
     Notes
     -----
     This function implements the following renewal process with susceptible depletion:
 
     ```math
-    I(t) & = S(t) \left( 1 - \exp\left(\frac{- \mathcal{R}(t) \lambda(t)}{S(t)} \right) \right)
+    I(t) & = S(t) \\left( 1 - \\exp\\left(\\frac{- \\mathcal{R}(t) \\lambda(t)}{S(t)} \\right) \\right)
 
-    \lambda(t) & = \sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
-    S(t) & = \max\left(1, S_0 - \sum_{\tau=1}^{t-1} I(\tau)\right)
+    \\lambda(t) & = \\sum_{\\tau=1}^{T_g}I(t - \\tau)g(\\tau)
+    S(t) & = \\max\\left(1, S_0 - \\sum_{\\tau=1}^{t-1} I(\\tau)\\right)
     ```
 
-    where $\mathcal{R}(t)$ is the reproductive number, $g(t)$
+    where $\\mathcal{R}(t)$ is the reproductive number, $g(t)$
     is the generation interval PMF, $T_g$ is the max-length of the
     generation interval, and $S_0$ is the initial susceptible population.
     """
@@ -147,7 +151,7 @@ def compute_infections_with_susceptible_depletion(
             "i...,i...->...", reversed_generation_interval_pmf, infection_history
         )
 
-        I_t = S_t * (-jnp.expm1(-(Rt_t * infectiousness) / S_t))
+        I_t = S_t * (1 - jnp.exp(-(Rt_t * infectiousness) / population))
 
         Rt_adj_t = jnp.where(infectiousness > 0, I_t / infectiousness, 0.0)
 
@@ -159,8 +163,8 @@ def compute_infections_with_susceptible_depletion(
 
         return (S_next, history_next), (I_t, Rt_adj_t)
 
-    _, (infections, Rt_adjusted) = jax.lax.scan(_scanner, (S0, I0), Rt_raw)
-    return infections, Rt_adjusted
+    (S_latest, _), (infections, Rt_adjusted) = jax.lax.scan(_scanner, (S0, I0), Rt_raw)
+    return infections, Rt_adjusted, S_latest
 
 
 def compute_infections_from_rt_with_feedback(

@@ -80,6 +80,7 @@ class InfectionsWithSusceptibleDepletion(RandomVariable):
         I0: ArrayLike,
         gen_int: ArrayLike,
         S0: ArrayLike,
+        population: ArrayLike,
         **kwargs: object,
     ) -> InfectionsSuspDepletionSample:
         """
@@ -98,6 +99,8 @@ class InfectionsWithSusceptibleDepletion(RandomVariable):
             Generation interval PMF.
         S0
             Initial susceptible population.
+        population
+            Total population size.
         **kwargs
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
@@ -121,6 +124,18 @@ class InfectionsWithSusceptibleDepletion(RandomVariable):
                 f"and Rt of batch shape {Rt.shape[1:]}."
             )
 
+        if jnp.shape(S0) != Rt.shape[1:]:
+            raise ValueError(
+                "S0 must match Rt batch shape exactly. "
+                f"Got S0 shape {jnp.shape(S0)} and Rt batch shape {Rt.shape[1:]}."
+            )
+
+        if jnp.shape(population) != Rt.shape[1:]:
+            raise ValueError(
+                "population must match Rt batch shape exactly. "
+                f"Got population shape {jnp.shape(population)} and Rt batch shape {Rt.shape[1:]}."
+            )
+
         gen_int_rev = jnp.flip(gen_int)
 
         I0 = I0[-gen_int_rev.size :]
@@ -128,11 +143,13 @@ class InfectionsWithSusceptibleDepletion(RandomVariable):
         (
             post_initialization_infections,
             Rt_adj,
+            _,
         ) = inf.compute_infections_with_susceptible_depletion(
             I0=I0,
             Rt_raw=Rt,
             reversed_generation_interval_pmf=gen_int_rev,
             S0=S0,
+            population=population,
         )
 
         return InfectionsSuspDepletionSample(
