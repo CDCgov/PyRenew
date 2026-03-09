@@ -12,6 +12,8 @@ import operator
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import pytest
+from pyrenew.process.periodiceffect import DayOfWeekEffect, PeriodicEffect
+from pyrenew.process.rtperiodicdiffar import RtPeriodicDiffARProcess
 
 from pyrenew.deterministic import (
     DeterministicPMF,
@@ -42,10 +44,8 @@ from pyrenew.observation import (
 )
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.iidrandomsequence import IIDRandomSequence, StandardNormalSequence
-from pyrenew.process.periodiceffect import DayOfWeekEffect, PeriodicEffect
 from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
 from pyrenew.process.randomwalk import StandardNormalRandomWalk
-from pyrenew.process.rtperiodicdiffar import RtPeriodicDiffARProcess
 from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 from test.test_helpers import ConcreteMeasurements
 
