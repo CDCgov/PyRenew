@@ -172,15 +172,16 @@ class DifferencedProcess(RandomVariable):
             )
         n_diffs = n - self.differencing_order
 
-        if n_diffs > 0:
-            diff_samp = self.fundamental_process.sample(
-                *args,
-                n=n_diffs,
-                init_vals=fundamental_process_init_vals,
-                **kwargs,
-            )
-            diffs = diff_samp
-        else:
-            diffs = jnp.array([])
+        with self.scope():
+            if n_diffs > 0:
+                diff_samp = self.fundamental_process.sample(
+                    *args,
+                    n=n_diffs,
+                    init_vals=fundamental_process_init_vals,
+                    **kwargs,
+                )
+                diffs = diff_samp
+            else:
+                diffs = jnp.array([])
         integrated_ts = integrate_discrete(init_vals, diffs)[:n]
         return integrated_ts

@@ -78,11 +78,12 @@ class PeriodicEffect(RandomVariable):
         ArrayLike
         """
 
-        return au.tile_until_n(
-            data=self.quantity_to_broadcast.sample(**kwargs),
-            n_timepoints=duration,
-            offset=self.offset,
-        )
+        with self.scope():
+            return au.tile_until_n(
+                data=self.quantity_to_broadcast.sample(**kwargs),
+                n_timepoints=duration,
+                offset=self.offset,
+            )
 
 
 class DayOfWeekEffect(PeriodicEffect):
