@@ -37,7 +37,7 @@ class IIDRandomSequence(RandomVariable):
         Returns
         -------
         None
-        """ 
+        """
         self.element_rv = element_rv
         super().__init__(name=name, **kwargs)
 
@@ -85,7 +85,7 @@ class IIDRandomSequence(RandomVariable):
                     # numpydoc ignore=GL08
                     el = self.element_rv.sample(*args, **kwargs)
                     return None, el
-                
+
                 _, result = scan(
                     transition,
                     xs=None,
