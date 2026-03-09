@@ -16,10 +16,9 @@ from pyrenew.observation import (
     CountsBySubpop,
     HierarchicalNormalNoise,
     PoissonNoise,
-    VectorizedRV,
 )
 from pyrenew.observation.measurements import Measurements
-from pyrenew.randomvariable import DistributionalVariable
+from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 
 # ---------------------------------------------------------------------------
 # Helpers – minimal concrete subclass of Measurements for testing
@@ -109,11 +108,11 @@ def measurements_proc():
     StubMeasurements
         A StubMeasurements observation process.
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
     )

@@ -38,13 +38,16 @@ from pyrenew.observation import (
     NegativeBinomialNoise,
     NegativeBinomialObservation,
     PoissonNoise,
-    VectorizedRV,
 )
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.iidrandomsequence import IIDRandomSequence, StandardNormalSequence
 from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
 from pyrenew.process.randomwalk import StandardNormalRandomWalk
-from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
+from pyrenew.randomvariable import (
+    DistributionalVariable,
+    TransformedVariable,
+    VectorizedVariable,
+)
 from test.test_helpers import ConcreteMeasurements
 
 # =============================================================================
@@ -92,11 +95,11 @@ def _make_measurements():
     -------
     instantiated object
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.1)),
     )
@@ -115,11 +118,11 @@ def _make_hierarchical_normal_noise():
     -------
     instantiated object
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.1)),
     )
@@ -455,12 +458,12 @@ def test_random_variable_rejects_invalid_name(bad_name):
         pytest.param(_make_counts_by_subpop(), "test_subpop", id="CountsBySubpop"),
         pytest.param(_make_measurements(), "test_ww", id="ConcreteMeasurements"),
         pytest.param(
-            VectorizedRV(
+            VectorizedVariable(
                 name="test_vec",
                 rv=DistributionalVariable("inner", dist.Normal(0, 1)),
             ),
             "test_vec",
-            id="VectorizedRV",
+            id="VectorizedVariable",
         ),
     ],
 )
