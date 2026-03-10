@@ -76,7 +76,7 @@ We load a delay distribution from PyRenew's example datasets, compute summary st
 
 ```{python}
 # | label: delay-distribution
-inf_hosp_int = datasets.load_infection_admission_interval()
+inf_hosp_int = datasets.load_example_infection_admission_interval()
 hosp_delay_pmf = jnp.array(inf_hosp_int["probability_mass"].to_numpy())
 delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
 

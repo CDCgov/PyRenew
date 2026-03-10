@@ -1,16 +1,19 @@
-# numpydoc ignore=GL08
+"""
+Example infection to admission delay distribution
+"""
 
 from importlib.resources import files
 
 import polars as pl
 
 
-def load_infection_admission_interval() -> pl.DataFrame:
+def load_example_infection_admission_interval() -> pl.DataFrame:
     """
-    Load the infection to admission interval
+    Load an example infection to hospital admission interval
+    distribution.
 
-    This dataset contains the infection to admission interval distribution for
-    COVID-19.
+    This dataset contains an example infection to admission interval
+    distribution for COVID-19.
 
     Returns
     -------
