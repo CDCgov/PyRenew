@@ -38,34 +38,6 @@ class DeterministicVariable(RandomVariable):
 
         return None
 
-    @staticmethod
-    def validate(value: ArrayLike) -> None:
-        """
-        Validates input to DeterministicVariable
-
-        Parameters
-        ----------
-        value
-            An ArrayLike object.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        Exception
-            If the input value object is not an ArrayLike object.
-        """
-        if not isinstance(value, ArrayLike):
-            raise ValueError(
-                f"value {value} passed to a DeterministicVariable "
-                f"is of type {type(value).__name__}, expected "
-                "an ArrayLike object"
-            )
-
-        return None
-
     def sample(
         self,
         record: bool = False,

@@ -33,10 +33,6 @@ class VectorizedVariable(RandomVariable):
         self.rv = rv
         self.plate_name = f"{name}_plate"
 
-    def validate(self) -> None:  # pragma: no cover
-        """Validate the underlying RV."""
-        self.rv.validate()
-
     def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample n_groups values using numpyro.plate.

@@ -40,30 +40,9 @@ class NegativeBinomialObservation(RandomVariable):
         -------
         None
         """
-
-        NegativeBinomialObservation.validate(concentration_rv)
-
         super().__init__(name=name)
         self.concentration_rv = concentration_rv
         self.eps = eps
-
-    @staticmethod
-    def validate(concentration_rv: RandomVariable) -> None:
-        """
-        Check that the concentration_rv is actually a RandomVariable
-
-        Parameters
-        ----------
-        concentration_rv
-            RandomVariable from which to sample the positive concentration
-            parameter of the negative binomial.
-
-        Returns
-        -------
-        None
-        """
-        assert isinstance(concentration_rv, RandomVariable)
-        return None
 
     def sample(
         self,

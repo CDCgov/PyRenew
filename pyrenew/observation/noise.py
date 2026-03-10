@@ -76,18 +76,6 @@ class CountNoise(ABC):
         """
         pass  # pragma: no cover
 
-    @abstractmethod
-    def validate(self) -> None:
-        """
-        Validate noise model parameters.
-
-        Raises
-        ------
-        ValueError
-            If parameters are invalid.
-        """
-        pass  # pragma: no cover
-
 
 class PoissonNoise(CountNoise):
     """
@@ -101,10 +89,6 @@ class PoissonNoise(CountNoise):
     def __repr__(self) -> str:
         """Return string representation."""
         return "PoissonNoise()"
-
-    def validate(self) -> None:
-        """Validate Poisson noise (always valid)."""
-        pass
 
     def sample(
         self,
@@ -175,7 +159,7 @@ class NegativeBinomialNoise(CountNoise):
         """Return string representation."""
         return f"NegativeBinomialNoise(concentration_rv={self.concentration_rv!r})"
 
-    def validate(self) -> None:
+    def validate_concentration_rv(self) -> None:
         """
         Validate concentration is positive.
 
@@ -266,18 +250,6 @@ class MeasurementNoise(ABC):
         """
         pass  # pragma: no cover
 
-    @abstractmethod
-    def validate(self) -> None:
-        """
-        Validate noise model parameters.
-
-        Raises
-        ------
-        ValueError
-            If parameters are invalid.
-        """
-        pass  # pragma: no cover
-
 
 class HierarchicalNormalNoise(MeasurementNoise):
     """
@@ -328,16 +300,6 @@ class HierarchicalNormalNoise(MeasurementNoise):
             f"sensor_mode_rv={self.sensor_mode_rv!r}, "
             f"sensor_sd_rv={self.sensor_sd_rv!r})"
         )
-
-    def validate(self) -> None:
-        """
-        Validate noise parameters.
-
-        Notes
-        -----
-        Full validation requires n_groups, which is only available during sample().
-        """
-        pass
 
     def sample(
         self,

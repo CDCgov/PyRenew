@@ -64,14 +64,6 @@ class RandomVariable(metaclass=ABCMeta):
         """
         pass
 
-    @staticmethod
-    @abstractmethod
-    def validate(**kwargs: object) -> None:
-        """
-        Validation of kwargs to be implemented in subclasses.
-        """
-        pass
-
     def __call__(self, **kwargs: object) -> tuple:
         """
         Alias for `sample`.
@@ -88,11 +80,6 @@ class Model(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, **kwargs: object) -> None:  # numpydoc ignore=GL08
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def validate() -> None:  # numpydoc ignore=GL08
         pass
 
     @abstractmethod
