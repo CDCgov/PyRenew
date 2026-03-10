@@ -1,15 +1,17 @@
-# numpydoc ignore=GL08
+"""
+Tests for the pyrenew.datasets module
+"""
 
 import numpy.testing as testing
 
 from pyrenew.datasets import (
-    load_infection_admission_interval,
+    load_example_infection_admission_interval,
 )
 
 
 def test_infection_admission_interval():
     """Test that the infection to admission interval dataset can be properly loaded"""
-    df = load_infection_admission_interval()
+    df = load_example_infection_admission_interval()
     assert len(df) > 0
     assert df.shape == (55, 2)
 
