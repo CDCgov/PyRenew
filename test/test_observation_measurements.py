@@ -11,28 +11,9 @@ import numpyro.distributions as dist
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF
-from pyrenew.observation import (
-    HierarchicalNormalNoise,
-    VectorizedRV,
-)
-from pyrenew.randomvariable import DistributionalVariable
+from pyrenew.observation import HierarchicalNormalNoise
+from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from test.test_helpers import ConcreteMeasurements
-
-
-class TestVectorizedRV:
-    """Test VectorizedRV wrapper class."""
-
-    def test_init_and_sample(self):
-        """Test VectorizedRV initialization and sampling."""
-        rv = DistributionalVariable("test", dist.Normal(0, 1.0))
-        vectorized = VectorizedRV(name="test_vectorized", rv=rv)
-
-        with numpyro.handlers.seed(rng_seed=42):
-            samples = vectorized.sample(n_groups=5)
-
-        assert samples.shape == (5,)
-        # Verify samples are actually different (not degenerate)
-        assert jnp.std(samples) > 0
 
 
 class TestHierarchicalNormalNoise:
@@ -235,11 +216,11 @@ class TestConcreteMeasurements:
         shedding_pmf = jnp.array([1.0])
 
         # Use wide priors to ensure sensors get distinguishable biases
-        sensor_mode_rv = VectorizedRV(
+        sensor_mode_rv = VectorizedVariable(
             name="sensor_mode_rv",
             rv=DistributionalVariable("mode", dist.Normal(0, 2.0)),
         )
-        sensor_sd_rv = VectorizedRV(
+        sensor_sd_rv = VectorizedVariable(
             name="sensor_sd_rv",
             rv=DistributionalVariable("sd", dist.TruncatedNormal(0.1, 0.05, low=0.01)),
         )
