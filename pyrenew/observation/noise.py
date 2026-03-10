@@ -90,6 +90,13 @@ class PoissonNoise(CountNoise):
         """Return string representation."""
         return "PoissonNoise()"
 
+    @staticmethod
+    def validate() -> None:
+        """
+        PoissonNoise always passes validation.
+        """
+        pass
+
     def sample(
         self,
         name: str,

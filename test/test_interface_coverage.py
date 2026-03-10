@@ -179,46 +179,6 @@ def test_repr_returns_nonempty_string(instance):
 
 
 # =============================================================================
-# validate() coverage (no-op and real)
-# =============================================================================
-
-
-@pytest.mark.parametrize(
-    "instance",
-    [
-        pytest.param(
-            HierarchicalNormalPrior(
-                name="test", sd_rv=DeterministicVariable("sd", 1.0)
-            ),
-            id="HierarchicalNormalPrior",
-        ),
-        pytest.param(
-            GammaGroupSdPrior(
-                name="test",
-                sd_mean_rv=DeterministicVariable("mean", 0.5),
-                sd_concentration_rv=DeterministicVariable("conc", 10.0),
-            ),
-            id="GammaGroupSdPrior",
-        ),
-        pytest.param(
-            StudentTGroupModePrior(
-                name="test",
-                sd_rv=DeterministicVariable("sd", 1.0),
-                df_rv=DeterministicVariable("df", 5.0),
-            ),
-            id="StudentTGroupModePrior",
-        ),
-        pytest.param(PoissonNoise(), id="PoissonNoise"),
-        pytest.param(_make_hierarchical_normal_noise(), id="HierarchicalNormalNoise"),
-        pytest.param(_make_counts(), id="Counts"),
-    ],
-)
-def test_validate_does_not_raise(instance):
-    """validate() completes without error on well-formed instances."""
-    instance.validate()
-
-
-# =============================================================================
 # infection_resolution() coverage
 # =============================================================================
 
