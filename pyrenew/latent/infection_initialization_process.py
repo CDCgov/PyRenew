@@ -6,7 +6,7 @@ from jax.typing import ArrayLike
 from pyrenew.latent.infection_initialization_method import (
     InfectionInitializationMethod,
 )
-from pyrenew.metaclass import RandomVariable, _assert_type
+from pyrenew.metaclass import RandomVariable
 
 
 class InfectionInitializationProcess(RandomVariable):
@@ -33,36 +33,9 @@ class InfectionInitializationProcess(RandomVariable):
         -------
         None
         """
-        InfectionInitializationProcess.validate(I_pre_init_rv, infection_init_method)
-
         super().__init__(name=name)
         self.I_pre_init_rv = I_pre_init_rv
         self.infection_init_method = infection_init_method
-
-    @staticmethod
-    def validate(
-        I_pre_init_rv: RandomVariable,
-        infection_init_method: InfectionInitializationMethod,
-    ) -> None:
-        """Validate the input arguments to the InfectionInitializationProcess class constructor
-
-        Parameters
-        ----------
-        I_pre_init_rv
-            A random variable representing the number of infections that occur at some time before the renewal process begins.
-        infection_init_method
-            An method to generate the initial infections.
-
-        Returns
-        -------
-        None
-        """
-        _assert_type("I_pre_init_rv", I_pre_init_rv, RandomVariable)
-        _assert_type(
-            "infection_init_method",
-            infection_init_method,
-            InfectionInitializationMethod,
-        )
 
     def sample(self) -> ArrayLike:
         """Sample the Infection Initialization Process.
