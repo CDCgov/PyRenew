@@ -161,7 +161,9 @@ The model code is identical whether the rate is fixed or estimated:
 ```{python}
 # | label: interchangeability
 hosp_delay_pmf = jnp.array(
-    datasets.load_infection_admission_interval()["probability_mass"].to_numpy()
+    datasets.load_example_infection_admission_interval()[
+        "probability_mass"
+    ].to_numpy()
 )
 
 # Fixed ascertainment rate

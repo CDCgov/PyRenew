@@ -38,15 +38,16 @@ from pyrenew.observation import (
     NegativeBinomialNoise,
     NegativeBinomialObservation,
     PoissonNoise,
-    VectorizedRV,
 )
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.iidrandomsequence import IIDRandomSequence, StandardNormalSequence
-from pyrenew.process.periodiceffect import DayOfWeekEffect, PeriodicEffect
 from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
 from pyrenew.process.randomwalk import StandardNormalRandomWalk
-from pyrenew.process.rtperiodicdiffar import RtPeriodicDiffARProcess
-from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
+from pyrenew.randomvariable import (
+    DistributionalVariable,
+    TransformedVariable,
+    VectorizedVariable,
+)
 from test.test_helpers import ConcreteMeasurements
 
 # =============================================================================
@@ -94,11 +95,11 @@ def _make_measurements():
     -------
     instantiated object
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.1)),
     )
@@ -117,33 +118,15 @@ def _make_hierarchical_normal_noise():
     -------
     instantiated object
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.1)),
     )
     return HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
-
-
-def _make_rt_periodic():
-    """
-    Build an RtPeriodicDiffARProcess instance with name "test_rt_periodic".
-
-    Returns
-    -------
-    RtPeriodicDiffARProcess
-    """
-    return RtPeriodicDiffARProcess(
-        name="test_rt_periodic",
-        offset=0,
-        period_size=7,
-        log_rt_rv=DeterministicVariable("log_rt", jnp.array([0.1, 0.2])),
-        autoreg_rv=DeterministicVariable("autoreg", jnp.array([0.7])),
-        periodic_diff_sd_rv=DeterministicVariable("sd", jnp.array([0.1])),
-    )
 
 
 def _make_infections_with_feedback():
@@ -432,31 +415,6 @@ def test_random_variable_rejects_invalid_name(bad_name):
             "test_snrw",
             id="StandardNormalRandomWalk",
         ),
-        pytest.param(
-            PeriodicEffect(
-                name="test_pe",
-                offset=0,
-                quantity_to_broadcast=DeterministicVariable(
-                    "qty", jnp.array([1.0, 2.0])
-                ),
-            ),
-            "test_pe",
-            id="PeriodicEffect",
-        ),
-        pytest.param(
-            DayOfWeekEffect(
-                name="test_dow",
-                offset=0,
-                quantity_to_broadcast=DeterministicVariable("qty", jnp.ones(7)),
-            ),
-            "test_dow",
-            id="DayOfWeekEffect",
-        ),
-        pytest.param(
-            _make_rt_periodic(),
-            "test_rt_periodic",
-            id="RtPeriodicDiffARProcess",
-        ),
         pytest.param(Infections(name="test_inf"), "test_inf", id="Infections"),
         pytest.param(
             _make_infections_with_feedback(),
@@ -500,12 +458,12 @@ def test_random_variable_rejects_invalid_name(bad_name):
         pytest.param(_make_counts_by_subpop(), "test_subpop", id="CountsBySubpop"),
         pytest.param(_make_measurements(), "test_ww", id="ConcreteMeasurements"),
         pytest.param(
-            VectorizedRV(
+            VectorizedVariable(
                 name="test_vec",
                 rv=DistributionalVariable("inner", dist.Normal(0, 1)),
             ),
             "test_vec",
-            id="VectorizedRV",
+            id="VectorizedVariable",
         ),
     ],
 )
@@ -548,17 +506,6 @@ def test_hierarchical_infections_name(gen_int_rv):
                 ("process.fundamental_process", "diff_ar1_fundamental"),
             ],
             id="DifferencedAR1",
-        ),
-        pytest.param(
-            _make_rt_periodic(),
-            [
-                ("ar_diff", "test_rt_periodic_diff"),
-                (
-                    "ar_diff.fundamental_process",
-                    "test_rt_periodic_diff_fundamental",
-                ),
-            ],
-            id="RtPeriodicDiffARProcess",
         ),
         pytest.param(
             ProcessRandomWalk(

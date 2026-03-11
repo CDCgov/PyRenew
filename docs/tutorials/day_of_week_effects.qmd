@@ -95,7 +95,9 @@ The only difference is whether `day_of_week_rv` is provided.
 ```{python}
 # | label: create-processes
 hosp_delay_pmf = jnp.array(
-    datasets.load_infection_admission_interval()["probability_mass"].to_numpy()
+    datasets.load_example_infection_admission_interval()[
+        "probability_mass"
+    ].to_numpy()
 )
 delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
 ihr_rv = DeterministicVariable("ihr", 0.01)
