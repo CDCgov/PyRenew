@@ -36,7 +36,6 @@ class BaseObservationProcess(RandomVariable):
 
     Subclasses must implement:
 
-    - ``validate()``: Validate parameters (call ``_validate_pmf()`` for PMFs)
     - ``lookback_days()``: Return PMF length for initialization
     - ``infection_resolution()``: Return ``"aggregate"`` or ``"subpop"``
     - ``_predicted_obs()``: Transform infections to predicted values
@@ -78,22 +77,6 @@ class BaseObservationProcess(RandomVariable):
         """
         super().__init__(name=name)
         self.temporal_pmf_rv = temporal_pmf_rv
-
-    @abstractmethod
-    def validate(self) -> None:
-        """
-        Validate observation process parameters.
-
-        Subclasses must implement this method to validate all parameters.
-        Typically this involves calling ``_validate_pmf()`` for the PMF
-        and adding any additional parameter-specific validation.
-
-        Raises
-        ------
-        ValueError
-            If any parameters fail validation.
-        """
-        pass  # pragma: no cover
 
     @abstractmethod
     def lookback_days(self) -> int:

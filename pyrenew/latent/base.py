@@ -287,24 +287,6 @@ class BaseLatentInfectionProcess(RandomVariable):
         return len(self.gen_int_rv())
 
     @abstractmethod
-    def validate(self) -> None:
-        """
-        Validate latent process parameters.
-
-        Subclasses must implement this method to validate all parameters specific
-        to their implementation (e.g., temporal process parameters, I0 parameters).
-
-        Common validation (n_initialization_points, gen_int_rv) is performed in
-        __init__. Population structure validation is performed at sample time.
-
-        Raises
-        ------
-        ValueError
-            If any parameters fail validation
-        """
-        pass  # pragma: no cover
-
-    @abstractmethod
     def sample(
         self,
         n_days_post_init: int,

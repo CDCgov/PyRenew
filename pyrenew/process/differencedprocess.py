@@ -100,12 +100,6 @@ class DifferencedProcess(RandomVariable):
                 f"{differencing_order}"
             )
 
-    def validate(self) -> None:
-        """
-        Empty validation method.
-        """
-        pass
-
     def sample(
         self,
         init_vals: ArrayLike,
