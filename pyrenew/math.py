@@ -27,6 +27,7 @@ def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
     jnp.ndarray
         The resulting array ``[1, ..., n]``.
     """
+    vec = jnp.asarray(vec)
     return jnp.arange(1, jnp.size(vec) + 1)
 
 
