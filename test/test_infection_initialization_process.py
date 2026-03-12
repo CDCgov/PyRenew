@@ -2,7 +2,6 @@
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
-import pytest
 
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
@@ -56,18 +55,3 @@ def test_infection_initialization_process():
 
     # Vec (identity passthrough): should equal jnp.arange(n_timepoints)
     assert jnp.array_equal(vec_result, jnp.arange(n_timepoints))
-
-    # Check that the InfectionInitializationProcess class raises an error when the wrong type of I0 is passed
-    with pytest.raises(TypeError):
-        InfectionInitializationProcess(
-            "vec_model",
-            jnp.arange(n_timepoints),
-            InitializeInfectionsFromVec(n_timepoints),
-        )
-
-    with pytest.raises(TypeError):
-        InfectionInitializationProcess(
-            "vec_model",
-            DeterministicVariable(name="I0", value=jnp.arange(n_timepoints)),
-            3,
-        )

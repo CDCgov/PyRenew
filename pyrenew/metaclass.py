@@ -10,35 +10,6 @@ from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_sample
 
 
-def _assert_type(arg_name: str, value: object, expected_type: type) -> None:
-    """
-    Matches TypeError arising during validation
-
-    Parameters
-    ----------
-    arg_name
-        Name of the argument
-    value
-        The object to be validated
-    expected_type
-        The expected object type
-
-    Raises
-    ------
-    TypeError
-        If `value` is not an instance of `expected_type`.
-
-    Returns
-    -------
-    None
-    """
-
-    if not isinstance(value, expected_type):
-        raise TypeError(
-            f"{arg_name} must be an instance of {expected_type}. Got {type(value)}"
-        )
-
-
 class RandomVariable(metaclass=ABCMeta):
     """
     Abstract base class for latent and observed random variables.
@@ -93,14 +64,6 @@ class RandomVariable(metaclass=ABCMeta):
         """
         pass
 
-    @staticmethod
-    @abstractmethod
-    def validate(**kwargs: object) -> None:
-        """
-        Validation of kwargs to be implemented in subclasses.
-        """
-        pass
-
     def __call__(self, **kwargs: object) -> tuple:
         """
         Alias for `sample`.
@@ -117,11 +80,6 @@ class Model(metaclass=ABCMeta):
 
     @abstractmethod
     def __init__(self, **kwargs: object) -> None:  # numpydoc ignore=GL08
-        pass
-
-    @staticmethod
-    @abstractmethod
-    def validate() -> None:  # numpydoc ignore=GL08
         pass
 
     @abstractmethod

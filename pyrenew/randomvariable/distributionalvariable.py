@@ -52,7 +52,7 @@ class DynamicDistributionalVariable(RandomVariable):
         """
 
         super().__init__(name=name)
-        self.validate(distribution_constructor)
+        self._validate_distribution_constructor(distribution_constructor)
         self.distribution_constructor = distribution_constructor
         if reparam is not None:
             self.reparam_dict = {self.name: reparam}
@@ -68,7 +68,7 @@ class DynamicDistributionalVariable(RandomVariable):
         return None
 
     @staticmethod
-    def validate(distribution_constructor: any) -> None:
+    def _validate_distribution_constructor(distribution_constructor: object) -> None:
         """
         Confirm that the distribution_constructor is
         callable.
@@ -192,7 +192,7 @@ class StaticDistributionalVariable(RandomVariable):
         """
 
         super().__init__(name=name)
-        self.validate(distribution)
+        self._validate_distribution(distribution)
         self.distribution = distribution
         if reparam is not None:
             self.reparam_dict = {self.name: reparam}
@@ -202,7 +202,7 @@ class StaticDistributionalVariable(RandomVariable):
         return None
 
     @staticmethod
-    def validate(distribution: any) -> None:
+    def _validate_distribution(distribution: object) -> None:
         """
         Validation of the distribution.
         """

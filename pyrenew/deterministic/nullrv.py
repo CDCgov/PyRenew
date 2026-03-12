@@ -19,19 +19,7 @@ class NullVariable(DeterministicVariable):
         None
         """
         RandomVariable.__init__(self, name="null")
-        self.validate()
 
-        return None
-
-    @staticmethod
-    def validate() -> None:
-        """
-        Not used
-
-        Returns
-        -------
-        None
-        """
         return None
 
     def sample(
@@ -64,19 +52,7 @@ class NullObservation(NullVariable):
         None
         """
         RandomVariable.__init__(self, name="null_observation")
-        self.validate()
 
-        return None
-
-    @staticmethod
-    def validate() -> None:
-        """
-        Not used
-
-        Returns
-        -------
-        None
-        """
         return None
 
     def sample(
