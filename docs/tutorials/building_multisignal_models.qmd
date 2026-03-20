@@ -992,10 +992,10 @@ quantiles_180 = {
     "q95": latent_inf.quantile(0.95, dim=["chain", "draw"]).values,
 }
 
-ci_width_180 = quantiles_90["q95"] - quantiles_90["q05"]
+ci_width_180 = quantiles_180["q95"] - quantiles_180["q05"]
 print(f"Posterior summary for {n_days_180} days:")
-print(f"  Mean 90% CI width: {ci_width_90.mean():,.0f} infections")
-print(f"  Median infections (day 45): {quantiles_90['q50'][45]:,.0f}")
+print(f"  Mean 90% CI width: {ci_width_180.mean():,.0f} infections")
+print(f"  Median infections (day 90): {quantiles_180['q50'][90]:,.0f}")
 ```
 
 ```{python}
