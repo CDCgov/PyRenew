@@ -796,6 +796,15 @@ Before running these diagnostics, it is necessary to we trim the first `n_init` 
 Since the model cannot estimate latent infections until it has seen a full generation interval's worth of data,
 these early time steps have no meaningful epidemiological interpretation and therefore should be excluded from summaries and visualizations.
 
+```{python}
+def trim_time(ds):
+    """Trim first n_init entries from time dimension and reindex."""
+    if "time" in ds.dims:
+        ds = ds.isel(time=slice(n_init, None))
+        ds = ds.assign_coords(time=range(ds.sizes["time"]))
+    return ds
+```
+
 We first label the time axis of all time-series variables using the dims argument to [az.from_numpyro](https://python.arviz.org/projects/base/en/latest/api/generated/arviz_base.from_numpyro.html).
 Then we trim the first `n_init` time steps from all time-series variables.
 Finally we call the [az.summary](https://python.arviz.org/projects/stats/en/latest/api/generated/arviz_stats.summary.html) report.
@@ -806,21 +815,18 @@ idata_90 = az.from_numpyro(
     model.mcmc,
     dims={
         "latent_infections": ["time"],
-        "latent_infections/infections_aggregate": ["time"],
-        "latent_infections/log_rt_baseline": ["time", "dummy"],
-        "latent_infections/rt_baseline": ["time", "dummy"],
-        "latent_infections/rt_subpop": ["time", "subpop"],
-        "latent_infections/subpop_deviations": ["time", "subpop"],
+        "latent_infections::infections_aggregate": ["time"],
+        "latent_infections::log_rt_baseline": ["time", "dummy"],
+        "latent_infections::rt_baseline": ["time", "dummy"],
+        "latent_infections::rt_subpop": ["time", "subpop"],
+        "latent_infections::subpop_deviations": ["time", "subpop"],
         "latent_infections_by_subpop": ["time", "subpop"],
         "hospital_predicted": ["time"],
         "wastewater_predicted": ["time", "subpop"],
     },
 )
 
-idata_90_trimmed = idata_90.isel(time=slice(n_init, None), groups="posterior")
-idata_90_trimmed.posterior = idata_90_trimmed.posterior.assign_coords(
-    time=np.arange(n_days_90)
-)
+idata_90_trimmed = idata_90.map_over_datasets(trim_time)
 az.summary(
     idata_90_trimmed, var_names=["latent_infections", "hospital_predicted"]
 )
@@ -953,27 +959,23 @@ We check the model fit, as before.
 ```{python}
 # | label: arviz-diagnostics-180
 # ArviZ diagnostics for 180-day fit
+
 idata_180 = az.from_numpyro(
     model.mcmc,
     dims={
         "latent_infections": ["time"],
-        "latent_infections/infections_aggregate": ["time"],
-        "latent_infections/log_rt_baseline": ["time", "dummy"],
-        "latent_infections/rt_baseline": ["time", "dummy"],
-        "latent_infections/rt_subpop": ["time", "subpop"],
-        "latent_infections/subpop_deviations": ["time", "subpop"],
+        "latent_infections::infections_aggregate": ["time"],
+        "latent_infections::log_rt_baseline": ["time", "dummy"],
+        "latent_infections::rt_baseline": ["time", "dummy"],
+        "latent_infections::rt_subpop": ["time", "subpop"],
+        "latent_infections::subpop_deviations": ["time", "subpop"],
         "latent_infections_by_subpop": ["time", "subpop"],
         "hospital_predicted": ["time"],
         "wastewater_predicted": ["time", "subpop"],
     },
 )
 
-idata_180_trimmed = idata_180.isel(
-    time=slice(n_init, None), groups="posterior"
-)
-idata_180_trimmed.posterior = idata_180_trimmed.posterior.assign_coords(
-    time=np.arange(n_days_180)
-)
+idata_180_trimmed = idata_180.map_over_datasets(trim_time)
 az.summary(
     idata_180_trimmed, var_names=["latent_infections", "hospital_predicted"]
 )

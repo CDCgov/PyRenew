@@ -104,7 +104,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         name
             Name prefix for numpyro sample sites. All deterministic
             quantities are recorded under this scope (e.g.,
-            ``"{name}/rt_baseline"``). Default: ``"latent_infections"``.
+            ``"{name}::rt_baseline"``). Default: ``"latent_infections"``.
 
         Raises
         ------
@@ -259,7 +259,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         )
 
         # Record key quantities for diagnostics and posterior analysis
-        with numpyro.handlers.scope(prefix=self.name):
+        with numpyro.handlers.scope(prefix=self.name, divider="::"):
             numpyro.deterministic("I0_init_all_subpops", I0_all)
             numpyro.deterministic("log_rt_baseline", log_rt_baseline)
             numpyro.deterministic("rt_baseline", jnp.exp(log_rt_baseline))
