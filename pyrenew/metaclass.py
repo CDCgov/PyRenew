@@ -110,14 +110,14 @@ class RandomVariable(metaclass=ABCMeta):
         [`RandomVariable`][]'s [`self.sample()`][] method.
 
         The scope prefix is always the [`name`][self.name] of the `RandomVariable`
-        and the divider is always `_`.
+        and the divider is always `::`.
 
         Returns
         -------
         numpyro.handlers.scope
            A properly configured scope handler.
         """
-        return numpyro.handlers.scope(prefix=self.name, divider="_")
+        return numpyro.handlers.scope(prefix=self.name, divider="::")
 
     def __call__(self, **kwargs: object) -> tuple:
         """
