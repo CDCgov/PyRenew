@@ -797,6 +797,7 @@ Since the model cannot estimate latent infections until it has seen a full gener
 these early time steps have no meaningful epidemiological interpretation and therefore should be excluded from summaries and visualizations.
 
 ```{python}
+# | label: helper-trim-time
 def trim_time(ds):
     """Trim first n_init entries from time dimension and reindex."""
     if "time" in ds.dims:
