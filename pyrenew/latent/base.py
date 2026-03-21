@@ -136,9 +136,25 @@ class BaseLatentInfectionProcess(RandomVariable):
             )
         self.n_initialization_points = n_initialization_points
 
-    @staticmethod
+    def default_subpop_fractions(self) -> ArrayLike | None:
+        """
+        Return default population fractions, or None if caller must provide them.
+
+        Subclasses override this to specify whether subpop_fractions can be
+        omitted at sample time. If this returns a valid array, it is used
+        when subpop_fractions is not passed to sample(). If it returns None,
+        _parse_and_validate_fractions will raise.
+
+        Returns
+        -------
+        ArrayLike or None
+            Default fractions array, or None if no default exists.
+        """
+        return None
+
     def _parse_and_validate_fractions(
-        subpop_fractions: ArrayLike = None,
+        self,
+        subpop_fractions: ArrayLike | None = None,
     ) -> PopulationStructure:
         """
         Parse and validate population fraction parameters.
@@ -148,6 +164,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         subpop_fractions
             Population fractions for all subpopulations. Must be a 1D array
             with at least one element. Values must be non-negative and sum to 1.
+            If None, falls back to ``self.default_subpop_fractions()``.
 
         Returns
         -------
@@ -157,10 +174,13 @@ class BaseLatentInfectionProcess(RandomVariable):
         Raises
         ------
         ValueError
-            If fractions are invalid or don't sum to 1.0
+            If fractions are invalid, don't sum to 1.0, or are None with
+            no subclass default.
         """
         if subpop_fractions is None:
-            raise ValueError("subpop_fractions must be provided")
+            subpop_fractions = self.default_subpop_fractions()
+            if subpop_fractions is None:
+                raise ValueError("subpop_fractions must be provided")
 
         fractions = jnp.asarray(subpop_fractions)
 
@@ -304,6 +324,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         subpop_fractions
             Population fractions for all subpopulations.
             Shape: (n_subpops,). Must sum to 1.0.
+            If None, falls back to ``self.default_subpop_fractions()``.
         **kwargs
             Additional parameters required by specific implementations
 

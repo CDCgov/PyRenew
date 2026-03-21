@@ -9,48 +9,70 @@ from pyrenew.deterministic import DeterministicPMF
 from pyrenew.latent.base import BaseLatentInfectionProcess
 
 
-class TestPopulationStructureParsing:
-    """Test _parse_and_validate_fractions static method."""
+class _ConcreteLatent(BaseLatentInfectionProcess):
+    """Minimal concrete subclass for testing."""
 
-    def test_parse_subpop_fractions(self):
+    def validate(self) -> None:
+        """No-op validation."""
+        pass
+
+    def sample(self, n_days_post_init: int, **kwargs) -> None:
+        """No-op sample."""
+        pass
+
+
+@pytest.fixture
+def latent_instance() -> _ConcreteLatent:
+    """Return a minimal BaseLatentInfectionProcess instance."""
+    return _ConcreteLatent(
+        name="test_latent",
+        gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.5, 0.3, 0.2])),
+        n_initialization_points=3,
+    )
+
+
+class TestPopulationStructureParsing:
+    """Test _parse_and_validate_fractions instance method."""
+
+    def test_parse_subpop_fractions(self, latent_instance):
         """Test parsing subpop_fractions."""
-        pop = BaseLatentInfectionProcess._parse_and_validate_fractions(
+        pop = latent_instance._parse_and_validate_fractions(
             subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
         )
 
         assert pop.n_subpops == 3
         assert jnp.allclose(pop.fractions, jnp.array([0.3, 0.25, 0.45]))
 
-    def test_rejects_fractions_not_summing_to_one(self):
+    def test_rejects_fractions_not_summing_to_one(self, latent_instance):
         """Test that fractions not summing to 1 raises error."""
         with pytest.raises(ValueError, match="must sum to 1.0"):
-            BaseLatentInfectionProcess._parse_and_validate_fractions(
+            latent_instance._parse_and_validate_fractions(
                 subpop_fractions=jnp.array([0.3, 0.25, 0.40]),
             )
 
-    def test_rejects_negative_fractions(self):
+    def test_rejects_negative_fractions(self, latent_instance):
         """Test that negative fractions raise error."""
         with pytest.raises(ValueError, match="must be non-negative"):
-            BaseLatentInfectionProcess._parse_and_validate_fractions(
+            latent_instance._parse_and_validate_fractions(
                 subpop_fractions=jnp.array([0.3, -0.1, 0.8]),
             )
 
-    def test_rejects_missing_fractions(self):
+    def test_rejects_missing_fractions(self, latent_instance):
         """Test that missing fractions raise error."""
         with pytest.raises(ValueError, match="subpop_fractions must be provided"):
-            BaseLatentInfectionProcess._parse_and_validate_fractions()
+            latent_instance._parse_and_validate_fractions()
 
-    def test_rejects_2d_fractions(self):
+    def test_rejects_2d_fractions(self, latent_instance):
         """Test that 2D fraction arrays raise error."""
         with pytest.raises(ValueError, match="must be a 1D array"):
-            BaseLatentInfectionProcess._parse_and_validate_fractions(
+            latent_instance._parse_and_validate_fractions(
                 subpop_fractions=jnp.array([[0.3, 0.25, 0.45]]),
             )
 
-    def test_rejects_empty_subpopulations(self):
+    def test_rejects_empty_subpopulations(self, latent_instance):
         """Test that empty subpopulations raise error."""
         with pytest.raises(ValueError, match="Must have at least one subpopulation"):
-            BaseLatentInfectionProcess._parse_and_validate_fractions(
+            latent_instance._parse_and_validate_fractions(
                 subpop_fractions=jnp.array([]),
             )
 
