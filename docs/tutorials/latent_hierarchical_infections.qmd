@@ -575,9 +575,9 @@ for name, temporal in temporal_configs.items():
     samples = Predictive(make_sampler(model), num_samples=n_samples)(
         random.PRNGKey(42)
     )
-    process_samples[name] = np.array(samples["latent_infections::rt_baseline"])[
-        :, n_init:, 0
-    ]
+    process_samples[name] = np.array(
+        samples["latent_infections::rt_baseline"]
+    )[:, n_init:, 0]
 ```
 
 ```{python}
