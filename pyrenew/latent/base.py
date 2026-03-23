@@ -140,10 +140,10 @@ class BaseLatentInfectionProcess(RandomVariable):
         """
         Return default population fractions, or None if caller must provide them.
 
-        Subclasses override this to specify whether subpop_fractions can be
-        omitted at sample time. If this returns a valid array, it is used
-        when subpop_fractions is not passed to sample(). If it returns None,
-        _parse_and_validate_fractions will raise.
+        Override this function in order to omit specification of
+        subpop_fractions at sample time, in which case it will be called
+        by _parse_and_validate_functions.
+        Must return a valid array of positive elements that sums to 1.
 
         Returns
         -------
@@ -164,7 +164,6 @@ class BaseLatentInfectionProcess(RandomVariable):
         subpop_fractions
             Population fractions for all subpopulations. Must be a 1D array
             with at least one element. Values must be non-negative and sum to 1.
-            If None, falls back to ``self.default_subpop_fractions()``.
 
         Returns
         -------
