@@ -29,9 +29,6 @@ numpyro.enable_x64()
 
 ```{python}
 # | label: imports-base
-# import arviz as az
-# import arviz_base as az_base
-# import arviz_stats as az_stats
 import arviz as az
 import jax
 import jax.numpy as jnp
