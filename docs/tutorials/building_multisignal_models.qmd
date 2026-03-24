@@ -29,9 +29,6 @@ numpyro.enable_x64()
 
 ```{python}
 # | label: imports-base
-# import arviz as az
-# import arviz_base as az_base
-# import arviz_stats as az_stats
 import arviz as az
 import jax
 import jax.numpy as jnp
@@ -100,8 +97,8 @@ A **multi-signal model** combines multiple observation processes—each represen
 
 The `PyrenewBuilder` class handles this plumbing. You specify:
 
-1.  A **latent process** (e.g., `HierarchicalInfections`) that defines how infections evolve
-2.  One or more **observation processes** (e.g., `Counts`, `Measurements`) that define how infections become data
+1.  A single **latent process** (e.g., `HierarchicalInfections`) that defines how infections evolve.
+2.  One or more **observation processes** (e.g., `Counts`, `Measurements`) that define how infections become data.
 
 The builder computes initialization requirements, wires components together, and produces a model ready for inference.
 
