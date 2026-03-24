@@ -97,8 +97,8 @@ A **multi-signal model** combines multiple observation processes—each represen
 
 The `PyrenewBuilder` class handles this plumbing. You specify:
 
-1.  A **latent process** (e.g., `HierarchicalInfections`) that defines how infections evolve
-2.  One or more **observation processes** (e.g., `Counts`, `Measurements`) that define how infections become data
+1.  A single **latent process** (e.g., `HierarchicalInfections`) that defines how infections evolve.
+2.  One or more **observation processes** (e.g., `Counts`, `Measurements`) that define how infections become data.
 
 The builder computes initialization requirements, wires components together, and produces a model ready for inference.
 
@@ -788,65 +788,61 @@ elapsed_90 = time.time() - start_time
 print(f"Elapsed time: {elapsed_90:.1f} seconds")
 ```
 
+We use [ArviZ](https://python.arviz.org/en/stable/) to assess MCMC convergence and mixing via the $\hat{R}$ statistic and effective sample size (ESS).
+Before running these diagnostics, it is necessary to we trim the first `n_init` time steps from all time-series variables.
+Since the model cannot estimate latent infections until it has seen a full generation interval's worth of data,
+these early time steps have no meaningful epidemiological interpretation and therefore should be excluded from summaries and visualizations.
+
 ```{python}
-# | label: posterior-shape-90
-lat_inf_90 = samples_90["latent_infections"]
-print(f"Posterior samples shape: {lat_inf_90.shape}")
-print(f"Mean latent infections: {np.mean(lat_inf_90):,.0f}")
+# | label: helper-trim-time
+def trim_time(ds):
+    """Trim first n_init entries from time dimension and reindex."""
+    if "time" in ds.dims:
+        ds = ds.isel(time=slice(n_init, None))
+        ds = ds.assign_coords(time=range(ds.sizes["time"]))
+    return ds
 ```
 
-We check that the chains have converged and the number of effective samples.
+We first label the time axis of all time-series variables using the dims argument to [az.from_numpyro](https://python.arviz.org/projects/base/en/latest/api/generated/arviz_base.from_numpyro.html).
+Then we trim the first `n_init` time steps from all time-series variables.
+Finally we call the [az.summary](https://python.arviz.org/projects/stats/en/latest/api/generated/arviz_stats.summary.html) report.
 
 ```{python}
 # | label: arviz-diagnostics-90
-# ArviZ diagnostics for 90-day fit
-def filter_samples_for_arviz(samples, n_init, num_chains=4):
-    """Slice time-series samples to exclude initialization period and reshape for chains."""
-    num_samples_per_chain = len(list(samples.values())[0]) // num_chains
-    filtered = {}
-    for k, v in samples.items():
-        if v.ndim == 2 and v.shape[1] > n_init:
-            # Time-series: slice to post-init period, reshape to (chains, draws, time)
-            filtered[k] = v[:, n_init:].reshape(
-                num_chains, num_samples_per_chain, -1
-            )
-        elif v.ndim == 1:
-            # Scalar: reshape to (chains, draws)
-            filtered[k] = v.reshape(num_chains, num_samples_per_chain)
-        else:
-            # Multi-dim: reshape to (chains, draws, ...)
-            filtered[k] = v.reshape(
-                num_chains, num_samples_per_chain, *v.shape[1:]
-            )
-    return filtered
-
-
-samples_90_filtered = filter_samples_for_arviz(
-    samples_90, n_init, num_chains=2
+idata_90 = az.from_numpyro(
+    model.mcmc,
+    dims={
+        "latent_infections": ["time"],
+        "latent_infections::infections_aggregate": ["time"],
+        "latent_infections::log_rt_baseline": ["time", "dummy"],
+        "latent_infections::rt_baseline": ["time", "dummy"],
+        "latent_infections::rt_subpop": ["time", "subpop"],
+        "latent_infections::subpop_deviations": ["time", "subpop"],
+        "latent_infections_by_subpop": ["time", "subpop"],
+        "hospital_predicted": ["time"],
+        "wastewater_predicted": ["time", "subpop"],
+    },
 )
-idata_90 = az.from_dict(posterior=samples_90_filtered)
-az.summary(idata_90, var_names=["~latent_infections", "~expected"])
+
+idata_90_trimmed = idata_90.map_over_datasets(trim_time)
+az.summary(
+    idata_90_trimmed, var_names=["latent_infections", "hospital_predicted"]
+)
 ```
 
 We extract the posterior quantiles and print summary statistics.
 
 ```{python}
 # | label: extract-quantiles-90
-def extract_posterior_quantiles(samples, n_init, n_days):
-    """Extract posterior quantiles for latent infections."""
-    latent_inf = np.array(samples["latent_infections"])[
-        :, n_init : n_init + n_days
-    ]
-    return {
-        "q05": np.percentile(latent_inf, 5, axis=0),
-        "q50": np.percentile(latent_inf, 50, axis=0),
-        "q95": np.percentile(latent_inf, 95, axis=0),
-    }
 
+latent_inf = idata_90_trimmed.posterior["latent_infections"]
 
-quantiles_90 = extract_posterior_quantiles(samples_90, n_init, n_days_90)
+quantiles_90 = {
+    "q05": latent_inf.quantile(0.05, dim=["chain", "draw"]).values,
+    "q50": latent_inf.quantile(0.50, dim=["chain", "draw"]).values,
+    "q95": latent_inf.quantile(0.95, dim=["chain", "draw"]).values,
+}
 
-# Summary statistics
 ci_width_90 = quantiles_90["q95"] - quantiles_90["q05"]
 print(f"Posterior summary for {n_days_90} days:")
 print(f"  Mean 90% CI width: {ci_width_90.mean():,.0f} infections")
@@ -956,28 +952,43 @@ elapsed_180 = time.time() - start_time
 print(f"Elapsed time: {elapsed_180:.1f} seconds")
 ```
 
-```{python}
-# | label: posterior-shape-180
-lat_inf_180 = samples_180["latent_infections"]
-print(f"Posterior samples shape: {lat_inf_180.shape}")
-print(f"Mean latent infections: {np.mean(lat_inf_180):,.0f}")
-```
-
 We check the model fit, as before.
 
 ```{python}
 # | label: arviz-diagnostics-180
 # ArviZ diagnostics for 180-day fit
-samples_180_filtered = filter_samples_for_arviz(
-    samples_180, n_init, num_chains=2
+
+idata_180 = az.from_numpyro(
+    model.mcmc,
+    dims={
+        "latent_infections": ["time"],
+        "latent_infections::infections_aggregate": ["time"],
+        "latent_infections::log_rt_baseline": ["time", "dummy"],
+        "latent_infections::rt_baseline": ["time", "dummy"],
+        "latent_infections::rt_subpop": ["time", "subpop"],
+        "latent_infections::subpop_deviations": ["time", "subpop"],
+        "latent_infections_by_subpop": ["time", "subpop"],
+        "hospital_predicted": ["time"],
+        "wastewater_predicted": ["time", "subpop"],
+    },
 )
-idata_180 = az.from_dict(posterior=samples_180_filtered)
-az.summary(idata_180, var_names=["~latent_infections", "~expected"])
+
+idata_180_trimmed = idata_180.map_over_datasets(trim_time)
+az.summary(
+    idata_180_trimmed, var_names=["latent_infections", "hospital_predicted"]
+)
 ```
 
 ```{python}
 # | label: extract-quantiles-180
-quantiles_180 = extract_posterior_quantiles(samples_180, n_init, n_days_180)
+
+latent_inf = idata_180_trimmed.posterior["latent_infections"]
+
+quantiles_180 = {
+    "q05": latent_inf.quantile(0.05, dim=["chain", "draw"]).values,
+    "q50": latent_inf.quantile(0.50, dim=["chain", "draw"]).values,
+    "q95": latent_inf.quantile(0.95, dim=["chain", "draw"]).values,
+}
 
 ci_width_180 = quantiles_180["q95"] - quantiles_180["q05"]
 print(f"Posterior summary for {n_days_180} days:")

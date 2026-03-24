@@ -467,10 +467,10 @@ predictive = Predictive(sample_model, num_samples=n_samples)
 prior_samples = predictive(random.PRNGKey(42))
 
 print(
-    f"Rt baseline samples: {prior_samples['latent_infections/rt_baseline'].shape}"
+    f"Rt baseline samples: {prior_samples['latent_infections::rt_baseline'].shape}"
 )
 print(
-    f"Infection samples: {prior_samples['latent_infections/infections_aggregate'].shape}"
+    f"Infection samples: {prior_samples['latent_infections::infections_aggregate'].shape}"
 )
 ```
 
@@ -479,7 +479,7 @@ print(
 ```{python}
 # | label: rt-trajectories-data
 # Extract post-initialization Rt trajectories
-rt_samples = np.array(prior_samples["latent_infections/rt_baseline"])[
+rt_samples = np.array(prior_samples["latent_infections::rt_baseline"])[
     :, n_init:, 0
 ]
 
@@ -575,9 +575,9 @@ for name, temporal in temporal_configs.items():
     samples = Predictive(make_sampler(model), num_samples=n_samples)(
         random.PRNGKey(42)
     )
-    process_samples[name] = np.array(samples["latent_infections/rt_baseline"])[
-        :, n_init:, 0
-    ]
+    process_samples[name] = np.array(
+        samples["latent_infections::rt_baseline"]
+    )[:, n_init:, 0]
 ```
 
 ```{python}
@@ -682,7 +682,7 @@ for name, subpop_rt_deviation_process in subpop_configs.items():
 dev_data = []
 for name in subpop_configs.keys():
     devs = np.array(
-        deviation_samples[name]["latent_infections/subpop_deviations"]
+        deviation_samples[name]["latent_infections::subpop_deviations"]
     )[:, n_init:, 0]
     for i in range(n_samples):
         for d in range(n_days):
@@ -768,7 +768,7 @@ for name, cfg in configs.items():
 # Build comparison dataframe
 tuning_data = []
 for name, samples in tuning_samples.items():
-    rt = np.array(samples["latent_infections/rt_baseline"])[:, n_init:, 0]
+    rt = np.array(samples["latent_infections::rt_baseline"])[:, n_init:, 0]
     for i in range(n_samples):
         for d in range(n_days):
             tuning_data.append(
@@ -823,7 +823,7 @@ with numpyro.handlers.seed(rng_seed=123):
             subpop_fractions=subpop_fractions,
         )
 
-deviations = trace["latent_infections/subpop_deviations"]["value"]
+deviations = trace["latent_infections::subpop_deviations"]["value"]
 deviation_sums = jnp.sum(deviations, axis=1)
 print(
     f"Max |sum of deviations|: {float(jnp.max(jnp.abs(deviation_sums))):.2e}"
