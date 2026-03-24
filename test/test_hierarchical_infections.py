@@ -36,7 +36,7 @@ class TestHierarchicalInfectionsSample:
                     subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
                 )
 
-        deviations = trace["latent_infections/subpop_deviations"]["value"]
+        deviations = trace["latent_infections::subpop_deviations"]["value"]
         deviation_sums = jnp.sum(deviations, axis=1)
 
         assert jnp.allclose(deviation_sums, 0.0, atol=1e-6)
