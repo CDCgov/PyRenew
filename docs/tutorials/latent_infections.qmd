@@ -1,0 +1,360 @@
+---
+title: "Latent infection processes"
+format:
+  gfm:
+    code-fold: true
+engine: jupyter
+---
+
+This tutorial introduces the infection renewal equation and shows how to model latent infections in PyRenew using the `SharedInfections` class.
+
+```{python}
+# | label: setup
+# | output: false
+import jax.numpy as jnp
+import numpy as np
+import numpyro
+import numpyro.distributions as dist
+import pandas as pd
+import plotnine as p9
+import warnings
+from plotnine.exceptions import PlotnineWarning
+
+warnings.filterwarnings("ignore", category=PlotnineWarning)
+
+from _tutorial_theme import theme_tutorial
+from pyrenew.deterministic import DeterministicPMF
+from pyrenew.latent import AR1, DifferencedAR1, RandomWalk
+from pyrenew.latent.shared_infections import SharedInfections
+from pyrenew.randomvariable import DistributionalVariable
+```
+
+## Overview
+
+In infectious disease modeling, the true number of new infections each day is not directly observed. Instead, we observe delayed, incomplete signals: hospital admissions, emergency department visits, reported cases. The latent infection process generates the unobserved infection trajectory that underlies all of these signals.
+
+PyRenew models latent infections using the **renewal equation**:
+
+$$I(t) = \mathcal{R}(t) \sum_{s=1}^{S} I(t-s) \, w(s)$$
+
+where:
+
+- $I(t)$ is the number of new infections on day $t$
+- $\mathcal{R}(t)$ is the time-varying reproduction number (the average number of secondary infections caused by one infected person at time $t$)
+- $w(s)$ is the **generation interval** distribution: the probability that $s$ days separate infection in an index case and a secondary case
+
+The renewal equation says: today's infections equal the reproduction number times a weighted sum of recent past infections, where the weights come from the generation interval.
+
+Observation processes (covered in [Observation Processes: Counts](observation_processes_counts.md) and [Observation Processes: Measurements](observation_processes_measurements.md)) then transform the latent infections into expected observations:
+
+$$\mu_k(t) = \alpha_k \sum_{s} I(t-s) \, \pi_k(s)$$
+
+where each signal $k$ has its own ascertainment rate $\alpha_k$ and delay distribution $\pi_k(s)$. The latent infection trajectory $I(t)$ is shared across all signals.
+
+PyRenew provides two latent infection classes:
+
+- **`SharedInfections`**: A single $\mathcal{R}(t)$ drives one renewal equation. Appropriate when modeling one jurisdiction with one or more observation streams. This tutorial covers `SharedInfections`.
+- **`HierarchicalInfections`**: A baseline $\mathcal{R}(t)$ with per-subpopulation deviations. See [Hierarchical Latent Infections](latent_hierarchical_infections.md).
+
+## The generation interval
+
+The generation interval distribution $w(s)$ encodes how infectiousness is distributed over time after infection. It determines how far back in time the renewal equation "looks" when computing today's infections.
+
+For COVID-19, the generation interval is short: most transmission occurs within the first few days. We define a 7-day PMF based on estimates from the literature.
+
+```{python}
+# | label: generation-interval
+gen_int_values = jnp.array([0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02])
+gen_int_rv = DeterministicPMF("gen_int", gen_int_values)
+
+days = np.arange(len(gen_int_values))
+mean_gi = float(np.sum(days * gen_int_values))
+mode_gi = int(np.argmax(gen_int_values))
+print(
+    f"Generation interval: {len(gen_int_values)} days, mode = {mode_gi}, mean = {mean_gi:.1f}"
+)
+```
+
+```{python}
+# | label: plot-generation-interval
+gi_df = pd.DataFrame({"day": days, "probability": np.array(gen_int_values)})
+
+plot_gi = (
+    p9.ggplot(gi_df, p9.aes(x="day", y="probability"))
+    + p9.geom_col(fill="steelblue", alpha=0.7, color="black")
+    + p9.labs(
+        x="Days since index infection",
+        y="Probability",
+        title="Generation Interval Distribution",
+    )
+    + theme_tutorial
+)
+plot_gi
+```
+
+The generation interval length also determines the minimum initialization period: the renewal equation at day 0 requires infections from the preceding $S - 1$ days.
+
+## Modeling $\mathcal{R}(t)$ with temporal processes
+
+The reproduction number $\mathcal{R}(t)$ is modeled on the log scale. A temporal process governs how $\log \mathcal{R}(t)$ evolves over time, starting from an initial value $\log \mathcal{R}(0)$.
+
+PyRenew provides three temporal processes, each encoding different assumptions about how $\mathcal{R}(t)$ behaves:
+
+| Process | Behavior | Use when |
+|---|---|---|
+| `AR1` | Mean-reverting: values are pulled back toward a baseline | $\mathcal{R}(t)$ is expected to fluctuate around a stable level |
+| `RandomWalk` | No mean reversion: values drift freely | No prior expectation about the direction of $\mathcal{R}(t)$ |
+| `DifferencedAR1` | AR(1) on first differences: the *rate of change* is mean-reverting | $\mathcal{R}(t)$ can trend persistently, but the trend stabilizes |
+
+All three satisfy the `TemporalProcess` protocol and can be used interchangeably in `SharedInfections`.
+
+### AR(1): mean-reverting dynamics
+
+The AR(1) process is the most common choice. Two parameters control its behavior:
+
+- `autoreg`: the autoregressive coefficient (between 0 and 1). Higher values produce smoother, more persistent trajectories; lower values revert faster to the baseline.
+- `innovation_sd`: the standard deviation of the noise at each time step. Larger values produce more volatile trajectories.
+
+```{python}
+# | label: ar1-demo
+n_days = 120
+
+with numpyro.handlers.seed(rng_seed=0):
+    smooth_traj = AR1(autoreg=0.95, innovation_sd=0.025).sample(
+        n_timepoints=n_days,
+        initial_value=0.0,
+        name_prefix="smooth",
+    )
+    volatile_traj = AR1(autoreg=0.7, innovation_sd=0.1).sample(
+        n_timepoints=n_days,
+        initial_value=0.0,
+        name_prefix="volatile",
+    )
+
+ar1_df = pd.DataFrame(
+    {
+        "day": np.tile(np.arange(n_days), 2),
+        "log_Rt": np.concatenate(
+            [
+                np.array(smooth_traj[:, 0]),
+                np.array(volatile_traj[:, 0]),
+            ]
+        ),
+        "setting": np.repeat(
+            ["autoreg=0.95, sd=0.025", "autoreg=0.70, sd=0.10"],
+            n_days,
+        ),
+    }
+)
+
+plot_ar1 = (
+    p9.ggplot(ar1_df, p9.aes(x="day", y="log_Rt", color="setting"))
+    + p9.geom_line(size=0.8)
+    + p9.geom_hline(yintercept=0.0, linetype="dashed", color="gray")
+    + p9.labs(
+        x="Day",
+        y=r"$\log \mathcal{R}(t)$",
+        title=r"AR(1) Trajectories for $\log \mathcal{R}(t)$",
+        color="Parameters",
+    )
+    + theme_tutorial
+    + p9.theme(legend_position="bottom")
+)
+plot_ar1
+```
+
+The dashed line at zero corresponds to $\mathcal{R}(t) = 1$ (the epidemic threshold). The AR(1) process pulls $\log \mathcal{R}(t)$ back toward this baseline, with the strength determined by `autoreg`.
+
+### RandomWalk and DifferencedAR1
+
+For comparison, here is one draw from each of the three processes using the same innovation scale:
+
+```{python}
+# | label: temporal-comparison
+sd = 0.05
+
+with numpyro.handlers.seed(rng_seed=42):
+    ar1_sample = AR1(autoreg=0.9, innovation_sd=sd).sample(
+        n_timepoints=n_days,
+        initial_value=0.0,
+        name_prefix="ar1",
+    )
+    rw_sample = RandomWalk(innovation_sd=sd).sample(
+        n_timepoints=n_days,
+        initial_value=0.0,
+        name_prefix="rw",
+    )
+    dar1_sample = DifferencedAR1(autoreg=0.9, innovation_sd=sd).sample(
+        n_timepoints=n_days,
+        initial_value=0.0,
+        name_prefix="dar1",
+    )
+
+comparison_df = pd.DataFrame(
+    {
+        "day": np.tile(np.arange(n_days), 3),
+        "log_Rt": np.concatenate(
+            [
+                np.array(ar1_sample[:, 0]),
+                np.array(rw_sample[:, 0]),
+                np.array(dar1_sample[:, 0]),
+            ]
+        ),
+        "process": np.repeat(
+            ["AR(1)", "RandomWalk", "DifferencedAR(1)"], n_days
+        ),
+    }
+)
+
+plot_comparison = (
+    p9.ggplot(comparison_df, p9.aes(x="day", y="log_Rt", color="process"))
+    + p9.geom_line(size=0.8)
+    + p9.geom_hline(yintercept=0.0, linetype="dashed", color="gray")
+    + p9.labs(
+        x="Day",
+        y=r"$\log \mathcal{R}(t)$",
+        title="Temporal Process Comparison",
+        color="Process",
+    )
+    + theme_tutorial
+    + p9.theme(legend_position="bottom")
+)
+plot_comparison
+```
+
+The AR(1) trajectory stays near zero; the random walk drifts; the differenced AR(1) can trend but the rate of change stabilizes. The choice of temporal process encodes your prior beliefs about $\mathcal{R}(t)$ dynamics.
+
+## Initial conditions
+
+The renewal equation requires a history of infections before the first observation day. `SharedInfections` handles this via two parameters:
+
+- **`I0_rv`**: The infection prevalence (as a proportion of the population) at the start of the observation period. A small value like `Beta(1, 100)` expresses prior belief that a small fraction of the population is infected.
+- **`initial_log_rt_rv`**: The initial value of $\log \mathcal{R}(t)$. A prior like `Normal(0, 0.5)` centers on $\mathcal{R}(0) = 1$ with moderate uncertainty.
+
+Given these two values, `SharedInfections` fills the initialization window by backprojecting an exponential growth curve. It computes the asymptotic growth rate $r$ implied by $\mathcal{R}(0)$ and the generation interval, then sets:
+
+$$I(t) = I_0 \cdot e^{r \cdot t} \quad \text{for } t \in [-S+1, \ldots, 0]$$
+
+This provides a smooth, epidemiologically consistent initial infection history without requiring the modeler to specify each day individually.
+
+```{python}
+# | label: initial-conditions
+I0_rv = DistributionalVariable("I0", dist.Beta(1, 100))
+initial_log_rt_rv = DistributionalVariable(
+    "initial_log_rt", dist.Normal(0.0, 0.5)
+)
+
+with numpyro.handlers.seed(rng_seed=0):
+    I0_draw = float(I0_rv())
+    log_rt_draw = float(initial_log_rt_rv())
+
+print(f"I0 draw: {I0_draw:.5f} (fraction of population)")
+print(
+    f"initial log R(t) draw: {log_rt_draw:.3f} => R(0) = {np.exp(log_rt_draw):.3f}"
+)
+```
+
+## Constructing a `SharedInfections` instance
+
+With the generation interval, temporal process, and initial conditions defined, we can assemble a `SharedInfections` object. The `n_initialization_points` parameter specifies how many days of infection history to generate before the first observation day. It must be at least as long as the generation interval.
+
+When using `PyrenewBuilder` (the recommended approach for full models), `n_initialization_points` is computed automatically from all observation process delay distributions. Here we set it manually.
+
+```{python}
+# | label: construct-shared-infections
+latent = SharedInfections(
+    gen_int_rv=gen_int_rv,
+    I0_rv=I0_rv,
+    shared_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+    initial_log_rt_rv=initial_log_rt_rv,
+    n_initialization_points=7,
+)
+```
+
+The components map directly to the renewal equation:
+
+| Component | Role in $I(t) = \mathcal{R}(t) \sum_s I(t-s)\,w(s)$ |
+|---|---|
+| `gen_int_rv` | Generation interval $w(s)$ |
+| `shared_rt_process` | Temporal dynamics of $\log \mathcal{R}(t)$ |
+| `initial_log_rt_rv` | Starting value $\log \mathcal{R}(0)$ |
+| `I0_rv` | Seed infections for backprojection |
+
+## Sampling from the latent process
+
+Calling `sample()` generates a complete infection trajectory: the initialization period (backprojected) followed by the post-initialization period (from the renewal equation).
+
+The return type is a `LatentSample` named tuple with two fields:
+
+- `aggregate`: total infections, shape `(n_total_days,)`
+- `all_subpops`: infections by subpopulation, shape `(n_total_days, n_subpops)`. For `SharedInfections`, there is one subpopulation.
+
+```{python}
+# | label: sample-latent
+n_days_post_init = 120
+
+with numpyro.handlers.seed(rng_seed=12):
+    result = latent.sample(n_days_post_init=n_days_post_init)
+
+n_init = latent.n_initialization_points
+n_total = n_init + n_days_post_init
+
+print(f"Initialization period: {n_init} days")
+print(f"Post-initialization period: {n_days_post_init} days")
+print(f"Total trajectory length: {n_total} days")
+print(f"aggregate shape: {result.aggregate.shape}")
+print(f"all_subpops shape: {result.all_subpops.shape}")
+```
+
+```{python}
+# | label: plot-infections
+infections = np.array(result.aggregate)
+day_index = np.arange(len(infections)) - n_init
+
+infections_df = pd.DataFrame(
+    {
+        "day": day_index,
+        "infections": infections,
+        "period": np.where(
+            day_index < 0, "initialization", "post-initialization"
+        ),
+    }
+)
+
+plot_infections = (
+    p9.ggplot(infections_df, p9.aes(x="day", y="infections", color="period"))
+    + p9.geom_line(size=0.8)
+    + p9.geom_vline(xintercept=0, linetype="dashed", color="gray")
+    + p9.labs(
+        x="Day (0 = first observation day)",
+        y="Infections (fraction of population)",
+        title="Sampled Infection Trajectory",
+        color="Period",
+    )
+    + theme_tutorial
+    + p9.theme(legend_position="bottom")
+)
+plot_infections
+```
+
+The initialization period (days $< 0$) shows the exponential backprojection. The post-initialization period (days $\geq 0$) is generated by the renewal equation with the AR(1) $\mathcal{R}(t)$ process.
+
+## Connecting to observation processes
+
+The latent infection trajectory is not observed directly. To connect it to data, one or more **observation processes** transform $I(t)$ into expected observations. Each observation process applies its own ascertainment rate $\alpha_k$ and delay distribution $\pi_k(s)$:
+
+$$\mu_k(t) = \alpha_k \sum_{s} I(t-s) \, \pi_k(s)$$
+
+This is where the multi-signal model concept enters: a single shared $I(t)$ can generate hospital admissions, ED visits, wastewater concentrations, or any other signal, each through its own observation process.
+
+The `PyrenewBuilder` handles the wiring:
+
+1. **`configure_latent()`** sets the shared infection process (called once)
+2. **`add_observation()`** adds an observation process (called once per data stream)
+3. **`build()`** computes `n_initialization_points` from all delay distributions and produces a model ready for inference
+
+To learn how to build complete models with observation processes, see:
+
+- [Observation Processes: Counts](observation_processes_counts.md) for count data (admissions, deaths)
+- [Observation Processes: Measurements](observation_processes_measurements.md) for continuous data (wastewater)
+- [Building Multi-Signal Models](building_multisignal_models.md) for assembling a full model with `PyrenewBuilder`

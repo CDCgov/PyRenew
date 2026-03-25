@@ -22,12 +22,7 @@ from pyrenew.metaclass import RandomVariable
 
 class SharedInfections(BaseLatentInfectionProcess):
     """
-    A single $\mathcal{R}(t)$ trajectory drives one renewal equation.
-
-    Mathematical form:
-    - $\log \mathcal{R}(t) \sim \text{TemporalProcess}$ (e.g., AR(1), RandomWalk)
-    - $I(t) = \mathcal{R}(t) \sum_\tau I(t-\tau) \, g(\tau)$
-    - Each observation: $\mu_k(t) = \alpha_k \sum_s I(t-s) \, \pi_k(s)$
+    A single Rt trajectory drives one renewal equation.
 
     The constructor specifies model structure (priors, temporal processes).
 

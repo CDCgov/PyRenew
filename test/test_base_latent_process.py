@@ -23,7 +23,14 @@ class _ConcreteLatent(BaseLatentInfectionProcess):
 
 @pytest.fixture
 def latent_instance() -> _ConcreteLatent:
-    """Return a minimal BaseLatentInfectionProcess instance."""
+    """
+    Return a minimal BaseLatentInfectionProcess instance.
+
+    Returns
+    -------
+    _ConcreteLatent
+        Minimal instance.
+    """
     return _ConcreteLatent(
         name="test_latent",
         gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.5, 0.3, 0.2])),
