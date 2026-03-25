@@ -1,0 +1,72 @@
+{
+  "description": "True parameters used to generate synthetic 120-day CA data. All values are known ground truth for posterior recovery checks.",
+  "population": 39512223,
+  "start_date": "2023-11-06",
+  "n_days": 120,
+  "n_init": 50,
+  "rng_seed": 20240101,
+  "generation_interval_pmf": [
+    0.6326975,
+    0.2327564,
+    0.0856263,
+    0.03150015,
+    0.01158826,
+    0.00426308,
+    0.0015683
+  ],
+  "i0_per_capita": 0.0005,
+  "rt_trajectory": {
+    "phase_1": {
+      "days": 60,
+      "start": 1.2,
+      "end": 0.8
+    },
+    "phase_2": {
+      "days": 40,
+      "start": 0.8,
+      "end": 1.1
+    },
+    "phase_3": {
+      "days": 20,
+      "start": 1.1,
+      "end": 0.85
+    }
+  },
+  "hospitalizations": {
+    "ihr": 0.005,
+    "delay_pmf_source": "infection_admission_interval.tsv",
+    "negbinom_concentration": 350.0,
+    "temporal_resolutions": [
+      "daily",
+      "weekly_epiweek"
+    ]
+  },
+  "ed_visits": {
+    "iedr": 0.0075,
+    "delay_pmf": [
+      0.0,
+      0.0213253,
+      0.17156943,
+      0.23836233,
+      0.20200046,
+      0.14144434,
+      0.09118459,
+      0.0567108,
+      0.03480426,
+      0.0213253,
+      0.01312726,
+      0.00814594
+    ],
+    "negbinom_concentration": 50.0,
+    "day_of_week_effects": [
+      1.15,
+      1.12,
+      1.08,
+      1.05,
+      0.98,
+      0.82,
+      0.8
+    ],
+    "temporal_resolution": "daily"
+  }
+}
