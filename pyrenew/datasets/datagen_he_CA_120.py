@@ -30,8 +30,6 @@ import polars as pl
 from scipy.signal import fftconvolve
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-PRIORS_JSON = REPO_ROOT / "pyrenew" / "datasets" / "he_covid_priors.json"
-HOSP_DELAY_TSV = REPO_ROOT / "pyrenew" / "datasets" / "infection_admission_interval.tsv"
 OUTPUT_DIR = REPO_ROOT / "pyrenew" / "datasets" / "synthetic_CA_120"
 
 RNG_SEED = 20240101
@@ -39,6 +37,83 @@ POPULATION = 39_512_223
 
 GEN_INT_PMF = np.array(
     [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
+)
+
+HOSP_DELAY_PMF = np.array(
+    [
+        0.0,
+        0.00469384736487552,
+        0.0145200073436112,
+        0.0278627741704387,
+        0.0423656492135518,
+        0.0558071445014868,
+        0.0665713169684116,
+        0.0737925805176124,
+        0.0772854627892072,
+        0.0773666390616176,
+        0.0746515449009949,
+        0.0698761436052596,
+        0.0637663813017696,
+        0.0569581929821651,
+        0.0499600186601535,
+        0.0431457477049282,
+        0.0367662806214045,
+        0.0309702535668237,
+        0.0258273785539499,
+        0.0213504646948306,
+        0.0175141661880584,
+        0.0142698211023571,
+        0.0115565159519833,
+        0.00930888979824423,
+        0.00746229206759215,
+        0.00595605679409682,
+        0.00473519993107751,
+        0.00375117728281841,
+        0.00296198928038098,
+        0.00233187862772459,
+        0.00183079868293457,
+        0.00143377454057296,
+        0.00107076258525208,
+        0.000773006742366448,
+        0.000539573690886396,
+        0.000364177599116743,
+        0.000237727628685579,
+        0.000150157714457011,
+        0.0000918283319498657,
+        0.0000544079947589854,
+        0.0000312548818921465,
+        0.0000174202619730274,
+        9.42698047424713e-6,
+        4.95614149002087e-6,
+        2.53275674485913e-6,
+        1.25854819834554e-6,
+        6.08116579596933e-7,
+        2.85572858589747e-7,
+        1.30129404249734e-7,
+        5.73280599448306e-8,
+        2.4219376577964e-8,
+        9.6316861194457e-9,
+        3.43804936850951e-9,
+        9.34806280366888e-10,
+        0.0,
+    ]
+)
+
+ED_DELAY_PMF = np.array(
+    [
+        0.0,
+        0.0213253,
+        0.17156943,
+        0.23836233,
+        0.20200046,
+        0.14144434,
+        0.09118459,
+        0.0567108,
+        0.03480426,
+        0.0213253,
+        0.01312726,
+        0.00814594,
+    ]
 )
 
 IHR = 0.005
@@ -251,13 +326,6 @@ def generate() -> None:
     rng = np.random.default_rng(RNG_SEED)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    with open(PRIORS_JSON) as f:
-        priors = json.load(f)
-    ed_delay_pmf = np.array(priors["ed_visits_observation"]["delay_pmf"])
-    hosp_delay_pmf = pl.read_csv(HOSP_DELAY_TSV, separator="\t")[
-        "probability_mass"
-    ].to_numpy()
-
     true_rt = build_true_rt(N_DAYS)
     i0_total = I0_PER_CAPITA * POPULATION
 
@@ -267,7 +335,7 @@ def generate() -> None:
     obs_dates = [START_DATE + timedelta(days=i) for i in range(N_DAYS)]
     first_dow = START_DATE.weekday()
 
-    expected_hosp_daily = convolve_with_pmf(infections_full, hosp_delay_pmf) * IHR
+    expected_hosp_daily = convolve_with_pmf(infections_full, HOSP_DELAY_PMF) * IHR
     expected_hosp_daily = expected_hosp_daily[N_INIT:]
     expected_hosp_daily = np.maximum(expected_hosp_daily, 1.0)
     hosp_daily_obs = sample_negbinom(
@@ -286,7 +354,7 @@ def generate() -> None:
     )
     hosp_daily_df.write_csv(OUTPUT_DIR / "daily_hospital_admissions.csv")
 
-    expected_ed = convolve_with_pmf(infections_full, ed_delay_pmf) * IEDR
+    expected_ed = convolve_with_pmf(infections_full, ED_DELAY_PMF) * IEDR
     expected_ed = expected_ed[N_INIT:]
     expected_ed = apply_day_of_week_effects(expected_ed, DOW_EFFECTS, first_dow)
     expected_ed = np.maximum(expected_ed, 1.0)
@@ -342,7 +410,7 @@ def generate() -> None:
         },
         "ed_visits": {
             "iedr": IEDR,
-            "delay_pmf": ed_delay_pmf.tolist(),
+            "delay_pmf": ED_DELAY_PMF.tolist(),
             "negbinom_concentration": NEGBINOM_CONCENTRATION_ED,
             "day_of_week_effects": DOW_EFFECTS.tolist(),
             "temporal_resolution": "daily",

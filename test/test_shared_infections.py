@@ -225,6 +225,15 @@ class TestSharedInfectionsValidation:
                     subpop_fractions=jnp.array([0.5]),
                 )
 
+    def test_validate_passes(self, shared_infections):
+        """Test that validate() succeeds for a properly constructed instance."""
+        shared_infections.validate()
+
+    def test_default_subpop_fractions(self, shared_infections):
+        """Test that default_subpop_fractions returns [1.0]."""
+        fracs = shared_infections.default_subpop_fractions()
+        assert jnp.allclose(fracs, jnp.array([1.0]))
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
