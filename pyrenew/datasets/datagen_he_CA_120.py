@@ -2,8 +2,7 @@
 """
 Generate 120-day synthetic CA hospital + ED visit data from known R(t).
 
-Unlike generate_ed_data.py (which deconvolves real hospital data),
-this script defines R(t) directly, runs a renewal equation forward,
+This script defines R(t) directly, runs a renewal equation forward,
 and convolves with signal-specific delay PMFs to produce two
 observation streams.  All true parameters are saved alongside the
 synthetic observations so tutorials can demonstrate posterior recovery.
