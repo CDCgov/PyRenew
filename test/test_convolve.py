@@ -82,7 +82,7 @@ def test_double_scanner_reduces_to_single(inits, to_scan_a, multipliers):
         [
             jnp.ones(3),
             jnp.array(np.array([0.5, 0.3, 0.2] * 3)).reshape(3, 3),
-            jnp.ones((3, 3)),
+            jnp.array([[-0.25, 0.25, 0.25], [0, 1, 0], [0.5, -0.5, 0.5]]),
             t.ExpTransform(),
         ],
     ],
@@ -95,14 +95,13 @@ def test_convolve_scanner_using_scan(arr, history, multipliers, transform):
     """
     scanner = pc.new_convolve_scanner(arr, transform)
 
-    _, result = jax.lax.scan(f=scanner, init=history, xs=multipliers)
+    _, result = jax.lax.scan(f=scanner, init=jnp.array(history), xs=multipliers)
 
     result_not_scanned = []
     for multiplier in multipliers:
         history, new_val = scanner(history, multiplier)
         result_not_scanned.append(new_val)
-
-    assert jnp.array_equal(result, result_not_scanned)
+    assert_array_equal(result, result_not_scanned)
 
 
 @pytest.mark.parametrize(

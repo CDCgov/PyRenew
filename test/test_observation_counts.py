@@ -150,7 +150,7 @@ class TestCountsWithPriors:
     def test_with_stochastic_ascertainment(self, short_shedding_pmf):
         """Test with uncertain ascertainment rate parameter."""
         delay = DeterministicPMF("delay", jnp.array([0.2, 0.5, 0.3]))
-        ascertainment = DistributionalVariable("ihr", dist.Beta(2, 100))
+        ascertainment = DistributionalVariable("ihr", dist.LogNormal(-1, 100.0))
         concentration = DeterministicVariable("conc", 10.0)
 
         process = Counts(
