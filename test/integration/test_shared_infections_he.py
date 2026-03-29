@@ -80,6 +80,20 @@ class TestDataAssembly:
         assert jnp.all(jnp.isnan(padded[:n_init]))
         assert not jnp.any(jnp.isnan(padded[n_init:]))
 
+    def test_ed_model_includes_day_of_week_effect(
+        self,
+        he_model: MultiSignalModel,
+    ) -> None:
+        """
+        Verify the ED observation model matches the synthetic data generator.
+
+        Parameters
+        ----------
+        he_model : MultiSignalModel
+            Built model.
+        """
+        assert he_model.observations["ed"].day_of_week_rv is not None
+
 
 class TestModelFit:
     """Fit the H+E model and check posterior recovery."""
@@ -170,14 +184,16 @@ class TestModelFit:
         def trim_init(ds):
             """
             Trim initialization period from time dimension.
+
             Parameters
             ----------
-            ds:  xarray.DataTree
+            ds : xarray.Dataset
+                Dataset to trim.
 
             Returns
             -------
-            xarray.DataTree
-                trimmed DataTree
+            xarray.Dataset
+                Trimmed dataset.
             """
             if "time" in ds.dims:
                 ds = ds.isel(time=slice(n_init, None))

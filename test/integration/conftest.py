@@ -15,7 +15,7 @@ import numpyro.distributions as dist
 import polars as pl
 import pytest
 
-from pyrenew.deterministic import DeterministicPMF
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import AR1
 from pyrenew.latent.shared_infections import SharedInfections
 from pyrenew.model import PyrenewBuilder
@@ -120,9 +120,28 @@ def ed_delay_pmf(true_params: dict) -> jnp.ndarray:
 
 
 @pytest.fixture(scope="module")
+def ed_day_of_week_effects(true_params: dict) -> jnp.ndarray:
+    """
+    Load ED visit day-of-week effects from true parameters.
+
+    Parameters
+    ----------
+    true_params : dict
+        Ground-truth parameter dictionary.
+
+    Returns
+    -------
+    jnp.ndarray
+        Seven-element day-of-week multiplier vector.
+    """
+    return jnp.array(true_params["ed_visits"]["day_of_week_effects"])
+
+
+@pytest.fixture(scope="module")
 def he_model(
     hosp_delay_pmf: jnp.ndarray,
     ed_delay_pmf: jnp.ndarray,
+    ed_day_of_week_effects: jnp.ndarray,
 ) -> PyrenewBuilder:
     """
     Build a SharedInfections model with hospital + ED observation processes.
@@ -133,6 +152,8 @@ def he_model(
         Infection-to-hospitalization delay PMF.
     ed_delay_pmf : jnp.ndarray
         Infection-to-ED-visit delay PMF.
+    ed_day_of_week_effects : jnp.ndarray
+        Day-of-week multipliers used in synthetic ED generation.
 
     Returns
     -------
@@ -171,6 +192,7 @@ def he_model(
         noise=NegativeBinomialNoise(
             DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
         ),
+        day_of_week_rv=DeterministicVariable("ed_dow", ed_day_of_week_effects),
     )
     builder.add_observation(ed_obs)
 

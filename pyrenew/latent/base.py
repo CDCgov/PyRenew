@@ -142,7 +142,7 @@ class BaseLatentInfectionProcess(RandomVariable):
 
         Override this function in order to omit specification of
         subpop_fractions at sample time, in which case it will be called
-        by _parse_and_validate_functions.
+        by _parse_and_validate_fractions.
         Must return a valid array of positive elements that sums to 1.
 
         Returns

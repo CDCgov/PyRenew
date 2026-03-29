@@ -7,6 +7,7 @@ from __future__ import annotations
 import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
+from numpyro.util import not_jax_tracer
 
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.distutil import validate_discrete_dist_vector
@@ -160,10 +161,22 @@ class SharedInfections(BaseLatentInfectionProcess):
             Named tuple with fields:
             - aggregate: shape (n_total_days,)
             - all_subpops: shape (n_total_days, 1)
+
+        Raises
+        ------
+        ValueError
+            If ``subpop_fractions`` does not represent a single population
+            with fraction ``[1.0]`` or if ``I0_rv`` does not return a scalar.
         """
         pop = self._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
         )
+        frac_check = jnp.isclose(pop.fractions[0], 1.0, atol=1e-6)
+        if pop.n_subpops != 1 or (not_jax_tracer(frac_check) and not frac_check):
+            raise ValueError(
+                "SharedInfections requires exactly one subpopulation "
+                "with fraction [1.0]"
+            )
 
         n_total_days = self.n_initialization_points + n_days_post_init
 
@@ -180,6 +193,10 @@ class SharedInfections(BaseLatentInfectionProcess):
         gen_int = self.gen_int_rv()
 
         I0 = jnp.asarray(self.I0_rv())
+        if I0.ndim != 0:
+            raise ValueError(
+                "SharedInfections requires I0_rv to return a scalar prevalence"
+            )
         self._validate_I0(I0)
 
         initial_r = r_approx_from_R(

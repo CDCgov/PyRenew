@@ -56,7 +56,7 @@ where $\mathcal{R}_{\text{baseline}}(t)$ is the jurisdiction-level reproduction 
 
 Each subpopulation runs its own renewal equation with $\mathcal{R}_k(t)$, and results are aggregated using population fractions: $I_{\text{aggregate}}(t) = \sum_k p_k \, I_k(t)$.
 
-This tutorial assumes familiarity with the renewal equation, generation interval, initial conditions (`I0`, `initial_log_rt`), and temporal processes. See [Latent Infection Processes](latent_infections_v2.md) for that background.
+This tutorial assumes familiarity with the renewal equation, generation interval, initial conditions (`I0`, `initial_log_rt`), and temporal processes. See [Latent Infection Processes](latent_infections.md) for that background.
 
 ## Model Structure
 
@@ -122,9 +122,9 @@ print(
 
 ## Choosing the Baseline Temporal Process
 
-The baseline process governs the jurisdiction-level trend in $\mathcal{R}(t)$. The same temporal process options apply as for `SharedInfections` (see [Temporal Process Choice](latent_infections_v2.md#temporal-process-choice)), and the same considerations hold: AR(1) for mean reversion, DifferencedAR1 for persistent trends with stabilizing rate of change, RandomWalk for unconstrained drift.
+The baseline process governs the jurisdiction-level trend in $\mathcal{R}(t)$. The same temporal process options apply as for `SharedInfections` (see [Temporal Process Choice](latent_infections.md#temporal-process-choice)), and the same considerations hold: AR(1) for mean reversion, DifferencedAR1 for persistent trends with stabilizing rate of change, RandomWalk for unconstrained drift.
 
-We use DifferencedAR1 with small `innovation_sd` for the baseline throughout this tutorial. The prior predictive for baseline $\mathcal{R}(t)$ looks the same as in the SharedInfections tutorial, so we do not repeat it here. The focus of this tutorial is the deviation process.
+We use DifferencedAR1 with small `innovation_sd` for the baseline throughout this tutorial. The prior predictive for baseline $\mathcal{R}(t)$ behaves much like the corresponding `SharedInfections` example, so we do not repeat that full comparison here. The focus of this tutorial is the deviation process and how it changes the spread of subpopulation trajectories around the baseline.
 
 ## Choosing the Deviation Temporal Process
 
@@ -280,7 +280,7 @@ for label, s in [("AR(1)", ar1_dev_samples), ("RandomWalk", rw_dev_samples)]:
     )
 ```
 
-AR(1) deviations stay close to zero because mean reversion continuously pulls them back. RandomWalk deviations accumulate over time. The choice depends on the epidemiological setting:
+AR(1) deviations stay close to zero because mean reversion continuously pulls them back. RandomWalk deviations accumulate over time. As in the SharedInfections tutorial, this is prior-modeling guidance rather than a uniquely determined epidemiologic rule. The choice depends on the epidemiological setting:
 
 - **AR(1) deviations** when subpopulations are expected to track the jurisdiction average. Local outbreaks or lulls are temporary. This is typical for geographically close subpopulations (e.g., counties within a metropolitan area) where mobility mixes transmission.
 - **RandomWalk deviations** when local differences can persist. This may be appropriate for subpopulations with distinct contact patterns, demographics, or intervention histories (e.g., urban vs. rural areas).

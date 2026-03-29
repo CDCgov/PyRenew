@@ -47,6 +47,8 @@ from pyrenew.randomvariable import DistributionalVariable
 
 In infectious disease modeling, the true number of new infections each day is not directly observed. Instead, we observe indirect signals: hospital admissions, emergency department visits, reported cases, wastewater concentrations. The latent infection process generates the unobserved infection trajectory that underlies all of these signals.
 
+In PyRenew, the latent process is represented on a **per-capita scale** (infection proportion) and is typically multiplied by a population size downstream when connecting to count observations.
+
 PyRenew models latent infections using the **renewal equation**:
 
 $$I(t) = \mathcal{R}(t) \sum_{s=1}^{S} I(t-s) \, w(s)$$
@@ -91,28 +93,28 @@ I0_rv = DistributionalVariable("I0", dist.Beta(1, 1000))
 
 ### Generation Interval
 
-The generation interval is fixed by pathogen biology and is not estimated from data. For COVID-19, most transmission occurs within the first few days. We define a 7-day PMF based on estimates from the literature:
+The generation interval is a key epidemiological input to the renewal equation. In many renewal-model analyses, it is specified from external studies rather than estimated jointly from the focal surveillance data. Because `R_t` estimates depend on this choice, sensitivity analysis is often warranted. For COVID-19, most transmission occurs within the first few days. We define a 7-day PMF for illustration:
 
 ```{python}
 # | label: generation-interval
 gen_int_pmf = jnp.array([0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02])
 gen_int_rv = DeterministicPMF("gen_int", gen_int_pmf)
 
-days = np.arange(len(gen_int_pmf))
+days = np.arange(1, len(gen_int_pmf) + 1)
 mean_gi = float(np.sum(days * gen_int_pmf))
 print(f"Generation interval: {len(gen_int_pmf)} days, mean = {mean_gi:.1f}")
 ```
 
 ```{python}
 # | label: fig-generation-interval
-# | fig-cap: COVID-like generation interval distribution. Most secondary infections occur within 1-3 days of the index infection.
+# | fig-cap: COVID-like generation interval distribution. The support is shown in whole days since infection of the primary case.
 gi_df = pd.DataFrame({"day": days, "probability": np.array(gen_int_pmf)})
 
 (
     p9.ggplot(gi_df, p9.aes(x="day", y="probability"))
     + p9.geom_col(fill="steelblue", alpha=0.7, color="black")
     + p9.labs(
-        x="Days since index infection",
+        x="Days since primary infection",
         y="Probability",
         title="Generation Interval Distribution",
     )
@@ -120,7 +122,7 @@ gi_df = pd.DataFrame({"day": days, "probability": np.array(gen_int_pmf)})
 )
 ```
 
-The generation interval length determines the minimum initialization period: the renewal equation at day 0 needs infections from the preceding $S - 1$ days, where $S$ is the length of the generation interval PMF.
+The generation interval length determines the minimum initialization period: with an $S$-point generation interval PMF, the renewal equation at day 0 needs an infection-history vector long enough to supply the previous $S$ infection values used in the convolution.
 
 ### Initial Conditions: `I0` and `initial_log_rt`
 
@@ -132,7 +134,7 @@ $$I_{\text{init}}(\tau) = I_0 \cdot e^{r \cdot \tau}, \quad \tau = 0, 1, \ldots,
 
 where $r$ is the asymptotic growth rate implied by the initial reproduction number $\mathcal{R}(0) = e^{\text{initial\_log\_rt}}$ and the generation interval. The function `r_approx_from_R` converts $\mathcal{R}(0)$ and the generation interval into $r$ using Newton's method.
 
-* **The level is set by `I0`**.</br>`I0` is the proportion of the population infected at the start of the initialization period. The renewal equation is linear in `I0`, so scaling `I0` by a factor $c$ scales the entire infection trajectory by $c$. In practice, `I0` is weakly identified by the data because observed counts depend on $\alpha_k \cdot I(t)$, where $\alpha_k$ is the ascertainment rate for signal $k$. Doubling `I0` while halving all ascertainment rates produces identical expected counts. Without external information to pin either the ascertainment rates or the absolute infection level, the data cannot distinguish "more infections, lower ascertainment" from "fewer infections, higher ascertainment." The prior on `I0` (or on ascertainment) resolves this ambiguity.
+* **The level is set by `I0`**.</br>`I0` is the proportion of the population infected at the start of the initialization period. The renewal equation is linear in `I0`, so scaling `I0` by a factor $c$ scales the entire infection trajectory by $c$. In practice, `I0` is weakly identified by the data because observed counts depend on $\alpha_k \cdot I(t)$, where $\alpha_k$ is the ascertainment rate for signal $k$. Doubling `I0` while halving all ascertainment rates produces identical expected counts. Without external information to pin either the ascertainment rates or the absolute infection level, the data cannot distinguish "more infections, lower ascertainment" from "fewer infections, higher ascertainment." The prior on `I0` or on ascertainment resolves this ambiguity.
 
 * **The shape is set by `initial_log_rt`**.<br>`initial_log_rt` enters the model in two places: it is the starting point of the $\mathcal{R}(t)$ trajectory ($\mathcal{R}(0) = e^{\text{initial\_log\_rt}}$), and it determines the exponential growth rate $r$ used to fill the initialization vector. When `initial_log_rt = 0`, the growth rate $r = 0$ and the initialization is flat at level `I0`. When `initial_log_rt > 0`, infections are growing exponentially into day 0; when `initial_log_rt < 0`, they are declining.
 
@@ -204,6 +206,8 @@ The temporal process governs how $\log \mathcal{R}(t)$ evolves day to day.
 
 To evaluate what a given process implies, we use **prior predictive checks**: drawing many samples from the model *before seeing any data* and examining the distribution of trajectories. A single sample tells you little (the trajectory depends on the random seed), but the envelope of many samples reveals the structural constraints built into the process.
 We fix the initial conditions to a moderately growing epidemic (`initial_log_rt = 0.2`, so $\mathcal{R}(0) \approx 1.22$) with `I0 = 0.001`. Starting from growth rather than equilibrium makes the behavioral differences between temporal processes visible: mean-reverting processes pull $\mathcal{R}(t)$ back, while non-reverting processes do not.
+
+This section is primarily **modeling guidance for prior specification in PyRenew**, not a claim that epidemiologic theory uniquely determines one temporal process choice. The appropriate process depends on the scientific setting, time horizon, and how strongly you want the prior to regularize latent transmission dynamics.
 
 ```{python}
 # | label: prior-predictive-config
@@ -410,18 +414,32 @@ comparison_df["process"] = pd.Categorical(
 
 ```{python}
 # | label: fig-comparison
-# | fig-cap: 'Side-by-side comparison of all three temporal processes with hyperparameters chosen to produce comparable trajectory envelopes. The qualitative differences are in trajectory shape: AR(1) reverts to Rt = 1, DifferencedAR1 sustains trends, Random Walk drifts freely.'
+# | fig-cap: Side-by-side comparison of all three temporal processes using median trajectories and 90% prior intervals. Hyperparameters are chosen to produce broadly comparable envelopes; the main difference is trajectory shape.
 (
-    p9.ggplot(comparison_df, p9.aes(x="day", y="rt", group="sample"))
-    + p9.geom_line(alpha=0.1, size=0.5, color="steelblue")
+    p9.ggplot(
+        comparison_df.groupby(["process", "day"])["rt"]
+        .agg(
+            q05=lambda x: np.percentile(x, 5),
+            median="median",
+            q95=lambda x: np.percentile(x, 95),
+        )
+        .reset_index(),
+        p9.aes(x="day"),
+    )
+    + p9.geom_ribbon(
+        p9.aes(ymin="q05", ymax="q95"),
+        fill="steelblue",
+        alpha=0.2,
+    )
+    + p9.geom_line(
+        p9.aes(y="median"),
+        color="steelblue",
+        size=1.0,
+    )
     + p9.geom_hline(yintercept=1.0, color="red", linetype="dashed", alpha=0.7)
     + p9.facet_wrap("~ process", ncol=3)
     + p9.coord_cartesian(ylim=(0, rt_cap))
-    + p9.labs(
-        x="Days",
-        y="Rt",
-        title="Temporal Process Comparison",
-    )
+    + p9.labs(x="Days", y="Rt", title="Temporal Process Comparison")
     + theme_tutorial
 )
 ```

@@ -225,6 +225,37 @@ class TestSharedInfectionsValidation:
                     subpop_fractions=jnp.array([0.5]),
                 )
 
+    def test_rejects_multiple_subpop_fractions_even_if_sum_to_one(
+        self, shared_infections
+    ):
+        """Test that multi-element fractions are rejected for shared infections."""
+        with pytest.raises(
+            ValueError,
+            match="requires exactly one subpopulation with fraction \\[1.0\\]",
+        ):
+            with numpyro.handlers.seed(rng_seed=42):
+                shared_infections.sample(
+                    n_days_post_init=30,
+                    subpop_fractions=jnp.array([0.5, 0.5]),
+                )
+
+    def test_rejects_non_scalar_I0(self, gen_int_rv):
+        """Test that vector-valued I0 is rejected with a clear error."""
+        process = SharedInfections(
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", jnp.array([0.001, 0.002])),
+            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+            shared_rt_process=RandomWalk(),
+            n_initialization_points=7,
+        )
+
+        with pytest.raises(
+            ValueError,
+            match="requires I0_rv to return a scalar prevalence",
+        ):
+            with numpyro.handlers.seed(rng_seed=42):
+                process.sample(n_days_post_init=30)
+
     def test_validate_passes(self, shared_infections):
         """Test that validate() succeeds for a properly constructed instance."""
         shared_infections.validate()
