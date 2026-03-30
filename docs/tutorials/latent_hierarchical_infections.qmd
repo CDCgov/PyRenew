@@ -67,6 +67,8 @@ This tutorial assumes familiarity with the renewal equation, generation interval
 
 Population structure (`subpop_fractions`) is provided at **sample time**, not at construction time. This allows a single model specification to be fit to different jurisdictions.
 
+As in the other latent process tutorials, these inputs are `RandomVariable`s. We use `DeterministicVariable` and `DeterministicPMF` here so the prior behavior is easy to inspect, but in an inference workflow you would usually replace at least some of them with prior distributions.
+
 ```{python}
 # | label: model-setup
 gen_int_pmf = jnp.array([0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02])
@@ -125,6 +127,20 @@ print(
 The baseline process governs the jurisdiction-level trend in $\mathcal{R}(t)$. The same temporal process options apply as for `SharedInfections` (see [Temporal Process Choice](latent_infections.md#temporal-process-choice)), and the same considerations hold: AR(1) for mean reversion, DifferencedAR1 for persistent trends with stabilizing rate of change, RandomWalk for unconstrained drift.
 
 We use DifferencedAR1 with small `innovation_sd` for the baseline throughout this tutorial. The prior predictive for baseline $\mathcal{R}(t)$ behaves much like the corresponding `SharedInfections` example, so we do not repeat that full comparison here. The focus of this tutorial is the deviation process and how it changes the spread of subpopulation trajectories around the baseline.
+
+The same high-level decision rules apply here:
+
+| If you believe... | Consider |
+|-------------------|----------|
+| Jurisdiction-wide Rt should stay near a long-run level | `AR1` for the baseline |
+| Jurisdiction-wide Rt may drift over the modeled horizon | `DifferencedAR1` for the baseline |
+| Local differences should fade back toward the baseline | `AR1` for deviations |
+| Local differences can persist or accumulate | `RandomWalk` for deviations |
+
+Two parameters matter most when tuning these processes:
+
+- **`autoreg`**: Controls how strongly AR(1)-type processes revert. Values near 1 imply slow reversion; smaller values imply faster pullback.
+- **`innovation_sd`**: Controls day-to-day volatility. Larger values produce wider prior spreads and more abrupt movement.
 
 ## Choosing the Deviation Temporal Process
 
