@@ -22,6 +22,7 @@ def shared_infections(gen_int_rv):
         Configured infection process with realistic parameters.
     """
     return SharedInfections(
+        name="shared",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
@@ -72,10 +73,10 @@ class TestSharedInfectionsSample:
                 shared_infections.sample(n_days_post_init=30)
 
         expected_sites = [
-            "latent_infections::I0_init",
-            "latent_infections::log_rt_shared",
-            "latent_infections::rt_shared",
-            "latent_infections::infections_aggregate",
+            "shared::I0_init",
+            "shared::log_rt_shared",
+            "shared::rt_shared",
+            "shared::infections_aggregate",
         ]
         for site in expected_sites:
             assert site in trace, f"Missing deterministic site: {site}"
@@ -86,8 +87,8 @@ class TestSharedInfectionsSample:
             with numpyro.handlers.trace() as trace:
                 shared_infections.sample(n_days_post_init=30)
 
-        log_rt = trace["latent_infections::log_rt_shared"]["value"]
-        rt = trace["latent_infections::rt_shared"]["value"]
+        log_rt = trace["shared::log_rt_shared"]["value"]
+        rt = trace["shared::rt_shared"]["value"]
 
         assert jnp.allclose(rt, jnp.exp(log_rt), atol=1e-6)
 
@@ -130,12 +131,12 @@ class TestSharedInfectionsSample:
     def test_custom_name_prefix(self, gen_int_rv):
         """Test that custom name prefix is used in deterministic sites."""
         process = SharedInfections(
+            name="my_infections",
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", 0.001),
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
             shared_rt_process=RandomWalk(),
             n_initialization_points=7,
-            name="my_infections",
         )
 
         with numpyro.handlers.seed(rng_seed=42):
@@ -152,6 +153,7 @@ class TestSharedInfectionsValidation:
         """Test that None I0_rv is rejected."""
         with pytest.raises(ValueError, match="I0_rv is required"):
             SharedInfections(
+                name="shared",
                 gen_int_rv=gen_int_rv,
                 I0_rv=None,
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
@@ -163,6 +165,7 @@ class TestSharedInfectionsValidation:
         """Test that None initial_log_rt_rv is rejected."""
         with pytest.raises(ValueError, match="initial_log_rt_rv is required"):
             SharedInfections(
+                name="shared",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=None,
@@ -174,6 +177,7 @@ class TestSharedInfectionsValidation:
         """Test that None shared_rt_process is rejected."""
         with pytest.raises(ValueError, match="shared_rt_process is required"):
             SharedInfections(
+                name="shared",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
@@ -185,6 +189,7 @@ class TestSharedInfectionsValidation:
         """Test that invalid I0 values are rejected at construction."""
         with pytest.raises(ValueError, match="I0 must be positive"):
             SharedInfections(
+                name="shared",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", -0.1),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
@@ -196,6 +201,7 @@ class TestSharedInfectionsValidation:
         """Test that I0 > 1 is rejected at construction."""
         with pytest.raises(ValueError, match="I0 must be <= 1"):
             SharedInfections(
+                name="shared",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 1.5),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
@@ -209,6 +215,7 @@ class TestSharedInfectionsValidation:
             ValueError, match="n_initialization_points must be at least"
         ):
             SharedInfections(
+                name="shared",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
@@ -242,6 +249,7 @@ class TestSharedInfectionsValidation:
     def test_rejects_non_scalar_I0(self, gen_int_rv):
         """Test that vector-valued I0 is rejected with a clear error."""
         process = SharedInfections(
+            name="shared",
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", jnp.array([0.001, 0.002])),
             initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),

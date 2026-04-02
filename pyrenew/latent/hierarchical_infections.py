@@ -51,21 +51,27 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     def __init__(
         self,
         *,
+        name: str,
         gen_int_rv: RandomVariable,
+        n_initialization_points: int,
         I0_rv: RandomVariable,
         baseline_rt_process: TemporalProcess,
         subpop_rt_deviation_process: TemporalProcess,
         initial_log_rt_rv: RandomVariable,
-        n_initialization_points: int,
-        name: str = "latent_infections",
     ) -> None:
         """
         Initialize hierarchical infections process.
 
         Parameters
         ----------
+        name
+            Name prefix for numpyro sample sites. All deterministic
+            quantities are recorded under this scope (e.g.,
+            ``"{name}::rt_baseline"``).
         gen_int_rv
             Generation interval PMF
+        n_initialization_points
+            Number of initialization days before day 0.
         I0_rv
             Initial infection prevalence (proportion of population)
         baseline_rt_process
@@ -74,12 +80,6 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             Temporal process for subpopulation deviations
         initial_log_rt_rv
             Initial value for log(Rt) at time 0.
-        n_initialization_points
-            Number of initialization days before day 0.
-        name
-            Name prefix for numpyro sample sites. All deterministic
-            quantities are recorded under this scope (e.g.,
-            ``"{name}::rt_baseline"``). Default: ``"latent_infections"``.
 
         Raises
         ------
@@ -96,11 +96,9 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             raise ValueError("I0_rv is required")
         self.I0_rv = I0_rv
 
-        # Validate I0 at construction time if it's deterministic
         if isinstance(I0_rv, DeterministicVariable):
             self._validate_I0(I0_rv.value)
 
-        # Validate initial log Rt
         if initial_log_rt_rv is None:
             raise ValueError("initial_log_rt_rv is required")
         self.initial_log_rt_rv = initial_log_rt_rv
@@ -129,8 +127,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     def sample(
         self,
         n_days_post_init: int,
-        *,
-        subpop_fractions: ArrayLike = None,
+        subpop_fractions: ArrayLike | None = None,
         **kwargs: object,
     ) -> LatentSample:
         """
@@ -156,7 +153,6 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             - aggregate: shape (n_total_days,)
             - all_subpops: shape (n_total_days, n_subpops)
         """
-        # Parse and validate population structure
         pop = self._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
         )
@@ -199,8 +195,6 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             partial(r_approx_from_R, g=gen_int, n_newton_steps=4)
         )(rt_subpop[0, :])
 
-        # Vectorized exponential growth initialization for all subpopulations
-        # Formula: I0_subpop[k] * exp(initial_r_subpop[k] * t) for t in [0, n_init)
         time_indices = jnp.arange(self.n_initialization_points)
         I0_all = I0_subpop[jnp.newaxis, :] * jnp.exp(
             initial_r_subpop[jnp.newaxis, :] * time_indices[:, jnp.newaxis]
@@ -209,7 +203,6 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         gen_int_reversed = jnp.flip(gen_int)
         recent_I0_all = I0_all[-gen_int.size :, :]
 
-        # Vectorized renewal equation for all subpopulations via vmap
         post_init_infections_all = jax.vmap(
             lambda I0_col, Rt_col: compute_infections_from_rt(
                 I0=I0_col,
@@ -233,7 +226,6 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             pop,
         )
 
-        # Record key quantities for diagnostics and posterior analysis
         with numpyro.handlers.scope(prefix=self.name, divider="::"):
             numpyro.deterministic("I0_init_all_subpops", I0_all)
             numpyro.deterministic("log_rt_baseline", log_rt_baseline)

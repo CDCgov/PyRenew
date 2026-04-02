@@ -31,32 +31,32 @@ class SharedInfections(BaseLatentInfectionProcess):
     def __init__(
         self,
         *,
+        name: str,
         gen_int_rv: RandomVariable,
+        n_initialization_points: int,
         I0_rv: RandomVariable,
         shared_rt_process: TemporalProcess,
         initial_log_rt_rv: RandomVariable,
-        n_initialization_points: int,
-        name: str = "latent_infections",
     ) -> None:
         """
         Initialize shared infections process.
 
         Parameters
         ----------
+        name
+            Name prefix for numpyro sample sites. All deterministic
+            quantities are recorded under this scope (e.g.,
+            ``"{name}::rt_shared"``).
         gen_int_rv
             Generation interval PMF
+        n_initialization_points
+            Number of initialization days before day 0.
         I0_rv
             Initial infection prevalence (proportion of population)
         shared_rt_process
             Temporal process for shared Rt dynamics
         initial_log_rt_rv
             Initial value for log(Rt) at time 0.
-        n_initialization_points
-            Number of initialization days before day 0.
-        name
-            Name prefix for numpyro sample sites. All deterministic
-            quantities are recorded under this scope (e.g.,
-            ``"{name}::rt_shared"``). Default: ``"latent_infections"``.
 
         Raises
         ------
@@ -111,7 +111,6 @@ class SharedInfections(BaseLatentInfectionProcess):
     def sample(
         self,
         n_days_post_init: int,
-        *,
         subpop_fractions: ArrayLike | None = None,
         **kwargs: object,
     ) -> LatentSample:

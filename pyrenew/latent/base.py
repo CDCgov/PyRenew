@@ -309,8 +309,7 @@ class BaseLatentInfectionProcess(RandomVariable):
     def sample(
         self,
         n_days_post_init: int,
-        *,
-        subpop_fractions: ArrayLike = None,
+        subpop_fractions: ArrayLike | None = None,
         **kwargs: object,
     ) -> LatentSample:
         """

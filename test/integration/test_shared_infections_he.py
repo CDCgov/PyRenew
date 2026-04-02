@@ -173,9 +173,9 @@ class TestModelFit:
             fitted_model.mcmc,
             dims={
                 "latent_infections": ["time"],
-                "latent_infections::infections_aggregate": ["time"],
-                "latent_infections::log_rt_shared": ["time", "dummy"],
-                "latent_infections::rt_shared": ["time", "dummy"],
+                "SharedInfections::infections_aggregate": ["time"],
+                "SharedInfections::log_rt_shared": ["time", "dummy"],
+                "SharedInfections::rt_shared": ["time", "dummy"],
                 "hospital_predicted": ["time"],
                 "ed_predicted": ["time"],
             },
@@ -239,7 +239,7 @@ class TestModelFit:
         daily_infections : pl.DataFrame
             True infections and R(t) trajectory.
         """
-        rt_posterior = posterior_dt.posterior["latent_infections::rt_shared"]
+        rt_posterior = posterior_dt.posterior["SharedInfections::rt_shared"]
         rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values
         rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values
 
