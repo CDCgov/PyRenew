@@ -32,7 +32,7 @@ class SharedInfections(BaseLatentInfectionProcess):
     gen_int_rv
         Generation interval PMF
     I0_rv
-        Initial infection prevalence (proportion of population) at first
+        Infection prevalence (proportion of population) at first
         observation time. Must return a scalar value in the interval (0, 1).
         Full initial infections timeseries needed to initialize renewal process generated via exponential extrapolation.
     shared_rt_process
