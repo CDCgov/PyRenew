@@ -23,7 +23,7 @@ from pyrenew.metaclass import RandomVariable
 
 class SharedInfections(BaseLatentInfectionProcess):
     """
-    A single Rt trajectory drives one renewal equation.
+    A single $\ mathcal{R}(t)$ trajectory drives one renewal equation.
 
     The constructor specifies model structure (priors, temporal processes).
 
