@@ -42,7 +42,7 @@ class SharedInfections(BaseLatentInfectionProcess):
         or given a prior distribution.
     n_initialization_points
         Number of initialization days before day 0. Must be at least
-        ``len(gen_int_rv())`` to provide enough history for the renewal
+        `len(gen_int_rv())` to provide enough history for the renewal
         equation convolution. When using PyrenewBuilder, this is computed
         automatically from all observation processes.
 
