@@ -34,7 +34,7 @@ class SharedInfections(BaseLatentInfectionProcess):
     I0_rv
         Initial infection prevalence (proportion of population) at first
         observation time. Must return a scalar value in the interval (0, 1).
-        Full I0 vector generated via exponential backprojection during sampling.
+        Full initial infections timeseries needed to initialize renewal process generated via exponential extrapolation.
     shared_rt_process
         Temporal process for shared Rt dynamics
     initial_log_rt_rv
