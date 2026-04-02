@@ -7,30 +7,24 @@ and ArviZ 1.0 posterior summary helpers.
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import polars as pl
 import pytest
 
+from pyrenew.datasets import (
+    load_example_infection_admission_interval,
+    load_synthetic_daily_ed_visits,
+    load_synthetic_daily_hospital_admissions,
+    load_synthetic_daily_infections,
+    load_synthetic_true_parameters,
+)
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import AR1
 from pyrenew.latent.shared_infections import SharedInfections
 from pyrenew.model import PyrenewBuilder
 from pyrenew.observation import Counts, NegativeBinomialNoise
 from pyrenew.randomvariable import DistributionalVariable
-
-DATA_DIR = (
-    Path(__file__).resolve().parents[2] / "pyrenew" / "datasets" / "synthetic_CA_120"
-)
-HOSP_DELAY_TSV = (
-    Path(__file__).resolve().parents[2]
-    / "pyrenew"
-    / "datasets"
-    / "infection_admission_interval.tsv"
-)
 
 
 @pytest.fixture(scope="module")
@@ -44,8 +38,7 @@ def true_params() -> dict:
         True parameter values including R(t) trajectory,
         ascertainment rates, and delay PMFs.
     """
-    with open(DATA_DIR / "true_parameters.json") as f:
-        return json.load(f)
+    return load_synthetic_true_parameters()
 
 
 @pytest.fixture(scope="module")
@@ -58,7 +51,7 @@ def daily_infections() -> pl.DataFrame:
     pl.DataFrame
         Columns: date, true_infections, true_rt.
     """
-    return pl.read_csv(DATA_DIR / "daily_infections.csv")
+    return load_synthetic_daily_infections()
 
 
 @pytest.fixture(scope="module")
@@ -71,7 +64,7 @@ def daily_hosp() -> pl.DataFrame:
     pl.DataFrame
         Columns: date, geo_value, daily_hosp_admits, pop.
     """
-    return pl.read_csv(DATA_DIR / "daily_hospital_admissions.csv")
+    return load_synthetic_daily_hospital_admissions()
 
 
 @pytest.fixture(scope="module")
@@ -84,7 +77,7 @@ def daily_ed() -> pl.DataFrame:
     pl.DataFrame
         Columns: date, geo_value, disease, ed_visits.
     """
-    return pl.read_csv(DATA_DIR / "daily_ed_visits.csv")
+    return load_synthetic_daily_ed_visits()
 
 
 @pytest.fixture(scope="module")
@@ -97,8 +90,8 @@ def hosp_delay_pmf() -> jnp.ndarray:
     jnp.ndarray
         Delay PMF from infection_admission_interval.tsv.
     """
-    pmf = pl.read_csv(HOSP_DELAY_TSV, separator="\t")["probability_mass"].to_numpy()
-    return jnp.array(pmf)
+    df = load_example_infection_admission_interval()
+    return jnp.array(df["probability_mass"].to_numpy())
 
 
 @pytest.fixture(scope="module")
