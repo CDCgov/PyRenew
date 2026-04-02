@@ -174,9 +174,9 @@ def sample_hierarchical(baseline_process, deviation_process, label):
 
     samples = Predictive(sampler, num_samples=n_samples)(random.PRNGKey(42))
     return {
-        "rt_baseline": np.array(samples["HierarchicalInfections::rt_baseline"])[
-            :, n_init:, 0
-        ],
+        "rt_baseline": np.array(
+            samples["HierarchicalInfections::rt_baseline"]
+        )[:, n_init:, 0],
         "rt_subpop": np.array(samples["HierarchicalInfections::rt_subpop"])[
             :, n_init:, :
         ],
