@@ -274,5 +274,38 @@ class TestSharedInfectionsValidation:
         assert jnp.allclose(fracs, jnp.array([1.0]))
 
 
+class TestSharedValidateAndPrepareI0:
+    """Test _validate_and_prepare_I0 for SharedInfections."""
+
+    def test_accepts_valid_scalar(self, shared_infections):
+        """Test that a valid scalar I0 passes through unchanged."""
+        pop = shared_infections._parse_and_validate_fractions()
+        I0 = jnp.array(0.01)
+        result = shared_infections._validate_and_prepare_I0(I0, pop)
+        assert result.ndim == 0
+        assert jnp.isclose(result, 0.01)
+
+    def test_rejects_vector(self, shared_infections):
+        """Test that a vector I0 is rejected."""
+        pop = shared_infections._parse_and_validate_fractions()
+        I0 = jnp.array([0.01, 0.02])
+        with pytest.raises(ValueError, match="scalar prevalence"):
+            shared_infections._validate_and_prepare_I0(I0, pop)
+
+    def test_rejects_negative(self, shared_infections):
+        """Test that negative I0 is rejected."""
+        pop = shared_infections._parse_and_validate_fractions()
+        I0 = jnp.array(-0.01)
+        with pytest.raises(ValueError, match="I0 must be positive"):
+            shared_infections._validate_and_prepare_I0(I0, pop)
+
+    def test_rejects_greater_than_one(self, shared_infections):
+        """Test that I0 > 1 is rejected."""
+        pop = shared_infections._parse_and_validate_fractions()
+        I0 = jnp.array(1.5)
+        with pytest.raises(ValueError, match="I0 must be <= 1"):
+            shared_infections._validate_and_prepare_I0(I0, pop)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

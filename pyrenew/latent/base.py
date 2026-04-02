@@ -291,6 +291,39 @@ class BaseLatentInfectionProcess(RandomVariable):
                 "I0 represents infection prevalence as a proportion of the population."
             )
 
+    def _validate_and_prepare_I0(
+        self,
+        I0: ArrayLike,
+        pop: PopulationStructure,
+    ) -> ArrayLike:
+        """
+        Validate and prepare I0 for use in the renewal equation.
+
+        Subclasses override this to enforce shape constraints (e.g., scalar
+        for SharedInfections) or broadcast I0 to match the population
+        structure (e.g., scalar to per-subpop array for
+        HierarchicalInfections).
+
+        Parameters
+        ----------
+        I0
+            Initial infection prevalence from I0_rv, as a JAX array.
+        pop
+            Parsed population structure.
+
+        Returns
+        -------
+        ArrayLike
+            Validated (and possibly reshaped) I0.
+
+        Raises
+        ------
+        ValueError
+            If I0 values are not in the interval (0, 1].
+        """
+        self._validate_I0(I0)
+        return I0
+
     def get_required_lookback(self) -> int:
         """
         Return the generation interval length for builder pattern support.

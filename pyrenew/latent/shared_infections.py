@@ -14,6 +14,7 @@ from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.latent.base import (
     BaseLatentInfectionProcess,
     LatentSample,
+    PopulationStructure,
 )
 from pyrenew.latent.infection_functions import compute_infections_from_rt
 from pyrenew.latent.temporal_processes import TemporalProcess
@@ -95,6 +96,40 @@ class SharedInfections(BaseLatentInfectionProcess):
         """
         return jnp.array([1.0])
 
+    def _validate_and_prepare_I0(
+        self,
+        I0: ArrayLike,
+        pop: PopulationStructure,
+    ) -> ArrayLike:
+        """
+        Validate that I0 is a scalar prevalence value.
+
+        SharedInfections operates on a single population, so I0 must be
+        a scalar (0-dimensional array).
+
+        Parameters
+        ----------
+        I0
+            Initial infection prevalence from I0_rv, as a JAX array.
+        pop
+            Parsed population structure (unused, required by interface).
+
+        Returns
+        -------
+        ArrayLike
+            Validated scalar I0.
+
+        Raises
+        ------
+        ValueError
+            If I0 is not scalar or not in the interval (0, 1].
+        """
+        if I0.ndim != 0:
+            raise ValueError(
+                "SharedInfections requires I0_rv to return a scalar prevalence"
+            )
+        return super()._validate_and_prepare_I0(I0, pop)
+
     def validate(self) -> None:
         """
         Validate shared infections parameters.
@@ -167,12 +202,7 @@ class SharedInfections(BaseLatentInfectionProcess):
 
         gen_int = self.gen_int_rv()
 
-        I0 = jnp.asarray(self.I0_rv())
-        if I0.ndim != 0:
-            raise ValueError(
-                "SharedInfections requires I0_rv to return a scalar prevalence"
-            )
-        self._validate_I0(I0)
+        I0 = self._validate_and_prepare_I0(jnp.asarray(self.I0_rv()), pop)
 
         initial_r = r_approx_from_R(
             R=rt_shared[0, 0],

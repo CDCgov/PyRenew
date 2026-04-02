@@ -16,6 +16,7 @@ from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.latent.base import (
     BaseLatentInfectionProcess,
     LatentSample,
+    PopulationStructure,
 )
 from pyrenew.latent.infection_functions import compute_infections_from_rt
 from pyrenew.latent.temporal_processes import TemporalProcess
@@ -111,6 +112,39 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             raise ValueError("subpop_rt_deviation_process is required")
         self.subpop_rt_deviation_process = subpop_rt_deviation_process
 
+    def _validate_and_prepare_I0(
+        self,
+        I0: ArrayLike,
+        pop: PopulationStructure,
+    ) -> ArrayLike:
+        """
+        Validate I0 and broadcast scalar to per-subpopulation array.
+
+        Accepts either a scalar (applied uniformly to all subpopulations)
+        or a 1D array of length ``n_subpops``.
+
+        Parameters
+        ----------
+        I0
+            Initial infection prevalence from I0_rv, as a JAX array.
+        pop
+            Parsed population structure.
+
+        Returns
+        -------
+        ArrayLike
+            Per-subpopulation I0 array of shape ``(n_subpops,)``.
+
+        Raises
+        ------
+        ValueError
+            If I0 values are not in the interval (0, 1].
+        """
+        super()._validate_and_prepare_I0(I0, pop)
+        if I0.ndim == 0:
+            return jnp.full(pop.n_subpops, I0)
+        return I0
+
     def validate(self) -> None:
         """
         Validate hierarchical infections parameters.
@@ -183,13 +217,9 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
 
         gen_int = self.gen_int_rv()
 
-        I0 = jnp.asarray(self.I0_rv())
-        self._validate_I0(I0)
-
-        if I0.ndim == 0:
-            I0_subpop = jnp.full(pop.n_subpops, I0)
-        else:
-            I0_subpop = I0
+        I0_subpop = self._validate_and_prepare_I0(
+            jnp.asarray(self.I0_rv()), pop
+        )
 
         initial_r_subpop = jax.vmap(
             partial(r_approx_from_R, g=gen_int, n_newton_steps=4)

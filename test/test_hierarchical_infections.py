@@ -207,5 +207,47 @@ class TestHierarchicalInfectionsPerSubpopI0:
         assert jnp.all(inf_all > 0)
 
 
+class TestHierarchicalValidateAndPrepareI0:
+    """Test _validate_and_prepare_I0 for HierarchicalInfections."""
+
+    def test_broadcasts_scalar_to_subpop_array(self, hierarchical_infections):
+        """Test that scalar I0 is broadcast to per-subpopulation array."""
+        pop = hierarchical_infections._parse_and_validate_fractions(
+            subpop_fractions=jnp.array([0.3, 0.25, 0.45])
+        )
+        I0 = jnp.array(0.01)
+        result = hierarchical_infections._validate_and_prepare_I0(I0, pop)
+        assert result.shape == (3,)
+        assert jnp.allclose(result, 0.01)
+
+    def test_passes_through_matching_array(self, hierarchical_infections):
+        """Test that a per-subpopulation I0 array passes through unchanged."""
+        pop = hierarchical_infections._parse_and_validate_fractions(
+            subpop_fractions=jnp.array([0.3, 0.25, 0.45])
+        )
+        I0 = jnp.array([0.001, 0.002, 0.0015])
+        result = hierarchical_infections._validate_and_prepare_I0(I0, pop)
+        assert result.shape == (3,)
+        assert jnp.allclose(result, I0)
+
+    def test_rejects_negative(self, hierarchical_infections):
+        """Test that negative I0 is rejected."""
+        pop = hierarchical_infections._parse_and_validate_fractions(
+            subpop_fractions=jnp.array([0.5, 0.5])
+        )
+        I0 = jnp.array(-0.01)
+        with pytest.raises(ValueError, match="I0 must be positive"):
+            hierarchical_infections._validate_and_prepare_I0(I0, pop)
+
+    def test_rejects_greater_than_one(self, hierarchical_infections):
+        """Test that I0 > 1 is rejected."""
+        pop = hierarchical_infections._parse_and_validate_fractions(
+            subpop_fractions=jnp.array([0.5, 0.5])
+        )
+        I0 = jnp.array(1.5)
+        with pytest.raises(ValueError, match="I0 must be <= 1"):
+            hierarchical_infections._validate_and_prepare_I0(I0, pop)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
