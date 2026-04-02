@@ -42,35 +42,10 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     Population structure (subpop_fractions) is provided at sample time,
     allowing a single model to be fit to multiple jurisdictions.
 
-    Parameters
-    ----------
-    gen_int_rv
-        Generation interval PMF
-    I0_rv
-        Initial infection prevalence (proportion of population) at first
-        observation time. Must return values in the interval (0, 1).
-        Returns scalar (same for all subpops) or (n_subpops,) array (per-subpop).
-        Full I0 matrix generated via exponential backprojection during sampling.
-    baseline_rt_process
-        Temporal process for baseline Rt dynamics
-    subpop_rt_deviation_process
-        Temporal process for subpopulation deviations
-    initial_log_rt_rv
-        Initial value for log(Rt) at time 0.  Can be estimated from data
-        or given a prior distribution.
-    n_initialization_points
-        Number of initialization days before day 0. Must be at least
-        ``len(gen_int_rv())`` to provide enough history for the renewal
-        equation convolution. When using PyrenewBuilder, this is computed
-        automatically from all observation processes.
-
     Notes
     -----
     Sum-to-zero constraint on deviations ensures R_baseline(t) is the geometric
     mean of subpopulation Rt values, providing identifiability.
-
-    When using PyrenewBuilder (recommended), n_initialization_points is computed
-    automatically from all observation processes.
     """
 
     def __init__(

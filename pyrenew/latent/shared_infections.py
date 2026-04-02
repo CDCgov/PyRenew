@@ -26,30 +26,6 @@ class SharedInfections(BaseLatentInfectionProcess):
     A single $\ mathcal{R}(t)$ trajectory drives one renewal equation.
 
     The constructor specifies model structure (priors, temporal processes).
-
-    Parameters
-    ----------
-    gen_int_rv
-        Generation interval PMF
-    I0_rv
-        Infection prevalence (proportion of population) at first
-        observation time. Must return a scalar value in the interval (0, 1).
-        Full initial infections timeseries needed to initialize renewal process generated via exponential extrapolation.
-    shared_rt_process
-        Temporal process for shared $\mathcal{R}(t)$ dynamics
-    initial_log_rt_rv
-        Value for $\log(\mathcal{R}(t))$ at time 0.  Can be estimated from data
-        or given a prior distribution.
-    n_initialization_points
-        Number of initialization days before day 0. Must be at least
-        `len(gen_int_rv())` to provide enough history for the renewal
-        equation convolution. When using PyrenewBuilder, this is computed
-        automatically from all observation processes.
-
-    Notes
-    -----
-    When using PyrenewBuilder (recommended), n_initialization_points is computed
-    automatically from all observation processes.
     """
 
     def __init__(

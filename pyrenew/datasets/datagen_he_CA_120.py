@@ -153,7 +153,6 @@ def build_true_rt() -> np.ndarray:
             for length, start, end in segments
         ]
     )
-    n_days = sum([length for length, _, _ in segments])
     return rt
 
 
