@@ -7,14 +7,11 @@ from datetime import date
 
 import numpy as np
 import polars as pl
-import pytest
-
 import pyrenew.datasets.datagen_he_CA_120 as datagen_mod
 from pyrenew.datasets.datagen_he_CA_120 import (
     aggregate_to_epiweeks,
     apply_day_of_week_effects,
     build_true_rt,
-    convolve_with_pmf,
     generate,
     run_renewal,
     sample_negbinom,
@@ -25,25 +22,20 @@ class TestBuildTrueRt:
     """Tests for build_true_rt."""
 
     def test_length(self):
-        """Test that the output has the requested number of days."""
-        rt = build_true_rt(120)
+        """Test that the output has 120 days."""
+        rt = build_true_rt()
         assert len(rt) == 120
 
     def test_starting_value(self):
         """Test that Rt starts near 1.2."""
-        rt = build_true_rt(120)
+        rt = build_true_rt()
         assert np.isclose(rt[0], 1.2, atol=0.01)
 
     def test_phase_endpoints(self):
         """Test that phase transitions occur at expected values."""
-        rt = build_true_rt(120)
+        rt = build_true_rt()
         assert rt[59] < 0.85
         assert rt[60] > 0.79
-
-    def test_wrong_length_raises(self):
-        """Test that a length not equal to 120 raises AssertionError."""
-        with pytest.raises(AssertionError):
-            build_true_rt(100)
 
 
 class TestRunRenewal:
@@ -70,23 +62,6 @@ class TestRunRenewal:
         result = run_renewal(rt, gen_int, i0_total=500.0, n_init=5)
         assert np.isclose(result[4], 500.0, rtol=0.01)
 
-
-class TestConvolveWithPmf:
-    """Tests for convolve_with_pmf."""
-
-    def test_output_length_matches_input(self):
-        """Test that output length equals input length."""
-        signal = np.ones(50)
-        pmf = np.array([0.5, 0.3, 0.2])
-        result = convolve_with_pmf(signal, pmf)
-        assert len(result) == len(signal)
-
-    def test_identity_pmf(self):
-        """Test that convolving with [1.0] returns the original signal."""
-        signal = np.array([1.0, 2.0, 3.0, 4.0])
-        pmf = np.array([1.0])
-        result = convolve_with_pmf(signal, pmf)
-        np.testing.assert_allclose(result, signal, atol=1e-10)
 
 
 class TestApplyDayOfWeekEffects:
@@ -189,7 +164,7 @@ class TestGenerate:
             params = json.load(f)
 
         assert params["population"] == datagen_mod.POPULATION
-        assert params["n_days"] == datagen_mod.N_DAYS
+        assert params["n_days"] == 120
         assert "hospitalizations" in params
         assert "ed_visits" in params
 
@@ -199,7 +174,7 @@ class TestGenerate:
         generate()
 
         df = pl.read_csv(tmp_path / "daily_infections.csv")
-        assert len(df) == datagen_mod.N_DAYS
+        assert len(df) == 120
         assert "true_infections" in df.columns
         assert "true_rt" in df.columns
 
@@ -209,7 +184,7 @@ class TestGenerate:
         generate()
 
         df = pl.read_csv(tmp_path / "daily_hospital_admissions.csv")
-        assert len(df) == datagen_mod.N_DAYS
+        assert len(df) == 120
         assert "daily_hosp_admits" in df.columns
 
     def test_generate_ed_visits_shape(self, tmp_path, monkeypatch):
@@ -218,5 +193,5 @@ class TestGenerate:
         generate()
 
         df = pl.read_csv(tmp_path / "daily_ed_visits.csv")
-        assert len(df) == datagen_mod.N_DAYS
+        assert len(df) == 120
         assert "ed_visits" in df.columns

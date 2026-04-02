@@ -3,7 +3,7 @@
   "population": 39512223,
   "start_date": "2023-11-06",
   "n_days": 120,
-  "n_init": 50,
+  "n_init": 55,
   "rng_seed": 20240101,
   "generation_interval_pmf": [
     0.6326975,

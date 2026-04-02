@@ -27,7 +27,9 @@ from pathlib import Path
 
 import numpy as np
 import polars as pl
-from scipy.signal import fftconvolve
+from pyrenew.convolve import compute_delay_ascertained_incidence
+from pyrenew.math import r_approx_from_R
+from pyrenew.time import daily_to_mmwr_epiweekly, get_sequential_day_of_week_indices
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = REPO_ROOT / "pyrenew" / "datasets" / "synthetic_CA_120"
@@ -124,26 +126,20 @@ NEGBINOM_CONCENTRATION_ED = 50.0
 DOW_EFFECTS = np.array([1.15, 1.12, 1.08, 1.05, 0.98, 0.82, 0.80])
 
 START_DATE = date(2023, 11, 6)
-N_DAYS = 120
-N_INIT = 50
+N_INIT = max(50, len(HOSP_DELAY_PMF), len(ED_DELAY_PMF))
 
 
-def build_true_rt(n_days: int) -> np.ndarray:
+def build_true_rt() -> np.ndarray:
     """
-    Build a piecewise-linear true R(t) trajectory over ``n_days`` days.
+    Build a piecewise-linear true R(t) trajectory.
 
     Phases: decline from 1.2 to 0.8 (60 d), rise from 0.8 to 1.1 (40 d),
     decline from 1.1 to 0.85 (20 d).
 
-    Parameters
-    ----------
-    n_days : int
-        Total number of days.
-
     Returns
     -------
     np.ndarray
-        R(t) trajectory of shape ``(n_days,)``.
+        R(t) trajectory.
     """
     segments = [
         (60, 1.2, 0.8),
@@ -154,7 +150,6 @@ def build_true_rt(n_days: int) -> np.ndarray:
     for length, start, end in segments:
         pieces.append(np.linspace(start, end, length, endpoint=False))
     rt = np.concatenate(pieces)
-    assert len(rt) == n_days, f"Expected {n_days} days, got {len(rt)}"
     return rt
 
 
@@ -174,7 +169,7 @@ def run_renewal(
     Parameters
     ----------
     rt : np.ndarray
-        Effective reproduction number trajectory of shape ``(n_days,)``.
+        Effective reproduction number trajectory.
     gen_int : np.ndarray
         Generation interval PMF (sums to 1).
     i0_total : float
@@ -191,7 +186,7 @@ def run_renewal(
     n_total = n_init + n_days
     infections = np.zeros(n_total)
 
-    r0_approx = np.log(rt[0]) / np.sum(gen_int * np.arange(len(gen_int)))
+    r0_approx = r_approx_from_R(rt[0], gen_int, 8)
     seed_times = np.arange(-n_init, 0)
     infections[:n_init] = i0_total * np.exp(r0_approx * seed_times)
 
@@ -203,25 +198,6 @@ def run_renewal(
         infections[t] = rt[t - n_init] * convolution
 
     return infections
-
-
-def convolve_with_pmf(signal: np.ndarray, pmf: np.ndarray) -> np.ndarray:
-    """
-    Convolve a signal with a delay PMF, keeping original length.
-
-    Parameters
-    ----------
-    signal : np.ndarray
-        Input time series.
-    pmf : np.ndarray
-        Delay PMF.
-
-    Returns
-    -------
-    np.ndarray
-        Convolved signal (same length as input).
-    """
-    return fftconvolve(signal, pmf, mode="full")[: len(signal)]
 
 
 def apply_day_of_week_effects(
@@ -245,8 +221,7 @@ def apply_day_of_week_effects(
     np.ndarray
         Adjusted daily values.
     """
-    n = len(values)
-    day_indices = (np.arange(n) + first_dow) % 7
+    day_indices = get_sequential_day_of_week_indices(first_dow, len(values))
     return values * dow_effects[day_indices]
 
 
@@ -298,27 +273,20 @@ def aggregate_to_epiweeks(
     pl.DataFrame
         Columns: week_end, weekly_hosp_admits.
     """
-    dates = [start_date + timedelta(days=int(i)) for i in range(len(daily_values))]
-    df = pl.DataFrame({"date": dates, "daily_value": daily_values.tolist()})
-    df = df.with_columns(
-        pl.col("date")
-        .map_elements(
-            lambda d: d + timedelta(days=(5 - d.weekday()) % 7),
-            return_dtype=pl.Date,
-        )
-        .alias("week_end")
+    first_dow = start_date.weekday()
+    weekly_values = daily_to_mmwr_epiweekly(
+        np.asarray(daily_values), input_data_first_dow=first_dow
     )
-    weekly = (
-        df.group_by("week_end")
-        .agg(
-            pl.col("daily_value").sum().alias("weekly_hosp_admits"),
-            pl.col("date").count().alias("n_days"),
-        )
-        .filter(pl.col("n_days") == 7)
-        .drop("n_days")
-        .sort("week_end")
+    days_to_first_sunday = (6 - first_dow) % 7
+    first_week_end = start_date + timedelta(days=days_to_first_sunday + 6)
+    n_weeks = len(weekly_values)
+    week_ends = [first_week_end + timedelta(weeks=i) for i in range(n_weeks)]
+    return pl.DataFrame(
+        {
+            "week_end": week_ends,
+            "weekly_hosp_admits": np.asarray(weekly_values).tolist(),
+        }
     )
-    return weekly
 
 
 def generate() -> None:
@@ -326,16 +294,22 @@ def generate() -> None:
     rng = np.random.default_rng(RNG_SEED)
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    true_rt = build_true_rt(N_DAYS)
+    true_rt = build_true_rt()
+    n_days = len(true_rt)
     i0_total = I0_PER_CAPITA * POPULATION
 
     infections_full = run_renewal(true_rt, GEN_INT_PMF, i0_total, N_INIT)
     infections_obs = infections_full[N_INIT:]
 
-    obs_dates = [START_DATE + timedelta(days=i) for i in range(N_DAYS)]
+    obs_dates = [START_DATE + timedelta(days=i) for i in range(n_days)]
     first_dow = START_DATE.weekday()
 
-    expected_hosp_daily = convolve_with_pmf(infections_full, HOSP_DELAY_PMF) * IHR
+    expected_hosp_daily, _ = compute_delay_ascertained_incidence(
+        latent_incidence=infections_full,
+        delay_incidence_to_observation_pmf=HOSP_DELAY_PMF,
+        p_observed_given_incident=IHR,
+        pad=True,
+    )
     expected_hosp_daily = expected_hosp_daily[N_INIT:]
     expected_hosp_daily = np.maximum(expected_hosp_daily, 1.0)
     hosp_daily_obs = sample_negbinom(
@@ -347,14 +321,19 @@ def generate() -> None:
     hosp_daily_df = pl.DataFrame(
         {
             "date": obs_dates,
-            "geo_value": ["CA"] * N_DAYS,
+            "geo_value": ["CA"] * n_days,
             "daily_hosp_admits": hosp_daily_obs.tolist(),
-            "pop": [POPULATION] * N_DAYS,
+            "pop": [POPULATION] * n_days,
         }
     )
     hosp_daily_df.write_csv(OUTPUT_DIR / "daily_hospital_admissions.csv")
 
-    expected_ed = convolve_with_pmf(infections_full, ED_DELAY_PMF) * IEDR
+    expected_ed, _ = compute_delay_ascertained_incidence(
+        latent_incidence=infections_full,
+        delay_incidence_to_observation_pmf=ED_DELAY_PMF,
+        p_observed_given_incident=IEDR,
+        pad=True,
+    )
     expected_ed = expected_ed[N_INIT:]
     expected_ed = apply_day_of_week_effects(expected_ed, DOW_EFFECTS, first_dow)
     expected_ed = np.maximum(expected_ed, 1.0)
@@ -372,8 +351,8 @@ def generate() -> None:
     ed_df = pl.DataFrame(
         {
             "date": obs_dates,
-            "geo_value": ["CA"] * N_DAYS,
-            "disease": ["COVID-19"] * N_DAYS,
+            "geo_value": ["CA"] * n_days,
+            "disease": ["COVID-19"] * n_days,
             "ed_visits": ed_obs.tolist(),
         }
     )
@@ -392,7 +371,7 @@ def generate() -> None:
         ),
         "population": POPULATION,
         "start_date": str(START_DATE),
-        "n_days": N_DAYS,
+        "n_days": n_days,
         "n_init": N_INIT,
         "rng_seed": RNG_SEED,
         "generation_interval_pmf": GEN_INT_PMF.tolist(),
@@ -418,14 +397,15 @@ def generate() -> None:
     }
     with open(OUTPUT_DIR / "true_parameters.json", "w") as f:
         json.dump(true_params, f, indent=2)
+        f.write("\n")
 
     n_weeks = len(weekly_hosp)
     mean_daily_hosp = float(np.mean(hosp_daily_obs))
     mean_weekly_hosp = float(weekly_hosp["weekly_hosp_admits"].mean())
     mean_daily_ed = float(np.mean(ed_obs))
-    print(f"Wrote {N_DAYS} daily infection rows")
-    print(f"Wrote {N_DAYS} daily hospital rows (mean {mean_daily_hosp:.0f}/day)")
-    print(f"Wrote {N_DAYS} daily ED visit rows (mean {mean_daily_ed:.0f}/day)")
+    print(f"Wrote {n_days} daily infection rows")
+    print(f"Wrote {n_days} daily hospital rows (mean {mean_daily_hosp:.0f}/day)")
+    print(f"Wrote {n_days} daily ED visit rows (mean {mean_daily_ed:.0f}/day)")
     print(f"Wrote {n_weeks} weekly hospital rows (mean {mean_weekly_hosp:.0f}/week)")
     print(f"Weekly ED/hosp ratio: {mean_daily_ed * 7 / mean_weekly_hosp:.2f}")
     print(f"Output directory: {OUTPUT_DIR}")
