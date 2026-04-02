@@ -27,6 +27,7 @@ from pathlib import Path
 
 import numpy as np
 import polars as pl
+
 from pyrenew.convolve import compute_delay_ascertained_incidence
 from pyrenew.math import r_approx_from_R
 from pyrenew.time import daily_to_mmwr_epiweekly, get_sequential_day_of_week_indices
@@ -146,10 +147,13 @@ def build_true_rt() -> np.ndarray:
         (40, 0.8, 1.1),
         (20, 1.1, 0.85),
     ]
-    pieces = []
-    for length, start, end in segments:
-        pieces.append(np.linspace(start, end, length, endpoint=False))
-    rt = np.concatenate(pieces)
+    rt = np.concatenate(
+        [
+            np.linspace(start, end, length, endpoint=False)
+            for length, start, end in segments
+        ]
+    )
+    n_days = sum([length for length, _, _ in segments])
     return rt
 
 

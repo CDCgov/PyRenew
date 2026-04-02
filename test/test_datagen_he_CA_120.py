@@ -7,6 +7,7 @@ from datetime import date
 
 import numpy as np
 import polars as pl
+
 import pyrenew.datasets.datagen_he_CA_120 as datagen_mod
 from pyrenew.datasets.datagen_he_CA_120 import (
     aggregate_to_epiweeks,
@@ -61,7 +62,6 @@ class TestRunRenewal:
         gen_int = np.array([0.5, 0.3, 0.2])
         result = run_renewal(rt, gen_int, i0_total=500.0, n_init=5)
         assert np.isclose(result[4], 500.0, rtol=0.01)
-
 
 
 class TestApplyDayOfWeekEffects:

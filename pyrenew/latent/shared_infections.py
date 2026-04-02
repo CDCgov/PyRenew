@@ -23,7 +23,7 @@ from pyrenew.metaclass import RandomVariable
 
 class SharedInfections(BaseLatentInfectionProcess):
     """
-    A single Rt trajectory drives one renewal equation.
+    A single $\ mathcal{R}(t)$ trajectory drives one renewal equation.
 
     The constructor specifies model structure (priors, temporal processes).
 
@@ -32,17 +32,17 @@ class SharedInfections(BaseLatentInfectionProcess):
     gen_int_rv
         Generation interval PMF
     I0_rv
-        Initial infection prevalence (proportion of population) at first
+        Infection prevalence (proportion of population) at first
         observation time. Must return a scalar value in the interval (0, 1).
-        Full I0 vector generated via exponential backprojection during sampling.
+        Full initial infections timeseries needed to initialize renewal process generated via exponential extrapolation.
     shared_rt_process
-        Temporal process for shared Rt dynamics
+        Temporal process for shared $\mathcal{R}(t)$ dynamics
     initial_log_rt_rv
-        Initial value for log(Rt) at time 0.  Can be estimated from data
+        Value for $\log(\mathcal{R}(t))$ at time 0.  Can be estimated from data
         or given a prior distribution.
     n_initialization_points
         Number of initialization days before day 0. Must be at least
-        ``len(gen_int_rv())`` to provide enough history for the renewal
+        `len(gen_int_rv())` to provide enough history for the renewal
         equation convolution. When using PyrenewBuilder, this is computed
         automatically from all observation processes.
 
