@@ -38,7 +38,7 @@ class SharedInfections(BaseLatentInfectionProcess):
     shared_rt_process
         Temporal process for shared $\mathcal{R}(t)$ dynamics
     initial_log_rt_rv
-        Initial value for log(Rt) at time 0.  Can be estimated from data
+        Value for $\log(\mathcal{R}(t))$ at time 0.  Can be estimated from data
         or given a prior distribution.
     n_initialization_points
         Number of initialization days before day 0. Must be at least
