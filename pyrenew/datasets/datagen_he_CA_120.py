@@ -147,7 +147,12 @@ def build_true_rt() -> np.ndarray:
         (40, 0.8, 1.1),
         (20, 1.1, 0.85),
     ]
-    rt = np.concatenate([np.linspace(start, end, length, endpoint=False) for length, start, end in segments])
+    rt = np.concatenate(
+        [
+            np.linspace(start, end, length, endpoint=False)
+            for length, start, end in segments
+        ]
+    )
     n_days = sum([length for length, _, _ in segments])
     return rt
 
