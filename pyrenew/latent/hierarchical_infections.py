@@ -217,9 +217,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
 
         gen_int = self.gen_int_rv()
 
-        I0_subpop = self._validate_and_prepare_I0(
-            jnp.asarray(self.I0_rv()), pop
-        )
+        I0_subpop = self._validate_and_prepare_I0(jnp.asarray(self.I0_rv()), pop)
 
         initial_r_subpop = jax.vmap(
             partial(r_approx_from_R, g=gen_int, n_newton_steps=4)
