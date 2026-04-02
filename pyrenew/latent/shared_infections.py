@@ -36,7 +36,7 @@ class SharedInfections(BaseLatentInfectionProcess):
         observation time. Must return a scalar value in the interval (0, 1).
         Full initial infections timeseries needed to initialize renewal process generated via exponential extrapolation.
     shared_rt_process
-        Temporal process for shared Rt dynamics
+        Temporal process for shared $\mathcal{R}(t)$ dynamics
     initial_log_rt_rv
         Initial value for log(Rt) at time 0.  Can be estimated from data
         or given a prior distribution.
