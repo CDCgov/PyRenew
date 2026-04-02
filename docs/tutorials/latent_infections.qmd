@@ -222,6 +222,7 @@ rt_cap = 3.0
 def sample_process(rt_process, label):
     """Draw prior predictive samples for a given temporal process."""
     model = SharedInfections(
+        name="SharedInfections",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", I0_val),
         initial_log_rt_rv=DeterministicVariable(
@@ -237,9 +238,9 @@ def sample_process(rt_process, label):
 
     samples = Predictive(sampler, num_samples=n_samples)(random.PRNGKey(42))
     return {
-        "rt": np.array(samples["latent_infections::rt_shared"])[:, n_init:, 0],
+        "rt": np.array(samples["SharedInfections::rt_shared"])[:, n_init:, 0],
         "infections": np.array(
-            samples["latent_infections::infections_aggregate"]
+            samples["SharedInfections::infections_aggregate"]
         )[:, n_init:],
     }
 

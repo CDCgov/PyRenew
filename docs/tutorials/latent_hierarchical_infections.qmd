@@ -92,6 +92,7 @@ print(f"Initial Rt: {np.exp(initial_log_rt):.2f}")
 ```{python}
 # | label: instantiate
 model = HierarchicalInfections(
+    name="HierarchicalInfections",
     gen_int_rv=gen_int_rv,
     I0_rv=DeterministicVariable("I0", I0_val),
     initial_log_rt_rv=DeterministicVariable("initial_log_rt", initial_log_rt),
@@ -114,7 +115,7 @@ with numpyro.handlers.seed(rng_seed=42):
             subpop_fractions=subpop_fractions,
         )
 
-deviations = trace["latent_infections::subpop_deviations"]["value"]
+deviations = trace["HierarchicalInfections::subpop_deviations"]["value"]
 deviation_sums = jnp.sum(deviations, axis=1)
 print(f"Deviation shape: {deviations.shape}  (n_total_days, n_subpops)")
 print(
@@ -153,6 +154,7 @@ The key question: **are local differences transient or persistent?**
 def sample_hierarchical(baseline_process, deviation_process, label):
     """Draw prior predictive samples from a HierarchicalInfections model."""
     m = HierarchicalInfections(
+        name="HierarchicalInfections",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", I0_val),
         initial_log_rt_rv=DeterministicVariable(
@@ -172,17 +174,17 @@ def sample_hierarchical(baseline_process, deviation_process, label):
 
     samples = Predictive(sampler, num_samples=n_samples)(random.PRNGKey(42))
     return {
-        "rt_baseline": np.array(samples["latent_infections::rt_baseline"])[
+        "rt_baseline": np.array(samples["HierarchicalInfections::rt_baseline"])[
             :, n_init:, 0
         ],
-        "rt_subpop": np.array(samples["latent_infections::rt_subpop"])[
+        "rt_subpop": np.array(samples["HierarchicalInfections::rt_subpop"])[
             :, n_init:, :
         ],
         "deviations": np.array(
-            samples["latent_infections::subpop_deviations"]
+            samples["HierarchicalInfections::subpop_deviations"]
         )[:, n_init:, :],
         "infections": np.array(
-            samples["latent_infections::infections_aggregate"]
+            samples["HierarchicalInfections::infections_aggregate"]
         )[:, n_init:],
     }
 
