@@ -225,6 +225,8 @@ class PyrenewBuilder:
 
         # Construct latent process with computed n_initialization_points
         latent_params = {**self.latent_params, "n_initialization_points": n_init}
+        if "name" not in latent_params:
+            latent_params["name"] = self.latent_class.__name__
 
         latent_process = self.latent_class(**latent_params)
 
