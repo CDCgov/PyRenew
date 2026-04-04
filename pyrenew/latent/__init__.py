@@ -27,6 +27,7 @@ from pyrenew.latent.infection_initialization_process import (
 )
 from pyrenew.latent.infections import Infections
 from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
+from pyrenew.latent.shared_infections import SharedInfections
 from pyrenew.latent.temporal_processes import (
     AR1,
     DifferencedAR1,
@@ -49,8 +50,10 @@ __all__ = [
     "BaseLatentInfectionProcess",
     "LatentSample",
     "PopulationStructure",
-    # Hierarchical infect1<ion processes
+    # Hierarchical infection processes
     "HierarchicalInfections",
+    # Shared infection processes
+    "SharedInfections",
     # Hierarchical priors
     "HierarchicalNormalPrior",
     "GammaGroupSdPrior",

@@ -226,6 +226,7 @@ def test_base_count_observation_infection_resolution_raises():
 def test_get_required_lookback(gen_int_rv):
     """get_required_lookback returns generation interval PMF length."""
     infections = HierarchicalInfections(
+        name="hierarchical",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
@@ -245,6 +246,7 @@ def test_get_required_lookback(gen_int_rv):
 def test_hierarchical_infections_validate(gen_int_rv):
     """HierarchicalInfections.validate() runs without error on valid PMF."""
     infections = HierarchicalInfections(
+        name="hierarchical",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),

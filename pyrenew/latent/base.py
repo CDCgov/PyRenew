@@ -136,9 +136,25 @@ class BaseLatentInfectionProcess(RandomVariable):
             )
         self.n_initialization_points = n_initialization_points
 
-    @staticmethod
+    def default_subpop_fractions(self) -> ArrayLike | None:
+        """
+        Return default population fractions, or None if caller must provide them.
+
+        Override this function in order to omit specification of
+        subpop_fractions at sample time, in which case it will be called
+        by _parse_and_validate_fractions.
+        Must return a valid array of positive elements that sums to 1.
+
+        Returns
+        -------
+        ArrayLike or None
+            Default fractions array, or None if no default exists.
+        """
+        return None
+
     def _parse_and_validate_fractions(
-        subpop_fractions: ArrayLike = None,
+        self,
+        subpop_fractions: ArrayLike | None = None,
     ) -> PopulationStructure:
         """
         Parse and validate population fraction parameters.
@@ -157,10 +173,13 @@ class BaseLatentInfectionProcess(RandomVariable):
         Raises
         ------
         ValueError
-            If fractions are invalid or don't sum to 1.0
+            If fractions are invalid, don't sum to 1.0, or are None with
+            no subclass default.
         """
         if subpop_fractions is None:
-            raise ValueError("subpop_fractions must be provided")
+            subpop_fractions = self.default_subpop_fractions()
+            if subpop_fractions is None:
+                raise ValueError("subpop_fractions must be provided")
 
         fractions = jnp.asarray(subpop_fractions)
 
@@ -272,6 +291,39 @@ class BaseLatentInfectionProcess(RandomVariable):
                 "I0 represents infection prevalence as a proportion of the population."
             )
 
+    def _validate_and_prepare_I0(
+        self,
+        I0: ArrayLike,
+        pop: PopulationStructure,
+    ) -> ArrayLike:
+        """
+        Validate and prepare I0 for use in the renewal equation.
+
+        Subclasses override this to enforce shape constraints (e.g., scalar
+        for SharedInfections) or broadcast I0 to match the population
+        structure (e.g., scalar to per-subpop array for
+        HierarchicalInfections).
+
+        Parameters
+        ----------
+        I0
+            Initial infection prevalence from I0_rv, as a JAX array.
+        pop
+            Parsed population structure.
+
+        Returns
+        -------
+        ArrayLike
+            Validated (and possibly reshaped) I0.
+
+        Raises
+        ------
+        ValueError
+            If I0 values are not in the interval (0, 1].
+        """
+        self._validate_I0(I0)
+        return I0
+
     def get_required_lookback(self) -> int:
         """
         Return the generation interval length for builder pattern support.
@@ -290,8 +342,7 @@ class BaseLatentInfectionProcess(RandomVariable):
     def sample(
         self,
         n_days_post_init: int,
-        *,
-        subpop_fractions: ArrayLike = None,
+        subpop_fractions: ArrayLike | None = None,
         **kwargs: object,
     ) -> LatentSample:
         """
@@ -304,6 +355,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         subpop_fractions
             Population fractions for all subpopulations.
             Shape: (n_subpops,). Must sum to 1.0.
+            If None, falls back to ``self.default_subpop_fractions()``.
         **kwargs
             Additional parameters required by specific implementations
 

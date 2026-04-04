@@ -211,7 +211,7 @@ class MultiSignalModel(Model):
             If dense obs length doesn't match n_total
             If data shapes are inconsistent
         """
-        pop = BaseLatentInfectionProcess._parse_and_validate_fractions(
+        pop = self.latent._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
         )
 

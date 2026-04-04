@@ -161,6 +161,7 @@ def hierarchical_infections(gen_int_rv):
         Configured infection process with realistic parameters.
     """
     return HierarchicalInfections(
+        name="hierarchical",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
