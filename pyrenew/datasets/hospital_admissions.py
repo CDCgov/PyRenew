@@ -3,7 +3,7 @@
 Load hospital admissions data for use in tutorials and examples.
 
 This module provides functions to load COVID-19 hospital admissions
-data from the CDC's cfa-forecast-renewal-ww project.
+data (daily and weekly) from the CDC's cfa-forecast-renewal-ww project.
 """
 
 from importlib.resources import files
