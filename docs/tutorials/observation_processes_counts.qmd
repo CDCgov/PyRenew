@@ -289,7 +289,7 @@ Because all infections occur on a single day, this example shows how a single pu
 ## Predicted admissions without observation noise.
 
 First, we compute the predicted admissions from the convolution alone, without observation noise.
-This gives the expected number of observations $\mu(t)$.
+This gives the predicted number of observations $\mu(t)$.
 
 
 ```{python}
