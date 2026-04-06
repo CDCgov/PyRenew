@@ -75,7 +75,7 @@ PyRenew provides two latent infection classes:
 
 1. Generation interval distribution $w_\tau$ (`gen_int_rv`)
 2. Initial infection prevalence (`I0_rv`)
-3. Initial value for $log(\mathcal{R}(t))$ at time 0 (`initial_log_rt_rv`)
+3. Value for $log(\mathcal{R}(t))$ at time 0 (`initial_log_rt_rv`)
 4. A temporal process for $\mathcal{R}(t)$ dynamics (`shared_rt_process`)
 
 All inputs are **RandomVariables**, a quantity that is either known (observed, conditioned on) or unknown (to be inferred). See [PyRenew's RandomVariable abstract base class](random_variables.md). In this tutorial, we use `DeterministicVariable` and `DeterministicPMF` (fixed values) for illustration. In real inference, you would use `DistributionalVariable` with priors for quantities you want to estimate:
