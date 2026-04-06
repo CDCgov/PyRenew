@@ -219,7 +219,7 @@ where:
 
 This model follows the same two-layer structure used for count observations:
 
-- A **deterministic layer**, where the convolution defines the expected concentration $\mu(t)$ from latent infections
+- A **deterministic layer**, where the convolution defines the predicted concentration $\mu(t)$ from latent infections
 - A **stochastic observation layer**, where observed measurements $Y(t)$ vary around $\log(\mu(t))$ due to sensor noise
 
 The key difference from count data is that measurements are modeled on a continuous (often log-transformed) scale, and variability is represented using a normal distribution rather than a count distribution.
