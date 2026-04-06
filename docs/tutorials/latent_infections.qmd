@@ -3,6 +3,12 @@ title: Latent Infection Processes
 format:
   gfm:
     code-fold: true
+  html:
+    toc: true
+    embed-resources: true
+    self-contained-math: true
+    code-fold: true
+    code-tools: true
 engine: jupyter
 jupyter:
   jupytext:
@@ -45,27 +51,24 @@ from pyrenew.randomvariable import DistributionalVariable
 
 ## Overview
 
-In infectious disease modeling, the true number of new infections each day is not directly observed. Instead, we observe indirect signals: hospital admissions, emergency department visits, reported cases, wastewater concentrations. The latent infection process generates the unobserved infection trajectory that underlies all of these signals.
+In infectious disease modeling, the true number of new infections each day is not directly observed. Instead, we observe indirect signals: hospital admissions, emergency department visits, reported cases, wastewater concentrations.
+The latent infection process generates the unobserved infection trajectory that underlies all of these signals.
 
-In PyRenew, the latent process is represented on a **per-capita scale** (infection proportion) and is typically multiplied by a population size downstream when connecting to count observations.
+PyRenew models latent infections using the **renewal equation**, which describes how new infections arise from recent past infections.
 
-PyRenew models latent infections using the **renewal equation**:
+Assume the generation interval has finite support over lags $\tau = 1, \dots, K$, with
 
-$$I(t) = \mathcal{R}(t) \sum_{s=1}^{S} I(t-s) \, w(s)$$
+$$
+\sum_{\tau=1}^{K} w_\tau = 1, \qquad w_\tau \ge 0.
+$$
 
-where:
+Then the renewal equation is
 
-- $I(t)$ is the number of new infections on day $t$
-- $\mathcal{R}(t)$ is the time-varying reproduction number
-- $w(s)$ is the **generation interval** distribution: the probability that $s$ days separate infection of a primary case and a secondary case
+$$
+I(t) = \mathcal{R}(t) \sum_{\tau=1}^{K} I(t - \tau)\, w_\tau.
+$$
 
-Today's infections equal the reproduction number times a weighted sum of recent past infections, where the weights come from the generation interval.
-
-Observation processes then transform the latent infections into expected observations. Each signal $k$ has its own ascertainment rate $\alpha_k$ and delay distribution $\pi_k(s)$:
-
-$$\mu_k(t) = \alpha_k \sum_{s} I(t-s) \, \pi_k(s)$$
-
-The latent infection trajectory $I(t)$ is shared across all signals.
+Here, $\tau$ indexes lags in the generation interval.
 
 PyRenew provides two latent infection classes:
 
@@ -76,10 +79,10 @@ PyRenew provides two latent infection classes:
 
 `SharedInfections` requires four inputs:
 
-1. A **generation interval** distribution (`gen_int_rv`)
-2. **Initial infection prevalence** (`I0_rv`)
-3. **Initial log reproduction number** (`initial_log_rt_rv`)
-4. A **temporal process** for $\mathcal{R}(t)$ dynamics (`shared_rt_process`)
+1. Generation interval distribution $w_\tau$ (`gen_int_rv`)
+2. Initial infection prevalence (`I0_rv`)
+3. Initial value for $log(\mathcal{R}(t))$ at time 0 (`initial_log_rt_rv`)
+4. A temporal process for $\mathcal{R}(t)$ dynamics (`shared_rt_process`)
 
 All inputs are **RandomVariables**, a quantity that is either known (observed, conditioned on) or unknown (to be inferred). See [PyRenew's RandomVariable abstract base class](random_variables.md). In this tutorial, we use `DeterministicVariable` and `DeterministicPMF` (fixed values) for illustration. In real inference, you would use `DistributionalVariable` with priors for quantities you want to estimate:
 
@@ -132,11 +135,11 @@ These two parameters jointly define the infection history before the observation
 
 $$I_{\text{init}}(\tau) = I_0 \cdot e^{r \cdot \tau}, \quad \tau = 0, 1, \ldots, n_{\text{init}} - 1$$
 
-where $r$ is the asymptotic growth rate implied by the initial reproduction number $\mathcal{R}(0) = e^{\text{initial\\_log\\_rt}}$ and the generation interval. The function `r_approx_from_R` converts $\mathcal{R}(0)$ and the generation interval into $r$ using Newton's method.
+where $r$ is the asymptotic growth rate implied by the initial reproduction number $\mathcal{R}(0) = e^{\text{initial\_log\_rt}}$ and the generation interval. The function `r_approx_from_R` converts $\mathcal{R}(0)$ and the generation interval into $r$ using Newton's method.
 
 * **The level is set by `I0`**.</br>`I0` is the proportion of the population infected at the start of the initialization period. The renewal equation is linear in `I0`, so scaling `I0` by a factor $c$ scales the entire infection trajectory by $c$. In practice, `I0` is weakly identified by the data because observed counts depend on $\alpha_k \cdot I(t)$, where $\alpha_k$ is the ascertainment rate for signal $k$. Doubling `I0` while halving all ascertainment rates produces identical expected counts. Without external information to pin either the ascertainment rates or the absolute infection level, the data cannot distinguish "more infections, lower ascertainment" from "fewer infections, higher ascertainment." The prior on `I0` or on ascertainment resolves this ambiguity.
 
-* **The shape is set by `initial_log_rt`**. <br>`initial_log_rt` enters the model in two places: it is the starting point of the $\mathcal{R}(t)$ trajectory ($\mathcal{R}(0) = e^{\text{initial\\_log\\_rt}}$), and it determines the exponential growth rate $r$ used to fill the initialization vector. When `initial_log_rt = 0`, the growth rate $r = 0$ and the initialization is flat at level `I0`. When `initial_log_rt > 0`, infections are growing exponentially on day 0; when `initial_log_rt < 0`, they are declining.
+* **The shape is set by `initial_log_rt`**. <br>`initial_log_rt` enters the model in two places: it is the starting point of the $\mathcal{R}(t)$ trajectory ($\mathcal{R}(0) = e^{\text{initial\_log\_rt}}$), and it determines the exponential growth rate $r$ used to fill the initialization vector. When `initial_log_rt = 0`, the growth rate $r = 0$ and the initialization is flat at level `I0`. When `initial_log_rt > 0`, infections are growing exponentially on day 0; when `initial_log_rt < 0`, they are declining.
 
 The initialization vector is what the renewal equation "sees" as recent infection history on day 0. We can compute it directly for three values of `initial_log_rt`:
 
@@ -341,49 +344,61 @@ rt_spaghetti_plot(
 rt_summary(ar1_samples["rt"], "AR(1) (autoreg = 0.9, innovation_sd = 0.05)")
 ```
 
+
+
 ### DifferencedAR1
 
-An AR(1) process applied to the *first differences* (day-to-day changes) of $\log \mathcal{R}(t)$. The rate of change is mean-reverting, but the level is not:
+DifferencedAR1 models *changes* in $\mathcal{R}(t)$ as an autoregressive process. In terms of increments,
 
-$$\Delta x_t = \phi \, \Delta x_{t-1} + \varepsilon_t, \quad \text{where } \Delta x_t = x_t - x_{t-1}$$
+$$
+\Delta x_t = \texttt{autoreg} \cdot \Delta x_{t-1} + \varepsilon_t, \quad x_t = x_{t-1} + \Delta x_t,
+$$
 
-Equivalently, $\log \mathcal{R}(t)$ is the cumulative sum of a mean-reverting rate-of-change process. If $\mathcal{R}(t)$ is trending upward, the trend can persist (unlike AR(1), which would pull it back). But the *acceleration* stabilizes (unlike a random walk, where the rate of change is unconstrained).
+so the autoregressive structure applies to the *rate of change* rather than the level.
 
-This is an integrated process (analogous to ARIMA(1,1,0) in time-series terminology). A critical consequence is that **variance grows faster than for a random walk**. Persistent rates of change accumulate, so the same `innovation_sd` produces a much wider envelope than a random walk with equal `innovation_sd`. To achieve comparable trajectory spread, DifferencedAR1 needs smaller `innovation_sd`.
+This has an important consequence: while changes in $\mathcal{R}(t)$ are mean-reverting, the level itself is not. As a result, trajectories can exhibit sustained upward or downward trends and may drift over time, even when the innovations are small.
+This process accumulates changes over time, so variability builds up in the level. Because successive changes are correlated, increases or decreases can persist for several steps in a row. These sustained runs can lead to wider trajectories than a random walk with the same `innovation_sd`, even though the individual innovations are small.
 
 **Hyperparameters:**
 
 - `autoreg` ($\phi$): controls persistence of the rate of change. Values near 1 mean trends persist longer; values near 0 mean trends dissipate quickly.
 - `innovation_sd` ($\sigma$): standard deviation of shocks to the rate of change (not to the level).
 
-We use `innovation_sd = 0.01` (smaller than the 0.05 used for Random Walk and AR(1) above) to produce a comparable visual envelope:
+We use `innovation_sd = 0.01` (smaller than the 0.05 used for Random Walk and AR(1) above).
 
 ```{python}
 # | label: dar1-sample
 dar1_samples = sample_process(
-    DifferencedAR1(autoreg=0.9, innovation_sd=0.01), "DifferencedAR1"
+    DifferencedAR1(autoreg=0.5, innovation_sd=0.01), "DifferencedAR1"
 )
 ```
 
 ```{python}
 # | label: fig-dar1
-# | fig-cap: Prior predictive Rt trajectories under DifferencedAR1 (autoreg = 0.9, innovation_sd = 0.01). Trajectories can trend persistently in one direction, unlike AR(1). The rate of change stabilizes, unlike a random walk. Note the smaller innovation_sd compared to the other processes.
+
+
+# | fig-cap: DifferencedAR1 allows sustained directional trends because the increments are autocorrelated. Even with a smaller innovation scale than the other examples, the induced prior on $\mathcal{R}(t)$ can still be fairly diffuse over this time horizon.
 rt_spaghetti_plot(
     dar1_samples["rt"],
-    "DifferencedAR1 (autoreg = 0.9, innovation_sd = 0.01)",
+    "DifferencedAR1 (autoreg = 0.5, innovation_sd = 0.01)",
 )
 ```
 
 ```{python}
 # | label: dar1-summary
 rt_summary(
-    dar1_samples["rt"], "DifferencedAR1 (autoreg = 0.9, innovation_sd = 0.01)"
+    dar1_samples["rt"], "DifferencedAR1 (autoreg = 0.5, innovation_sd = 0.01)"
 )
 ```
 
 ### Comparing the Three Processes
 
-The plots above use different `innovation_sd` values for each process. This is intentional: `innovation_sd` controls different quantities in each process (daily step size for RandomWalk, noise around mean reversion for AR(1), shock to the rate of change for DifferencedAR1), so equal numerical values do not produce equal spread.
+The plots above use different hyperparameter values for each process. This is intentional: the parameters `innovation_sd` and `autoreg` play different roles across processes (daily step size for RandomWalk, noise around the level for AR(1), and shocks to the *rate of change* for DifferencedAR1), so equal numerical values are not directly comparable.
+
+For AR(1), `autoreg` controls how strongly $\mathcal{R}(t)$ is pulled back toward a baseline, directly limiting variation in the level. For DifferencedAR1, `autoreg` instead controls how persistent changes are over time. Because these changes accumulate, even small innovations can produce substantial drift in $\mathcal{R}(t)$ when persistence is high.
+
+As a result, DifferencedAR1 can exhibit wider trajectories than might be expected from the scale of `innovation_sd` alone. Hyperparameters are chosen to illustrate characteristic behavior rather than to match marginal variability, so the resulting spreads are not directly comparable across panels.
+
 
 ```{python}
 # | label: comparison-data
@@ -391,7 +406,7 @@ comparison_data = []
 process_labels = {
     "Random Walk\n(sd=0.05)": rw_samples,
     "AR(1)\n(autoreg=0.9, sd=0.05)": ar1_samples,
-    "DifferencedAR1\n(autoreg=0.9, sd=0.01)": dar1_samples,
+    "DifferencedAR1\n(autoreg=0.5, sd=0.01)": dar1_samples,
 }
 for label, s in process_labels.items():
     rt = s["rt"]
@@ -415,7 +430,7 @@ comparison_df["process"] = pd.Categorical(
 
 ```{python}
 # | label: fig-comparison
-# | fig-cap: Side-by-side comparison of all three temporal processes using median trajectories and 90% prior intervals. Hyperparameters are chosen to produce broadly comparable envelopes; the main difference is trajectory shape.
+# | fig-cap: Side-by-side comparison of all three temporal processes using median trajectories and 90% prior intervals.
 (
     p9.ggplot(
         comparison_df.groupby(["process", "day"])["rt"]
@@ -449,17 +464,18 @@ comparison_df["process"] = pd.Categorical(
 # | label: comparison-summary
 print(f"Rt at day {n_days} by temporal process:")
 print(
-    f"{'Process':<20} {'innovation_sd':>14} {'Median':>8} {'90% interval':>20} {'Max':>8}"
+    f"{'Process':<20} {'autoreg':>10} {'innovation_sd (increments)':>25} {'Median':>8} {'90% interval':>20} {'Max':>8}"
 )
-print("-" * 74)
-for label, sd, s in [
-    ("Random Walk", 0.05, rw_samples),
-    ("AR(1)", 0.05, ar1_samples),
-    ("DifferencedAR1", 0.01, dar1_samples),
+print("-" * 90)
+for label, ar, sd, s in [
+    ("Random Walk", None, 0.05, rw_samples),
+    ("AR(1)", 0.9, 0.05, ar1_samples),
+    ("DifferencedAR1", 0.5, 0.01, dar1_samples),
 ]:
     rt = s["rt"][:, -1]
+    ar_str = "-" if ar is None else f"{ar:.2f}"
     print(
-        f"{label:<20} {sd:>14.2f} {np.median(rt):>8.2f} "
+        f"{label:<20} {ar_str:>10} {sd:>14.2f} {np.median(rt):>8.2f} "
         f"[{np.percentile(rt, 5):>6.2f}, {np.percentile(rt, 95):>6.2f}]"
         f"{np.max(rt):>11.1f}"
     )
@@ -473,7 +489,22 @@ for label, sd, s in [
 
 ### Effect of Hyperparameters
 
-The hyperparameters `autoreg` and `innovation_sd` control how tightly the prior constrains $\mathcal{R}(t)$. We illustrate with DifferencedAR1, varying both parameters:
+The hyperparameters `autoreg` and `innovation_sd` control how tightly the prior constrains $\mathcal{R}(t)$, but their roles differ in important ways for DifferencedAR1.\
+
+The `innovation_sd` parameter sets the scale of shocks to the *rate of change* in $\mathcal{R}(t)$, while `autoreg` controls how persistent those changes are over time. In terms of increments, where $\phi =$ `autoreg`
+
+
+$$\Delta x_t = \phi \cdot \Delta x_{t-1} + \varepsilon_t$$
+
+`autoreg` ($\phi$) determines how strongly each change carries forward into the next. The level then accumulates these changes via $x_t = x_{t-1} + \Delta x_t$.
+
+When `autoreg` is large (e.g., 0.9), increments are highly persistent: a positive change in $\mathcal{R}(t)$ is likely to be followed by further positive changes. This produces sustained upward or downward trends, even when `innovation_sd` is small. Because these persistent changes accumulate in the level, the resulting prior over $\mathcal{R}(t)$ can be relatively diffuse over time.
+
+Lowering `autoreg` reduces this persistence. Increments decorrelate more quickly, causing positive and negative changes to cancel out, which limits long runs of same-direction movement and produces a tighter prior over $\mathcal{R}(t)$.
+
+Importantly, this differs from AR(1): in AR(1), `autoreg` controls mean reversion of the *level*, directly shrinking $\mathcal{R}(t)$ toward a baseline. In DifferencedAR1, only the *changes* are mean-reverting, so the level itself can drift. As a result, controlling long-term variability in DifferencedAR1 typically requires adjusting both `innovation_sd` (step size) and `autoreg` (persistence of trends).
+
+We illustrate these effects below for DifferencedAR1 by varying both parameters:
 
 ```{python}
 # | label: hyperparam-sample

@@ -48,26 +48,115 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 
 ## Overview
 
-`HierarchicalInfections` models a jurisdiction with $K$ subpopulations, each running its own renewal equation. Transmission dynamics are related through a hierarchical decomposition of the effective reproduction number:
 
-$$\log \mathcal{R}_k(t) = \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t)$$
+`HierarchicalInfections` extends the renewal model to a population composed of $K$ subpopulations, each with its own latent infection trajectory.
 
-where $\mathcal{R}_{\text{baseline}}(t)$ is the jurisdiction-level reproduction number shared across all subpopulations, and $\delta_k(t)$ is the deviation for subpopulation $k$. A sum-to-zero constraint ($\sum_k \delta_k(t) = 0$) ensures identifiability.
+As in the single-population case, infections evolve according to the renewal equation. For each subpopulation $k = 1, \dots, K$, we define
 
-Each subpopulation runs its own renewal equation with $\mathcal{R}_k(t)$, and results are aggregated using population fractions: $I_{\text{aggregate}}(t) = \sum_k p_k \, I_k(t)$.
+$$
+I_k(t) = \mathcal{R}_k(t) \sum_{\tau=1}^{K_{\text{gen}}} I_k(t - \tau)\, w_\tau,
+$$
+
+where:
+
+- $I_k(t)$ is the latent infection proportion in subpopulation $k$ at time $t$
+- $\mathcal{R}_k(t)$ is the effective reproduction number for subpopulation $k$
+- $w_\tau$ is the generation interval PMF
+
+The generation interval is shared across all subpopulations.
+
+### Hierarchical decomposition of $\mathcal{R}_k(t)$
+
+The reproduction numbers are modeled through a hierarchical decomposition:
+
+$$
+\log \mathcal{R}_k(t) = \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t),
+$$
+
+where:
+
+- $\mathcal{R}_{\text{baseline}}(t)$ is the shared baseline trajectory
+- $\delta_k(t)$ is the deviation for subpopulation $k$
+
+This separates:
+
+- **shared dynamics** via $\mathcal{R}_{\text{baseline}}(t)$
+- **relative differences** via $\delta_k(t)$
+
+The baseline controls *where the epidemic is going*, while the deviations control *which subpopulations are above or below that trajectory*.
+
+Because deviations are additive on the log scale, they act multiplicatively on $\mathcal{R}_k(t)$: positive $\delta_k(t)$ increases transmission relative to the baseline, while negative values decrease it.
+
+### Aggregation
+
+Each subpopulation produces its own infection trajectory $I_k(t)$. These are combined into an aggregate infection process using population fractions $p_k$:
+
+$$
+I_{\text{aggregate}}(t) = \sum_{k=1}^{K} p_k \, I_k(t),
+$$
+
+where $p_k$ is the fraction of the total population in subpopulation $k$.
+
+The aggregate trajectory $I_{\text{aggregate}}(t)$ is then passed to observation processes, which transform it into expected observations as described in the observation model tutorials.
+
+### Relationship to the single-population model
+
+This model generalizes the single-population renewal model:
+
+- `SharedInfections`: one trajectory $I(t)$ with one $\mathcal{R}(t)$
+- `HierarchicalInfections`: multiple trajectories $I_k(t)$ with a shared baseline $\mathcal{R}_{\text{baseline}}(t)$ and subpopulation deviations $\delta_k(t)$
+
+When all $\delta_k(t) = 0$, the model reduces to the shared (single-population) case.
 
 This tutorial assumes familiarity with the renewal equation, generation interval, initial conditions (`I0`, `initial_log_rt`), and temporal processes. See [Latent Infection Processes](latent_infections.md) for that background.
 
+---
+
 ## Model Structure
 
-`HierarchicalInfections` requires the same inputs as `SharedInfections` (generation interval, `I0`, `initial_log_rt`) plus a second temporal process for the subpopulation deviations:
+`HierarchicalInfections` uses the same core inputs as `SharedInfections`, with additional structure for subpopulation variation.
 
-- **`baseline_rt_process`**: Temporal process for $\log \mathcal{R}_{\text{baseline}}(t)$. One trajectory, shared across all subpopulations.
-- **`subpop_rt_deviation_process`**: Temporal process for $\delta_k(t)$. Produces $K$ trajectories (one per subpopulation), initialized at zero and centered via the sum-to-zero constraint.
+### Core inputs (shared across subpopulations)
 
-Population structure (`subpop_fractions`) is provided at **sample time**, not at construction time. This allows a single model specification to be fit to different jurisdictions.
+- **`gen_int_rv`**: Generation interval distribution $w_\tau$
+- **`I0_rv`**: Initial infection level (shared by default across subpopulations, but can be specified per subpopulation)
+- **`initial_log_rt_rv`**: Initial value of $\log \mathcal{R}_{\text{baseline}}(t)$ at time $0$
 
-As in the other latent process tutorials, these inputs are `RandomVariable`s. We use `DeterministicVariable` and `DeterministicPMF` here so the prior behavior is easy to inspect, but in an inference workflow you would usually replace at least some of them with prior distributions.
+### Temporal processes
+
+Two temporal processes define the evolution of $\log \mathcal{R}_k(t)$:
+
+- **`baseline_rt_process`**
+  Temporal process for $\log \mathcal{R}_{\text{baseline}}(t)$.
+  Produces a single trajectory shared across all subpopulations.
+
+- **`subpop_rt_deviation_process`**
+  Temporal process for $\delta_k(t)$.
+  Produces $K$ trajectories (one per subpopulation), which are centered at each time point to satisfy the sum-to-zero constraint.
+
+Together, these define the full set of reproduction numbers:
+
+$$
+\log \mathcal{R}_k(t)
+= \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t),
+\qquad
+\mathcal{R}_k(t) = \exp\big(\log \mathcal{R}_k(t)\big).
+$$
+
+
+### Population structure
+
+Population fractions $p_k$ are provided at **sample time**, not at model construction. This allows a single model specification to be reused across different jurisdictions or stratifications.
+
+### Random variables
+
+As in other PyRenew models, all inputs are specified as `RandomVariable`s:
+
+- `DeterministicVariable` and `DeterministicPMF` for fixed values (used in this tutorial)
+- `DistributionalVariable` for parameters with priors (used in inference)
+
+In practice, the temporal processes and initial conditions are typically given prior distributions, allowing the model to infer both shared and subpopulation-specific transmission dynamics.
+
 
 ```{python}
 # | label: model-setup
@@ -96,7 +185,7 @@ model = HierarchicalInfections(
     gen_int_rv=gen_int_rv,
     I0_rv=DeterministicVariable("I0", I0_val),
     initial_log_rt_rv=DeterministicVariable("initial_log_rt", initial_log_rt),
-    baseline_rt_process=DifferencedAR1(autoreg=0.9, innovation_sd=0.01),
+    baseline_rt_process=DifferencedAR1(autoreg=0.5, innovation_sd=0.01),
     subpop_rt_deviation_process=AR1(autoreg=0.8, innovation_sd=0.05),
     n_initialization_points=n_init,
 )
@@ -104,7 +193,8 @@ model = HierarchicalInfections(
 
 ## The Sum-to-Zero Constraint
 
-Without a constraint, the baseline and deviations are not identifiable: shifting the baseline up by some amount $c$ and all deviations down by $c$ produces the same subpopulation $\mathcal{R}_k(t)$ values. `HierarchicalInfections` enforces $\sum_k \delta_k(t) = 0$ at every time step by centering the raw deviation trajectories. This ensures $\mathcal{R}_{\text{baseline}}(t)$ is the geometric mean of the subpopulation $\mathcal{R}_k(t)$ values.
+Without a constraint, the baseline and deviations are not identifiable: shifting the baseline up by some amount $c$ and all deviations down by $c$ produces the same subpopulation $\mathcal{R}_k(t)$ values. `HierarchicalInfections` enforces $\sum_k \delta_k(t) = 0$ at every time step by centering the raw deviation trajectories.
+This ensures $\mathcal{R}_{\text{baseline}}(t)$ is the geometric mean of the subpopulation $\mathcal{R}_k(t)$ values, so the baseline represents the typical transmission level across subpopulations.
 
 ```{python}
 # | label: verify-constraint
@@ -125,7 +215,8 @@ print(
 
 ## Choosing the Baseline Temporal Process
 
-The baseline process governs the jurisdiction-level trend in $\mathcal{R}(t)$. The same temporal process options apply as for `SharedInfections` (see [Temporal Process Choice](latent_infections.md#temporal-process-choice)), and the same considerations hold: AR(1) for mean reversion, DifferencedAR1 for persistent trends with stabilizing rate of change, RandomWalk for unconstrained drift.
+The baseline process governs the jurisdiction-level trend in $\mathcal{R}(t)$.
+The same temporal process options apply as in `SharedInfections` (see [Temporal Process Choice](latent_infections.md#temporal-process-choice)): AR(1) for mean reversion, DifferencedAR1 for persistent trends with stabilizing rate of change, RandomWalk for unconstrained drift.
 
 We use DifferencedAR1 with small `innovation_sd` for the baseline throughout this tutorial. The prior predictive for baseline $\mathcal{R}(t)$ behaves much like the corresponding `SharedInfections` example, so we do not repeat that full comparison here. The focus of this tutorial is the deviation process and how it changes the spread of subpopulation trajectories around the baseline.
 
@@ -145,9 +236,11 @@ Two parameters matter most when tuning these processes:
 
 ## Choosing the Deviation Temporal Process
 
-The deviation process controls how subpopulation $\mathcal{R}_k(t)$ values spread around the baseline. The deviations $\delta_k(t)$ are initialized at zero (all subpopulations start at the baseline) and evolve according to the chosen temporal process.
+The deviation process controls how subpopulation $\mathcal{R}_k(t)$ values move relative to the baseline $\mathcal{R}_{\text{baseline}}(t)$, not the overall trend itself.
+The deviations $\delta_k(t)$ are initialized at zero (all subpopulations start at the baseline) and evolve according to the chosen temporal process.
 
 The key question: **are local differences transient or persistent?**
+This determines whether subpopulations quickly return to the baseline or can diverge and remain different over time.
 
 ```{python}
 # | label: helpers
@@ -189,8 +282,9 @@ def sample_hierarchical(baseline_process, deviation_process, label):
     }
 
 
-baseline_process = DifferencedAR1(autoreg=0.9, innovation_sd=0.01)
+baseline_process = DifferencedAR1(autoreg=0.5, innovation_sd=0.01)
 ```
+
 
 ### AR(1) Deviations
 
@@ -358,7 +452,7 @@ baseline_df = pairs_df[pairs_df["subpop"] == "baseline"]
     + p9.labs(
         x="Days",
         y="Rt (baseline)",
-        title="Baseline Rt (DifferencedAR1, autoreg=0.9, sd=0.01)",
+        title="Baseline Rt (DifferencedAR1, autoreg=0.5, sd=0.01)",
     )
     + theme_tutorial
 )

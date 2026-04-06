@@ -53,11 +53,18 @@ The `Measurements` class models continuous signals derived from infections. Unli
 
 ### The general pattern
 
-All measurement observation processes follow the same pattern:
+All measurement observation processes follow the same two-layer structure as the count observation model:
 
-$$y_t \sim \text{Noise}(\mu(t))$$
+1. A deterministic transformation defining the expected measurement value
+2. A stochastic observation model
 
-where $\mu(t)$ is the predicted measurement value on day $t$, computed from infections via a domain-specific transformation, and the noise model adds stochastic variation around predictions.
+Let $\mu(t)$ denote the expected measurement at time $t$. Observations are modeled as
+
+$$
+Y(t) \sim \text{Noise}(f(\mu(t))),
+$$
+
+where $f(\cdot)$ is a transformation (often the identity or log function), and the noise model adds stochastic variation around this transformed expectation.
 
 Subclasses implement `_predicted_obs()` to compute $\mu(t)$ from infections. PyRenew provides the noise model.
 
@@ -90,7 +97,7 @@ Measurement data typically exhibits **sensor-level variability**: different inst
 - **Sensor SD**: Measurement precision (noise level)
 
 ```
-observed ~ Normal(predicted + sensor_mode[sensor], sensor_sd[sensor])
+observed ~ Normal(f(\mu(t)) + sensor_mode[sensor], sensor_sd[sensor])
 ```
 
 The sensor-level RVs must implement `sample(n_groups=...)`. Use `VectorizedVariable` to wrap simple distributions:
@@ -173,26 +180,49 @@ based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-multisignal) family
 **The wastewater signal**
 
 Wastewater treatment plants measure viral RNA concentrations in sewage.
-The predicted concentration depends on:
+The expected concentration is determined by:
 
 - **Infections**: People shed virus into wastewater
 - **Shedding kinetics**: Viral shedding peaks a few days after infection
-- **Scaling factors**: Genome copies per infection, wastewater volume
+- **Scaling factors**: Genome copies per infection and wastewater volume
 
-The predicted log-concentration on day $t$ is:
+### Observation model
 
-$$\log(\mu(t)) = \log\left(\frac{G}{V} \cdot \sum_{s} I(t-s) \, \pi(s)\right)$$
+The expected concentration at time $t$ is given by
+
+$$
+\mu(t) = \frac{G}{V} \sum_{\delta=0}^{D} I(t-\delta)\, \pi_\delta,
+$$
 
 where:
 
-- $I(t-s)$ is infections on day $t-s$
-- $\pi(s)$ is the shedding kinetics PMF (fraction shed on day $s$ post-infection)
-- $G$ is genome copies shed per infection
-- $V$ is wastewater volume per person per day
+- $I(t-\delta)$ is the number of infections on day $t-\delta$
+- $\pi_\delta$ is the shedding kinetics PMF (fraction of total shedding occurring $\delta$ days after infection)
+- $G$ is the number of genome copies shed per infection
+- $V$ is the wastewater volume per person per day
 
-Observations are log-concentrations with normal noise:
+This has the same convolution structure as the observation equation for count data, with a different transformation applied to the expected value.
 
-$$y_t \sim \text{Normal}(\log(\mu(t)) + \text{sensor\_mode}, \text{sensor\_sd})$$
+We model the observed **log-concentration** as
+
+$$
+Y(t) \sim \text{Normal}\big(\log(\mu(t)) + \text{sensor\_mode}, \ \text{sensor\_sd}\big),
+$$
+
+where:
+
+- $Y(t)$ is the observed log-concentration at time $t$
+- $\text{sensor\_mode}$ represents a sensor-specific bias (additive shift on the log scale)
+- $\text{sensor\_sd}$ represents the measurement variability for that sensor
+
+### Interpretation
+
+This model follows the same two-layer structure used for count observations:
+
+- A **deterministic layer**, where the convolution defines the expected concentration $\mu(t)$ from latent infections
+- A **stochastic observation layer**, where observed measurements $Y(t)$ vary around $\log(\mu(t))$ due to sensor noise
+
+The key difference from count data is that measurements are modeled on a continuous (often log-transformed) scale, and variability is represented using a normal distribution rather than a count distribution.
 
 ### Implementing the Wastewater class
 
@@ -253,8 +283,8 @@ class Wastewater(Measurements):
 
     def _predicted_obs(self, infections: ArrayLike) -> ArrayLike:
         """
-        Compute predicted log-concentration from infections.
-
+        Compute the log of the expected concentration from infections.
+        This corresponds to log(mu(t)), where mu(t) is defined by the observation equation.
         Applies shedding kinetics convolution, then scales by
         genome copies and volume to get concentration.
         """
