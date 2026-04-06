@@ -20,7 +20,9 @@ def test_infections_with_feedback_plate_compatibility():
     Rt = jnp.ones((10, 5))
     gen_int = jnp.array([0.4, 0.25, 0.25, 0.1])
 
-    inf_feed_strength = DistributionalVariable("inf_feed_strength", dist.Beta(1, 1))
+    inf_feed_strength = DistributionalVariable(
+        "inf_feed_strength", dist.LogNormal(0.0, 1.0)
+    )
     inf_feedback_pmf = DeterministicPMF(name="inf_feedback_pmf", value=gen_int)
 
     # Test the InfectionsWithFeedback class
