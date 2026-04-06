@@ -75,7 +75,7 @@ This equation is a discrete convolution: observations at time $t$ arise from inf
 
 The observation equation defines the expected number of observed events, but the actual data are stochastic.
 
-Let $Y(t)$ denote the observed number of events at time $t$. Observations are modeled as draws from a count distribution with mean $\mu(t)$:
+Let $Y(t)$ denote the observed number of events at time $t$. Observations are modeled as draws from a count distribution with central value (typically but not necessary mean) $\mu(t)$:
 
 $$
 Y(t) \sim \text{Distribution}(\mu(t), \theta).
