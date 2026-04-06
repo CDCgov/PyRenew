@@ -56,7 +56,7 @@ Here, $\delta$ indexes lags in the infection-to-observation delay distribution.
 
 The observation equation defines the expected number of observed events at time $t$, but the actual observed data are stochastic.
 
-Let $Y(t)$ denote the observed number of events at time $t$. We model observations as draws from a count distribution with mean $\mu(t)$:
+Let $Y(t)$ denote the observed number of events at time $t$. We model observations as draws from a count distribution with central value (typically mean) $\mu(t)$:
 
 $$
 Y(t) \sim \text{Distribution}(\mu(t), \theta).
