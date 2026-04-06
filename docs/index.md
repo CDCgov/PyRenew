@@ -30,7 +30,7 @@ $$
 I(t) = \mathcal{R}(t) \sum_{\tau=1}^{K} I(t - \tau)\, w_\tau.
 $$
 
-Here, $\tau$ indexes lags in the generation interval.
+Here, $\tau$ indexes the generation interval.
 
 In PyRenew, the latent process is represented on a **per-capita scale** (infection proportion) and is multiplied by a population size downstream when connecting to count observations.
 
@@ -56,18 +56,18 @@ Here, $\delta$ indexes lags in the infection-to-observation delay distribution.
 
 The observation equation defines the expected number of observed events at time $t$, but the actual observed data are stochastic.
 
-Let $Y(t)$ denote the observed number of events at time $t$. We model observations as draws from a count distribution with mean $\mu(t)$:
+Let $Y(t)$ denote the observed number of events at time $t$. We model observations as draws from a count distribution with central value (typically mean) $\mu(t)$:
 
 $$
 Y(t) \sim \text{Distribution}(\mu(t), \theta).
 $$
 
-A common choice is the Poisson distribution  which assumes the variance equals the mean.
-In practice, epidemiological data are often overdispersed relative to the Poisson, so a negative binomial distribution with a dispersion parameter controlling the variance is used.
+One possible choice is the Poisson distribution, which assumes the variance equals the mean.
+In practice, epidemiological count data are often overdispersed relative to the Poisson. Negative binomial distributions are a common choice for modeling these overdispersed counts.
 
 The model thus has two layers:
 
-- A **mechanistic layer**, where the renewal and delay convolutions determine the expected number of observations $\mu(t)$ from the latent infections $I(t)$.
+- A **mechanistic layer**, where the renewal and delay convolutions determine the predicted number of observations $\mu(t)$ from the latent infections $I(t)$.
 - A **stochastic observation layer**, where observed counts $Y(t)$ vary around $\mu(t)$ according to a specified distribution.
 
 This separation allows the model to distinguish between systematic structure driven by transmission and reporting delays, and stochastic variability in observed data.

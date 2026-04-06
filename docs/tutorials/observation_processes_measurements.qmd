@@ -64,7 +64,7 @@ $$
 Y(t) \sim \text{Noise}(f(\mu(t))),
 $$
 
-where $f(\cdot)$ is a transformation (often the identity or log function), and the noise model adds stochastic variation around this transformed expectation.
+where $f(\cdot)$ is a transformation (often the identity or log function), and the noise model adds stochastic variation around this transformed prediction.
 
 Subclasses implement `_predicted_obs()` to compute $\mu(t)$ from infections. PyRenew provides the noise model.
 
@@ -180,7 +180,7 @@ based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-multisignal) family
 **The wastewater signal**
 
 Wastewater treatment plants measure viral RNA concentrations in sewage.
-The expected concentration is determined by:
+The concentration is determined by:
 
 - **Infections**: People shed virus into wastewater
 - **Shedding kinetics**: Viral shedding peaks a few days after infection
@@ -188,7 +188,7 @@ The expected concentration is determined by:
 
 ### Observation model
 
-The expected concentration at time $t$ is given by
+The predicted concentration at time $t$ is given by
 
 $$
 \mu(t) = \frac{G}{V} \sum_{\delta=0}^{D} I(t-\delta)\, \pi_\delta,
@@ -219,7 +219,7 @@ where:
 
 This model follows the same two-layer structure used for count observations:
 
-- A **deterministic layer**, where the convolution defines the expected concentration $\mu(t)$ from latent infections
+- A **deterministic layer**, where the convolution defines the predicted concentration $\mu(t)$ from latent infections
 - A **stochastic observation layer**, where observed measurements $Y(t)$ vary around $\log(\mu(t))$ due to sensor noise
 
 The key difference from count data is that measurements are modeled on a continuous (often log-transformed) scale, and variability is represented using a normal distribution rather than a count distribution.
