@@ -188,7 +188,7 @@ The concentration is determined by:
 
 ### Observation model
 
-The expected concentration at time $t$ is given by
+The predicted concentration at time $t$ is given by
 
 $$
 \mu(t) = \frac{G}{V} \sum_{\delta=0}^{D} I(t-\delta)\, \pi_\delta,
