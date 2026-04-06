@@ -85,7 +85,7 @@ A common choice is the Poisson distribution, which assumes the variance equals t
 
 This yields a two-layer model:
 
-- A **mechanistic layer**, where the delay convolution determines the expected number of observations $\mu(t)$ from latent infections $I(t)$.
+- A **mechanistic layer**, where the delay convolution determines the predicted number of observations $\mu(t)$ from latent infections $I(t)$.
 - A **stochastic observation layer**, where observed counts $Y(t)$ vary around $\mu(t)$ according to a specified distribution.
 
 **Note on terminology:** In real-world inference, incident infections $I(t)$ are typically *latent* (unobserved) and must be inferred from observed data. In this tutorial, we simulate the observation process by specifying infections directly and showing how they produce observed counts through convolution and sampling.
