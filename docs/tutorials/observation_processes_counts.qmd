@@ -102,7 +102,7 @@ $$
 Y(t) \sim \text{NegBinomial}(\mu(t), \phi)
 $$
 
-where $\phi$ is a dispersion parameter controlling variability.
+where $\phi$ is a concentration parameter controlling variability.
 
 The negative binomial distribution is commonly used because real-world count data are overdispersed, meaning the variance exceeds the mean.
 
