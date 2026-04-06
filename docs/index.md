@@ -63,7 +63,7 @@ Y(t) \sim \text{Distribution}(\mu(t), \theta).
 $$
 
 One possible choice is the Poisson distribution, which assumes the variance equals the mean.
-In practice, epidemiological data are often overdispersed relative to the Poisson, so a negative binomial distribution with a dispersion parameter controlling the variance is used.
+In practice, epidemiological count data are often overdispersed relative to the Poisson. Negative binomial distributions are a common choice for modeling these overdispersed counts.
 
 The model thus has two layers:
 
