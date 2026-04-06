@@ -62,7 +62,7 @@ $$
 Y(t) \sim \text{Distribution}(\mu(t), \theta).
 $$
 
-A common choice is the Poisson distribution  which assumes the variance equals the mean.
+One possible choice is the Poisson distribution, which assumes the variance equals the mean.
 In practice, epidemiological data are often overdispersed relative to the Poisson, so a negative binomial distribution with a dispersion parameter controlling the variance is used.
 
 The model thus has two layers:
