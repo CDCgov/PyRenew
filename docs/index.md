@@ -67,7 +67,7 @@ In practice, epidemiological data are often overdispersed relative to the Poisso
 
 The model thus has two layers:
 
-- A **mechanistic layer**, where the renewal and delay convolutions determine the expected number of observations $\mu(t)$ from the latent infections $I(t)$.
+- A **mechanistic layer**, where the renewal and delay convolutions determine the predicted number of observations $\mu(t)$ from the latent infections $I(t)$.
 - A **stochastic observation layer**, where observed counts $Y(t)$ vary around $\mu(t)$ according to a specified distribution.
 
 This separation allows the model to distinguish between systematic structure driven by transmission and reporting delays, and stochastic variability in observed data.
