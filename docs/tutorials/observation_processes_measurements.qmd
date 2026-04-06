@@ -180,7 +180,7 @@ based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-multisignal) family
 **The wastewater signal**
 
 Wastewater treatment plants measure viral RNA concentrations in sewage.
-The expected concentration is determined by:
+The concentration is determined by:
 
 - **Infections**: People shed virus into wastewater
 - **Shedding kinetics**: Viral shedding peaks a few days after infection
