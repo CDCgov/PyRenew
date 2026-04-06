@@ -45,7 +45,7 @@ Count observation processes model how latent infections give rise to observed da
 In the renewal modeling framework, observations are generated in two steps:
 
 1. A **deterministic transformation**, where infections are mapped to an expected number of observed events via an ascertainment rate and a delay distribution.
-2. A **stochastic observation model**, where observed counts are drawn from a distribution with that expected value.
+2. A **stochastic observation model**, where observed counts are drawn from a distribution with that predicted value.
 
 Observed data can be aggregated or available as subpopulation-level counts, which are modeled by the classes `Counts` and `CountsBySubpop`, respectively.
 
