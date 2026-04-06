@@ -191,13 +191,13 @@ The concentration is determined by:
 The predicted concentration at time $t$ is given by
 
 $$
-\mu(t) = \frac{G}{V} \sum_{\delta=0}^{D} I(t-\delta)\, \pi_\delta,
+\mu(t) = \frac{G}{V} \sum_{d=0}^{D} I(t-d)\, \pi_d,
 $$
 
 where:
 
-- $I(t-\delta)$ is the number of infections on day $t-\delta$
-- $\pi_\delta$ is the shedding kinetics PMF (fraction of total shedding occurring $\delta$ days after infection)
+- $I(t-d)$ is the number of infections on day $t-d$
+- $\pi_d$ is the shedding kinetics PMF, giving the fraction of total shedding occurring $d$ days after infection, analogous to the delay distribution in count observation models
 - $G$ is the number of genome copies shed per infection
 - $V$ is the wastewater volume per person per day
 

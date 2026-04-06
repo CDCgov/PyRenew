@@ -3,12 +3,6 @@ title: Latent Infection Processes
 format:
   gfm:
     code-fold: true
-  html:
-    toc: true
-    embed-resources: true
-    self-contained-math: true
-    code-fold: true
-    code-tools: true
 engine: jupyter
 jupyter:
   jupytext:

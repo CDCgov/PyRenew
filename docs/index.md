@@ -11,7 +11,7 @@ A renewal model estimates new infections from recent past infections.
 It combines two distinct discrete convolutions which describe different processes: transmission between infections and delay from infection to observation.
 
 - The **renewal equation** maps past infections to new infections using the generation interval distribution $w_\tau$.
-- The **observation equation** maps latent infections to expected observed events using the delay distribution $\pi_\delta$.
+- The **observation equation** maps latent infections to expected observed events using the delay distribution $\pi_d$.
 
 #### Renewal equation
 
@@ -38,19 +38,19 @@ In PyRenew, the latent process is represented on a **per-capita scale** (infecti
 
 Infections are latent and are not directly observed; instead, the data consist of events that occur some time after infection, such as hospitalizations or emergency department visits.
 
-Let $\mu(t)$ denote the expected number of observed events at time $t$, and let $\alpha$ denote an **ascertainment rate**, the probability an infection is observed as an event. Assume the delay from infection to observation has finite support over lags $\delta = 0, \dots, D$. Let $\pi_\delta$ denote the probability that an infection is observed $\delta$ days later, with
+Let $\mu(t)$ denote the expected number of observed events at time $t$, and let $\alpha$ denote an **ascertainment rate**, the probability an infection is observed as an event. Assume the delay from infection to observation has finite support over lags $d = 0, \dots, D$. Let $\pi_d$ denote the probability that an infection is observed $d$ days later, with
 
 $$
-\sum_{\delta=0}^{D} \pi_\delta = 1, \qquad \pi_\delta \ge 0.
+\sum_{d=0}^{D} \pi_d = 1, \qquad \pi_d \ge 0.
 $$
 
 Then the observation equation is
 
 $$
-\mu(t) = \alpha \sum_{\delta=0}^{D} I(t - \delta)\, \pi_\delta.
+\mu(t) = \alpha \sum_{d=0}^{D} I(t - d)\, \pi_d.
 $$
 
-Here, $\delta$ indexes lags in the infection-to-observation delay distribution.
+Here, $d$ indexes lags in the infection-to-observation delay distribution.
 
 #### Stochastic observation model
 
