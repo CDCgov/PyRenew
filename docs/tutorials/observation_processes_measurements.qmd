@@ -64,7 +64,7 @@ $$
 Y(t) \sim \text{Noise}(f(\mu(t))),
 $$
 
-where $f(\cdot)$ is a transformation (often the identity or log function), and the noise model adds stochastic variation around this transformed expectation.
+where $f(\cdot)$ is a transformation (often the identity or log function), and the noise model adds stochastic variation around this transformed prediction.
 
 Subclasses implement `_predicted_obs()` to compute $\mu(t)$ from infections. PyRenew provides the noise model.
 
