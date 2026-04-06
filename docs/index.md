@@ -30,7 +30,7 @@ $$
 I(t) = \mathcal{R}(t) \sum_{\tau=1}^{K} I(t - \tau)\, w_\tau.
 $$
 
-Here, $\tau$ indexes lags in the generation interval.
+Here, $\tau$ indexes the generation interval.
 
 In PyRenew, the latent process is represented on a **per-capita scale** (infection proportion) and is multiplied by a population size downstream when connecting to count observations.
 
