@@ -1,25 +1,5 @@
-[default]
-extend-ignore-identifiers-re = [
-    "AttributeID.*Supress.*",
-]
-
-[default.extend-identifiers]
-AttributeIDSupressMenu = "AttributeIDSupressMenu"
 
 [default.extend-words]
 # words that should not be corrected
-Damon = "Damon"
-below_LOD = "below_LOD"
-lod_sewage = "lod_sewage"
-lod = "lod"
-LOD = "LOD"
-ans = "ans"
 arange = "arange"
-setp = "setp"
-
-[files]
-extend-exclude = [
-    ".gitignore",
-    ".pre-commit-config.yaml",
-    ".github/ISSUE_TEMPLATE/general_issue.md",
-]
+lod = "lod"
