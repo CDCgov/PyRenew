@@ -54,7 +54,7 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 As in the single-population case, infections evolve according to the renewal equation. For each subpopulation $k = 1, \dots, K$, we define
 
 $$
-I_k(t) = \mathcal{R}_k(t) \sum_{\tau=1}^{K_{\text{gen}}} I_k(t - \tau)\, w_\tau,
+I_k(t) = \mathcal{R}_k(t) \sum_{\tau=1}^{G} I_k(t - \tau)\, w_\tau,
 $$
 
 where:
@@ -89,13 +89,17 @@ Because deviations are additive on the log scale, they act multiplicatively on $
 
 ### Aggregation
 
-Each subpopulation produces its own infection trajectory $I_k(t)$. These are combined into an aggregate infection process using population fractions $p_k$:
+Each subpopulation produces its own infection trajectory $I_k(t)$. These are combined into an aggregate infection process using population fractions $p_k$, where $p_k$ is the fraction of the total population in subpopulation $k$, with
 
 $$
-I_{\text{aggregate}}(t) = \sum_{k=1}^{K} p_k \, I_k(t),
+\sum_{k=1}^{K} p_k = 1, \qquad p_k \ge 0.
 $$
 
-where $p_k$ is the fraction of the total population in subpopulation $k$.
+The aggregate infection trajectory is then
+
+$$
+I_{\text{aggregate}}(t) = \sum_{k=1}^{K} p_k \, I_k(t).
+$$
 
 The aggregate trajectory $I_{\text{aggregate}}(t)$ is then passed to observation processes, which transform it into expected observations as described in the observation model tutorials.
 
@@ -194,7 +198,9 @@ model = HierarchicalInfections(
 ## The Sum-to-Zero Constraint
 
 Without a constraint, the baseline and deviations are not identifiable: shifting the baseline up by some amount $c$ and all deviations down by $c$ produces the same subpopulation $\mathcal{R}_k(t)$ values. `HierarchicalInfections` enforces $\sum_k \delta_k(t) = 0$ at every time step by centering the raw deviation trajectories.
-This ensures $\mathcal{R}_{\text{baseline}}(t)$ is the geometric mean of the subpopulation $\mathcal{R}_k(t)$ values, so the baseline represents the typical transmission level across subpopulations.
+This ensures $\mathcal{R}_{\text{baseline}}(t)$ is the *unweighted* geometric mean of the subpopulation $\mathcal{R}_k(t)$ values, so the baseline represents the typical transmission level across subpopulations.
+
+Note that this is the unweighted mean across subpopulations, not population-weighted by $p_k$. As a result, $\mathcal{R}_{\text{baseline}}(t)$ does **not** in general equal the jurisdiction-level reproduction number implied by the aggregate infection trajectory $I_{\text{aggregate}}(t)$. When subpopulations differ in size, a small subpopulation with a large $\mathcal{R}_k(t)$ contributes equally to the baseline but only marginally to the aggregate.
 
 ```{python}
 # | label: verify-constraint
@@ -288,7 +294,9 @@ baseline_process = DifferencedAR1(autoreg=0.5, innovation_sd=0.01)
 
 ### AR(1) Deviations
 
-AR(1) deviations revert toward zero. Subpopulations that temporarily deviate from the baseline are pulled back. The `autoreg` coefficient controls how quickly: values near 1 produce slow reversion (local differences linger), values near 0 produce fast reversion (subpopulations snap back to the baseline).
+AR(1) deviations have **bounded variance**. Because every subpopulation starts at the baseline ($\delta_k(0) = 0$), there is no initial displacement to "revert from" — the visible behavior in a prior predictive plot is the spread of $\delta_k(t)$ growing from $0$ at initialization toward a stationary value $\sigma^2 / (1 - \phi^2)$ and then staying there. With `autoreg = 0.8` and `innovation_sd = 0.05`, that stationary standard deviation is approximately $0.083$ on the log scale, reached after roughly 10 days.
+
+The `autoreg` coefficient still matters: if a subpopulation drifts away from zero by chance, $\phi$ controls how quickly it is pulled back. Values near 1 produce slow pullback (local differences linger), values near 0 produce fast pullback (subpopulations snap back to the baseline). What this looks like in a prior predictive plot is a **constant-width band** rather than a fanning-out cloud.
 
 ```{python}
 # | label: ar1-deviations-sample
@@ -320,17 +328,56 @@ def deviation_df(samples, label):
     return pd.DataFrame(data)
 
 
+def deviation_summary_df(samples):
+    """Build a long-format median and 90% interval per (day, subpop) using all samples."""
+    devs = samples["deviations"]
+    rows = []
+    for k in range(n_subpops):
+        col = devs[:, :, k]
+        for d in range(n_days):
+            rows.append(
+                {
+                    "day": d,
+                    "subpop": f"subpop {k}",
+                    "median": float(np.median(col[:, d])),
+                    "q05": float(np.percentile(col[:, d], 5)),
+                    "q95": float(np.percentile(col[:, d], 95)),
+                }
+            )
+    return pd.DataFrame(rows)
+
+
 ar1_dev_df = deviation_df(ar1_dev_samples, "AR(1) deviations")
+ar1_dev_summary = deviation_summary_df(ar1_dev_samples)
 ```
 
 ```{python}
 # | label: fig-ar1-deviations
-# | fig-cap: AR(1) deviation trajectories (50 samples, all 6 subpopulations overlaid). Deviations revert toward zero, meaning subpopulations track the baseline and local differences are transient.
+# | fig-cap: AR(1) deviation trajectories (50 samples, all 6 subpopulations). The envelope grows from zero at initialization to its stationary width within roughly 10 days, then stays bounded. Compare the y-axis scale to fig-rw-deviations below.
 (
-    p9.ggplot(ar1_dev_df, p9.aes(x="day", y="deviation", group="sample"))
-    + p9.geom_line(alpha=0.1, size=0.5, color="purple")
+    p9.ggplot()
+    + p9.geom_line(
+        ar1_dev_df,
+        p9.aes(x="day", y="deviation", group="sample"),
+        alpha=0.08,
+        size=0.5,
+        color="purple",
+    )
+    + p9.geom_ribbon(
+        ar1_dev_summary,
+        p9.aes(x="day", ymin="q05", ymax="q95"),
+        fill="purple",
+        alpha=0.25,
+    )
+    + p9.geom_line(
+        ar1_dev_summary,
+        p9.aes(x="day", y="median"),
+        color="purple",
+        size=0.8,
+    )
     + p9.geom_hline(yintercept=0, color="black", linetype="dotted")
     + p9.facet_wrap("~ subpop", ncol=3)
+    + p9.coord_cartesian(ylim=(-0.5, 0.5))
     + p9.labs(
         x="Days",
         y="Deviation $\\delta_k(t)$",
@@ -342,7 +389,7 @@ ar1_dev_df = deviation_df(ar1_dev_samples, "AR(1) deviations")
 
 ### RandomWalk Deviations
 
-RandomWalk deviations have no mean reversion. Subpopulations can drift away from the baseline and stay there. Differences that emerge early in the time series persist and can grow.
+RandomWalk deviations have **unbounded variance**. The spread of $\delta_k(t)$ grows linearly with time as $\sigma^2 t$, so over a 28-day horizon with `innovation_sd = 0.05` the standard deviation reaches roughly $0.265$ on the log scale — about three times the AR(1) stationary value above. There is no pullback toward zero: subpopulations that drift away from the baseline stay drifted, and differences that emerge early persist and can grow. The visual signature is a **fanning-out cloud** rather than a constant-width band.
 
 ```{python}
 # | label: rw-deviations-sample
@@ -356,16 +403,36 @@ rw_dev_samples = sample_hierarchical(
 ```{python}
 # | label: rw-deviations-data
 rw_dev_df = deviation_df(rw_dev_samples, "RandomWalk deviations")
+rw_dev_summary = deviation_summary_df(rw_dev_samples)
 ```
 
 ```{python}
 # | label: fig-rw-deviations
-# | fig-cap: RandomWalk deviation trajectories (50 samples, all 6 subpopulations overlaid). Deviations drift freely with no tendency to return to zero. Subpopulations can diverge permanently from the baseline.
+# | fig-cap: RandomWalk deviation trajectories (50 samples, 6 subpopulations). The envelope fans out continuously over the 28-day horizon and reaches roughly three times the AR(1) stationary width. The y-axis matches fig-ar1-deviations above for direct comparison.
 (
-    p9.ggplot(rw_dev_df, p9.aes(x="day", y="deviation", group="sample"))
-    + p9.geom_line(alpha=0.1, size=0.5, color="purple")
+    p9.ggplot()
+    + p9.geom_line(
+        rw_dev_df,
+        p9.aes(x="day", y="deviation", group="sample"),
+        alpha=0.08,
+        size=0.5,
+        color="purple",
+    )
+    + p9.geom_ribbon(
+        rw_dev_summary,
+        p9.aes(x="day", ymin="q05", ymax="q95"),
+        fill="purple",
+        alpha=0.25,
+    )
+    + p9.geom_line(
+        rw_dev_summary,
+        p9.aes(x="day", y="median"),
+        color="purple",
+        size=0.8,
+    )
     + p9.geom_hline(yintercept=0, color="black", linetype="dotted")
     + p9.facet_wrap("~ subpop", ncol=3)
+    + p9.coord_cartesian(ylim=(-0.5, 0.5))
     + p9.labs(
         x="Days",
         y="Deviation $\\delta_k(t)$",
@@ -378,18 +445,20 @@ rw_dev_df = deviation_df(rw_dev_samples, "RandomWalk deviations")
 ### Comparing Deviation Processes
 
 ```{python}
-# | label: deviation-summary
-print(f"Deviation spread at day {n_days} (across all subpops and samples):")
-print(
-    f"{'Process':<24} {'Median |dev|':>14} {'90th % |dev|':>14} {'Max |dev|':>12}"
-)
-print("-" * 66)
+# | label: tbl-deviation-summary
+# | tbl-cap: Deviation spread at day 28 (across all subpopulations and samples).
+deviation_summary_rows = []
 for label, s in [("AR(1)", ar1_dev_samples), ("RandomWalk", rw_dev_samples)]:
     devs = np.abs(s["deviations"][:, -1, :]).flatten()
-    print(
-        f"{label:<24} {np.median(devs):>14.3f} "
-        f"{np.percentile(devs, 90):>14.3f} {np.max(devs):>12.3f}"
+    deviation_summary_rows.append(
+        {
+            "Process": label,
+            "Median |dev|": f"{np.median(devs):.3f}",
+            "90th % |dev|": f"{np.percentile(devs, 90):.3f}",
+            "Max |dev|": f"{np.max(devs):.3f}",
+        }
     )
+pd.DataFrame(deviation_summary_rows)
 ```
 
 AR(1) deviations stay close to zero because mean reversion continuously pulls them back. RandomWalk deviations accumulate over time. As in the SharedInfections tutorial, this is prior-modeling guidance rather than a uniquely determined epidemiologic rule. The choice depends on the epidemiological setting:

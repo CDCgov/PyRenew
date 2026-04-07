@@ -184,7 +184,7 @@ Latent infection processes implement the renewal equation to generate infection 
 
 ### Generation Interval
 
-The generation interval PMF specifies the probability that a secondary infection occurs $d$ days after the primary infection.
+The generation interval PMF specifies the probability that a secondary infection occurs $\tau$ days after the primary infection.
 
 ```{python}
 # | label: gen-interval
@@ -205,6 +205,8 @@ The initial infections RV `I0_rv` specifies the **proportion of the population i
 # | label: initial-infections
 I0_rv = DistributionalVariable("I0", dist.Beta(1, 100))
 ```
+
+
 
 ### Initial Log Rt
 
@@ -553,6 +555,15 @@ print(f"  n_initialization_points: {n_init}")
 print(f"  Latent process: {type(model.latent).__name__}")
 print(f"  Observation processes: {list(model.observations.keys())}")
 ```
+
+### Model  Identifiability.
+
+The renewal equation is linear in the initial infections `I0_rv`, so scaling `I0_rv` by a factor $c$ scales the entire infection trajectory by $c$.
+In practice, `I0_rv` is weakly identified because each observation process links infections to data through a signal-specific ascertainment rate $\alpha_s$ — the probability that an infection is observed as an event in signal $s$.
+Doubling `I0_rv` while halving all ascertainment rates produces identical expected observations.
+Without external information to anchor either the ascertainment rates or the absolute infection level, the data cannot distinguish "more infections, lower ascertainment" from "fewer infections, higher ascertainment."
+The priors on `I0_rv` and on the ascertainment rates resolve this ambiguity.
+
 
 ## Fitting the Model to Data:  `model.run()`
 

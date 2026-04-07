@@ -18,16 +18,16 @@ It combines two distinct discrete convolutions which describe different processe
 New infections arise from past infections through a generation interval distribution.
 
 Let $I(t)$ denote the latent number of new infections at time $t$, and let $\mathcal{R}(t)$ denote the time-varying reproduction number.
-Assume the generation interval distribution has finite support over lags $\tau = 1, \dots, K$. Let $w_\tau$ denote the probability that a secondary infection occurs $\tau$ days after infection in the primary case, with
+Assume the generation interval distribution has finite support over lags $\tau = 1, \dots, G$. Let $w_\tau$ denote the probability that a secondary infection occurs $\tau$ days after infection in the primary case, with
 
 $$
-\sum_{\tau=1}^{K} w_\tau = 1, \qquad w_\tau \ge 0.
+\sum_{\tau=1}^{G} w_\tau = 1, \qquad w_\tau \ge 0.
 $$
 
 Then the renewal equation is
 
 $$
-I(t) = \mathcal{R}(t) \sum_{\tau=1}^{K} I(t - \tau)\, w_\tau.
+I(t) = \mathcal{R}(t) \sum_{\tau=1}^{G} I(t - \tau)\, w_\tau.
 $$
 
 Here, $\tau$ indexes the generation interval.
