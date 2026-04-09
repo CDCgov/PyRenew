@@ -29,7 +29,6 @@ from pyrenew.observation.noise import (
     MeasurementNoise,
     NegativeBinomialNoise,
     PoissonNoise,
-    VectorizedRV,
 )
 from pyrenew.observation.types import ObservationSample
 
@@ -45,7 +44,6 @@ __all__ = [
     "NegativeBinomialNoise",
     "MeasurementNoise",
     "HierarchicalNormalNoise",
-    "VectorizedRV",
     # Observation processes
     "CountBase",
     "Counts",

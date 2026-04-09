@@ -1,6 +1,6 @@
 [project]
 name = "PyRenew"
-version = "0.1.6"
+version = "0.1.7"
 description = "PyRenew, a Python package for multi-signal Bayesian renewal modeling with JAX and NumPyro."
 readme = "README.md"
 license = "Apache-2.0"
@@ -15,7 +15,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "arviz>=0.22.0",
+    "arviz>=1.0.0",
     "beautifulsoup4>=4.13.5",
     "deptry>=0.23.1",
     "ipykernel>=6.30.1",
@@ -26,12 +26,14 @@ dev = [
     "mkdocstrings>=0.30.0",
     "mkdocstrings-python>=1.18.2",
     "nbconvert>=7.16.6",
+    "pandas>=3.0.2",
+    "plotnine>=0.14.0",
+    "pre-commit>=4.5.1",
     "pytest>=8.4.2",
     "pytest-cov>=6.3.0",
-    "plotnine>=0.14.0",
     "pytest-mpl>=0.17.0",
-    "scipy>=1.16.1",
     "ruff>=0.15.0",
+    "scipy>=1.16.1",
 ]
 
 [build-system]
@@ -73,7 +75,7 @@ exclude = [  # don't report on objects that match any of these regex
 known_first_party = ["pyrenew", "test"]
 
 [tool.deptry.per_rule_ignores]
-DEP004 = ["pytest", "scipy", "bs4"]
+DEP004 = ["arviz", "pytest", "scipy", "bs4"]
 
 [tool.ruff]
 fix = true

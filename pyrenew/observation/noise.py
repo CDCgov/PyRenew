@@ -1,4 +1,3 @@
-# numpydoc ignore=GL08
 """
 Noise models for observation processes.
 
@@ -16,10 +15,6 @@ separating the noise distribution from the observation structure.
 - ``HierarchicalNormalNoise``: Normal noise with hierarchical sensor effects.
   Takes ``sensor_mode_rv`` and ``sensor_sd_rv`` for sensor-level
   bias and variability.
-
-**Utilities**
-
-- ``VectorizedRV``: Wrapper that adds ``n_groups`` support to simple RVs.
 """
 
 from __future__ import annotations
@@ -34,60 +29,6 @@ from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 
 _EPSILON = 1e-10
-
-
-class VectorizedRV(RandomVariable):
-    """
-    Wrapper that adds n_groups support to simple RandomVariables.
-
-    Uses numpyro.plate to vectorize sampling, enabling simple RVs
-    to work with noise models expecting the group-level interface.
-
-    Parameters
-    ----------
-    name
-        A name for this random variable.
-        The numpyro plate is named ``f"{name}_plate"``.
-    rv
-        The underlying RandomVariable to wrap.
-    """
-
-    def __init__(self, name: str, rv: RandomVariable) -> None:
-        """
-        Initialize VectorizedRV wrapper.
-
-        Parameters
-        ----------
-        name
-            A name for this random variable.
-            The numpyro plate is named ``f"{name}_plate"``.
-        rv
-            The underlying RandomVariable to wrap.
-        """
-        super().__init__(name=name)
-        self.rv = rv
-        self.plate_name = f"{name}_plate"
-
-    def validate(self) -> None:  # pragma: no cover
-        """Validate the underlying RV."""
-        self.rv.validate()
-
-    def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
-        """
-        Sample n_groups values using numpyro.plate.
-
-        Parameters
-        ----------
-        n_groups
-            Number of group-level values to sample.
-
-        Returns
-        -------
-        ArrayLike
-            Array of shape (n_groups,).
-        """
-        with numpyro.plate(self.plate_name, n_groups):
-            return self.rv(**kwargs)
 
 
 class CountNoise(ABC):
@@ -135,18 +76,6 @@ class CountNoise(ABC):
         """
         pass  # pragma: no cover
 
-    @abstractmethod
-    def validate(self) -> None:
-        """
-        Validate noise model parameters.
-
-        Raises
-        ------
-        ValueError
-            If parameters are invalid.
-        """
-        pass  # pragma: no cover
-
 
 class PoissonNoise(CountNoise):
     """
@@ -161,8 +90,11 @@ class PoissonNoise(CountNoise):
         """Return string representation."""
         return "PoissonNoise()"
 
-    def validate(self) -> None:
-        """Validate Poisson noise (always valid)."""
+    @staticmethod
+    def validate() -> None:
+        """
+        PoissonNoise always passes validation.
+        """
         pass
 
     def sample(
@@ -234,7 +166,7 @@ class NegativeBinomialNoise(CountNoise):
         """Return string representation."""
         return f"NegativeBinomialNoise(concentration_rv={self.concentration_rv!r})"
 
-    def validate(self) -> None:
+    def validate_concentration_rv(self) -> None:
         """
         Validate concentration is positive.
 
@@ -325,18 +257,6 @@ class MeasurementNoise(ABC):
         """
         pass  # pragma: no cover
 
-    @abstractmethod
-    def validate(self) -> None:
-        """
-        Validate noise model parameters.
-
-        Raises
-        ------
-        ValueError
-            If parameters are invalid.
-        """
-        pass  # pragma: no cover
-
 
 class HierarchicalNormalNoise(MeasurementNoise):
     """
@@ -356,7 +276,8 @@ class HierarchicalNormalNoise(MeasurementNoise):
 
     Notes
     -----
-    Use ``VectorizedRV`` to wrap simple RVs that lack this interface.
+    Use [`VectorizedVariable`][pyrenew.randomvariable.VectorizedVariable]
+    to wrap simple RVs that lack this interface.
     """
 
     def __init__(
@@ -386,16 +307,6 @@ class HierarchicalNormalNoise(MeasurementNoise):
             f"sensor_mode_rv={self.sensor_mode_rv!r}, "
             f"sensor_sd_rv={self.sensor_sd_rv!r})"
         )
-
-    def validate(self) -> None:
-        """
-        Validate noise parameters.
-
-        Notes
-        -----
-        Full validation requires n_groups, which is only available during sample().
-        """
-        pass
 
     def sample(
         self,

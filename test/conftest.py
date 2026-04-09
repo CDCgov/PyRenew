@@ -15,9 +15,8 @@ from pyrenew.observation import (
     Counts,
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
-    VectorizedRV,
 )
-from pyrenew.randomvariable import DistributionalVariable
+from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 
 # =============================================================================
 # PMF Fixtures
@@ -103,18 +102,18 @@ def gen_int_rv():
 @pytest.fixture
 def hierarchical_normal_noise():
     """
-    Standard HierarchicalNormalNoise with VectorizedRV wrappers.
+    Standard HierarchicalNormalNoise with VectorizedVariable wrappers.
 
     Returns
     -------
     HierarchicalNormalNoise
         Noise model for continuous measurements.
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable(
             "ww_sensor_sd", dist.TruncatedNormal(0.3, 0.15, low=0.10)
@@ -133,11 +132,11 @@ def hierarchical_normal_noise_tight():
     HierarchicalNormalNoise
         Noise model with very small variance.
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.01)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable(
             "ww_sensor_sd", dist.TruncatedNormal(0.01, 0.005, low=0.001)
@@ -162,6 +161,7 @@ def hierarchical_infections(gen_int_rv):
         Configured infection process with realistic parameters.
     """
     return HierarchicalInfections(
+        name="hierarchical",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),

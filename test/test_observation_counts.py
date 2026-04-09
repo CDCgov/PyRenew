@@ -374,13 +374,13 @@ class TestNoiseValidation:
         """Test NegativeBinomialNoise validate with zero concentration."""
         noise = NegativeBinomialNoise(DeterministicVariable("conc", 0.0))
         with pytest.raises(ValueError, match="concentration must be positive"):
-            noise.validate()
+            noise.validate_concentration_rv()
 
     def test_negative_binomial_noise_validate_negative_concentration(self):
         """Test NegativeBinomialNoise validate with negative concentration."""
         noise = NegativeBinomialNoise(DeterministicVariable("conc", -1.0))
         with pytest.raises(ValueError, match="concentration must be positive"):
-            noise.validate()
+            noise.validate_concentration_rv()
 
 
 class TestBaseObservationProcessValidation:

@@ -161,7 +161,9 @@ The model code is identical whether the rate is fixed or estimated:
 ```{python}
 # | label: interchangeability
 hosp_delay_pmf = jnp.array(
-    datasets.load_infection_admission_interval()["probability_mass"].to_numpy()
+    datasets.load_example_infection_admission_interval()[
+        "probability_mass"
+    ].to_numpy()
 )
 
 # Fixed ascertainment rate
@@ -189,7 +191,6 @@ subclasses to implement:
 | Method | Signature | Purpose |
 |--------|-----------|---------|
 | `sample` | `sample(**kwargs) -> tuple` | Core computation: return a value, draw from a distribution, or perform a calculation |
-| `validate` | `validate(**kwargs) -> None` | Check that parameters are well-formed; raise an error if not |
 
 The metaclass also provides:
 
@@ -510,7 +511,6 @@ and weekday peaks that is characteristic of real hospital admissions data.
 ### Writing a custom RandomVariable
 
 1. Subclass `RandomVariable` from `pyrenew.metaclass`
-2. Implement `validate()` as a `@staticmethod`; call it in `__init__`
 3. Implement `sample(**kwargs)` returning a `tuple`
 4. Use `numpyro.sample()` for quantities to be estimated
 5. Use `numpyro.deterministic()` to record derived quantities in the trace

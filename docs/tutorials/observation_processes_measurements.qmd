@@ -4,6 +4,17 @@ format:
   gfm:
     code-fold: true
 engine: jupyter
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .qmd
+      format_name: quarto
+      format_version: '1.0'
+      jupytext_version: 1.18.1
+  kernelspec:
+    display_name: Python 3 (ipykernel)
+    language: python
+    name: python3
 ---
 
 This tutorial demonstrates how to use the `Measurements` observation process to model continuous measurement data. We first explain the general framework, then illustrate with a wastewater viral concentration example.
@@ -24,9 +35,8 @@ from _tutorial_theme import theme_tutorial
 from pyrenew.observation import (
     Measurements,
     HierarchicalNormalNoise,
-    VectorizedRV,
 )
-from pyrenew.randomvariable import DistributionalVariable
+from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 ```
 
@@ -43,11 +53,18 @@ The `Measurements` class models continuous signals derived from infections. Unli
 
 ### The general pattern
 
-All measurement observation processes follow the same pattern:
+All measurement observation processes follow the same two-layer structure as the count observation model:
 
-$$y_t \sim \text{Noise}(\mu(t))$$
+1. A deterministic transformation defining the expected measurement value
+2. A stochastic observation model
 
-where $\mu(t)$ is the predicted measurement value on day $t$, computed from infections via a domain-specific transformation, and the noise model adds stochastic variation around predictions.
+Let $\mu(t)$ denote the expected measurement at time $t$. Observations are modeled as
+
+$$
+Y(t) \sim \text{Noise}(f(\mu(t))),
+$$
+
+where $f(\cdot)$ is a transformation (often the identity or log function), and the noise model adds stochastic variation around this transformed prediction.
 
 Subclasses implement `_predicted_obs()` to compute $\mu(t)$ from infections. PyRenew provides the noise model.
 
@@ -80,21 +97,21 @@ Measurement data typically exhibits **sensor-level variability**: different inst
 - **Sensor SD**: Measurement precision (noise level)
 
 ```
-observed ~ Normal(predicted + sensor_mode[sensor], sensor_sd[sensor])
+observed ~ Normal(f(\mu(t)) + sensor_mode[sensor], sensor_sd[sensor])
 ```
 
-The sensor-level RVs must implement `sample(n_groups=...)`. Use `VectorizedRV` to wrap simple distributions:
+The sensor-level RVs must implement `sample(n_groups=...)`. Use `VectorizedVariable` to wrap simple distributions:
 
 ```{python}
 # | label: noise-model-general
 # Sensor modes: zero-centered, allowing positive or negative bias
-sensor_mode_rv = VectorizedRV(
+sensor_mode_rv = VectorizedVariable(
     "vec_sensor_mode",
     DistributionalVariable("sensor_mode", dist.Normal(0, 0.5)),
 )
 
 # Sensor SDs: must be positive, truncated normal is a common choice
-sensor_sd_rv = VectorizedRV(
+sensor_sd_rv = VectorizedVariable(
     "vec_sensor_sd",
     DistributionalVariable(
         "sensor_sd", dist.TruncatedNormal(loc=0.3, scale=0.15, low=0.05)
@@ -163,26 +180,49 @@ based on the [PyRenew-HEW](https://github.com/cdcgov/pyrenew-multisignal) family
 **The wastewater signal**
 
 Wastewater treatment plants measure viral RNA concentrations in sewage.
-The predicted concentration depends on:
+The concentration is determined by:
 
 - **Infections**: People shed virus into wastewater
 - **Shedding kinetics**: Viral shedding peaks a few days after infection
-- **Scaling factors**: Genome copies per infection, wastewater volume
+- **Scaling factors**: Genome copies per infection and wastewater volume
 
-The predicted log-concentration on day $t$ is:
+### Observation model
 
-$$\log(\mu(t)) = \log\left(\frac{G}{V} \cdot \sum_{s} I(t-s) \, \pi(s)\right)$$
+The predicted concentration at time $t$ is given by
+
+$$
+\mu(t) = \frac{G}{V} \sum_{d=0}^{D} I(t-d)\, \pi_d,
+$$
 
 where:
 
-- $I(t-s)$ is infections on day $t-s$
-- $\pi(s)$ is the shedding kinetics PMF (fraction shed on day $s$ post-infection)
-- $G$ is genome copies shed per infection
-- $V$ is wastewater volume per person per day
+- $I(t-d)$ is the number of infections on day $t-d$
+- $\pi_d$ is the shedding kinetics PMF, giving the fraction of total shedding occurring $d$ days after infection, analogous to the delay distribution in count observation models
+- $G$ is the number of genome copies shed per infection
+- $V$ is the wastewater volume per person per day
 
-Observations are log-concentrations with normal noise:
+This has the same convolution structure as the observation equation for count data, with a different transformation applied to the expected value.
 
-$$y_t \sim \text{Normal}(\log(\mu(t)) + \text{sensor\_mode}, \text{sensor\_sd})$$
+We model the observed **log-concentration** as
+
+$$
+Y(t) \sim \text{Normal}\big(\log(\mu(t)) + \text{sensor\_mode}, \ \text{sensor\_sd}\big),
+$$
+
+where:
+
+- $Y(t)$ is the observed log-concentration at time $t$
+- $\text{sensor\_mode}$ represents a sensor-specific bias (additive shift on the log scale)
+- $\text{sensor\_sd}$ represents the measurement variability for that sensor
+
+### Interpretation
+
+This model follows the same two-layer structure used for count observations:
+
+- A **deterministic layer**, where the convolution defines the predicted concentration $\mu(t)$ from latent infections
+- A **stochastic observation layer**, where observed measurements $Y(t)$ vary around $\log(\mu(t))$ due to sensor noise
+
+The key difference from count data is that measurements are modeled on a continuous (often log-transformed) scale, and variability is represented using a normal distribution rather than a count distribution.
 
 ### Implementing the Wastewater class
 
@@ -243,8 +283,8 @@ class Wastewater(Measurements):
 
     def _predicted_obs(self, infections: ArrayLike) -> ArrayLike:
         """
-        Compute predicted log-concentration from infections.
-
+        Compute the log of the expected concentration from infections.
+        This corresponds to log(mu(t)), where mu(t) is defined by the observation equation.
         Applies shedding kinetics convolution, then scales by
         genome copies and volume to get concentration.
         """
@@ -355,13 +395,13 @@ For wastewater, a "sensor" is a WWTP/lab pair—the combination of treatment pla
 ```{python}
 # | label: ww-noise-model
 # Sensor-level mode: systematic differences between WWTP/lab pairs
-ww_sensor_mode_rv = VectorizedRV(
+ww_sensor_mode_rv = VectorizedVariable(
     "vec_ww_sensor_mode",
     DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5)),
 )
 
 # Sensor-level SD: measurement variability within each WWTP/lab pair
-ww_sensor_sd_rv = VectorizedRV(
+ww_sensor_sd_rv = VectorizedVariable(
     "vec_ww_sensor_sd",
     DistributionalVariable(
         "ww_sensor_sd", dist.TruncatedNormal(loc=0.3, scale=0.15, low=0.10)

@@ -60,10 +60,6 @@ class Infections(RandomVariable):
         """
         super().__init__(name=name)
 
-    @staticmethod
-    def validate() -> None:  # numpydoc ignore=GL08
-        return None
-
     def sample(
         self,
         Rt: ArrayLike,

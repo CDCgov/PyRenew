@@ -6,10 +6,12 @@ from pyrenew.randomvariable.distributionalvariable import (
     StaticDistributionalVariable,
 )
 from pyrenew.randomvariable.transformedvariable import TransformedVariable
+from pyrenew.randomvariable.vectorizedvariable import VectorizedVariable
 
 __all__ = [
     "DistributionalVariable",
     "StaticDistributionalVariable",
     "DynamicDistributionalVariable",
     "TransformedVariable",
+    "VectorizedVariable",
 ]

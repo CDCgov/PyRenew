@@ -47,9 +47,9 @@ def test_invalid_constructor_args(not_a_dist):
             "distribution should be an instance of numpyro.distributions.Distribution"
         ),
     ):
-        StaticDistributionalVariable.validate(not_a_dist)
+        StaticDistributionalVariable._validate_distribution(not_a_dist)
     with pytest.raises(ValueError, match="must provide a Callable"):
-        DynamicDistributionalVariable.validate(not_a_dist)
+        DynamicDistributionalVariable._validate_distribution_constructor(not_a_dist)
 
 
 @pytest.mark.parametrize(
