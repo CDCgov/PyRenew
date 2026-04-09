@@ -350,7 +350,7 @@ rw_samples = sample_process(RandomWalk(innovation_sd=0.05), "RandomWalk")
 
 ```{python}
 # | label: fig-rw
-# | fig-cap: Prior predictive Rt trajectories under a Random Walk (innovation_sd = 0.05). The envelope widens steadily over time because variance grows linearly. Trajectories drift in both directions from the starting value with no tendency to return.
+# | fig-cap: 'Prior predictive $\mathcal{R}(t)$ trajectories under a Random Walk (innovation_sd = 0.05). The envelope widens steadily over time because variance grows linearly. Trajectories drift in both directions from the starting value with no tendency to return.'
 rt_spaghetti_plot(rw_samples["rt"], "Random Walk (innovation_sd = 0.05)")
 ```
 
@@ -381,7 +381,7 @@ ar1_samples = sample_process(AR1(autoreg=0.9, innovation_sd=0.05), "AR1")
 
 ```{python}
 # | label: fig-ar1
-# | fig-cap: Prior predictive Rt trajectories under AR(1) (autoreg = 0.9, innovation_sd = 0.05). The envelope stabilizes rather than growing over time. The median trajectory (solid line) drifts from the starting Rt of 1.65 back toward 1, illustrating mean reversion of the level.
+# | fig-cap: 'Prior predictive $\mathcal{R}(t)$ trajectories under AR(1) (autoreg = 0.9, innovation_sd = 0.05). The envelope stabilizes rather than growing over time. The median trajectory (solid line) drifts from the starting $\mathcal{R}(0)$ of 1.65 back toward 1, illustrating mean reversion of the level.'
 rt_spaghetti_plot(
     ar1_samples["rt"], "AR(1) (autoreg = 0.9, innovation_sd = 0.05)"
 )
@@ -425,7 +425,7 @@ dar1_samples = sample_process(
 # | label: fig-dar1
 
 
-# | fig-cap: DifferencedAR1 allows sustained directional trends because the increments are autocorrelated. Even with a smaller innovation scale than the other examples, the induced prior on $\mathcal{R}(t)$ can still be fairly diffuse over this time horizon.
+# | fig-cap: 'DifferencedAR1 allows sustained directional trends because the increments are autocorrelated. Even with a smaller innovation scale than the other examples, the induced prior on $\mathcal{R}(t)$ can still be fairly diffuse over this time horizon.'
 rt_spaghetti_plot(
     dar1_samples["rt"],
     "DifferencedAR1 (autoreg = 0.5, innovation_sd = 0.01)",
@@ -510,7 +510,7 @@ comparison_df["process"] = pd.Categorical(
 
 ```{python}
 # | label: tbl-comparison-summary
-# | tbl-cap: Rt at day 28 by temporal process.
+# | tbl-cap: '$\mathcal{R}(t)$ at day 28 by temporal process.'
 summary_rows = []
 for label, ar, sd, s in [
     ("Random Walk", None, 0.05, rw_samples),
@@ -590,7 +590,7 @@ hp_df["config"] = pd.Categorical(
 
 ```{python}
 # | label: fig-hyperparam-effect
-# | fig-cap: Effect of DifferencedAR1 hyperparameters on prior Rt distribution. Lower autoreg and innovation_sd (left) produce a tighter envelope; higher values (right) allow wider drift. All start at Rt = 1.65.
+# | fig-cap: 'Effect of DifferencedAR1 hyperparameters on prior $\mathcal{R}(t)$ distribution. Lower autoreg and innovation_sd (left) produce a tighter envelope; higher values (right) allow wider drift. All start at $\mathcal{R}(0)$ = 1.65.'
 (
     p9.ggplot(hp_df, p9.aes(x="day", y="rt", group="sample"))
     + p9.geom_line(alpha=0.1, size=0.5, color="steelblue")
@@ -600,7 +600,7 @@ hp_df["config"] = pd.Categorical(
     + p9.labs(
         x="Days",
         y="Rt",
-        title="DifferencedAR1: Effect of Hyperparameters on Prior Rt",
+        title=r"DifferencedAR1: Effect of Hyperparameters on Prior $\mathcal{R}(t)$",
     )
     + theme_tutorial
 )
@@ -608,7 +608,7 @@ hp_df["config"] = pd.Categorical(
 
 ```{python}
 # | label: tbl-hyperparam-summary
-# | tbl-cap: Rt at day 28 by DifferencedAR1 configuration.
+# | tbl-cap: '$\mathcal{R}(t)$ at day 28 by DifferencedAR1 configuration.'
 hp_summary_rows = []
 for name in hyperparam_configs:
     rt = hyperparam_samples[name]["rt"][:, -1]
@@ -659,7 +659,7 @@ inf_comparison_df["process"] = pd.Categorical(
 
 ```{python}
 # | label: fig-infection-comparison
-# | fig-cap: Prior predictive infection trajectories (log scale). The nonlinear transformation from Rt to infections amplifies differences between temporal processes. The vertical spread represents orders-of-magnitude differences in infection levels.
+# | fig-cap: 'Prior predictive infection trajectories (log scale). The nonlinear transformation from $\mathcal{R}(t)$ to infections amplifies differences between temporal processes. The vertical spread represents orders-of-magnitude differences in infection levels.'
 (
     p9.ggplot(
         inf_comparison_df, p9.aes(x="day", y="infections", group="sample")
