@@ -3,6 +3,12 @@ title: Latent Infection Processes
 format:
   gfm:
     code-fold: true
+  html:
+    toc: true
+    embed-resources: true
+    self-contained-math: true
+    code-fold: true
+    code-tools: true
 engine: jupyter
 jupyter:
   jupytext:
@@ -423,8 +429,6 @@ dar1_samples = sample_process(
 
 ```{python}
 # | label: fig-dar1
-
-
 # | fig-cap: 'DifferencedAR1 allows sustained directional trends because the increments are autocorrelated. Even with a smaller innovation scale than the other examples, the induced prior on $\mathcal{R}(t)$ can still be fairly diffuse over this time horizon.'
 rt_spaghetti_plot(
     dar1_samples["rt"],
