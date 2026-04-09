@@ -26,12 +26,14 @@ dev = [
     "mkdocstrings>=0.30.0",
     "mkdocstrings-python>=1.18.2",
     "nbconvert>=7.16.6",
+    "pandas>=3.0.2",
+    "plotnine>=0.14.0",
+    "pre-commit>=4.5.1",
     "pytest>=8.4.2",
     "pytest-cov>=6.3.0",
-    "plotnine>=0.14.0",
     "pytest-mpl>=0.17.0",
-    "scipy>=1.16.1",
     "ruff>=0.15.0",
+    "scipy>=1.16.1",
 ]
 
 [build-system]

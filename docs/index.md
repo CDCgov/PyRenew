@@ -7,19 +7,70 @@ Built on top of [NumPyro](https://num.pyro.ai/), PyRenew provides configurable c
 
 ## Renewal models
 
-A renewal model estimates new infections from recent past infections using a generation interval distribution $w(s)$: the probability that $s$ time units separate infection in an index case and a secondary case.
-The core renewal equation is:
+A renewal model estimates new infections from recent past infections.
+It combines two distinct discrete convolutions which describe different processes: transmission between infections and delay from infection to observation.
 
-$$I(t) = \mathcal{R}(t) \sum_{s} I(t-s) \, w(s)$$
+- The **renewal equation** maps past infections to new infections using the generation interval distribution $w_\tau$.
+- The **observation equation** maps latent infections to expected observed events using the delay distribution $\pi_d$.
 
-where $R_t$ is the time-varying reproduction number.
+#### Renewal equation
 
-Inference is complicated by the fact that observational data require their own models ([Bhatt et al., 2023, S2](https://doi.org/10.1093/jrsssa/qnad030)).
-The observation equation links infections to expected observations:
+New infections arise from past infections through a generation interval distribution.
 
-$$\mu(t) = \alpha \sum_{s} I(t-s) \, \pi(s)$$
+Let $I(t)$ denote the latent number of new infections at time $t$, and let $\mathcal{R}(t)$ denote the time-varying reproduction number.
+Assume the generation interval distribution has finite support over lags $\tau = 1, \dots, G$. Let $w_\tau$ denote the probability that a secondary infection occurs $\tau$ days after infection in the primary case, with
 
-where $\alpha$ is the ascertainment rate and $\pi(s)$ is the delay distribution from infection to observation.
+$$
+\sum_{\tau=1}^{G} w_\tau = 1, \qquad w_\tau \ge 0.
+$$
+
+Then the renewal equation is
+
+$$
+I(t) = \mathcal{R}(t) \sum_{\tau=1}^{G} I(t - \tau)\, w_\tau.
+$$
+
+Here, $\tau$ indexes the generation interval.
+
+In PyRenew, the latent process is represented on a **per-capita scale** (infection proportion) and is multiplied by a population size downstream when connecting to count observations.
+
+#### Observation equation
+
+Infections are latent and are not directly observed; instead, the data consist of events that occur some time after infection, such as hospitalizations or emergency department visits.
+
+Let $\mu(t)$ denote the expected number of observed events at time $t$, and let $\alpha$ denote an **ascertainment rate**, the probability an infection is observed as an event. Assume the delay from infection to observation has finite support over lags $d = 0, \dots, D$. Let $\pi_d$ denote the probability that an infection is observed $d$ days later, with
+
+$$
+\sum_{d=0}^{D} \pi_d = 1, \qquad \pi_d \ge 0.
+$$
+
+Then the observation equation is
+
+$$
+\mu(t) = \alpha \sum_{d=0}^{D} I(t - d)\, \pi_d.
+$$
+
+Here, $d$ indexes lags in the infection-to-observation delay distribution.
+
+#### Stochastic observation model
+
+The observation equation defines the expected number of observed events at time $t$, but the actual observed data are stochastic.
+
+Let $Y(t)$ denote the observed number of events at time $t$. We model observations as draws from a count distribution with central value (typically mean) $\mu(t)$:
+
+$$
+Y(t) \sim \text{Distribution}(\mu(t), \theta).
+$$
+
+One possible choice is the Poisson distribution, which assumes the variance equals the mean.
+In practice, epidemiological count data are often overdispersed relative to the Poisson. Negative binomial distributions are a common choice for modeling these overdispersed counts.
+
+The model thus has two layers:
+
+- A **mechanistic layer**, where the renewal and delay convolutions determine the predicted number of observations $\mu(t)$ from the latent infections $I(t)$.
+- A **stochastic observation layer**, where observed counts $Y(t)$ vary around $\mu(t)$ according to a specified distribution.
+
+This separation allows the model to distinguish between systematic structure driven by transmission and reporting delays, and stochastic variability in observed data.
 
 ## Design
 
