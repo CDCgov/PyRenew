@@ -226,10 +226,10 @@ def test_base_count_observation_infection_resolution_raises():
 def test_get_required_lookback(gen_int_rv):
     """get_required_lookback returns generation interval PMF length."""
     infections = SubpopulationInfections(
-        name="hierarchical",
+        name="subpopulation",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,
@@ -243,13 +243,13 @@ def test_get_required_lookback(gen_int_rv):
 # =============================================================================
 
 
-def test_hierarchical_infections_validate(gen_int_rv):
+def test_subpopulation_infections_validate(gen_int_rv):
     """SubpopulationInfections.validate() runs without error on valid PMF."""
     infections = SubpopulationInfections(
-        name="hierarchical",
+        name="subpopulation",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,
@@ -434,13 +434,13 @@ def test_name_attribute_matches_expected(instance, expected_name):
     assert instance.name == expected_name
 
 
-def test_hierarchical_infections_name(gen_int_rv):
+def test_subpopulation_infections_name(gen_int_rv):
     """SubpopulationInfections.name is correctly set during construction."""
     infections = SubpopulationInfections(
         name="test_hi",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,
