@@ -1,5 +1,5 @@
 ---
-title: Hierarchical Latent Infections
+title: Latent Subpopulation Infections
 format:
   gfm:
     code-fold: true
@@ -112,7 +112,7 @@ This model generalizes the single-population renewal model:
 
 When all $\delta_k(t) = 0$, the model reduces to the shared (single-population) case.
 
-This tutorial assumes familiarity with the renewal equation, generation interval, initial conditions (`I0`, `initial_log_rt`), and temporal processes. See [Latent Infection Processes](latent_infections.md) for that background.
+This tutorial assumes familiarity with the renewal equation, generation interval, initial conditions (`I0`, `initial_log_rt`), and temporal processes. See [Latent Infections](latent_infections.md) for that background.
 
 ---
 
@@ -173,13 +173,13 @@ n_subpops = len(subpop_fractions)
 n_days = 28
 n_init = len(gen_int_pmf)
 n_samples = 200
-initial_log_rt = 0.2
+log_rt_time_0 = 0.2
 I0_val = 0.001
 rt_cap = 3.0
 
 print(f"Subpopulations: {n_subpops}")
 print(f"Population fractions: {np.array(subpop_fractions)}")
-print(f"Initial Rt: {np.exp(initial_log_rt):.2f}")
+print(f"Log Rt at time 0: {np.exp(log_rt_time_0):.2f}")
 ```
 
 ```{python}
@@ -188,7 +188,7 @@ model = SubpopulationInfections(
     name="SubpopulationInfections",
     gen_int_rv=gen_int_rv,
     I0_rv=DeterministicVariable("I0", I0_val),
-    log_rt_time_0_rv=DeterministicVariable("initial_log_rt", initial_log_rt),
+    log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", log_rt_time_0),
     baseline_rt_process=DifferencedAR1(autoreg=0.5, innovation_sd=0.01),
     subpop_rt_deviation_process=AR1(autoreg=0.8, innovation_sd=0.05),
     n_initialization_points=n_init,
@@ -256,9 +256,7 @@ def sample_hierarchical(baseline_process, deviation_process, label):
         name="SubpopulationInfections",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", I0_val),
-        log_rt_time_0_rv=DeterministicVariable(
-            "initial_log_rt", initial_log_rt
-        ),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", log_rt_time_0),
         baseline_rt_process=baseline_process,
         subpop_rt_deviation_process=deviation_process,
         n_initialization_points=n_init,

@@ -99,9 +99,10 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 
 - [The RandomVariable abstract base class](tutorials/random_variables.md) -- PyRenew's core abstraction and its concrete implementations.
 - [Building multi-signal models](tutorials/building_multisignal_models.md) -- composing a renewal model from PyRenew components using `PyrenewBuilder`.
+- [Latent infections](tutorials/latent_infections.md) -- modeling latent infection trajectories over time.
+- [Latent subpopulation infections](tutorials/latent_subpopulation_infections.md) -- modeling latent infections with subpopulation structure.
 - [Observation processes: count data](tutorials/observation_processes_counts.md) -- connecting latent infections to observed counts.
 - [Observation processes: measurements](tutorials/observation_processes_measurements.md) -- connecting latent infections to continuous measurements.
-- [Latent hierarchical infections](tutorials/latent_hierarchical_infections.md) -- modeling infections with subpopulation structure.
 
 ## Resources
 
@@ -115,4 +116,4 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 ### Further reading
 
 - [Semi-mechanistic Bayesian modelling of COVID-19 with renewal processes](https://academic.oup.com/jrsssa/article-pdf/186/4/601/54770289/qnad030.pdf) (Bhatt et al., 2023)
-- [Unifying incidence and prevalence under a time-varying general branching process](https://link.springer.com/content/pdf/10.1007/s00285-023-01958-w.pdf)
+- [Unifying incidence and prevalence under a time-varying general branching process](https://link.springer.com/content/pdf/10.1007/s00285-023-01958-w.pdf) (Pakkanen et al., 2023)

@@ -3,12 +3,6 @@ title: Latent Infection Processes
 format:
   gfm:
     code-fold: true
-  html:
-    toc: true
-    embed-resources: true
-    self-contained-math: true
-    code-fold: true
-    code-tools: true
 engine: jupyter
 jupyter:
   jupytext:
@@ -78,7 +72,7 @@ Here, $\tau$ indexes lags in the generation interval.
 PyRenew provides two latent infection classes:
 
 - **`PopulationInfections`**: A single $\mathcal{R}(t)$ drives one renewal equation. Appropriate when modeling one jurisdiction as a single population with one or more observation streams. This tutorial covers `PopulationInfections`.
-- **`SubpopulationInfections`**: A baseline $\mathcal{R}(t)$ with per-subpopulation deviations. See [Hierarchical Latent Infections](latent_hierarchical_infections.md).
+- **`SubpopulationInfections`**: A baseline $\mathcal{R}(t)$ with per-subpopulation deviations. See [Latent Subpopulation Infections](latent_subpopulation_infections.md).
 
 ## Model Inputs
 
@@ -132,7 +126,7 @@ gi_df = pd.DataFrame({"day": days, "probability": np.array(gen_int_pmf)})
 
 The generation interval length determines the minimum initialization period: with a $G$-point generation interval distribution, the renewal equation at time $0$ needs an infection-history vector long enough to supply the previous $G$ infection values used in the convolution.
 
-### Initial Conditions: `I0` and `initial_log_rt`
+### Initial Conditions: `I0` and `log_rt_time_0`
 
 These two parameters jointly define the infection history before the observation
 period begins. Understanding their interaction requires knowing how the latent
@@ -161,17 +155,17 @@ period, $n_{\text{init}} - 1$ time points before $t = 0$. It sets the scale of
 the entire initialization vector: $I_{\text{init}}(0) = I_0$, with subsequent
 entries growing or declining exponentially toward $t = 0$.
 
-* **The shape is set by `initial_log_rt`**.<br>
-`initial_log_rt` enters the model in two places: it is the starting point of
+* **The shape is set by `log_rt_time_0`**.<br>
+`log_rt_time_0` enters the model in two places: it is the starting point of
 the $\mathcal{R}(t)$ trajectory ($\mathcal{R}(t=0) =
 e^{\text{initial\_log\_rt}}$), and it determines the exponential growth rate
-$r$ used to construct the initialization vector. When `initial_log_rt = 0`,
+$r$ used to construct the initialization vector. When `log_rt_time_0 = 0`,
 $r = 0$ and the initialization vector is flat at level `I0`. When
-`initial_log_rt > 0`, infections are growing exponentially at $t = 0$; when
-`initial_log_rt < 0`, they are declining.
+`log_rt_time_0 > 0`, infections are growing exponentially at $t = 0$; when
+`log_rt_time_0 < 0`, they are declining.
 
 
-The initialization vector is what the renewal equation "sees" as recent infection history at time $0$. We can compute it directly for three values of `initial_log_rt`:
+The initialization vector is what the renewal equation "sees" as recent infection history at time $0$. We can compute it directly for three values of `log_rt_time_0`:
 
 ```{python}
 # | label: backprojection-compute
@@ -196,11 +190,11 @@ for label, log_rt in init_rt_values.items():
             {
                 "day": int(t) - n_init,
                 "infections": float(I0_init[t]),
-                "config": f"initial_log_rt = {log_rt} ({label})",
+                "config": f"log_rt_time_0 = {log_rt} ({label})",
             }
         )
     print(
-        f"initial_log_rt = {log_rt:+.1f}: Rt(0) = {float(Rt0):.2f}, r = {float(r):.4f}, "
+        f"log_rt_time_0 = {log_rt:+.1f}: Rt(0) = {float(Rt0):.2f}, r = {float(r):.4f}, "
         f"I_init range = [{float(I0_init[0]):.6f}, {float(I0_init[-1]):.6f}]"
     )
 
@@ -209,7 +203,7 @@ init_df = pd.DataFrame(init_data)
 
 ```{python}
 # | label: fig-backprojection
-# | fig-cap: Initialization vectors for three values of initial_log_rt. Days are numbered relative to day 0, which is when the temporal process and renewal equation take over. When initial_log_rt = 0 (stable), the vector is flat. Nonzero values produce exponential growth or decay in the pre-observation period.
+# | fig-cap: Initialization vectors for three values of log_rt_time_0. Days are numbered relative to day 0, which is when the temporal process and renewal equation take over. When log_rt_time_0 = 0 (stable), the vector is flat. Nonzero values produce exponential growth or decay in the pre-observation period.
 (
     p9.ggplot(init_df, p9.aes(x="day", y="infections", color="config"))
     + p9.geom_line(size=1)
@@ -238,7 +232,7 @@ After day 0, the temporal process takes over. How quickly the trajectory departs
 The temporal process governs how $\log \mathcal{R}(t)$ evolves day to day.
 
 To evaluate what a given process implies, we use **prior predictive checks**: drawing many samples from the model *before seeing any data* and examining the distribution of trajectories. A single sample tells you little (the trajectory depends on the random seed), but the envelope of many samples reveals the structural constraints built into the process.
-We fix the initial conditions to a growing epidemic (`initial_log_rt = 0.5`, so $\mathcal{R}(0) \approx 1.65$) with `I0 = 0.001`. Starting well above equilibrium rather than near it makes the behavioral differences between temporal processes visible: the median trajectory of a mean-reverting process drifts back toward $\mathcal{R} = 1$, while a non-reverting process does not.
+We fix the initial conditions to a growing epidemic (`log_rt_time_0 = 0.5`, so $\mathcal{R}(0) \approx 1.65$) with `I0 = 0.001`. Starting well above equilibrium rather than near it makes the behavioral differences between temporal processes visible: the median trajectory of a mean-reverting process drifts back toward $\mathcal{R} = 1$, while a non-reverting process does not.
 
 This section is primarily **modeling guidance for prior specification in PyRenew**, not a claim that epidemiologic theory uniquely determines one temporal process choice. The appropriate process depends on the scientific setting, time horizon, and how strongly you want the prior to regularize latent transmission dynamics.
 
@@ -247,7 +241,7 @@ This section is primarily **modeling guidance for prior specification in PyRenew
 n_days = 28
 n_init = len(gen_int_pmf)
 n_samples = 200
-initial_log_rt = 0.5
+log_rt_time_0 = 0.5
 I0_val = 0.001
 rt_cap = 3.0
 
@@ -258,9 +252,7 @@ def sample_process(rt_process, label):
         name="PopulationInfections",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", I0_val),
-        log_rt_time_0_rv=DeterministicVariable(
-            "initial_log_rt", initial_log_rt
-        ),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", log_rt_time_0),
         single_rt_process=rt_process,
         n_initialization_points=n_init,
     )

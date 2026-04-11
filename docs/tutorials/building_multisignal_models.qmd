@@ -106,7 +106,7 @@ The builder computes initialization requirements, wires components together, and
 
 Before diving into multi-signal models, you may want to review these foundational tutorials:
 
--   **[Hierarchical Latent Infections](latent_hierarchical_infections.md)**: Understanding temporal process choices for $\mathcal{R}(t)$
+-   **[Latent Infections](latent_infections.md)** and **[Latent Subpopulation Infections](latent_subpopulation_infections.md)**: Understanding temporal process choices for $\mathcal{R}(t)$
 -   **[Observation Processes: Counts](observation_processes_counts.md)**: Modeling count data (admissions, deaths)
 -   **[Observation Processes: Measurements](observation_processes_measurements.md)**: Modeling continuous data (wastewater)
 
@@ -208,14 +208,14 @@ I0_rv = DistributionalVariable("I0", dist.Beta(1, 100))
 
 
 
-### Initial Log Rt
+### Log Rt at time $0$
 
-We place a prior on the initial log(Rt), centered at 0.0 (Rt = 1.0) with moderate uncertainty:
+We place a prior on the log(Rt) at time $0$, centered at 0.0 (Rt = 1.0) with moderate uncertainty:
 
 ```{python}
-# | label: initial-log-rt
+# | label: log-rt-time-0
 log_rt_time_0_rv = DistributionalVariable(
-    "initial_log_rt", dist.Normal(0.0, 0.5)
+    "log_rt_time_0", dist.Normal(0.0, 0.5)
 )
 ```
 
@@ -1139,6 +1139,6 @@ This tutorial demonstrated composing a multi-signal renewal model using `Pyrenew
 
 ### Next Steps
 
--   Explore different temporal processes for $\mathcal{R}(t)$ in the [Hierarchical Latent Infections](latent_hierarchical_infections.md) tutorial
+-   Explore different temporal processes for $\mathcal{R}(t)$ in the [Latent Infections](latent_infections.md) and [Latent Subpopulation Infections](latent_subpopulation_infections.md) tutorials
 -   Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.md)
 -   Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.md)
