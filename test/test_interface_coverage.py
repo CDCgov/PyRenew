@@ -243,7 +243,7 @@ def test_get_required_lookback(gen_int_rv):
 # =============================================================================
 
 
-def test_hierarchical_infections_validate(gen_int_rv):
+def test_subpopulation_infections_validate(gen_int_rv):
     """SubpopulationInfections.validate() runs without error on valid PMF."""
     infections = SubpopulationInfections(
         name="hierarchical",
