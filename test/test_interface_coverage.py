@@ -23,12 +23,12 @@ from pyrenew.latent import (
     AR1,
     DifferencedAR1,
     GammaGroupSdPrior,
-    HierarchicalInfections,
     HierarchicalNormalPrior,
     Infections,
     InfectionsWithFeedback,
     RandomWalk,
     StudentTGroupModePrior,
+    SubpopulationInfections,
 )
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation import (
@@ -225,11 +225,11 @@ def test_base_count_observation_infection_resolution_raises():
 
 def test_get_required_lookback(gen_int_rv):
     """get_required_lookback returns generation interval PMF length."""
-    infections = HierarchicalInfections(
+    infections = SubpopulationInfections(
         name="hierarchical",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,
@@ -239,17 +239,17 @@ def test_get_required_lookback(gen_int_rv):
 
 
 # =============================================================================
-# HierarchicalInfections.validate() coverage
+# SubpopulationInfections.validate() coverage
 # =============================================================================
 
 
 def test_hierarchical_infections_validate(gen_int_rv):
-    """HierarchicalInfections.validate() runs without error on valid PMF."""
-    infections = HierarchicalInfections(
+    """SubpopulationInfections.validate() runs without error on valid PMF."""
+    infections = SubpopulationInfections(
         name="hierarchical",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,
@@ -435,12 +435,12 @@ def test_name_attribute_matches_expected(instance, expected_name):
 
 
 def test_hierarchical_infections_name(gen_int_rv):
-    """HierarchicalInfections.name is correctly set during construction."""
-    infections = HierarchicalInfections(
+    """SubpopulationInfections.name is correctly set during construction."""
+    infections = SubpopulationInfections(
         name="test_hi",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,

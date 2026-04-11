@@ -38,7 +38,7 @@ from _tutorial_theme import theme_tutorial
 ```{python}
 # | label: imports
 from pyrenew.latent import (
-    HierarchicalInfections,
+    SubpopulationInfections,
     AR1,
     DifferencedAR1,
     RandomWalk,
@@ -49,7 +49,7 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 ## Overview
 
 
-`HierarchicalInfections` extends the renewal model to a population composed of $K$ subpopulations, each with its own latent infection trajectory.
+`SubpopulationInfections` extends the renewal model to a population composed of $K$ subpopulations, each with its own latent infection trajectory.
 
 As in the single-population case, infections evolve according to the renewal equation. For each subpopulation $k = 1, \dots, K$, we define
 
@@ -107,8 +107,8 @@ The aggregate trajectory $I_{\text{aggregate}}(t)$ is then passed to observation
 
 This model generalizes the single-population renewal model:
 
-- `SharedInfections`: one trajectory $I(t)$ with one $\mathcal{R}(t)$
-- `HierarchicalInfections`: multiple trajectories $I_k(t)$ with a shared baseline $\mathcal{R}_{\text{baseline}}(t)$ and subpopulation deviations $\delta_k(t)$
+- `PopulationInfections`: one trajectory $I(t)$ with one $\mathcal{R}(t)$
+- `SubpopulationInfections`: multiple trajectories $I_k(t)$ with a shared baseline $\mathcal{R}_{\text{baseline}}(t)$ and subpopulation deviations $\delta_k(t)$
 
 When all $\delta_k(t) = 0$, the model reduces to the shared (single-population) case.
 
@@ -118,13 +118,13 @@ This tutorial assumes familiarity with the renewal equation, generation interval
 
 ## Model Structure
 
-`HierarchicalInfections` uses the same core inputs as `SharedInfections`, with additional structure for subpopulation variation.
+`SubpopulationInfections` uses the same core inputs as `PopulationInfections`, with additional structure for subpopulation variation.
 
 ### Core inputs (shared across subpopulations)
 
 - **`gen_int_rv`**: Generation interval distribution $w_\tau$
 - **`I0_rv`**: Initial infection level (shared by default across subpopulations, but can be specified per subpopulation)
-- **`initial_log_rt_rv`**: Initial value of $\log \mathcal{R}_{\text{baseline}}(t)$ at time $0$
+- **`log_rt_time_0_rv`**: Initial value of $\log \mathcal{R}_{\text{baseline}}(t)$ at time $0$
 
 ### Temporal processes
 
@@ -184,11 +184,11 @@ print(f"Initial Rt: {np.exp(initial_log_rt):.2f}")
 
 ```{python}
 # | label: instantiate
-model = HierarchicalInfections(
-    name="HierarchicalInfections",
+model = SubpopulationInfections(
+    name="SubpopulationInfections",
     gen_int_rv=gen_int_rv,
     I0_rv=DeterministicVariable("I0", I0_val),
-    initial_log_rt_rv=DeterministicVariable("initial_log_rt", initial_log_rt),
+    log_rt_time_0_rv=DeterministicVariable("initial_log_rt", initial_log_rt),
     baseline_rt_process=DifferencedAR1(autoreg=0.5, innovation_sd=0.01),
     subpop_rt_deviation_process=AR1(autoreg=0.8, innovation_sd=0.05),
     n_initialization_points=n_init,
@@ -197,7 +197,7 @@ model = HierarchicalInfections(
 
 ## The Sum-to-Zero Constraint
 
-Without a constraint, the baseline and deviations are not identifiable: shifting the baseline up by some amount $c$ and all deviations down by $c$ produces the same subpopulation $\mathcal{R}_k(t)$ values. `HierarchicalInfections` enforces $\sum_k \delta_k(t) = 0$ at every time step by centering the raw deviation trajectories.
+Without a constraint, the baseline and deviations are not identifiable: shifting the baseline up by some amount $c$ and all deviations down by $c$ produces the same subpopulation $\mathcal{R}_k(t)$ values. `SubpopulationInfections` enforces $\sum_k \delta_k(t) = 0$ at every time step by centering the raw deviation trajectories.
 This ensures $\mathcal{R}_{\text{baseline}}(t)$ is the *unweighted* geometric mean of the subpopulation $\mathcal{R}_k(t)$ values, so the baseline represents the typical transmission level across subpopulations.
 
 Note that this is the unweighted mean across subpopulations, not population-weighted by $p_k$. As a result, $\mathcal{R}_{\text{baseline}}(t)$ does **not** in general equal the jurisdiction-level reproduction number implied by the aggregate infection trajectory $I_{\text{aggregate}}(t)$. When subpopulations differ in size, a small subpopulation with a large $\mathcal{R}_k(t)$ contributes equally to the baseline but only marginally to the aggregate.
@@ -211,7 +211,7 @@ with numpyro.handlers.seed(rng_seed=42):
             subpop_fractions=subpop_fractions,
         )
 
-deviations = trace["HierarchicalInfections::subpop_deviations"]["value"]
+deviations = trace["SubpopulationInfections::subpop_deviations"]["value"]
 deviation_sums = jnp.sum(deviations, axis=1)
 print(f"Deviation shape: {deviations.shape}  (n_total_days, n_subpops)")
 print(
@@ -222,9 +222,9 @@ print(
 ## Choosing the Baseline Temporal Process
 
 The baseline process governs the jurisdiction-level trend in $\mathcal{R}(t)$.
-The same temporal process options apply as in `SharedInfections` (see [Temporal Process Choice](latent_infections.md#temporal-process-choice)): AR(1) for mean reversion, DifferencedAR1 for persistent trends with stabilizing rate of change, RandomWalk for unconstrained drift.
+The same temporal process options apply as in `PopulationInfections` (see [Temporal Process Choice](latent_infections.md#temporal-process-choice)): AR(1) for mean reversion, DifferencedAR1 for persistent trends with stabilizing rate of change, RandomWalk for unconstrained drift.
 
-We use DifferencedAR1 with small `innovation_sd` for the baseline throughout this tutorial. The prior predictive for baseline $\mathcal{R}(t)$ behaves much like the corresponding `SharedInfections` example, so we do not repeat that full comparison here. The focus of this tutorial is the deviation process and how it changes the spread of subpopulation trajectories around the baseline.
+We use DifferencedAR1 with small `innovation_sd` for the baseline throughout this tutorial. The prior predictive for baseline $\mathcal{R}(t)$ behaves much like the corresponding `PopulationInfections` example, so we do not repeat that full comparison here. The focus of this tutorial is the deviation process and how it changes the spread of subpopulation trajectories around the baseline.
 
 The same high-level decision rules apply here:
 
@@ -251,12 +251,12 @@ This determines whether subpopulations quickly return to the baseline or can div
 ```{python}
 # | label: helpers
 def sample_hierarchical(baseline_process, deviation_process, label):
-    """Draw prior predictive samples from a HierarchicalInfections model."""
-    m = HierarchicalInfections(
-        name="HierarchicalInfections",
+    """Draw prior predictive samples from a SubpopulationInfections model."""
+    m = SubpopulationInfections(
+        name="SubpopulationInfections",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", I0_val),
-        initial_log_rt_rv=DeterministicVariable(
+        log_rt_time_0_rv=DeterministicVariable(
             "initial_log_rt", initial_log_rt
         ),
         baseline_rt_process=baseline_process,
@@ -274,16 +274,16 @@ def sample_hierarchical(baseline_process, deviation_process, label):
     samples = Predictive(sampler, num_samples=n_samples)(random.PRNGKey(42))
     return {
         "rt_baseline": np.array(
-            samples["HierarchicalInfections::rt_baseline"]
+            samples["SubpopulationInfections::rt_baseline"]
         )[:, n_init:, 0],
-        "rt_subpop": np.array(samples["HierarchicalInfections::rt_subpop"])[
+        "rt_subpop": np.array(samples["SubpopulationInfections::rt_subpop"])[
             :, n_init:, :
         ],
         "deviations": np.array(
-            samples["HierarchicalInfections::subpop_deviations"]
+            samples["SubpopulationInfections::subpop_deviations"]
         )[:, n_init:, :],
         "infections": np.array(
-            samples["HierarchicalInfections::infections_aggregate"]
+            samples["SubpopulationInfections::infections_aggregate"]
         )[:, n_init:],
     }
 
@@ -461,7 +461,7 @@ for label, s in [("AR(1)", ar1_dev_samples), ("RandomWalk", rw_dev_samples)]:
 pd.DataFrame(deviation_summary_rows)
 ```
 
-AR(1) deviations stay close to zero because mean reversion continuously pulls them back. RandomWalk deviations accumulate over time. As in the SharedInfections tutorial, this is prior-modeling guidance rather than a uniquely determined epidemiologic rule. The choice depends on the epidemiological setting:
+AR(1) deviations stay close to zero because mean reversion continuously pulls them back. RandomWalk deviations accumulate over time. As in the PopulationInfections tutorial, this is prior-modeling guidance rather than a uniquely determined epidemiologic rule. The choice depends on the epidemiological setting:
 
 - **AR(1) deviations** when subpopulations are expected to track the jurisdiction average. Local outbreaks or lulls are temporary. This is typical for geographically close subpopulations (e.g., counties within a metropolitan area) where mobility mixes transmission.
 - **RandomWalk deviations** when local differences can persist. This may be appropriate for subpopulations with distinct contact patterns, demographics, or intervention histories (e.g., urban vs. rural areas).

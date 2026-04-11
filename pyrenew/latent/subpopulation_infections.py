@@ -24,7 +24,7 @@ from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
 
 
-class HierarchicalInfections(BaseLatentInfectionProcess):
+class SubpopulationInfections(BaseLatentInfectionProcess):
     """
     Multi-subpopulation renewal model with hierarchical Rt structure.
 
@@ -58,7 +58,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         I0_rv: RandomVariable,
         baseline_rt_process: TemporalProcess,
         subpop_rt_deviation_process: TemporalProcess,
-        initial_log_rt_rv: RandomVariable,
+        log_rt_time_0_rv: RandomVariable,
     ) -> None:
         """
         Initialize hierarchical infections process.
@@ -79,7 +79,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             Temporal process for baseline Rt dynamics
         subpop_rt_deviation_process
             Temporal process for subpopulation deviations
-        initial_log_rt_rv
+        log_rt_time_0_rv
             Initial value for log(Rt) at time 0.
 
         Raises
@@ -100,9 +100,9 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         if isinstance(I0_rv, DeterministicVariable):
             self._validate_I0(I0_rv.value)
 
-        if initial_log_rt_rv is None:
-            raise ValueError("initial_log_rt_rv is required")
-        self.initial_log_rt_rv = initial_log_rt_rv
+        if log_rt_time_0_rv is None:
+            raise ValueError("log_rt_time_0_rv is required")
+        self.log_rt_time_0_rv = log_rt_time_0_rv
 
         if baseline_rt_process is None:
             raise ValueError("baseline_rt_process is required")
@@ -193,7 +193,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
 
         n_total_days = self.n_initialization_points + n_days_post_init
 
-        initial_log_rt = self.initial_log_rt_rv()
+        initial_log_rt = self.log_rt_time_0_rv()
 
         log_rt_baseline = self.baseline_rt_process.sample(
             n_timepoints=n_total_days,

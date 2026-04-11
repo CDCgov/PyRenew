@@ -1,5 +1,5 @@
 """
-Unit tests for HierarchicalInfections.
+Unit tests for SubpopulationInfections.
 """
 
 import jax.numpy as jnp
@@ -7,18 +7,18 @@ import numpyro
 import pytest
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent import HierarchicalInfections, RandomWalk
+from pyrenew.latent import RandomWalk, SubpopulationInfections
 
 
-class TestHierarchicalInfectionsSample:
+class TestSubpopulationInfectionsSample:
     """Test sample method with population structure at sample time."""
 
-    def test_jurisdiction_total_is_weighted_sum(self, hierarchical_infections):
+    def test_jurisdiction_total_is_weighted_sum(self, subpopulation_infections):
         """Test that jurisdiction total equals weighted sum of subpopulations."""
         fractions = jnp.array([0.3, 0.25, 0.45])
 
         with numpyro.handlers.seed(rng_seed=42):
-            inf_juris, inf_all = hierarchical_infections.sample(
+            inf_juris, inf_all = subpopulation_infections.sample(
                 n_days_post_init=30,
                 subpop_fractions=fractions,
             )
@@ -27,24 +27,24 @@ class TestHierarchicalInfectionsSample:
 
         assert jnp.allclose(inf_juris, expected, atol=1e-6)
 
-    def test_deviations_sum_to_zero(self, hierarchical_infections):
+    def test_deviations_sum_to_zero(self, subpopulation_infections):
         """Test that subpopulation deviations sum to zero (identifiability)."""
         with numpyro.handlers.seed(rng_seed=42):
             with numpyro.handlers.trace() as trace:
-                hierarchical_infections.sample(
+                subpopulation_infections.sample(
                     n_days_post_init=30,
                     subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
                 )
 
-        deviations = trace["hierarchical::subpop_deviations"]["value"]
+        deviations = trace["subpopulation::subpop_deviations"]["value"]
         deviation_sums = jnp.sum(deviations, axis=1)
 
         assert jnp.allclose(deviation_sums, 0.0, atol=1e-6)
 
-    def test_infections_are_positive(self, hierarchical_infections):
+    def test_infections_are_positive(self, subpopulation_infections):
         """Test that all infections are positive (epidemiological invariant)."""
         with numpyro.handlers.seed(rng_seed=42):
-            inf_juris, inf_all = hierarchical_infections.sample(
+            inf_juris, inf_all = subpopulation_infections.sample(
                 n_days_post_init=30,
                 subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
             )
@@ -62,15 +62,15 @@ class TestHierarchicalInfectionsSample:
         ids=["K=1", "K=3", "K=6"],
     )
     def test_shape_and_positivity_across_subpop_counts(
-        self, hierarchical_infections, fractions
+        self, subpopulation_infections, fractions
     ):
         """Test correct shapes and positivity for varying numbers of subpops."""
         n_days_post_init = 30
-        n_total = hierarchical_infections.n_initialization_points + n_days_post_init
+        n_total = subpopulation_infections.n_initialization_points + n_days_post_init
         n_subpops = len(fractions)
 
         with numpyro.handlers.seed(rng_seed=42):
-            inf_juris, inf_all = hierarchical_infections.sample(
+            inf_juris, inf_all = subpopulation_infections.sample(
                 n_days_post_init=n_days_post_init,
                 subpop_fractions=fractions,
             )
@@ -85,30 +85,30 @@ class TestHierarchicalInfectionsSample:
         assert jnp.allclose(inf_juris, expected, atol=1e-6)
 
 
-class TestHierarchicalInfectionsValidation:
+class TestSubpopulationInfectionsValidation:
     """Test validation of inputs."""
 
     def test_rejects_missing_I0_rv(self, gen_int_rv):
         """Test that None I0_rv is rejected."""
         with pytest.raises(ValueError, match="I0_rv is required"):
-            HierarchicalInfections(
-                name="hierarchical",
+            SubpopulationInfections(
+                name="subpopulation",
                 gen_int_rv=gen_int_rv,
                 I0_rv=None,
-                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=7,
             )
 
-    def test_rejects_missing_initial_log_rt_rv(self, gen_int_rv):
-        """Test that None initial_log_rt_rv is rejected."""
-        with pytest.raises(ValueError, match="initial_log_rt_rv is required"):
-            HierarchicalInfections(
-                name="hierarchical",
+    def test_rejects_missing_log_rt_time_0_rv(self, gen_int_rv):
+        """Test that None log_rt_time_0_rv is rejected."""
+        with pytest.raises(ValueError, match="log_rt_time_0_rv is required"):
+            SubpopulationInfections(
+                name="subpopulation",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
-                initial_log_rt_rv=None,
+                log_rt_time_0_rv=None,
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=7,
@@ -117,11 +117,11 @@ class TestHierarchicalInfectionsValidation:
     def test_rejects_missing_baseline_rt_process(self, gen_int_rv):
         """Test that None baseline_rt_process is rejected."""
         with pytest.raises(ValueError, match="baseline_rt_process is required"):
-            HierarchicalInfections(
-                name="hierarchical",
+            SubpopulationInfections(
+                name="subpopulation",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
-                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=None,
                 subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=7,
@@ -130,11 +130,11 @@ class TestHierarchicalInfectionsValidation:
     def test_rejects_missing_subpop_rt_deviation_process(self, gen_int_rv):
         """Test that None subpop_rt_deviation_process is rejected."""
         with pytest.raises(ValueError, match="subpop_rt_deviation_process is required"):
-            HierarchicalInfections(
-                name="hierarchical",
+            SubpopulationInfections(
+                name="subpopulation",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
-                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=None,
                 n_initialization_points=7,
@@ -143,11 +143,11 @@ class TestHierarchicalInfectionsValidation:
     def test_rejects_invalid_I0(self, gen_int_rv):
         """Test that invalid I0 values are rejected."""
         with pytest.raises(ValueError, match="I0 must be positive"):
-            HierarchicalInfections(
-                name="hierarchical",
+            SubpopulationInfections(
+                name="subpopulation",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", -0.1),
-                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=7,
@@ -158,36 +158,36 @@ class TestHierarchicalInfectionsValidation:
         with pytest.raises(
             ValueError, match="n_initialization_points must be at least"
         ):
-            HierarchicalInfections(
-                name="hierarchical",
+            SubpopulationInfections(
+                name="subpopulation",
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
-                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=2,
             )
 
-    def test_rejects_fractions_not_summing_to_one(self, hierarchical_infections):
+    def test_rejects_fractions_not_summing_to_one(self, subpopulation_infections):
         """Test that fractions not summing to 1 raises error at sample time."""
         with pytest.raises(ValueError, match="must sum to 1.0"):
             with numpyro.handlers.seed(rng_seed=42):
-                hierarchical_infections.sample(
+                subpopulation_infections.sample(
                     n_days_post_init=30,
                     subpop_fractions=jnp.array([0.3, 0.25, 0.40]),
                 )
 
 
-class TestHierarchicalInfectionsPerSubpopI0:
+class TestSubpopulationInfectionsPerSubpopI0:
     """Test per-subpopulation I0 values."""
 
     def test_per_subpop_I0_array(self, gen_int_rv):
         """Test with per-subpopulation I0 values and verify positivity."""
-        process = HierarchicalInfections(
-            name="hierarchical",
+        process = SubpopulationInfections(
+            name="subpopulation",
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", jnp.array([0.001, 0.002, 0.0015])),
-            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
             baseline_rt_process=RandomWalk(),
             subpop_rt_deviation_process=RandomWalk(),
             n_initialization_points=7,
@@ -207,46 +207,46 @@ class TestHierarchicalInfectionsPerSubpopI0:
         assert jnp.all(inf_all > 0)
 
 
-class TestHierarchicalValidateAndPrepareI0:
-    """Test _validate_and_prepare_I0 for HierarchicalInfections."""
+class TestSubpopulationValidateAndPrepareI0:
+    """Test _validate_and_prepare_I0 for SubpopulationInfections."""
 
-    def test_broadcasts_scalar_to_subpop_array(self, hierarchical_infections):
+    def test_broadcasts_scalar_to_subpop_array(self, subpopulation_infections):
         """Test that scalar I0 is broadcast to per-subpopulation array."""
-        pop = hierarchical_infections._parse_and_validate_fractions(
+        pop = subpopulation_infections._parse_and_validate_fractions(
             subpop_fractions=jnp.array([0.3, 0.25, 0.45])
         )
         I0 = jnp.array(0.01)
-        result = hierarchical_infections._validate_and_prepare_I0(I0, pop)
+        result = subpopulation_infections._validate_and_prepare_I0(I0, pop)
         assert result.shape == (3,)
         assert jnp.allclose(result, 0.01)
 
-    def test_passes_through_matching_array(self, hierarchical_infections):
+    def test_passes_through_matching_array(self, subpopulation_infections):
         """Test that a per-subpopulation I0 array passes through unchanged."""
-        pop = hierarchical_infections._parse_and_validate_fractions(
+        pop = subpopulation_infections._parse_and_validate_fractions(
             subpop_fractions=jnp.array([0.3, 0.25, 0.45])
         )
         I0 = jnp.array([0.001, 0.002, 0.0015])
-        result = hierarchical_infections._validate_and_prepare_I0(I0, pop)
+        result = subpopulation_infections._validate_and_prepare_I0(I0, pop)
         assert result.shape == (3,)
         assert jnp.allclose(result, I0)
 
-    def test_rejects_negative(self, hierarchical_infections):
+    def test_rejects_negative(self, subpopulation_infections):
         """Test that negative I0 is rejected."""
-        pop = hierarchical_infections._parse_and_validate_fractions(
+        pop = subpopulation_infections._parse_and_validate_fractions(
             subpop_fractions=jnp.array([0.5, 0.5])
         )
         I0 = jnp.array(-0.01)
         with pytest.raises(ValueError, match="I0 must be positive"):
-            hierarchical_infections._validate_and_prepare_I0(I0, pop)
+            subpopulation_infections._validate_and_prepare_I0(I0, pop)
 
-    def test_rejects_greater_than_one(self, hierarchical_infections):
+    def test_rejects_greater_than_one(self, subpopulation_infections):
         """Test that I0 > 1 is rejected."""
-        pop = hierarchical_infections._parse_and_validate_fractions(
+        pop = subpopulation_infections._parse_and_validate_fractions(
             subpop_fractions=jnp.array([0.5, 0.5])
         )
         I0 = jnp.array(1.5)
         with pytest.raises(ValueError, match="I0 must be <= 1"):
-            hierarchical_infections._validate_and_prepare_I0(I0, pop)
+            subpopulation_infections._validate_and_prepare_I0(I0, pop)
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ from pyrenew.datasets import (
 )
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import AR1
-from pyrenew.latent.shared_infections import SharedInfections
+from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.model import PyrenewBuilder
 from pyrenew.observation import Counts, NegativeBinomialNoise
 from pyrenew.randomvariable import DistributionalVariable
@@ -137,7 +137,7 @@ def he_model(
     ed_day_of_week_effects: jnp.ndarray,
 ) -> PyrenewBuilder:
     """
-    Build a SharedInfections model with hospital + ED observation processes.
+    Build a PopulationInfections model with hospital + ED observation processes.
 
     Parameters
     ----------
@@ -159,13 +159,11 @@ def he_model(
 
     builder = PyrenewBuilder()
     builder.configure_latent(
-        SharedInfections,
+        PopulationInfections,
         gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
-        initial_log_rt_rv=DistributionalVariable(
-            "initial_log_rt", dist.Normal(0.0, 0.5)
-        ),
-        shared_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+        single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
     )
 
     hospital_obs = Counts(

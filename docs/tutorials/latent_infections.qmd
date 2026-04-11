@@ -44,7 +44,12 @@ from _tutorial_theme import theme_tutorial
 
 ```{python}
 # | label: imports
-from pyrenew.latent import SharedInfections, AR1, DifferencedAR1, RandomWalk
+from pyrenew.latent import (
+    PopulationInfections,
+    AR1,
+    DifferencedAR1,
+    RandomWalk,
+)
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.randomvariable import DistributionalVariable
 ```
@@ -72,17 +77,17 @@ Here, $\tau$ indexes lags in the generation interval.
 
 PyRenew provides two latent infection classes:
 
-- **`SharedInfections`**: A single $\mathcal{R}(t)$ drives one renewal equation. Appropriate when modeling one jurisdiction as a single population with one or more observation streams. This tutorial covers `SharedInfections`.
-- **`HierarchicalInfections`**: A baseline $\mathcal{R}(t)$ with per-subpopulation deviations. See [Hierarchical Latent Infections](latent_hierarchical_infections.md).
+- **`PopulationInfections`**: A single $\mathcal{R}(t)$ drives one renewal equation. Appropriate when modeling one jurisdiction as a single population with one or more observation streams. This tutorial covers `PopulationInfections`.
+- **`SubpopulationInfections`**: A baseline $\mathcal{R}(t)$ with per-subpopulation deviations. See [Hierarchical Latent Infections](latent_hierarchical_infections.md).
 
 ## Model Inputs
 
-`SharedInfections` requires four inputs:
+`PopulationInfections` requires four inputs:
 
 1. Generation interval distribution $w_\tau$ (`gen_int_rv`)
 2. Infection prevalence at time $0$ as a proportion of the population (`I0_rv`)
-3. Value for $log(\mathcal{R}(t))$ at time $0$ (`initial_log_rt_rv`)
-4. A temporal process for $\mathcal{R}(t)$ dynamics (`shared_rt_process`)
+3. Value for $log(\mathcal{R}(t))$ at time $0$ (`log_rt_time_0_rv`)
+4. A temporal process for $\mathcal{R}(t)$ dynamics (`single_rt_process`)
 
 All inputs are **RandomVariables**, a quantity that is either known (observed, conditioned on) or unknown (to be inferred).  See [PyRenew's RandomVariable abstract base class](random_variables.md).  In this tutorial, we use `DeterministicVariable` and `DeterministicPMF` (fixed values) for illustration.  In real inference, you would use `DistributionalVariable` with priors for quantities you want to estimate:
 
@@ -249,14 +254,14 @@ rt_cap = 3.0
 
 def sample_process(rt_process, label):
     """Draw prior predictive samples for a given temporal process."""
-    model = SharedInfections(
-        name="SharedInfections",
+    model = PopulationInfections(
+        name="PopulationInfections",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", I0_val),
-        initial_log_rt_rv=DeterministicVariable(
+        log_rt_time_0_rv=DeterministicVariable(
             "initial_log_rt", initial_log_rt
         ),
-        shared_rt_process=rt_process,
+        single_rt_process=rt_process,
         n_initialization_points=n_init,
     )
 
@@ -266,9 +271,11 @@ def sample_process(rt_process, label):
 
     samples = Predictive(sampler, num_samples=n_samples)(random.PRNGKey(42))
     return {
-        "rt": np.array(samples["SharedInfections::rt_shared"])[:, n_init:, 0],
+        "rt": np.array(samples["PopulationInfections::rt_single"])[
+            :, n_init:, 0
+        ],
         "infections": np.array(
-            samples["SharedInfections::infections_aggregate"]
+            samples["PopulationInfections::infections_aggregate"]
         )[:, n_init:],
     }
 
@@ -686,7 +693,7 @@ The latent infection trajectory is not observed directly. To connect it to data,
 
 The `PyrenewBuilder` handles the wiring:
 
-1. **`configure_latent()`** sets the shared infection process (called once)
+1. **`configure_latent()`** sets the single infection process (called once)
 2. **`add_observation()`** adds an observation process (called once per data stream)
 3. **`build()`** computes `n_initialization_points` from all delay distributions and produces a model ready for inference
 

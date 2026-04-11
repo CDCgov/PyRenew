@@ -20,7 +20,7 @@ class MultiSignalModel(Model):
     """
     Multi-signal renewal model.
 
-    Combines a latent infection process (e.g., HierarchicalInfections,
+    Combines a latent infection process (e.g., SubpopulationInfections,
     PartitionedInfections) with multiple observation processes (e.g.,
     CountObservation, WastewaterObservation).
 
