@@ -10,7 +10,12 @@ import numpyro.distributions as dist
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import AR1, HierarchicalInfections, RandomWalk
+from pyrenew.latent import (
+    AR1,
+    PopulationInfections,
+    RandomWalk,
+    SubpopulationInfections,
+)
 from pyrenew.observation import (
     Counts,
     HierarchicalNormalNoise,
@@ -146,27 +151,47 @@ def hierarchical_normal_noise_tight():
 
 
 # =============================================================================
-# Hierarchical Infections Fixture
+# Latent Infections Fixtures
 # =============================================================================
 
 
 @pytest.fixture
-def hierarchical_infections(gen_int_rv):
+def subpopulation_infections(gen_int_rv):
     """
-    Pre-configured HierarchicalInfections instance.
+    Pre-configured SubpopulationInfections instance.
 
     Returns
     -------
-    HierarchicalInfections
+    SubpopulationInfections
         Configured infection process with realistic parameters.
     """
-    return HierarchicalInfections(
-        name="hierarchical",
+    return SubpopulationInfections(
+        name="subpopulation",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
+        n_initialization_points=7,
+    )
+
+
+@pytest.fixture
+def population_infections(gen_int_rv):
+    """
+    Pre-configured PopulationInfections instance.
+
+    Returns
+    -------
+    PopulationInfections
+        Configured infection process with realistic parameters.
+    """
+    return PopulationInfections(
+        name="population",
+        gen_int_rv=gen_int_rv,
+        I0_rv=DeterministicVariable("I0", 0.001),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+        single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         n_initialization_points=7,
     )
 

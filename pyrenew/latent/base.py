@@ -300,9 +300,9 @@ class BaseLatentInfectionProcess(RandomVariable):
         Validate and prepare I0 for use in the renewal equation.
 
         Subclasses override this to enforce shape constraints (e.g., scalar
-        for SharedInfections) or broadcast I0 to match the population
+        for PopulationInfections) or broadcast I0 to match the population
         structure (e.g., scalar to per-subpop array for
-        HierarchicalInfections).
+        SubpopulationInfections).
 
         Parameters
         ----------

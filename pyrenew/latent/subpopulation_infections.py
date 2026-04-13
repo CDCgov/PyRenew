@@ -24,17 +24,17 @@ from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
 
 
-class HierarchicalInfections(BaseLatentInfectionProcess):
+class SubpopulationInfections(BaseLatentInfectionProcess):
     """
-    Multi-subpopulation renewal model with hierarchical Rt structure.
+    Multi-subpopulation renewal model with hierarchical $\\mathcal{R}(t)$ structure.
 
-    Each subpopulation has its own renewal equation with Rt deviating from a
+    Each subpopulation has its own renewal equation with $\\mathcal{R}(t)$ deviating from a
     shared baseline. Suitable when transmission dynamics vary substantially
     across subpopulations.
 
     Mathematical form:
-    - Baseline Rt: log[R_baseline(t)] ~ TemporalProcess
-    - Subpopulation Rt: log R_k(t) = log[R_baseline(t)] + delta_k(t)
+    - Baseline $\\mathcal{R}(t)$: log[R_baseline(t)] ~ TemporalProcess
+    - Subpopulation $\\mathcal{R}(t)$: log R_k(t) = log[R_baseline(t)] + delta_k(t)
     - Deviations: delta_k(t) ~ TemporalProcess with sum-to-zero constraint
     - Renewal per subpop: I_k(t) = R_k(t) * sum_tau I_k(t-tau) * g(tau)
     - Aggregate total: I_aggregate(t) = sum_k p_k * I_k(t)
@@ -46,7 +46,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     Notes
     -----
     Sum-to-zero constraint on deviations ensures R_baseline(t) is the geometric
-    mean of subpopulation Rt values, providing identifiability.
+    mean of subpopulation $\\mathcal{R}(t)$ values, providing identifiability.
     """
 
     def __init__(
@@ -58,7 +58,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         I0_rv: RandomVariable,
         baseline_rt_process: TemporalProcess,
         subpop_rt_deviation_process: TemporalProcess,
-        initial_log_rt_rv: RandomVariable,
+        log_rt_time_0_rv: RandomVariable,
     ) -> None:
         """
         Initialize hierarchical infections process.
@@ -76,11 +76,11 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         I0_rv
             Initial infection prevalence (proportion of population)
         baseline_rt_process
-            Temporal process for baseline Rt dynamics
+            Temporal process for baseline $\\mathcal{R}(t)$ dynamics
         subpop_rt_deviation_process
             Temporal process for subpopulation deviations
-        initial_log_rt_rv
-            Initial value for log(Rt) at time 0.
+        log_rt_time_0_rv
+            Initial value for log($\\mathcal{R}(t)$) at time 0.
 
         Raises
         ------
@@ -100,9 +100,9 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         if isinstance(I0_rv, DeterministicVariable):
             self._validate_I0(I0_rv.value)
 
-        if initial_log_rt_rv is None:
-            raise ValueError("initial_log_rt_rv is required")
-        self.initial_log_rt_rv = initial_log_rt_rv
+        if log_rt_time_0_rv is None:
+            raise ValueError("log_rt_time_0_rv is required")
+        self.log_rt_time_0_rv = log_rt_time_0_rv
 
         if baseline_rt_process is None:
             raise ValueError("baseline_rt_process is required")
@@ -167,7 +167,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         """
         Sample hierarchical infections for all subpopulations.
 
-        Generates baseline Rt, subpopulation deviations with sum-to-zero
+        Generates baseline $\\mathcal{R}(t)$, subpopulation deviations with sum-to-zero
         constraint, initial infections, and runs n_subpops independent renewal processes.
 
         Parameters
@@ -193,7 +193,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
 
         n_total_days = self.n_initialization_points + n_days_post_init
 
-        initial_log_rt = self.initial_log_rt_rv()
+        initial_log_rt = self.log_rt_time_0_rv()
 
         log_rt_baseline = self.baseline_rt_process.sample(
             n_timepoints=n_total_days,

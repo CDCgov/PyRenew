@@ -1,9 +1,9 @@
 nav:
   - random_variables.md
   - building_multisignal_models.md
+  - latent_infections.md
+  - latent_subpopulation_infections.md
   - observation_processes_counts.md
   - observation_processes_measurements.md
-  - latent_infections.md
-  - latent_hierarchical_infections.md
   - right_truncation.md
   - day_of_week_effects.md

@@ -1,5 +1,5 @@
 """
-Shared latent infection process renewal model.
+Populaton-level single-trajectory latent infection process renewal model.
 """
 
 from __future__ import annotations
@@ -22,9 +22,9 @@ from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
 
 
-class SharedInfections(BaseLatentInfectionProcess):
+class PopulationInfections(BaseLatentInfectionProcess):
     """
-    A single $\ mathcal{R}(t)$ trajectory drives one renewal equation.
+    A single $\\mathcal{R}(t)$ trajectory drives one renewal equation.
 
     The constructor specifies model structure (priors, temporal processes).
     """
@@ -36,28 +36,28 @@ class SharedInfections(BaseLatentInfectionProcess):
         gen_int_rv: RandomVariable,
         n_initialization_points: int,
         I0_rv: RandomVariable,
-        shared_rt_process: TemporalProcess,
-        initial_log_rt_rv: RandomVariable,
+        single_rt_process: TemporalProcess,
+        log_rt_time_0_rv: RandomVariable,
     ) -> None:
         """
-        Initialize shared infections process.
+        Initialize population-level infections process.
 
         Parameters
         ----------
         name
             Name prefix for numpyro sample sites. All deterministic
             quantities are recorded under this scope (e.g.,
-            ``"{name}::rt_shared"``).
+            ``"{name}::rt_single"``).
         gen_int_rv
             Generation interval PMF
         n_initialization_points
             Number of initialization days before day 0.
         I0_rv
             Initial infection prevalence (proportion of population)
-        shared_rt_process
-            Temporal process for shared Rt dynamics
-        initial_log_rt_rv
-            Initial value for log(Rt) at time 0.
+        single_rt_process
+            Temporal process for single $\\mathcal{R}(t)$ dynamics
+        log_rt_time_0_rv
+            Initial value for log($\\mathcal{R}(t)$) at time 0.
 
         Raises
         ------
@@ -77,13 +77,13 @@ class SharedInfections(BaseLatentInfectionProcess):
         if isinstance(I0_rv, DeterministicVariable):
             self._validate_I0(I0_rv.value)
 
-        if initial_log_rt_rv is None:
-            raise ValueError("initial_log_rt_rv is required")
-        self.initial_log_rt_rv = initial_log_rt_rv
+        if log_rt_time_0_rv is None:
+            raise ValueError("log_rt_time_0_rv is required")
+        self.log_rt_time_0_rv = log_rt_time_0_rv
 
-        if shared_rt_process is None:
-            raise ValueError("shared_rt_process is required")
-        self.shared_rt_process = shared_rt_process
+        if single_rt_process is None:
+            raise ValueError("single_rt_process is required")
+        self.single_rt_process = single_rt_process
 
     def default_subpop_fractions(self) -> ArrayLike:
         """
@@ -104,7 +104,7 @@ class SharedInfections(BaseLatentInfectionProcess):
         """
         Validate that I0 is a scalar prevalence value.
 
-        SharedInfections operates on a single population, so I0 must be
+        PopulationInfections operates on a single population, so I0 must be
         a scalar (0-dimensional array).
 
         Parameters
@@ -126,13 +126,13 @@ class SharedInfections(BaseLatentInfectionProcess):
         """
         if I0.ndim != 0:
             raise ValueError(
-                "SharedInfections requires I0_rv to return a scalar prevalence"
+                "PopulationInfections requires I0_rv to return a scalar prevalence"
             )
         return super()._validate_and_prepare_I0(I0, pop)
 
     def validate(self) -> None:
         """
-        Validate shared infections parameters.
+        Validate population infections parameters.
 
         Checks that the generation interval is a valid PMF.
 
@@ -150,9 +150,9 @@ class SharedInfections(BaseLatentInfectionProcess):
         **kwargs: object,
     ) -> LatentSample:
         """
-        Sample shared infections using a single renewal process.
+        Sample population infections using a single renewal process.
 
-        Generates a shared Rt trajectory, computes initial infections via
+        Generates a single $\\mathcal{R}(t)$ trajectory, computes initial infections via
         exponential backprojection, and runs one renewal equation.
 
         Parameters
@@ -184,28 +184,28 @@ class SharedInfections(BaseLatentInfectionProcess):
         frac_check = jnp.isclose(pop.fractions[0], 1.0, atol=1e-6)
         if pop.n_subpops != 1 or (not_jax_tracer(frac_check) and not frac_check):
             raise ValueError(
-                "SharedInfections requires exactly one subpopulation "
+                "PopulationInfections requires exactly one subpopulation "
                 "with fraction [1.0]"
             )
 
         n_total_days = self.n_initialization_points + n_days_post_init
 
-        initial_log_rt = self.initial_log_rt_rv()
+        initial_log_rt = self.log_rt_time_0_rv()
 
-        log_rt_shared = self.shared_rt_process.sample(
+        log_rt_single = self.single_rt_process.sample(
             n_timepoints=n_total_days,
             initial_value=initial_log_rt,
-            name_prefix="log_rt_shared",
+            name_prefix="log_rt_single",
         )
 
-        rt_shared = jnp.exp(log_rt_shared)
+        rt_single = jnp.exp(log_rt_single)
 
         gen_int = self.gen_int_rv()
 
         I0 = self._validate_and_prepare_I0(jnp.asarray(self.I0_rv()), pop)
 
         initial_r = r_approx_from_R(
-            R=rt_shared[0, 0],
+            R=rt_single[0, 0],
             g=gen_int,
             n_newton_steps=4,
         )
@@ -218,7 +218,7 @@ class SharedInfections(BaseLatentInfectionProcess):
 
         post_init_infections = compute_infections_from_rt(
             I0=recent_I0,
-            Rt=rt_shared[self.n_initialization_points :, 0],
+            Rt=rt_single[self.n_initialization_points :, 0],
             reversed_generation_interval_pmf=gen_int_reversed,
         )
 
@@ -235,8 +235,8 @@ class SharedInfections(BaseLatentInfectionProcess):
 
         with numpyro.handlers.scope(prefix=self.name, divider="::"):
             numpyro.deterministic("I0_init", I0_init)
-            numpyro.deterministic("log_rt_shared", log_rt_shared)
-            numpyro.deterministic("rt_shared", rt_shared)
+            numpyro.deterministic("log_rt_single", log_rt_single)
+            numpyro.deterministic("rt_single", rt_single)
             numpyro.deterministic("infections_aggregate", infections_aggregate)
 
         return LatentSample(

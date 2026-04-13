@@ -61,8 +61,8 @@ class PyrenewBuilder:
         Parameters
         ----------
         latent_class
-            Class to use for latent infections (e.g., HierarchicalInfections,
-            PartitionedInfections, or a custom implementation)
+            Class to use for latent infections (e.g., PopulationInfections,
+            SubpopulationInfections, or a custom implementation)
         **params
             Parameters for latent class constructor (model structure).
             DO NOT include n_initialization_points - it will be computed
