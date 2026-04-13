@@ -6,7 +6,7 @@ import jax.numpy as jnp
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import HierarchicalInfections, RandomWalk
+from pyrenew.latent import RandomWalk, SubpopulationInfections
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import Counts, CountsBySubpop, NegativeBinomialNoise
 
@@ -28,10 +28,10 @@ def simple_builder():
     gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
     builder.configure_latent(
-        HierarchicalInfections,
+        SubpopulationInfections,
         gen_int_rv=gen_int,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
         baseline_rt_process=RandomWalk(),
         subpop_rt_deviation_process=RandomWalk(),
     )
@@ -66,10 +66,10 @@ def validation_builder():
     gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
     builder.configure_latent(
-        HierarchicalInfections,
+        SubpopulationInfections,
         gen_int_rv=gen_int,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
         baseline_rt_process=RandomWalk(),
         subpop_rt_deviation_process=RandomWalk(),
     )
@@ -105,10 +105,10 @@ class TestPyrenewBuilderConfiguration:
 
         with pytest.raises(ValueError, match="Do not specify"):
             builder.configure_latent(
-                HierarchicalInfections,
+                SubpopulationInfections,
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
-                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
                 subpop_fractions=jnp.array([0.5, 0.5]),
@@ -121,10 +121,10 @@ class TestPyrenewBuilderConfiguration:
 
         with pytest.raises(ValueError, match="Do not specify n_initialization_points"):
             builder.configure_latent(
-                HierarchicalInfections,
+                SubpopulationInfections,
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
-                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
                 n_initialization_points=10,
@@ -136,20 +136,20 @@ class TestPyrenewBuilderConfiguration:
         gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
 
         builder.configure_latent(
-            HierarchicalInfections,
+            SubpopulationInfections,
             gen_int_rv=gen_int,
             I0_rv=DeterministicVariable("I0", 0.001),
-            initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
             baseline_rt_process=RandomWalk(),
             subpop_rt_deviation_process=RandomWalk(),
         )
 
         with pytest.raises(RuntimeError, match="already configured"):
             builder.configure_latent(
-                HierarchicalInfections,
+                SubpopulationInfections,
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
-                initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+                log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=RandomWalk(),
                 subpop_rt_deviation_process=RandomWalk(),
             )
@@ -189,7 +189,7 @@ class TestPyrenewBuilderConfiguration:
     def test_compute_n_initialization_points_without_gen_int_raises(self):
         """Test that compute_n_initialization_points without gen_int_rv raises."""
         builder = PyrenewBuilder()
-        builder.latent_class = HierarchicalInfections
+        builder.latent_class = SubpopulationInfections
         builder.latent_params = {}
 
         with pytest.raises(ValueError, match="gen_int_rv is required"):

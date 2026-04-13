@@ -1,7 +1,7 @@
 """
-Integration test: SharedInfections H+E model with posterior recovery.
+Integration test: PopulationInfections H+E model with posterior recovery.
 
-Fits a SharedInfections model with hospital admissions and ED visit
+Fits a PopulationInfections model with hospital admissions and ED visit
 observation processes to synthetic 120-day CA data, then checks that
 posterior estimates recover known true parameters.
 """
@@ -173,9 +173,9 @@ class TestModelFit:
             fitted_model.mcmc,
             dims={
                 "latent_infections": ["time"],
-                "SharedInfections::infections_aggregate": ["time"],
-                "SharedInfections::log_rt_shared": ["time", "dummy"],
-                "SharedInfections::rt_shared": ["time", "dummy"],
+                "PopulationInfections::infections_aggregate": ["time"],
+                "PopulationInfections::log_rt_single": ["time", "dummy"],
+                "PopulationInfections::rt_single": ["time", "dummy"],
                 "hospital_predicted": ["time"],
                 "ed_predicted": ["time"],
             },
@@ -216,7 +216,7 @@ class TestModelFit:
         """
         summary = az.summary(
             posterior_dt,
-            var_names=["I0", "initial_log_rt", "ihr", "iedr"],
+            var_names=["I0", "log_rt_time_0", "ihr", "iedr"],
         )
         rhat = summary["r_hat"].astype(float)
         ess = summary["ess_bulk"].astype(float)
@@ -239,7 +239,7 @@ class TestModelFit:
         daily_infections : pl.DataFrame
             True infections and R(t) trajectory.
         """
-        rt_posterior = posterior_dt.posterior["SharedInfections::rt_shared"]
+        rt_posterior = posterior_dt.posterior["PopulationInfections::rt_single"]
         rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values
         rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values
 

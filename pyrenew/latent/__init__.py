@@ -5,7 +5,6 @@ from pyrenew.latent.base import (
     LatentSample,
     PopulationStructure,
 )
-from pyrenew.latent.hierarchical_infections import HierarchicalInfections
 from pyrenew.latent.hierarchical_priors import (
     GammaGroupSdPrior,
     HierarchicalNormalPrior,
@@ -27,7 +26,8 @@ from pyrenew.latent.infection_initialization_process import (
 )
 from pyrenew.latent.infections import Infections
 from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
-from pyrenew.latent.shared_infections import SharedInfections
+from pyrenew.latent.population_infections import PopulationInfections
+from pyrenew.latent.subpopulation_infections import SubpopulationInfections
 from pyrenew.latent.temporal_processes import (
     AR1,
     DifferencedAR1,
@@ -50,10 +50,8 @@ __all__ = [
     "BaseLatentInfectionProcess",
     "LatentSample",
     "PopulationStructure",
-    # Hierarchical infection processes
-    "HierarchicalInfections",
-    # Shared infection processes
-    "SharedInfections",
+    "SubpopulationInfections",
+    "PopulationInfections",
     # Hierarchical priors
     "HierarchicalNormalPrior",
     "GammaGroupSdPrior",
