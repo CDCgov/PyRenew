@@ -112,7 +112,7 @@ This model generalizes the single-population renewal model:
 
 When all $\delta_k(t) = 0$, the model reduces to the shared (single-population) case.
 
-This tutorial assumes familiarity with the renewal equation, generation interval, initial conditions (`I0`, `initial_log_rt`), and temporal processes. See [Latent Infections](latent_infections.md) for that background.
+This tutorial assumes familiarity with the renewal equation, generation interval, initial conditions (`I0`, `log_rt_time_0`), and temporal processes. See [Latent Infections](latent_infections.md) for that background.
 
 ---
 

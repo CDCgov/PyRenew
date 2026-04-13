@@ -145,7 +145,7 @@ $$I_{\text{init}}(\tau) = I_0 \cdot e^{r \cdot \tau}, \quad \tau = 0, 1,
 
 where $r$ is the asymptotic growth rate implied by the reproduction number at
 the start of the observation period, $\mathcal{R}(t=0) =
-e^{\text{initial\_log\_rt}}$, and the generation interval. The function
+e^{\text{log\_rt\_time\_0}}$, and the generation interval. The function
 `r_approx_from_R` converts $\mathcal{R}(t=0)$ and the generation interval into
 $r$ using Newton's method.
 
@@ -158,7 +158,7 @@ entries growing or declining exponentially toward $t = 0$.
 * **The shape is set by `log_rt_time_0`**.<br>
 `log_rt_time_0` enters the model in two places: it is the starting point of
 the $\mathcal{R}(t)$ trajectory ($\mathcal{R}(t=0) =
-e^{\text{initial\_log\_rt}}$), and it determines the exponential growth rate
+e^{\text{log\_rt\_time\_0}}$), and it determines the exponential growth rate
 $r$ used to construct the initialization vector. When `log_rt_time_0 = 0`,
 $r = 0$ and the initialization vector is flat at level `I0`. When
 `log_rt_time_0 > 0`, infections are growing exponentially at $t = 0$; when
