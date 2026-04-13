@@ -20,9 +20,9 @@ class MultiSignalModel(Model):
     """
     Multi-signal renewal model.
 
-    Combines a latent infection process (e.g., SubpopulationInfections,
-    PartitionedInfections) with multiple observation processes (e.g.,
-    CountObservation, WastewaterObservation).
+    Combines a latent infection process (e.g., SubpopulationInfections)
+    with multiple observation processes (e.g., CountObservation,
+    WastewaterObservation).
 
     Built via PyrenewBuilder to ensure n_initialization_points is computed
     correctly from all components. Can also be constructed manually for
