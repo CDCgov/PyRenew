@@ -24,7 +24,7 @@ from pyrenew.metaclass import RandomVariable
 
 class PopulationInfections(BaseLatentInfectionProcess):
     """
-    A single $\ mathcal{R}(t)$ trajectory drives one renewal equation.
+    A single $\\mathcal{R}(t)$ trajectory drives one renewal equation.
 
     The constructor specifies model structure (priors, temporal processes).
     """
@@ -55,9 +55,9 @@ class PopulationInfections(BaseLatentInfectionProcess):
         I0_rv
             Initial infection prevalence (proportion of population)
         single_rt_process
-            Temporal process for single Rt dynamics
+            Temporal process for single $\\mathcal{R}(t)$ dynamics
         log_rt_time_0_rv
-            Initial value for log(Rt) at time 0.
+            Initial value for log($\\mathcal{R}(t)$) at time 0.
 
         Raises
         ------
@@ -152,7 +152,7 @@ class PopulationInfections(BaseLatentInfectionProcess):
         """
         Sample population infections using a single renewal process.
 
-        Generates a single Rt trajectory, computes initial infections via
+        Generates a single $\\mathcal{R}(t)$ trajectory, computes initial infections via
         exponential backprojection, and runs one renewal equation.
 
         Parameters
