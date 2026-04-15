@@ -41,16 +41,15 @@ __all__ = [
     # Base classes and types
     "BaseObservationProcess",
     "ObservationSample",
+    # Observation processes
+    "CountObservation",
+    "MeasurementObservation",
+    "PopulationCounts",
+    "SubpopulationCounts",
     # Noise models
     "CountNoise",
     "PoissonNoise",
     "NegativeBinomialNoise",
     "MeasurementNoise",
     "HierarchicalNormalNoise",
-    # Observation processes
-    "BaseObservationProcess",
-    "CountObservation",
-    "MeasurementObservation",
-    "PopulationCounts",
-    "SubpopulationCounts",
 ]

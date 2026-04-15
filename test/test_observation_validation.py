@@ -332,7 +332,7 @@ class TestValidateObsDense:
 # ===================================================================
 
 
-class TestCountsValidateData:
+class TestPopulationCountsValidateData:
     """Tests for PopulationCounts.validate_data()."""
 
     def test_none_obs_passes(self, counts_proc):

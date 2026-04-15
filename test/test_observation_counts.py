@@ -1,7 +1,5 @@
 """
-Unit tests for CountObservation.
-
-These tests validate the count observation process implementation.
+Unit tests for PopulationCounts and SubpopulationCounts classes.
 """
 
 import jax.numpy as jnp
