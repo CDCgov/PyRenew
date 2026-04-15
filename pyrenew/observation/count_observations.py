@@ -19,9 +19,9 @@ from pyrenew.observation.types import ObservationSample
 from pyrenew.time import get_sequential_day_of_week_indices
 
 
-class _CountBase(BaseObservationProcess):
+class CountObservation(BaseObservationProcess):
     """
-    Internal base for count observation processes.
+    Base class for count observation processes.
 
     Implements ascertainment x delay convolution with pluggable noise model.
     """
@@ -246,7 +246,7 @@ class _CountBase(BaseObservationProcess):
         return predicted * daily_effect
 
 
-class Counts(_CountBase):
+class PopulationCounts(CountObservation):
     """
     Aggregated count observation.
 
@@ -281,7 +281,7 @@ class Counts(_CountBase):
     def __repr__(self) -> str:
         """Return string representation."""
         return (
-            f"Counts(name={self.name!r}, "
+            f"PopulationCounts(name={self.name!r}, "
             f"ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
             f"delay_distribution_rv={self.temporal_pmf_rv!r}, "
             f"noise={self.noise!r}, "
@@ -399,7 +399,7 @@ class Counts(_CountBase):
         return ObservationSample(observed=observed, predicted=predicted_counts)
 
 
-class CountsBySubpop(_CountBase):
+class SubpopulationCounts(CountObservation):
     """
     Subpopulation-level count observation.
 
@@ -422,7 +422,7 @@ class CountsBySubpop(_CountBase):
     def __repr__(self) -> str:
         """Return string representation."""
         return (
-            f"CountsBySubpop(name={self.name!r}, "
+            f"SubpopulationCounts(name={self.name!r}, "
             f"ascertainment_rate_rv={self.ascertainment_rate_rv!r}, "
             f"delay_distribution_rv={self.temporal_pmf_rv!r}, "
             f"noise={self.noise!r}, "

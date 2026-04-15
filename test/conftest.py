@@ -17,7 +17,7 @@ from pyrenew.latent import (
     SubpopulationInfections,
 )
 from pyrenew.observation import (
-    Counts,
+    PopulationCounts,
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
 )
@@ -197,21 +197,21 @@ def population_infections(gen_int_rv):
 
 
 # =============================================================================
-# Counts Process Fixtures
+# PopulationCounts Process Fixtures
 # =============================================================================
 
 
 @pytest.fixture
 def counts_process(simple_delay_pmf):
     """
-    Standard Counts observation process with simple delay.
+    Standard PopulationCounts observation process with simple delay.
 
     Returns
     -------
-    Counts
-        A Counts observation process with no delay.
+    PopulationCounts
+        A PopulationCounts observation process with no delay.
     """
-    return Counts(
+    return PopulationCounts(
         name="test_counts",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -220,7 +220,7 @@ def counts_process(simple_delay_pmf):
 
 
 class CountsProcessFactory:
-    """Factory for creating Counts processes with custom parameters."""
+    """Factory for creating PopulationCounts observation processes with custom parameters."""
 
     @staticmethod
     def create(
@@ -230,16 +230,16 @@ class CountsProcessFactory:
         concentration=10.0,
     ):
         """
-        Create a Counts process with specified parameters.
+        Create a PopulationCounts observation process with specified parameters.
 
         Returns
         -------
-        Counts
-            A Counts observation process with the specified parameters.
+        PopulationCounts
+            A PopulationCounts observation process with the specified parameters.
         """
         if delay_pmf is None:
             delay_pmf = jnp.array([1.0])
-        return Counts(
+        return PopulationCounts(
             name=name,
             ascertainment_rate_rv=DeterministicVariable("ihr", ascertainment_rate),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
@@ -250,7 +250,7 @@ class CountsProcessFactory:
 @pytest.fixture
 def counts_factory():
     """
-    Factory fixture for creating custom Counts processes.
+    Factory fixture for creating custom PopulationCounts observation processes.
 
     Returns
     -------

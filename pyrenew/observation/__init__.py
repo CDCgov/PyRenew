@@ -4,9 +4,9 @@ Observation processes for connecting infections to observed data.
 
 ``BaseObservationProcess`` is the abstract base. Concrete subclasses:
 
-- ``Counts``: Aggregate counts (admissions, deaths)
-- ``CountsBySubpop``: Subpopulation-level counts
-- ``Measurements``: Continuous subpopulation-level signals (e.g., wastewater)
+- ``PopulationCounts``: Aggregate counts (admissions, deaths)
+- ``SubpopulationCounts``: Subpopulation-level counts
+- ``MeasurementObservation``: Continuous subpopulation-level signals (e.g., wastewater)
 
 All observation processes implement:
 
@@ -19,8 +19,8 @@ to observation constructors to control the output distribution.
 """
 
 from pyrenew.observation.base import BaseObservationProcess
-from pyrenew.observation.count_observations import Counts, CountsBySubpop
-from pyrenew.observation.measurements import Measurements
+from pyrenew.observation.count_observations import CountObservation, PopulationCounts, SubpopulationCounts
+from pyrenew.observation.measurement_observations import MeasurementObservation
 from pyrenew.observation.negativebinomial import NegativeBinomialObservation
 from pyrenew.observation.noise import (
     CountNoise,
@@ -44,7 +44,9 @@ __all__ = [
     "MeasurementNoise",
     "HierarchicalNormalNoise",
     # Observation processes
-    "Counts",
-    "CountsBySubpop",
-    "Measurements",
+    "BaseObservationProcess",
+    "CountObservation",
+    "MeasurementObservation",
+    "PopulationCounts",
+    "SubpopulationCounts",
 ]

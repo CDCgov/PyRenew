@@ -23,7 +23,7 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import AR1
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.model import PyrenewBuilder
-from pyrenew.observation import Counts, NegativeBinomialNoise
+from pyrenew.observation import PopulationCounts, NegativeBinomialNoise
 from pyrenew.randomvariable import DistributionalVariable
 
 
@@ -166,7 +166,7 @@ def he_model(
         single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
     )
 
-    hospital_obs = Counts(
+    hospital_obs = PopulationCounts(
         name="hospital",
         ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(1, 100)),
         delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
@@ -176,7 +176,7 @@ def he_model(
     )
     builder.add_observation(hospital_obs)
 
-    ed_obs = Counts(
+    ed_obs = PopulationCounts(
         name="ed",
         ascertainment_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
         delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),

@@ -32,8 +32,8 @@ from pyrenew.latent import (
 )
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation import (
-    Counts,
-    CountsBySubpop,
+    PopulationCounts,
+    SubpopulationCounts,
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
     NegativeBinomialObservation,
@@ -48,7 +48,7 @@ from pyrenew.randomvariable import (
     TransformedVariable,
     VectorizedVariable,
 )
-from test.test_helpers import ConcreteMeasurements
+from test.test_helpers import ConcreteMeasurementObservation
 
 # =============================================================================
 # Shared instance builders
@@ -57,13 +57,13 @@ from test.test_helpers import ConcreteMeasurements
 
 def _make_counts():
     """
-    Build a Counts instance.
+    Build a PopulationCounts instance.
 
     Returns
     -------
     instantiated object
     """
-    return Counts(
+    return PopulationCounts(
         name="test",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
@@ -73,13 +73,13 @@ def _make_counts():
 
 def _make_counts_by_subpop():
     """
-    Build a CountsBySubpop instance.
+    Build a SubpopulationCounts instance.
 
     Returns
     -------
     instantiated object
     """
-    return CountsBySubpop(
+    return SubpopulationCounts(
         name="test_subpop",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
@@ -89,7 +89,7 @@ def _make_counts_by_subpop():
 
 def _make_measurements():
     """
-    Build a ConcreteMeasurements instance.
+    Build a ConcreteMeasurementObservation instance.
 
     Returns
     -------
@@ -103,7 +103,7 @@ def _make_measurements():
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.1)),
     )
-    return ConcreteMeasurements(
+    return ConcreteMeasurementObservation(
         name="test_ww",
         temporal_pmf_rv=DeterministicPMF("shed", jnp.array([0.3, 0.4, 0.3])),
         noise=HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv),
@@ -160,7 +160,7 @@ def _make_infections_with_feedback():
         ),
         pytest.param(RandomWalk(innovation_sd=0.5), id="RandomWalk"),
         pytest.param(_make_counts(), id="Counts"),
-        pytest.param(_make_counts_by_subpop(), id="CountsBySubpop"),
+        pytest.param(_make_counts_by_subpop(), id="SubpopulationCounts"),
         pytest.param(_make_measurements(), id="Measurements"),
         pytest.param(PoissonNoise(), id="PoissonNoise"),
         pytest.param(
@@ -184,22 +184,22 @@ def test_repr_returns_nonempty_string(instance):
 
 
 def test_counts_by_subpop_infection_resolution():
-    """CountsBySubpop.infection_resolution() returns 'subpop'."""
+    """SubpopulationCounts.infection_resolution() returns 'subpop'."""
     counts = _make_counts_by_subpop()
     assert counts.infection_resolution() == "subpop"
 
 
 def test_measurements_infection_resolution():
-    """ConcreteMeasurements.infection_resolution() returns 'subpop'."""
+    """ConcreteMeasurementObservation.infection_resolution() returns 'subpop'."""
     m = _make_measurements()
     assert m.infection_resolution() == "subpop"
 
 
 def test_base_count_observation_infection_resolution_raises():
-    """Base _CountBase.infection_resolution() raises NotImplementedError."""
-    from pyrenew.observation.count_observations import _CountBase
+    """Base CountObservation.infection_resolution() raises NotImplementedError."""
+    from pyrenew.observation.count_observations import CountObservation
 
-    class _MinimalCounts(_CountBase):
+    class _MinimalCounts(CountObservation):
         """Minimal subclass that inherits infection_resolution unchanged."""
 
         def sample(self, *args, **kwargs):  # numpydoc ignore=GL08
@@ -417,7 +417,7 @@ def test_random_variable_rejects_invalid_name(bad_name):
             id="StudentTGroupModePrior",
         ),
         pytest.param(_make_counts(), "test", id="Counts"),
-        pytest.param(_make_counts_by_subpop(), "test_subpop", id="CountsBySubpop"),
+        pytest.param(_make_counts_by_subpop(), "test_subpop", id="SubpopulationCounts"),
         pytest.param(_make_measurements(), "test_ww", id="ConcreteMeasurements"),
         pytest.param(
             VectorizedVariable(

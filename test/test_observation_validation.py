@@ -2,8 +2,8 @@
 Unit tests for observation data validation functions.
 
 Tests the refactored validation helpers on BaseObservationProcess
-and the validate_data() methods on Counts, CountsBySubpop, and
-Measurements.
+and the validate_data() methods on PopulationCounts, SubpopulationCounts, and
+MeasurementObservation.
 """
 
 import jax.numpy as jnp
@@ -12,21 +12,21 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.observation import (
-    Counts,
-    CountsBySubpop,
+    PopulationCounts,
+    SubpopulationCounts,
+    MeasurementObservation,
     HierarchicalNormalNoise,
     PoissonNoise,
 )
-from pyrenew.observation.measurements import Measurements
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 
 # ---------------------------------------------------------------------------
-# Helpers – minimal concrete subclass of Measurements for testing
+# Helpers – minimal concrete subclass of MeasurementObservation for testing
 # ---------------------------------------------------------------------------
 
 
-class StubMeasurements(Measurements):
-    """Minimal concrete Measurements for testing validate_data()."""
+class StubMeasurementObservation(MeasurementObservation):
+    """Minimal concrete MeasurementObservation for testing validate_data()."""
 
     def validate(self) -> None:
         """
@@ -65,14 +65,14 @@ class StubMeasurements(Measurements):
 @pytest.fixture()
 def counts_proc():
     """
-    Counts process used to access base validation helpers.
+    PopulationCounts process used to access base validation helpers.
 
     Returns
     -------
-    Counts
-        A Counts observation process.
+    PopulationCounts
+        A PopulationCounts observation process.
     """
-    return Counts(
+    return PopulationCounts(
         name="hosp",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", jnp.array([0.3, 0.5, 0.2])),
@@ -83,14 +83,14 @@ def counts_proc():
 @pytest.fixture()
 def subpop_proc():
     """
-    CountsBySubpop process for validate_data() tests.
+    SubpopulationCounts process for validate_data() tests.
 
     Returns
     -------
-    CountsBySubpop
-        A CountsBySubpop observation process.
+    SubpopulationCounts
+        A SubpopulationCounts observation process.
     """
-    return CountsBySubpop(
+    return SubpopulationCounts(
         name="subpop_hosp",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.02),
         delay_distribution_rv=DeterministicPMF("delay", jnp.array([0.4, 0.4, 0.2])),
@@ -101,12 +101,12 @@ def subpop_proc():
 @pytest.fixture()
 def measurements_proc():
     """
-    Measurements process for validate_data() tests.
+    MeasurementObservation process for validate_data() tests.
 
     Returns
     -------
-    StubMeasurements
-        A StubMeasurements observation process.
+    StubMeasurementObservation
+        A StubMeasurementObservation observation process.
     """
     sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
@@ -117,7 +117,7 @@ def measurements_proc():
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.05)),
     )
     noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
-    return StubMeasurements(
+    return StubMeasurementObservation(
         name="ww",
         temporal_pmf_rv=DeterministicPMF("shedding", jnp.array([0.3, 0.4, 0.3])),
         noise=noise,
@@ -328,12 +328,12 @@ class TestValidateObsDense:
 
 
 # ===================================================================
-# Counts.validate_data()
+# PopulationCounts.validate_data()
 # ===================================================================
 
 
 class TestCountsValidateData:
-    """Tests for Counts.validate_data()."""
+    """Tests for PopulationCounts.validate_data()."""
 
     def test_none_obs_passes(self, counts_proc):
         """validate_data with obs=None should not raise."""
@@ -363,12 +363,12 @@ class TestCountsValidateData:
 
 
 # ===================================================================
-# CountsBySubpop.validate_data()
+# SubpopulationCounts.validate_data()
 # ===================================================================
 
 
-class TestCountsBySubpopValidateData:
-    """Tests for CountsBySubpop.validate_data()."""
+class TestSubpopulationCountsValidateData:
+    """Tests for SubpopulationCounts.validate_data()."""
 
     def test_all_none_passes(self, subpop_proc):
         """validate_data with all optional args None should not raise."""
@@ -442,12 +442,12 @@ class TestCountsBySubpopValidateData:
 
 
 # ===================================================================
-# Measurements.validate_data()
+# MeasurementObservation.validate_data()
 # ===================================================================
 
 
-class TestMeasurementsValidateData:
-    """Tests for Measurements.validate_data()."""
+class TestMeasurementObservationValidateData:
+    """Tests for MeasurementObservation.validate_data()."""
 
     def test_all_none_passes(self, measurements_proc):
         """validate_data with all optional args None should not raise."""
