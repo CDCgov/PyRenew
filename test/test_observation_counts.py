@@ -11,10 +11,10 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.observation import (
-    PopulationCounts,
-    SubpopulationCounts,
     NegativeBinomialNoise,
     PoissonNoise,
+    PopulationCounts,
+    SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable
 from test.test_helpers import create_mock_infections

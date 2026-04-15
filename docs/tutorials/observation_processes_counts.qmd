@@ -33,7 +33,11 @@ from plotnine.exceptions import PlotnineWarning
 warnings.filterwarnings("ignore", category=PlotnineWarning)
 
 from _tutorial_theme import theme_tutorial
-from pyrenew.observation import PopulationCounts, NegativeBinomialNoise, PoissonNoise
+from pyrenew.observation import (
+    PopulationCounts,
+    NegativeBinomialNoise,
+    PoissonNoise,
+)
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 from pyrenew import datasets
 ```

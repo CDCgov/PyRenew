@@ -17,9 +17,9 @@ from pyrenew.latent import (
     SubpopulationInfections,
 )
 from pyrenew.observation import (
-    PopulationCounts,
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
+    PopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 

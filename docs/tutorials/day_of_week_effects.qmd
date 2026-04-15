@@ -25,7 +25,11 @@ import numpy as np
 import numpyro
 import pandas as pd
 
-from pyrenew.observation import PopulationCounts, NegativeBinomialNoise, PoissonNoise
+from pyrenew.observation import (
+    PopulationCounts,
+    NegativeBinomialNoise,
+    PoissonNoise,
+)
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 from pyrenew import datasets
 

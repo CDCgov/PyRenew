@@ -19,7 +19,11 @@ to observation constructors to control the output distribution.
 """
 
 from pyrenew.observation.base import BaseObservationProcess
-from pyrenew.observation.count_observations import CountObservation, PopulationCounts, SubpopulationCounts
+from pyrenew.observation.count_observations import (
+    CountObservation,
+    PopulationCounts,
+    SubpopulationCounts,
+)
 from pyrenew.observation.measurement_observations import MeasurementObservation
 from pyrenew.observation.negativebinomial import NegativeBinomialObservation
 from pyrenew.observation.noise import (

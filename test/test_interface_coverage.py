@@ -32,12 +32,12 @@ from pyrenew.latent import (
 )
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation import (
-    PopulationCounts,
-    SubpopulationCounts,
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
     NegativeBinomialObservation,
     PoissonNoise,
+    PopulationCounts,
+    SubpopulationCounts,
 )
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.iidrandomsequence import IIDRandomSequence, StandardNormalSequence

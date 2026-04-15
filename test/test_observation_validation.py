@@ -12,11 +12,11 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.observation import (
+    HierarchicalNormalNoise,
+    MeasurementObservation,
+    PoissonNoise,
     PopulationCounts,
     SubpopulationCounts,
-    MeasurementObservation,
-    HierarchicalNormalNoise,
-    PoissonNoise,
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 

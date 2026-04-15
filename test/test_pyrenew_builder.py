@@ -8,7 +8,11 @@ import pytest
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import RandomWalk, SubpopulationInfections
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
-from pyrenew.observation import PopulationCounts, SubpopulationCounts, NegativeBinomialNoise
+from pyrenew.observation import (
+    NegativeBinomialNoise,
+    PopulationCounts,
+    SubpopulationCounts,
+)
 
 # Standard population structure for tests (3 subpopulations)
 SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
