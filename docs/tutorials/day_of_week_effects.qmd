@@ -25,7 +25,7 @@ import numpy as np
 import numpyro
 import pandas as pd
 
-from pyrenew.observation import Counts, NegativeBinomialNoise, PoissonNoise
+from pyrenew.observation import PopulationCounts, NegativeBinomialNoise, PoissonNoise
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 from pyrenew import datasets
 
@@ -89,7 +89,7 @@ Monday at 1.20 means 20% more counts than an average day; Saturday and Sunday at
 
 ## Observation process with and without day-of-week effects
 
-We construct two `Counts` observation processes using the same delay distribution and ascertainment rate.
+We construct two `PopulationCounts` observation processes using the same delay distribution and ascertainment rate.
 The only difference is whether `day_of_week_rv` is provided.
 
 ```{python}
@@ -103,14 +103,14 @@ delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
 ihr_rv = DeterministicVariable("ihr", 0.01)
 concentration_rv = DeterministicVariable("concentration", 20.0)
 
-process_no_dow = Counts(
+process_no_dow = PopulationCounts(
     name="hosp_no_dow",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=delay_rv,
     noise=NegativeBinomialNoise(concentration_rv),
 )
 
-process_with_dow = Counts(
+process_with_dow = PopulationCounts(
     name="hosp_dow",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=delay_rv,
@@ -332,7 +332,7 @@ $$\lambda(t) = F(k_t) \cdot d_{w(t)} \cdot \alpha \sum_s I(t-s)\,\pi(s)$$
 # | label: compose-with-truncation
 reporting_delay_pmf = jnp.array([0.4, 0.3, 0.15, 0.08, 0.04, 0.02, 0.01])
 
-process_both = Counts(
+process_both = PopulationCounts(
     name="hosp_both",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=delay_rv,

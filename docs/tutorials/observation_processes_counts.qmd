@@ -17,7 +17,7 @@ jupyter:
     name: python3
 ---
 
-This tutorial demonstrates how to use the `Counts` observation process to model count data such as hospital admissions, emergency department visits, or deaths.
+This tutorial demonstrates how to use the `PopulationCounts` observation process to model count data such as hospital admissions, emergency department visits, or deaths.
 
 ```{python}
 # | label: setup
@@ -33,7 +33,7 @@ from plotnine.exceptions import PlotnineWarning
 warnings.filterwarnings("ignore", category=PlotnineWarning)
 
 from _tutorial_theme import theme_tutorial
-from pyrenew.observation import Counts, NegativeBinomialNoise, PoissonNoise
+from pyrenew.observation import PopulationCounts, NegativeBinomialNoise, PoissonNoise
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 from pyrenew import datasets
 ```
@@ -47,7 +47,7 @@ In the renewal modeling framework, observations are generated in two steps:
 1. A **deterministic transformation**, where infections are mapped to an expected number of observed events via an ascertainment rate and a delay distribution.
 2. A **stochastic observation model**, where observed counts are drawn from a distribution with that predicted value.
 
-Observed data can be aggregated or available as subpopulation-level counts, which are modeled by the classes `Counts` and `CountsBySubpop`, respectively.
+Observed data can be aggregated or available as subpopulation-level counts, which are modeled by the classes `PopulationCounts` and `SubpopulationCounts`, respectively.
 
 ### Observation equation
 
@@ -94,7 +94,7 @@ This yields a two-layer model:
 
 ## Hospital admissions example
 
-For hospital admissions data, we construct a `Counts` observation process.
+For hospital admissions data, we construct a `PopulationCounts` observation process.
 
 The delay is the key mechanism: infections from $d$ days ago ($I(t-d)$) contribute to today's predicted hospital admissions ($\mu(t)$), weighted by the probability $\pi_d$ that an infection leads to hospitalization after exactly $d$ days. The convolution sums these contributions across all past days.
 
@@ -180,9 +180,9 @@ plot_delay = (
 plot_delay
 ```
 
-## Creating a Counts observation process
+## Creating a PopulationCounts observation process
 
-A `Counts` object takes the following arguments:
+A `PopulationCounts` object takes the following arguments:
 
 - **`name`**: unique, meaningful identifier for this observation process (e.g., `"hospital"`, `"deaths"`)
 - **`ascertainment_rate_rv`**: the probability an infection results in an observation (e.g., IHR)
@@ -206,7 +206,7 @@ ihr_rv = DeterministicVariable("ihr", 0.01)
 concentration_rv = DeterministicVariable("concentration", 10.0)
 
 # Create the observation process
-hosp_process = Counts(
+hosp_process = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=delay_rv,
@@ -232,7 +232,7 @@ def first_valid_observation_day(obs_process) -> int:
 
 ## Simulating observations from a single-day infection pulse
 
-To demonstrate how a `Counts` observation process works, we examine how infections occurring on a single day result in observed hospital admissions.
+To demonstrate how a `PopulationCounts` observation process works, we examine how infections occurring on a single day result in observed hospital admissions.
 
 
 ```{python}
@@ -554,7 +554,7 @@ n_replicates = 10
 conc_results = []
 for conc_val in concentration_values:
     conc_rv_temp = DeterministicVariable("conc", conc_val)
-    process_temp = Counts(
+    process_temp = PopulationCounts(
         name="hospital",
         ascertainment_rate_rv=ihr_rv,
         delay_distribution_rv=delay_rv,
@@ -611,7 +611,7 @@ To use Poisson noise instead of negative binomial, change the noise model:
 
 ```{python}
 # | label: poisson-noise
-hosp_process_poisson = Counts(
+hosp_process_poisson = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=delay_rv,

@@ -17,7 +17,7 @@ jupyter:
     name: python3
 ---
 
-This tutorial demonstrates how to use the `Measurements` observation process to model continuous measurement data. We first explain the general framework, then illustrate with a wastewater viral concentration example.
+This tutorial demonstrates how to use the `MeasurementObservation` observation process to model continuous measurement data. We first explain the general framework, then illustrate with a wastewater viral concentration example.
 
 ```{python}
 # | label: setup
@@ -33,16 +33,16 @@ import numpyro.distributions as dist
 from _tutorial_theme import theme_tutorial
 
 from pyrenew.observation import (
-    Measurements,
+    MeasurementObservation,
     HierarchicalNormalNoise,
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 ```
 
-## The Measurements Class
+## The MeasurementObservation Class
 
-The `Measurements` class models continuous signals derived from infections. Unlike count observations (hospital admissions, deaths), measurements are continuous values that may span orders of magnitude or even be negative (e.g., log-transformed data).
+The `MeasurementObservation` class models continuous signals derived from infections. Unlike count observations (hospital admissions, deaths), measurements are continuous values that may span orders of magnitude or even be negative (e.g., log-transformed data).
 
 **Examples of measurement data:**
 
@@ -68,7 +68,7 @@ where $f(\cdot)$ is a transformation (often the identity or log function), and t
 
 Subclasses implement `_predicted_obs()` to compute $\mu(t)$ from infections. PyRenew provides the noise model.
 
-The `Measurements` base class provides:
+The `MeasurementObservation` base class provides:
 
 - Convolution utilities for temporal delays
 - Timeline alignment between infections and observations
@@ -79,7 +79,7 @@ The `Measurements` base class provides:
 
 The core convolution structure is shared with count observations, but key aspects differ:
 
-| Aspect | Counts | Measurements |
+| Aspect | CountObservation | MeasurementObservation |
 |--------|--------|--------------|
 | Output type | Discrete counts | Continuous values |
 | Output space | Linear (expected counts) | Often log-transformed |
@@ -141,18 +141,18 @@ This flexible indexing supports:
 - **Multiple sensors per subpopulation**: Different labs analyzing the same source
 - **Multiple subpopulations per sensor**: One sensor serving multiple areas (less common)
 
-### Subclassing Measurements
+### Subclassing MeasurementObservation
 
-To create a measurement process for your domain, subclass `Measurements` and implement:
+To create a measurement process for your domain, subclass `MeasurementObservation` and implement:
 
 1. **`_predicted_obs(infections)`**: Transform infections to predicted values
 2. **`validate()`**: Check parameter validity
 3. **`lookback_days()`**: Return the temporal PMF length
 
-The `Measurements` base class requires a `name` parameter. Observation processes are components in multi-signal models, where each signal must have a unique, meaningful name (e.g., `"wastewater"`, `"air_quality"`). This name prefixes all numpyro sample sites, ensuring distinct identifiers in the inference trace.
+The `MeasurementObservation` base class requires a `name` parameter. Observation processes are components in multi-signal models, where each signal must have a unique, meaningful name (e.g., `"wastewater"`, `"air_quality"`). This name prefixes all numpyro sample sites, ensuring distinct identifiers in the inference trace.
 
 ```python
-class MyMeasurement(Measurements):
+class MyMeasurement(MeasurementObservation):
     def __init__(self, name, temporal_pmf_rv, noise, my_scaling_param):
         super().__init__(name=name, temporal_pmf_rv=temporal_pmf_rv, noise=noise)
         self.my_scaling_param = my_scaling_param
@@ -233,7 +233,7 @@ from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.noise import MeasurementNoise
 
 
-class Wastewater(Measurements):
+class Wastewater(MeasurementObservation):
     """
     Wastewater viral concentration observation process.
 
@@ -759,7 +759,7 @@ The diverging trajectories reflect the different underlying infection curves. Su
 
 ## Summary
 
-The `Measurements` class provides:
+The `MeasurementObservation` class provides:
 
 1. **A consistent interface** for continuous observation processes
 2. **Hierarchical noise models** that capture sensor-level variability
@@ -768,7 +768,7 @@ The `Measurements` class provides:
 
 To use it for your domain:
 
-1. Subclass `Measurements`
+1. Subclass `MeasurementObservation`
 2. Implement `_predicted_obs()` with your signal transformation
 3. Configure appropriate priors for sensor-level effects
 4. Use the indexing system to map observations to their context
