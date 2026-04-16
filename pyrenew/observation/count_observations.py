@@ -1,8 +1,6 @@
 # numpydoc ignore=GL08
 """
 Count observations with composable noise models.
-
-Ascertainment x delay convolution with pluggable noise (Poisson, Negative Binomial, etc.).
 """
 
 from __future__ import annotations
@@ -21,9 +19,10 @@ from pyrenew.time import get_sequential_day_of_week_indices
 
 class CountObservation(BaseObservationProcess):
     """
-    Base class for count observation processes.
+    Abstract Base class for count observation processes.
 
-    Implements ascertainment x delay convolution with pluggable noise model.
+    Subclasses map infections to counts through ascertainment x delay convolution
+    with composable noise model.
     """
 
     def __init__(
