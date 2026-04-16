@@ -2,7 +2,7 @@
 Unit tests for Measurements (continuous measurement observations).
 
 These tests validate the measurement observation process implementation
-using ConcreteMeasurements from conftest.py.
+using ConcreteMeasurementObservation from conftest.py.
 """
 
 import jax.numpy as jnp
@@ -13,7 +13,7 @@ import pytest
 from pyrenew.deterministic import DeterministicPMF
 from pyrenew.observation import HierarchicalNormalNoise
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
-from test.test_helpers import ConcreteMeasurements
+from test.test_helpers import ConcreteMeasurementObservation
 
 
 class TestHierarchicalNormalNoise:
@@ -59,14 +59,14 @@ class TestHierarchicalNormalNoise:
         assert jnp.allclose(samples, obs)
 
 
-class TestConcreteMeasurements:
-    """Test concrete Measurements implementation."""
+class TestConcreteMeasurementObservation:
+    """Test concrete MeasurementObservation implementation."""
 
     def test_lookback_days(self, hierarchical_normal_noise):
         """Test lookback_days returns len(pmf) - 1."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
 
-        process = ConcreteMeasurements(
+        process = ConcreteMeasurementObservation(
             name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=hierarchical_normal_noise,
@@ -78,7 +78,7 @@ class TestConcreteMeasurements:
         """Test that sample returns correct shape and log-scale output."""
         shedding_pmf = jnp.array([0.3, 0.4, 0.3])
 
-        process = ConcreteMeasurements(
+        process = ConcreteMeasurementObservation(
             name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=hierarchical_normal_noise,
@@ -108,7 +108,7 @@ class TestConcreteMeasurements:
         """Test that predicted values are stored as deterministic."""
         shedding_pmf = jnp.array([0.5, 0.5])
 
-        process = ConcreteMeasurements(
+        process = ConcreteMeasurementObservation(
             name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=hierarchical_normal_noise_tight,
@@ -142,7 +142,7 @@ class TestConcreteMeasurements:
         """
         shedding_pmf = jnp.array([0.5, 0.5])
 
-        process = ConcreteMeasurements(
+        process = ConcreteMeasurementObservation(
             name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=hierarchical_normal_noise_tight,
@@ -185,7 +185,7 @@ class TestConcreteMeasurements:
     def test_log_scale_correctness(self, hierarchical_normal_noise_tight):
         """Test that output is log-scale of convolved infections times scale."""
         # Use simple PMF [1.0] so convolution is identity
-        process = ConcreteMeasurements(
+        process = ConcreteMeasurementObservation(
             name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", jnp.array([1.0])),
             noise=hierarchical_normal_noise_tight,
@@ -226,7 +226,7 @@ class TestConcreteMeasurements:
         )
         noise = HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv)
 
-        process = ConcreteMeasurements(
+        process = ConcreteMeasurementObservation(
             name="test",
             temporal_pmf_rv=DeterministicPMF("shedding", shedding_pmf),
             noise=noise,

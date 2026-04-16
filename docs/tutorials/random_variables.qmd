@@ -51,7 +51,7 @@ from pyrenew.randomvariable import (
     DynamicDistributionalVariable,
     TransformedVariable,
 )
-from pyrenew.observation import Counts, NegativeBinomialNoise
+from pyrenew.observation import PopulationCounts, NegativeBinomialNoise
 import pyrenew.transformation as transformation
 from pyrenew import datasets
 
@@ -154,7 +154,7 @@ with numpyro.handlers.seed(rng_seed=0):
 ### Interchangeability
 
 Because all implementations share the `sample()` interface,
-you can swap them freely. For example, the `Counts` observation process
+you can swap them freely. For example, the `PopulationCounts` observation process
 accepts any `RandomVariable` as its `ascertainment_rate_rv`.
 The model code is identical whether the rate is fixed or estimated:
 
@@ -167,7 +167,7 @@ hosp_delay_pmf = jnp.array(
 )
 
 # Fixed ascertainment rate
-hosp_fixed = Counts(
+hosp_fixed = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
     delay_distribution_rv=DeterministicPMF("delay", hosp_delay_pmf),
@@ -175,7 +175,7 @@ hosp_fixed = Counts(
 )
 
 # Estimated ascertainment rate --- same model structure, different RV
-hosp_estimated = Counts(
+hosp_estimated = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
     delay_distribution_rv=DeterministicPMF("delay", hosp_delay_pmf),

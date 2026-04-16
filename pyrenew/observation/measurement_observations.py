@@ -14,7 +14,7 @@ from pyrenew.observation.noise import MeasurementNoise
 from pyrenew.observation.types import ObservationSample
 
 
-class Measurements(BaseObservationProcess):
+class MeasurementObservation(BaseObservationProcess):
     """
     Abstract base for continuous measurement observations.
 

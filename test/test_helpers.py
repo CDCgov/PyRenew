@@ -8,11 +8,11 @@ For pytest fixtures, see conftest.py.
 import jax
 import jax.numpy as jnp
 
-from pyrenew.observation import Measurements
+from pyrenew.observation import MeasurementObservation
 
 
-class ConcreteMeasurements(Measurements):
-    """Concrete implementation of Measurements for testing."""
+class ConcreteMeasurementObservation(MeasurementObservation):
+    """Concrete implementation of MeasurementObservation for testing."""
 
     def __init__(self, name, temporal_pmf_rv, noise, log10_scale=9.0):
         """Initialize the concrete measurements for testing."""
