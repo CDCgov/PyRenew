@@ -8,7 +8,11 @@ import pytest
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import RandomWalk, SubpopulationInfections
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
-from pyrenew.observation import Counts, CountsBySubpop, NegativeBinomialNoise
+from pyrenew.observation import (
+    NegativeBinomialNoise,
+    PopulationCounts,
+    SubpopulationCounts,
+)
 
 # Standard population structure for tests (3 subpopulations)
 SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
@@ -37,7 +41,7 @@ def simple_builder():
     )
 
     delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
-    obs = Counts(
+    obs = PopulationCounts(
         name="hospital",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=delay,
@@ -59,7 +63,7 @@ def validation_builder():
     Returns
     -------
     PyrenewBuilder
-        Builder with Counts ("hospital") and CountsBySubpop
+        Builder with PopulationCounts ("hospital") and SubpopulationCounts
         ("hospital_subpop") observations.
     """
     builder = PyrenewBuilder()
@@ -76,7 +80,7 @@ def validation_builder():
 
     delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
     builder.add_observation(
-        Counts(
+        PopulationCounts(
             name="hospital",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=delay,
@@ -84,7 +88,7 @@ def validation_builder():
         )
     )
     builder.add_observation(
-        CountsBySubpop(
+        SubpopulationCounts(
             name="hospital_subpop",
             ascertainment_rate_rv=DeterministicVariable("ihr_subpop", 0.01),
             delay_distribution_rv=delay,
@@ -157,7 +161,7 @@ class TestPyrenewBuilderConfiguration:
     def test_rejects_duplicate_observation_name(self, simple_builder):
         """Test that adding duplicate observation name raises ValueError."""
         delay = DeterministicPMF("delay2", jnp.array([0.5, 0.5]))
-        obs = Counts(
+        obs = PopulationCounts(
             name="hospital",
             ascertainment_rate_rv=DeterministicVariable("ihr2", 0.02),
             delay_distribution_rv=delay,

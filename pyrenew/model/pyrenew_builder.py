@@ -124,8 +124,8 @@ class PyrenewBuilder:
         Parameters
         ----------
         obs_process
-            Configured observation process instance (e.g., Counts,
-            Wastewater, CountsBySubpop). Must have a ``name`` attribute.
+            Configured observation process instance (e.g., PopulationCounts,
+            Wastewater, SubpopulationCounts). Must have a ``name`` attribute.
 
         Returns
         -------
