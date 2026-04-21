@@ -19,6 +19,7 @@ from pyrenew.observation import (
     SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
+from pyrenew.time import daily_to_weekly
 
 # ---------------------------------------------------------------------------
 # Helpers – minimal concrete subclass of MeasurementObservation for testing
@@ -95,6 +96,7 @@ def subpop_proc():
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.02),
         delay_distribution_rv=DeterministicPMF("delay", jnp.array([0.4, 0.4, 0.2])),
         noise=PoissonNoise(),
+        reporting_schedule="irregular",
     )
 
 
@@ -184,6 +186,14 @@ class TestValidateIndexArray:
         """Non-contiguous but valid indices should not raise."""
         counts_proc._validate_index_array(
             jnp.array([0, 3, 7, 9]),
+            upper_bound=10,
+            param_name="test_idx",
+        )
+
+    def test_empty_array_passes(self, counts_proc):
+        """Empty index array has no values to bounds-check; should not raise."""
+        counts_proc._validate_index_array(
+            jnp.array([], dtype=jnp.int32),
             upper_bound=10,
             param_name="test_idx",
         )
@@ -375,29 +385,33 @@ class TestSubpopulationCountsValidateData:
         subpop_proc.validate_data(n_total=30, n_subpops=3)
 
     def test_valid_data_passes(self, subpop_proc):
-        """validate_data with valid times, subpop_indices, obs should not raise."""
-        times = jnp.array([5, 10, 15, 20])
+        """validate_data with valid period_end_times, subpop_indices, obs should not raise."""
+        period_end_times = jnp.array([5, 10, 15, 20])
         subpop_indices = jnp.array([0, 1, 2, 0])
         obs = jnp.array([10.0, 20.0, 30.0, 15.0])
         subpop_proc.validate_data(
             n_total=30,
             n_subpops=3,
-            times=times,
+            period_end_times=period_end_times,
             subpop_indices=subpop_indices,
             obs=obs,
         )
 
     def test_invalid_times_raises(self, subpop_proc):
-        """validate_data with out-of-bounds times should raise."""
-        times = jnp.array([5, 30])  # 30 == n_total, out of bounds
+        """validate_data with out-of-bounds period_end_times should raise."""
+        period_end_times = jnp.array([5, 30])  # 30 == n_total, out of bounds
         with pytest.raises(ValueError, match="upper bound"):
-            subpop_proc.validate_data(n_total=30, n_subpops=3, times=times)
+            subpop_proc.validate_data(
+                n_total=30, n_subpops=3, period_end_times=period_end_times
+            )
 
     def test_negative_times_raises(self, subpop_proc):
-        """validate_data with negative times should raise."""
-        times = jnp.array([-1, 5])
+        """validate_data with negative period_end_times should raise."""
+        period_end_times = jnp.array([-1, 5])
         with pytest.raises(ValueError, match="cannot be negative"):
-            subpop_proc.validate_data(n_total=30, n_subpops=3, times=times)
+            subpop_proc.validate_data(
+                n_total=30, n_subpops=3, period_end_times=period_end_times
+            )
 
     def test_invalid_subpop_indices_raises(self, subpop_proc):
         """validate_data with out-of-bounds subpop_indices should raise."""
@@ -416,22 +430,28 @@ class TestSubpopulationCountsValidateData:
             )
 
     def test_mismatched_obs_times_raises(self, subpop_proc):
-        """validate_data with obs/times shape mismatch should raise."""
-        times = jnp.array([5, 10, 15])
+        """validate_data with obs/period_end_times shape mismatch should raise."""
+        period_end_times = jnp.array([5, 10, 15])
         obs = jnp.array([1.0, 2.0])  # length 2 != length 3
         with pytest.raises(ValueError, match="must match times shape"):
-            subpop_proc.validate_data(n_total=30, n_subpops=3, times=times, obs=obs)
+            subpop_proc.validate_data(
+                n_total=30,
+                n_subpops=3,
+                period_end_times=period_end_times,
+                obs=obs,
+            )
 
     def test_obs_without_times_skips_shape_check(self, subpop_proc):
-        """validate_data with obs but no times should not check shapes."""
+        """validate_data with obs but no period_end_times should not check shapes."""
         obs = jnp.array([1.0, 2.0])
-        # times is None, so shape check is skipped
         subpop_proc.validate_data(n_total=30, n_subpops=3, obs=obs)
 
     def test_times_without_obs_skips_shape_check(self, subpop_proc):
-        """validate_data with times but no obs should validate times only."""
-        times = jnp.array([5, 10, 15])
-        subpop_proc.validate_data(n_total=30, n_subpops=3, times=times)
+        """validate_data with period_end_times but no obs should validate indices only."""
+        period_end_times = jnp.array([5, 10, 15])
+        subpop_proc.validate_data(
+            n_total=30, n_subpops=3, period_end_times=period_end_times
+        )
 
     def test_non_contiguous_subpop_indices_valid(self, subpop_proc):
         """validate_data with non-contiguous but valid subpop_indices passes."""
@@ -556,3 +576,202 @@ class TestMeasurementObservationValidateData:
     def test_extra_kwargs_ignored(self, measurements_proc):
         """validate_data should ignore extra keyword arguments."""
         measurements_proc.validate_data(n_total=30, n_subpops=3, foo="bar")
+
+
+# ===================================================================
+# _validate_aggregation_params
+# ===================================================================
+
+
+class TestValidateAggregationParams:
+    """Tests for BaseObservationProcess._validate_aggregation_params."""
+
+    def test_p1_no_anchor_passes(self, counts_proc):
+        """P=1 with period_end_dow=None should not raise."""
+        counts_proc._validate_aggregation_params(1, None)
+
+    def test_p1_anchor_ignored(self, counts_proc):
+        """P=1 with any period_end_dow value should not raise."""
+        counts_proc._validate_aggregation_params(1, 5)
+        counts_proc._validate_aggregation_params(1, 99)
+
+    def test_p7_valid_anchor_passes(self, counts_proc):
+        """P=7 with period_end_dow in {0, ..., 6} should not raise."""
+        for dow in range(7):
+            counts_proc._validate_aggregation_params(7, dow)
+
+    def test_p7_missing_anchor_raises(self, counts_proc):
+        """P=7 with period_end_dow=None should raise."""
+        with pytest.raises(ValueError, match="period_end_dow is required"):
+            counts_proc._validate_aggregation_params(7, None)
+
+    def test_p7_negative_anchor_raises(self, counts_proc):
+        """P=7 with period_end_dow<0 should raise."""
+        with pytest.raises(ValueError, match="integer in"):
+            counts_proc._validate_aggregation_params(7, -1)
+
+    def test_p7_too_large_anchor_raises(self, counts_proc):
+        """P=7 with period_end_dow>6 should raise."""
+        with pytest.raises(ValueError, match="integer in"):
+            counts_proc._validate_aggregation_params(7, 7)
+
+    def test_zero_period_raises(self, counts_proc):
+        """aggregation_period=0 should raise."""
+        with pytest.raises(ValueError, match="positive integer"):
+            counts_proc._validate_aggregation_params(0, None)
+
+    def test_negative_period_raises(self, counts_proc):
+        """Negative aggregation_period should raise."""
+        with pytest.raises(ValueError, match="positive integer"):
+            counts_proc._validate_aggregation_params(-3, None)
+
+    def test_unsupported_period_raises(self, counts_proc):
+        """aggregation_period not in {1, 7} should raise."""
+        with pytest.raises(ValueError, match=r"one of \{1, 7\}"):
+            counts_proc._validate_aggregation_params(14, 5)
+
+    def test_float_period_raises(self, counts_proc):
+        """Non-integer aggregation_period should raise."""
+        with pytest.raises(ValueError, match="positive integer"):
+            counts_proc._validate_aggregation_params(7.0, 5)
+
+
+# ===================================================================
+# _compute_period_offset
+# ===================================================================
+
+
+class TestComputePeriodOffset:
+    """Tests for BaseObservationProcess._compute_period_offset."""
+
+    def test_p1_returns_zero(self, counts_proc):
+        """P=1 always returns 0 regardless of dow arguments."""
+        assert counts_proc._compute_period_offset(None, 1, None) == 0
+        assert counts_proc._compute_period_offset(0, 1, 5) == 0
+        assert counts_proc._compute_period_offset(6, 1, None) == 0
+
+    def test_p7_mmwr_aligned_start(self, counts_proc):
+        """Daily axis starting Sunday with Saturday end => offset 0."""
+        assert counts_proc._compute_period_offset(6, 7, 5) == 0
+
+    def test_p7_monday_start_saturday_end(self, counts_proc):
+        """Daily axis starting Monday with Saturday end => offset 6."""
+        assert counts_proc._compute_period_offset(0, 7, 5) == 6
+
+    def test_p7_saturday_start_saturday_end(self, counts_proc):
+        """Daily axis starting Saturday with Saturday end => offset 1."""
+        assert counts_proc._compute_period_offset(5, 7, 5) == 1
+
+    def test_p7_iso_week_alignment(self, counts_proc):
+        """Daily axis starting Thursday with Sunday end (ISO) => offset 4."""
+        assert counts_proc._compute_period_offset(3, 7, 6) == 4
+
+    def test_p7_offset_always_in_range(self, counts_proc):
+        """P=7 offset is always in [0, 7) for any valid dow combination."""
+        for first in range(7):
+            for end in range(7):
+                offset = counts_proc._compute_period_offset(first, 7, end)
+                assert 0 <= offset < 7
+
+    def test_p7_missing_first_day_dow_raises(self, counts_proc):
+        """P=7 with first_day_dow=None should raise."""
+        with pytest.raises(ValueError, match="both required"):
+            counts_proc._compute_period_offset(None, 7, 5)
+
+    def test_p7_missing_period_end_dow_raises(self, counts_proc):
+        """P=7 with period_end_dow=None should raise."""
+        with pytest.raises(ValueError, match="both required"):
+            counts_proc._compute_period_offset(0, 7, None)
+
+    def test_unsupported_period_raises(self, counts_proc):
+        """P not in {1, 7} should raise."""
+        with pytest.raises(ValueError, match=r"one of \{1, 7\}"):
+            counts_proc._compute_period_offset(0, 14, 5)
+
+    def test_offset_agrees_with_daily_to_weekly(self, counts_proc):
+        """
+        Offset from _compute_period_offset selects the same leading
+        days that daily_to_weekly trims internally for the first
+        complete period, for every (first_day_dow, period_end_dow).
+        """
+        daily = jnp.arange(21.0)
+        for first in range(7):
+            for end in range(7):
+                offset = counts_proc._compute_period_offset(first, 7, end)
+                weekly = daily_to_weekly(
+                    daily,
+                    input_data_first_dow=first,
+                    week_start_dow=(end + 1) % 7,
+                )
+                expected_first_week = float(jnp.sum(daily[offset : offset + 7]))
+                assert float(weekly[0]) == expected_first_week
+
+
+# ===================================================================
+# _validate_period_end_times
+# ===================================================================
+
+
+class TestValidatePeriodEndTimes:
+    """Tests for BaseObservationProcess._validate_period_end_times."""
+
+    def test_p7_aligned_times_pass(self, counts_proc):
+        """P=7 with Saturdays at offset 0 should not raise."""
+        times = jnp.array([6, 13, 20])
+        counts_proc._validate_period_end_times(
+            times, n_total=21, offset=0, aggregation_period=7
+        )
+
+    def test_p7_aligned_nonzero_offset_pass(self, counts_proc):
+        """P=7 with nonzero offset shifts the boundary days."""
+        times = jnp.array([12, 19, 26])
+        counts_proc._validate_period_end_times(
+            times, n_total=30, offset=6, aggregation_period=7
+        )
+
+    def test_p1_any_in_bounds_passes(self, counts_proc):
+        """P=1: alignment is trivial; any in-bounds index passes."""
+        times = jnp.array([0, 3, 7, 19])
+        counts_proc._validate_period_end_times(
+            times, n_total=20, offset=0, aggregation_period=1
+        )
+
+    def test_misaligned_time_raises(self, counts_proc):
+        """P=7 with a non-boundary time should raise."""
+        times = jnp.array([5])
+        with pytest.raises(ValueError, match="period_end_times must lie on"):
+            counts_proc._validate_period_end_times(
+                times, n_total=21, offset=0, aggregation_period=7
+            )
+
+    def test_partial_misalignment_raises(self, counts_proc):
+        """Any single misaligned entry should raise."""
+        times = jnp.array([6, 12, 20])
+        with pytest.raises(ValueError, match="period_end_times must lie on"):
+            counts_proc._validate_period_end_times(
+                times, n_total=21, offset=0, aggregation_period=7
+            )
+
+    def test_negative_time_raises(self, counts_proc):
+        """Negative period_end_times should raise via bounds check."""
+        times = jnp.array([-1, 6])
+        with pytest.raises(ValueError, match="cannot be negative"):
+            counts_proc._validate_period_end_times(
+                times, n_total=21, offset=0, aggregation_period=7
+            )
+
+    def test_time_at_n_total_raises(self, counts_proc):
+        """period_end_times == n_total should raise via bounds check."""
+        times = jnp.array([21])
+        with pytest.raises(ValueError, match="upper bound"):
+            counts_proc._validate_period_end_times(
+                times, n_total=21, offset=0, aggregation_period=7
+            )
+
+    def test_error_reports_offset_and_period(self, counts_proc):
+        """Alignment error message should include offset and aggregation_period."""
+        times = jnp.array([5])
+        with pytest.raises(ValueError, match=r"offset=0.*aggregation_period=7"):
+            counts_proc._validate_period_end_times(
+                times, n_total=21, offset=0, aggregation_period=7
+            )

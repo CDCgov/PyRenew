@@ -19,7 +19,9 @@ from pyrenew.latent import (
 from pyrenew.observation import (
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
+    PoissonNoise,
     PopulationCounts,
+    SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 
@@ -260,6 +262,186 @@ def counts_factory():
     return CountsProcessFactory()
 
 
+@pytest.fixture
+def weekly_regular_counts(simple_delay_pmf):
+    """
+    PopulationCounts with weekly aggregation and regular (dense) reporting.
+
+    Reporting periods end on Saturdays (``period_end_dow=5``), matching the
+    MMWR epiweek convention.
+
+    Returns
+    -------
+    PopulationCounts
+        A weekly-regular PopulationCounts process.
+    """
+    return PopulationCounts(
+        name="hosp",
+        ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        aggregation_period=7,
+        reporting_schedule="regular",
+        period_end_dow=5,
+    )
+
+
+@pytest.fixture
+def weekly_irregular_counts(simple_delay_pmf):
+    """
+    PopulationCounts with weekly aggregation and irregular (sparse) reporting.
+
+    Reporting periods end on Saturdays (``period_end_dow=5``), matching the
+    MMWR epiweek convention.
+
+    Returns
+    -------
+    PopulationCounts
+        A weekly-irregular PopulationCounts process.
+    """
+    return PopulationCounts(
+        name="hosp",
+        ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        aggregation_period=7,
+        reporting_schedule="irregular",
+        period_end_dow=5,
+    )
+
+
+@pytest.fixture
+def daily_irregular_counts(simple_delay_pmf):
+    """
+    PopulationCounts with daily scale and irregular (sparse) reporting.
+
+    Returns
+    -------
+    PopulationCounts
+        A daily-irregular PopulationCounts process.
+    """
+    return PopulationCounts(
+        name="hosp",
+        ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        reporting_schedule="irregular",
+    )
+
+
+@pytest.fixture
+def weekly_regular_subpop_counts(simple_delay_pmf):
+    """
+    SubpopulationCounts with weekly aggregation and regular (dense) reporting.
+
+    Reporting periods end on Saturdays (``period_end_dow=5``), matching the
+    MMWR epiweek convention.
+
+    Returns
+    -------
+    SubpopulationCounts
+        A weekly-regular SubpopulationCounts process.
+    """
+    return SubpopulationCounts(
+        name="ed",
+        ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        aggregation_period=7,
+        reporting_schedule="regular",
+        period_end_dow=5,
+    )
+
+
+@pytest.fixture
+def weekly_irregular_subpop_counts(simple_delay_pmf):
+    """
+    SubpopulationCounts with weekly aggregation and irregular (sparse) reporting.
+
+    Reporting periods end on Saturdays (``period_end_dow=5``), matching the
+    MMWR epiweek convention.
+
+    Returns
+    -------
+    SubpopulationCounts
+        A weekly-irregular SubpopulationCounts process.
+    """
+    return SubpopulationCounts(
+        name="ed",
+        ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        aggregation_period=7,
+        reporting_schedule="irregular",
+        period_end_dow=5,
+    )
+
+
+@pytest.fixture
+def daily_irregular_subpop_counts(simple_delay_pmf):
+    """
+    SubpopulationCounts with daily scale and irregular (sparse) reporting.
+
+    Returns
+    -------
+    SubpopulationCounts
+        A daily-irregular SubpopulationCounts process.
+    """
+    return SubpopulationCounts(
+        name="ed",
+        ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        reporting_schedule="irregular",
+    )
+
+
 # =============================================================================
 # Infection Fixtures
 # =============================================================================
+
+
+@pytest.fixture
+def subpop_infections_28d():
+    """
+    Four-week ``(28, 3)`` infections array at 100/day/subpop.
+
+    Used by weekly-aggregation tests on ``SubpopulationCounts``.
+
+    Returns
+    -------
+    jnp.ndarray
+        Shape ``(28, 3)`` filled with 100.0.
+    """
+    return jnp.ones((28, 3)) * 100.0
+
+
+@pytest.fixture
+def subpop_infections_30d():
+    """
+    Thirty-day ``(30, 3)`` infections array at 100/day/subpop.
+
+    Used by daily-scale tests on ``SubpopulationCounts``.
+
+    Returns
+    -------
+    jnp.ndarray
+        Shape ``(30, 3)`` filled with 100.0.
+    """
+    return jnp.ones((30, 3)) * 100.0
+
+
+@pytest.fixture
+def mmwr_saturday_indices_first_three():
+    """
+    Daily-axis indices of the first three MMWR Saturdays for a Sunday-start axis.
+
+    When element 0 of the daily axis is a Sunday (``first_day_dow=6``),
+    Saturdays fall on indices 6, 13, 20, ...
+
+    Returns
+    -------
+    jnp.ndarray
+        Shape ``(3,)`` containing ``[6, 13, 20]``.
+    """
+    return jnp.array([6, 13, 20])

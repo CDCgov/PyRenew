@@ -93,6 +93,7 @@ def validation_builder():
             ascertainment_rate_rv=DeterministicVariable("ihr_subpop", 0.01),
             delay_distribution_rv=delay,
             noise=NegativeBinomialNoise(DeterministicVariable("conc_subpop", 10.0)),
+            reporting_schedule="irregular",
         )
     )
 
@@ -284,7 +285,7 @@ class TestMultiSignalModelValidation:
             },
             hospital_subpop={
                 "obs": jnp.array([10, 20]),
-                "times": jnp.array([5, 10]),
+                "period_end_times": jnp.array([5, 10]),
             },
         )
 
@@ -299,7 +300,7 @@ class TestMultiSignalModelValidation:
                 subpop_fractions=SUBPOP_FRACTIONS,
                 hospital_subpop={
                     "obs": jnp.array([10]),
-                    "times": jnp.array([n_total + 10]),
+                    "period_end_times": jnp.array([n_total + 10]),
                 },
             )
 
@@ -313,7 +314,7 @@ class TestMultiSignalModelValidation:
                 subpop_fractions=SUBPOP_FRACTIONS,
                 hospital_subpop={
                     "obs": jnp.array([10]),
-                    "times": jnp.array([-1]),
+                    "period_end_times": jnp.array([-1]),
                 },
             )
 
@@ -327,7 +328,7 @@ class TestMultiSignalModelValidation:
                 subpop_fractions=SUBPOP_FRACTIONS,
                 unknown_obs={
                     "obs": jnp.array([10]),
-                    "times": jnp.array([5]),
+                    "period_end_times": jnp.array([5]),
                 },
             )
 
@@ -343,7 +344,7 @@ class TestMultiSignalModelValidation:
                 subpop_fractions=SUBPOP_FRACTIONS,
                 hospital_subpop={
                     "obs": jnp.array([10, 20, 30]),  # 3 elements
-                    "times": jnp.array([5, 10]),  # 2 elements
+                    "period_end_times": jnp.array([5, 10]),  # 2 elements
                 },
             )
 
@@ -363,7 +364,7 @@ class TestMultiSignalModelValidation:
                 subpop_fractions=SUBPOP_FRACTIONS,
                 hospital_subpop={
                     "subpop_indices": jnp.array([-1, 0, 1]),
-                    "times": jnp.array([5, 6, 7]),
+                    "period_end_times": jnp.array([5, 6, 7]),
                 },
             )
 
@@ -380,7 +381,7 @@ class TestMultiSignalModelValidation:
                 subpop_fractions=SUBPOP_FRACTIONS,
                 hospital_subpop={
                     "subpop_indices": jnp.array([0, 1, 5]),  # 5 >= 3
-                    "times": jnp.array([5, 6, 7]),
+                    "period_end_times": jnp.array([5, 6, 7]),
                 },
             )
 

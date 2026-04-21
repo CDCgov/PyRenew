@@ -198,6 +198,113 @@ class BaseObservationProcess(RandomVariable):
         if jnp.any(dow_effect < 0):
             raise ValueError(f"{param_name} must have non-negative values")
 
+    def _validate_aggregation_params(
+        self,
+        aggregation_period: int,
+        period_end_dow: int | None,
+    ) -> None:
+        """
+        Validate temporal-aggregation constructor parameters.
+
+        Checks that ``aggregation_period`` is an integer in
+        ``{1, 7}``, and that ``period_end_dow`` is an integer in
+        ``{0, ..., 6}`` (0=Monday, 6=Sunday, ISO convention) when
+        ``aggregation_period == 7``. ``period_end_dow`` is ignored
+        when ``aggregation_period == 1``.
+
+        Parameters
+        ----------
+        aggregation_period
+            Width of the reporting period in fundamental time units.
+        period_end_dow
+            Day-of-week index of each period's final day.
+
+        Raises
+        ------
+        ValueError
+            If ``aggregation_period`` is not in ``{1, 7}``, or if
+            ``period_end_dow`` is missing or out of range when
+            ``aggregation_period == 7``.
+
+        Notes
+        -----
+        ``period_end_dow`` is a weekly-specific anchor; generalizing
+        beyond ``aggregation_period == 7`` will require a different
+        anchor representation.
+        """
+        if not isinstance(aggregation_period, int) or aggregation_period < 1:
+            raise ValueError(
+                "aggregation_period must be a positive integer, "
+                f"got {aggregation_period!r}"
+            )
+        if aggregation_period not in (1, 7):
+            raise ValueError(
+                f"aggregation_period must be one of {{1, 7}}, got {aggregation_period}"
+            )
+        if aggregation_period == 7:
+            if period_end_dow is None:
+                raise ValueError(
+                    "period_end_dow is required when aggregation_period == 7"
+                )
+            if not isinstance(period_end_dow, int) or not (0 <= period_end_dow <= 6):
+                raise ValueError(
+                    "period_end_dow must be an integer in {0, ..., 6} "
+                    f"(0=Monday, 6=Sunday), got {period_end_dow!r}"
+                )
+
+    def _compute_period_offset(
+        self,
+        first_day_dow: int | None,
+        aggregation_period: int,
+        period_end_dow: int | None,
+    ) -> int:
+        """
+        Compute the number of leading daily timepoints to trim so
+        that the daily axis aligns to whole aggregation periods.
+
+        Parameters
+        ----------
+        first_day_dow
+            Day-of-week index of element 0 of the daily axis
+            (0=Monday, 6=Sunday, ISO convention). Required when
+            ``aggregation_period == 7``.
+        aggregation_period
+            Width of the reporting period. Must be in ``{1, 7}``.
+        period_end_dow
+            Day-of-week index of each period's final day. Required
+            when ``aggregation_period == 7``.
+
+        Returns
+        -------
+        int
+            Trim offset in ``[0, aggregation_period)``. Returns
+            ``0`` when ``aggregation_period == 1``.
+
+        Raises
+        ------
+        ValueError
+            If ``aggregation_period`` is not in ``{1, 7}``, or if
+            ``first_day_dow`` or ``period_end_dow`` is ``None`` when
+            ``aggregation_period == 7``.
+
+        Notes
+        -----
+        For ``aggregation_period == 7``:
+        ``(period_end_dow + 1 - first_day_dow) % 7``.
+        """
+        if aggregation_period == 1:
+            return 0
+        if aggregation_period != 7:
+            raise ValueError(
+                f"aggregation_period must be one of {{1, 7}}, got {aggregation_period}"
+            )
+        if first_day_dow is None or period_end_dow is None:
+            raise ValueError(
+                "first_day_dow and period_end_dow are both required "
+                "when aggregation_period == 7"
+            )
+        return (period_end_dow + 1 - first_day_dow) % aggregation_period
+
     def _convolve_with_alignment(
         self,
         latent_incidence: ArrayLike,
@@ -363,6 +470,7 @@ class BaseObservationProcess(RandomVariable):
         Validate an index array has non-negative values within bounds.
 
         Checks that all values are non-negative integers in ``[0, upper_bound)``.
+        An empty array is a no-op and passes validation.
 
         Parameters
         ----------
@@ -379,6 +487,8 @@ class BaseObservationProcess(RandomVariable):
             If indices contains negative values or values >= upper_bound.
         """
         indices = jnp.asarray(indices)
+        if indices.size == 0:
+            return
         if jnp.any(indices < 0):
             raise ValueError(
                 f"Observation '{self.name}': {param_name} cannot be negative"
@@ -482,6 +592,58 @@ class BaseObservationProcess(RandomVariable):
                 f"Observation '{self.name}': obs length {obs.shape[0]} "
                 f"must equal n_total ({n_total}). "
                 f"Pad with NaN for initialization period."
+            )
+
+    def _validate_period_end_times(
+        self,
+        period_end_times: ArrayLike,
+        n_total: int,
+        offset: int,
+        aggregation_period: int,
+    ) -> None:
+        """
+        Validate a period-end-time index array.
+
+        Checks that all values are non-negative, within
+        ``[0, n_total)``, and lie on aggregation-period boundaries,
+        i.e., ``(t - offset) % aggregation_period ==
+        aggregation_period - 1`` for every entry ``t``. When
+        ``aggregation_period == 1`` the alignment condition holds
+        trivially and only the bounds check runs.
+
+        Parameters
+        ----------
+        period_end_times
+            Daily-axis indices of each observed period's final day.
+        n_total
+            Total number of time steps.
+        offset
+            Front-trim offset in daily units, as returned by
+            ``_compute_period_offset``. Must be in
+            ``[0, aggregation_period)``.
+        aggregation_period
+            Width of the reporting period in fundamental time units.
+
+        Raises
+        ------
+        ValueError
+            If ``period_end_times`` contains negative values, values
+            ``>= n_total``, or entries that fail the alignment check.
+        """
+        self._validate_index_array(period_end_times, n_total, "period_end_times")
+        if aggregation_period == 1:
+            return
+        period_end_times = jnp.asarray(period_end_times)
+        misaligned = (period_end_times - offset) % aggregation_period != (
+            aggregation_period - 1
+        )
+        if jnp.any(misaligned):
+            raise ValueError(
+                f"Observation '{self.name}': period_end_times must lie on "
+                f"aggregation-period boundaries "
+                f"(offset={offset}, aggregation_period={aggregation_period}); "
+                f"each entry t must satisfy "
+                f"(t - offset) % {aggregation_period} == {aggregation_period - 1}."
             )
 
     @abstractmethod

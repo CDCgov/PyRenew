@@ -14,7 +14,7 @@ from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.noise import CountNoise
 from pyrenew.observation.types import ObservationSample
-from pyrenew.time import get_sequential_day_of_week_indices
+from pyrenew.time import daily_to_weekly, get_sequential_day_of_week_indices
 
 
 class CountObservation(BaseObservationProcess):
@@ -25,6 +25,8 @@ class CountObservation(BaseObservationProcess):
     with composable noise model.
     """
 
+    _SUPPORTED_SCHEDULES = ("regular", "irregular")
+
     def __init__(
         self,
         name: str,
@@ -33,6 +35,9 @@ class CountObservation(BaseObservationProcess):
         noise: CountNoise,
         right_truncation_rv: RandomVariable | None = None,
         day_of_week_rv: RandomVariable | None = None,
+        aggregation_period: int = 1,
+        reporting_schedule: str = "regular",
+        period_end_dow: int | None = None,
     ) -> None:
         """
         Initialize count observation base.
@@ -63,12 +68,46 @@ class CountObservation(BaseObservationProcess):
             overall predicted counts. When provided (along with
             ``first_day_dow`` at sample time), predicted counts are
             scaled by a periodic weekly pattern.
+        aggregation_period
+            Width of the reporting period in fundamental time units.
+            Must be in ``{1, 7}``. ``1`` means no aggregation (daily
+            observations).
+        reporting_schedule
+            Either ``"regular"`` (dense observation array, one entry
+            per period, NaN for unobserved periods) or ``"irregular"``
+            (sparse observation array with user-supplied period-end
+            time indices).
+        period_end_dow
+            Day-of-week index of each period's final day
+            (0=Monday, 6=Sunday, ISO convention). Required when
+            ``aggregation_period == 7``; ignored otherwise.
+
+        Raises
+        ------
+        ValueError
+            If aggregation/reporting parameters are invalid, or if a
+            day-of-week effect is combined with ``aggregation_period > 1``
+            (within-period structure is destroyed by aggregation).
         """
         super().__init__(name=name, temporal_pmf_rv=delay_distribution_rv)
         self.ascertainment_rate_rv = ascertainment_rate_rv
         self.noise = noise
         self.right_truncation_rv = right_truncation_rv
         self.day_of_week_rv = day_of_week_rv
+        self._validate_aggregation_params(aggregation_period, period_end_dow)
+        if reporting_schedule not in self._SUPPORTED_SCHEDULES:
+            raise ValueError(
+                f"reporting_schedule must be one of {self._SUPPORTED_SCHEDULES}, "
+                f"got {reporting_schedule!r}"
+            )
+        if aggregation_period > 1 and day_of_week_rv is not None:
+            raise ValueError(
+                "day_of_week_rv cannot be combined with aggregation_period > 1; "
+                "aggregation destroys within-period structure."
+            )
+        self.aggregation_period = aggregation_period
+        self.reporting_schedule = reporting_schedule
+        self.period_end_dow = period_end_dow
 
     def validate(self) -> None:
         """
@@ -244,6 +283,52 @@ class CountObservation(BaseObservationProcess):
             daily_effect = daily_effect[:, None]
         return predicted * daily_effect
 
+    def _aggregate(
+        self,
+        predicted_daily: ArrayLike,
+        first_day_dow: int | None,
+    ) -> ArrayLike:
+        """
+        Aggregate daily predicted counts to the reporting-period grid.
+
+        When ``aggregation_period == 1`` returns the input unchanged.
+        Otherwise sums daily values over non-overlapping fixed-width
+        periods anchored by ``period_end_dow``, via
+        ``pyrenew.time.daily_to_weekly``. Works on both 1D
+        ``(n_total,)`` and 2D ``(n_total, n_subpops)`` inputs.
+
+        Parameters
+        ----------
+        predicted_daily
+            Predicted counts on the daily time axis.
+        first_day_dow
+            Day-of-week index of element 0 of the daily axis
+            (0=Monday, 6=Sunday, ISO convention). Required when
+            ``aggregation_period > 1``.
+
+        Returns
+        -------
+        ArrayLike
+            Aggregated counts on the period grid; same trailing
+            dimensions as ``predicted_daily``. Returns
+            ``predicted_daily`` unchanged when
+            ``aggregation_period == 1``.
+
+        Raises
+        ------
+        ValueError
+            If ``aggregation_period > 1`` and ``first_day_dow`` is ``None``.
+        """
+        if self.aggregation_period == 1:
+            return predicted_daily
+        if first_day_dow is None:
+            raise ValueError("first_day_dow is required when aggregation_period > 1")
+        return daily_to_weekly(
+            predicted_daily,
+            input_data_first_dow=first_day_dow,
+            week_start_dow=(self.period_end_dow + 1) % 7,
+        )
+
 
 class PopulationCounts(CountObservation):
     """
@@ -293,6 +378,8 @@ class PopulationCounts(CountObservation):
         n_total: int,
         n_subpops: int,
         obs: ArrayLike | None = None,
+        period_end_times: ArrayLike | None = None,
+        first_day_dow: int | None = None,
         **kwargs: object,
     ) -> None:
         """
@@ -301,21 +388,66 @@ class PopulationCounts(CountObservation):
         Parameters
         ----------
         n_total
-            Total number of time steps (n_init + n_days_post_init).
+            Total number of daily time steps (``n_init + n_days_post_init``).
         n_subpops
             Number of subpopulations (unused for aggregate observations).
         obs
-            Observed counts on shared time axis. Shape: (n_total,).
+            Observed counts. Shape depends on ``reporting_schedule``:
+            ``"regular"`` expects a dense array of length ``n_total // P``
+            after front-trim, with NaN for unobserved periods;
+            ``"irregular"`` expects an array matching ``period_end_times``.
+        period_end_times
+            Daily-axis indices of each observed period's final day. Required
+            for ``reporting_schedule="irregular"``.
+        first_day_dow
+            Day-of-week index of element 0 of the shared time axis
+            (0=Monday, 6=Sunday, ISO convention). Required when
+            ``aggregation_period > 1``.
         **kwargs
             Additional keyword arguments (ignored).
 
         Raises
         ------
         ValueError
-            If obs length doesn't match n_total.
+            If obs length or period_end_times fail their respective
+            checks, or if ``first_day_dow`` is missing when
+            ``aggregation_period > 1``.
         """
+        P = self.aggregation_period
+
+        if self.reporting_schedule == "regular":
+            if obs is None:
+                return
+            if P == 1:
+                self._validate_obs_dense(obs, n_total)
+                return
+            if first_day_dow is None:
+                raise ValueError(
+                    f"Observation '{self.name}': first_day_dow is required "
+                    f"when aggregation_period == {P}"
+                )
+            offset = self._compute_period_offset(first_day_dow, P, self.period_end_dow)
+            n_periods = (n_total - offset) // P
+            obs = jnp.asarray(obs)
+            if obs.shape[0] != n_periods:
+                raise ValueError(
+                    f"Observation '{self.name}': obs length {obs.shape[0]} "
+                    f"must equal n_periods ({n_periods}). "
+                    f"Pad with NaN for unobserved periods."
+                )
+            return
+
+        if period_end_times is None:
+            return
+        if P > 1 and first_day_dow is None:
+            raise ValueError(
+                f"Observation '{self.name}': first_day_dow is required "
+                f"when aggregation_period == {P}"
+            )
+        offset = self._compute_period_offset(first_day_dow, P, self.period_end_dow)
+        self._validate_period_end_times(period_end_times, n_total, offset, P)
         if obs is not None:
-            self._validate_obs_dense(obs, n_total)
+            self._validate_obs_times_shape(obs, period_end_times)
 
     def sample(
         self,
@@ -323,79 +455,110 @@ class PopulationCounts(CountObservation):
         obs: ArrayLike | None = None,
         right_truncation_offset: int | None = None,
         first_day_dow: int | None = None,
+        period_end_times: ArrayLike | None = None,
     ) -> ObservationSample:
         """
         Sample aggregated counts.
 
-        Both infections and obs use a shared time axis [0, n_total) where
-        n_total = n_init + n_days. NaN in obs marks unobserved timepoints
-        (initialization period or missing data).
+        Daily transforms (right-truncation, day-of-week) run on the
+        daily axis. When ``aggregation_period > 1`` the daily
+        predictions are summed onto the reporting-period grid before
+        the noise model. Likelihood path depends on
+        ``reporting_schedule``: ``"regular"`` uses a dense-with-NaN
+        array plus a mask; ``"irregular"`` fancy-indexes the
+        aggregated array at period indices derived from
+        ``period_end_times``.
 
         Parameters
         ----------
         infections
             Aggregate infections from the infection process.
-            Shape: (n_total,) where n_total = n_init + n_days.
+            Shape ``(n_total,)``.
         obs
-            Observed counts on shared time axis. Shape: (n_total,).
-            Use NaN for initialization period and any missing observations.
-            None for prior predictive sampling.
+            Observed counts. Shape depends on ``reporting_schedule``:
+            ``"regular"`` expects a dense array on the period grid
+            with NaN for unobserved periods; ``"irregular"`` expects
+            an array of the same length as ``period_end_times``.
+            ``None`` for prior predictive sampling.
         right_truncation_offset
-            If provided (and ``right_truncation_rv`` was set at construction),
-            apply right-truncation adjustment to predicted counts.
-        first_day_dow : int | None
-            Day of the week for the first timepoint on the shared time
-            axis (0=Monday, 6=Sunday, ISO convention). Required when
-            ``day_of_week_rv`` was set at construction. Use
-            ``model.compute_first_day_dow(obs_start_dow)`` to convert
-            from the day of the week of the first observation.
+            If provided (and ``right_truncation_rv`` was set at
+            construction), apply right-truncation adjustment to the
+            daily predictions.
+        first_day_dow
+            Day-of-week index of the first timepoint on the shared
+            time axis (0=Monday, 6=Sunday, ISO convention). Required
+            when ``day_of_week_rv`` was set at construction or when
+            ``aggregation_period > 1``.
+        period_end_times
+            Daily-axis indices of each observed period's final day.
+            Required when ``reporting_schedule == "irregular"``.
 
         Returns
         -------
         ObservationSample
-            Named tuple with `observed` (sampled/conditioned counts) and
-            `predicted` (predicted counts before noise, shape: n_total).
+            Named tuple with ``observed`` (sampled/conditioned counts)
+            and ``predicted`` (predictions on the reporting-period
+            grid; equal to daily predictions when
+            ``aggregation_period == 1``).
         """
-        predicted_counts = self._predicted_obs(infections)
+        predicted_daily = self._predicted_obs(infections)
         if self.day_of_week_rv is not None:
             if first_day_dow is None:
                 raise ValueError(
                     "first_day_dow is required when day_of_week_rv is set."
                 )
-            predicted_counts = self._apply_day_of_week(predicted_counts, first_day_dow)
+            predicted_daily = self._apply_day_of_week(predicted_daily, first_day_dow)
         if self.right_truncation_rv is not None and right_truncation_offset is not None:
-            predicted_counts = self._apply_right_truncation(
-                predicted_counts, right_truncation_offset
+            predicted_daily = self._apply_right_truncation(
+                predicted_daily, right_truncation_offset
             )
-        self._deterministic("predicted", predicted_counts)
 
-        # Compute mask: True where observation contributes to likelihood.
-        # NaN in predictions (initialization period) or obs (missing data)
-        # are excluded via mask.
-        valid_pred = ~jnp.isnan(predicted_counts)
-        if obs is not None:
-            valid_obs = ~jnp.isnan(obs)
-            mask = valid_pred & valid_obs
+        predicted = self._aggregate(predicted_daily, first_day_dow)
+        if self.aggregation_period > 1:
+            self._deterministic("predicted_daily", predicted_daily)
+        self._deterministic("predicted", predicted)
+
+        if self.reporting_schedule == "regular":
+            valid_pred = ~jnp.isnan(predicted)
+            if obs is not None:
+                valid_obs = ~jnp.isnan(obs)
+                mask = valid_pred & valid_obs
+            else:
+                mask = valid_pred
+
+            # JAX evaluates log_prob for all elements even when mask excludes
+            # them from the likelihood sum. Replace NaN with safe values to
+            # avoid NaN propagation; mask=False ensures they do not affect
+            # inference.
+            safe_predicted = jnp.where(jnp.isnan(predicted), 1.0, predicted)
+            safe_obs = None
+            if obs is not None:
+                safe_obs = jnp.where(jnp.isnan(obs), safe_predicted, obs)
+
+            observed = self.noise.sample(
+                name=self._sample_site_name("obs"),
+                predicted=safe_predicted,
+                obs=safe_obs,
+                mask=mask,
+            )
         else:
-            mask = valid_pred
+            if period_end_times is None:
+                raise ValueError(
+                    f"Observation '{self.name}': period_end_times is "
+                    f"required when reporting_schedule == 'irregular'"
+                )
+            P = self.aggregation_period
+            offset = self._compute_period_offset(first_day_dow, P, self.period_end_dow)
+            period_idx = (jnp.asarray(period_end_times) - offset - (P - 1)) // P
+            predicted_obs = predicted[period_idx]
 
-        # JAX evaluates log_prob for all array elements even when mask
-        # excludes them from the likelihood sum. Replace NaN with safe values
-        # to avoid NaN propagation in JAX's computation graph. These values
-        # do not affect inference since mask=False excludes them.
-        safe_predicted = jnp.where(jnp.isnan(predicted_counts), 1.0, predicted_counts)
-        safe_obs = None
-        if obs is not None:
-            safe_obs = jnp.where(jnp.isnan(obs), safe_predicted, obs)
+            observed = self.noise.sample(
+                name=self._sample_site_name("obs"),
+                predicted=predicted_obs,
+                obs=obs,
+            )
 
-        observed = self.noise.sample(
-            name=self._sample_site_name("obs"),
-            predicted=safe_predicted,
-            obs=safe_obs,
-            mask=mask,
-        )
-
-        return ObservationSample(observed=observed, predicted=predicted_counts)
+        return ObservationSample(observed=observed, predicted=predicted)
 
 
 class SubpopulationCounts(CountObservation):
@@ -444,9 +607,10 @@ class SubpopulationCounts(CountObservation):
         self,
         n_total: int,
         n_subpops: int,
-        times: ArrayLike | None = None,
-        subpop_indices: ArrayLike | None = None,
         obs: ArrayLike | None = None,
+        period_end_times: ArrayLike | None = None,
+        first_day_dow: int | None = None,
+        subpop_indices: ArrayLike | None = None,
         **kwargs: object,
     ) -> None:
         """
@@ -455,96 +619,213 @@ class SubpopulationCounts(CountObservation):
         Parameters
         ----------
         n_total
-            Total number of time steps (n_init + n_days_post_init).
+            Total number of daily time steps (``n_init + n_days_post_init``).
         n_subpops
             Number of subpopulations.
-        times
-            Day index for each observation on the shared time axis.
-        subpop_indices
-            Subpopulation index for each observation (0-indexed).
         obs
-            Observed counts (n_obs,).
+            Observed counts. For ``reporting_schedule="regular"``
+            has shape ``(n_periods, n_observed_subpops)`` with NaN
+            for unobserved periods. For
+            ``reporting_schedule="irregular"`` has shape ``(n_obs,)``
+            matching ``period_end_times`` and ``subpop_indices``.
+        period_end_times
+            Daily-axis indices of each observed period's final day.
+            Required for ``reporting_schedule="irregular"``.
+        first_day_dow
+            Day-of-week index of element 0 of the shared time axis
+            (0=Monday, 6=Sunday, ISO convention). Required when
+            ``aggregation_period > 1``.
+        subpop_indices
+            Subpopulation indices (0-indexed). For
+            ``reporting_schedule="regular"``: shape
+            ``(n_observed_subpops,)`` selecting which subpopulation
+            columns appear in ``obs``. For
+            ``reporting_schedule="irregular"``: shape ``(n_obs,)``
+            with one subpopulation per observation.
         **kwargs
             Additional keyword arguments (ignored).
 
         Raises
         ------
         ValueError
-            If times or subpop_indices are out of bounds, or if
-            obs and times have mismatched lengths.
+            If any index array is out of bounds, any shape check
+            fails, or ``first_day_dow`` is missing when
+            ``aggregation_period > 1``.
         """
-        if times is not None:
-            self._validate_times(times, n_total)
-            if obs is not None:
-                self._validate_obs_times_shape(obs, times)
+        P = self.aggregation_period
+
         if subpop_indices is not None:
             self._validate_subpop_indices(subpop_indices, n_subpops)
+
+        if self.reporting_schedule == "regular":
+            if obs is None:
+                return
+            if P > 1 and first_day_dow is None:
+                raise ValueError(
+                    f"Observation '{self.name}': first_day_dow is required "
+                    f"when aggregation_period == {P}"
+                )
+            offset = self._compute_period_offset(first_day_dow, P, self.period_end_dow)
+            n_periods = n_total if P == 1 else (n_total - offset) // P
+            obs = jnp.asarray(obs)
+            if obs.ndim != 2:
+                raise ValueError(
+                    f"Observation '{self.name}': regular-schedule obs must "
+                    f"be 2D (n_periods, n_observed_subpops); got shape {obs.shape}"
+                )
+            if obs.shape[0] != n_periods:
+                raise ValueError(
+                    f"Observation '{self.name}': obs dimension 0 length "
+                    f"{obs.shape[0]} must equal n_periods ({n_periods}). "
+                    f"Pad with NaN for unobserved periods."
+                )
+            if subpop_indices is not None:
+                n_observed = jnp.asarray(subpop_indices).shape[0]
+                if obs.shape[1] != n_observed:
+                    raise ValueError(
+                        f"Observation '{self.name}': obs dimension 1 length "
+                        f"{obs.shape[1]} must equal len(subpop_indices) "
+                        f"({n_observed})"
+                    )
+            return
+
+        if period_end_times is None:
+            return
+        if P > 1 and first_day_dow is None:
+            raise ValueError(
+                f"Observation '{self.name}': first_day_dow is required "
+                f"when aggregation_period == {P}"
+            )
+        offset = self._compute_period_offset(first_day_dow, P, self.period_end_dow)
+        self._validate_period_end_times(period_end_times, n_total, offset, P)
+        if obs is not None:
+            self._validate_obs_times_shape(obs, period_end_times)
+        if subpop_indices is not None:
+            self._validate_obs_times_shape(subpop_indices, period_end_times)
 
     def sample(
         self,
         infections: ArrayLike,
-        times: ArrayLike,
-        subpop_indices: ArrayLike,
         obs: ArrayLike | None = None,
         right_truncation_offset: int | None = None,
         first_day_dow: int | None = None,
+        period_end_times: ArrayLike | None = None,
+        subpop_indices: ArrayLike | None = None,
     ) -> ObservationSample:
         """
         Sample subpopulation-level counts.
 
-        Times are on the shared time axis [0, n_total) where
-        n_total = n_init + n_days. This method performs direct indexing
-        without any offset adjustment.
+        Daily transforms (right-truncation, day-of-week) run on the
+        daily axis. When ``aggregation_period > 1`` the daily
+        predictions are summed onto the reporting-period grid before
+        the noise model. Likelihood path depends on
+        ``reporting_schedule``: ``"regular"`` selects the observed
+        subpopulation columns and uses a dense-with-NaN array plus
+        a mask; ``"irregular"`` fancy-indexes the aggregated array
+        at period indices derived from ``period_end_times``.
 
         Parameters
         ----------
         infections
             Subpopulation-level infections from the infection process.
-            Shape: (n_total, n_subpops)
-        times
-            Day index for each observation on the shared time axis.
-            Must be in range [0, n_total). Shape: (n_obs,)
-        subpop_indices
-            Subpopulation index for each observation (0-indexed).
-            Shape: (n_obs,)
+            Shape ``(n_total, n_subpops)``.
         obs
-            Observed counts (n_obs,), or None for prior sampling.
+            Observed counts. For ``reporting_schedule="regular"``:
+            shape ``(n_periods, n_observed_subpops)`` with NaN for
+            unobserved periods. For
+            ``reporting_schedule="irregular"``: shape ``(n_obs,)``
+            matching ``period_end_times`` and ``subpop_indices``.
+            ``None`` for prior predictive sampling.
         right_truncation_offset
-            If provided (and ``right_truncation_rv`` was set at construction),
-            apply right-truncation adjustment to predicted counts.
-        first_day_dow : int | None
-            Day of the week for the first timepoint on the shared time
-            axis (0=Monday, 6=Sunday, ISO convention). Required when
-            ``day_of_week_rv`` was set at construction. Use
-            ``model.compute_first_day_dow(obs_start_dow)`` to convert
-            from the day of the week of the first observation.
+            If provided (and ``right_truncation_rv`` was set at
+            construction), apply right-truncation adjustment to the
+            daily predictions.
+        first_day_dow
+            Day-of-week index of the first timepoint on the shared
+            time axis (0=Monday, 6=Sunday, ISO convention). Required
+            when ``day_of_week_rv`` was set at construction or when
+            ``aggregation_period > 1``.
+        period_end_times
+            Daily-axis indices of each observed period's final day.
+            Required when ``reporting_schedule == "irregular"``.
+        subpop_indices
+            Subpopulation indices (0-indexed). Required. For
+            ``reporting_schedule="regular"``: shape
+            ``(n_observed_subpops,)`` selecting which subpopulation
+            columns of the aggregated array enter the likelihood.
+            For ``reporting_schedule="irregular"``: shape ``(n_obs,)``
+            with one subpopulation per observation.
 
         Returns
         -------
         ObservationSample
-            Named tuple with `observed` (sampled/conditioned counts) and
-            `predicted` (predicted counts before noise, shape: n_total x n_subpops).
+            Named tuple with ``observed`` (sampled/conditioned counts)
+            and ``predicted`` (predictions on the reporting-period
+            grid, shape ``(n_periods, n_subpops)``; equal to daily
+            predictions when ``aggregation_period == 1``).
         """
-        predicted_counts = self._predicted_obs(infections)
+        if subpop_indices is None:
+            raise ValueError(f"Observation '{self.name}': subpop_indices is required.")
+
+        predicted_daily = self._predicted_obs(infections)
         if self.day_of_week_rv is not None:
             if first_day_dow is None:
                 raise ValueError(
                     "first_day_dow is required when day_of_week_rv is set."
                 )
-            predicted_counts = self._apply_day_of_week(predicted_counts, first_day_dow)
+            predicted_daily = self._apply_day_of_week(predicted_daily, first_day_dow)
         if self.right_truncation_rv is not None and right_truncation_offset is not None:
-            predicted_counts = self._apply_right_truncation(
-                predicted_counts, right_truncation_offset
+            predicted_daily = self._apply_right_truncation(
+                predicted_daily, right_truncation_offset
             )
-        self._deterministic("predicted", predicted_counts)
 
-        # Direct indexing on shared time axis - no offset needed
-        predicted_obs = predicted_counts[times, subpop_indices]
+        predicted = self._aggregate(predicted_daily, first_day_dow)
+        if self.aggregation_period > 1:
+            self._deterministic("predicted_daily", predicted_daily)
+        self._deterministic("predicted", predicted)
 
-        observed = self.noise.sample(
-            name=self._sample_site_name("obs"),
-            predicted=predicted_obs,
-            obs=obs,
-        )
+        if self.reporting_schedule == "regular":
+            predicted_selected = predicted[:, subpop_indices]
 
-        return ObservationSample(observed=observed, predicted=predicted_counts)
+            valid_pred = ~jnp.isnan(predicted_selected)
+            if obs is not None:
+                valid_obs = ~jnp.isnan(obs)
+                mask = valid_pred & valid_obs
+            else:
+                mask = valid_pred
+
+            # JAX evaluates log_prob for all elements even when mask excludes
+            # them from the likelihood sum. Replace NaN with safe values to
+            # avoid NaN propagation; mask=False ensures they do not affect
+            # inference.
+            safe_predicted = jnp.where(
+                jnp.isnan(predicted_selected), 1.0, predicted_selected
+            )
+            safe_obs = None
+            if obs is not None:
+                safe_obs = jnp.where(jnp.isnan(obs), safe_predicted, obs)
+
+            observed = self.noise.sample(
+                name=self._sample_site_name("obs"),
+                predicted=safe_predicted,
+                obs=safe_obs,
+                mask=mask,
+            )
+        else:
+            if period_end_times is None:
+                raise ValueError(
+                    f"Observation '{self.name}': period_end_times is "
+                    f"required when reporting_schedule == 'irregular'"
+                )
+            P = self.aggregation_period
+            offset = self._compute_period_offset(first_day_dow, P, self.period_end_dow)
+            period_idx = (jnp.asarray(period_end_times) - offset - (P - 1)) // P
+            predicted_obs = predicted[period_idx, subpop_indices]
+
+            observed = self.noise.sample(
+                name=self._sample_site_name("obs"),
+                predicted=predicted_obs,
+                obs=obs,
+            )
+
+        return ObservationSample(observed=observed, predicted=predicted)
