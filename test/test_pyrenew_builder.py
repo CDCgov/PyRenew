@@ -6,10 +6,17 @@ import jax.numpy as jnp
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import RandomWalk, SubpopulationInfections
+from pyrenew.latent import (
+    AR1,
+    PopulationInfections,
+    RandomWalk,
+    StepwiseTemporalProcess,
+    SubpopulationInfections,
+)
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import (
     NegativeBinomialNoise,
+    PoissonNoise,
     PopulationCounts,
     SubpopulationCounts,
 )
@@ -441,6 +448,184 @@ class TestMultiSignalModelHelpers:
         shifted = model.shift_times(times)
 
         assert jnp.array_equal(shifted, times + n_init)
+
+
+def _coherence_builder(
+    *,
+    single_rt_process,
+    observations,
+):
+    """
+    Build a configured PyrenewBuilder with a PopulationInfections latent and
+    a supplied temporal process, plus the given observation instances.
+
+    Returns
+    -------
+    PyrenewBuilder
+        Builder configured but not yet built.
+    """
+    builder = PyrenewBuilder()
+    builder.configure_latent(
+        PopulationInfections,
+        gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
+        I0_rv=DeterministicVariable("I0", 0.001),
+        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+        single_rt_process=single_rt_process,
+    )
+    for obs in observations:
+        builder.add_observation(obs)
+    return builder
+
+
+def _weekly_hosp_counts(name="hospital", period_end_dow=5):
+    """
+    Build a weekly-aggregated PopulationCounts observation with PoissonNoise.
+
+    Returns
+    -------
+    PopulationCounts
+        Weekly-regular observation anchored to the specified period end dow.
+    """
+    return PopulationCounts(
+        name=name,
+        ascertainment_rate_rv=DeterministicVariable(f"{name}_ihr", 0.01),
+        delay_distribution_rv=DeterministicPMF(f"{name}_delay", jnp.array([1.0])),
+        noise=PoissonNoise(),
+        aggregation_period=7,
+        reporting_schedule="regular",
+        period_end_dow=period_end_dow,
+    )
+
+
+def _daily_ed_counts(name="ed"):
+    """
+    Build a daily PopulationCounts observation with PoissonNoise.
+
+    Returns
+    -------
+    PopulationCounts
+        Daily-regular observation with no aggregation.
+    """
+    return PopulationCounts(
+        name=name,
+        ascertainment_rate_rv=DeterministicVariable(f"{name}_ihr", 0.01),
+        delay_distribution_rv=DeterministicPMF(f"{name}_delay", jnp.array([1.0])),
+        noise=PoissonNoise(),
+    )
+
+
+class TestBuilderCoherence:
+    """PyrenewBuilder._validate_coherence enforcement at build() time."""
+
+    def test_daily_rt_with_daily_observation_passes(self):
+        """step_size=1 and P=1: valid."""
+        builder = _coherence_builder(
+            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            observations=[_daily_ed_counts()],
+        )
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
+
+    def test_weekly_rt_with_weekly_observation_passes(self):
+        """step_size=7 and P=7: valid when weekly is the only obs cadence."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+            ),
+            observations=[_weekly_hosp_counts()],
+        )
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
+
+    def test_daily_rt_with_mixed_observations_passes(self):
+        """step_size=1 with mixed P=1 + P=7: valid (R(t) at finest cadence)."""
+        builder = _coherence_builder(
+            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            observations=[_weekly_hosp_counts(), _daily_ed_counts()],
+        )
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
+
+    def test_weekly_rt_with_daily_observation_raises(self):
+        """step_size=7 with any daily obs: rule 2 violation."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+            ),
+            observations=[_weekly_hosp_counts(), _daily_ed_counts()],
+        )
+        with pytest.raises(ValueError, match="exceeding the finest"):
+            builder.build()
+
+    def test_mismatched_weekly_period_end_dow_raises(self):
+        """Two weekly observations with different period_end_dow: rule 1 violation."""
+        builder = _coherence_builder(
+            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            observations=[
+                _weekly_hosp_counts(name="hospital", period_end_dow=5),
+                _weekly_hosp_counts(name="other", period_end_dow=6),
+            ],
+        )
+        with pytest.raises(ValueError, match="must agree on period_end_dow"):
+            builder.build()
+
+    def test_matching_weekly_period_end_dow_passes(self):
+        """Two weekly observations agreeing on period_end_dow: rule 1 passes."""
+        builder = _coherence_builder(
+            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            observations=[
+                _weekly_hosp_counts(name="hospital", period_end_dow=5),
+                _weekly_hosp_counts(name="other", period_end_dow=5),
+            ],
+        )
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
+
+
+class TestMultiSignalValidateDataAnchor:
+    """MultiSignalModel.validate_data sample-time anchor check for first_day_dow."""
+
+    def test_missing_first_day_dow_for_weekly_obs_raises(self):
+        """An observation with aggregation_period>1 must have first_day_dow supplied."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+            ),
+            observations=[_weekly_hosp_counts()],
+        )
+        model = builder.build()
+        with pytest.raises(ValueError, match="requires 'first_day_dow'"):
+            model.validate_data(
+                n_days_post_init=28,
+                hospital={"obs": jnp.ones(4) * 5.0},
+            )
+
+    def test_first_day_dow_supplied_for_weekly_obs_passes(self):
+        """Supplying first_day_dow satisfies the anchor check."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+            ),
+            observations=[_weekly_hosp_counts()],
+        )
+        model = builder.build()
+        model.validate_data(
+            n_days_post_init=28,
+            hospital={"obs": jnp.ones(4) * 5.0, "first_day_dow": 6},
+        )
+
+    def test_anchor_check_skipped_for_daily_obs(self):
+        """Daily observations do not require first_day_dow at validate_data time."""
+        builder = _coherence_builder(
+            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            observations=[_daily_ed_counts()],
+        )
+        model = builder.build()
+        n_total = model.latent.n_initialization_points + 30
+        model.validate_data(
+            n_days_post_init=30,
+            ed={"obs": jnp.ones(n_total) * 5.0},
+        )
 
 
 if __name__ == "__main__":

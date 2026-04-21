@@ -225,7 +225,17 @@ class MultiSignalModel(Model):
                     f"Available: {list(self.observations.keys())}"
                 )
 
-            self.observations[name].validate_data(
+            obs = self.observations[name]
+            if getattr(obs, "aggregation_period", 1) > 1 and (
+                "first_day_dow" not in obs_data
+            ):
+                raise ValueError(
+                    f"Observation '{name}' has aggregation_period="
+                    f"{obs.aggregation_period} and requires 'first_day_dow' "
+                    f"in its observation data."
+                )
+
+            obs.validate_data(
                 n_total=n_total,
                 n_subpops=pop.n_subpops,
                 **obs_data,

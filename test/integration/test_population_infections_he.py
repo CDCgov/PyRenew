@@ -2,7 +2,7 @@
 Integration test: PopulationInfections H+E model with posterior recovery.
 
 Fits a PopulationInfections model with hospital admissions and ED visit
-observation processes to synthetic 120-day CA data, then checks that
+observation processes to synthetic 126-day CA data, then checks that
 posterior estimates recover known true parameters.
 """
 
@@ -21,7 +21,7 @@ from pyrenew.model import MultiSignalModel
 pytestmark = pytest.mark.integration
 
 
-N_DAYS_FIT = 120
+N_DAYS_FIT = 126
 NUM_WARMUP = 500
 NUM_SAMPLES = 500
 NUM_CHAINS = 4
@@ -48,9 +48,9 @@ class TestDataAssembly:
         daily_infections : pl.DataFrame
             True infections and R(t).
         """
-        assert len(daily_hosp) == 120
-        assert len(daily_ed) == 120
-        assert len(daily_infections) == 120
+        assert len(daily_hosp) == 126
+        assert len(daily_ed) == 126
+        assert len(daily_infections) == 126
         assert "daily_hosp_admits" in daily_hosp.columns
         assert "ed_visits" in daily_ed.columns
         assert "true_rt" in daily_infections.columns

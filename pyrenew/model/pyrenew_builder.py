@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from pyrenew.latent.base import BaseLatentInfectionProcess
+from pyrenew.latent.temporal_processes import TemporalProcess
 from pyrenew.model.multisignal_model import MultiSignalModel
 from pyrenew.observation.base import BaseObservationProcess
 
@@ -195,15 +196,84 @@ class PyrenewBuilder:
 
         return n_init
 
+    def _validate_coherence(self) -> None:
+        """
+        Enforce end-to-end coherence between R(t) cadence and observation cadences.
+
+        Called at the start of ``build()`` before any model components are
+        constructed. Inspects ``self.observations`` for ``aggregation_period``
+        and ``period_end_dow`` attributes, and walks ``self.latent_params``
+        values for any ``TemporalProcess`` instances to read their
+        ``step_size`` attribute.
+
+        Checks:
+
+        - All observations sharing the same ``aggregation_period > 1`` must
+          agree on ``period_end_dow``.
+        - Every temporal-process ``step_size`` must be ``<=`` the finest
+          observation ``aggregation_period``.
+        - If a temporal process has ``step_size > 1``, that ``step_size``
+          must equal the ``aggregation_period`` of every observation whose
+          ``aggregation_period > 1``.
+
+        Raises
+        ------
+        ValueError
+            If any of the three rules is violated.
+        """
+        agg_by_dow: dict[int, set[int]] = {}
+        agg_periods: list[int] = []
+        for name, obs in self.observations.items():
+            P = getattr(obs, "aggregation_period", 1)
+            agg_periods.append(P)
+            if P > 1:
+                agg_by_dow.setdefault(P, set()).add(getattr(obs, "period_end_dow"))
+
+        for P, dows in agg_by_dow.items():
+            if len(dows) > 1:
+                raise ValueError(
+                    f"Observations with aggregation_period={P} must agree on "
+                    f"period_end_dow; got values {sorted(dows)}"
+                )
+
+        temporal_processes = {
+            name: value
+            for name, value in self.latent_params.items()
+            if isinstance(value, TemporalProcess)
+        }
+
+        finest = min(agg_periods) if agg_periods else 1
+        coarse_periods = {P for P in agg_periods if P > 1}
+
+        for param_name, process in temporal_processes.items():
+            step_size = getattr(process, "step_size", 1)
+            if step_size > finest:
+                raise ValueError(
+                    f"Temporal process '{param_name}' has step_size={step_size} "
+                    f"exceeding the finest observation aggregation_period "
+                    f"({finest}). Parameterize R(t) at least as finely as the "
+                    f"finest observed signal."
+                )
+            if step_size > 1:
+                mismatched = {P for P in coarse_periods if P != step_size}
+                if mismatched:
+                    raise ValueError(
+                        f"Temporal process '{param_name}' has step_size="
+                        f"{step_size} but observations include "
+                        f"aggregation_period(s) {sorted(mismatched)} that do "
+                        f"not match. All coarse cadences must agree."
+                    )
+
     def build(self) -> MultiSignalModel:
         """
         Build the multi-signal model with computed n_initialization_points.
 
         This method:
-        1. Computes n_initialization_points from all components
-        2. Constructs the latent process with the computed value
-        3. Creates a MultiSignalModel with automatic infection routing
-        4. Validates that observation/latent types are compatible
+        1. Enforces coherence between R(t) cadence and observation cadences
+        2. Computes n_initialization_points from all components
+        3. Constructs the latent process with the computed value
+        4. Creates a MultiSignalModel with automatic infection routing
+        5. Validates that observation/latent types are compatible
 
         Can be called multiple times to create multiple model instances.
 
@@ -215,10 +285,13 @@ class PyrenewBuilder:
         Raises
         ------
         ValueError
-            If latent process not configured
+            If latent process not configured, or if R(t) and observation
+            cadences are incoherent.
         """
         if self.latent_class is None:
             raise ValueError("Must call configure_latent() before build()")
+
+        self._validate_coherence()
 
         # Compute n_initialization_points
         n_init = self.compute_n_initialization_points()

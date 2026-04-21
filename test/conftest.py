@@ -3,7 +3,21 @@ Shared pytest fixtures for PyRenew tests.
 
 This module provides reusable fixtures for creating observation processes,
 test data, and common configurations used across multiple test files.
+
+The module also sets two JAX environment variables before any jax import so
+that all tests (unit and integration) run with 64-bit precision and with
+four logical host devices available for parallel MCMC chains. JAX reads
+these variables at import time, so they must be set before the first
+``import jax`` anywhere in the test process; placing them at the top of
+this file (loaded by pytest before any test module) satisfies that
+requirement. The ``setdefault`` form respects any value the caller already
+set at the shell level (e.g., a CI with different configuration).
 """
+
+import os
+
+os.environ.setdefault("JAX_ENABLE_X64", "true")
+os.environ.setdefault("XLA_FLAGS", "--xla_force_host_platform_device_count=4")
 
 import jax.numpy as jnp
 import numpyro.distributions as dist

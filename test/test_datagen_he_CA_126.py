@@ -1,5 +1,5 @@
 """
-Unit tests for the datagen_he_CA_120 helper functions.
+Unit tests for the datagen_he_CA_126 helper functions.
 """
 
 import json
@@ -8,11 +8,11 @@ from datetime import date
 import numpy as np
 import polars as pl
 
-import pyrenew.datasets.datagen_he_CA_120 as datagen_mod
-from pyrenew.datasets.datagen_he_CA_120 import (
-    aggregate_to_epiweeks,
+import pyrenew.datasets.datagen_he_CA_126 as datagen_mod
+from pyrenew.datasets.datagen_he_CA_126 import (
     apply_day_of_week_effects,
     build_true_rt,
+    build_weekly_hosp_frame,
     generate,
     run_renewal,
     sample_negbinom,
@@ -23,9 +23,9 @@ class TestBuildTrueRt:
     """Tests for build_true_rt."""
 
     def test_length(self):
-        """Test that the output has 120 days."""
+        """Test that the output has 126 days."""
         rt = build_true_rt()
-        assert len(rt) == 120
+        assert len(rt) == 126
 
     def test_starting_value(self):
         """Test that Rt starts near 1.2."""
@@ -35,8 +35,9 @@ class TestBuildTrueRt:
     def test_phase_endpoints(self):
         """Test that phase transitions occur at expected values."""
         rt = build_true_rt()
-        assert rt[59] < 0.85
-        assert rt[60] > 0.79
+        # Phase 1 ends at index 62 (last day of 63-day decline), phase 2 starts at 63.
+        assert rt[62] < 0.85
+        assert rt[63] > 0.79
 
 
 class TestRunRenewal:
@@ -116,25 +117,39 @@ class TestSampleNegbinom:
         assert result.shape == mu.shape
 
 
-class TestAggregateToEpiweeks:
-    """Tests for aggregate_to_epiweeks."""
+class TestBuildWeeklyHospFrame:
+    """Tests for build_weekly_hosp_frame."""
 
-    def test_complete_weeks_only(self):
-        """Test that only complete 7-day weeks are returned."""
-        daily = np.ones(20)
+    def test_length_matches_input(self):
+        """Frame length equals the number of weekly values supplied."""
+        weekly = np.array([100.0, 200.0, 300.0])
         start = date(2023, 11, 6)
-        result = aggregate_to_epiweeks(daily, start)
+        result = build_weekly_hosp_frame(weekly, start)
         assert isinstance(result, pl.DataFrame)
-        assert "weekly_hosp_admits" in result.columns
-        for val in result["weekly_hosp_admits"].to_list():
-            assert val == 7.0
+        assert len(result) == 3
 
-    def test_weekly_sum(self):
-        """Test that weekly sums are correct."""
-        daily = np.arange(1, 15, dtype=float)
+    def test_weekly_values_preserved(self):
+        """Input weekly values appear in the weekly_hosp_admits column."""
+        weekly = np.array([100.0, 200.0, 300.0])
+        start = date(2023, 11, 6)
+        result = build_weekly_hosp_frame(weekly, start)
+        assert result["weekly_hosp_admits"].to_list() == [100.0, 200.0, 300.0]
+
+    def test_first_week_end_is_saturday(self):
+        """First week_end is the Saturday of the first complete MMWR epiweek."""
+        # 2023-11-06 is a Monday; first MMWR Saturday after (Sun-start week) is 2023-11-18.
+        weekly = np.array([1.0, 2.0])
+        start = date(2023, 11, 6)
+        result = build_weekly_hosp_frame(weekly, start)
+        assert result["week_end"].to_list() == [date(2023, 11, 18), date(2023, 11, 25)]
+
+    def test_first_week_end_sunday_start(self):
+        """A Sunday start yields the immediately-following Saturday as first week_end."""
+        # 2023-11-05 is a Sunday; first full MMWR week ends Saturday 2023-11-11.
+        weekly = np.array([5.0])
         start = date(2023, 11, 5)
-        result = aggregate_to_epiweeks(daily, start)
-        assert len(result) >= 1
+        result = build_weekly_hosp_frame(weekly, start)
+        assert result["week_end"].to_list() == [date(2023, 11, 11)]
 
 
 class TestGenerate:
@@ -164,7 +179,7 @@ class TestGenerate:
             params = json.load(f)
 
         assert params["population"] == datagen_mod.POPULATION
-        assert params["n_days"] == 120
+        assert params["n_days"] == 126
         assert "hospitalizations" in params
         assert "ed_visits" in params
 
@@ -174,7 +189,7 @@ class TestGenerate:
         generate()
 
         df = pl.read_csv(tmp_path / "daily_infections.csv")
-        assert len(df) == 120
+        assert len(df) == 126
         assert "true_infections" in df.columns
         assert "true_rt" in df.columns
 
@@ -184,7 +199,7 @@ class TestGenerate:
         generate()
 
         df = pl.read_csv(tmp_path / "daily_hospital_admissions.csv")
-        assert len(df) == 120
+        assert len(df) == 126
         assert "daily_hosp_admits" in df.columns
 
     def test_generate_ed_visits_shape(self, tmp_path, monkeypatch):
@@ -193,5 +208,5 @@ class TestGenerate:
         generate()
 
         df = pl.read_csv(tmp_path / "daily_ed_visits.csv")
-        assert len(df) == 120
+        assert len(df) == 126
         assert "ed_visits" in df.columns

@@ -18,6 +18,7 @@ from pyrenew.datasets import (
     load_synthetic_daily_hospital_admissions,
     load_synthetic_daily_infections,
     load_synthetic_true_parameters,
+    load_synthetic_weekly_hospital_admissions,
 )
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import AR1
@@ -78,6 +79,19 @@ def daily_ed() -> pl.DataFrame:
         Columns: date, geo_value, disease, ed_visits.
     """
     return load_synthetic_daily_ed_visits()
+
+
+@pytest.fixture(scope="module")
+def weekly_hosp() -> pl.DataFrame:
+    """
+    Load synthetic weekly (MMWR epiweek) hospital admissions.
+
+    Returns
+    -------
+    pl.DataFrame
+        Columns: week_end, weekly_hosp_admits, location, pop.
+    """
+    return load_synthetic_weekly_hospital_admissions()
 
 
 @pytest.fixture(scope="module")
@@ -173,6 +187,74 @@ def he_model(
         noise=NegativeBinomialNoise(
             DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
         ),
+    )
+    builder.add_observation(hospital_obs)
+
+    ed_obs = PopulationCounts(
+        name="ed",
+        ascertainment_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
+        delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
+        noise=NegativeBinomialNoise(
+            DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
+        ),
+        day_of_week_rv=DeterministicVariable("ed_dow", ed_day_of_week_effects),
+    )
+    builder.add_observation(ed_obs)
+
+    return builder.build()
+
+
+@pytest.fixture(scope="module")
+def he_weekly_model(
+    hosp_delay_pmf: jnp.ndarray,
+    ed_delay_pmf: jnp.ndarray,
+    ed_day_of_week_effects: jnp.ndarray,
+) -> PyrenewBuilder:
+    """
+    Build a PopulationInfections model with WEEKLY hospital + DAILY ED observations.
+
+    The hospital observation is aggregated to MMWR epiweeks (Sunday-Saturday,
+    anchored by ``period_end_dow=5``); the ED observation stays daily with a
+    day-of-week effect. R(t) is parametrized at the finest observation
+    cadence (daily) per the coherence rules for mixed-cadence models.
+
+    Parameters
+    ----------
+    hosp_delay_pmf : jnp.ndarray
+        Infection-to-hospitalization delay PMF.
+    ed_delay_pmf : jnp.ndarray
+        Infection-to-ED-visit delay PMF.
+    ed_day_of_week_effects : jnp.ndarray
+        Day-of-week multipliers used in synthetic ED generation.
+
+    Returns
+    -------
+    MultiSignalModel
+        Built model ready for fitting.
+    """
+    gen_int_pmf = jnp.array(
+        [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
+    )
+
+    builder = PyrenewBuilder()
+    builder.configure_latent(
+        PopulationInfections,
+        gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
+        I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
+        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+        single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+    )
+
+    hospital_obs = PopulationCounts(
+        name="hospital",
+        ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(1, 100)),
+        delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
+        noise=NegativeBinomialNoise(
+            DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
+        ),
+        aggregation_period=7,
+        reporting_schedule="regular",
+        period_end_dow=5,
     )
     builder.add_observation(hospital_obs)
 

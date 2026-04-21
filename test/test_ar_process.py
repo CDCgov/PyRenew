@@ -243,6 +243,23 @@ def test_ar_process_asymptotics(ar_inits, autoreg, noise_sd, n):
         :n
     ]
 
+    # Closed-form stationary standard deviation for the AR(p) process.
+    # The previous assertion used `3 * noise_sd`, which is only correct when
+    # the stationary variance equals the innovation variance (p=0); for AR(1)
+    # and AR(2) with non-zero autoreg, the stationary SD is strictly larger.
+    sigma2 = noise_sd**2
+    if order == 1:
+        stationary_sd = jnp.sqrt(sigma2 / (1 - autoreg[0] ** 2))
+    elif order == 2:
+        phi1, phi2 = autoreg[0], autoreg[1]
+        stationary_sd = jnp.sqrt(
+            sigma2 * (1 - phi2) / ((1 + phi2) * ((1 - phi2) ** 2 - phi1**2))
+        )
+    else:
+        raise NotImplementedError(
+            f"Stationary SD for AR order {order} not implemented in this test."
+        )
+
     with numpyro.handlers.seed(rng_seed=62):
         # check it regresses to mean
         # when started away from it
@@ -255,4 +272,4 @@ def test_ar_process_asymptotics(ar_inits, autoreg, noise_sd, n):
         )
         assert_array_almost_equal(long_ts[:order], expected_first_entries)
 
-        assert jnp.abs(long_ts[-1]) < 3 * noise_sd
+        assert jnp.abs(long_ts[-1]) < 3 * stationary_sd
