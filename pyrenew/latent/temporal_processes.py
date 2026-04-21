@@ -39,6 +39,10 @@ low-level building blocks in [pyrenew.process][]. The key differences:
   while stabilizing the growth rate. Wraps [pyrenew.process.DifferencedProcess][].
 - ``RandomWalk``: No mean reversion. Rt can drift without bound.
   Wraps [pyrenew.process.RandomWalk][].
+- ``StepwiseTemporalProcess``: Wrapper that parameterizes any inner
+  ``TemporalProcess`` at a coarser cadence and broadcasts to the per-timepoint
+  scale by repetition. Use to match R(t) parametrization to the coarsest
+  observation cadence.
 
 All implementations satisfy the ``TemporalProcess`` protocol and can be
 used interchangeably in hierarchical infection models.
@@ -66,7 +70,18 @@ class TemporalProcess(Protocol):
     Used for jurisdiction-level Rt dynamics, subpopulation deviations, or
     allocation trajectories. All processes return 2D arrays of shape
     (n_timepoints, n_processes) for consistent handling.
+
+    Attributes
+    ----------
+    step_size : int
+        Number of consecutive timepoints that share the same sampled value.
+        Defaults to ``1`` for the standard processes (one independent sample
+        per timepoint). Wrapper processes like ``StepwiseTemporalProcess``
+        expose a larger value so that model builders can enforce coherence
+        between R(t) parametrization cadence and observation aggregation.
     """
+
+    step_size: int
 
     def sample(
         self,
@@ -119,6 +134,8 @@ class AR1(TemporalProcess):
         Standard deviation of noise at each time step. Larger values produce
         more volatile trajectories; smaller values produce smoother ones.
     """
+
+    step_size: int = 1
 
     def __init__(self, autoreg: float, innovation_sd: float = 1.0) -> None:
         """
@@ -219,6 +236,8 @@ class DifferencedAR1(TemporalProcess):
         Standard deviation of noise added to changes. Larger values produce
         more erratic growth rates; smaller values produce smoother trends.
     """
+
+    step_size: int = 1
 
     def __init__(self, autoreg: float, innovation_sd: float = 1.0) -> None:
         """
@@ -331,6 +350,8 @@ class RandomWalk(TemporalProcess):
     (``{name_prefix}_step``) via ``numpyro.handlers.reparam``.
     """
 
+    step_size: int = 1
+
     def __init__(self, innovation_sd: float = 1.0) -> None:
         """
         Initialize random walk process.
@@ -399,3 +420,97 @@ class RandomWalk(TemporalProcess):
             init_vals=initial_value[jnp.newaxis, :],
             n=n_timepoints,
         )
+
+
+class StepwiseTemporalProcess(TemporalProcess):
+    """
+    Parameterize an inner temporal process at a coarser cadence and
+    broadcast to the per-timepoint scale by repetition.
+
+    Each ``step_size`` consecutive output timepoints share a single
+    sampled value from the inner process. Use to match R(t)
+    parametrization cadence to the coarsest observation cadence
+    (e.g., ``step_size=7`` with weekly-aggregated observations).
+
+    Parameters
+    ----------
+    inner
+        Inner ``TemporalProcess`` that generates the coarse-scale
+        trajectory. Must satisfy the ``TemporalProcess`` protocol.
+    step_size
+        Number of per-timepoint units that share each inner sample.
+        Must be a positive integer.
+
+    Raises
+    ------
+    ValueError
+        If ``step_size`` is not a positive integer.
+    """
+
+    def __init__(self, inner: TemporalProcess, step_size: int) -> None:
+        """
+        Initialize stepwise temporal process.
+
+        Parameters
+        ----------
+        inner
+            Inner ``TemporalProcess`` that generates the coarse trajectory.
+        step_size
+            Number of per-timepoint units that share each inner sample.
+
+        Raises
+        ------
+        ValueError
+            If ``step_size`` is not a positive integer.
+        """
+        if not isinstance(step_size, int) or step_size < 1:
+            raise ValueError(f"step_size must be a positive integer, got {step_size!r}")
+        self.inner = inner
+        self.step_size = step_size
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return (
+            f"StepwiseTemporalProcess(inner={self.inner!r}, step_size={self.step_size})"
+        )
+
+    def sample(
+        self,
+        n_timepoints: int,
+        initial_value: float | ArrayLike | None = None,
+        n_processes: int = 1,
+        name_prefix: str = "stepwise",
+    ) -> ArrayLike:
+        """
+        Sample coarse trajectory from inner process and broadcast.
+
+        Computes ``n_steps = ceil(n_timepoints / step_size)``, samples
+        the inner process at that cadence, then repeats each coarse
+        value ``step_size`` times along the time axis and trims to
+        ``n_timepoints``.
+
+        Parameters
+        ----------
+        n_timepoints
+            Number of per-timepoint outputs to produce.
+        initial_value
+            Initial value(s) for the inner process. Defaults to 0.0.
+        n_processes
+            Number of parallel processes.
+        name_prefix
+            Prefix for numpyro sample sites; forwarded to the inner process.
+
+        Returns
+        -------
+        ArrayLike
+            Trajectories of shape ``(n_timepoints, n_processes)``, constant
+            within each block of ``step_size`` consecutive rows.
+        """
+        n_steps = (n_timepoints + self.step_size - 1) // self.step_size
+        coarse = self.inner.sample(
+            n_timepoints=n_steps,
+            initial_value=initial_value,
+            n_processes=n_processes,
+            name_prefix=name_prefix,
+        )
+        return jnp.repeat(coarse, repeats=self.step_size, axis=0)[:n_timepoints]

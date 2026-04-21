@@ -32,6 +32,7 @@ from pyrenew.latent.temporal_processes import (
     AR1,
     DifferencedAR1,
     RandomWalk,
+    StepwiseTemporalProcess,
     TemporalProcess,
 )
 
@@ -61,4 +62,5 @@ __all__ = [
     "AR1",
     "DifferencedAR1",
     "RandomWalk",
+    "StepwiseTemporalProcess",
 ]

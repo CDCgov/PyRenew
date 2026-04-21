@@ -6,7 +6,13 @@ import jax.numpy as jnp
 import numpyro
 import pytest
 
-from pyrenew.latent import AR1, DifferencedAR1, RandomWalk
+from pyrenew.latent import AR1, DifferencedAR1, RandomWalk, StepwiseTemporalProcess
+
+INNER_PROCESS_PARAMS = [
+    (AR1, {"autoreg": 0.9, "innovation_sd": 0.05}),
+    (DifferencedAR1, {"autoreg": 0.9, "innovation_sd": 0.05}),
+    (RandomWalk, {"innovation_sd": 0.05}),
+]
 
 
 class TestTemporalProcessVectorizedSampling:
@@ -234,6 +240,93 @@ class TestTemporalProcessBehavior:
         diffs = jnp.diff(trajectory[:, 0])
         fraction_positive = jnp.mean(diffs > 0)
         assert fraction_positive > 0.5
+
+
+class TestTemporalProcessStepSizeDefault:
+    """Standard temporal processes expose step_size=1 as a class attribute."""
+
+    @pytest.mark.parametrize(
+        "process_cls",
+        [AR1, DifferencedAR1, RandomWalk],
+    )
+    def test_class_attribute_step_size_is_one(self, process_cls):
+        """Each concrete class has step_size=1 as a class attribute."""
+        assert process_cls.step_size == 1
+
+
+class TestStepwiseTemporalProcessConstruction:
+    """Construction-time validation for StepwiseTemporalProcess."""
+
+    def test_step_size_attribute(self):
+        """step_size is exposed on the instance for builder inspection."""
+        wrapper = StepwiseTemporalProcess(
+            AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+        )
+        assert wrapper.step_size == 7
+
+    def test_zero_step_size_raises(self):
+        """step_size=0 raises."""
+        with pytest.raises(ValueError, match="positive integer"):
+            StepwiseTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), step_size=0)
+
+    def test_negative_step_size_raises(self):
+        """Negative step_size raises."""
+        with pytest.raises(ValueError, match="positive integer"):
+            StepwiseTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), step_size=-1)
+
+    def test_float_step_size_raises(self):
+        """Non-integer step_size raises."""
+        with pytest.raises(ValueError, match="positive integer"):
+            StepwiseTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), step_size=7.0)
+
+
+class TestStepwiseTemporalProcessSample:
+    """Sample-time behavior of StepwiseTemporalProcess."""
+
+    @pytest.mark.parametrize("inner_cls,inner_kwargs", INNER_PROCESS_PARAMS)
+    def test_output_shape_divisible(self, inner_cls, inner_kwargs):
+        """n_timepoints divisible by step_size yields (n_timepoints, n_processes)."""
+        wrapper = StepwiseTemporalProcess(inner_cls(**inner_kwargs), step_size=7)
+        with numpyro.handlers.seed(rng_seed=42):
+            result = wrapper.sample(n_timepoints=28, n_processes=3)
+        assert result.shape == (28, 3)
+
+    @pytest.mark.parametrize("inner_cls,inner_kwargs", INNER_PROCESS_PARAMS)
+    def test_output_shape_non_divisible(self, inner_cls, inner_kwargs):
+        """n_timepoints not divisible by step_size still yields n_timepoints rows."""
+        wrapper = StepwiseTemporalProcess(inner_cls(**inner_kwargs), step_size=7)
+        with numpyro.handlers.seed(rng_seed=42):
+            result = wrapper.sample(n_timepoints=30, n_processes=2)
+        assert result.shape == (30, 2)
+
+    @pytest.mark.parametrize("inner_cls,inner_kwargs", INNER_PROCESS_PARAMS)
+    def test_broadcast_within_block(self, inner_cls, inner_kwargs):
+        """Each block of step_size consecutive timepoints is constant."""
+        wrapper = StepwiseTemporalProcess(inner_cls(**inner_kwargs), step_size=7)
+        with numpyro.handlers.seed(rng_seed=42):
+            result = wrapper.sample(n_timepoints=28, n_processes=1)
+        for start in range(0, 28, 7):
+            block = result[start : start + 7]
+            assert jnp.allclose(block, block[0])
+
+    @pytest.mark.parametrize("inner_cls,inner_kwargs", INNER_PROCESS_PARAMS)
+    def test_broadcast_with_partial_final_block(self, inner_cls, inner_kwargs):
+        """A partial final block is still constant, just shorter than step_size."""
+        wrapper = StepwiseTemporalProcess(inner_cls(**inner_kwargs), step_size=7)
+        with numpyro.handlers.seed(rng_seed=42):
+            result = wrapper.sample(n_timepoints=30, n_processes=1)
+        # The 4th block starts at row 28 and runs through row 29 (2 rows)
+        final_block = result[28:30]
+        assert jnp.allclose(final_block, final_block[0])
+
+    def test_step_size_one_passthrough_shape(self):
+        """step_size=1 yields (n_timepoints, n_processes), same as inner directly."""
+        wrapper = StepwiseTemporalProcess(
+            AR1(autoreg=0.9, innovation_sd=0.05), step_size=1
+        )
+        with numpyro.handlers.seed(rng_seed=42):
+            result = wrapper.sample(n_timepoints=20, n_processes=2)
+        assert result.shape == (20, 2)
 
 
 if __name__ == "__main__":
