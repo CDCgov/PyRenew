@@ -64,9 +64,7 @@ def _build_hospital_obs_on_period_grid(
     offset = (hosp.period_end_dow + 1 - first_day_dow) % hosp.aggregation_period
     n_periods = (n_total - offset) // hosp.aggregation_period
     n_pre = n_periods - len(weekly_values)
-    return jnp.concatenate(
-        [jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values]
-    )
+    return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
 
 
 class TestDataAssembly:
@@ -156,9 +154,7 @@ class TestDataAssembly:
         n_init = he_weekly_model.latent.n_initialization_points
         n_total = n_init + N_DAYS_FIT
         hosp = he_weekly_model.observations["hospital"]
-        offset = (
-            hosp.period_end_dow + 1 - first_day_dow
-        ) % hosp.aggregation_period
+        offset = (hosp.period_end_dow + 1 - first_day_dow) % hosp.aggregation_period
         n_periods = (n_total - offset) // hosp.aggregation_period
 
         assert hosp_obs.shape == (n_periods,)
@@ -406,9 +402,7 @@ class TestModelFit:
         # n_periods from the weekly grid must be >= the number of observed weeks.
         assert hosp_pred.sizes["week"] >= len(weekly_hosp)
 
-        hosp_pred_median = float(
-            hosp_pred.median(dim=["chain", "draw", "week"]).values
-        )
+        hosp_pred_median = float(hosp_pred.median(dim=["chain", "draw", "week"]).values)
         hosp_obs_mean = float(weekly_hosp["weekly_hosp_admits"].mean())
 
         assert hosp_pred_median > 0, "Hospital predictions should be positive"
