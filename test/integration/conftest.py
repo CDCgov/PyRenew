@@ -23,7 +23,7 @@ from pyrenew.datasets import (
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import AR1
 from pyrenew.latent.population_infections import PopulationInfections
-from pyrenew.model import PyrenewBuilder, MultiSignalModel
+from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
 
