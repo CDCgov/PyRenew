@@ -467,10 +467,11 @@ class BaseObservationProcess(RandomVariable):
         self, indices: ArrayLike, upper_bound: int, param_name: str
     ) -> None:
         """
-        Validate an index array has non-negative values within bounds.
+        Validate an index array is 1D with non-negative values within bounds.
 
-        Checks that all values are non-negative integers in ``[0, upper_bound)``.
-        An empty array is a no-op and passes validation.
+        Checks that the array is 1D and that all values are non-negative
+        integers in ``[0, upper_bound)``. An empty 1D array is a no-op
+        and passes the bounds check.
 
         Parameters
         ----------
@@ -484,9 +485,15 @@ class BaseObservationProcess(RandomVariable):
         Raises
         ------
         ValueError
-            If indices contains negative values or values >= upper_bound.
+            If indices is not 1D, contains negative values, or values
+            >= upper_bound.
         """
         indices = jnp.asarray(indices)
+        if indices.ndim != 1:
+            raise ValueError(
+                f"Observation '{self.name}': {param_name} must be 1D, "
+                f"got shape {indices.shape}"
+            )
         if indices.size == 0:
             return
         if jnp.any(indices < 0):
@@ -542,28 +549,38 @@ class BaseObservationProcess(RandomVariable):
         """
         self._validate_index_array(subpop_indices, n_subpops, "subpop_indices")
 
-    def _validate_obs_times_shape(self, obs: ArrayLike, times: ArrayLike) -> None:
+    def _validate_shapes_match(
+        self,
+        first: ArrayLike,
+        second: ArrayLike,
+        first_name: str,
+        second_name: str,
+    ) -> None:
         """
-        Validate that obs and times arrays have matching shapes.
+        Validate that two arrays have matching shapes.
 
         Parameters
         ----------
-        obs
-            Observed data array.
-        times
-            Times index array.
+        first
+            First array.
+        second
+            Second array.
+        first_name
+            Name of the first parameter (for error messages).
+        second_name
+            Name of the second parameter (for error messages).
 
         Raises
         ------
         ValueError
-            If obs and times have different shapes.
+            If the two arrays have different shapes.
         """
-        obs = jnp.asarray(obs)
-        times = jnp.asarray(times)
-        if obs.shape != times.shape:
+        first = jnp.asarray(first)
+        second = jnp.asarray(second)
+        if first.shape != second.shape:
             raise ValueError(
-                f"Observation '{self.name}': obs shape {obs.shape} "
-                f"must match times shape {times.shape}"
+                f"Observation '{self.name}': {first_name} shape {first.shape} "
+                f"must match {second_name} shape {second.shape}"
             )
 
     def _validate_obs_dense(self, obs: ArrayLike, n_total: int) -> None:
@@ -571,8 +588,9 @@ class BaseObservationProcess(RandomVariable):
         Validate that obs covers the full shared time axis.
 
         For dense observations on the shared time axis ``[0, n_total)``,
-        obs must have length equal to ``n_total``. Use NaN to mark
-        unobserved timepoints (initialization period or missing data).
+        obs must be 1D with length equal to ``n_total``. Use NaN to
+        mark unobserved timepoints (initialization period or missing
+        data).
 
         Parameters
         ----------
@@ -584,9 +602,13 @@ class BaseObservationProcess(RandomVariable):
         Raises
         ------
         ValueError
-            If obs length doesn't equal n_total.
+            If obs is not 1D or its length doesn't equal n_total.
         """
         obs = jnp.asarray(obs)
+        if obs.ndim != 1:
+            raise ValueError(
+                f"Observation '{self.name}': obs must be 1D, got shape {obs.shape}"
+            )
         if obs.shape[0] != n_total:
             raise ValueError(
                 f"Observation '{self.name}': obs length {obs.shape[0]} "

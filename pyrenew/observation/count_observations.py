@@ -429,6 +429,10 @@ class PopulationCounts(CountObservation):
             offset = self._compute_period_offset(first_day_dow, P, self.period_end_dow)
             n_periods = (n_total - offset) // P
             obs = jnp.asarray(obs)
+            if obs.ndim != 1:
+                raise ValueError(
+                    f"Observation '{self.name}': obs must be 1D, got shape {obs.shape}"
+                )
             if obs.shape[0] != n_periods:
                 raise ValueError(
                     f"Observation '{self.name}': obs length {obs.shape[0]} "
@@ -447,7 +451,9 @@ class PopulationCounts(CountObservation):
         offset = self._compute_period_offset(first_day_dow, P, self.period_end_dow)
         self._validate_period_end_times(period_end_times, n_total, offset, P)
         if obs is not None:
-            self._validate_obs_times_shape(obs, period_end_times)
+            self._validate_shapes_match(
+                obs, period_end_times, "obs", "period_end_times"
+            )
 
     def sample(
         self,
@@ -699,9 +705,16 @@ class SubpopulationCounts(CountObservation):
         offset = self._compute_period_offset(first_day_dow, P, self.period_end_dow)
         self._validate_period_end_times(period_end_times, n_total, offset, P)
         if obs is not None:
-            self._validate_obs_times_shape(obs, period_end_times)
+            self._validate_shapes_match(
+                obs, period_end_times, "obs", "period_end_times"
+            )
         if subpop_indices is not None:
-            self._validate_obs_times_shape(subpop_indices, period_end_times)
+            self._validate_shapes_match(
+                subpop_indices,
+                period_end_times,
+                "subpop_indices",
+                "period_end_times",
+            )
 
     def sample(
         self,

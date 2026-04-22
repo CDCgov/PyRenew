@@ -23,7 +23,7 @@ from pyrenew.datasets import (
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import AR1
 from pyrenew.latent.population_infections import PopulationInfections
-from pyrenew.model import PyrenewBuilder
+from pyrenew.model import PyrenewBuilder, MultiSignalModel
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
 
@@ -149,7 +149,7 @@ def he_model(
     hosp_delay_pmf: jnp.ndarray,
     ed_delay_pmf: jnp.ndarray,
     ed_day_of_week_effects: jnp.ndarray,
-) -> PyrenewBuilder:
+) -> MultiSignalModel:
     """
     Build a PopulationInfections model with hospital + ED observation processes.
 
@@ -209,7 +209,7 @@ def he_weekly_model(
     hosp_delay_pmf: jnp.ndarray,
     ed_delay_pmf: jnp.ndarray,
     ed_day_of_week_effects: jnp.ndarray,
-) -> PyrenewBuilder:
+) -> MultiSignalModel:
     """
     Build a PopulationInfections model with WEEKLY hospital + DAILY ED observations.
 

@@ -198,6 +198,24 @@ class TestValidateIndexArray:
             param_name="test_idx",
         )
 
+    def test_scalar_raises(self, counts_proc):
+        """0-D scalar index array should raise ValueError."""
+        with pytest.raises(ValueError, match="must be 1D"):
+            counts_proc._validate_index_array(
+                jnp.asarray(0),
+                upper_bound=5,
+                param_name="test_idx",
+            )
+
+    def test_2d_raises(self, counts_proc):
+        """2D index array should raise ValueError."""
+        with pytest.raises(ValueError, match="must be 1D"):
+            counts_proc._validate_index_array(
+                jnp.array([[0, 1], [2, 3]]),
+                upper_bound=5,
+                param_name="test_idx",
+            )
+
 
 # ===================================================================
 # _validate_times
@@ -260,44 +278,56 @@ class TestValidateSubpopIndices:
 
 
 # ===================================================================
-# _validate_obs_times_shape
+# _validate_shapes_match
 # ===================================================================
 
 
-class TestValidateObsTimesShape:
-    """Tests for BaseObservationProcess._validate_obs_times_shape."""
+class TestValidateShapesMatch:
+    """Tests for BaseObservationProcess._validate_shapes_match."""
 
     def test_matching_1d_shapes(self, counts_proc):
-        """Obs and times with matching 1D shapes should not raise."""
-        obs = jnp.array([1.0, 2.0, 3.0])
-        times = jnp.array([0, 5, 10])
-        counts_proc._validate_obs_times_shape(obs, times)
+        """Two arrays with matching 1D shapes should not raise."""
+        a = jnp.array([1.0, 2.0, 3.0])
+        b = jnp.array([0, 5, 10])
+        counts_proc._validate_shapes_match(a, b, "obs", "times")
 
     def test_mismatched_lengths_raises(self, counts_proc):
-        """Obs and times with different lengths should raise ValueError."""
-        obs = jnp.array([1.0, 2.0, 3.0])
-        times = jnp.array([0, 5])
+        """Two arrays with different lengths should raise ValueError."""
+        a = jnp.array([1.0, 2.0, 3.0])
+        b = jnp.array([0, 5])
         with pytest.raises(ValueError, match="must match times shape"):
-            counts_proc._validate_obs_times_shape(obs, times)
+            counts_proc._validate_shapes_match(a, b, "obs", "times")
 
     def test_empty_arrays_match(self, counts_proc):
         """Two empty arrays should not raise."""
-        obs = jnp.array([])
-        times = jnp.array([])
-        counts_proc._validate_obs_times_shape(obs, times)
+        a = jnp.array([])
+        b = jnp.array([])
+        counts_proc._validate_shapes_match(a, b, "obs", "times")
 
     def test_scalar_arrays_match(self, counts_proc):
         """Single-element arrays should not raise."""
-        obs = jnp.array([5.0])
-        times = jnp.array([0])
-        counts_proc._validate_obs_times_shape(obs, times)
+        a = jnp.array([5.0])
+        b = jnp.array([0])
+        counts_proc._validate_shapes_match(a, b, "obs", "times")
 
     def test_error_includes_both_shapes(self, counts_proc):
         """Error message should report both shapes."""
-        obs = jnp.array([1.0, 2.0])
-        times = jnp.array([0, 1, 2])
+        a = jnp.array([1.0, 2.0])
+        b = jnp.array([0, 1, 2])
         with pytest.raises(ValueError, match=r"\(2,\).*\(3,\)"):
-            counts_proc._validate_obs_times_shape(obs, times)
+            counts_proc._validate_shapes_match(a, b, "obs", "times")
+
+    def test_error_uses_provided_names(self, counts_proc):
+        """Error message should use the caller-supplied parameter names."""
+        a = jnp.array([1.0, 2.0])
+        b = jnp.array([0, 1, 2])
+        with pytest.raises(
+            ValueError,
+            match=r"subpop_indices shape .* must match period_end_times shape",
+        ):
+            counts_proc._validate_shapes_match(
+                a, b, "subpop_indices", "period_end_times"
+            )
 
 
 # ===================================================================
@@ -336,6 +366,12 @@ class TestValidateObsDense:
         with pytest.raises(ValueError, match="15.*30"):
             counts_proc._validate_obs_dense(obs, n_total=30)
 
+    def test_2d_obs_raises(self, counts_proc):
+        """2D obs (e.g., shape (n_total, 1)) should raise ValueError."""
+        obs = jnp.ones((30, 1))
+        with pytest.raises(ValueError, match="obs must be 1D"):
+            counts_proc._validate_obs_dense(obs, n_total=30)
+
 
 # ===================================================================
 # PopulationCounts.validate_data()
@@ -364,6 +400,36 @@ class TestPopulationCountsValidateData:
         obs = jnp.ones(20)
         with pytest.raises(ValueError, match="must equal n_total"):
             counts_proc.validate_data(n_total=30, n_subpops=1, obs=obs)
+
+    def test_2d_obs_daily_raises(self, counts_proc):
+        """Daily regular-schedule obs must be 1D; 2D (n_total, 1) should raise."""
+        obs = jnp.ones((30, 1))
+        with pytest.raises(ValueError, match="obs must be 1D"):
+            counts_proc.validate_data(n_total=30, n_subpops=1, obs=obs)
+
+    def test_2d_obs_weekly_raises(self):
+        """Weekly regular-schedule obs must be 1D; 2D (n_periods, 1) should raise."""
+        proc = PopulationCounts(
+            name="hosp",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", jnp.array([0.3, 0.5, 0.2])),
+            noise=PoissonNoise(),
+            aggregation_period=7,
+            reporting_schedule="regular",
+            period_end_dow=5,
+        )
+        n_total = 35
+        first_day_dow = 6
+        offset = (proc.period_end_dow + 1 - first_day_dow) % proc.aggregation_period
+        n_periods = (n_total - offset) // proc.aggregation_period
+        obs = jnp.ones((n_periods, 1))
+        with pytest.raises(ValueError, match="obs must be 1D"):
+            proc.validate_data(
+                n_total=n_total,
+                n_subpops=1,
+                obs=obs,
+                first_day_dow=first_day_dow,
+            )
 
     def test_extra_kwargs_ignored(self, counts_proc):
         """validate_data should ignore extra keyword arguments."""
@@ -433,7 +499,9 @@ class TestSubpopulationCountsValidateData:
         """validate_data with obs/period_end_times shape mismatch should raise."""
         period_end_times = jnp.array([5, 10, 15])
         obs = jnp.array([1.0, 2.0])  # length 2 != length 3
-        with pytest.raises(ValueError, match="must match times shape"):
+        with pytest.raises(
+            ValueError, match=r"obs shape .* must match period_end_times shape"
+        ):
             subpop_proc.validate_data(
                 n_total=30,
                 n_subpops=3,
@@ -459,6 +527,13 @@ class TestSubpopulationCountsValidateData:
         subpop_proc.validate_data(
             n_total=30, n_subpops=3, subpop_indices=subpop_indices
         )
+
+    def test_scalar_subpop_indices_raises(self, subpop_proc):
+        """Scalar (0-D) subpop_indices should raise ValueError, not IndexError."""
+        with pytest.raises(ValueError, match="must be 1D"):
+            subpop_proc.validate_data(
+                n_total=30, n_subpops=3, subpop_indices=jnp.asarray(0)
+            )
 
 
 # ===================================================================
@@ -555,7 +630,7 @@ class TestMeasurementObservationValidateData:
         """validate_data with obs/times shape mismatch should raise."""
         times = jnp.array([5, 10, 15])
         obs = jnp.array([1.0, 2.0])
-        with pytest.raises(ValueError, match="must match times shape"):
+        with pytest.raises(ValueError, match=r"obs shape .* must match times shape"):
             measurements_proc.validate_data(
                 n_total=30, n_subpops=3, times=times, obs=obs
             )

@@ -146,7 +146,7 @@ class MeasurementObservation(BaseObservationProcess):
         if times is not None:
             self._validate_times(times, n_total)
             if obs is not None:
-                self._validate_obs_times_shape(obs, times)
+                self._validate_shapes_match(obs, times, "obs", "times")
         if subpop_indices is not None:
             self._validate_subpop_indices(subpop_indices, n_subpops)
         if sensor_indices is not None and n_sensors is not None:
