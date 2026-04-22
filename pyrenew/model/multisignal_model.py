@@ -247,6 +247,7 @@ class MultiSignalModel(Model):
         population_size: float,
         *,
         subpop_fractions: ArrayLike | None = None,
+        first_day_dow: int | None = None,
         **observation_data: dict[str, object],
     ) -> None:
         """
@@ -263,6 +264,9 @@ class MultiSignalModel(Model):
             (from latent process) to infection counts (for observation processes).
         subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
+        first_day_dow
+            Forwarded to the latent process. See
+            [pyrenew.latent.TemporalProcess][].
         **observation_data
             Data for each observation process, keyed by observation name
             (the ``name`` attribute of each observation process).
@@ -280,6 +284,7 @@ class MultiSignalModel(Model):
         latent_sample = self.latent.sample(
             n_days_post_init=n_days_post_init,
             subpop_fractions=subpop_fractions,
+            first_day_dow=first_day_dow,
         )
 
         # Scale from proportions to counts

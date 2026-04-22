@@ -3,6 +3,7 @@ Tests for PyrenewBuilder and MultiSignalModel.
 """
 
 import jax.numpy as jnp
+import numpyro
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
@@ -275,6 +276,115 @@ class TestMultiSignalModelSampling:
         # All prior predictive infections should be positive
         assert jnp.all(prior_samples["latent_infections"] > 0)
 
+    def test_first_day_dow_reaches_calendar_aligned_latent_process(self):
+        """MultiSignalModel forwards model-axis day of week to the latent process."""
+        latent = PopulationInfections(
+            name="PopulationInfections",
+            gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                alignment="calendar_week",
+                week_start_dow=6,
+            ),
+            n_initialization_points=3,
+        )
+        model = MultiSignalModel(latent, {"ed": _daily_ed_counts()})
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                model.sample(
+                    n_days_post_init=10,
+                    population_size=1_000_000,
+                    first_day_dow=3,
+                    ed={"obs": None},
+                )
+
+        log_rt = trace["PopulationInfections::log_rt_single"]["value"]
+        coarse = trace["log_rt_single_coarse"]["value"]
+
+        assert log_rt.shape == (model.latent.n_initialization_points + 10, 1)
+        assert coarse.shape[0] < log_rt.shape[0]
+        assert jnp.allclose(log_rt[:3], log_rt[0])
+        assert jnp.allclose(log_rt[3:10], log_rt[3])
+
+    def test_missing_first_day_dow_for_calendar_aligned_latent_process_raises(self):
+        """Calendar-aligned latent temporal processes require model-axis DOW."""
+        latent = PopulationInfections(
+            name="PopulationInfections",
+            gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                alignment="calendar_week",
+                week_start_dow=6,
+            ),
+            n_initialization_points=3,
+        )
+        model = MultiSignalModel(latent, {"ed": _daily_ed_counts()})
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(ValueError, match="first_day_dow"):
+                model.sample(
+                    n_days_post_init=10,
+                    population_size=1_000_000,
+                    ed={"obs": None},
+                )
+
+    def test_builder_mixed_cadence_weekly_rt_samples(self):
+        """
+        Mixed daily/weekly observations can use weekly-parameterized Rt.
+
+        The latent temporal process records a coarse Rt trajectory, the latent
+        process records daily Rt values, ED remains on the daily likelihood
+        scale, and hospital observations are scored on the weekly likelihood
+        scale.
+        """
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                alignment="calendar_week",
+                week_start_dow=6,
+            ),
+            observations=[_weekly_hosp_counts(), _daily_ed_counts()],
+        )
+        model = builder.build()
+        n_days_post_init = 28
+        n_total = model.latent.n_initialization_points + n_days_post_init
+        first_day_dow = 6
+        hospital_obs = jnp.array([jnp.nan, 5.0, 7.0, 6.0], dtype=float)
+        ed_obs = jnp.concatenate(
+            [
+                jnp.full(model.latent.n_initialization_points, jnp.nan),
+                jnp.ones(n_days_post_init) * 3.0,
+            ]
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                model.sample(
+                    n_days_post_init=n_days_post_init,
+                    population_size=1_000_000,
+                    first_day_dow=first_day_dow,
+                    hospital={"obs": hospital_obs, "first_day_dow": first_day_dow},
+                    ed={"obs": ed_obs},
+                )
+
+        assert trace["log_rt_single_coarse"]["value"].shape == (5, 1)
+        assert trace["PopulationInfections::log_rt_single"]["value"].shape == (
+            n_total,
+            1,
+        )
+        assert trace["ed_obs"]["value"].shape == (n_total,)
+        assert trace["hospital_obs"]["value"].shape == hospital_obs.shape
+        assert trace["hospital_predicted_daily"]["value"].shape == (n_total,)
+        assert trace["hospital_predicted"]["value"].shape == hospital_obs.shape
+
 
 class TestMultiSignalModelValidation:
     """Test data validation."""
@@ -546,16 +656,16 @@ class TestBuilderCoherence:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_weekly_rt_with_daily_observation_raises(self):
-        """step_size=7 with any daily obs: rule 2 violation."""
+    def test_weekly_rt_with_daily_observation_passes(self):
+        """Coarse Rt parameter cadence is allowed with daily observations."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
             ),
             observations=[_weekly_hosp_counts(), _daily_ed_counts()],
         )
-        with pytest.raises(ValueError, match="exceeding the finest"):
-            builder.build()
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
 
     def test_mismatched_weekly_period_end_dow_raises(self):
         """Two weekly observations with different period_end_dow: rule 1 violation."""
@@ -581,16 +691,82 @@ class TestBuilderCoherence:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_step_size_mismatches_coarse_period_raises(self):
-        """step_size > 1 must equal every coarse observation aggregation_period."""
+    def test_arbitrary_step_size_with_weekly_observation_passes(self):
+        """Parameter cadence need not match observation aggregation period."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05), step_size=2
             ),
             observations=[_weekly_hosp_counts()],
         )
-        with pytest.raises(ValueError, match="All coarse cadences must agree"):
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
+
+    def test_invalid_temporal_process_step_size_raises(
+        self, invalid_step_size_temporal_process
+    ):
+        """Temporal process metadata must expose a positive integer step_size."""
+        builder = _coherence_builder(
+            single_rt_process=invalid_step_size_temporal_process,
+            observations=[_daily_ed_counts()],
+        )
+        with pytest.raises(ValueError, match="positive integer step_size"):
             builder.build()
+
+    def test_calendar_week_alignment_matches_weekly_period_end_dow_passes(self):
+        """Sunday-start weeks pair with Saturday-ending weekly observations."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                alignment="calendar_week",
+                week_start_dow=6,
+            ),
+            observations=[_weekly_hosp_counts(period_end_dow=5)],
+        )
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
+
+    def test_calendar_week_alignment_mismatches_weekly_period_end_dow_raises(self):
+        """A weekly Rt anchor must agree with the weekly observation anchor."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                alignment="calendar_week",
+                week_start_dow=0,
+            ),
+            observations=[_weekly_hosp_counts(period_end_dow=5)],
+        )
+        with pytest.raises(
+            ValueError, match="weekly observations should end on period_end_dow=6"
+        ):
+            builder.build()
+
+    def test_calendar_week_alignment_with_only_daily_observations_passes(self):
+        """No weekly observation means no calendar-anchor agreement to enforce."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                alignment="calendar_week",
+                week_start_dow=6,
+            ),
+            observations=[_daily_ed_counts()],
+        )
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
+
+    def test_model_index_alignment_ignores_weekly_period_end_dow(self):
+        """Model-index alignment carries no calendar anchor to compare against."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+            ),
+            observations=[_weekly_hosp_counts(period_end_dow=5)],
+        )
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
 
 
 class TestMultiSignalValidateDataAnchor:

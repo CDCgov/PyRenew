@@ -288,6 +288,43 @@ class TestStepwiseTemporalProcessConstruction:
         assert f"inner={inner!r}" in rendered
         assert "step_size=7" in rendered
 
+    def test_unknown_alignment_raises(self):
+        """Unknown alignment names raise."""
+        with pytest.raises(ValueError, match="alignment"):
+            StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                alignment="weekly",
+            )
+
+    def test_calendar_week_requires_weekly_step_size(self):
+        """calendar_week alignment is explicitly weekly."""
+        with pytest.raises(ValueError, match="step_size=7"):
+            StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=3,
+                alignment="calendar_week",
+                week_start_dow=6,
+            )
+
+    def test_calendar_week_requires_week_start_dow(self):
+        """calendar_week alignment requires a declared week start."""
+        with pytest.raises(ValueError, match="week_start_dow"):
+            StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                alignment="calendar_week",
+            )
+
+    def test_model_index_rejects_week_start_dow(self):
+        """week_start_dow is only meaningful for calendar_week alignment."""
+        with pytest.raises(ValueError, match="week_start_dow"):
+            StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                week_start_dow=6,
+            )
+
 
 class TestStepwiseTemporalProcessSample:
     """Sample-time behavior of StepwiseTemporalProcess."""
@@ -336,6 +373,73 @@ class TestStepwiseTemporalProcessSample:
         with numpyro.handlers.seed(rng_seed=42):
             result = wrapper.sample(n_timepoints=20, n_processes=2)
         assert result.shape == (20, 2)
+
+    def test_calendar_week_requires_first_day_dow_at_sample_time(self):
+        """calendar_week alignment needs the model-axis day of week."""
+        wrapper = StepwiseTemporalProcess(
+            AR1(autoreg=0.9, innovation_sd=0.05),
+            step_size=7,
+            alignment="calendar_week",
+            week_start_dow=6,
+        )
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(ValueError, match="first_day_dow"):
+                wrapper.sample(n_timepoints=20, n_processes=1)
+
+    def test_calendar_week_alignment_with_leading_partial_week(self):
+        """calendar_week alignment starts full blocks on week_start_dow."""
+        wrapper = StepwiseTemporalProcess(
+            AR1(autoreg=0.9, innovation_sd=0.05),
+            step_size=7,
+            alignment="calendar_week",
+            week_start_dow=6,
+        )
+        # first_day_dow=3 means day 0 is Thursday. With Sunday week starts,
+        # days 0-2 are a leading partial week, then days 3-9 are the first
+        # full Sunday-Saturday block on the model axis.
+        with numpyro.handlers.seed(rng_seed=42):
+            result = wrapper.sample(
+                n_timepoints=17,
+                n_processes=1,
+                first_day_dow=3,
+            )
+
+        assert jnp.allclose(result[:3], result[0])
+        assert jnp.allclose(result[3:10], result[3])
+        assert jnp.allclose(result[10:17], result[10])
+        assert not jnp.allclose(result[2], result[3])
+
+    def test_calendar_week_alignment_without_leading_partial_week(self):
+        """calendar_week alignment handles model axes starting on week_start_dow."""
+        wrapper = StepwiseTemporalProcess(
+            AR1(autoreg=0.9, innovation_sd=0.05),
+            step_size=7,
+            alignment="calendar_week",
+            week_start_dow=6,
+        )
+        with numpyro.handlers.seed(rng_seed=42):
+            result = wrapper.sample(
+                n_timepoints=15,
+                n_processes=1,
+                first_day_dow=6,
+            )
+
+        assert jnp.allclose(result[:7], result[0])
+        assert jnp.allclose(result[7:14], result[7])
+        assert jnp.allclose(result[14:15], result[14])
+
+    def test_coarse_trajectory_is_recorded(self):
+        """StepwiseTemporalProcess records the coarse trajectory."""
+        wrapper = StepwiseTemporalProcess(
+            AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+        )
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(wrapper.sample, rng_seed=42)
+        ).get_trace(n_timepoints=15, n_processes=1, name_prefix="rt")
+
+        assert "rt_coarse" in traced
+        assert traced["rt_coarse"]["type"] == "deterministic"
+        assert traced["rt_coarse"]["value"].shape == (3, 1)
 
 
 if __name__ == "__main__":

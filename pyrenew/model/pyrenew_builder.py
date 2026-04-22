@@ -198,34 +198,27 @@ class PyrenewBuilder:
 
     def _validate_coherence(self) -> None:
         """
-        Enforce end-to-end coherence between R(t) cadence and observation cadences.
-
-        Called at the start of ``build()`` before any model components are
-        constructed. Inspects ``self.observations`` for ``aggregation_period``
-        and ``period_end_dow`` attributes, and walks ``self.latent_params``
-        values for any ``TemporalProcess`` instances to read their
-        ``step_size`` attribute.
+        Enforce calendar-anchor and structural coherence across components.
 
         Checks:
 
         - All observations sharing the same ``aggregation_period > 1`` must
           agree on ``period_end_dow``.
-        - Every temporal-process ``step_size`` must be ``<=`` the finest
-          observation ``aggregation_period``.
-        - If a temporal process has ``step_size > 1``, that ``step_size``
-          must equal the ``aggregation_period`` of every observation whose
-          ``aggregation_period > 1``.
+        - Every temporal-process ``step_size`` must be a positive integer.
+        - Calendar-week-aligned temporal processes must have a
+          ``week_start_dow`` consistent with the ``period_end_dow`` of any
+          weekly observation: ``period_end_dow == (week_start_dow + 6) % 7``.
 
         Raises
         ------
         ValueError
-            If any of the three rules is violated.
+            If any of the above checks fails.
         """
+        # Intentionally permissive: parameter cadence and observation cadence
+        # are independent.
         agg_by_dow: dict[int, set[int]] = {}
-        agg_periods: list[int] = []
         for name, obs in self.observations.items():
             P = getattr(obs, "aggregation_period", 1)
-            agg_periods.append(P)
             if P > 1:
                 agg_by_dow.setdefault(P, set()).add(getattr(obs, "period_end_dow"))
 
@@ -242,26 +235,28 @@ class PyrenewBuilder:
             if isinstance(value, TemporalProcess)
         }
 
-        finest = min(agg_periods) if agg_periods else 1
-        coarse_periods = {P for P in agg_periods if P > 1}
+        weekly_period_end_dow = next(iter(agg_by_dow.get(7, set())), None)
 
         for param_name, process in temporal_processes.items():
             step_size = getattr(process, "step_size", 1)
-            if step_size > finest:
+            if not isinstance(step_size, int) or step_size < 1:
                 raise ValueError(
-                    f"Temporal process '{param_name}' has step_size={step_size} "
-                    f"exceeding the finest observation aggregation_period "
-                    f"({finest}). Parameterize R(t) at least as finely as the "
-                    f"finest observed signal."
+                    f"Temporal process '{param_name}' must expose a positive "
+                    f"integer step_size; got {step_size!r}"
                 )
-            if step_size > 1:
-                mismatched = {P for P in coarse_periods if P != step_size}
-                if mismatched:
+            if (
+                getattr(process, "alignment", None) == "calendar_week"
+                and weekly_period_end_dow is not None
+            ):
+                week_start_dow = getattr(process, "week_start_dow", None)
+                expected_period_end_dow = (week_start_dow + 6) % 7
+                if expected_period_end_dow != weekly_period_end_dow:
                     raise ValueError(
-                        f"Temporal process '{param_name}' has step_size="
-                        f"{step_size} but observations include "
-                        f"aggregation_period(s) {sorted(mismatched)} that do "
-                        f"not match. All coarse cadences must agree."
+                        f"Temporal process '{param_name}' has "
+                        f"week_start_dow={week_start_dow}, which implies "
+                        f"weekly observations should end on "
+                        f"period_end_dow={expected_period_end_dow}; got "
+                        f"period_end_dow={weekly_period_end_dow}"
                     )
 
     def build(self) -> MultiSignalModel:

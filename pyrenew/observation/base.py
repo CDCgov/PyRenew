@@ -14,6 +14,7 @@ import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
 
+from pyrenew.arrayutils import require_shape
 from pyrenew.convolve import compute_delay_ascertained_incidence
 from pyrenew.metaclass import RandomVariable
 
@@ -191,10 +192,7 @@ class BaseObservationProcess(RandomVariable):
         ValueError
             If shape is not (7,) or any values are negative.
         """
-        if dow_effect.shape != (7,):
-            raise ValueError(
-                f"{param_name} must return shape (7,), got {dow_effect.shape}"
-            )
+        require_shape(dow_effect, (7,), param_name)
         if jnp.any(dow_effect < 0):
             raise ValueError(f"{param_name} must have non-negative values")
 

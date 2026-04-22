@@ -67,6 +67,7 @@ from pyrenew.latent import (
     SubpopulationInfections,
     AR1,
     RandomWalk,
+    StepwiseTemporalProcess,
     GammaGroupSdPrior,
     HierarchicalNormalPrior,
 )
@@ -236,6 +237,54 @@ baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
 # RandomWalk allows flexible subpopulation deviations
 subpop_rt_deviation_process = RandomWalk(innovation_sd=0.025)
 ```
+
+### Choosing the Rt Parameter Cadence
+
+The renewal equation is evaluated on the model's daily time axis, but the temporal process for $\mathcal{R}(t)$ does not have to sample a new parameter every day.
+This separates three model choices:
+
+-   **Parameter cadence**: how often the $\mathcal{R}(t)$ temporal process samples a new latent value
+-   **Model time axis**: the daily axis used by the renewal equation and delay convolutions
+-   **Observation cadence**: the scale of the likelihood for each signal, such as daily ED visits or weekly hospital admissions
+
+The AR(1) process above samples one value per model day:
+
+```python
+baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
+```
+
+To parameterize $\mathcal{R}(t)$ weekly while still running the renewal equation daily, wrap the temporal process in `StepwiseTemporalProcess`.
+The wrapper samples a coarse trajectory and broadcasts it to the daily model axis before the latent infection process uses it.
+
+```python
+weekly_baseline_rt_process = StepwiseTemporalProcess(
+    inner=AR1(autoreg=0.9, innovation_sd=0.05),
+    step_size=7,
+    alignment="calendar_week",
+    week_start_dow=6,  # Sunday
+)
+```
+
+Use `alignment="calendar_week"` when the weekly Rt blocks should align to a known weekday.
+For MMWR-style weeks ending on Saturday, use `week_start_dow=6` for Sunday starts; the corresponding weekly count observation would use `period_end_dow=5`.
+At sample or run time, pass the day of week for element 0 of the shared model axis:
+
+```python
+first_day_dow = model.compute_first_day_dow(obs_start_dow)
+
+model.run(
+    rng_key,
+    n_warmup=500,
+    n_samples=1000,
+    first_day_dow=first_day_dow,
+    hospital={"obs": hospital_obs, "first_day_dow": first_day_dow},
+    ed={"obs": ed_obs},
+)
+```
+
+The top-level `first_day_dow` is used by calendar-aligned latent temporal processes.
+The observation-level `first_day_dow` is used by observation processes that need calendar alignment, such as weekly aggregation or day-of-week effects.
+For `alignment="model_index"`, stepwise blocks start at model index 0 and no top-level `first_day_dow` is needed.
 
 ## Observation Processes
 

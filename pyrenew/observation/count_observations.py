@@ -22,7 +22,10 @@ class CountObservation(BaseObservationProcess):
     Abstract Base class for count observation processes.
 
     Subclasses map infections to counts through ascertainment x delay convolution
-    with composable noise model.
+    with composable noise model. Count observations always receive predictions
+    on the model's daily time axis and then, if requested, aggregate those
+    daily predictions to the observation reporting grid before evaluating the
+    likelihood.
     """
 
     _SUPPORTED_SCHEDULES = ("regular", "irregular")
@@ -69,9 +72,11 @@ class CountObservation(BaseObservationProcess):
             ``first_day_dow`` at sample time), predicted counts are
             scaled by a periodic weekly pattern.
         aggregation_period
-            Width of the reporting period in fundamental time units.
-            Must be in ``{1, 7}``. ``1`` means no aggregation (daily
-            observations).
+            Width of the observation reporting period in days. Must be in
+            ``{1, 7}``. ``1`` means no aggregation (daily observations).
+            This controls only the scale on which the count likelihood is
+            evaluated. It does not control how often the latent Rt temporal
+            process samples new parameters.
         reporting_schedule
             Either ``"regular"`` (dense observation array, one entry
             per period, NaN for unobserved periods) or ``"irregular"``
@@ -289,13 +294,15 @@ class CountObservation(BaseObservationProcess):
         first_day_dow: int | None,
     ) -> ArrayLike:
         """
-        Aggregate daily predicted counts to the reporting-period grid.
+        Aggregate daily predicted counts to the observation reporting grid.
 
         When ``aggregation_period == 1`` returns the input unchanged.
         Otherwise sums daily values over non-overlapping fixed-width
         periods anchored by ``period_end_dow``, via
         ``pyrenew.time.daily_to_weekly``. Works on both 1D
         ``(n_total,)`` and 2D ``(n_total, n_subpops)`` inputs.
+        This aggregation is part of the observation likelihood path and is
+        independent of the parameter cadence used by the latent Rt process.
 
         Parameters
         ----------
@@ -335,7 +342,10 @@ class PopulationCounts(CountObservation):
     Aggregated count observation.
 
     Maps aggregate infections to counts through ascertainment x delay
-    convolution with composable noise model.
+    convolution with composable noise model. Predictions are constructed on
+    the daily model axis; ``aggregation_period`` controls whether those
+    predictions are scored as daily counts or summed to weekly counts before
+    the likelihood.
 
     Parameters
     ----------
@@ -402,7 +412,8 @@ class PopulationCounts(CountObservation):
         first_day_dow
             Day-of-week index of element 0 of the shared time axis
             (0=Monday, 6=Sunday, ISO convention). Required when
-            ``aggregation_period > 1``.
+            ``aggregation_period > 1`` so weekly observation periods can be
+            aligned to the shared daily model axis.
         **kwargs
             Additional keyword arguments (ignored).
 
@@ -475,6 +486,11 @@ class PopulationCounts(CountObservation):
         aggregated array at period indices derived from
         ``period_end_times``.
 
+        ``aggregation_period`` describes the observation scale only. The
+        latent infection process may use daily or coarser Rt parameter
+        cadence, but by the time this method is called it supplies infections
+        on the daily model axis.
+
         Parameters
         ----------
         infections
@@ -494,7 +510,9 @@ class PopulationCounts(CountObservation):
             Day-of-week index of the first timepoint on the shared
             time axis (0=Monday, 6=Sunday, ISO convention). Required
             when ``day_of_week_rv`` was set at construction or when
-            ``aggregation_period > 1``.
+            ``aggregation_period > 1``. This aligns observation-level
+            day-of-week effects or weekly aggregation to the shared daily
+            model axis.
         period_end_times
             Daily-axis indices of each observed period's final day.
             Required when ``reporting_schedule == "irregular"``.
@@ -573,6 +591,10 @@ class SubpopulationCounts(CountObservation):
 
     Maps subpopulation-level infections to counts through
     ascertainment x delay convolution with composable noise model.
+    Predictions are constructed on the daily model axis for each
+    subpopulation; ``aggregation_period`` controls whether those predictions
+    are scored as daily counts or summed to weekly counts before the
+    likelihood.
 
     Parameters
     ----------
@@ -640,7 +662,8 @@ class SubpopulationCounts(CountObservation):
         first_day_dow
             Day-of-week index of element 0 of the shared time axis
             (0=Monday, 6=Sunday, ISO convention). Required when
-            ``aggregation_period > 1``.
+            ``aggregation_period > 1`` so weekly observation periods can be
+            aligned to the shared daily model axis.
         subpop_indices
             Subpopulation indices (0-indexed). For
             ``reporting_schedule="regular"``: shape
@@ -737,6 +760,11 @@ class SubpopulationCounts(CountObservation):
         a mask; ``"irregular"`` fancy-indexes the aggregated array
         at period indices derived from ``period_end_times``.
 
+        ``aggregation_period`` describes the observation scale only. The
+        latent infection process may use daily or coarser Rt parameter
+        cadence, but by the time this method is called it supplies infections
+        on the daily model axis.
+
         Parameters
         ----------
         infections
@@ -757,7 +785,9 @@ class SubpopulationCounts(CountObservation):
             Day-of-week index of the first timepoint on the shared
             time axis (0=Monday, 6=Sunday, ISO convention). Required
             when ``day_of_week_rv`` was set at construction or when
-            ``aggregation_period > 1``.
+            ``aggregation_period > 1``. This aligns observation-level
+            day-of-week effects or weekly aggregation to the shared daily
+            model axis.
         period_end_times
             Daily-axis indices of each observed period's final day.
             Required when ``reporting_schedule == "irregular"``.
