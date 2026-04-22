@@ -1036,6 +1036,12 @@ class TestPopulationCountsAggregationValidateData:
                 n_total=20, n_subpops=1, period_end_times=period_end_times
             )
 
+    def test_irregular_no_period_end_times_is_noop(self, weekly_irregular_counts):
+        """Irregular schedule with period_end_times=None returns without error."""
+        weekly_irregular_counts.validate_data(
+            n_total=28, n_subpops=1, obs=None, period_end_times=None
+        )
+
 
 # ===================================================================
 # PopulationCounts with aggregation: sample
@@ -1127,6 +1133,14 @@ class TestPopulationCountsAggregationSample:
         assert result.predicted.shape == (30,)
         assert result.observed.shape == (3,)
 
+    def test_aggregate_helper_missing_first_day_dow_raises(self, weekly_regular_counts):
+        """_aggregate raises when aggregation_period > 1 and first_day_dow is None."""
+        predicted_daily = jnp.ones(28)
+        with pytest.raises(
+            ValueError, match="first_day_dow is required when aggregation_period > 1"
+        ):
+            weekly_regular_counts._aggregate(predicted_daily, first_day_dow=None)
+
 
 # ===================================================================
 # SubpopulationCounts with aggregation: validate_data
@@ -1161,6 +1175,10 @@ class TestSubpopulationCountsAggregationValidateData:
             first_day_dow=6,
             subpop_indices=subpop_indices,
         )
+
+    def test_regular_no_obs_is_noop(self, weekly_regular_subpop_counts):
+        """Regular schedule with obs=None returns without error."""
+        weekly_regular_subpop_counts.validate_data(n_total=28, n_subpops=3, obs=None)
 
     def test_weekly_regular_wrong_n_periods_raises(self, weekly_regular_subpop_counts):
         """Weekly-regular obs with wrong dim-0 length raises."""
@@ -1434,6 +1452,29 @@ class TestSubpopulationCountsAggregationSample:
             )
         assert result.predicted.shape == (30, 3)
         assert result.observed.shape == (3,)
+
+    def test_weekly_regular_with_obs_conditions(
+        self, weekly_regular_subpop_counts, subpop_infections_28d
+    ):
+        """Weekly-regular sample conditions on 2D obs with NaN-padding for unobserved periods."""
+        subpop_indices = jnp.array([0, 2])
+        obs = jnp.array(
+            [
+                [7.0, 7.0],
+                [jnp.nan, jnp.nan],
+                [7.0, 7.0],
+                [7.0, 7.0],
+            ]
+        )
+        with numpyro.handlers.seed(rng_seed=42):
+            result = weekly_regular_subpop_counts.sample(
+                infections=subpop_infections_28d,
+                obs=obs,
+                first_day_dow=6,
+                subpop_indices=subpop_indices,
+            )
+        assert result.predicted.shape == (4, 3)
+        assert result.observed.shape == (4, 2)
 
 
 if __name__ == "__main__":

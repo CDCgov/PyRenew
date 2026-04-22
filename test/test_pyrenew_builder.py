@@ -581,6 +581,17 @@ class TestBuilderCoherence:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
+    def test_step_size_mismatches_coarse_period_raises(self):
+        """step_size > 1 must equal every coarse observation aggregation_period."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05), step_size=2
+            ),
+            observations=[_weekly_hosp_counts()],
+        )
+        with pytest.raises(ValueError, match="All coarse cadences must agree"):
+            builder.build()
+
 
 class TestMultiSignalValidateDataAnchor:
     """MultiSignalModel.validate_data sample-time anchor check for first_day_dow."""

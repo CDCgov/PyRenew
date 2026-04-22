@@ -279,6 +279,15 @@ class TestStepwiseTemporalProcessConstruction:
         with pytest.raises(ValueError, match="positive integer"):
             StepwiseTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), step_size=7.0)
 
+    def test_repr_includes_inner_and_step_size(self):
+        """__repr__ shows the inner process and step_size."""
+        inner = AR1(autoreg=0.9, innovation_sd=0.05)
+        wrapper = StepwiseTemporalProcess(inner, step_size=7)
+        rendered = repr(wrapper)
+        assert rendered.startswith("StepwiseTemporalProcess(")
+        assert f"inner={inner!r}" in rendered
+        assert "step_size=7" in rendered
+
 
 class TestStepwiseTemporalProcessSample:
     """Sample-time behavior of StepwiseTemporalProcess."""
