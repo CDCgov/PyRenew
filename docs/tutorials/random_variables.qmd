@@ -51,7 +51,7 @@ from pyrenew.randomvariable import (
     DynamicDistributionalVariable,
     TransformedVariable,
 )
-from pyrenew.observation import Counts, NegativeBinomialNoise
+from pyrenew.observation import PopulationCounts, NegativeBinomialNoise
 import pyrenew.transformation as transformation
 from pyrenew import datasets
 
@@ -154,18 +154,20 @@ with numpyro.handlers.seed(rng_seed=0):
 ### Interchangeability
 
 Because all implementations share the `sample()` interface,
-you can swap them freely. For example, the `Counts` observation process
+you can swap them freely. For example, the `PopulationCounts` observation process
 accepts any `RandomVariable` as its `ascertainment_rate_rv`.
 The model code is identical whether the rate is fixed or estimated:
 
 ```{python}
 # | label: interchangeability
 hosp_delay_pmf = jnp.array(
-    datasets.load_infection_admission_interval()["probability_mass"].to_numpy()
+    datasets.load_example_infection_admission_interval()[
+        "probability_mass"
+    ].to_numpy()
 )
 
 # Fixed ascertainment rate
-hosp_fixed = Counts(
+hosp_fixed = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
     delay_distribution_rv=DeterministicPMF("delay", hosp_delay_pmf),
@@ -173,7 +175,7 @@ hosp_fixed = Counts(
 )
 
 # Estimated ascertainment rate --- same model structure, different RV
-hosp_estimated = Counts(
+hosp_estimated = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
     delay_distribution_rv=DeterministicPMF("delay", hosp_delay_pmf),
@@ -189,7 +191,6 @@ subclasses to implement:
 | Method | Signature | Purpose |
 |--------|-----------|---------|
 | `sample` | `sample(**kwargs) -> tuple` | Core computation: return a value, draw from a distribution, or perform a calculation |
-| `validate` | `validate(**kwargs) -> None` | Check that parameters are well-formed; raise an error if not |
 
 The metaclass also provides:
 
@@ -510,7 +511,6 @@ and weekday peaks that is characteristic of real hospital admissions data.
 ### Writing a custom RandomVariable
 
 1. Subclass `RandomVariable` from `pyrenew.metaclass`
-2. Implement `validate()` as a `@staticmethod`; call it in `__init__`
 3. Implement `sample(**kwargs)` returning a `tuple`
 4. Use `numpyro.sample()` for quantities to be estimated
 5. Use `numpyro.deterministic()` to record derived quantities in the trace

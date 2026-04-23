@@ -54,22 +54,6 @@ class DeterministicPMF(RandomVariable):
 
         return None
 
-    @staticmethod
-    def validate(value: ArrayLike) -> None:
-        """
-        Validates input to DeterministicPMF
-
-        Parameters
-        ----------
-        value
-            An ArrayLike object.
-
-        Returns
-        -------
-        None
-        """
-        return None
-
     def sample(
         self,
         **kwargs: object,

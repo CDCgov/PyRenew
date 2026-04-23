@@ -196,10 +196,3 @@ class ARProcess(RandomVariable):
         else:
             ts_with_inits = inits_broadcast
         return ts_with_inits[:n]
-
-    @staticmethod
-    def validate() -> None:  # numpydoc ignore=RT01
-        """
-        Validates input parameters, implementation pending.
-        """
-        return None

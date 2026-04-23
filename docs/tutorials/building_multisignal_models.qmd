@@ -64,7 +64,7 @@ from pyrenew.metaclass import RandomVariable
 from pyrenew.randomvariable import DistributionalVariable
 
 from pyrenew.latent import (
-    HierarchicalInfections,
+    SubpopulationInfections,
     AR1,
     RandomWalk,
     GammaGroupSdPrior,
@@ -73,9 +73,9 @@ from pyrenew.latent import (
 from pyrenew.model import PyrenewBuilder
 
 from pyrenew.observation import (
-    Counts,
+    PopulationCounts,
     HierarchicalNormalNoise,
-    Measurements,
+    MeasurementObservation,
     MeasurementNoise,
     NegativeBinomialNoise,
 )
@@ -89,7 +89,7 @@ Renewal models in PyRenew combine two types of components:
 
 2.  **Observation processes**: Transform latent infections into observable signals (hospital admissions, wastewater concentrations, etc.) by applying delays, ascertainment, and noise
 
-A **multi-signal model** combines multiple observation processes—each representing a different data stream, e.g., hospital admissions, wastewater concentrations, which stem from the same underlying latent infection process. By jointly modeling these signals, we can improve estimation and prediction of the time-varying reproduction number $\mathcal{R}(t)$. Such a model must:
+A **multi-signal model** combines multiple observation processes—each representing a different data stream, e.g., hospital admissions, emergency deparatment visits, wastewater concentrations, which stem from the same underlying latent infection process. By jointly modeling these signals, we can improve estimation and prediction of the time-varying reproduction number $\mathcal{R}(t)$. Such a model must:
 
 -   Generate a single coherent infection trajectory (or set of trajectories for subpopulations)
 -   Route those infections to each observation process appropriately
@@ -97,8 +97,8 @@ A **multi-signal model** combines multiple observation processes—each represen
 
 The `PyrenewBuilder` class handles this plumbing. You specify:
 
-1.  A **latent process** (e.g., `HierarchicalInfections`) that defines how infections evolve
-2.  One or more **observation processes** (e.g., `Counts`, `Measurements`) that define how infections become data
+1.  A single **latent process** (e.g., `SubpopulationInfections`) that defines how infections evolve.
+2.  One or more **observation processes** (e.g., `PopulationCounts`, `MeasurementObservation`) that define how infections become data.
 
 The builder computes initialization requirements, wires components together, and produces a model ready for inference.
 
@@ -106,7 +106,7 @@ The builder computes initialization requirements, wires components together, and
 
 Before diving into multi-signal models, you may want to review these foundational tutorials:
 
--   **[Hierarchical Latent Infections](latent_hierarchical_infections.md)**: Understanding temporal process choices for $\mathcal{R}(t)$
+-   **[Latent Infections](latent_infections.md)** and **[Latent Subpopulation Infections](latent_subpopulation_infections.md)**: Understanding temporal process choices for $\mathcal{R}(t)$
 -   **[Observation Processes: Counts](observation_processes_counts.md)**: Modeling count data (admissions, deaths)
 -   **[Observation Processes: Measurements](observation_processes_measurements.md)**: Modeling continuous data (wastewater)
 
@@ -116,8 +116,8 @@ This tutorial shows how to combine these components into a complete multi-signal
 
 This tutorial demonstrates building a multi-signal renewal model using:
 
--   `HierarchicalInfections` — subpopulations share a jurisdiction-level baseline $\mathcal{R}(t)$ with subpopulation-specific deviations
--   `Counts` — hospital admissions (jurisdiction-level)
+-   `SubpopulationInfections` — subpopulations share a jurisdiction-level baseline $\mathcal{R}(t)$ with subpopulation-specific deviations
+-   `PopulationCounts` — hospital admissions (jurisdiction-level)
 -   A custom `Wastewater` class — viral concentrations (subpopulation-level)
 
 ## Model Structure
@@ -133,7 +133,7 @@ The diagram below shows how data flows through the model. The latent process gen
 flowchart TB
 
     subgraph Latent["Latent Infection Process"]
-        L["Renewal equation<br/>(HierarchicalInfections)"]
+        L["Renewal equation<br/>(SubpopulationInfections)"]
     end
 
     subgraph Infections["Infection Trajectories"]
@@ -142,8 +142,8 @@ flowchart TB
     end
 
     subgraph Obs["Observation Processes"]
-        C["Hospital admissions<br/>(Counts)"]
-        W["Wastewater concentrations<br/>(Measurements)"]
+        C["Hospital admissions<br/>(PopulationCounts)"]
+        W["Wastewater concentrations<br/>(MeasurementObservation)"]
     end
 
     subgraph Data["Observed Data"]
@@ -184,7 +184,7 @@ Latent infection processes implement the renewal equation to generate infection 
 
 ### Generation Interval
 
-The generation interval PMF specifies the probability that a secondary infection occurs $d$ days after the primary infection.
+The generation interval PMF specifies the probability that a secondary infection occurs $\tau$ days after the primary infection.
 
 ```{python}
 # | label: gen-interval
@@ -206,14 +206,16 @@ The initial infections RV `I0_rv` specifies the **proportion of the population i
 I0_rv = DistributionalVariable("I0", dist.Beta(1, 100))
 ```
 
-### Initial Log Rt
 
-We place a prior on the initial log(Rt), centered at 0.0 (Rt = 1.0) with moderate uncertainty:
+
+### Log Rt at time $0$
+
+We place a prior on the log(Rt) at time $0$, centered at 0.0 (Rt = 1.0) with moderate uncertainty:
 
 ```{python}
-# | label: initial-log-rt
-initial_log_rt_rv = DistributionalVariable(
-    "initial_log_rt", dist.Normal(0.0, 0.5)
+# | label: log-rt-time-0
+log_rt_time_0_rv = DistributionalVariable(
+    "log_rt_time_0", dist.Normal(0.0, 0.5)
 )
 ```
 
@@ -280,7 +282,7 @@ print(
 )
 ```
 
-The hospital admissions data is aggregated at the jurisdiction level, therefore we specify a `Counts` observation process.
+The hospital admissions data is aggregated at the jurisdiction level, therefore we specify a `PopulationCounts` observation process.
 
 ```{python}
 # | label: hospital-obs-process
@@ -341,7 +343,7 @@ ihr_rv = DeterministicVariable("ihr", 0.01)
 hosp_concentration_rv = DeterministicVariable("hosp_concentration", 10.0)
 
 # Create hospital observation process
-hosp_obs = Counts(
+hosp_obs = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=hosp_delay_rv,
@@ -357,13 +359,13 @@ print(f"  Delay PMF length: {len(inf_to_hosp_pmf)} days")
 
 #### Wastewater Observation Process
 
-The `Measurements` base class handles continuous observation processes. Domain-specific
+The `MeasurementObservation` base class handles continuous observation processes. Domain-specific
 implementations subclass it and implement `_predicted_obs()` to transform infections
 into predicted values. See `observation_processes_measurements.md` for a detailed tutorial.
 
 ```{python}
 # | label: wastewater-class
-class Wastewater(Measurements):
+class Wastewater(MeasurementObservation):
     """
     Wastewater viral concentration observation process.
 
@@ -528,10 +530,10 @@ print("Latent process configuration:")
 print(f"  Generation interval length: {len(gen_int_rv())} days")
 
 builder.configure_latent(
-    HierarchicalInfections,
+    SubpopulationInfections,
     gen_int_rv=gen_int_rv,
     I0_rv=I0_rv,
-    initial_log_rt_rv=initial_log_rt_rv,
+    log_rt_time_0_rv=log_rt_time_0_rv,
     baseline_rt_process=baseline_rt_process,
     subpop_rt_deviation_process=subpop_rt_deviation_process,
 )
@@ -553,6 +555,15 @@ print(f"  n_initialization_points: {n_init}")
 print(f"  Latent process: {type(model.latent).__name__}")
 print(f"  Observation processes: {list(model.observations.keys())}")
 ```
+
+### Model  Identifiability.
+
+The renewal equation is linear in the initial infections `I0_rv`, so scaling `I0_rv` by a factor $c$ scales the entire infection trajectory by $c$.
+In practice, `I0_rv` is weakly identified because each observation process links infections to data through a signal-specific ascertainment rate $\alpha_s$ — the probability that an infection is observed as an event in signal $s$.
+Doubling `I0_rv` while halving all ascertainment rates produces identical expected observations.
+Without external information to anchor either the ascertainment rates or the absolute infection level, the data cannot distinguish "more infections, lower ascertainment" from "fewer infections, higher ascertainment."
+The priors on `I0_rv` and on the ascertainment rates resolve this ambiguity.
+
 
 ## Fitting the Model to Data:  `model.run()`
 
@@ -585,7 +596,7 @@ builder.add_observation(ww_obs)     # ww_obs.name="wastewater" → wastewater={.
 
 #### Jurisdiction-level signals (dense)
 
-The jurisdiction-level hospital admissions data is specified as a `Counts` observations process with dense data padded to length `n_total`:
+The jurisdiction-level hospital admissions data is specified as a `PopulationCounts` observations process with dense data padded to length `n_total`:
 
 ```python
 hospital={
@@ -788,65 +799,61 @@ elapsed_90 = time.time() - start_time
 print(f"Elapsed time: {elapsed_90:.1f} seconds")
 ```
 
+We use [ArviZ](https://python.arviz.org/en/stable/) to assess MCMC convergence and mixing via the $\hat{R}$ statistic and effective sample size (ESS).
+Before running these diagnostics, it is necessary to we trim the first `n_init` time steps from all time-series variables.
+Since the model cannot estimate latent infections until it has seen a full generation interval's worth of data,
+these early time steps have no meaningful epidemiological interpretation and therefore should be excluded from summaries and visualizations.
+
 ```{python}
-# | label: posterior-shape-90
-lat_inf_90 = samples_90["latent_infections"]
-print(f"Posterior samples shape: {lat_inf_90.shape}")
-print(f"Mean latent infections: {np.mean(lat_inf_90):,.0f}")
+# | label: helper-trim-time
+def trim_time(ds):
+    """Trim first n_init entries from time dimension and reindex."""
+    if "time" in ds.dims:
+        ds = ds.isel(time=slice(n_init, None))
+        ds = ds.assign_coords(time=range(ds.sizes["time"]))
+    return ds
 ```
 
-We check that the chains have converged and the number of effective samples.
+We first label the time axis of all time-series variables using the dims argument to [az.from_numpyro](https://python.arviz.org/projects/base/en/latest/api/generated/arviz_base.from_numpyro.html).
+Then we trim the first `n_init` time steps from all time-series variables.
+Finally we call the [az.summary](https://python.arviz.org/projects/stats/en/latest/api/generated/arviz_stats.summary.html) report.
 
 ```{python}
 # | label: arviz-diagnostics-90
-# ArviZ diagnostics for 90-day fit
-def filter_samples_for_arviz(samples, n_init, num_chains=4):
-    """Slice time-series samples to exclude initialization period and reshape for chains."""
-    num_samples_per_chain = len(list(samples.values())[0]) // num_chains
-    filtered = {}
-    for k, v in samples.items():
-        if v.ndim == 2 and v.shape[1] > n_init:
-            # Time-series: slice to post-init period, reshape to (chains, draws, time)
-            filtered[k] = v[:, n_init:].reshape(
-                num_chains, num_samples_per_chain, -1
-            )
-        elif v.ndim == 1:
-            # Scalar: reshape to (chains, draws)
-            filtered[k] = v.reshape(num_chains, num_samples_per_chain)
-        else:
-            # Multi-dim: reshape to (chains, draws, ...)
-            filtered[k] = v.reshape(
-                num_chains, num_samples_per_chain, *v.shape[1:]
-            )
-    return filtered
-
-
-samples_90_filtered = filter_samples_for_arviz(
-    samples_90, n_init, num_chains=2
+idata_90 = az.from_numpyro(
+    model.mcmc,
+    dims={
+        "latent_infections": ["time"],
+        "SubpopulationInfections::infections_aggregate": ["time"],
+        "SubpopulationInfections::log_rt_baseline": ["time", "dummy"],
+        "SubpopulationInfections::rt_baseline": ["time", "dummy"],
+        "SubpopulationInfections::rt_subpop": ["time", "subpop"],
+        "SubpopulationInfections::subpop_deviations": ["time", "subpop"],
+        "latent_infections_by_subpop": ["time", "subpop"],
+        "hospital_predicted": ["time"],
+        "wastewater_predicted": ["time", "subpop"],
+    },
 )
-idata_90 = az.from_dict(posterior=samples_90_filtered)
-az.summary(idata_90, var_names=["~latent_infections", "~expected"])
+
+idata_90_trimmed = idata_90.map_over_datasets(trim_time)
+az.summary(
+    idata_90_trimmed, var_names=["latent_infections", "hospital_predicted"]
+)
 ```
 
 We extract the posterior quantiles and print summary statistics.
 
 ```{python}
 # | label: extract-quantiles-90
-def extract_posterior_quantiles(samples, n_init, n_days):
-    """Extract posterior quantiles for latent infections."""
-    latent_inf = np.array(samples["latent_infections"])[
-        :, n_init : n_init + n_days
-    ]
-    return {
-        "q05": np.percentile(latent_inf, 5, axis=0),
-        "q50": np.percentile(latent_inf, 50, axis=0),
-        "q95": np.percentile(latent_inf, 95, axis=0),
-    }
 
+latent_inf = idata_90_trimmed.posterior["latent_infections"]
 
-quantiles_90 = extract_posterior_quantiles(samples_90, n_init, n_days_90)
+quantiles_90 = {
+    "q05": latent_inf.quantile(0.05, dim=["chain", "draw"]).values,
+    "q50": latent_inf.quantile(0.50, dim=["chain", "draw"]).values,
+    "q95": latent_inf.quantile(0.95, dim=["chain", "draw"]).values,
+}
 
-# Summary statistics
 ci_width_90 = quantiles_90["q95"] - quantiles_90["q05"]
 print(f"Posterior summary for {n_days_90} days:")
 print(f"  Mean 90% CI width: {ci_width_90.mean():,.0f} infections")
@@ -956,28 +963,43 @@ elapsed_180 = time.time() - start_time
 print(f"Elapsed time: {elapsed_180:.1f} seconds")
 ```
 
-```{python}
-# | label: posterior-shape-180
-lat_inf_180 = samples_180["latent_infections"]
-print(f"Posterior samples shape: {lat_inf_180.shape}")
-print(f"Mean latent infections: {np.mean(lat_inf_180):,.0f}")
-```
-
 We check the model fit, as before.
 
 ```{python}
 # | label: arviz-diagnostics-180
 # ArviZ diagnostics for 180-day fit
-samples_180_filtered = filter_samples_for_arviz(
-    samples_180, n_init, num_chains=2
+
+idata_180 = az.from_numpyro(
+    model.mcmc,
+    dims={
+        "latent_infections": ["time"],
+        "SubpopulationInfections::infections_aggregate": ["time"],
+        "SubpopulationInfections::log_rt_baseline": ["time", "dummy"],
+        "SubpopulationInfections::rt_baseline": ["time", "dummy"],
+        "SubpopulationInfections::rt_subpop": ["time", "subpop"],
+        "SubpopulationInfections::subpop_deviations": ["time", "subpop"],
+        "latent_infections_by_subpop": ["time", "subpop"],
+        "hospital_predicted": ["time"],
+        "wastewater_predicted": ["time", "subpop"],
+    },
 )
-idata_180 = az.from_dict(posterior=samples_180_filtered)
-az.summary(idata_180, var_names=["~latent_infections", "~expected"])
+
+idata_180_trimmed = idata_180.map_over_datasets(trim_time)
+az.summary(
+    idata_180_trimmed, var_names=["latent_infections", "hospital_predicted"]
+)
 ```
 
 ```{python}
 # | label: extract-quantiles-180
-quantiles_180 = extract_posterior_quantiles(samples_180, n_init, n_days_180)
+
+latent_inf = idata_180_trimmed.posterior["latent_infections"]
+
+quantiles_180 = {
+    "q05": latent_inf.quantile(0.05, dim=["chain", "draw"]).values,
+    "q50": latent_inf.quantile(0.50, dim=["chain", "draw"]).values,
+    "q95": latent_inf.quantile(0.95, dim=["chain", "draw"]).values,
+}
 
 ci_width_180 = quantiles_180["q95"] - quantiles_180["q05"]
 print(f"Posterior summary for {n_days_180} days:")
@@ -1117,6 +1139,6 @@ This tutorial demonstrated composing a multi-signal renewal model using `Pyrenew
 
 ### Next Steps
 
--   Explore different temporal processes for $\mathcal{R}(t)$ in the [Hierarchical Latent Infections](latent_hierarchical_infections.md) tutorial
+-   Explore different temporal processes for $\mathcal{R}(t)$ in the [Latent Infections](latent_infections.md) and [Latent Subpopulation Infections](latent_subpopulation_infections.md) tutorials
 -   Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.md)
 -   Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.md)

@@ -23,29 +23,32 @@ from pyrenew.latent import (
     AR1,
     DifferencedAR1,
     GammaGroupSdPrior,
-    HierarchicalInfections,
     HierarchicalNormalPrior,
     Infections,
     InfectionsWithFeedback,
     RandomWalk,
     StudentTGroupModePrior,
+    SubpopulationInfections,
 )
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation import (
-    Counts,
-    CountsBySubpop,
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
     NegativeBinomialObservation,
     PoissonNoise,
-    VectorizedRV,
+    PopulationCounts,
+    SubpopulationCounts,
 )
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.iidrandomsequence import IIDRandomSequence, StandardNormalSequence
 from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
 from pyrenew.process.randomwalk import StandardNormalRandomWalk
-from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
-from test.test_helpers import ConcreteMeasurements
+from pyrenew.randomvariable import (
+    DistributionalVariable,
+    TransformedVariable,
+    VectorizedVariable,
+)
+from test.test_helpers import ConcreteMeasurementObservation
 
 # =============================================================================
 # Shared instance builders
@@ -54,13 +57,13 @@ from test.test_helpers import ConcreteMeasurements
 
 def _make_counts():
     """
-    Build a Counts instance.
+    Build a PopulationCounts instance.
 
     Returns
     -------
     instantiated object
     """
-    return Counts(
+    return PopulationCounts(
         name="test",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
@@ -70,13 +73,13 @@ def _make_counts():
 
 def _make_counts_by_subpop():
     """
-    Build a CountsBySubpop instance.
+    Build a SubpopulationCounts instance.
 
     Returns
     -------
     instantiated object
     """
-    return CountsBySubpop(
+    return SubpopulationCounts(
         name="test_subpop",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
@@ -86,21 +89,21 @@ def _make_counts_by_subpop():
 
 def _make_measurements():
     """
-    Build a ConcreteMeasurements instance.
+    Build a ConcreteMeasurementObservation instance.
 
     Returns
     -------
     instantiated object
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.1)),
     )
-    return ConcreteMeasurements(
+    return ConcreteMeasurementObservation(
         name="test_ww",
         temporal_pmf_rv=DeterministicPMF("shed", jnp.array([0.3, 0.4, 0.3])),
         noise=HierarchicalNormalNoise(sensor_mode_rv, sensor_sd_rv),
@@ -115,11 +118,11 @@ def _make_hierarchical_normal_noise():
     -------
     instantiated object
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("mode", dist.Normal(0, 0.5)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable("sd", dist.TruncatedNormal(0.3, 0.15, low=0.1)),
     )
@@ -157,7 +160,7 @@ def _make_infections_with_feedback():
         ),
         pytest.param(RandomWalk(innovation_sd=0.5), id="RandomWalk"),
         pytest.param(_make_counts(), id="Counts"),
-        pytest.param(_make_counts_by_subpop(), id="CountsBySubpop"),
+        pytest.param(_make_counts_by_subpop(), id="SubpopulationCounts"),
         pytest.param(_make_measurements(), id="Measurements"),
         pytest.param(PoissonNoise(), id="PoissonNoise"),
         pytest.param(
@@ -176,67 +179,27 @@ def test_repr_returns_nonempty_string(instance):
 
 
 # =============================================================================
-# validate() coverage (no-op and real)
-# =============================================================================
-
-
-@pytest.mark.parametrize(
-    "instance",
-    [
-        pytest.param(
-            HierarchicalNormalPrior(
-                name="test", sd_rv=DeterministicVariable("sd", 1.0)
-            ),
-            id="HierarchicalNormalPrior",
-        ),
-        pytest.param(
-            GammaGroupSdPrior(
-                name="test",
-                sd_mean_rv=DeterministicVariable("mean", 0.5),
-                sd_concentration_rv=DeterministicVariable("conc", 10.0),
-            ),
-            id="GammaGroupSdPrior",
-        ),
-        pytest.param(
-            StudentTGroupModePrior(
-                name="test",
-                sd_rv=DeterministicVariable("sd", 1.0),
-                df_rv=DeterministicVariable("df", 5.0),
-            ),
-            id="StudentTGroupModePrior",
-        ),
-        pytest.param(PoissonNoise(), id="PoissonNoise"),
-        pytest.param(_make_hierarchical_normal_noise(), id="HierarchicalNormalNoise"),
-        pytest.param(_make_counts(), id="Counts"),
-    ],
-)
-def test_validate_does_not_raise(instance):
-    """validate() completes without error on well-formed instances."""
-    instance.validate()
-
-
-# =============================================================================
 # infection_resolution() coverage
 # =============================================================================
 
 
 def test_counts_by_subpop_infection_resolution():
-    """CountsBySubpop.infection_resolution() returns 'subpop'."""
+    """SubpopulationCounts.infection_resolution() returns 'subpop'."""
     counts = _make_counts_by_subpop()
     assert counts.infection_resolution() == "subpop"
 
 
 def test_measurements_infection_resolution():
-    """ConcreteMeasurements.infection_resolution() returns 'subpop'."""
+    """ConcreteMeasurementObservation.infection_resolution() returns 'subpop'."""
     m = _make_measurements()
     assert m.infection_resolution() == "subpop"
 
 
 def test_base_count_observation_infection_resolution_raises():
-    """Base _CountBase.infection_resolution() raises NotImplementedError."""
-    from pyrenew.observation.count_observations import _CountBase
+    """Base CountObservation.infection_resolution() raises NotImplementedError."""
+    from pyrenew.observation.count_observations import CountObservation
 
-    class _MinimalCounts(_CountBase):
+    class _MinimalCounts(CountObservation):
         """Minimal subclass that inherits infection_resolution unchanged."""
 
         def sample(self, *args, **kwargs):  # numpydoc ignore=GL08
@@ -262,10 +225,11 @@ def test_base_count_observation_infection_resolution_raises():
 
 def test_get_required_lookback(gen_int_rv):
     """get_required_lookback returns generation interval PMF length."""
-    infections = HierarchicalInfections(
+    infections = SubpopulationInfections(
+        name="subpopulation",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,
@@ -275,16 +239,17 @@ def test_get_required_lookback(gen_int_rv):
 
 
 # =============================================================================
-# HierarchicalInfections.validate() coverage
+# SubpopulationInfections.validate() coverage
 # =============================================================================
 
 
-def test_hierarchical_infections_validate(gen_int_rv):
-    """HierarchicalInfections.validate() runs without error on valid PMF."""
-    infections = HierarchicalInfections(
+def test_subpopulation_infections_validate(gen_int_rv):
+    """SubpopulationInfections.validate() runs without error on valid PMF."""
+    infections = SubpopulationInfections(
+        name="subpopulation",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,
@@ -452,15 +417,15 @@ def test_random_variable_rejects_invalid_name(bad_name):
             id="StudentTGroupModePrior",
         ),
         pytest.param(_make_counts(), "test", id="Counts"),
-        pytest.param(_make_counts_by_subpop(), "test_subpop", id="CountsBySubpop"),
+        pytest.param(_make_counts_by_subpop(), "test_subpop", id="SubpopulationCounts"),
         pytest.param(_make_measurements(), "test_ww", id="ConcreteMeasurements"),
         pytest.param(
-            VectorizedRV(
+            VectorizedVariable(
                 name="test_vec",
                 rv=DistributionalVariable("inner", dist.Normal(0, 1)),
             ),
             "test_vec",
-            id="VectorizedRV",
+            id="VectorizedVariable",
         ),
     ],
 )
@@ -469,13 +434,13 @@ def test_name_attribute_matches_expected(instance, expected_name):
     assert instance.name == expected_name
 
 
-def test_hierarchical_infections_name(gen_int_rv):
-    """HierarchicalInfections.name is correctly set during construction."""
-    infections = HierarchicalInfections(
+def test_subpopulation_infections_name(gen_int_rv):
+    """SubpopulationInfections.name is correctly set during construction."""
+    infections = SubpopulationInfections(
         name="test_hi",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,

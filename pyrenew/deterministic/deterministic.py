@@ -33,36 +33,7 @@ class DeterministicVariable(RandomVariable):
         None
         """
         super().__init__(name=name)
-        self.validate(value)
         self.value = value
-
-        return None
-
-    @staticmethod
-    def validate(value: ArrayLike) -> None:
-        """
-        Validates input to DeterministicVariable
-
-        Parameters
-        ----------
-        value
-            An ArrayLike object.
-
-        Returns
-        -------
-        None
-
-        Raises
-        ------
-        Exception
-            If the input value object is not an ArrayLike object.
-        """
-        if not isinstance(value, ArrayLike):
-            raise ValueError(
-                f"value {value} passed to a DeterministicVariable "
-                f"is of type {type(value).__name__}, expected "
-                "an ArrayLike object"
-            )
 
         return None
 

@@ -1,16 +1,19 @@
-# numpydoc ignore=GL08
+"""
+Example infection to admission delay distribution
+"""
 
 from importlib.resources import files
 
 import polars as pl
 
 
-def load_infection_admission_interval() -> pl.DataFrame:
+def load_example_infection_admission_interval() -> pl.DataFrame:
     """
-    Load the infection to admission interval
+    Load an example infection to hospital admission interval
+    distribution.
 
-    This dataset contains the infection to admission interval distribution for
-    COVID-19.
+    This dataset contains an example infection to admission interval
+    distribution for COVID-19.
 
     Returns
     -------
@@ -20,7 +23,7 @@ def load_infection_admission_interval() -> pl.DataFrame:
     Notes
     -----
     This dataset was downloaded directly from:
-    https://raw.githubusercontent.com/CDCgov/wastewater-informed-covid-forecasting/0962c5d1652787479ac72caebf076ab55fe4e10c/input/saved_pmfs/inf_to_hosp.csv
+    [github.com/cdcgov/wastewater-informed-covid-forecasting](https://raw.githubusercontent.com/CDCgov/wastewater-informed-covid-forecasting/0962c5d1652787479ac72caebf076ab55fe4e10c/input/saved_pmfs/inf_to_hosp.csv)
 
     The dataset contains the following columns:
         - `timepoint`

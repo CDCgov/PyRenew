@@ -51,10 +51,6 @@ class HierarchicalNormalPrior(RandomVariable):
         super().__init__(name=name)
         self.sd_rv = sd_rv
 
-    def validate(self) -> None:
-        """Validate the random variable (no-op for this class)."""
-        pass
-
     def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample group-level effects.
@@ -136,10 +132,6 @@ class GammaGroupSdPrior(RandomVariable):
         self.sd_concentration_rv = sd_concentration_rv
         self.sd_min = sd_min
 
-    def validate(self) -> None:
-        """Validate the random variable (no-op for this class)."""
-        pass
-
     def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """
         Sample group-level standard deviations.
@@ -219,10 +211,6 @@ class StudentTGroupModePrior(RandomVariable):
         super().__init__(name=name)
         self.sd_rv = sd_rv
         self.df_rv = df_rv
-
-    def validate(self) -> None:
-        """Validate the random variable (no-op for this class)."""
-        pass
 
     def sample(self, n_groups: int, **kwargs: object) -> ArrayLike:
         """

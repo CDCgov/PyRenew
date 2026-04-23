@@ -10,14 +10,18 @@ import numpyro.distributions as dist
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import AR1, HierarchicalInfections, RandomWalk
+from pyrenew.latent import (
+    AR1,
+    PopulationInfections,
+    RandomWalk,
+    SubpopulationInfections,
+)
 from pyrenew.observation import (
-    Counts,
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
-    VectorizedRV,
+    PopulationCounts,
 )
-from pyrenew.randomvariable import DistributionalVariable
+from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 
 # =============================================================================
 # PMF Fixtures
@@ -103,18 +107,18 @@ def gen_int_rv():
 @pytest.fixture
 def hierarchical_normal_noise():
     """
-    Standard HierarchicalNormalNoise with VectorizedRV wrappers.
+    Standard HierarchicalNormalNoise with VectorizedVariable wrappers.
 
     Returns
     -------
     HierarchicalNormalNoise
         Noise model for continuous measurements.
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.5)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable(
             "ww_sensor_sd", dist.TruncatedNormal(0.3, 0.15, low=0.10)
@@ -133,11 +137,11 @@ def hierarchical_normal_noise_tight():
     HierarchicalNormalNoise
         Noise model with very small variance.
     """
-    sensor_mode_rv = VectorizedRV(
+    sensor_mode_rv = VectorizedVariable(
         name="sensor_mode_rv",
         rv=DistributionalVariable("ww_sensor_mode", dist.Normal(0, 0.01)),
     )
-    sensor_sd_rv = VectorizedRV(
+    sensor_sd_rv = VectorizedVariable(
         name="sensor_sd_rv",
         rv=DistributionalVariable(
             "ww_sensor_sd", dist.TruncatedNormal(0.01, 0.005, low=0.001)
@@ -147,46 +151,67 @@ def hierarchical_normal_noise_tight():
 
 
 # =============================================================================
-# Hierarchical Infections Fixture
+# Latent Infections Fixtures
 # =============================================================================
 
 
 @pytest.fixture
-def hierarchical_infections(gen_int_rv):
+def subpopulation_infections(gen_int_rv):
     """
-    Pre-configured HierarchicalInfections instance.
+    Pre-configured SubpopulationInfections instance.
 
     Returns
     -------
-    HierarchicalInfections
+    SubpopulationInfections
         Configured infection process with realistic parameters.
     """
-    return HierarchicalInfections(
+    return SubpopulationInfections(
+        name="subpopulation",
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
-        initial_log_rt_rv=DeterministicVariable("initial_log_rt", 0.0),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
         baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
         subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
         n_initialization_points=7,
     )
 
 
+@pytest.fixture
+def population_infections(gen_int_rv):
+    """
+    Pre-configured PopulationInfections instance.
+
+    Returns
+    -------
+    PopulationInfections
+        Configured infection process with realistic parameters.
+    """
+    return PopulationInfections(
+        name="population",
+        gen_int_rv=gen_int_rv,
+        I0_rv=DeterministicVariable("I0", 0.001),
+        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+        single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+        n_initialization_points=7,
+    )
+
+
 # =============================================================================
-# Counts Process Fixtures
+# PopulationCounts Process Fixtures
 # =============================================================================
 
 
 @pytest.fixture
 def counts_process(simple_delay_pmf):
     """
-    Standard Counts observation process with simple delay.
+    Standard PopulationCounts observation process with simple delay.
 
     Returns
     -------
-    Counts
-        A Counts observation process with no delay.
+    PopulationCounts
+        A PopulationCounts observation process with no delay.
     """
-    return Counts(
+    return PopulationCounts(
         name="test_counts",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -195,7 +220,7 @@ def counts_process(simple_delay_pmf):
 
 
 class CountsProcessFactory:
-    """Factory for creating Counts processes with custom parameters."""
+    """Factory for creating PopulationCounts observation processes with custom parameters."""
 
     @staticmethod
     def create(
@@ -205,16 +230,16 @@ class CountsProcessFactory:
         concentration=10.0,
     ):
         """
-        Create a Counts process with specified parameters.
+        Create a PopulationCounts observation process with specified parameters.
 
         Returns
         -------
-        Counts
-            A Counts observation process with the specified parameters.
+        PopulationCounts
+            A PopulationCounts observation process with the specified parameters.
         """
         if delay_pmf is None:
             delay_pmf = jnp.array([1.0])
-        return Counts(
+        return PopulationCounts(
             name=name,
             ascertainment_rate_rv=DeterministicVariable("ihr", ascertainment_rate),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
@@ -225,7 +250,7 @@ class CountsProcessFactory:
 @pytest.fixture
 def counts_factory():
     """
-    Factory fixture for creating custom Counts processes.
+    Factory fixture for creating custom PopulationCounts observation processes.
 
     Returns
     -------

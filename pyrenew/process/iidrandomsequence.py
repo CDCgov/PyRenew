@@ -94,14 +94,6 @@ class IIDRandomSequence(RandomVariable):
                 )
         return result
 
-    @staticmethod
-    def validate() -> None:
-        """
-        Validates input parameters, implementation pending.
-        """
-        super().validate()
-        return None
-
 
 class StandardNormalSequence(IIDRandomSequence):
     """

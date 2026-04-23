@@ -16,6 +16,7 @@ from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.latent.base import (
     BaseLatentInfectionProcess,
     LatentSample,
+    PopulationStructure,
 )
 from pyrenew.latent.infection_functions import compute_infections_from_rt
 from pyrenew.latent.temporal_processes import TemporalProcess
@@ -23,17 +24,17 @@ from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
 
 
-class HierarchicalInfections(BaseLatentInfectionProcess):
+class SubpopulationInfections(BaseLatentInfectionProcess):
     """
-    Multi-subpopulation renewal model with hierarchical Rt structure.
+    Multi-subpopulation renewal model with hierarchical $\\mathcal{R}(t)$ structure.
 
-    Each subpopulation has its own renewal equation with Rt deviating from a
+    Each subpopulation has its own renewal equation with $\\mathcal{R}(t)$ deviating from a
     shared baseline. Suitable when transmission dynamics vary substantially
     across subpopulations.
 
     Mathematical form:
-    - Baseline Rt: log[R_baseline(t)] ~ TemporalProcess
-    - Subpopulation Rt: log R_k(t) = log[R_baseline(t)] + delta_k(t)
+    - Baseline $\\mathcal{R}(t)$: log[R_baseline(t)] ~ TemporalProcess
+    - Subpopulation $\\mathcal{R}(t)$: log R_k(t) = log[R_baseline(t)] + delta_k(t)
     - Deviations: delta_k(t) ~ TemporalProcess with sum-to-zero constraint
     - Renewal per subpop: I_k(t) = R_k(t) * sum_tau I_k(t-tau) * g(tau)
     - Aggregate total: I_aggregate(t) = sum_k p_k * I_k(t)
@@ -42,69 +43,44 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     Population structure (subpop_fractions) is provided at sample time,
     allowing a single model to be fit to multiple jurisdictions.
 
-    Parameters
-    ----------
-    gen_int_rv
-        Generation interval PMF
-    I0_rv
-        Initial infection prevalence (proportion of population) at first
-        observation time. Must return values in the interval (0, 1).
-        Returns scalar (same for all subpops) or (n_subpops,) array (per-subpop).
-        Full I0 matrix generated via exponential backprojection during sampling.
-    baseline_rt_process
-        Temporal process for baseline Rt dynamics
-    subpop_rt_deviation_process
-        Temporal process for subpopulation deviations
-    initial_log_rt_rv
-        Initial value for log(Rt) at time 0.  Can be estimated from data
-        or given a prior distribution.
-    n_initialization_points
-        Number of initialization days before day 0. Must be at least
-        ``len(gen_int_rv())`` to provide enough history for the renewal
-        equation convolution. When using PyrenewBuilder, this is computed
-        automatically from all observation processes.
-
     Notes
     -----
     Sum-to-zero constraint on deviations ensures R_baseline(t) is the geometric
-    mean of subpopulation Rt values, providing identifiability.
-
-    When using PyrenewBuilder (recommended), n_initialization_points is computed
-    automatically from all observation processes.
+    mean of subpopulation $\\mathcal{R}(t)$ values, providing identifiability.
     """
 
     def __init__(
         self,
         *,
+        name: str,
         gen_int_rv: RandomVariable,
+        n_initialization_points: int,
         I0_rv: RandomVariable,
         baseline_rt_process: TemporalProcess,
         subpop_rt_deviation_process: TemporalProcess,
-        initial_log_rt_rv: RandomVariable,
-        n_initialization_points: int,
-        name: str = "latent_infections",
+        log_rt_time_0_rv: RandomVariable,
     ) -> None:
         """
         Initialize hierarchical infections process.
 
         Parameters
         ----------
-        gen_int_rv
-            Generation interval PMF
-        I0_rv
-            Initial infection prevalence (proportion of population)
-        baseline_rt_process
-            Temporal process for baseline Rt dynamics
-        subpop_rt_deviation_process
-            Temporal process for subpopulation deviations
-        initial_log_rt_rv
-            Initial value for log(Rt) at time 0.
-        n_initialization_points
-            Number of initialization days before day 0.
         name
             Name prefix for numpyro sample sites. All deterministic
             quantities are recorded under this scope (e.g.,
-            ``"{name}/rt_baseline"``). Default: ``"latent_infections"``.
+            ``"{name}::rt_baseline"``).
+        gen_int_rv
+            Generation interval PMF
+        n_initialization_points
+            Number of initialization days before day 0.
+        I0_rv
+            Initial infection prevalence (proportion of population)
+        baseline_rt_process
+            Temporal process for baseline $\\mathcal{R}(t)$ dynamics
+        subpop_rt_deviation_process
+            Temporal process for subpopulation deviations
+        log_rt_time_0_rv
+            Initial value for log($\\mathcal{R}(t)$) at time 0.
 
         Raises
         ------
@@ -121,14 +97,12 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             raise ValueError("I0_rv is required")
         self.I0_rv = I0_rv
 
-        # Validate I0 at construction time if it's deterministic
         if isinstance(I0_rv, DeterministicVariable):
             self._validate_I0(I0_rv.value)
 
-        # Validate initial log Rt
-        if initial_log_rt_rv is None:
-            raise ValueError("initial_log_rt_rv is required")
-        self.initial_log_rt_rv = initial_log_rt_rv
+        if log_rt_time_0_rv is None:
+            raise ValueError("log_rt_time_0_rv is required")
+        self.log_rt_time_0_rv = log_rt_time_0_rv
 
         if baseline_rt_process is None:
             raise ValueError("baseline_rt_process is required")
@@ -137,6 +111,39 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         if subpop_rt_deviation_process is None:
             raise ValueError("subpop_rt_deviation_process is required")
         self.subpop_rt_deviation_process = subpop_rt_deviation_process
+
+    def _validate_and_prepare_I0(
+        self,
+        I0: ArrayLike,
+        pop: PopulationStructure,
+    ) -> ArrayLike:
+        """
+        Validate I0 and broadcast scalar to per-subpopulation array.
+
+        Accepts either a scalar (applied uniformly to all subpopulations)
+        or a 1D array of length ``n_subpops``.
+
+        Parameters
+        ----------
+        I0
+            Initial infection prevalence from I0_rv, as a JAX array.
+        pop
+            Parsed population structure.
+
+        Returns
+        -------
+        ArrayLike
+            Per-subpopulation I0 array of shape ``(n_subpops,)``.
+
+        Raises
+        ------
+        ValueError
+            If I0 values are not in the interval (0, 1].
+        """
+        super()._validate_and_prepare_I0(I0, pop)
+        if I0.ndim == 0:
+            return jnp.full(pop.n_subpops, I0)
+        return I0
 
     def validate(self) -> None:
         """
@@ -154,14 +161,13 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
     def sample(
         self,
         n_days_post_init: int,
-        *,
-        subpop_fractions: ArrayLike = None,
+        subpop_fractions: ArrayLike | None = None,
         **kwargs: object,
     ) -> LatentSample:
         """
         Sample hierarchical infections for all subpopulations.
 
-        Generates baseline Rt, subpopulation deviations with sum-to-zero
+        Generates baseline $\\mathcal{R}(t)$, subpopulation deviations with sum-to-zero
         constraint, initial infections, and runs n_subpops independent renewal processes.
 
         Parameters
@@ -181,14 +187,13 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             - aggregate: shape (n_total_days,)
             - all_subpops: shape (n_total_days, n_subpops)
         """
-        # Parse and validate population structure
         pop = self._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
         )
 
         n_total_days = self.n_initialization_points + n_days_post_init
 
-        initial_log_rt = self.initial_log_rt_rv()
+        initial_log_rt = self.log_rt_time_0_rv()
 
         log_rt_baseline = self.baseline_rt_process.sample(
             n_timepoints=n_total_days,
@@ -212,20 +217,12 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
 
         gen_int = self.gen_int_rv()
 
-        I0 = jnp.asarray(self.I0_rv())
-        self._validate_I0(I0)
-
-        if I0.ndim == 0:
-            I0_subpop = jnp.full(pop.n_subpops, I0)
-        else:
-            I0_subpop = I0
+        I0_subpop = self._validate_and_prepare_I0(jnp.asarray(self.I0_rv()), pop)
 
         initial_r_subpop = jax.vmap(
             partial(r_approx_from_R, g=gen_int, n_newton_steps=4)
         )(rt_subpop[0, :])
 
-        # Vectorized exponential growth initialization for all subpopulations
-        # Formula: I0_subpop[k] * exp(initial_r_subpop[k] * t) for t in [0, n_init)
         time_indices = jnp.arange(self.n_initialization_points)
         I0_all = I0_subpop[jnp.newaxis, :] * jnp.exp(
             initial_r_subpop[jnp.newaxis, :] * time_indices[:, jnp.newaxis]
@@ -234,7 +231,6 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
         gen_int_reversed = jnp.flip(gen_int)
         recent_I0_all = I0_all[-gen_int.size :, :]
 
-        # Vectorized renewal equation for all subpopulations via vmap
         post_init_infections_all = jax.vmap(
             lambda I0_col, Rt_col: compute_infections_from_rt(
                 I0=I0_col,
@@ -258,8 +254,7 @@ class HierarchicalInfections(BaseLatentInfectionProcess):
             pop,
         )
 
-        # Record key quantities for diagnostics and posterior analysis
-        with numpyro.handlers.scope(prefix=self.name):
+        with numpyro.handlers.scope(prefix=self.name, divider="::"):
             numpyro.deterministic("I0_init_all_subpops", I0_all)
             numpyro.deterministic("log_rt_baseline", log_rt_baseline)
             numpyro.deterministic("rt_baseline", jnp.exp(log_rt_baseline))

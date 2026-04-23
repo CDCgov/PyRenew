@@ -61,8 +61,8 @@ class PyrenewBuilder:
         Parameters
         ----------
         latent_class
-            Class to use for latent infections (e.g., HierarchicalInfections,
-            PartitionedInfections, or a custom implementation)
+            Class to use for latent infections (e.g., PopulationInfections,
+            SubpopulationInfections, or a custom implementation)
         **params
             Parameters for latent class constructor (model structure).
             DO NOT include n_initialization_points - it will be computed
@@ -124,8 +124,8 @@ class PyrenewBuilder:
         Parameters
         ----------
         obs_process
-            Configured observation process instance (e.g., Counts,
-            Wastewater, CountsBySubpop). Must have a ``name`` attribute.
+            Configured observation process instance (e.g., PopulationCounts,
+            Wastewater, SubpopulationCounts). Must have a ``name`` attribute.
 
         Returns
         -------
@@ -225,6 +225,8 @@ class PyrenewBuilder:
 
         # Construct latent process with computed n_initialization_points
         latent_params = {**self.latent_params, "n_initialization_points": n_init}
+        if "name" not in latent_params:
+            latent_params["name"] = self.latent_class.__name__
 
         latent_process = self.latent_class(**latent_params)
 

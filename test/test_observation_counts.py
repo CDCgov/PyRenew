@@ -1,7 +1,5 @@
 """
-Unit tests for Counts (aggregated count observations).
-
-These tests validate the count observation process implementation.
+Unit tests for PopulationCounts and SubpopulationCounts classes.
 """
 
 import jax.numpy as jnp
@@ -11,10 +9,10 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.observation import (
-    Counts,
-    CountsBySubpop,
     NegativeBinomialNoise,
     PoissonNoise,
+    PopulationCounts,
+    SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable
 from test.test_helpers import create_mock_infections
@@ -108,7 +106,7 @@ class TestCountsBasics:
         1000 infections on day 10, delay PMF [0.5, 0.5], ascertainment 1.0.
         Expected predicted: 500 on day 10, 500 on day 11.
         """
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", jnp.array([0.5, 0.5])),
@@ -153,7 +151,7 @@ class TestCountsWithPriors:
         ascertainment = DistributionalVariable("ihr", dist.Beta(2, 100))
         concentration = DeterministicVariable("conc", 10.0)
 
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=ascertainment,
             delay_distribution_rv=delay,
@@ -178,7 +176,7 @@ class TestCountsWithPriors:
         ascertainment = DeterministicVariable("ihr", 0.01)
         concentration = DistributionalVariable("conc", dist.HalfNormal(10.0))
 
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=ascertainment,
             delay_distribution_rv=delay,
@@ -270,8 +268,8 @@ class TestCountsDenseObservations:
         assert jnp.all(~jnp.isnan(result.predicted))
 
 
-class TestCountsBySubpop:
-    """Test CountsBySubpop for subpopulation-level observations."""
+class TestSubpopulationCounts:
+    """Test SubpopulationCounts for subpopulation-level observations."""
 
     def test_non_contiguous_subpop_indices(self):
         """Test that non-contiguous subpop_indices work correctly.
@@ -280,7 +278,7 @@ class TestCountsBySubpop:
         of subpopulations with correct value proportionality.
         """
         delay_pmf = jnp.array([0.3, 0.4, 0.3])
-        process = CountsBySubpop(
+        process = SubpopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
@@ -318,7 +316,7 @@ class TestPoissonNoise:
 
     def test_poisson_mean_approximation(self, simple_delay_pmf):
         """Test that Poisson samples have mean close to predicted rate."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -344,7 +342,7 @@ class TestCountsValidation:
 
     def test_validate_invalid_ascertainment_rate_negative(self, simple_delay_pmf):
         """Test that validate raises for negative ascertainment rate."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", -0.1),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -357,7 +355,7 @@ class TestCountsValidation:
         self, simple_delay_pmf
     ):
         """Test that validate raises for ascertainment rate > 1."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.5),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -374,13 +372,13 @@ class TestNoiseValidation:
         """Test NegativeBinomialNoise validate with zero concentration."""
         noise = NegativeBinomialNoise(DeterministicVariable("conc", 0.0))
         with pytest.raises(ValueError, match="concentration must be positive"):
-            noise.validate()
+            noise.validate_concentration_rv()
 
     def test_negative_binomial_noise_validate_negative_concentration(self):
         """Test NegativeBinomialNoise validate with negative concentration."""
         noise = NegativeBinomialNoise(DeterministicVariable("conc", -1.0))
         with pytest.raises(ValueError, match="concentration must be positive"):
-            noise.validate()
+            noise.validate_concentration_rv()
 
 
 class TestBaseObservationProcessValidation:
@@ -388,7 +386,7 @@ class TestBaseObservationProcessValidation:
 
     def test_validate_pmf_empty_array(self, simple_delay_pmf):
         """Test that _validate_pmf raises for empty array."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -400,7 +398,7 @@ class TestBaseObservationProcessValidation:
 
     def test_validate_pmf_sum_not_one(self, simple_delay_pmf):
         """Test that _validate_pmf raises for PMF not summing to 1."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -412,7 +410,7 @@ class TestBaseObservationProcessValidation:
 
     def test_validate_pmf_negative_values(self, simple_delay_pmf):
         """Test that _validate_pmf raises for negative values."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -428,7 +426,7 @@ class TestRightTruncation:
 
     def test_no_truncation_rv_unchanged(self, simple_delay_pmf):
         """Test that right_truncation_rv=None produces unchanged behavior."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -447,7 +445,7 @@ class TestRightTruncation:
     def test_truncation_rv_without_offset_unchanged(self, simple_delay_pmf):
         """Test that right_truncation_offset=None skips adjustment."""
         rt_pmf = jnp.array([0.2, 0.3, 0.5])
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -466,7 +464,7 @@ class TestRightTruncation:
     def test_truncation_reduces_recent_counts(self, simple_delay_pmf):
         """Test that right-truncation reduces predicted counts for recent timepoints."""
         rt_pmf = jnp.array([0.2, 0.3, 0.5])
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -487,7 +485,7 @@ class TestRightTruncation:
     def test_deterministic_site_recorded(self, simple_delay_pmf):
         """Test that prop_already_reported deterministic site is recorded."""
         rt_pmf = jnp.array([0.2, 0.3, 0.5])
-        process = Counts(
+        process = PopulationCounts(
             name="hosp",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -510,7 +508,7 @@ class TestRightTruncation:
 
     def test_validate_catches_invalid_rt_pmf(self, simple_delay_pmf):
         """Test that validate() rejects invalid right-truncation PMFs."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -525,7 +523,7 @@ class TestRightTruncation:
     def test_short_observation_window_raises(self, simple_delay_pmf):
         """Test that observation window shorter than delay support raises."""
         rt_pmf = jnp.array([0.2, 0.3, 0.5])
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -543,10 +541,10 @@ class TestRightTruncation:
                 )
 
     def test_counts_by_subpop_2d_broadcasting(self):
-        """Test right-truncation with CountsBySubpop 2D infections."""
+        """Test right-truncation with SubpopulationCounts 2D infections."""
         rt_pmf = jnp.array([0.2, 0.3, 0.5])
         delay_pmf = jnp.array([1.0])
-        process = CountsBySubpop(
+        process = SubpopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
@@ -581,7 +579,7 @@ class TestDayOfWeek:
 
     def test_no_dow_rv_unchanged(self, simple_delay_pmf):
         """Test that day_of_week_rv=None ignores first_day_dow."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -597,7 +595,7 @@ class TestDayOfWeek:
     def test_dow_rv_without_offset_raises(self, simple_delay_pmf):
         """Test that first_day_dow=None raises when day_of_week_rv is set."""
         dow_effect = jnp.array([2.0, 0.5, 0.5, 0.5, 0.5, 1.5, 1.5])
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -613,7 +611,7 @@ class TestDayOfWeek:
     def test_uniform_dow_effect_unchanged(self, simple_delay_pmf):
         """Test that uniform effect [1,1,...,1] leaves predictions unchanged."""
         dow_effect = jnp.ones(7)
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -635,7 +633,7 @@ class TestDayOfWeek:
         equal 100 * dow_effect[i % 7].
         """
         dow_effect = jnp.array([2.0, 1.5, 1.0, 1.0, 0.5, 0.5, 0.5])
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -660,13 +658,13 @@ class TestDayOfWeek:
         predicted_with_dow[t] / predicted_no_dow[t] == dow_effect[t % 7].
         """
         dow_effect = jnp.array([2.0, 1.5, 1.0, 1.0, 0.5, 0.5, 0.5])
-        process_no_dow = Counts(
+        process_no_dow = PopulationCounts(
             name="base",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", short_delay_pmf),
             noise=PoissonNoise(),
         )
-        process_with_dow = Counts(
+        process_with_dow = PopulationCounts(
             name="dow",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", short_delay_pmf),
@@ -695,7 +693,7 @@ class TestDayOfWeek:
         dow_effect[2], element 1 gets dow_effect[3], etc.
         """
         dow_effect = jnp.array([2.0, 1.5, 1.0, 0.8, 0.7, 0.5, 0.5])
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -714,7 +712,7 @@ class TestDayOfWeek:
     def test_deterministic_site_recorded(self, simple_delay_pmf):
         """Test that day_of_week_effect deterministic site is recorded."""
         dow_effect = jnp.ones(7)
-        process = Counts(
+        process = PopulationCounts(
             name="ed",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -732,10 +730,10 @@ class TestDayOfWeek:
         assert effect.shape == (7,)
 
     def test_counts_by_subpop_2d_broadcasting(self):
-        """Test day-of-week with CountsBySubpop 2D infections."""
+        """Test day-of-week with SubpopulationCounts 2D infections."""
         dow_effect = jnp.array([2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
         delay_pmf = jnp.array([1.0])
-        process = CountsBySubpop(
+        process = SubpopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
@@ -772,7 +770,7 @@ class TestDayOfWeek:
         """
         dow_effect = jnp.array([2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
         rt_pmf = jnp.array([0.2, 0.3, 0.5])
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -796,7 +794,7 @@ class TestDayOfWeek:
 
     def test_validate_catches_wrong_shape(self, simple_delay_pmf):
         """Test that validate() rejects non-length-7 effect vectors."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -808,7 +806,7 @@ class TestDayOfWeek:
 
     def test_validate_catches_negative_values(self, simple_delay_pmf):
         """Test that validate() rejects negative effect values."""
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -823,7 +821,7 @@ class TestDayOfWeek:
     def test_invalid_first_day_dow_raises(self, simple_delay_pmf):
         """Test that out-of-range first_day_dow raises ValueError."""
         dow_effect = jnp.ones(7)
-        process = Counts(
+        process = PopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -837,9 +835,9 @@ class TestDayOfWeek:
                 process.sample(infections=infections, obs=None, first_day_dow=7)
 
     def test_counts_by_subpop_dow_without_offset_raises(self):
-        """Test that first_day_dow=None raises for CountsBySubpop with day_of_week_rv."""
+        """Test that first_day_dow=None raises for SubpopulationCounts with day_of_week_rv."""
         dow_effect = jnp.ones(7)
-        process = CountsBySubpop(
+        process = SubpopulationCounts(
             name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
