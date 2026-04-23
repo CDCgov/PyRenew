@@ -215,7 +215,9 @@ class BaseObservationProcess(RandomVariable):
         aggregation_period
             Width of the reporting period in fundamental time units.
         period_end_dow
-            Day-of-week index of each period's final day.
+            Day-of-week index of each weekly period's final day, used as
+            the calendar anchor for weekly aggregation (e.g., 5 for MMWR
+            Sunday-Saturday epiweeks; 6 for ISO Monday-Sunday weeks).
 
         Raises
         ------

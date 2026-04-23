@@ -83,9 +83,12 @@ class CountObservation(BaseObservationProcess):
             (sparse observation array with user-supplied period-end
             time indices).
         period_end_dow
-            Day-of-week index of each period's final day
-            (0=Monday, 6=Sunday, ISO convention). Required when
-            ``aggregation_period == 7``; ignored otherwise.
+            Day-of-week index of each weekly period's final day (e.g., 5
+            for MMWR Sunday-Saturday epiweeks; 6 for ISO Monday-Sunday
+            weeks). Required when ``aggregation_period == 7``; ignored
+            otherwise. Anchors the weekly likelihood: daily predictions
+            are bucketed into weeks ending on this day, then summed before
+            scoring. (0=Monday, 6=Sunday, ISO convention.)
 
         Raises
         ------

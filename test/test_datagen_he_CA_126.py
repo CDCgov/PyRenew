@@ -72,22 +72,22 @@ class TestApplyDayOfWeekEffects:
         """Test that uniform effects leave values unchanged."""
         values = np.array([10.0, 20.0, 30.0])
         dow = np.ones(7)
-        result = apply_day_of_week_effects(values, dow, first_dow=0)
+        result = apply_day_of_week_effects(values, dow, first_day_dow=0)
         np.testing.assert_allclose(result, values)
 
     def test_known_pattern(self):
         """Test that known day-of-week effects are applied correctly."""
         values = np.ones(7) * 100.0
         dow = np.array([1.0, 1.0, 1.0, 1.0, 1.0, 0.5, 0.5])
-        result = apply_day_of_week_effects(values, dow, first_dow=0)
+        result = apply_day_of_week_effects(values, dow, first_day_dow=0)
         np.testing.assert_allclose(result[5], 50.0)
         np.testing.assert_allclose(result[6], 50.0)
 
     def test_offset_start(self):
-        """Test that first_dow correctly offsets the pattern."""
+        """Test that first_day_dow correctly offsets the pattern."""
         values = np.ones(3) * 10.0
         dow = np.array([2.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-        result = apply_day_of_week_effects(values, dow, first_dow=6)
+        result = apply_day_of_week_effects(values, dow, first_day_dow=6)
         np.testing.assert_allclose(result[0], 10.0)
         np.testing.assert_allclose(result[1], 20.0)
 

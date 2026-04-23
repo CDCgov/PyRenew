@@ -210,7 +210,7 @@ def run_renewal(
 
 
 def apply_day_of_week_effects(
-    values: np.ndarray, dow_effects: np.ndarray, first_dow: int
+    values: np.ndarray, dow_effects: np.ndarray, first_day_dow: int
 ) -> np.ndarray:
     """
     Apply multiplicative day-of-week effects to daily values.
@@ -222,7 +222,7 @@ def apply_day_of_week_effects(
     dow_effects : np.ndarray
         Multiplicative effects for each day (length 7, ISO convention:
         0 = Monday, 6 = Sunday). Should sum to 7 to preserve weekly totals.
-    first_dow : int
+    first_day_dow : int
         ISO day-of-week of the first element in values.
 
     Returns
@@ -230,7 +230,7 @@ def apply_day_of_week_effects(
     np.ndarray
         Adjusted daily values.
     """
-    day_indices = get_sequential_day_of_week_indices(first_dow, len(values))
+    day_indices = get_sequential_day_of_week_indices(first_day_dow, len(values))
     return values * dow_effects[day_indices]
 
 
@@ -282,8 +282,8 @@ def build_weekly_hosp_frame(
     pl.DataFrame
         Columns: week_end, weekly_hosp_admits.
     """
-    first_dow = start_date.weekday()
-    days_to_first_sunday = (6 - first_dow) % 7
+    first_day_dow = start_date.weekday()
+    days_to_first_sunday = (6 - first_day_dow) % 7
     first_week_end = start_date + timedelta(days=days_to_first_sunday + 6)
     n_weeks = len(weekly_values)
     week_ends = [first_week_end + timedelta(weeks=i) for i in range(n_weeks)]
@@ -308,7 +308,7 @@ def generate() -> None:
     infections_obs = infections_full[N_INIT:]
 
     obs_dates = [START_DATE + timedelta(days=i) for i in range(n_days)]
-    first_dow = START_DATE.weekday()
+    first_day_dow = START_DATE.weekday()
 
     expected_hosp_daily, _ = compute_delay_ascertained_incidence(
         latent_incidence=infections_full,
@@ -327,7 +327,7 @@ def generate() -> None:
     # generative assumption of PopulationCounts(aggregation_period=7) with a
     # single NegativeBinomialNoise at the reporting cadence.
     expected_hosp_weekly = np.asarray(
-        daily_to_mmwr_epiweekly(expected_hosp_daily, input_data_first_dow=first_dow)
+        daily_to_mmwr_epiweekly(expected_hosp_daily, input_data_first_dow=first_day_dow)
     )
     expected_hosp_weekly = np.maximum(expected_hosp_weekly, 1.0)
     hosp_weekly_obs = sample_negbinom(
@@ -352,7 +352,7 @@ def generate() -> None:
         pad=True,
     )
     expected_ed = expected_ed[N_INIT:]
-    expected_ed = apply_day_of_week_effects(expected_ed, DOW_EFFECTS, first_dow)
+    expected_ed = apply_day_of_week_effects(expected_ed, DOW_EFFECTS, first_day_dow)
     expected_ed = np.maximum(expected_ed, 1.0)
     ed_obs = sample_negbinom(expected_ed, NEGBINOM_CONCENTRATION_ED, rng)
 

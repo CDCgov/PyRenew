@@ -1,8 +1,51 @@
 """
-Helper functions for handling timeseries in Pyrenew
+Helper functions for handling timeseries in Pyrenew.
 
-Days of the week in pyrenew are 0-indexed and follow
-ISO standards, so 0 is Monday at 6 is Sunday.
+Days of the week in pyrenew are 0-indexed and follow ISO standards,
+so 0 is Monday and 6 is Sunday.
+
+Calendar concepts used elsewhere in pyrenew
+-------------------------------------------
+
+Three day-of-week values appear across the codebase. They name
+distinct things; do not conflate them.
+
+- ``first_day_dow`` — day-of-week of element 0 of a model's shared
+  daily time axis. Sample-time data fact (depends on the dataset
+  being fit). Threaded through ``MultiSignalModel.sample`` and the
+  ``TemporalProcess.sample`` protocol.
+
+- ``period_end_dow`` — day-of-week on which each weekly observation
+  period ends. Construction-time modeling choice on
+  ``CountObservation``. MMWR convention: 5 (Saturday). ISO
+  convention: 6 (Sunday).
+
+- ``week_start_dow`` — day-of-week on which weekly Rt blocks begin.
+  Construction-time modeling choice on ``StepwiseTemporalProcess``
+  with ``alignment="calendar_week"``. Also the parameter name used by
+  ``daily_to_weekly`` / ``weekly_to_daily`` in this module.
+
+The two anchors are complements: a weekly observation period that ends
+on day X is contained in the calendar week that starts on day
+``(X + 1) % 7``. ``PyrenewBuilder._validate_coherence`` enforces
+``period_end_dow == (week_start_dow + 6) % 7`` when both are present.
+
+Worked example: ``first_day_dow=3`` (Thursday), ``week_start_dow=6``
+(Sunday), 17-day axis::
+
+    model index:    0  1  2 | 3  4  5  6  7  8  9 | 10 11 12 13 14 15 16
+    weekday:        Th Fr Sa | Su Mo Tu We Th Fr Sa | Su Mo Tu We Th Fr Sa
+    weekly Rt:      [ c0   ] [        c1         ] [        c2         ]
+
+The first three indices fall in the leading partial week (``c0``);
+each subsequent block of 7 days falls in one full Sunday-Saturday
+week and shares one Rt sample.
+
+The conversion between the model-axis fact and these calendar anchors
+happens at call sites (e.g., ``daily_to_weekly(daily_predicted,
+input_data_first_dow=first_day_dow, week_start_dow=...)``); functions
+in this module use locally scoped role names like
+``input_data_first_dow`` and ``output_data_first_dow``.
 """
 
 import datetime as dt
