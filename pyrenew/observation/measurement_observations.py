@@ -160,6 +160,7 @@ class MeasurementObservation(BaseObservationProcess):
         sensor_indices: ArrayLike,
         n_sensors: int,
         obs: ArrayLike | None = None,
+        **kwargs: object,
     ) -> ObservationSample:
         """
         Sample measurements from observed sensors.
@@ -189,6 +190,10 @@ class MeasurementObservation(BaseObservationProcess):
             Total number of measurement sensors.
         obs
             Observed measurements (n_obs,), or None for prior sampling.
+        **kwargs
+            Additional keyword arguments forwarded by the model
+            dispatch (e.g., ``first_day_dow``); ignored here because
+            measurement observations index the shared axis directly.
 
         Returns
         -------

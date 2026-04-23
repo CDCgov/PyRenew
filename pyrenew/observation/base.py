@@ -588,11 +588,13 @@ class BaseObservationProcess(RandomVariable):
         Validate a period-end-time index array.
 
         Checks that all values are non-negative, within
-        ``[0, n_total)``, and lie on aggregation-period boundaries,
-        i.e., ``(t - offset) % aggregation_period ==
-        aggregation_period - 1`` for every entry ``t``. When
-        ``aggregation_period == 1`` the alignment condition holds
-        trivially and only the bounds check runs.
+        ``[0, n_total)``, are at least ``offset + aggregation_period - 1``
+        (so the earliest period end points at the last day of the first
+        complete period, not inside the leading partial period), and lie
+        on aggregation-period boundaries, i.e., ``(t - offset) %
+        aggregation_period == aggregation_period - 1`` for every entry
+        ``t``. When ``aggregation_period == 1`` the alignment condition
+        holds trivially and only the bounds check runs.
 
         Parameters
         ----------
@@ -611,12 +613,26 @@ class BaseObservationProcess(RandomVariable):
         ------
         ValueError
             If ``period_end_times`` contains negative values, values
-            ``>= n_total``, or entries that fail the alignment check.
+            ``>= n_total``, values below the first complete period's
+            final day, or entries that fail the alignment check.
         """
         self._validate_index_array(period_end_times, n_total, "period_end_times")
         if aggregation_period == 1:
             return
         period_end_times = jnp.asarray(period_end_times)
+
+        # Lower bound: the first complete period's final day. An entry below
+        # this would yield a negative period index under fancy-indexing
+        # (which JAX silently wraps to the last element of the aggregated
+        # array).
+        min_valid = offset + aggregation_period - 1
+        if jnp.any(period_end_times < min_valid):
+            raise ValueError(
+                f"Observation '{self.name}': period_end_times must be >= "
+                f"{min_valid} (= offset + aggregation_period - 1); entries "
+                f"below this do not correspond to a complete aggregation period."
+            )
+
         misaligned = (period_end_times - offset) % aggregation_period != (
             aggregation_period - 1
         )

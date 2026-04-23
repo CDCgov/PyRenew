@@ -604,6 +604,8 @@ class StepwiseTemporalProcess(TemporalProcess):
             within each block of ``step_size`` consecutive rows.
         """
         n_steps = self._resolve_n_coarse(n_timepoints, first_day_dow)
+        # first_day_dow intentionally not forwarded: inner operates on the
+        # coarse axis; the outer's axis-origin day-of-week does not apply.
         coarse = self.inner.sample(
             n_timepoints=n_steps,
             initial_value=initial_value,

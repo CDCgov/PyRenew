@@ -991,7 +991,7 @@ class TestPopulationCountsAggregationValidateData:
 
     def test_weekly_irregular_misaligned_times_raise(self, weekly_irregular_counts):
         """Weekly-irregular with non-Saturday period_end_times raises."""
-        period_end_times = jnp.array([5, 13, 20])
+        period_end_times = jnp.array([6, 12, 20])
         with pytest.raises(ValueError, match="period_end_times must lie on"):
             weekly_irregular_counts.validate_data(
                 n_total=28,
@@ -1277,7 +1277,7 @@ class TestSubpopulationCountsAggregationValidateData:
 
     def test_weekly_irregular_misaligned_raises(self, weekly_irregular_subpop_counts):
         """Weekly-irregular with non-Saturday period_end_times raises."""
-        period_end_times = jnp.array([5, 13, 20])
+        period_end_times = jnp.array([6, 12, 20])
         subpop_indices = jnp.array([0, 1, 2])
         with pytest.raises(ValueError, match="period_end_times must lie on"):
             weekly_irregular_subpop_counts.validate_data(

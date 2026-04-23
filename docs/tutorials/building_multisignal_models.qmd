@@ -320,7 +320,7 @@ for the first 10 months of 2023 (as reported to the CDC).
 # | label: load-hospital-data
 # Load daily hospital admissions for California
 ca_hosp_data = datasets.load_hospital_data_for_state("CA", "2023-11-06.csv")
-
+obs_start_date = ca_hosp_data["dates"][0]
 hosp_admits = ca_hosp_data["daily_admits"]
 population_size = ca_hosp_data["population"]
 n_hosp_days = ca_hosp_data["n_days"]
@@ -755,7 +755,12 @@ We define a function to prepare observation data using the model's helper method
 ```{python}
 # | label: prepare-observation-data
 def prepare_observation_data(
-    model, n_days_fit, hosp_admits, ww_data, ww_monitored_subpops
+    model,
+    n_days_fit,
+    obs_start_date,
+    hosp_admits,
+    ww_data,
+    ww_monitored_subpops,
 ):
     """
     Prepare observation data for fitting.
@@ -769,6 +774,8 @@ def prepare_observation_data(
         The model (provides padding/shifting helpers)
     n_days_fit : int
         Number of days to include in fit
+    obs_start_date : date
+        Date of first observation
     hosp_admits : array
         Hospital admissions time series
     ww_data : dict
@@ -801,6 +808,7 @@ def prepare_observation_data(
     )
 
     return {
+        "obs_start_date": obs_start_date,
         "hospital": {
             "obs": hosp_obs,
         },
@@ -826,7 +834,12 @@ jax.clear_caches()
 
 n_days_90 = 90
 obs_data_90 = prepare_observation_data(
-    model, n_days_90, hosp_admits, ca_ww_data, ww_monitored_subpops
+    model,
+    n_days_90,
+    obs_start_date,
+    hosp_admits,
+    ca_ww_data,
+    ww_monitored_subpops,
 )
 
 print(f"Fitting model with {n_days_90} days of data...")
@@ -991,7 +1004,12 @@ jax.clear_caches()
 
 n_days_180 = 180
 obs_data_180 = prepare_observation_data(
-    model, n_days_180, hosp_admits, ca_ww_data, ww_monitored_subpops
+    model,
+    n_days_180,
+    obs_start_date,
+    hosp_admits,
+    ca_ww_data,
+    ww_monitored_subpops,
 )
 
 print(f"Fitting model with {n_days_180} days of data...")

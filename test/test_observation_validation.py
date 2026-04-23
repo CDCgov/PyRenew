@@ -780,8 +780,8 @@ class TestValidatePeriodEndTimes:
         )
 
     def test_misaligned_time_raises(self, counts_proc):
-        """P=7 with a non-boundary time should raise."""
-        times = jnp.array([5])
+        """P=7 with a non-boundary time (past the first complete period) should raise."""
+        times = jnp.array([7])
         with pytest.raises(ValueError, match="period_end_times must lie on"):
             counts_proc._validate_period_end_times(
                 times, n_total=21, offset=0, aggregation_period=7
@@ -813,8 +813,32 @@ class TestValidatePeriodEndTimes:
 
     def test_error_reports_offset_and_period(self, counts_proc):
         """Alignment error message should include offset and aggregation_period."""
-        times = jnp.array([5])
+        times = jnp.array([7])
         with pytest.raises(ValueError, match=r"offset=0.*aggregation_period=7"):
             counts_proc._validate_period_end_times(
                 times, n_total=21, offset=0, aggregation_period=7
             )
+
+    def test_time_before_first_complete_period_raises(self, counts_proc):
+        """
+        An entry before the first complete period's final day must raise.
+
+        With ``offset=6, aggregation_period=7``, ``t=5`` satisfies the
+        modulo boundary check ``(5 - 6) % 7 == 6`` (Python negative
+        modulo), but maps to ``period_idx = -1`` under fancy indexing,
+        which JAX silently wraps. The lower-bound check must reject it.
+        """
+        times = jnp.array([5])
+        with pytest.raises(
+            ValueError, match="do not correspond to a complete aggregation period"
+        ):
+            counts_proc._validate_period_end_times(
+                times, n_total=20, offset=6, aggregation_period=7
+            )
+
+    def test_time_at_first_complete_period_end_passes(self, counts_proc):
+        """The first complete period's final day is the lower-bound edge case."""
+        times = jnp.array([12])
+        counts_proc._validate_period_end_times(
+            times, n_total=20, offset=6, aggregation_period=7
+        )
