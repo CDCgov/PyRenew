@@ -762,3 +762,52 @@ def test_create_date_time_spine_date_values():
     assert dates[0] == dt.date(2025, 1, 1)
     assert dates[1] == dt.date(2025, 1, 2)
     assert dates[2] == dt.date(2025, 1, 3)
+
+
+class TestWeekCycle:
+    """Tests for the :class:`pyrenew.time.WeekCycle` value object."""
+
+    def test_construction_and_end_dow(self):
+        """Construct with each valid ``start_dow`` and verify ``end_dow``."""
+        for start in range(7):
+            cycle = ptime.WeekCycle(start_dow=start)
+            assert cycle.start_dow == start
+            assert cycle.end_dow == (start + 6) % 7
+
+    def test_mmwr_and_iso_constants(self):
+        """Named constants encode the MMWR and ISO weekly conventions."""
+        assert ptime.MMWR_WEEK == ptime.WeekCycle(start_dow=6)
+        assert ptime.MMWR_WEEK.end_dow == 5
+        assert ptime.ISO_WEEK == ptime.WeekCycle(start_dow=0)
+        assert ptime.ISO_WEEK.end_dow == 6
+
+    @pytest.mark.parametrize("bad", [-1, 7, 42])
+    def test_invalid_start_dow_raises(self, bad):
+        """Out-of-range ``start_dow`` raises via :func:`validate_dow`."""
+        with pytest.raises(ValueError, match="Day-of-week"):
+            ptime.WeekCycle(start_dow=bad)
+
+    @pytest.mark.parametrize("bad", [None, "6", 6.0])
+    def test_non_integer_start_dow_raises(self, bad):
+        """Non-integer ``start_dow`` raises via :func:`validate_dow`."""
+        with pytest.raises(ValueError, match="must be integers"):
+            ptime.WeekCycle(start_dow=bad)
+
+    def test_frozen_instance_rejects_mutation(self):
+        """``frozen=True`` blocks attribute assignment after construction."""
+        cycle = ptime.WeekCycle(start_dow=3)
+        with pytest.raises(Exception):
+            cycle.start_dow = 4
+
+    def test_equality_and_hashability(self):
+        """Structural equality and set membership work as expected."""
+        a = ptime.WeekCycle(start_dow=6)
+        b = ptime.WeekCycle(start_dow=6)
+        c = ptime.WeekCycle(start_dow=0)
+        assert a == b
+        assert a != c
+        assert len({a, b, c}) == 2
+
+    def test_not_equal_to_plain_tuple(self):
+        """Type-strict equality: a ``WeekCycle`` is not equal to ``(6,)``."""
+        assert ptime.WeekCycle(start_dow=6) != (6,)

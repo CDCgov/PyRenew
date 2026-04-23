@@ -60,7 +60,7 @@ from jax.typing import ArrayLike
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
 from pyrenew.randomvariable import DistributionalVariable
-from pyrenew.time import validate_dow, weekly_to_daily
+from pyrenew.time import WeekCycle, validate_dow, weekly_to_daily
 
 
 @runtime_checkable
@@ -463,12 +463,13 @@ class StepwiseTemporalProcess(TemporalProcess):
     alignment
         How repeated blocks align to the output time axis. ``"model_index"``
         starts blocks at output index 0. ``"calendar_week"`` aligns blocks
-        to calendar weeks using ``week_start_dow`` and the ``first_day_dow``
+        to calendar weeks using ``week`` and the ``first_day_dow``
         supplied to ``sample()``.
-    week_start_dow
-        Day of week on which weekly blocks begin when
-        ``alignment="calendar_week"`` (0=Monday, ..., 6=Sunday). Required
-        for calendar-week alignment.
+    week
+        Calendar-week anchor used when ``alignment="calendar_week"``
+        (e.g., :data:`pyrenew.time.MMWR_WEEK`,
+        :data:`pyrenew.time.ISO_WEEK`). Required for calendar-week
+        alignment; must be ``None`` otherwise.
 
     Raises
     ------
@@ -484,7 +485,7 @@ class StepwiseTemporalProcess(TemporalProcess):
         inner: TemporalProcess,
         step_size: int,
         alignment: Literal["model_index", "calendar_week"] = "model_index",
-        week_start_dow: int | None = None,
+        week: WeekCycle | None = None,
     ) -> None:
         """
         Initialize stepwise temporal process.
@@ -498,11 +499,11 @@ class StepwiseTemporalProcess(TemporalProcess):
         alignment
             How repeated blocks align to the output time axis. ``"model_index"``
             starts blocks at output index 0. ``"calendar_week"`` aligns
-            weekly blocks to ``week_start_dow`` using ``first_day_dow`` at
+            weekly blocks to ``week`` using ``first_day_dow`` at
             sample time.
-        week_start_dow
-            Day of week on which weekly blocks begin when
-            ``alignment="calendar_week"`` (0=Monday, ..., 6=Sunday).
+        week
+            Calendar-week anchor used when
+            ``alignment="calendar_week"``.
 
         Raises
         ------
@@ -523,26 +524,21 @@ class StepwiseTemporalProcess(TemporalProcess):
                     "calendar_week alignment requires step_size=7, "
                     f"got step_size={step_size}"
                 )
-            if week_start_dow is None:
-                raise ValueError(
-                    "week_start_dow is required when alignment='calendar_week'"
-                )
-            validate_dow(week_start_dow, "week_start_dow")
-        elif week_start_dow is not None:
-            raise ValueError(
-                "week_start_dow is only used when alignment='calendar_week'"
-            )
+            if week is None:
+                raise ValueError("week is required when alignment='calendar_week'")
+        elif week is not None:
+            raise ValueError("week is only used when alignment='calendar_week'")
         self.inner = inner
         self.step_size = step_size
         self.alignment = alignment
-        self.week_start_dow = week_start_dow
+        self.week = week
 
     def __repr__(self) -> str:
         """Return string representation."""
         return (
             f"StepwiseTemporalProcess(inner={self.inner!r}, "
             f"step_size={self.step_size}, alignment={self.alignment!r}, "
-            f"week_start_dow={self.week_start_dow!r})"
+            f"week={self.week!r})"
         )
 
     def _resolve_n_coarse(self, n_timepoints: int, first_day_dow: int | None) -> int:
@@ -563,7 +559,7 @@ class StepwiseTemporalProcess(TemporalProcess):
                 "alignment='calendar_week'"
             )
         validate_dow(first_day_dow, "first_day_dow")
-        trim = (first_day_dow - self.week_start_dow) % 7
+        trim = (first_day_dow - self.week.start_dow) % 7
         return (n_timepoints + trim + 6) // 7
 
     def sample(
@@ -619,6 +615,6 @@ class StepwiseTemporalProcess(TemporalProcess):
             return jnp.repeat(coarse, repeats=self.step_size, axis=0)[:n_timepoints]
         return weekly_to_daily(
             coarse,
-            week_start_dow=self.week_start_dow,
+            week_start_dow=self.week.start_dow,
             output_data_first_dow=first_day_dow,
         )[:n_timepoints]

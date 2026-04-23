@@ -21,6 +21,7 @@ from pyrenew.observation import (
     PopulationCounts,
     SubpopulationCounts,
 )
+from pyrenew.time import MMWR_WEEK, WeekCycle
 
 # Standard population structure for tests (3 subpopulations)
 SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
@@ -287,7 +288,7 @@ class TestMultiSignalModelSampling:
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=7,
                 alignment="calendar_week",
-                week_start_dow=6,
+                week=MMWR_WEEK,
             ),
             n_initialization_points=3,
         )
@@ -321,7 +322,7 @@ class TestMultiSignalModelSampling:
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=7,
                 alignment="calendar_week",
-                week_start_dow=6,
+                week=MMWR_WEEK,
             ),
             n_initialization_points=3,
         )
@@ -349,7 +350,7 @@ class TestMultiSignalModelSampling:
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=7,
                 alignment="calendar_week",
-                week_start_dow=6,
+                week=MMWR_WEEK,
             ),
             observations=[_weekly_hosp_counts(), _daily_ed_counts()],
         )
@@ -587,23 +588,23 @@ def _coherence_builder(
     return builder
 
 
-def _weekly_hosp_counts(name="hospital", period_end_dow=5):
+def _weekly_hosp_counts(name="hospital", week=MMWR_WEEK):
     """
     Build a weekly-aggregated PopulationCounts observation with PoissonNoise.
 
     Returns
     -------
     PopulationCounts
-        Weekly-regular observation anchored to the specified period end dow.
+        Weekly-regular observation anchored to the specified ``WeekCycle``.
     """
     return PopulationCounts(
         name=name,
         ascertainment_rate_rv=DeterministicVariable(f"{name}_ihr", 0.01),
         delay_distribution_rv=DeterministicPMF(f"{name}_delay", jnp.array([1.0])),
         noise=PoissonNoise(),
-        aggregation_period=7,
+        aggregation="weekly",
         reporting_schedule="regular",
-        period_end_dow=period_end_dow,
+        week=week,
     )
 
 
@@ -667,25 +668,25 @@ class TestBuilderCoherence:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_mismatched_weekly_period_end_dow_raises(self):
-        """Two weekly observations with different period_end_dow: rule 1 violation."""
+    def test_mismatched_weekly_week_raises(self):
+        """Two weekly observations with different WeekCycles: rule 1 violation."""
         builder = _coherence_builder(
             single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
             observations=[
-                _weekly_hosp_counts(name="hospital", period_end_dow=5),
-                _weekly_hosp_counts(name="other", period_end_dow=6),
+                _weekly_hosp_counts(name="hospital", week=MMWR_WEEK),
+                _weekly_hosp_counts(name="other", week=WeekCycle(start_dow=0)),
             ],
         )
-        with pytest.raises(ValueError, match="must agree on period_end_dow"):
+        with pytest.raises(ValueError, match="must share a single WeekCycle"):
             builder.build()
 
-    def test_matching_weekly_period_end_dow_passes(self):
-        """Two weekly observations agreeing on period_end_dow: rule 1 passes."""
+    def test_matching_weekly_week_passes(self):
+        """Two weekly observations sharing a WeekCycle: rule 1 passes."""
         builder = _coherence_builder(
             single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
             observations=[
-                _weekly_hosp_counts(name="hospital", period_end_dow=5),
-                _weekly_hosp_counts(name="other", period_end_dow=5),
+                _weekly_hosp_counts(name="hospital", week=MMWR_WEEK),
+                _weekly_hosp_counts(name="other", week=MMWR_WEEK),
             ],
         )
         model = builder.build()
@@ -713,34 +714,32 @@ class TestBuilderCoherence:
         with pytest.raises(ValueError, match="positive integer step_size"):
             builder.build()
 
-    def test_calendar_week_alignment_matches_weekly_period_end_dow_passes(self):
+    def test_calendar_week_alignment_matches_weekly_week_passes(self):
         """Sunday-start weeks pair with Saturday-ending weekly observations."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=7,
                 alignment="calendar_week",
-                week_start_dow=6,
+                week=MMWR_WEEK,
             ),
-            observations=[_weekly_hosp_counts(period_end_dow=5)],
+            observations=[_weekly_hosp_counts(week=MMWR_WEEK)],
         )
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_calendar_week_alignment_mismatches_weekly_period_end_dow_raises(self):
+    def test_calendar_week_alignment_mismatches_weekly_week_raises(self):
         """A weekly Rt anchor must agree with the weekly observation anchor."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=7,
                 alignment="calendar_week",
-                week_start_dow=0,
+                week=WeekCycle(start_dow=0),
             ),
-            observations=[_weekly_hosp_counts(period_end_dow=5)],
+            observations=[_weekly_hosp_counts(week=MMWR_WEEK)],
         )
-        with pytest.raises(
-            ValueError, match="weekly observations should end on period_end_dow=6"
-        ):
+        with pytest.raises(ValueError, match="disagrees with the weekly observation"):
             builder.build()
 
     def test_calendar_week_alignment_with_only_daily_observations_passes(self):
@@ -750,20 +749,20 @@ class TestBuilderCoherence:
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=7,
                 alignment="calendar_week",
-                week_start_dow=6,
+                week=MMWR_WEEK,
             ),
             observations=[_daily_ed_counts()],
         )
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_model_index_alignment_ignores_weekly_period_end_dow(self):
+    def test_model_index_alignment_ignores_weekly_week(self):
         """Model-index alignment carries no calendar anchor to compare against."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
             ),
-            observations=[_weekly_hosp_counts(period_end_dow=5)],
+            observations=[_weekly_hosp_counts(week=MMWR_WEEK)],
         )
         model = builder.build()
         assert isinstance(model, MultiSignalModel)

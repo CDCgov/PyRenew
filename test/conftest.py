@@ -38,6 +38,7 @@ from pyrenew.observation import (
     SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
+from pyrenew.time import MMWR_WEEK
 
 # =============================================================================
 # PMF Fixtures
@@ -281,8 +282,7 @@ def weekly_regular_counts(simple_delay_pmf):
     """
     PopulationCounts with weekly aggregation and regular (dense) reporting.
 
-    Reporting periods end on Saturdays (``period_end_dow=5``), matching the
-    MMWR epiweek convention.
+    Uses ``MMWR_WEEK`` (Sunday-Saturday epiweeks).
 
     Returns
     -------
@@ -294,9 +294,9 @@ def weekly_regular_counts(simple_delay_pmf):
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
         noise=PoissonNoise(),
-        aggregation_period=7,
+        aggregation="weekly",
         reporting_schedule="regular",
-        period_end_dow=5,
+        week=MMWR_WEEK,
     )
 
 
@@ -305,8 +305,7 @@ def weekly_irregular_counts(simple_delay_pmf):
     """
     PopulationCounts with weekly aggregation and irregular (sparse) reporting.
 
-    Reporting periods end on Saturdays (``period_end_dow=5``), matching the
-    MMWR epiweek convention.
+    Uses ``MMWR_WEEK`` (Sunday-Saturday epiweeks).
 
     Returns
     -------
@@ -318,9 +317,9 @@ def weekly_irregular_counts(simple_delay_pmf):
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
         noise=PoissonNoise(),
-        aggregation_period=7,
+        aggregation="weekly",
         reporting_schedule="irregular",
-        period_end_dow=5,
+        week=MMWR_WEEK,
     )
 
 
@@ -348,8 +347,7 @@ def weekly_regular_subpop_counts(simple_delay_pmf):
     """
     SubpopulationCounts with weekly aggregation and regular (dense) reporting.
 
-    Reporting periods end on Saturdays (``period_end_dow=5``), matching the
-    MMWR epiweek convention.
+    Uses ``MMWR_WEEK`` (Sunday-Saturday epiweeks).
 
     Returns
     -------
@@ -361,9 +359,9 @@ def weekly_regular_subpop_counts(simple_delay_pmf):
         ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
         noise=PoissonNoise(),
-        aggregation_period=7,
+        aggregation="weekly",
         reporting_schedule="regular",
-        period_end_dow=5,
+        week=MMWR_WEEK,
     )
 
 
@@ -372,8 +370,7 @@ def weekly_irregular_subpop_counts(simple_delay_pmf):
     """
     SubpopulationCounts with weekly aggregation and irregular (sparse) reporting.
 
-    Reporting periods end on Saturdays (``period_end_dow=5``), matching the
-    MMWR epiweek convention.
+    Uses ``MMWR_WEEK`` (Sunday-Saturday epiweeks).
 
     Returns
     -------
@@ -385,9 +382,9 @@ def weekly_irregular_subpop_counts(simple_delay_pmf):
         ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
         noise=PoissonNoise(),
-        aggregation_period=7,
+        aggregation="weekly",
         reporting_schedule="irregular",
-        period_end_dow=5,
+        week=MMWR_WEEK,
     )
 
 

@@ -7,31 +7,28 @@ so 0 is Monday and 6 is Sunday.
 Calendar concepts used elsewhere in pyrenew
 -------------------------------------------
 
-Three day-of-week values appear across the codebase. They name
-distinct things; do not conflate them.
+Two calendar concepts appear across the codebase. They name distinct
+things; do not conflate them.
 
 - ``first_day_dow`` — day-of-week of element 0 of a model's shared
   daily time axis. Sample-time data fact (depends on the dataset
   being fit). Threaded through ``MultiSignalModel.sample`` and the
   ``TemporalProcess.sample`` protocol.
 
-- ``period_end_dow`` — day-of-week on which each weekly observation
-  period ends. Construction-time modeling choice on
-  ``CountObservation``. MMWR convention: 5 (Saturday). ISO
-  convention: 6 (Sunday).
+- :class:`WeekCycle` — a 7-day calendar cycle identified by its
+  ``start_dow``. Construction-time modeling choice, shared by every
+  model component that must agree on the same calendar week
+  (weekly :class:`CountObservation` and calendar-week-aligned
+  :class:`StepwiseTemporalProcess`). The module-level constants
+  :data:`MMWR_WEEK` (Sun-Sat) and :data:`ISO_WEEK` (Mon-Sun) cover
+  the common conventions; custom cycles use ``WeekCycle(start_dow=k)``.
 
-- ``week_start_dow`` — day-of-week on which weekly Rt blocks begin.
-  Construction-time modeling choice on ``StepwiseTemporalProcess``
-  with ``alignment="calendar_week"``. Also the parameter name used by
-  ``daily_to_weekly`` / ``weekly_to_daily`` in this module.
+``PyrenewBuilder._validate_coherence`` enforces that all weekly
+observations share one ``WeekCycle`` and that any calendar-week-aligned
+temporal process uses the same cycle.
 
-The two anchors are complements: a weekly observation period that ends
-on day X is contained in the calendar week that starts on day
-``(X + 1) % 7``. ``PyrenewBuilder._validate_coherence`` enforces
-``period_end_dow == (week_start_dow + 6) % 7`` when both are present.
-
-Worked example: ``first_day_dow=3`` (Thursday), ``week_start_dow=6``
-(Sunday), 17-day axis::
+Worked example: ``first_day_dow=3`` (Thursday), ``week=MMWR_WEEK``
+(Sunday start), 17-day axis::
 
     model index:    0  1  2 | 3  4  5  6  7  8  9 | 10 11 12 13 14 15 16
     weekday:        Th Fr Sa | Su Mo Tu We Th Fr Sa | Su Mo Tu We Th Fr Sa
@@ -41,14 +38,15 @@ The first three indices fall in the leading partial week (``c0``);
 each subsequent block of 7 days falls in one full Sunday-Saturday
 week and shares one Rt sample.
 
-The conversion between the model-axis fact and these calendar anchors
-happens at call sites (e.g., ``daily_to_weekly(daily_predicted,
-input_data_first_dow=first_day_dow, week_start_dow=...)``); functions
-in this module use locally scoped role names like
-``input_data_first_dow`` and ``output_data_first_dow``.
+The low-level functions :func:`daily_to_weekly` and
+:func:`weekly_to_daily` take integer day-of-week parameters
+(``input_data_first_dow``, ``output_data_first_dow``,
+``week_start_dow``) directly so that callers outside pyrenew can use
+them without the :class:`WeekCycle` abstraction.
 """
 
 import datetime as dt
+from dataclasses import dataclass
 
 import jax.numpy as jnp
 import numpy as np
@@ -94,6 +92,46 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
             f"Got {day_of_week} for {variable_name}."
         )
     return None
+
+
+@dataclass(frozen=True)
+class WeekCycle:
+    """
+    A 7-day calendar cycle identified by its start day.
+
+    Value object that names a single weekly convention (MMWR,
+    ISO, or custom) and is shared by any model component that
+    must agree on it. Equality is structural, so a builder-level
+    coherence check reduces to ``a == b``.
+
+    Attributes
+    ----------
+    start_dow
+        Day-of-week on which the cycle begins
+        (0=Monday, 6=Sunday, ISO convention).
+    """
+
+    start_dow: int
+
+    def __post_init__(self) -> None:
+        """Validate ``start_dow`` via :func:`validate_dow`."""
+        validate_dow(self.start_dow, "start_dow")
+
+    @property
+    def end_dow(self) -> int:
+        """
+        Day-of-week on which the cycle ends.
+
+        Returns
+        -------
+        int
+            ``(start_dow + 6) % 7``.
+        """
+        return (self.start_dow + 6) % 7
+
+
+MMWR_WEEK: WeekCycle = WeekCycle(start_dow=6)
+ISO_WEEK: WeekCycle = WeekCycle(start_dow=0)
 
 
 def get_sequential_day_of_week_indices(

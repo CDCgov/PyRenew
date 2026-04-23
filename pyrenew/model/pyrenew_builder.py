@@ -202,40 +202,34 @@ class PyrenewBuilder:
 
         Checks:
 
-        - All observations sharing the same ``aggregation_period > 1`` must
-          agree on ``period_end_dow``.
+        - All weekly observations must share a single
+          :class:`pyrenew.time.WeekCycle`.
         - Every temporal-process ``step_size`` must be a positive integer.
-        - Calendar-week-aligned temporal processes must have a
-          ``week_start_dow`` consistent with the ``period_end_dow`` of any
-          weekly observation: ``period_end_dow == (week_start_dow + 6) % 7``.
+        - Calendar-week-aligned temporal processes must share that
+          :class:`WeekCycle`.
 
         Raises
         ------
         ValueError
             If any of the above checks fails.
         """
-        # Intentionally permissive: parameter cadence and observation cadence
-        # are independent.
-        agg_by_dow: dict[int, set[int]] = {}
-        for name, obs in self.observations.items():
-            P = getattr(obs, "aggregation_period", 1)
-            if P > 1:
-                agg_by_dow.setdefault(P, set()).add(getattr(obs, "period_end_dow"))
-
-        for P, dows in agg_by_dow.items():
-            if len(dows) > 1:
-                raise ValueError(
-                    f"Observations with aggregation_period={P} must agree on "
-                    f"period_end_dow; got values {sorted(dows)}"
-                )
+        weekly_weeks = {
+            obs.week
+            for obs in self.observations.values()
+            if getattr(obs, "aggregation", "daily") == "weekly"
+        }
+        if len(weekly_weeks) > 1:
+            raise ValueError(
+                f"Weekly observations must share a single WeekCycle; "
+                f"got {sorted(weekly_weeks, key=lambda w: w.start_dow)}"
+            )
+        obs_week = next(iter(weekly_weeks), None)
 
         temporal_processes = {
             name: value
             for name, value in self.latent_params.items()
             if isinstance(value, TemporalProcess)
         }
-
-        weekly_period_end_dow = next(iter(agg_by_dow.get(7, set())), None)
 
         for param_name, process in temporal_processes.items():
             step_size = getattr(process, "step_size", 1)
@@ -246,17 +240,14 @@ class PyrenewBuilder:
                 )
             if (
                 getattr(process, "alignment", None) == "calendar_week"
-                and weekly_period_end_dow is not None
+                and obs_week is not None
             ):
-                week_start_dow = getattr(process, "week_start_dow", None)
-                expected_period_end_dow = (week_start_dow + 6) % 7
-                if expected_period_end_dow != weekly_period_end_dow:
+                proc_week = getattr(process, "week", None)
+                if proc_week != obs_week:
                     raise ValueError(
-                        f"Temporal process '{param_name}' has "
-                        f"week_start_dow={week_start_dow}, which implies "
-                        f"weekly observations should end on "
-                        f"period_end_dow={expected_period_end_dow}; got "
-                        f"period_end_dow={weekly_period_end_dow}"
+                        f"Temporal process '{param_name}' has week={proc_week!r}, "
+                        f"which disagrees with the weekly observation "
+                        f"week={obs_week!r}"
                     )
 
     def build(self) -> MultiSignalModel:

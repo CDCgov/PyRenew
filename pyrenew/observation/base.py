@@ -17,6 +17,7 @@ from jax.typing import ArrayLike
 from pyrenew.arrayutils import require_shape
 from pyrenew.convolve import compute_delay_ascertained_incidence
 from pyrenew.metaclass import RandomVariable
+from pyrenew.time import WeekCycle
 
 
 class BaseObservationProcess(RandomVariable):
@@ -196,114 +197,74 @@ class BaseObservationProcess(RandomVariable):
         if jnp.any(dow_effect < 0):
             raise ValueError(f"{param_name} must have non-negative values")
 
-    def _validate_aggregation_params(
+    def _validate_week(
         self,
-        aggregation_period: int,
-        period_end_dow: int | None,
+        aggregation: str,
+        week: WeekCycle | None,
     ) -> None:
         """
-        Validate temporal-aggregation constructor parameters.
+        Validate the ``(aggregation, week)`` pair.
 
-        Checks that ``aggregation_period`` is an integer in
-        ``{1, 7}``, and that ``period_end_dow`` is an integer in
-        ``{0, ..., 6}`` (0=Monday, 6=Sunday, ISO convention) when
-        ``aggregation_period == 7``. ``period_end_dow`` is ignored
-        when ``aggregation_period == 1``.
+        ``aggregation="weekly"`` requires a :class:`WeekCycle`;
+        ``aggregation="daily"`` ignores ``week``.
 
         Parameters
         ----------
-        aggregation_period
-            Width of the reporting period in fundamental time units.
-        period_end_dow
-            Day-of-week index of each weekly period's final day, used as
-            the calendar anchor for weekly aggregation (e.g., 5 for MMWR
-            Sunday-Saturday epiweeks; 6 for ISO Monday-Sunday weeks).
+        aggregation
+            Observation reporting cadence; one of ``"daily"`` or
+            ``"weekly"``.
+        week
+            Calendar-week anchor; required iff
+            ``aggregation == "weekly"``.
 
         Raises
         ------
         ValueError
-            If ``aggregation_period`` is not in ``{1, 7}``, or if
-            ``period_end_dow`` is missing or out of range when
-            ``aggregation_period == 7``.
-
-        Notes
-        -----
-        ``period_end_dow`` is a weekly-specific anchor; generalizing
-        beyond ``aggregation_period == 7`` will require a different
-        anchor representation.
+            If ``aggregation`` is unrecognized, or if
+            ``aggregation == "weekly"`` and ``week`` is ``None``.
         """
-        if not isinstance(aggregation_period, int) or aggregation_period < 1:
+        if aggregation not in ("daily", "weekly"):
             raise ValueError(
-                "aggregation_period must be a positive integer, "
-                f"got {aggregation_period!r}"
+                f"aggregation must be one of {{'daily', 'weekly'}}, got {aggregation!r}"
             )
-        if aggregation_period not in (1, 7):
-            raise ValueError(
-                f"aggregation_period must be one of {{1, 7}}, got {aggregation_period}"
-            )
-        if aggregation_period == 7:
-            if period_end_dow is None:
-                raise ValueError(
-                    "period_end_dow is required when aggregation_period == 7"
-                )
-            if not isinstance(period_end_dow, int) or not (0 <= period_end_dow <= 6):
-                raise ValueError(
-                    "period_end_dow must be an integer in {0, ..., 6} "
-                    f"(0=Monday, 6=Sunday), got {period_end_dow!r}"
-                )
+        if aggregation == "weekly" and week is None:
+            raise ValueError("week is required when aggregation == 'weekly'")
 
     def _compute_period_offset(
         self,
         first_day_dow: int | None,
-        aggregation_period: int,
-        period_end_dow: int | None,
+        week: WeekCycle | None,
     ) -> int:
         """
         Compute the number of leading daily timepoints to trim so
-        that the daily axis aligns to whole aggregation periods.
+        that the daily axis aligns to whole weekly periods.
 
         Parameters
         ----------
         first_day_dow
             Day-of-week index of element 0 of the daily axis
             (0=Monday, 6=Sunday, ISO convention). Required when
-            ``aggregation_period == 7``.
-        aggregation_period
-            Width of the reporting period. Must be in ``{1, 7}``.
-        period_end_dow
-            Day-of-week index of each period's final day. Required
-            when ``aggregation_period == 7``.
+            ``week`` is not ``None``.
+        week
+            Calendar-week anchor. ``None`` indicates daily
+            (non-aggregated) observations; in that case the
+            offset is ``0``.
 
         Returns
         -------
         int
-            Trim offset in ``[0, aggregation_period)``. Returns
-            ``0`` when ``aggregation_period == 1``.
+            Trim offset in ``[0, 7)``. Returns ``0`` when ``week`` is ``None``.
 
         Raises
         ------
         ValueError
-            If ``aggregation_period`` is not in ``{1, 7}``, or if
-            ``first_day_dow`` or ``period_end_dow`` is ``None`` when
-            ``aggregation_period == 7``.
-
-        Notes
-        -----
-        For ``aggregation_period == 7``:
-        ``(period_end_dow + 1 - first_day_dow) % 7``.
+            If ``week`` is provided but ``first_day_dow`` is ``None``.
         """
-        if aggregation_period == 1:
+        if week is None:
             return 0
-        if aggregation_period != 7:
-            raise ValueError(
-                f"aggregation_period must be one of {{1, 7}}, got {aggregation_period}"
-            )
-        if first_day_dow is None or period_end_dow is None:
-            raise ValueError(
-                "first_day_dow and period_end_dow are both required "
-                "when aggregation_period == 7"
-            )
-        return (period_end_dow + 1 - first_day_dow) % aggregation_period
+        if first_day_dow is None:
+            raise ValueError("first_day_dow is required when week is not None")
+        return (week.end_dow + 1 - first_day_dow) % 7
 
     def _convolve_with_alignment(
         self,

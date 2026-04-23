@@ -26,6 +26,7 @@ from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
+from pyrenew.time import MMWR_WEEK
 
 
 @pytest.fixture(scope="module")
@@ -247,7 +248,7 @@ def he_weekly_rt_model(
             AR1(autoreg=0.9, innovation_sd=0.05),
             step_size=7,
             alignment="calendar_week",
-            week_start_dow=6,
+            week=MMWR_WEEK,
         ),
     )
 
@@ -258,9 +259,9 @@ def he_weekly_rt_model(
         noise=NegativeBinomialNoise(
             DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
         ),
-        aggregation_period=7,
+        aggregation="weekly",
         reporting_schedule="regular",
-        period_end_dow=5,
+        week=MMWR_WEEK,
     )
     builder.add_observation(hospital_obs)
 
@@ -287,10 +288,11 @@ def he_weekly_model(
     """
     Build a PopulationInfections model with WEEKLY hospital + DAILY ED observations.
 
-    The hospital observation is aggregated to MMWR epiweeks (Sunday-Saturday,
-    anchored by ``period_end_dow=5``); the ED observation stays daily with a
-    day-of-week effect. R(t) is parametrized at the finest observation
-    cadence (daily) per the coherence rules for mixed-cadence models.
+    The hospital observation is aggregated to MMWR epiweeks
+    (Sunday-Saturday, via ``MMWR_WEEK``); the ED observation stays
+    daily with a day-of-week effect. R(t) is parametrized at the
+    finest observation cadence (daily) per the coherence rules for
+    mixed-cadence models.
 
     Parameters
     ----------
@@ -326,9 +328,9 @@ def he_weekly_model(
         noise=NegativeBinomialNoise(
             DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
         ),
-        aggregation_period=7,
+        aggregation="weekly",
         reporting_schedule="regular",
-        period_end_dow=5,
+        week=MMWR_WEEK,
     )
     builder.add_observation(hospital_obs)
 

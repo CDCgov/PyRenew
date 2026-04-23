@@ -15,6 +15,7 @@ from pyrenew.observation import (
     SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable
+from pyrenew.time import MMWR_WEEK
 from test.test_helpers import create_mock_infections
 
 
@@ -890,40 +891,45 @@ class TestPopulationCountsAggregationConstruction:
         )
 
     def test_default_construction_is_daily_regular(self, simple_delay_pmf):
-        """Default constructor yields aggregation_period=1, reporting_schedule='regular'."""
+        """Default constructor yields aggregation='daily', reporting_schedule='regular'."""
         process = self._make(simple_delay_pmf)
-        assert process.aggregation_period == 1
+        assert process.aggregation == "daily"
         assert process.reporting_schedule == "regular"
-        assert process.period_end_dow is None
+        assert process.week is None
 
-    def test_weekly_requires_period_end_dow(self, simple_delay_pmf):
-        """aggregation_period=7 without period_end_dow must raise."""
-        with pytest.raises(ValueError, match="period_end_dow is required"):
-            self._make(simple_delay_pmf, aggregation_period=7)
+    def test_weekly_requires_week(self, simple_delay_pmf):
+        """aggregation='weekly' without week must raise."""
+        with pytest.raises(ValueError, match="week is required"):
+            self._make(simple_delay_pmf, aggregation="weekly")
 
-    def test_weekly_with_saturday_anchor_constructs(self, simple_delay_pmf):
-        """aggregation_period=7, period_end_dow=5 (Saturday) is valid."""
-        process = self._make(simple_delay_pmf, aggregation_period=7, period_end_dow=5)
-        assert process.aggregation_period == 7
-        assert process.period_end_dow == 5
+    def test_weekly_with_mmwr_anchor_constructs(self, simple_delay_pmf):
+        """aggregation='weekly' with MMWR_WEEK is valid."""
+        process = self._make(simple_delay_pmf, aggregation="weekly", week=MMWR_WEEK)
+        assert process.aggregation == "weekly"
+        assert process.week == MMWR_WEEK
 
     def test_dow_effect_with_weekly_aggregation_raises(self, simple_delay_pmf):
-        """day_of_week_rv cannot be combined with aggregation_period > 1."""
+        """day_of_week_rv cannot be combined with aggregation='weekly'."""
         with pytest.raises(ValueError, match="day_of_week_rv cannot be combined"):
             self._make(
                 simple_delay_pmf,
-                aggregation_period=7,
-                period_end_dow=5,
+                aggregation="weekly",
+                week=MMWR_WEEK,
                 day_of_week_rv=DeterministicVariable("dow", jnp.ones(7)),
             )
 
     def test_dow_effect_with_daily_aggregation_allowed(self, simple_delay_pmf):
-        """day_of_week_rv remains valid for aggregation_period=1."""
+        """day_of_week_rv remains valid for aggregation='daily'."""
         process = self._make(
             simple_delay_pmf,
             day_of_week_rv=DeterministicVariable("dow", jnp.ones(7)),
         )
         assert process.day_of_week_rv is not None
+
+    def test_unknown_aggregation_raises(self, simple_delay_pmf):
+        """aggregation must be 'daily' or 'weekly'."""
+        with pytest.raises(ValueError, match="aggregation must be one of"):
+            self._make(simple_delay_pmf, aggregation="monthly")
 
     def test_unknown_reporting_schedule_raises(self, simple_delay_pmf):
         """reporting_schedule must be 'regular' or 'irregular'."""
@@ -1134,10 +1140,10 @@ class TestPopulationCountsAggregationSample:
         assert result.observed.shape == (3,)
 
     def test_aggregate_helper_missing_first_day_dow_raises(self, weekly_regular_counts):
-        """_aggregate raises when aggregation_period > 1 and first_day_dow is None."""
+        """_aggregate raises when aggregation == 'weekly' and first_day_dow is None."""
         predicted_daily = jnp.ones(28)
         with pytest.raises(
-            ValueError, match="first_day_dow is required when aggregation_period > 1"
+            ValueError, match="first_day_dow is required when aggregation == 'weekly'"
         ):
             weekly_regular_counts._aggregate(predicted_daily, first_day_dow=None)
 

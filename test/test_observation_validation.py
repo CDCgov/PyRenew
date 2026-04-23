@@ -19,7 +19,7 @@ from pyrenew.observation import (
     SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
-from pyrenew.time import daily_to_weekly
+from pyrenew.time import MMWR_WEEK, WeekCycle, daily_to_weekly
 
 # ---------------------------------------------------------------------------
 # Helpers – minimal concrete subclass of MeasurementObservation for testing
@@ -414,13 +414,13 @@ class TestPopulationCountsValidateData:
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", jnp.array([0.3, 0.5, 0.2])),
             noise=PoissonNoise(),
-            aggregation_period=7,
+            aggregation="weekly",
             reporting_schedule="regular",
-            period_end_dow=5,
+            week=MMWR_WEEK,
         )
         n_total = 35
         first_day_dow = 6
-        offset = (proc.period_end_dow + 1 - first_day_dow) % proc.aggregation_period
+        offset = proc._compute_period_offset(first_day_dow, proc.week)
         n_periods = (n_total - offset) // proc.aggregation_period
         obs = jnp.ones((n_periods, 1))
         with pytest.raises(ValueError, match="obs must be 1D"):
@@ -654,61 +654,36 @@ class TestMeasurementObservationValidateData:
 
 
 # ===================================================================
-# _validate_aggregation_params
+# _validate_week
 # ===================================================================
 
 
-class TestValidateAggregationParams:
-    """Tests for BaseObservationProcess._validate_aggregation_params."""
+class TestValidateWeek:
+    """Tests for BaseObservationProcess._validate_week."""
 
-    def test_p1_no_anchor_passes(self, counts_proc):
-        """P=1 with period_end_dow=None should not raise."""
-        counts_proc._validate_aggregation_params(1, None)
+    def test_daily_with_no_week_passes(self, counts_proc):
+        """aggregation='daily' with week=None should not raise."""
+        counts_proc._validate_week("daily", None)
 
-    def test_p1_anchor_ignored(self, counts_proc):
-        """P=1 with any period_end_dow value should not raise."""
-        counts_proc._validate_aggregation_params(1, 5)
-        counts_proc._validate_aggregation_params(1, 99)
+    def test_daily_ignores_week(self, counts_proc):
+        """aggregation='daily' ignores any supplied WeekCycle."""
+        counts_proc._validate_week("daily", MMWR_WEEK)
 
-    def test_p7_valid_anchor_passes(self, counts_proc):
-        """P=7 with period_end_dow in {0, ..., 6} should not raise."""
-        for dow in range(7):
-            counts_proc._validate_aggregation_params(7, dow)
+    def test_weekly_with_week_passes(self, counts_proc):
+        """aggregation='weekly' with any WeekCycle should not raise."""
+        counts_proc._validate_week("weekly", MMWR_WEEK)
+        counts_proc._validate_week("weekly", WeekCycle(start_dow=0))
 
-    def test_p7_missing_anchor_raises(self, counts_proc):
-        """P=7 with period_end_dow=None should raise."""
-        with pytest.raises(ValueError, match="period_end_dow is required"):
-            counts_proc._validate_aggregation_params(7, None)
+    def test_weekly_missing_week_raises(self, counts_proc):
+        """aggregation='weekly' with week=None should raise."""
+        with pytest.raises(ValueError, match="week is required"):
+            counts_proc._validate_week("weekly", None)
 
-    def test_p7_negative_anchor_raises(self, counts_proc):
-        """P=7 with period_end_dow<0 should raise."""
-        with pytest.raises(ValueError, match="integer in"):
-            counts_proc._validate_aggregation_params(7, -1)
-
-    def test_p7_too_large_anchor_raises(self, counts_proc):
-        """P=7 with period_end_dow>6 should raise."""
-        with pytest.raises(ValueError, match="integer in"):
-            counts_proc._validate_aggregation_params(7, 7)
-
-    def test_zero_period_raises(self, counts_proc):
-        """aggregation_period=0 should raise."""
-        with pytest.raises(ValueError, match="positive integer"):
-            counts_proc._validate_aggregation_params(0, None)
-
-    def test_negative_period_raises(self, counts_proc):
-        """Negative aggregation_period should raise."""
-        with pytest.raises(ValueError, match="positive integer"):
-            counts_proc._validate_aggregation_params(-3, None)
-
-    def test_unsupported_period_raises(self, counts_proc):
-        """aggregation_period not in {1, 7} should raise."""
-        with pytest.raises(ValueError, match=r"one of \{1, 7\}"):
-            counts_proc._validate_aggregation_params(14, 5)
-
-    def test_float_period_raises(self, counts_proc):
-        """Non-integer aggregation_period should raise."""
-        with pytest.raises(ValueError, match="positive integer"):
-            counts_proc._validate_aggregation_params(7.0, 5)
+    @pytest.mark.parametrize("bad", ["monthly", "biweekly", "Weekly", ""])
+    def test_unknown_aggregation_raises(self, counts_proc, bad):
+        """Unrecognized aggregation strings should raise."""
+        with pytest.raises(ValueError, match="aggregation must be one of"):
+            counts_proc._validate_week(bad, MMWR_WEEK)
 
 
 # ===================================================================
@@ -719,64 +694,57 @@ class TestValidateAggregationParams:
 class TestComputePeriodOffset:
     """Tests for BaseObservationProcess._compute_period_offset."""
 
-    def test_p1_returns_zero(self, counts_proc):
-        """P=1 always returns 0 regardless of dow arguments."""
-        assert counts_proc._compute_period_offset(None, 1, None) == 0
-        assert counts_proc._compute_period_offset(0, 1, 5) == 0
-        assert counts_proc._compute_period_offset(6, 1, None) == 0
+    def test_daily_returns_zero(self, counts_proc):
+        """week=None always returns 0 regardless of first_day_dow."""
+        assert counts_proc._compute_period_offset(None, None) == 0
+        assert counts_proc._compute_period_offset(0, None) == 0
+        assert counts_proc._compute_period_offset(6, None) == 0
 
-    def test_p7_mmwr_aligned_start(self, counts_proc):
-        """Daily axis starting Sunday with Saturday end => offset 0."""
-        assert counts_proc._compute_period_offset(6, 7, 5) == 0
+    def test_mmwr_aligned_start(self, counts_proc):
+        """Daily axis starting Sunday under MMWR_WEEK => offset 0."""
+        assert counts_proc._compute_period_offset(6, MMWR_WEEK) == 0
 
-    def test_p7_monday_start_saturday_end(self, counts_proc):
-        """Daily axis starting Monday with Saturday end => offset 6."""
-        assert counts_proc._compute_period_offset(0, 7, 5) == 6
+    def test_monday_start_mmwr(self, counts_proc):
+        """Daily axis starting Monday under MMWR_WEEK => offset 6."""
+        assert counts_proc._compute_period_offset(0, MMWR_WEEK) == 6
 
-    def test_p7_saturday_start_saturday_end(self, counts_proc):
-        """Daily axis starting Saturday with Saturday end => offset 1."""
-        assert counts_proc._compute_period_offset(5, 7, 5) == 1
+    def test_saturday_start_mmwr(self, counts_proc):
+        """Daily axis starting Saturday under MMWR_WEEK => offset 1."""
+        assert counts_proc._compute_period_offset(5, MMWR_WEEK) == 1
 
-    def test_p7_iso_week_alignment(self, counts_proc):
-        """Daily axis starting Thursday with Sunday end (ISO) => offset 4."""
-        assert counts_proc._compute_period_offset(3, 7, 6) == 4
+    def test_iso_week_alignment(self, counts_proc):
+        """Daily axis starting Thursday under ISO week (Mon start) => offset 4."""
+        assert counts_proc._compute_period_offset(3, WeekCycle(start_dow=0)) == 4
 
-    def test_p7_offset_always_in_range(self, counts_proc):
-        """P=7 offset is always in [0, 7) for any valid dow combination."""
+    def test_offset_always_in_range(self, counts_proc):
+        """Offset is always in [0, 7) for any valid (first_day_dow, week)."""
         for first in range(7):
-            for end in range(7):
-                offset = counts_proc._compute_period_offset(first, 7, end)
+            for start in range(7):
+                offset = counts_proc._compute_period_offset(
+                    first, WeekCycle(start_dow=start)
+                )
                 assert 0 <= offset < 7
 
-    def test_p7_missing_first_day_dow_raises(self, counts_proc):
-        """P=7 with first_day_dow=None should raise."""
-        with pytest.raises(ValueError, match="both required"):
-            counts_proc._compute_period_offset(None, 7, 5)
-
-    def test_p7_missing_period_end_dow_raises(self, counts_proc):
-        """P=7 with period_end_dow=None should raise."""
-        with pytest.raises(ValueError, match="both required"):
-            counts_proc._compute_period_offset(0, 7, None)
-
-    def test_unsupported_period_raises(self, counts_proc):
-        """P not in {1, 7} should raise."""
-        with pytest.raises(ValueError, match=r"one of \{1, 7\}"):
-            counts_proc._compute_period_offset(0, 14, 5)
+    def test_missing_first_day_dow_raises(self, counts_proc):
+        """week set with first_day_dow=None should raise."""
+        with pytest.raises(ValueError, match="first_day_dow is required"):
+            counts_proc._compute_period_offset(None, MMWR_WEEK)
 
     def test_offset_agrees_with_daily_to_weekly(self, counts_proc):
         """
         Offset from _compute_period_offset selects the same leading
         days that daily_to_weekly trims internally for the first
-        complete period, for every (first_day_dow, period_end_dow).
+        complete period, for every (first_day_dow, week) pair.
         """
         daily = jnp.arange(21.0)
         for first in range(7):
-            for end in range(7):
-                offset = counts_proc._compute_period_offset(first, 7, end)
+            for start in range(7):
+                week = WeekCycle(start_dow=start)
+                offset = counts_proc._compute_period_offset(first, week)
                 weekly = daily_to_weekly(
                     daily,
                     input_data_first_dow=first,
-                    week_start_dow=(end + 1) % 7,
+                    week_start_dow=start,
                 )
                 expected_first_week = float(jnp.sum(daily[offset : offset + 7]))
                 assert float(weekly[0]) == expected_first_week

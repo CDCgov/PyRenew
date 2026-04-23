@@ -9,6 +9,7 @@ import pytest
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import AR1, RandomWalk, StepwiseTemporalProcess
 from pyrenew.latent.population_infections import PopulationInfections
+from pyrenew.time import MMWR_WEEK
 
 
 class TestPopulationInfectionsSample:
@@ -136,7 +137,7 @@ class TestPopulationInfectionsSample:
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=7,
                 alignment="calendar_week",
-                week_start_dow=6,
+                week=MMWR_WEEK,
             ),
             n_initialization_points=7,
         )

@@ -7,6 +7,7 @@ import numpyro
 import pytest
 
 from pyrenew.latent import AR1, DifferencedAR1, RandomWalk, StepwiseTemporalProcess
+from pyrenew.time import MMWR_WEEK
 
 INNER_PROCESS_PARAMS = [
     (AR1, {"autoreg": 0.9, "innovation_sd": 0.05}),
@@ -304,25 +305,25 @@ class TestStepwiseTemporalProcessConstruction:
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=3,
                 alignment="calendar_week",
-                week_start_dow=6,
+                week=MMWR_WEEK,
             )
 
-    def test_calendar_week_requires_week_start_dow(self):
-        """calendar_week alignment requires a declared week start."""
-        with pytest.raises(ValueError, match="week_start_dow"):
+    def test_calendar_week_requires_week(self):
+        """calendar_week alignment requires a WeekCycle."""
+        with pytest.raises(ValueError, match="week is required"):
             StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=7,
                 alignment="calendar_week",
             )
 
-    def test_model_index_rejects_week_start_dow(self):
-        """week_start_dow is only meaningful for calendar_week alignment."""
-        with pytest.raises(ValueError, match="week_start_dow"):
+    def test_model_index_rejects_week(self):
+        """week is only meaningful for calendar_week alignment."""
+        with pytest.raises(ValueError, match="week is only used"):
             StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
                 step_size=7,
-                week_start_dow=6,
+                week=MMWR_WEEK,
             )
 
 
@@ -380,7 +381,7 @@ class TestStepwiseTemporalProcessSample:
             AR1(autoreg=0.9, innovation_sd=0.05),
             step_size=7,
             alignment="calendar_week",
-            week_start_dow=6,
+            week=MMWR_WEEK,
         )
         with numpyro.handlers.seed(rng_seed=42):
             with pytest.raises(ValueError, match="first_day_dow"):
@@ -392,7 +393,7 @@ class TestStepwiseTemporalProcessSample:
             AR1(autoreg=0.9, innovation_sd=0.05),
             step_size=7,
             alignment="calendar_week",
-            week_start_dow=6,
+            week=MMWR_WEEK,
         )
         # first_day_dow=3 means day 0 is Thursday. With Sunday week starts,
         # days 0-2 are a leading partial week, then days 3-9 are the first
@@ -415,7 +416,7 @@ class TestStepwiseTemporalProcessSample:
             AR1(autoreg=0.9, innovation_sd=0.05),
             step_size=7,
             alignment="calendar_week",
-            week_start_dow=6,
+            week=MMWR_WEEK,
         )
         with numpyro.handlers.seed(rng_seed=42):
             result = wrapper.sample(
