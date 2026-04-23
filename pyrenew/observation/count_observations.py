@@ -633,7 +633,12 @@ class PopulationCounts(CountObservation):
             return
 
         if period_end_times is None:
-            return
+            if obs is None:
+                return
+            raise ValueError(
+                f"Observation '{self.name}': period_end_times is required "
+                f"when reporting_schedule='irregular' and obs is provided."
+            )
         offset = self._compute_period_offset(first_day_dow, self.week)
         self._validate_period_end_times(
             period_end_times, n_total, offset, self.aggregation_period
@@ -850,7 +855,12 @@ class SubpopulationCounts(CountObservation):
             return
 
         if period_end_times is None:
-            return
+            if obs is None:
+                return
+            raise ValueError(
+                f"Observation '{self.name}': period_end_times is required "
+                f"when reporting_schedule='irregular' and obs is provided."
+            )
         offset = self._compute_period_offset(first_day_dow, self.week)
         self._validate_period_end_times(
             period_end_times, n_total, offset, self.aggregation_period

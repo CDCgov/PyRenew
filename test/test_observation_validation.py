@@ -509,10 +509,11 @@ class TestSubpopulationCountsValidateData:
                 obs=obs,
             )
 
-    def test_obs_without_times_skips_shape_check(self, subpop_proc):
-        """validate_data with obs but no period_end_times should not check shapes."""
+    def test_obs_without_times_raises(self, subpop_proc):
+        """validate_data with obs but no period_end_times should raise ValueError."""
         obs = jnp.array([1.0, 2.0])
-        subpop_proc.validate_data(n_total=30, n_subpops=3, obs=obs)
+        with pytest.raises(ValueError, match="period_end_times is required"):
+            subpop_proc.validate_data(n_total=30, n_subpops=3, obs=obs)
 
     def test_times_without_obs_skips_shape_check(self, subpop_proc):
         """validate_data with period_end_times but no obs should validate indices only."""
