@@ -2,6 +2,8 @@
 Tests for PyrenewBuilder and MultiSignalModel.
 """
 
+from datetime import date, timedelta
+
 import jax.numpy as jnp
 import numpyro
 import pytest
@@ -25,6 +27,31 @@ from pyrenew.time import MMWR_WEEK, WeekCycle
 
 # Standard population structure for tests (3 subpopulations)
 SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
+
+
+def _obs_date_for_dow(target_first_day_dow: int, n_init: int) -> date:
+    """
+    Return an ``obs_start_date`` whose axis-origin day-of-week matches.
+
+    Given a desired ``first_day_dow`` (day-of-week of element 0 of the
+    padded axis) and the model's ``n_init``, pick a concrete date for
+    the first observation day such that
+    ``(obs_start_date.weekday() - n_init) % 7 == target_first_day_dow``.
+
+    Parameters
+    ----------
+    target_first_day_dow
+        Desired axis-origin day-of-week in ``{0, ..., 6}``.
+    n_init
+        Initialization-period length in days.
+
+    Returns
+    -------
+    datetime.date
+        A date with the required day-of-week, drawn from January 2024.
+    """
+    obs_dow = (target_first_day_dow + n_init) % 7
+    return date(2024, 1, 1) + timedelta(days=obs_dow)
 
 
 @pytest.fixture
@@ -299,7 +326,7 @@ class TestMultiSignalModelSampling:
                 model.sample(
                     n_days_post_init=10,
                     population_size=1_000_000,
-                    first_day_dow=3,
+                    obs_start_date=_obs_date_for_dow(target_first_day_dow=3, n_init=3),
                     ed={"obs": None},
                 )
 
@@ -311,8 +338,8 @@ class TestMultiSignalModelSampling:
         assert jnp.allclose(log_rt[:3], log_rt[0])
         assert jnp.allclose(log_rt[3:10], log_rt[3])
 
-    def test_missing_first_day_dow_for_calendar_aligned_latent_process_raises(self):
-        """Calendar-aligned latent temporal processes require model-axis DOW."""
+    def test_missing_obs_start_date_for_calendar_aligned_latent_process_raises(self):
+        """Calendar-aligned latent temporal processes require a calendar anchor."""
         latent = PopulationInfections(
             name="PopulationInfections",
             gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
@@ -357,7 +384,10 @@ class TestMultiSignalModelSampling:
         model = builder.build()
         n_days_post_init = 28
         n_total = model.latent.n_initialization_points + n_days_post_init
-        first_day_dow = 6
+        obs_start_date = _obs_date_for_dow(
+            target_first_day_dow=6,
+            n_init=model.latent.n_initialization_points,
+        )
         hospital_obs = jnp.array([jnp.nan, 5.0, 7.0, 6.0], dtype=float)
         ed_obs = jnp.concatenate(
             [
@@ -371,8 +401,8 @@ class TestMultiSignalModelSampling:
                 model.sample(
                     n_days_post_init=n_days_post_init,
                     population_size=1_000_000,
-                    first_day_dow=first_day_dow,
-                    hospital={"obs": hospital_obs, "first_day_dow": first_day_dow},
+                    obs_start_date=obs_start_date,
+                    hospital={"obs": hospital_obs},
                     ed={"obs": ed_obs},
                 )
 
@@ -545,10 +575,16 @@ class TestMultiSignalModelHelpers:
             (6, (6 - 3) % 7),
         ],
     )
-    def test_compute_first_day_dow(self, simple_builder, obs_start_dow, expected):
-        """Test that compute_first_day_dow offsets by n_initialization_points."""
+    def test_resolve_first_day_dow(self, simple_builder, obs_start_dow, expected):
+        """_resolve_first_day_dow offsets by n_initialization_points."""
         model = simple_builder.build()
-        assert model.compute_first_day_dow(obs_start_dow) == expected
+        obs_date = date(2024, 1, 1) + timedelta(days=obs_start_dow)
+        assert model._resolve_first_day_dow(obs_date) == expected
+
+    def test_resolve_first_day_dow_none_passthrough(self, simple_builder):
+        """_resolve_first_day_dow returns None when obs_start_date is None."""
+        model = simple_builder.build()
+        assert model._resolve_first_day_dow(None) is None
 
     def test_shift_times_adds_offset(self, simple_builder):
         """Test that shift_times shifts by n_initialization_points."""
@@ -769,10 +805,10 @@ class TestBuilderCoherence:
 
 
 class TestMultiSignalValidateDataAnchor:
-    """MultiSignalModel.validate_data sample-time anchor check for first_day_dow."""
+    """MultiSignalModel.validate_data sample-time anchor check for obs_start_date."""
 
-    def test_missing_first_day_dow_for_weekly_obs_raises(self):
-        """An observation with aggregation_period>1 must have first_day_dow supplied."""
+    def test_missing_obs_start_date_for_weekly_obs_raises(self):
+        """An observation with aggregation='weekly' must have obs_start_date supplied."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
@@ -780,14 +816,14 @@ class TestMultiSignalValidateDataAnchor:
             observations=[_weekly_hosp_counts()],
         )
         model = builder.build()
-        with pytest.raises(ValueError, match="requires 'first_day_dow'"):
+        with pytest.raises(ValueError, match="obs_start_date is required"):
             model.validate_data(
                 n_days_post_init=28,
                 hospital={"obs": jnp.ones(4) * 5.0},
             )
 
-    def test_first_day_dow_supplied_for_weekly_obs_passes(self):
-        """Supplying first_day_dow satisfies the anchor check."""
+    def test_obs_start_date_supplied_for_weekly_obs_passes(self):
+        """Supplying obs_start_date satisfies the anchor check."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
@@ -795,13 +831,18 @@ class TestMultiSignalValidateDataAnchor:
             observations=[_weekly_hosp_counts()],
         )
         model = builder.build()
+        obs_start_date = _obs_date_for_dow(
+            target_first_day_dow=6,
+            n_init=model.latent.n_initialization_points,
+        )
         model.validate_data(
             n_days_post_init=28,
-            hospital={"obs": jnp.ones(4) * 5.0, "first_day_dow": 6},
+            obs_start_date=obs_start_date,
+            hospital={"obs": jnp.ones(4) * 5.0},
         )
 
     def test_anchor_check_skipped_for_daily_obs(self):
-        """Daily observations do not require first_day_dow at validate_data time."""
+        """Daily observations do not require obs_start_date at validate_data time."""
         builder = _coherence_builder(
             single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
             observations=[_daily_ed_counts()],

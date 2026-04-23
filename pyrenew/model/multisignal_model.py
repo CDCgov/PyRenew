@@ -6,7 +6,10 @@ Combines a latent infection process with multiple observation processes.
 
 from __future__ import annotations
 
+import datetime as dt
+
 import jax.numpy as jnp
+import numpy as np
 import numpyro
 import numpyro.handlers
 from jax.typing import ArrayLike
@@ -14,6 +17,7 @@ from jax.typing import ArrayLike
 from pyrenew.latent.base import BaseLatentInfectionProcess
 from pyrenew.metaclass import Model
 from pyrenew.observation.base import BaseObservationProcess
+from pyrenew.time import convert_date
 
 
 class MultiSignalModel(Model):
@@ -130,29 +134,71 @@ class MultiSignalModel(Model):
         padding = jnp.full(pad_shape, jnp.nan)
         return jnp.concatenate([padding, obs], axis=axis)
 
-    def compute_first_day_dow(self, obs_start_dow: int) -> int:
+    def _resolve_first_day_dow(
+        self,
+        obs_start_date: dt.date | dt.datetime | np.datetime64 | None,
+    ) -> int | None:
         """
-        Compute the day of the week for the start of the shared time axis.
+        Derive the axis-origin day-of-week from ``obs_start_date``.
 
-        The shared time axis begins ``n_init`` days before the first
-        observation. This method converts the known day of the week of
-        the first observation into the day of the week of the shared
-        time axis start (element 0), accounting for the initialization
-        period offset.
+        The shared daily time axis begins ``n_init`` days before the
+        first observation. This method converts a user-supplied
+        first-observation date into the day-of-week of element 0 of
+        that axis, accounting for the initialization-period offset.
 
         Parameters
         ----------
-        obs_start_dow : int
-            Day of the week of the first observation day
-            (0=Monday, 6=Sunday, ISO convention).
+        obs_start_date
+            Date of the first observation day, or ``None``.
 
         Returns
         -------
-        int
-            Day of the week for element 0 of the shared time axis.
+        int or None
+            Day-of-week index in ``{0, ..., 6}`` (0=Monday, ISO
+            convention) of element 0 of the shared axis. ``None`` when
+            ``obs_start_date`` is ``None``.
         """
+        if obs_start_date is None:
+            return None
         n_init = self.latent.n_initialization_points
-        return (obs_start_dow - n_init) % 7
+        return (convert_date(obs_start_date).weekday() - n_init) % 7
+
+    def _require_obs_start_date_if_weekly(
+        self,
+        obs_start_date: dt.date | dt.datetime | np.datetime64 | None,
+    ) -> None:
+        """
+        Validate that ``obs_start_date`` is supplied whenever any observation needs it.
+
+        Observations with ``aggregation="weekly"`` or a
+        ``day_of_week_rv`` require a calendar anchor. Rather than
+        surface a downstream error from the observation itself, raise
+        at the model entry with the name of the offending observation.
+
+        Parameters
+        ----------
+        obs_start_date
+            Top-level calendar anchor passed by the caller.
+
+        Raises
+        ------
+        ValueError
+            If ``obs_start_date`` is ``None`` and any observation
+            requires a calendar anchor.
+        """
+        if obs_start_date is not None:
+            return
+        for name, obs in self.observations.items():
+            if getattr(obs, "aggregation", "daily") == "weekly":
+                raise ValueError(
+                    f"obs_start_date is required when any observation uses "
+                    f"aggregation='weekly'; observation '{name}' does."
+                )
+            if getattr(obs, "day_of_week_rv", None) is not None:
+                raise ValueError(
+                    f"obs_start_date is required when any observation uses "
+                    f"a day-of-week effect; observation '{name}' does."
+                )
 
     def shift_times(self, times: jnp.ndarray) -> jnp.ndarray:
         """
@@ -179,7 +225,9 @@ class MultiSignalModel(Model):
     def validate_data(
         self,
         n_days_post_init: int,
+        *,
         subpop_fractions: ArrayLike | None = None,
+        obs_start_date: dt.date | dt.datetime | np.datetime64 | None = None,
         **observation_data: dict[str, object],
     ) -> None:
         """
@@ -197,9 +245,16 @@ class MultiSignalModel(Model):
         Parameters
         ----------
         n_days_post_init
-            Number of days to simulate after initialization period
+            Number of days to simulate after initialization period.
         subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
+        obs_start_date
+            Date of the first observation day. Required when any
+            observation uses ``aggregation="weekly"`` or a day-of-week
+            effect, or when a latent temporal process uses
+            calendar-week alignment. Converted once to the axis-origin
+            ``first_day_dow`` and forwarded to the latent process and
+            every observation.
         **observation_data
             Data for each observation process, keyed by observation name.
             Each value should be a dict of kwargs for that observation's sample().
@@ -207,16 +262,19 @@ class MultiSignalModel(Model):
         Raises
         ------
         ValueError
-            If times indices are out of bounds or negative
-            If dense obs length doesn't match n_total
-            If data shapes are inconsistent
+            If times indices are out of bounds or negative, if dense obs
+            length doesn't match n_total, if data shapes are inconsistent,
+            or if ``obs_start_date`` is missing when an observation requires it.
         """
+        self._require_obs_start_date_if_weekly(obs_start_date)
+
         pop = self.latent._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
         )
 
         n_init = self.latent.n_initialization_points
         n_total = n_init + n_days_post_init
+        first_day_dow = self._resolve_first_day_dow(obs_start_date)
 
         for name, obs_data in observation_data.items():
             if name not in self.observations:
@@ -226,18 +284,10 @@ class MultiSignalModel(Model):
                 )
 
             obs = self.observations[name]
-            if getattr(obs, "aggregation_period", 1) > 1 and (
-                "first_day_dow" not in obs_data
-            ):
-                raise ValueError(
-                    f"Observation '{name}' has aggregation_period="
-                    f"{obs.aggregation_period} and requires 'first_day_dow' "
-                    f"in its observation data."
-                )
-
             obs.validate_data(
                 n_total=n_total,
                 n_subpops=pop.n_subpops,
+                first_day_dow=first_day_dow,
                 **obs_data,
             )
 
@@ -247,7 +297,7 @@ class MultiSignalModel(Model):
         population_size: float,
         *,
         subpop_fractions: ArrayLike | None = None,
-        first_day_dow: int | None = None,
+        obs_start_date: dt.date | dt.datetime | np.datetime64 | None = None,
         **observation_data: dict[str, object],
     ) -> None:
         """
@@ -264,9 +314,14 @@ class MultiSignalModel(Model):
             (from latent process) to infection counts (for observation processes).
         subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
-        first_day_dow
-            Forwarded to the latent process. See
-            [pyrenew.latent.TemporalProcess][].
+        obs_start_date
+            Date of the first observation day. Converted once to the
+            axis-origin ``first_day_dow`` (day-of-week of element 0 of
+            the padded axis, after subtracting ``n_init``) and forwarded
+            to the latent process and every observation. Required when
+            any observation uses ``aggregation="weekly"`` or a
+            day-of-week effect, or when a latent temporal process uses
+            calendar-week alignment.
         **observation_data
             Data for each observation process, keyed by observation name
             (the ``name`` attribute of each observation process).
@@ -280,6 +335,9 @@ class MultiSignalModel(Model):
             observation sites. Use ``numpyro.infer.Predictive`` for forward
             sampling.
         """
+        self._require_obs_start_date_if_weekly(obs_start_date)
+        first_day_dow = self._resolve_first_day_dow(obs_start_date)
+
         # Generate latent infections (proportions)
         latent_sample = self.latent.sample(
             n_days_post_init=n_days_post_init,
@@ -318,6 +376,7 @@ class MultiSignalModel(Model):
             # Sample from observation process
             obs_process.sample(
                 infections=latent_infections,
+                first_day_dow=first_day_dow,
                 **obs_data,
             )
 

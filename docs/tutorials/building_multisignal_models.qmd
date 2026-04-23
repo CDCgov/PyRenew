@@ -39,6 +39,7 @@ import plotnine as p9
 import pandas as pd
 import time
 import warnings
+from datetime import date
 
 warnings.filterwarnings("ignore")
 
@@ -269,24 +270,24 @@ weekly_baseline_rt_process = StepwiseTemporalProcess(
 Use `alignment="calendar_week"` when the weekly Rt blocks should align to a calendar week.
 Pass the same `WeekCycle` to every weekly component that must agree on the calendar: the `StepwiseTemporalProcess` above and any weekly `PopulationCounts` or `SubpopulationCounts` observation.
 `pyrenew.time` exports `MMWR_WEEK` (Sunday-Saturday epiweeks) and `ISO_WEEK` (Monday-Sunday); use `WeekCycle(start_dow=k)` for any other convention.
-At sample or run time, pass the day of week for element 0 of the shared model axis:
+At sample or run time, pass the date of the first observation day as `obs_start_date`.
+The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it:
 
 ```python
-first_day_dow = model.compute_first_day_dow(obs_start_dow)
-
 model.run(
-    rng_key,
-    n_warmup=500,
-    n_samples=1000,
-    first_day_dow=first_day_dow,
-    hospital={"obs": hospital_obs, "first_day_dow": first_day_dow},
+    num_warmup=500,
+    num_samples=1000,
+    rng_key=random.PRNGKey(42),
+    n_days_post_init=n_days_post_init,
+    population_size=population_size,
+    obs_start_date=date(2024, 1, 7),
+    hospital={"obs": hospital_obs},
     ed={"obs": ed_obs},
 )
 ```
 
-The top-level `first_day_dow` is used by calendar-aligned latent temporal processes.
-The observation-level `first_day_dow` is used by observation processes that need calendar alignment, such as weekly aggregation or day-of-week effects.
-For `alignment="model_index"`, stepwise blocks start at model index 0 and no top-level `first_day_dow` is needed.
+`obs_start_date` is required whenever any component performs calendar-aligned work: a latent temporal process with `alignment="calendar_week"`, a count observation with `aggregation="weekly"`, or any observation with a day-of-week effect.
+For `alignment="model_index"` and daily observations with no day-of-week effect, `obs_start_date` can be omitted.
 
 ## Observation Processes
 

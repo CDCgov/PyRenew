@@ -257,8 +257,8 @@ offset_df["offset"] = pd.Categorical(
 The two curves have the same shape but are phase-shifted: their weekend dips fall on different days.
 Getting `first_day_dow` right matters — a misaligned offset would attribute Monday's high to Sunday or vice versa.
 
-When using `MultiSignalModel`, the shared time axis starts `n_init` days before the first observation.
-The convenience method `model.compute_first_day_dow(obs_start_dow)` converts the known day of the week of the first observation to the correct offset for element 0 of the time axis.
+When using `MultiSignalModel`, pass `obs_start_date` (the date of the first observation day) to `model.sample()` or `model.run()`.
+The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it.
 
 ## Sampled observations
 

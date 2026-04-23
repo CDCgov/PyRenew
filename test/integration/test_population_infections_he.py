@@ -8,6 +8,8 @@ posterior estimates recover known true parameters.
 
 from __future__ import annotations
 
+from datetime import date
+
 import arviz as az
 import jax
 import jax.numpy as jnp
@@ -130,7 +132,6 @@ class TestModelFit:
         )
 
         population_size = float(daily_hosp["pop"][0])
-        first_dow = 0  # 2023-11-06 is a Monday
 
         he_model.run(
             num_warmup=NUM_WARMUP,
@@ -139,11 +140,9 @@ class TestModelFit:
             mcmc_args={"num_chains": NUM_CHAINS, "progress_bar": False},
             n_days_post_init=N_DAYS_FIT,
             population_size=population_size,
+            obs_start_date=date(2023, 11, 6),
             hospital={"obs": hosp_obs},
-            ed={
-                "obs": ed_obs,
-                "first_day_dow": he_model.compute_first_day_dow(first_dow),
-            },
+            ed={"obs": ed_obs},
         )
 
         samples = he_model.mcmc.get_samples()

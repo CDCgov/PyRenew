@@ -9,6 +9,8 @@ posterior recovery.
 
 from __future__ import annotations
 
+from datetime import date
+
 import arviz as az
 import jax
 import jax.numpy as jnp
@@ -27,8 +29,8 @@ N_DAYS_FIT = 126
 NUM_WARMUP = 500
 NUM_SAMPLES = 500
 NUM_CHAINS = 4
-# Day 0 of the synthetic data is 2023-11-05, a Sunday (ISO dow = 6).
-OBS_START_DOW = 6
+# First observation day of the synthetic data. 2023-11-05 is a Sunday (ISO dow = 6).
+OBS_START_DATE = date(2023, 11, 5)
 
 
 def _build_hospital_obs_on_period_grid(
@@ -144,7 +146,7 @@ class TestDataAssembly:
         weekly_hosp : pl.DataFrame
             Weekly hospital admissions.
         """
-        first_day_dow = he_weekly_model.compute_first_day_dow(OBS_START_DOW)
+        first_day_dow = he_weekly_model._resolve_first_day_dow(OBS_START_DATE)
         weekly_values = jnp.array(
             weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
         )
@@ -191,7 +193,7 @@ class TestModelFit:
         MultiSignalModel
             Model with MCMC results attached.
         """
-        first_day_dow = he_weekly_model.compute_first_day_dow(OBS_START_DOW)
+        first_day_dow = he_weekly_model._resolve_first_day_dow(OBS_START_DATE)
 
         weekly_values = jnp.array(
             weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
@@ -213,8 +215,9 @@ class TestModelFit:
             mcmc_args={"num_chains": NUM_CHAINS, "progress_bar": False},
             n_days_post_init=N_DAYS_FIT,
             population_size=population_size,
-            hospital={"obs": hosp_obs, "first_day_dow": first_day_dow},
-            ed={"obs": ed_obs, "first_day_dow": first_day_dow},
+            obs_start_date=OBS_START_DATE,
+            hospital={"obs": hosp_obs},
+            ed={"obs": ed_obs},
         )
 
         samples = he_weekly_model.mcmc.get_samples()
