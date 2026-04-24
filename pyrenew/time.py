@@ -16,16 +16,14 @@ things; do not conflate them.
   ``TemporalProcess.sample`` protocol.
 
 - :class:`WeekCycle` — a 7-day calendar cycle identified by its
-  ``start_dow``. Construction-time modeling choice, shared by every
-  model component that must agree on the same calendar week
-  (weekly :class:`CountObservation` and calendar-week-aligned
-  :class:`StepwiseTemporalProcess`). The module-level constants
+  ``start_dow``. Construction-time modeling choice, set independently on
+  each model component that does calendar-week work (weekly
+  :class:`CountObservation` and calendar-week-aligned
+  :class:`StepwiseTemporalProcess`). Different components can use
+  different cycles; each performs its own trimming and aggregation
+  relative to the shared daily axis. The module-level constants
   :data:`MMWR_WEEK` (Sun-Sat) and :data:`ISO_WEEK` (Mon-Sun) cover
   the common conventions; custom cycles use ``WeekCycle(start_dow=k)``.
-
-``PyrenewBuilder._validate_coherence`` enforces that all weekly
-observations share one ``WeekCycle`` and that any calendar-week-aligned
-temporal process uses the same cycle.
 
 Worked example: ``first_day_dow=3`` (Thursday), ``week=MMWR_WEEK``
 (Sunday start), 17-day axis::

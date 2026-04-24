@@ -515,26 +515,6 @@ class ConstantTemporalProcess:
         return jnp.zeros((n_timepoints, n_processes))
 
 
-class InvalidStepSizeTemporalProcess:
-    """Temporal process stub with invalid builder-inspected metadata."""
-
-    step_size = 0
-
-    def sample(self, **kwargs):
-        """
-        Return an arbitrary array.
-
-        Builder validation should reject this process before ``sample`` runs,
-        so the returned value is irrelevant.
-
-        Returns
-        -------
-        jnp.ndarray
-            Shape ``(1, 1)`` array of zeros.
-        """
-        return jnp.zeros((1, 1))
-
-
 @pytest.fixture
 def wrong_shape_temporal_process_cls():
     """
@@ -560,19 +540,3 @@ def constant_temporal_process():
         Instance whose ``sample`` returns zeros of the requested shape.
     """
     return ConstantTemporalProcess()
-
-
-@pytest.fixture
-def invalid_step_size_temporal_process():
-    """
-    Temporal-process stub that advertises ``step_size=0``.
-
-    Used to exercise ``PyrenewBuilder._validate_coherence`` rejection of
-    temporal processes whose metadata is structurally invalid.
-
-    Returns
-    -------
-    InvalidStepSizeTemporalProcess
-        Instance with ``step_size=0``.
-    """
-    return InvalidStepSizeTemporalProcess()

@@ -12,6 +12,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.util import not_jax_tracer
 
+from pyrenew.latent.temporal_processes import TemporalProcess
 from pyrenew.metaclass import RandomVariable
 
 
@@ -355,8 +356,6 @@ class BaseLatentInfectionProcess(RandomVariable):
             ``first_day_dow`` (derived from ``obs_start_date`` at the
             model entry point); ``False`` otherwise.
         """
-        from pyrenew.latent.temporal_processes import TemporalProcess
-
         for value in vars(self).values():
             if (
                 isinstance(value, TemporalProcess)

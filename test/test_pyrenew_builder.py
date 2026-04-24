@@ -663,8 +663,8 @@ def _daily_ed_counts(name="ed"):
     )
 
 
-class TestBuilderCoherence:
-    """PyrenewBuilder._validate_coherence enforcement at build() time."""
+class TestBuilderConfigurations:
+    """PyrenewBuilder.build() accepts varied R(t) and observation cadences."""
 
     def test_daily_rt_with_daily_observation_passes(self):
         """step_size=1 and P=1: valid."""
@@ -706,8 +706,8 @@ class TestBuilderCoherence:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_mismatched_weekly_week_raises(self):
-        """Two weekly observations with different WeekCycles: rule 1 violation."""
+    def test_mismatched_weekly_week_passes(self):
+        """Weekly observations can use different WeekCycles; each aggregates independently."""
         builder = _coherence_builder(
             single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
             observations=[
@@ -715,11 +715,11 @@ class TestBuilderCoherence:
                 _weekly_hosp_counts(name="other", week=WeekCycle(start_dow=0)),
             ],
         )
-        with pytest.raises(ValueError, match="must share a single WeekCycle"):
-            builder.build()
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
 
     def test_matching_weekly_week_passes(self):
-        """Two weekly observations sharing a WeekCycle: rule 1 passes."""
+        """Two weekly observations sharing a WeekCycle build normally."""
         builder = _coherence_builder(
             single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
             observations=[
@@ -741,17 +741,6 @@ class TestBuilderCoherence:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_invalid_temporal_process_step_size_raises(
-        self, invalid_step_size_temporal_process
-    ):
-        """Temporal process metadata must expose a positive integer step_size."""
-        builder = _coherence_builder(
-            single_rt_process=invalid_step_size_temporal_process,
-            observations=[_daily_ed_counts()],
-        )
-        with pytest.raises(ValueError, match="positive integer step_size"):
-            builder.build()
-
     def test_calendar_week_alignment_matches_weekly_week_passes(self):
         """Sunday-start weeks pair with Saturday-ending weekly observations."""
         builder = _coherence_builder(
@@ -766,8 +755,8 @@ class TestBuilderCoherence:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_calendar_week_alignment_mismatches_weekly_week_raises(self):
-        """A weekly Rt anchor must agree with the weekly observation anchor."""
+    def test_calendar_week_alignment_mismatches_weekly_week_passes(self):
+        """A weekly Rt anchor can differ from a weekly observation anchor."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
@@ -777,11 +766,11 @@ class TestBuilderCoherence:
             ),
             observations=[_weekly_hosp_counts(week=MMWR_WEEK)],
         )
-        with pytest.raises(ValueError, match="disagrees with the weekly observation"):
-            builder.build()
+        model = builder.build()
+        assert isinstance(model, MultiSignalModel)
 
     def test_calendar_week_alignment_with_only_daily_observations_passes(self):
-        """No weekly observation means no calendar-anchor agreement to enforce."""
+        """Calendar-week-aligned R(t) pairs with daily observations."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
@@ -794,8 +783,8 @@ class TestBuilderCoherence:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_model_index_alignment_ignores_weekly_week(self):
-        """Model-index alignment carries no calendar anchor to compare against."""
+    def test_model_index_alignment_with_weekly_observation_passes(self):
+        """Model-index-aligned R(t) pairs with weekly observations."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05), step_size=7

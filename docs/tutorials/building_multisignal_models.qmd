@@ -270,7 +270,6 @@ weekly_baseline_rt_process = StepwiseTemporalProcess(
 Use `alignment="calendar_week"` when the weekly Rt blocks should align to a calendar week.
 PyRenew provides class `WeekCycle` which identifies the start day of a calendar week by ISO convention, e.g. `0 == Monday`, `6 == Sunday`
 and two pre-defined instances: `MMWR_WEEK: WeekCycle = WeekCycle(start_dow=6)` and `ISO_WEEK: WeekCycle = WeekCycle(start_dow=0)`.
-Pass the same `WeekCycle` to every weekly component that must agree on the calendar: the `StepwiseTemporalProcess` above and any weekly `PopulationCounts` or `SubpopulationCounts` observation.
 `pyrenew.time` exports `MMWR_WEEK` (Sunday-Saturday epiweeks) and `ISO_WEEK` (Monday-Sunday); use `WeekCycle(start_dow=k)` for any other convention.
 At sample or run time, pass the date of the first observation day as `obs_start_date`.
 Argument `obs_start_date` is required whenever any component performs calendar-aligned work: a latent temporal process with `alignment="calendar_week"`, a count observation with `aggregation="weekly"`, or any observation with a day-of-week effect.

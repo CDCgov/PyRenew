@@ -41,8 +41,7 @@ low-level building blocks in [pyrenew.process][]. The key differences:
   Wraps [pyrenew.process.RandomWalk][].
 - ``StepwiseTemporalProcess``: Wrapper that parameterizes any inner
   ``TemporalProcess`` at a coarser cadence and broadcasts to the per-timepoint
-  scale by repetition. Use to match R(t) parametrization to the coarsest
-  observation cadence.
+  scale by repetition.
 
 All implementations satisfy the ``TemporalProcess`` protocol and can be
 used interchangeably in hierarchical infection models.

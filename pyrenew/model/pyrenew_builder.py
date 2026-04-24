@@ -10,7 +10,6 @@ from __future__ import annotations
 from typing import Any
 
 from pyrenew.latent.base import BaseLatentInfectionProcess
-from pyrenew.latent.temporal_processes import TemporalProcess
 from pyrenew.model.multisignal_model import MultiSignalModel
 from pyrenew.observation.base import BaseObservationProcess
 
@@ -196,70 +195,14 @@ class PyrenewBuilder:
 
         return n_init
 
-    def _validate_coherence(self) -> None:
-        """
-        Enforce calendar-anchor and structural coherence across components.
-
-        Checks:
-
-        - All weekly observations must share a single
-          :class:`pyrenew.time.WeekCycle`.
-        - Every temporal-process ``step_size`` must be a positive integer.
-        - Calendar-week-aligned temporal processes must share that
-          :class:`WeekCycle`.
-
-        Raises
-        ------
-        ValueError
-            If any of the above checks fails.
-        """
-        weekly_weeks = {
-            obs.week
-            for obs in self.observations.values()
-            if getattr(obs, "aggregation", "daily") == "weekly"
-        }
-        if len(weekly_weeks) > 1:
-            raise ValueError(
-                f"Weekly observations must share a single WeekCycle; "
-                f"got {sorted(weekly_weeks, key=lambda w: w.start_dow)}"
-            )
-        obs_week = next(iter(weekly_weeks), None)
-
-        temporal_processes = {
-            name: value
-            for name, value in self.latent_params.items()
-            if isinstance(value, TemporalProcess)
-        }
-
-        for param_name, process in temporal_processes.items():
-            step_size = getattr(process, "step_size", 1)
-            if not isinstance(step_size, int) or step_size < 1:
-                raise ValueError(
-                    f"Temporal process '{param_name}' must expose a positive "
-                    f"integer step_size; got {step_size!r}"
-                )
-            if (
-                getattr(process, "alignment", None) == "calendar_week"
-                and obs_week is not None
-            ):
-                proc_week = getattr(process, "week", None)
-                if proc_week != obs_week:
-                    raise ValueError(
-                        f"Temporal process '{param_name}' has week={proc_week!r}, "
-                        f"which disagrees with the weekly observation "
-                        f"week={obs_week!r}"
-                    )
-
     def build(self) -> MultiSignalModel:
         """
         Build the multi-signal model with computed n_initialization_points.
 
         This method:
-        1. Enforces coherence between R(t) cadence and observation cadences
-        2. Computes n_initialization_points from all components
-        3. Constructs the latent process with the computed value
-        4. Creates a MultiSignalModel with automatic infection routing
-        5. Validates that observation/latent types are compatible
+        1. Computes n_initialization_points from all components
+        2. Constructs the latent process with the computed value
+        3. Creates a MultiSignalModel with automatic infection routing
 
         Can be called multiple times to create multiple model instances.
 
@@ -271,13 +214,10 @@ class PyrenewBuilder:
         Raises
         ------
         ValueError
-            If latent process not configured, or if R(t) and observation
-            cadences are incoherent.
+            If latent process not configured.
         """
         if self.latent_class is None:
             raise ValueError("Must call configure_latent() before build()")
-
-        self._validate_coherence()
 
         # Compute n_initialization_points
         n_init = self.compute_n_initialization_points()
