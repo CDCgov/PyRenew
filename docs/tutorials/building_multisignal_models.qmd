@@ -247,7 +247,7 @@ This separates three model choices:
 
 -   **Parameter cadence**: how often the $\mathcal{R}(t)$ temporal process samples a new latent value
 -   **Model time axis**: the daily axis used by the renewal equation and delay convolutions
--   **Observation cadence**: the scale of the likelihood for each signal, such as daily ED visits or weekly hospital admissions
+-   **Observation cadence**: the temporal granularity for each signal, such as daily ED visits or weekly hospital admissions
 
 The AR(1) process above samples one value per model day:
 
@@ -255,7 +255,7 @@ The AR(1) process above samples one value per model day:
 baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
 ```
 
-To parameterize $\mathcal{R}(t)$ weekly while still running the renewal equation daily, wrap the temporal process in `StepwiseTemporalProcess`.
+To use a  weekly $\mathcal{R}(t)$ while still running the renewal equation daily, wrap the temporal process in `StepwiseTemporalProcess`.
 The wrapper samples a coarse trajectory and broadcasts it to the daily model axis before the latent infection process uses it.
 
 ```python
@@ -268,25 +268,14 @@ weekly_baseline_rt_process = StepwiseTemporalProcess(
 ```
 
 Use `alignment="calendar_week"` when the weekly Rt blocks should align to a calendar week.
+PyRenew provides class `WeekCycle` which identifies the start day of a calendar week by ISO convention, e.g. `0 == Monday`, `6 == Sunday`
+and two pre-defined instances: `MMWR_WEEK: WeekCycle = WeekCycle(start_dow=6)` and `ISO_WEEK: WeekCycle = WeekCycle(start_dow=0)`.
 Pass the same `WeekCycle` to every weekly component that must agree on the calendar: the `StepwiseTemporalProcess` above and any weekly `PopulationCounts` or `SubpopulationCounts` observation.
 `pyrenew.time` exports `MMWR_WEEK` (Sunday-Saturday epiweeks) and `ISO_WEEK` (Monday-Sunday); use `WeekCycle(start_dow=k)` for any other convention.
 At sample or run time, pass the date of the first observation day as `obs_start_date`.
-The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it:
-
-```python
-model.run(
-    num_warmup=500,
-    num_samples=1000,
-    rng_key=random.PRNGKey(42),
-    n_days_post_init=n_days_post_init,
-    population_size=population_size,
-    obs_start_date=date(2024, 1, 7),
-
-)
-```
-
-`obs_start_date` is required whenever any component performs calendar-aligned work: a latent temporal process with `alignment="calendar_week"`, a count observation with `aggregation="weekly"`, or any observation with a day-of-week effect.
+Argument `obs_start_date` is required whenever any component performs calendar-aligned work: a latent temporal process with `alignment="calendar_week"`, a count observation with `aggregation="weekly"`, or any observation with a day-of-week effect.
 For `alignment="model_index"` and daily observations with no day-of-week effect, `obs_start_date` can be omitted.
+The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it.
 
 ## Observation Processes
 
@@ -715,6 +704,23 @@ samples = model.mcmc.get_samples()
 ```
 
 where `**obs_data` is a data dictionary which supplies the observation start date as `obs_start_date`  and a data dictionary for each set of signal data, where the name of the data dictionary corresponds to the signal name registered on the builder.
+For this example,  such a data dictionary would have the following structure:
+
+```python
+{
+    "obs_start_date": ...
+    "hospital": {
+        "obs": ...
+    },
+    "wastewater": {
+        "obs": ...
+        "times": ...
+        "subpop_indices": ...
+        "sensor_indices": ...
+        "n_sensors": ...
+    },
+}
+```
 
 
 ## Running the Model
