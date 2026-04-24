@@ -339,7 +339,7 @@ class TestMultiSignalModelSampling:
         assert jnp.allclose(log_rt[3:10], log_rt[3])
 
     def test_missing_obs_start_date_for_calendar_aligned_latent_process_raises(self):
-        """Calendar-aligned latent temporal processes require a calendar anchor."""
+        """Calendar-aligned latent temporal processes trigger the model-entry anchor check."""
         latent = PopulationInfections(
             name="PopulationInfections",
             gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
@@ -356,7 +356,9 @@ class TestMultiSignalModelSampling:
         model = MultiSignalModel(latent, {"ed": _daily_ed_counts()})
 
         with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(ValueError, match="first_day_dow"):
+            with pytest.raises(
+                ValueError, match="obs_start_date is required.*calendar_week"
+            ):
                 model.sample(
                     n_days_post_init=10,
                     population_size=1_000_000,
@@ -853,6 +855,27 @@ class TestMultiSignalValidateDataAnchor:
             n_days_post_init=30,
             ed={"obs": jnp.ones(n_total) * 5.0},
         )
+
+    def test_missing_obs_start_date_for_calendar_aligned_latent_raises(self):
+        """A calendar-week-aligned latent temporal process requires obs_start_date."""
+        builder = _coherence_builder(
+            single_rt_process=StepwiseTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                step_size=7,
+                alignment="calendar_week",
+                week=MMWR_WEEK,
+            ),
+            observations=[_daily_ed_counts()],
+        )
+        model = builder.build()
+        n_total = model.latent.n_initialization_points + 30
+        with pytest.raises(
+            ValueError, match="obs_start_date is required.*calendar_week"
+        ):
+            model.validate_data(
+                n_days_post_init=30,
+                ed={"obs": jnp.ones(n_total) * 5.0},
+            )
 
 
 if __name__ == "__main__":

@@ -338,6 +338,33 @@ class BaseLatentInfectionProcess(RandomVariable):
         """
         return len(self.gen_int_rv())
 
+    def requires_calendar_anchor(self) -> bool:
+        """
+        Report whether this latent process needs a calendar anchor at sample time.
+
+        The default implementation inspects this instance's attributes
+        for :class:`pyrenew.latent.temporal_processes.TemporalProcess`
+        instances and returns ``True`` if any of them has
+        ``alignment="calendar_week"``. Subclasses may override to add
+        additional calendar-aligned components.
+
+        Returns
+        -------
+        bool
+            ``True`` if the caller of :meth:`sample` must supply a
+            ``first_day_dow`` (derived from ``obs_start_date`` at the
+            model entry point); ``False`` otherwise.
+        """
+        from pyrenew.latent.temporal_processes import TemporalProcess
+
+        for value in vars(self).values():
+            if (
+                isinstance(value, TemporalProcess)
+                and getattr(value, "alignment", None) == "calendar_week"
+            ):
+                return True
+        return False
+
     @abstractmethod
     def sample(
         self,

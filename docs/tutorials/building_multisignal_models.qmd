@@ -281,8 +281,7 @@ model.run(
     n_days_post_init=n_days_post_init,
     population_size=population_size,
     obs_start_date=date(2024, 1, 7),
-    hospital={"obs": hospital_obs},
-    ed={"obs": ed_obs},
+
 )
 ```
 
@@ -710,17 +709,13 @@ model.run(
     n_days_post_init=n_days,
     population_size=population_size,
     subpop_fractions=subpop_fractions,
-    hospital={"obs": model.pad_observations(hosp_counts)},
-    wastewater={
-        "obs": ww_conc,
-        "times": model.shift_times(ww_times),
-        "subpop_indices": ww_subpop_indices,
-        "sensor_indices": ww_sensor_indices,
-        "n_sensors": n_ww_sensors,
-    },
+    **obs_data,
 )
 samples = model.mcmc.get_samples()
 ```
+
+where `**obs_data` is a data dictionary which supplies the observation start date as `obs_start_date`  and a data dictionary for each set of signal data, where the name of the data dictionary corresponds to the signal name registered on the builder.
+
 
 ## Running the Model
 
@@ -751,6 +746,8 @@ print(f"Total population: {float(jnp.sum(subpop_fractions)):.0%}")
 ```
 
 We define a function to prepare observation data using the model's helper methods to align with the shared time axis.
+The returned dictionary is structured to match the keyword arguments of `model.run()`: `obs_start_date` at the top level, plus one sub-dictionary per observation process, keyed by the name registered on the builder (`hospital`, `wastewater`).
+At call time the returned dict is unpacked with `**` (for example, `**obs_data_90` in the 90-day fit below), forwarding each entry as a keyword argument to `model.run()`.
 
 ```{python}
 # | label: prepare-observation-data

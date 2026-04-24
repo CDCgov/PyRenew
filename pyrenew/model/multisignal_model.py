@@ -163,17 +163,18 @@ class MultiSignalModel(Model):
         n_init = self.latent.n_initialization_points
         return (convert_date(obs_start_date).weekday() - n_init) % 7
 
-    def _require_obs_start_date_if_weekly(
+    def _check_obs_start_date(
         self,
         obs_start_date: dt.date | dt.datetime | np.datetime64 | None,
     ) -> None:
         """
-        Validate that ``obs_start_date`` is supplied whenever any observation needs it.
+        Check that ``obs_start_date`` is supplied whenever any component needs it.
 
         Observations with ``aggregation="weekly"`` or a
-        ``day_of_week_rv`` require a calendar anchor. Rather than
-        surface a downstream error from the observation itself, raise
-        at the model entry with the name of the offending observation.
+        ``day_of_week_rv`` require a calendar anchor, as do latent
+        processes with a calendar-week-aligned temporal process.
+        Rather than surface a downstream error, raise at the model
+        entry naming the offending component.
 
         Parameters
         ----------
@@ -183,8 +184,8 @@ class MultiSignalModel(Model):
         Raises
         ------
         ValueError
-            If ``obs_start_date`` is ``None`` and any observation
-            requires a calendar anchor.
+            If ``obs_start_date`` is ``None`` and any observation or
+            the latent process requires a calendar anchor.
         """
         if obs_start_date is not None:
             return
@@ -199,6 +200,11 @@ class MultiSignalModel(Model):
                     f"obs_start_date is required when any observation uses "
                     f"a day-of-week effect; observation '{name}' does."
                 )
+        if self.latent.requires_calendar_anchor():
+            raise ValueError(
+                "obs_start_date is required when the latent process uses a "
+                "temporal process with alignment='calendar_week'."
+            )
 
     def shift_times(self, times: jnp.ndarray) -> jnp.ndarray:
         """
@@ -266,7 +272,7 @@ class MultiSignalModel(Model):
             length doesn't match n_total, if data shapes are inconsistent,
             or if ``obs_start_date`` is missing when an observation requires it.
         """
-        self._require_obs_start_date_if_weekly(obs_start_date)
+        self._check_obs_start_date(obs_start_date)
 
         pop = self.latent._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
@@ -335,7 +341,7 @@ class MultiSignalModel(Model):
             observation sites. Use ``numpyro.infer.Predictive`` for forward
             sampling.
         """
-        self._require_obs_start_date_if_weekly(obs_start_date)
+        self._check_obs_start_date(obs_start_date)
         first_day_dow = self._resolve_first_day_dow(obs_start_date)
 
         # Generate latent infections (proportions)
