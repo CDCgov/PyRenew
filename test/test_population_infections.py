@@ -7,8 +7,9 @@ import numpyro
 import pytest
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent import RandomWalk
+from pyrenew.latent import AR1, RandomWalk, WeeklyTemporalProcess
 from pyrenew.latent.population_infections import PopulationInfections
+from pyrenew.time import MMWR_WEEK
 
 
 class TestPopulationInfectionsSample:
@@ -124,6 +125,47 @@ class TestPopulationInfectionsSample:
                 process.sample(n_days_post_init=30)
 
         assert "my_infections::rt_single" in trace
+
+    def test_first_day_dow_reaches_calendar_aligned_rt_process(self, gen_int_rv):
+        """Weekly Rt receives model-axis day of week."""
+        process = PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            single_rt_process=WeeklyTemporalProcess(
+                AR1(autoreg=0.9, innovation_sd=0.05),
+                start_dow=MMWR_WEEK,
+            ),
+            n_initialization_points=7,
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                process.sample(n_days_post_init=10, first_day_dow=3)
+
+        log_rt = trace["population::log_rt_single"]["value"]
+        weekly = trace["log_rt_single_weekly"]["value"]
+
+        assert log_rt.shape == (17, 1)
+        assert weekly.shape == (3, 1)
+        assert jnp.allclose(log_rt[:3], log_rt[0])
+        assert jnp.allclose(log_rt[3:10], log_rt[3])
+        assert jnp.allclose(log_rt[10:17], log_rt[10])
+
+    def test_wrong_rt_shape_raises(self, gen_int_rv, wrong_shape_temporal_process_cls):
+        """Temporal processes must return daily-length single-process Rt."""
+        process = PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            single_rt_process=wrong_shape_temporal_process_cls(jnp.zeros((16, 2))),
+            n_initialization_points=7,
+        )
+
+        with pytest.raises(ValueError, match="single_rt_process must return shape"):
+            process.sample(n_days_post_init=10)
 
 
 class TestPopulationInfectionsValidation:

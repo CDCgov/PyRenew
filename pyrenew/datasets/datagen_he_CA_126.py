@@ -1,13 +1,18 @@
 # numpydoc ignore=ES01,SA01,EX01
 """
-Generate 120-day synthetic CA hospital + ED visit data from known R(t).
+Generate 126-day synthetic CA hospital + ED visit data from known R(t).
 
 This script defines R(t) directly, runs a renewal equation forward,
 and convolves with signal-specific delay PMFs to produce two
 observation streams.  All true parameters are saved alongside the
 synthetic observations so tutorials can demonstrate posterior recovery.
 
-Outputs (in pyrenew/datasets/synthetic_CA_120/):
+The start date (2023-11-05, Sunday) and length (126 days = 18 weeks)
+are chosen so that the daily time axis aligns exactly with 18 complete
+MMWR epiweeks, with no days trimmed at either end during weekly
+aggregation.
+
+Outputs (in pyrenew/datasets/synthetic_CA_126/):
 - true_parameters.json
 - daily_infections.csv
 - daily_ed_visits.csv
@@ -16,7 +21,7 @@ Outputs (in pyrenew/datasets/synthetic_CA_120/):
 
 Run from repo root::
 
-    python -m pyrenew.datasets.datagen_he_CA_120
+    python -m pyrenew.datasets.datagen_he_CA_126
 """
 
 from __future__ import annotations
@@ -33,7 +38,7 @@ from pyrenew.math import r_approx_from_R
 from pyrenew.time import daily_to_mmwr_epiweekly, get_sequential_day_of_week_indices
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_DIR = REPO_ROOT / "pyrenew" / "datasets" / "synthetic_CA_120"
+OUTPUT_DIR = REPO_ROOT / "pyrenew" / "datasets" / "synthetic_CA_126"
 
 RNG_SEED = 20240101
 POPULATION = 39_512_223
@@ -123,10 +128,11 @@ IHR = 0.005
 IEDR = 0.0075
 I0_PER_CAPITA = 5e-4
 NEGBINOM_CONCENTRATION_HOSP = 350.0
+NEGBINOM_CONCENTRATION_HOSP_WEEKLY = 100.0
 NEGBINOM_CONCENTRATION_ED = 50.0
 DOW_EFFECTS = np.array([1.15, 1.12, 1.08, 1.05, 0.98, 0.82, 0.80])
 
-START_DATE = date(2023, 11, 6)
+START_DATE = date(2023, 11, 5)
 N_INIT = max(50, len(HOSP_DELAY_PMF), len(ED_DELAY_PMF))
 
 
@@ -134,8 +140,8 @@ def build_true_rt() -> np.ndarray:
     """
     Build a piecewise-linear true R(t) trajectory.
 
-    Phases: decline from 1.2 to 0.8 (60 d), rise from 0.8 to 1.1 (40 d),
-    decline from 1.1 to 0.85 (20 d).
+    Phases: decline from 1.2 to 0.8 (63 d), rise from 0.8 to 1.1 (42 d),
+    decline from 1.1 to 0.85 (21 d). Total 126 days = 18 weeks.
 
     Returns
     -------
@@ -143,9 +149,9 @@ def build_true_rt() -> np.ndarray:
         R(t) trajectory.
     """
     segments = [
-        (60, 1.2, 0.8),
-        (40, 0.8, 1.1),
-        (20, 1.1, 0.85),
+        (63, 1.2, 0.8),
+        (42, 0.8, 1.1),
+        (21, 1.1, 0.85),
     ]
     rt = np.concatenate(
         [
@@ -204,7 +210,7 @@ def run_renewal(
 
 
 def apply_day_of_week_effects(
-    values: np.ndarray, dow_effects: np.ndarray, first_dow: int
+    values: np.ndarray, dow_effects: np.ndarray, first_day_dow: int
 ) -> np.ndarray:
     """
     Apply multiplicative day-of-week effects to daily values.
@@ -216,7 +222,7 @@ def apply_day_of_week_effects(
     dow_effects : np.ndarray
         Multiplicative effects for each day (length 7, ISO convention:
         0 = Monday, 6 = Sunday). Should sum to 7 to preserve weekly totals.
-    first_dow : int
+    first_day_dow : int
         ISO day-of-week of the first element in values.
 
     Returns
@@ -224,7 +230,7 @@ def apply_day_of_week_effects(
     np.ndarray
         Adjusted daily values.
     """
-    day_indices = get_sequential_day_of_week_indices(first_dow, len(values))
+    day_indices = get_sequential_day_of_week_indices(first_day_dow, len(values))
     return values * dow_effects[day_indices]
 
 
@@ -255,32 +261,29 @@ def sample_negbinom(
     return rng.negative_binomial(n=concentration, p=p)
 
 
-def aggregate_to_epiweeks(
-    daily_values: np.ndarray,
+def build_weekly_hosp_frame(
+    weekly_values: np.ndarray,
     start_date: date,
 ) -> pl.DataFrame:
     """
-    Aggregate daily counts to MMWR epiweek totals (Sun-Sat, labeled by Saturday).
-
-    Only complete 7-day weeks are kept.
+    Build a weekly hospital admissions frame with MMWR week-ending dates.
 
     Parameters
     ----------
-    daily_values : np.ndarray
-        Daily count time series.
+    weekly_values : np.ndarray
+        One value per MMWR epiweek (aggregated by the caller).
     start_date : date
-        Date of the first element.
+        Date of day 0 of the daily time series the weekly values were
+        aggregated from. Used to compute the date of the first
+        Saturday (week-ending day).
 
     Returns
     -------
     pl.DataFrame
         Columns: week_end, weekly_hosp_admits.
     """
-    first_dow = start_date.weekday()
-    weekly_values = daily_to_mmwr_epiweekly(
-        np.asarray(daily_values), input_data_first_dow=first_dow
-    )
-    days_to_first_sunday = (6 - first_dow) % 7
+    first_day_dow = start_date.weekday()
+    days_to_first_sunday = (6 - first_day_dow) % 7
     first_week_end = start_date + timedelta(days=days_to_first_sunday + 6)
     n_weeks = len(weekly_values)
     week_ends = [first_week_end + timedelta(weeks=i) for i in range(n_weeks)]
@@ -305,7 +308,7 @@ def generate() -> None:
     infections_obs = infections_full[N_INIT:]
 
     obs_dates = [START_DATE + timedelta(days=i) for i in range(n_days)]
-    first_dow = START_DATE.weekday()
+    first_day_dow = START_DATE.weekday()
 
     expected_hosp_daily, _ = compute_delay_ascertained_incidence(
         latent_incidence=infections_full,
@@ -319,7 +322,18 @@ def generate() -> None:
         expected_hosp_daily, NEGBINOM_CONCENTRATION_HOSP, rng
     )
 
-    weekly_hosp = aggregate_to_epiweeks(hosp_daily_obs, START_DATE)
+    # Weekly hospital admissions: aggregate daily *expected* values to MMWR
+    # epiweeks, then apply one NegBin at the weekly scale. This matches the
+    # generative assumption of PopulationCounts(aggregation_period=7) with a
+    # single NegativeBinomialNoise at the reporting cadence.
+    expected_hosp_weekly = np.asarray(
+        daily_to_mmwr_epiweekly(expected_hosp_daily, input_data_first_dow=first_day_dow)
+    )
+    expected_hosp_weekly = np.maximum(expected_hosp_weekly, 1.0)
+    hosp_weekly_obs = sample_negbinom(
+        expected_hosp_weekly, NEGBINOM_CONCENTRATION_HOSP_WEEKLY, rng
+    )
+    weekly_hosp = build_weekly_hosp_frame(hosp_weekly_obs, START_DATE)
 
     hosp_daily_df = pl.DataFrame(
         {
@@ -338,7 +352,7 @@ def generate() -> None:
         pad=True,
     )
     expected_ed = expected_ed[N_INIT:]
-    expected_ed = apply_day_of_week_effects(expected_ed, DOW_EFFECTS, first_dow)
+    expected_ed = apply_day_of_week_effects(expected_ed, DOW_EFFECTS, first_day_dow)
     expected_ed = np.maximum(expected_ed, 1.0)
     ed_obs = sample_negbinom(expected_ed, NEGBINOM_CONCENTRATION_ED, rng)
 
@@ -380,14 +394,15 @@ def generate() -> None:
         "generation_interval_pmf": GEN_INT_PMF.tolist(),
         "i0_per_capita": I0_PER_CAPITA,
         "rt_trajectory": {
-            "phase_1": {"days": 60, "start": 1.2, "end": 0.8},
-            "phase_2": {"days": 40, "start": 0.8, "end": 1.1},
-            "phase_3": {"days": 20, "start": 1.1, "end": 0.85},
+            "phase_1": {"days": 63, "start": 1.2, "end": 0.8},
+            "phase_2": {"days": 42, "start": 0.8, "end": 1.1},
+            "phase_3": {"days": 21, "start": 1.1, "end": 0.85},
         },
         "hospitalizations": {
             "ihr": IHR,
             "delay_pmf_source": "infection_admission_interval.tsv",
-            "negbinom_concentration": NEGBINOM_CONCENTRATION_HOSP,
+            "negbinom_concentration_daily": NEGBINOM_CONCENTRATION_HOSP,
+            "negbinom_concentration_weekly": NEGBINOM_CONCENTRATION_HOSP_WEEKLY,
             "temporal_resolutions": ["daily", "weekly_epiweek"],
         },
         "ed_visits": {

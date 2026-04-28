@@ -15,6 +15,7 @@ from pyrenew.observation import (
     SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable
+from pyrenew.time import MMWR_WEEK
 from test.test_helpers import create_mock_infections
 
 
@@ -283,6 +284,7 @@ class TestSubpopulationCounts:
             ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
             noise=PoissonNoise(),
+            reporting_schedule="irregular",
         )
 
         # 5 subpopulations with distinct infection levels
@@ -291,13 +293,13 @@ class TestSubpopulationCounts:
         for k in range(5):
             infections = infections.at[:, k].set((k + 1) * 100.0)
 
-        times = jnp.array([10, 10, 10])
+        period_end_times = jnp.array([10, 10, 10])
         subpop_indices = jnp.array([0, 2, 4])
 
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
-                times=times,
+                period_end_times=period_end_times,
                 subpop_indices=subpop_indices,
                 obs=None,
             )
@@ -550,18 +552,19 @@ class TestRightTruncation:
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
             noise=PoissonNoise(),
             right_truncation_rv=DeterministicPMF("rt_delay", rt_pmf),
+            reporting_schedule="irregular",
         )
 
         n_days = 10
         n_subpops = 3
         infections = jnp.ones((n_days, n_subpops)) * 100
-        times = jnp.array([0, 8, 9])
+        period_end_times = jnp.array([0, 8, 9])
         subpop_indices = jnp.array([0, 1, 2])
 
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
-                times=times,
+                period_end_times=period_end_times,
                 subpop_indices=subpop_indices,
                 obs=None,
                 right_truncation_offset=0,
@@ -739,18 +742,19 @@ class TestDayOfWeek:
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
             noise=PoissonNoise(),
             day_of_week_rv=DeterministicVariable("dow", dow_effect),
+            reporting_schedule="irregular",
         )
 
         n_days = 14
         n_subpops = 3
         infections = jnp.ones((n_days, n_subpops)) * 100
-        times = jnp.array([0, 1, 7])
+        period_end_times = jnp.array([0, 1, 7])
         subpop_indices = jnp.array([0, 1, 2])
 
         with numpyro.handlers.seed(rng_seed=42):
             result = process.sample(
                 infections=infections,
-                times=times,
+                period_end_times=period_end_times,
                 subpop_indices=subpop_indices,
                 obs=None,
                 first_day_dow=0,
@@ -843,20 +847,643 @@ class TestDayOfWeek:
             delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
             noise=PoissonNoise(),
             day_of_week_rv=DeterministicVariable("dow", dow_effect),
+            reporting_schedule="irregular",
         )
         infections = jnp.ones((14, 2)) * 100
-        times = jnp.array([0, 1])
+        period_end_times = jnp.array([0, 1])
         subpop_indices = jnp.array([0, 1])
 
         with numpyro.handlers.seed(rng_seed=42):
             with pytest.raises(ValueError, match="first_day_dow is required"):
                 process.sample(
                     infections=infections,
-                    times=times,
+                    period_end_times=period_end_times,
                     subpop_indices=subpop_indices,
                     obs=None,
                     first_day_dow=None,
                 )
+
+
+# ===================================================================
+# PopulationCounts with aggregation: construction-time validation
+# ===================================================================
+
+
+class TestPopulationCountsAggregationConstruction:
+    """Construction-time validation for the aggregation parameters."""
+
+    def _make(self, simple_delay_pmf, **kwargs):
+        """
+        Build a PopulationCounts with a stub noise model and optional overrides.
+
+        Returns
+        -------
+        PopulationCounts
+            A PopulationCounts instance using the supplied delay PMF and
+            any additional constructor overrides passed via ``**kwargs``.
+        """
+        return PopulationCounts(
+            name="hosp",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+            **kwargs,
+        )
+
+    def test_default_construction_is_daily_regular(self, simple_delay_pmf):
+        """Default constructor yields aggregation='daily', reporting_schedule='regular'."""
+        process = self._make(simple_delay_pmf)
+        assert process.aggregation == "daily"
+        assert process.reporting_schedule == "regular"
+        assert process.start_dow is None
+
+    def test_weekly_requires_start_dow(self, simple_delay_pmf):
+        """aggregation='weekly' without start_dow must raise."""
+        with pytest.raises(ValueError, match="start_dow is required"):
+            self._make(simple_delay_pmf, aggregation="weekly")
+
+    def test_weekly_with_mmwr_anchor_constructs(self, simple_delay_pmf):
+        """aggregation='weekly' with MMWR_WEEK is valid."""
+        process = self._make(
+            simple_delay_pmf, aggregation="weekly", start_dow=MMWR_WEEK
+        )
+        assert process.aggregation == "weekly"
+        assert process.start_dow == MMWR_WEEK
+
+    def test_dow_effect_with_weekly_aggregation_raises(self, simple_delay_pmf):
+        """day_of_week_rv cannot be combined with aggregation='weekly'."""
+        with pytest.raises(ValueError, match="day_of_week_rv cannot be combined"):
+            self._make(
+                simple_delay_pmf,
+                aggregation="weekly",
+                start_dow=MMWR_WEEK,
+                day_of_week_rv=DeterministicVariable("dow", jnp.ones(7)),
+            )
+
+    def test_dow_effect_with_daily_aggregation_allowed(self, simple_delay_pmf):
+        """day_of_week_rv remains valid for aggregation='daily'."""
+        process = self._make(
+            simple_delay_pmf,
+            day_of_week_rv=DeterministicVariable("dow", jnp.ones(7)),
+        )
+        assert process.day_of_week_rv is not None
+
+    def test_unknown_aggregation_raises(self, simple_delay_pmf):
+        """aggregation must be 'daily' or 'weekly'."""
+        with pytest.raises(ValueError, match="aggregation must be one of"):
+            self._make(simple_delay_pmf, aggregation="monthly")
+
+    def test_unknown_reporting_schedule_raises(self, simple_delay_pmf):
+        """reporting_schedule must be 'regular' or 'irregular'."""
+        with pytest.raises(ValueError, match="reporting_schedule must be one of"):
+            self._make(simple_delay_pmf, reporting_schedule="sporadic")
+
+
+# ===================================================================
+# PopulationCounts with aggregation: validate_data
+# ===================================================================
+
+
+class TestPopulationCountsAggregationValidateData:
+    """validate_data branches for each (schedule, aggregation_period) combination."""
+
+    def test_weekly_regular_correct_length_passes(self, weekly_regular_counts):
+        """Weekly-regular obs of length n_periods passes when first_day_dow aligns."""
+        obs = jnp.ones(4) * 10.0
+        weekly_regular_counts.validate_data(
+            n_total=28, n_subpops=1, obs=obs, first_day_dow=6
+        )
+
+    def test_weekly_regular_wrong_length_raises(self, weekly_regular_counts):
+        """Weekly-regular obs with wrong length raises."""
+        obs = jnp.ones(28) * 10.0
+        with pytest.raises(ValueError, match="must equal n_periods"):
+            weekly_regular_counts.validate_data(
+                n_total=28, n_subpops=1, obs=obs, first_day_dow=6
+            )
+
+    def test_weekly_regular_missing_first_day_dow_raises(self, weekly_regular_counts):
+        """Weekly-regular with first_day_dow=None raises."""
+        obs = jnp.ones(4) * 10.0
+        with pytest.raises(ValueError, match="first_day_dow is required"):
+            weekly_regular_counts.validate_data(n_total=28, n_subpops=1, obs=obs)
+
+    def test_weekly_regular_obs_none_passes(self, weekly_regular_counts):
+        """Weekly-regular with obs=None skips checks."""
+        weekly_regular_counts.validate_data(n_total=28, n_subpops=1)
+
+    def test_weekly_regular_honors_offset(self, weekly_regular_counts):
+        """Weekly-regular n_periods reflects front-trim offset."""
+        obs = jnp.ones(3) * 10.0
+        weekly_regular_counts.validate_data(
+            n_total=28, n_subpops=1, obs=obs, first_day_dow=0
+        )
+
+    def test_weekly_irregular_aligned_times_pass(self, weekly_irregular_counts):
+        """Weekly-irregular with Saturdays at offset 0 passes."""
+        period_end_times = jnp.array([6, 13, 20])
+        obs = jnp.ones(3) * 10.0
+        weekly_irregular_counts.validate_data(
+            n_total=28,
+            n_subpops=1,
+            obs=obs,
+            period_end_times=period_end_times,
+            first_day_dow=6,
+        )
+
+    def test_weekly_irregular_misaligned_times_raise(self, weekly_irregular_counts):
+        """Weekly-irregular with non-Saturday period_end_times raises."""
+        period_end_times = jnp.array([6, 12, 20])
+        with pytest.raises(ValueError, match="period_end_times must lie on"):
+            weekly_irregular_counts.validate_data(
+                n_total=28,
+                n_subpops=1,
+                period_end_times=period_end_times,
+                first_day_dow=6,
+            )
+
+    def test_weekly_irregular_missing_first_day_dow_raises(
+        self, weekly_irregular_counts
+    ):
+        """Weekly-irregular with first_day_dow=None raises."""
+        period_end_times = jnp.array([6, 13, 20])
+        with pytest.raises(ValueError, match="first_day_dow is required"):
+            weekly_irregular_counts.validate_data(
+                n_total=28, n_subpops=1, period_end_times=period_end_times
+            )
+
+    def test_weekly_irregular_obs_shape_mismatch_raises(self, weekly_irregular_counts):
+        """Weekly-irregular obs of wrong length raises."""
+        period_end_times = jnp.array([6, 13, 20])
+        obs = jnp.ones(2) * 10.0
+        with pytest.raises(ValueError, match="must match"):
+            weekly_irregular_counts.validate_data(
+                n_total=28,
+                n_subpops=1,
+                obs=obs,
+                period_end_times=period_end_times,
+                first_day_dow=6,
+            )
+
+    def test_daily_irregular_passes(self, daily_irregular_counts):
+        """Daily-irregular validates via bounds only; alignment is trivial."""
+        period_end_times = jnp.array([0, 5, 19])
+        obs = jnp.ones(3) * 10.0
+        daily_irregular_counts.validate_data(
+            n_total=20,
+            n_subpops=1,
+            obs=obs,
+            period_end_times=period_end_times,
+        )
+
+    def test_daily_irregular_out_of_bounds_raises(self, daily_irregular_counts):
+        """Daily-irregular out-of-bounds index raises."""
+        period_end_times = jnp.array([0, 5, 25])
+        with pytest.raises(ValueError, match="upper bound"):
+            daily_irregular_counts.validate_data(
+                n_total=20, n_subpops=1, period_end_times=period_end_times
+            )
+
+    def test_irregular_no_period_end_times_is_noop(self, weekly_irregular_counts):
+        """Irregular schedule with period_end_times=None returns without error."""
+        weekly_irregular_counts.validate_data(
+            n_total=28, n_subpops=1, obs=None, period_end_times=None
+        )
+
+
+# ===================================================================
+# PopulationCounts with aggregation: sample
+# ===================================================================
+
+
+class TestPopulationCountsAggregationSample:
+    """Sample-time behavior for the new aggregation paths."""
+
+    def test_weekly_regular_predicted_shape(self, weekly_regular_counts):
+        """Weekly-regular predicted has shape (n_periods,) equal to weekly sums."""
+        infections = jnp.ones(28) * 100.0
+        with numpyro.handlers.seed(rng_seed=42):
+            result = weekly_regular_counts.sample(
+                infections=infections, first_day_dow=6
+            )
+        assert result.predicted.shape == (4,)
+        assert jnp.allclose(result.predicted, 7.0, rtol=1e-5)
+
+    def test_weekly_regular_emits_predicted_daily_site(self, weekly_regular_counts):
+        """When aggregation_period > 1, the 'predicted_daily' deterministic site exists."""
+        infections = jnp.ones(28) * 100.0
+        with numpyro.handlers.trace() as trace:
+            with numpyro.handlers.seed(rng_seed=42):
+                weekly_regular_counts.sample(infections=infections, first_day_dow=6)
+        assert "hosp_predicted_daily" in trace
+        assert "hosp_predicted" in trace
+        assert trace["hosp_predicted_daily"]["value"].shape == (28,)
+        assert trace["hosp_predicted"]["value"].shape == (4,)
+
+    def test_daily_backward_compat_no_predicted_daily_site(self, simple_delay_pmf):
+        """When aggregation_period == 1, 'predicted_daily' is not emitted."""
+        process = PopulationCounts(
+            name="hosp",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        infections = jnp.ones(28) * 100.0
+        with numpyro.handlers.trace() as trace:
+            with numpyro.handlers.seed(rng_seed=42):
+                process.sample(infections=infections)
+        assert "hosp_predicted_daily" not in trace
+        assert "hosp_predicted" in trace
+        assert trace["hosp_predicted"]["value"].shape == (28,)
+
+    def test_weekly_regular_with_obs_runs(self, weekly_regular_counts):
+        """Weekly-regular sample accepts dense-with-NaN obs on the period grid."""
+        infections = jnp.ones(28) * 100.0
+        obs = jnp.array([7.0, jnp.nan, 7.0, 7.0])
+        with numpyro.handlers.seed(rng_seed=42):
+            result = weekly_regular_counts.sample(
+                infections=infections, obs=obs, first_day_dow=6
+            )
+        assert result.observed.shape == (4,)
+        assert result.predicted.shape == (4,)
+
+    def test_weekly_irregular_period_indexing(self, weekly_irregular_counts):
+        """Weekly-irregular fancy-indexes the aggregated array at correct periods."""
+        infections = jnp.ones(28) * 100.0
+        period_end_times = jnp.array([6, 20])
+        with numpyro.handlers.seed(rng_seed=42):
+            result = weekly_irregular_counts.sample(
+                infections=infections,
+                period_end_times=period_end_times,
+                first_day_dow=6,
+            )
+        assert result.predicted.shape == (4,)
+        assert result.observed.shape == (2,)
+        assert jnp.allclose(result.predicted, 7.0, rtol=1e-5)
+
+    def test_weekly_irregular_missing_period_end_times_raises(
+        self, weekly_irregular_counts
+    ):
+        """Irregular schedule requires period_end_times at sample time."""
+        infections = jnp.ones(28) * 100.0
+        with pytest.raises(ValueError, match="period_end_times is required"):
+            with numpyro.handlers.seed(rng_seed=42):
+                weekly_irregular_counts.sample(infections=infections, first_day_dow=6)
+
+    def test_daily_irregular_period_indexing(self, daily_irregular_counts):
+        """Daily-irregular fancy-indexes at the supplied daily indices directly."""
+        infections = jnp.ones(30) * 100.0
+        period_end_times = jnp.array([5, 10, 20])
+        with numpyro.handlers.seed(rng_seed=42):
+            result = daily_irregular_counts.sample(
+                infections=infections, period_end_times=period_end_times
+            )
+        assert result.predicted.shape == (30,)
+        assert result.observed.shape == (3,)
+
+    def test_aggregate_helper_missing_first_day_dow_raises(self, weekly_regular_counts):
+        """_aggregate raises when aggregation == 'weekly' and first_day_dow is None."""
+        predicted_daily = jnp.ones(28)
+        with pytest.raises(
+            ValueError, match="first_day_dow is required when aggregation == 'weekly'"
+        ):
+            weekly_regular_counts._aggregate(predicted_daily, first_day_dow=None)
+
+
+# ===================================================================
+# SubpopulationCounts with aggregation: validate_data
+# ===================================================================
+
+
+class TestSubpopulationCountsAggregationValidateData:
+    """validate_data branches for each (schedule, aggregation_period) combination."""
+
+    def test_daily_regular_valid_passes(self, simple_delay_pmf):
+        """Daily-regular dense 2D obs (n_total, n_observed_subpops) passes."""
+        process = SubpopulationCounts(
+            name="ed",
+            ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        obs = jnp.ones((30, 2)) * 5.0
+        subpop_indices = jnp.array([0, 2])
+        process.validate_data(
+            n_total=30, n_subpops=3, obs=obs, subpop_indices=subpop_indices
+        )
+
+    def test_weekly_regular_valid_passes(self, weekly_regular_subpop_counts):
+        """Weekly-regular dense 2D obs (n_periods, n_observed_subpops) passes."""
+        obs = jnp.ones((4, 2)) * 5.0
+        subpop_indices = jnp.array([0, 2])
+        weekly_regular_subpop_counts.validate_data(
+            n_total=28,
+            n_subpops=3,
+            obs=obs,
+            first_day_dow=6,
+            subpop_indices=subpop_indices,
+        )
+
+    def test_regular_no_obs_is_noop(self, weekly_regular_subpop_counts):
+        """Regular schedule with obs=None returns without error."""
+        weekly_regular_subpop_counts.validate_data(n_total=28, n_subpops=3, obs=None)
+
+    def test_weekly_regular_wrong_n_periods_raises(self, weekly_regular_subpop_counts):
+        """Weekly-regular obs with wrong dim-0 length raises."""
+        obs = jnp.ones((28, 2)) * 5.0
+        subpop_indices = jnp.array([0, 2])
+        with pytest.raises(ValueError, match="must equal n_periods"):
+            weekly_regular_subpop_counts.validate_data(
+                n_total=28,
+                n_subpops=3,
+                obs=obs,
+                first_day_dow=6,
+                subpop_indices=subpop_indices,
+            )
+
+    def test_regular_wrong_n_subpops_raises(self, weekly_regular_subpop_counts):
+        """Regular-schedule obs dim-1 must equal len(subpop_indices)."""
+        obs = jnp.ones((4, 3)) * 5.0
+        subpop_indices = jnp.array([0, 2])
+        with pytest.raises(ValueError, match=r"must equal len\(subpop_indices\)"):
+            weekly_regular_subpop_counts.validate_data(
+                n_total=28,
+                n_subpops=3,
+                obs=obs,
+                first_day_dow=6,
+                subpop_indices=subpop_indices,
+            )
+
+    def test_weekly_regular_missing_first_day_dow_raises(
+        self, weekly_regular_subpop_counts
+    ):
+        """Weekly-regular without first_day_dow raises."""
+        obs = jnp.ones((4, 2)) * 5.0
+        subpop_indices = jnp.array([0, 2])
+        with pytest.raises(ValueError, match="first_day_dow is required"):
+            weekly_regular_subpop_counts.validate_data(
+                n_total=28,
+                n_subpops=3,
+                obs=obs,
+                subpop_indices=subpop_indices,
+            )
+
+    def test_regular_1d_obs_raises(self, weekly_regular_subpop_counts):
+        """Regular-schedule obs must be 2D."""
+        obs = jnp.ones(4) * 5.0
+        subpop_indices = jnp.array([0])
+        with pytest.raises(ValueError, match="regular-schedule obs must be 2D"):
+            weekly_regular_subpop_counts.validate_data(
+                n_total=28,
+                n_subpops=3,
+                obs=obs,
+                first_day_dow=6,
+                subpop_indices=subpop_indices,
+            )
+
+    def test_regular_bad_subpop_indices_raises(self, weekly_regular_subpop_counts):
+        """Regular-schedule out-of-bounds subpop_indices raises."""
+        subpop_indices = jnp.array([0, 5])
+        with pytest.raises(ValueError, match="upper bound"):
+            weekly_regular_subpop_counts.validate_data(
+                n_total=28, n_subpops=3, subpop_indices=subpop_indices
+            )
+
+    def test_daily_irregular_valid_passes(self, daily_irregular_subpop_counts):
+        """Daily-irregular with valid period_end_times and subpop_indices passes."""
+        period_end_times = jnp.array([5, 10, 15, 20])
+        subpop_indices = jnp.array([0, 1, 2, 0])
+        obs = jnp.array([10.0, 20.0, 30.0, 15.0])
+        daily_irregular_subpop_counts.validate_data(
+            n_total=30,
+            n_subpops=3,
+            obs=obs,
+            period_end_times=period_end_times,
+            subpop_indices=subpop_indices,
+        )
+
+    def test_weekly_irregular_valid_passes(
+        self, weekly_irregular_subpop_counts, mmwr_saturday_indices_first_three
+    ):
+        """Weekly-irregular with Saturdays at offset 0 passes."""
+        subpop_indices = jnp.array([0, 1, 2])
+        obs = jnp.array([10.0, 20.0, 30.0])
+        weekly_irregular_subpop_counts.validate_data(
+            n_total=28,
+            n_subpops=3,
+            obs=obs,
+            period_end_times=mmwr_saturday_indices_first_three,
+            first_day_dow=6,
+            subpop_indices=subpop_indices,
+        )
+
+    def test_weekly_irregular_misaligned_raises(self, weekly_irregular_subpop_counts):
+        """Weekly-irregular with non-Saturday period_end_times raises."""
+        period_end_times = jnp.array([6, 12, 20])
+        subpop_indices = jnp.array([0, 1, 2])
+        with pytest.raises(ValueError, match="period_end_times must lie on"):
+            weekly_irregular_subpop_counts.validate_data(
+                n_total=28,
+                n_subpops=3,
+                period_end_times=period_end_times,
+                first_day_dow=6,
+                subpop_indices=subpop_indices,
+            )
+
+    def test_weekly_irregular_missing_first_day_dow_raises(
+        self, weekly_irregular_subpop_counts, mmwr_saturday_indices_first_three
+    ):
+        """Weekly-irregular without first_day_dow raises."""
+        with pytest.raises(ValueError, match="first_day_dow is required"):
+            weekly_irregular_subpop_counts.validate_data(
+                n_total=28,
+                n_subpops=3,
+                period_end_times=mmwr_saturday_indices_first_three,
+            )
+
+    def test_irregular_obs_shape_mismatch_raises(
+        self, weekly_irregular_subpop_counts, mmwr_saturday_indices_first_three
+    ):
+        """Irregular-schedule obs length must match period_end_times."""
+        obs = jnp.array([10.0, 20.0])
+        with pytest.raises(ValueError, match="must match"):
+            weekly_irregular_subpop_counts.validate_data(
+                n_total=28,
+                n_subpops=3,
+                obs=obs,
+                period_end_times=mmwr_saturday_indices_first_three,
+                subpop_indices=jnp.array([0, 1, 2]),
+                first_day_dow=6,
+            )
+
+    def test_irregular_subpop_indices_shape_mismatch_raises(
+        self, weekly_irregular_subpop_counts, mmwr_saturday_indices_first_three
+    ):
+        """Irregular-schedule subpop_indices length must match period_end_times."""
+        subpop_indices = jnp.array([0, 1])
+        with pytest.raises(ValueError, match="must match"):
+            weekly_irregular_subpop_counts.validate_data(
+                n_total=28,
+                n_subpops=3,
+                period_end_times=mmwr_saturday_indices_first_three,
+                first_day_dow=6,
+                subpop_indices=subpop_indices,
+            )
+
+
+# ===================================================================
+# SubpopulationCounts with aggregation: sample
+# ===================================================================
+
+
+class TestSubpopulationCountsAggregationSample:
+    """Sample-time behavior for the new aggregation paths."""
+
+    def test_daily_regular_shape(self, simple_delay_pmf, subpop_infections_30d):
+        """Daily-regular sample returns predicted of shape (n_total, n_subpops)."""
+        process = SubpopulationCounts(
+            name="ed",
+            ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        subpop_indices = jnp.array([0, 2])
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                infections=subpop_infections_30d, subpop_indices=subpop_indices
+            )
+        assert result.predicted.shape == (30, 3)
+        assert result.observed.shape == (30, 2)
+
+    def test_weekly_regular_predicted_shape_and_values(
+        self, weekly_regular_subpop_counts, subpop_infections_28d
+    ):
+        """Weekly-regular aggregates (n_total, n_subpops) to (n_periods, n_subpops)."""
+        subpop_indices = jnp.array([0, 2])
+        with numpyro.handlers.seed(rng_seed=42):
+            result = weekly_regular_subpop_counts.sample(
+                infections=subpop_infections_28d,
+                first_day_dow=6,
+                subpop_indices=subpop_indices,
+            )
+        assert result.predicted.shape == (4, 3)
+        assert jnp.allclose(result.predicted, 7.0, rtol=1e-5)
+        assert result.observed.shape == (4, 2)
+
+    def test_weekly_regular_emits_predicted_daily_site(
+        self, weekly_regular_subpop_counts, subpop_infections_28d
+    ):
+        """aggregation_period > 1 emits a 'predicted_daily' deterministic site."""
+        subpop_indices = jnp.array([0, 2])
+        with numpyro.handlers.trace() as trace:
+            with numpyro.handlers.seed(rng_seed=42):
+                weekly_regular_subpop_counts.sample(
+                    infections=subpop_infections_28d,
+                    first_day_dow=6,
+                    subpop_indices=subpop_indices,
+                )
+        assert "ed_predicted_daily" in trace
+        assert "ed_predicted" in trace
+        assert trace["ed_predicted_daily"]["value"].shape == (28, 3)
+        assert trace["ed_predicted"]["value"].shape == (4, 3)
+
+    def test_daily_backward_compat_no_predicted_daily_site(
+        self, simple_delay_pmf, subpop_infections_28d
+    ):
+        """aggregation_period == 1 emits only 'predicted', not 'predicted_daily'."""
+        process = SubpopulationCounts(
+            name="ed",
+            ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
+            delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+            noise=PoissonNoise(),
+        )
+        subpop_indices = jnp.array([0, 1, 2])
+        with numpyro.handlers.trace() as trace:
+            with numpyro.handlers.seed(rng_seed=42):
+                process.sample(
+                    infections=subpop_infections_28d, subpop_indices=subpop_indices
+                )
+        assert "ed_predicted_daily" not in trace
+        assert "ed_predicted" in trace
+        assert trace["ed_predicted"]["value"].shape == (28, 3)
+
+    def test_missing_subpop_indices_raises(
+        self, weekly_regular_subpop_counts, subpop_infections_28d
+    ):
+        """subpop_indices is required in every sample call."""
+        with pytest.raises(ValueError, match="subpop_indices is required"):
+            with numpyro.handlers.seed(rng_seed=42):
+                weekly_regular_subpop_counts.sample(
+                    infections=subpop_infections_28d, first_day_dow=6
+                )
+
+    def test_weekly_irregular_period_indexing(
+        self, weekly_irregular_subpop_counts, subpop_infections_28d
+    ):
+        """Weekly-irregular fancy-indexes the aggregated array at (period, subpop)."""
+        period_end_times = jnp.array([6, 20])
+        subpop_indices = jnp.array([0, 2])
+        with numpyro.handlers.seed(rng_seed=42):
+            result = weekly_irregular_subpop_counts.sample(
+                infections=subpop_infections_28d,
+                period_end_times=period_end_times,
+                first_day_dow=6,
+                subpop_indices=subpop_indices,
+            )
+        assert result.predicted.shape == (4, 3)
+        assert result.observed.shape == (2,)
+        assert jnp.allclose(result.predicted, 7.0, rtol=1e-5)
+
+    def test_weekly_irregular_missing_period_end_times_raises(
+        self, weekly_irregular_subpop_counts, subpop_infections_28d
+    ):
+        """Irregular schedule requires period_end_times at sample time."""
+        subpop_indices = jnp.array([0, 1, 2])
+        with pytest.raises(ValueError, match="period_end_times is required"):
+            with numpyro.handlers.seed(rng_seed=42):
+                weekly_irregular_subpop_counts.sample(
+                    infections=subpop_infections_28d,
+                    first_day_dow=6,
+                    subpop_indices=subpop_indices,
+                )
+
+    def test_daily_irregular_fancy_indexing(
+        self, daily_irregular_subpop_counts, subpop_infections_30d
+    ):
+        """Daily-irregular indexes predicted at (period_end_times, subpop_indices)."""
+        period_end_times = jnp.array([5, 10, 20])
+        subpop_indices = jnp.array([0, 1, 2])
+        with numpyro.handlers.seed(rng_seed=42):
+            result = daily_irregular_subpop_counts.sample(
+                infections=subpop_infections_30d,
+                period_end_times=period_end_times,
+                subpop_indices=subpop_indices,
+            )
+        assert result.predicted.shape == (30, 3)
+        assert result.observed.shape == (3,)
+
+    def test_weekly_regular_with_obs_conditions(
+        self, weekly_regular_subpop_counts, subpop_infections_28d
+    ):
+        """Weekly-regular sample conditions on 2D obs with NaN-padding for unobserved periods."""
+        subpop_indices = jnp.array([0, 2])
+        obs = jnp.array(
+            [
+                [7.0, 7.0],
+                [jnp.nan, jnp.nan],
+                [7.0, 7.0],
+                [7.0, 7.0],
+            ]
+        )
+        with numpyro.handlers.seed(rng_seed=42):
+            result = weekly_regular_subpop_counts.sample(
+                infections=subpop_infections_28d,
+                obs=obs,
+                first_day_dow=6,
+                subpop_indices=subpop_indices,
+            )
+        assert result.predicted.shape == (4, 3)
+        assert result.observed.shape == (4, 2)
 
 
 if __name__ == "__main__":

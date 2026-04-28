@@ -84,6 +84,50 @@ class TestSubpopulationInfectionsSample:
         expected = jnp.sum(inf_all * fractions[jnp.newaxis, :], axis=1)
         assert jnp.allclose(inf_juris, expected, atol=1e-6)
 
+    def test_wrong_baseline_rt_shape_raises(
+        self, gen_int_rv, wrong_shape_temporal_process_cls
+    ):
+        """Baseline temporal process must return one daily baseline trajectory."""
+        process = SubpopulationInfections(
+            name="subpopulation",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_rt_process=wrong_shape_temporal_process_cls(jnp.zeros((16, 2))),
+            subpop_rt_deviation_process=RandomWalk(),
+            n_initialization_points=7,
+        )
+
+        with pytest.raises(ValueError, match="baseline_rt_process must return shape"):
+            process.sample(
+                n_days_post_init=10,
+                subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
+            )
+
+    def test_wrong_subpop_deviation_shape_raises(
+        self, gen_int_rv, wrong_shape_temporal_process_cls, constant_temporal_process
+    ):
+        """Deviation temporal process must return one trajectory per subpop."""
+        process = SubpopulationInfections(
+            name="subpopulation",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_rt_process=constant_temporal_process,
+            subpop_rt_deviation_process=wrong_shape_temporal_process_cls(
+                jnp.zeros((17, 2))
+            ),
+            n_initialization_points=7,
+        )
+
+        with pytest.raises(
+            ValueError, match="subpop_rt_deviation_process must return shape"
+        ):
+            process.sample(
+                n_days_post_init=10,
+                subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
+            )
+
 
 class TestSubpopulationInfectionsValidation:
     """Test validation of inputs."""

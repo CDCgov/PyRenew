@@ -11,6 +11,7 @@ import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
 
+from pyrenew.arrayutils import require_shape
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.latent.base import (
@@ -162,13 +163,18 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
         self,
         n_days_post_init: int,
         subpop_fractions: ArrayLike | None = None,
+        first_day_dow: int | None = None,
         **kwargs: object,
     ) -> LatentSample:
         """
         Sample hierarchical infections for all subpopulations.
 
-        Generates baseline $\\mathcal{R}(t)$, subpopulation deviations with sum-to-zero
-        constraint, initial infections, and runs n_subpops independent renewal processes.
+        Generates daily baseline $\\mathcal{R}(t)$, daily subpopulation
+        deviations with a sum-to-zero constraint, initial infections, and runs
+        n_subpops deterministic daily renewal processes. The temporal
+        processes may sample parameters at any supported cadence (for example
+        daily or weekly/stepwise), but they must return daily-length
+        trajectories before the renewal equations are evaluated.
 
         Parameters
         ----------
@@ -177,6 +183,10 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
         subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
             Must sum to 1.0.
+        first_day_dow
+            Forwarded to ``baseline_rt_process`` and
+            ``subpop_rt_deviation_process``. See
+            [pyrenew.latent.TemporalProcess][].
         **kwargs
             Additional arguments (unused, for compatibility)
 
@@ -199,13 +209,21 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
             n_timepoints=n_total_days,
             initial_value=initial_log_rt,
             name_prefix="log_rt_baseline",
+            first_day_dow=first_day_dow,
         )
+        require_shape(log_rt_baseline, (n_total_days, 1), "baseline_rt_process")
 
         deviations_raw = self.subpop_rt_deviation_process.sample(
             n_timepoints=n_total_days,
             n_processes=pop.n_subpops,
             initial_value=jnp.zeros(pop.n_subpops),
             name_prefix="subpop_deviations",
+            first_day_dow=first_day_dow,
+        )
+        require_shape(
+            deviations_raw,
+            (n_total_days, pop.n_subpops),
+            "subpop_rt_deviation_process",
         )
 
         # Sum-to-zero constraint ensures identifiability

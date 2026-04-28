@@ -77,6 +77,11 @@ known_first_party = ["pyrenew", "test"]
 [tool.deptry.per_rule_ignores]
 DEP004 = ["arviz", "pytest", "scipy", "bs4"]
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: integration tests that fit models via MCMC (deselect with '-m \"not integration\"')",
+]
+
 [tool.ruff]
 fix = true
 
