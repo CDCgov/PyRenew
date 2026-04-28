@@ -1,5 +1,5 @@
 """
-Unit tests for synthetic CA 120-day dataset loaders.
+Unit tests for synthetic CA 126-day dataset loaders.
 """
 
 import polars as pl
@@ -46,9 +46,9 @@ class TestLoadSyntheticTrueParameters:
         assert params["population"] > 0
 
     def test_n_days_matches_data(self):
-        """Test that n_days is 120."""
+        """Test that n_days is 126."""
         params = load_synthetic_true_parameters()
-        assert params["n_days"] == 120
+        assert params["n_days"] == 126
 
     def test_hospitalization_params(self):
         """Test that hospitalization sub-dict has expected keys."""
@@ -83,10 +83,10 @@ class TestLoadSyntheticDailyInfections:
         assert "true_infections" in df.columns
         assert "true_rt" in df.columns
 
-    def test_has_120_rows(self):
-        """Test that the dataset has 120 days."""
+    def test_has_126_rows(self):
+        """Test that the dataset has 126 days."""
         df = load_synthetic_daily_infections()
-        assert len(df) == 120
+        assert len(df) == 126
 
     def test_infections_are_positive(self):
         """Test that true infections are positive."""
@@ -114,10 +114,10 @@ class TestLoadSyntheticDailyHospitalAdmissions:
         assert "daily_hosp_admits" in df.columns
         assert "pop" in df.columns
 
-    def test_has_120_rows(self):
-        """Test that the dataset has 120 days."""
+    def test_has_126_rows(self):
+        """Test that the dataset has 126 days."""
         df = load_synthetic_daily_hospital_admissions()
-        assert len(df) == 120
+        assert len(df) == 126
 
     def test_admits_are_non_negative(self):
         """Test that hospital admissions are non-negative."""
@@ -139,10 +139,10 @@ class TestLoadSyntheticDailyEdVisits:
         assert "date" in df.columns
         assert "ed_visits" in df.columns
 
-    def test_has_120_rows(self):
-        """Test that the dataset has 120 days."""
+    def test_has_126_rows(self):
+        """Test that the dataset has 126 days."""
         df = load_synthetic_daily_ed_visits()
-        assert len(df) == 120
+        assert len(df) == 126
 
     def test_visits_are_non_negative(self):
         """Test that ED visits are non-negative."""

@@ -14,8 +14,10 @@ import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
 
+from pyrenew.arrayutils import require_shape
 from pyrenew.convolve import compute_delay_ascertained_incidence
 from pyrenew.metaclass import RandomVariable
+from pyrenew.time import validate_dow
 
 
 class BaseObservationProcess(RandomVariable):
@@ -191,12 +193,82 @@ class BaseObservationProcess(RandomVariable):
         ValueError
             If shape is not (7,) or any values are negative.
         """
-        if dow_effect.shape != (7,):
-            raise ValueError(
-                f"{param_name} must return shape (7,), got {dow_effect.shape}"
-            )
+        require_shape(dow_effect, (7,), param_name)
         if jnp.any(dow_effect < 0):
             raise ValueError(f"{param_name} must have non-negative values")
+
+    def _validate_aggregation_start_dow(
+        self,
+        aggregation: str,
+        start_dow: int | None,
+    ) -> None:
+        """
+        Validate the ``(aggregation, start_dow)`` pair.
+
+        ``aggregation="weekly"`` requires a ``start_dow``;
+        ``aggregation="daily"`` ignores ``start_dow``.
+
+        Parameters
+        ----------
+        aggregation
+            Observation reporting cadence; one of ``"daily"`` or
+            ``"weekly"``.
+        start_dow
+            Day-of-week on which the calendar-week cycle begins
+            (0=Monday, 6=Sunday). Required iff
+            ``aggregation == "weekly"``.
+
+        Raises
+        ------
+        ValueError
+            If ``aggregation`` is unrecognized, if
+            ``aggregation == "weekly"`` and ``start_dow`` is ``None``,
+            or if ``start_dow`` is out of range.
+        """
+        if aggregation not in ("daily", "weekly"):
+            raise ValueError(
+                f"aggregation must be one of {{'daily', 'weekly'}}, got {aggregation!r}"
+            )
+        if aggregation == "weekly":
+            if start_dow is None:
+                raise ValueError("start_dow is required when aggregation == 'weekly'")
+            validate_dow(start_dow, "start_dow")
+
+    def _compute_period_offset(
+        self,
+        first_day_dow: int | None,
+        start_dow: int | None,
+    ) -> int:
+        """
+        Compute the number of leading daily timepoints to trim so
+        that the daily axis aligns to whole weekly periods.
+
+        Parameters
+        ----------
+        first_day_dow
+            Day-of-week index of element 0 of the daily axis
+            (0=Monday, 6=Sunday, ISO convention). Required when
+            ``start_dow`` is not ``None``.
+        start_dow
+            Day-of-week on which the calendar-week cycle begins.
+            ``None`` indicates daily (non-aggregated) observations;
+            in that case the offset is ``0``.
+
+        Returns
+        -------
+        int
+            Trim offset in ``[0, 7)``. Returns ``0`` when ``start_dow`` is ``None``.
+
+        Raises
+        ------
+        ValueError
+            If ``start_dow`` is provided but ``first_day_dow`` is ``None``.
+        """
+        if start_dow is None:
+            return 0
+        if first_day_dow is None:
+            raise ValueError("first_day_dow is required when start_dow is not None")
+        return (start_dow - first_day_dow) % 7
 
     def _convolve_with_alignment(
         self,
@@ -360,9 +432,11 @@ class BaseObservationProcess(RandomVariable):
         self, indices: ArrayLike, upper_bound: int, param_name: str
     ) -> None:
         """
-        Validate an index array has non-negative values within bounds.
+        Validate an index array is 1D with non-negative values within bounds.
 
-        Checks that all values are non-negative integers in ``[0, upper_bound)``.
+        Checks that the array is 1D and that all values are non-negative
+        integers in ``[0, upper_bound)``. An empty 1D array is a no-op
+        and passes the bounds check.
 
         Parameters
         ----------
@@ -376,9 +450,17 @@ class BaseObservationProcess(RandomVariable):
         Raises
         ------
         ValueError
-            If indices contains negative values or values >= upper_bound.
+            If indices is not 1D, contains negative values, or values
+            >= upper_bound.
         """
         indices = jnp.asarray(indices)
+        if indices.ndim != 1:
+            raise ValueError(
+                f"Observation '{self.name}': {param_name} must be 1D, "
+                f"got shape {indices.shape}"
+            )
+        if indices.size == 0:
+            return
         if jnp.any(indices < 0):
             raise ValueError(
                 f"Observation '{self.name}': {param_name} cannot be negative"
@@ -432,28 +514,38 @@ class BaseObservationProcess(RandomVariable):
         """
         self._validate_index_array(subpop_indices, n_subpops, "subpop_indices")
 
-    def _validate_obs_times_shape(self, obs: ArrayLike, times: ArrayLike) -> None:
+    def _validate_shapes_match(
+        self,
+        first: ArrayLike,
+        second: ArrayLike,
+        first_name: str,
+        second_name: str,
+    ) -> None:
         """
-        Validate that obs and times arrays have matching shapes.
+        Validate that two arrays have matching shapes.
 
         Parameters
         ----------
-        obs
-            Observed data array.
-        times
-            Times index array.
+        first
+            First array.
+        second
+            Second array.
+        first_name
+            Name of the first parameter (for error messages).
+        second_name
+            Name of the second parameter (for error messages).
 
         Raises
         ------
         ValueError
-            If obs and times have different shapes.
+            If the two arrays have different shapes.
         """
-        obs = jnp.asarray(obs)
-        times = jnp.asarray(times)
-        if obs.shape != times.shape:
+        first = jnp.asarray(first)
+        second = jnp.asarray(second)
+        if first.shape != second.shape:
             raise ValueError(
-                f"Observation '{self.name}': obs shape {obs.shape} "
-                f"must match times shape {times.shape}"
+                f"Observation '{self.name}': {first_name} shape {first.shape} "
+                f"must match {second_name} shape {second.shape}"
             )
 
     def _validate_obs_dense(self, obs: ArrayLike, n_total: int) -> None:
@@ -461,8 +553,9 @@ class BaseObservationProcess(RandomVariable):
         Validate that obs covers the full shared time axis.
 
         For dense observations on the shared time axis ``[0, n_total)``,
-        obs must have length equal to ``n_total``. Use NaN to mark
-        unobserved timepoints (initialization period or missing data).
+        obs must be 1D with length equal to ``n_total``. Use NaN to
+        mark unobserved timepoints (initialization period or missing
+        data).
 
         Parameters
         ----------
@@ -474,14 +567,86 @@ class BaseObservationProcess(RandomVariable):
         Raises
         ------
         ValueError
-            If obs length doesn't equal n_total.
+            If obs is not 1D or its length doesn't equal n_total.
         """
         obs = jnp.asarray(obs)
+        if obs.ndim != 1:
+            raise ValueError(
+                f"Observation '{self.name}': obs must be 1D, got shape {obs.shape}"
+            )
         if obs.shape[0] != n_total:
             raise ValueError(
                 f"Observation '{self.name}': obs length {obs.shape[0]} "
                 f"must equal n_total ({n_total}). "
                 f"Pad with NaN for initialization period."
+            )
+
+    def _validate_period_end_times(
+        self,
+        period_end_times: ArrayLike,
+        n_total: int,
+        offset: int,
+        aggregation_period: int,
+    ) -> None:
+        """
+        Validate a period-end-time index array.
+
+        Checks that all values are non-negative, within
+        ``[0, n_total)``, are at least ``offset + aggregation_period - 1``
+        (so the earliest period end points at the last day of the first
+        complete period, not inside the leading partial period), and lie
+        on aggregation-period boundaries, i.e., ``(t - offset) %
+        aggregation_period == aggregation_period - 1`` for every entry
+        ``t``. When ``aggregation_period == 1`` the alignment condition
+        holds trivially and only the bounds check runs.
+
+        Parameters
+        ----------
+        period_end_times
+            Daily-axis indices of each observed period's final day.
+        n_total
+            Total number of time steps.
+        offset
+            Front-trim offset in daily units, as returned by
+            ``_compute_period_offset``. Must be in
+            ``[0, aggregation_period)``.
+        aggregation_period
+            Width of the reporting period in fundamental time units.
+
+        Raises
+        ------
+        ValueError
+            If ``period_end_times`` contains negative values, values
+            ``>= n_total``, values below the first complete period's
+            final day, or entries that fail the alignment check.
+        """
+        self._validate_index_array(period_end_times, n_total, "period_end_times")
+        if aggregation_period == 1:
+            return
+        period_end_times = jnp.asarray(period_end_times)
+
+        # Lower bound: the first complete period's final day. An entry below
+        # this would yield a negative period index under fancy-indexing
+        # (which JAX silently wraps to the last element of the aggregated
+        # array).
+        min_valid = offset + aggregation_period - 1
+        if jnp.any(period_end_times < min_valid):
+            raise ValueError(
+                f"Observation '{self.name}': period_end_times must be >= "
+                f"{min_valid} (= offset + aggregation_period - 1); entries "
+                f"below this do not correspond to a complete aggregation period."
+            )
+
+        misaligned = (period_end_times - offset) % aggregation_period != (
+            aggregation_period - 1
+        )
+        if jnp.any(misaligned):
+            raise ValueError(
+                f"Observation '{self.name}': period_end_times must lie on "
+                f"aggregation-period boundaries "
+                f"(offset={offset}, aggregation_period={aggregation_period}); "
+                f"each entry t must satisfy "
+                f"(t - offset) % {aggregation_period} == {aggregation_period - 1}."
             )
 
     @abstractmethod

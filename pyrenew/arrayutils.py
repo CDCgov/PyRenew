@@ -24,6 +24,28 @@ class PeriodicProcessSample(NamedTuple):
         return f"PeriodicProcessSample(value={self})"
 
 
+def require_shape(arr: ArrayLike, expected: tuple[int, ...], label: str) -> None:
+    """
+    Validate that ``arr.shape`` equals ``expected``.
+
+    Parameters
+    ----------
+    arr
+        Array whose shape is being checked.
+    expected
+        Required shape.
+    label
+        Name of the producing component, used in the error message.
+
+    Raises
+    ------
+    ValueError
+        If ``arr.shape`` does not equal ``expected``.
+    """
+    if arr.shape != expected:
+        raise ValueError(f"{label} must return shape {expected}; got {arr.shape}")
+
+
 def tile_until_n(
     data: ArrayLike,
     n_timepoints: int,

@@ -1,8 +1,43 @@
 """
-Helper functions for handling timeseries in Pyrenew
+Helper functions for handling timeseries in Pyrenew.
 
-Days of the week in pyrenew are 0-indexed and follow
-ISO standards, so 0 is Monday at 6 is Sunday.
+Days of the week in pyrenew are 0-indexed and follow ISO standards,
+so 0 is Monday and 6 is Sunday.
+
+Calendar concepts used elsewhere in pyrenew
+-------------------------------------------
+
+Two day-of-week concepts appear across the codebase. They name distinct
+things; do not conflate them.
+
+- ``first_day_dow`` — day-of-week of element 0 of a model's shared
+  daily time axis. Sample-time data fact (depends on the dataset
+  being fit). Threaded through ``MultiSignalModel.sample`` and the
+  ``TemporalProcess.sample`` protocol.
+
+- ``start_dow`` — day-of-week on which a calendar-week cycle begins
+  (0=Monday, 6=Sunday, ISO convention). Construction-time modeling
+  choice on weekly :class:`CountObservation` and
+  :class:`WeeklyTemporalProcess`. Common values are ``6`` for MMWR
+  weeks (Sun-Sat) and ``0`` for ISO weeks (Mon-Sun). Different
+  components can use different cycles; each performs its own trimming
+  and aggregation relative to the shared daily axis.
+
+Worked example: ``first_day_dow=3`` (Thursday), ``start_dow=6``
+(Sunday-start MMWR week), 17-day axis::
+
+    model index:    0  1  2 | 3  4  5  6  7  8  9 | 10 11 12 13 14 15 16
+    weekday:        Th Fr Sa | Su Mo Tu We Th Fr Sa | Su Mo Tu We Th Fr Sa
+    weekly Rt:      [ c0   ] [        c1         ] [        c2         ]
+
+The first three indices fall in the leading partial week (``c0``);
+each subsequent block of 7 days falls in one full Sunday-Saturday
+week and shares one Rt sample.
+
+The low-level functions :func:`daily_to_weekly` and
+:func:`weekly_to_daily` take integer day-of-week parameters
+(``input_data_first_dow``, ``output_data_first_dow``,
+``week_start_dow``) directly.
 """
 
 import datetime as dt
@@ -51,6 +86,13 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
             f"Got {day_of_week} for {variable_name}."
         )
     return None
+
+
+MMWR_WEEK: int = 6
+"""Start-of-week ``start_dow`` for MMWR Sunday-Saturday epiweeks."""
+
+ISO_WEEK: int = 0
+"""Start-of-week ``start_dow`` for ISO Monday-Sunday weeks."""
 
 
 def get_sequential_day_of_week_indices(
