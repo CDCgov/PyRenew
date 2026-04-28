@@ -17,7 +17,7 @@ from jax.typing import ArrayLike
 from pyrenew.arrayutils import require_shape
 from pyrenew.convolve import compute_delay_ascertained_incidence
 from pyrenew.metaclass import RandomVariable
-from pyrenew.time import WeekCycle
+from pyrenew.time import validate_dow
 
 
 class BaseObservationProcess(RandomVariable):
@@ -197,43 +197,47 @@ class BaseObservationProcess(RandomVariable):
         if jnp.any(dow_effect < 0):
             raise ValueError(f"{param_name} must have non-negative values")
 
-    def _validate_week(
+    def _validate_aggregation_start_dow(
         self,
         aggregation: str,
-        week: WeekCycle | None,
+        start_dow: int | None,
     ) -> None:
         """
-        Validate the ``(aggregation, week)`` pair.
+        Validate the ``(aggregation, start_dow)`` pair.
 
-        ``aggregation="weekly"`` requires a :class:`WeekCycle`;
-        ``aggregation="daily"`` ignores ``week``.
+        ``aggregation="weekly"`` requires a ``start_dow``;
+        ``aggregation="daily"`` ignores ``start_dow``.
 
         Parameters
         ----------
         aggregation
             Observation reporting cadence; one of ``"daily"`` or
             ``"weekly"``.
-        week
-            Calendar-week anchor; required iff
+        start_dow
+            Day-of-week on which the calendar-week cycle begins
+            (0=Monday, 6=Sunday). Required iff
             ``aggregation == "weekly"``.
 
         Raises
         ------
         ValueError
-            If ``aggregation`` is unrecognized, or if
-            ``aggregation == "weekly"`` and ``week`` is ``None``.
+            If ``aggregation`` is unrecognized, if
+            ``aggregation == "weekly"`` and ``start_dow`` is ``None``,
+            or if ``start_dow`` is out of range.
         """
         if aggregation not in ("daily", "weekly"):
             raise ValueError(
                 f"aggregation must be one of {{'daily', 'weekly'}}, got {aggregation!r}"
             )
-        if aggregation == "weekly" and week is None:
-            raise ValueError("week is required when aggregation == 'weekly'")
+        if aggregation == "weekly":
+            if start_dow is None:
+                raise ValueError("start_dow is required when aggregation == 'weekly'")
+            validate_dow(start_dow, "start_dow")
 
     def _compute_period_offset(
         self,
         first_day_dow: int | None,
-        week: WeekCycle | None,
+        start_dow: int | None,
     ) -> int:
         """
         Compute the number of leading daily timepoints to trim so
@@ -244,27 +248,27 @@ class BaseObservationProcess(RandomVariable):
         first_day_dow
             Day-of-week index of element 0 of the daily axis
             (0=Monday, 6=Sunday, ISO convention). Required when
-            ``week`` is not ``None``.
-        week
-            Calendar-week anchor. ``None`` indicates daily
-            (non-aggregated) observations; in that case the
-            offset is ``0``.
+            ``start_dow`` is not ``None``.
+        start_dow
+            Day-of-week on which the calendar-week cycle begins.
+            ``None`` indicates daily (non-aggregated) observations;
+            in that case the offset is ``0``.
 
         Returns
         -------
         int
-            Trim offset in ``[0, 7)``. Returns ``0`` when ``week`` is ``None``.
+            Trim offset in ``[0, 7)``. Returns ``0`` when ``start_dow`` is ``None``.
 
         Raises
         ------
         ValueError
-            If ``week`` is provided but ``first_day_dow`` is ``None``.
+            If ``start_dow`` is provided but ``first_day_dow`` is ``None``.
         """
-        if week is None:
+        if start_dow is None:
             return 0
         if first_day_dow is None:
-            raise ValueError("first_day_dow is required when week is not None")
-        return (week.end_dow + 1 - first_day_dow) % 7
+            raise ValueError("first_day_dow is required when start_dow is not None")
+        return (start_dow - first_day_dow) % 7
 
     def _convolve_with_alignment(
         self,

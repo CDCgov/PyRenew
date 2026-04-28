@@ -62,7 +62,7 @@ from jax.typing import ArrayLike
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
 from pyrenew.randomvariable import DistributionalVariable
-from pyrenew.time import WeekCycle, validate_dow, weekly_to_daily
+from pyrenew.time import validate_dow, weekly_to_daily
 
 
 @runtime_checkable
@@ -577,15 +577,16 @@ class WeeklyTemporalProcess(TemporalProcess):
     inner
         Inner ``TemporalProcess`` that generates the weekly trajectory.
         Must satisfy the ``TemporalProcess`` protocol.
-    week
-        Calendar-week cycle used to align repeated blocks (e.g.,
-        :data:`pyrenew.time.MMWR_WEEK`, :data:`pyrenew.time.ISO_WEEK`).
+    start_dow
+        Day-of-week on which the calendar-week cycle begins
+        (0=Monday, 6=Sunday, ISO convention). Use ``6`` for MMWR
+        Sunday-Saturday epiweeks or ``0`` for ISO Monday-Sunday weeks.
     """
 
     step_size = 7
     requires_calendar_anchor = True
 
-    def __init__(self, inner: TemporalProcess, week: WeekCycle) -> None:
+    def __init__(self, inner: TemporalProcess, start_dow: int) -> None:
         """
         Initialize weekly temporal process.
 
@@ -593,17 +594,19 @@ class WeeklyTemporalProcess(TemporalProcess):
         ----------
         inner
             Inner ``TemporalProcess`` that generates the weekly trajectory.
-        week
-            Calendar-week cycle used to align repeated blocks.
+        start_dow
+            Day-of-week on which the calendar-week cycle begins
+            (0=Monday, 6=Sunday, ISO convention).
         """
-        if week is None:
-            raise ValueError("week is required")
+        validate_dow(start_dow, "start_dow")
         self.inner = inner
-        self.week = week
+        self.start_dow = start_dow
 
     def __repr__(self) -> str:
         """Return string representation."""
-        return f"WeeklyTemporalProcess(inner={self.inner!r}, week={self.week!r})"
+        return (
+            f"WeeklyTemporalProcess(inner={self.inner!r}, start_dow={self.start_dow!r})"
+        )
 
     def _resolve_n_weekly(self, n_timepoints: int, first_day_dow: int | None) -> int:
         """
@@ -620,7 +623,7 @@ class WeeklyTemporalProcess(TemporalProcess):
                 "first_day_dow is required at sample time for WeeklyTemporalProcess"
             )
         validate_dow(first_day_dow, "first_day_dow")
-        trim = (first_day_dow - self.week.start_dow) % 7
+        trim = (first_day_dow - self.start_dow) % 7
         return (n_timepoints + trim + 6) // 7
 
     def sample(
@@ -675,6 +678,6 @@ class WeeklyTemporalProcess(TemporalProcess):
         numpyro.deterministic(f"{name_prefix}_weekly", weekly)
         return weekly_to_daily(
             weekly,
-            week_start_dow=self.week.start_dow,
+            week_start_dow=self.start_dow,
             output_data_first_dow=first_day_dow,
         )[:n_timepoints]

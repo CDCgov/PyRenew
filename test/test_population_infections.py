@@ -135,7 +135,7 @@ class TestPopulationInfectionsSample:
             log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
             single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                week=MMWR_WEEK,
+                start_dow=MMWR_WEEK,
             ),
             n_initialization_points=7,
         )

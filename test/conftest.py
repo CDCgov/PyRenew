@@ -282,7 +282,7 @@ def weekly_regular_counts(simple_delay_pmf):
     """
     PopulationCounts with weekly aggregation and regular (dense) reporting.
 
-    Uses ``MMWR_WEEK`` (Sunday-Saturday epiweeks).
+    Uses MMWR Sunday-Saturday epiweeks (``start_dow=6``).
 
     Returns
     -------
@@ -296,7 +296,7 @@ def weekly_regular_counts(simple_delay_pmf):
         noise=PoissonNoise(),
         aggregation="weekly",
         reporting_schedule="regular",
-        week=MMWR_WEEK,
+        start_dow=MMWR_WEEK,
     )
 
 
@@ -305,7 +305,7 @@ def weekly_irregular_counts(simple_delay_pmf):
     """
     PopulationCounts with weekly aggregation and irregular (sparse) reporting.
 
-    Uses ``MMWR_WEEK`` (Sunday-Saturday epiweeks).
+    Uses MMWR Sunday-Saturday epiweeks (``start_dow=6``).
 
     Returns
     -------
@@ -319,7 +319,7 @@ def weekly_irregular_counts(simple_delay_pmf):
         noise=PoissonNoise(),
         aggregation="weekly",
         reporting_schedule="irregular",
-        week=MMWR_WEEK,
+        start_dow=MMWR_WEEK,
     )
 
 
@@ -347,7 +347,7 @@ def weekly_regular_subpop_counts(simple_delay_pmf):
     """
     SubpopulationCounts with weekly aggregation and regular (dense) reporting.
 
-    Uses ``MMWR_WEEK`` (Sunday-Saturday epiweeks).
+    Uses MMWR Sunday-Saturday epiweeks (``start_dow=6``).
 
     Returns
     -------
@@ -361,7 +361,7 @@ def weekly_regular_subpop_counts(simple_delay_pmf):
         noise=PoissonNoise(),
         aggregation="weekly",
         reporting_schedule="regular",
-        week=MMWR_WEEK,
+        start_dow=MMWR_WEEK,
     )
 
 
@@ -370,7 +370,7 @@ def weekly_irregular_subpop_counts(simple_delay_pmf):
     """
     SubpopulationCounts with weekly aggregation and irregular (sparse) reporting.
 
-    Uses ``MMWR_WEEK`` (Sunday-Saturday epiweeks).
+    Uses MMWR Sunday-Saturday epiweeks (``start_dow=6``).
 
     Returns
     -------
@@ -384,7 +384,7 @@ def weekly_irregular_subpop_counts(simple_delay_pmf):
         noise=PoissonNoise(),
         aggregation="weekly",
         reporting_schedule="irregular",
-        week=MMWR_WEEK,
+        start_dow=MMWR_WEEK,
     )
 
 

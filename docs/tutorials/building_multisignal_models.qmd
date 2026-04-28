@@ -262,14 +262,13 @@ The wrapper samples a weekly trajectory and broadcasts it to the daily model axi
 ```python
 weekly_baseline_rt_process = WeeklyTemporalProcess(
     inner=AR1(autoreg=0.9, innovation_sd=0.05),
-    week=MMWR_WEEK,
+    start_dow=MMWR_WEEK,
 )
 ```
 
 Use `WeeklyTemporalProcess` when the weekly Rt blocks should align to a calendar week.
-PyRenew provides class `WeekCycle` which identifies the start day of a calendar week by ISO convention, e.g. `0 == Monday`, `6 == Sunday`
-and two pre-defined instances: `MMWR_WEEK: WeekCycle = WeekCycle(start_dow=6)` and `ISO_WEEK: WeekCycle = WeekCycle(start_dow=0)`.
-`pyrenew.time` exports `MMWR_WEEK` (Sunday-Saturday epiweeks) and `ISO_WEEK` (Monday-Sunday); use `WeekCycle(start_dow=k)` for any other convention.
+The `start_dow` parameter is the day of week on which the calendar-week cycle begins (0=Monday, 6=Sunday, ISO convention).
+`pyrenew.time` exports `MMWR_WEEK = 6` (Sunday-Saturday epiweeks) and `ISO_WEEK = 0` (Monday-Sunday); pass any integer in `[0, 6]` for other conventions.
 At sample or run time, pass the date of the first observation day as `obs_start_date`.
 Argument `obs_start_date` is required whenever any component performs calendar-aligned work: a `WeeklyTemporalProcess`, a count observation with `aggregation="weekly"`, or any observation with a day-of-week effect.
 For `StepwiseTemporalProcess` and daily observations with no day-of-week effect, `obs_start_date` can be omitted.
@@ -706,7 +705,7 @@ For this example,  such a data dictionary would have the following structure:
 
 ```python
 {
-    "obs_start_date": ...
+    "obs_start_date": ...,
     "hospital": {
         "obs": ...
     },

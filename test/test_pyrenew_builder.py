@@ -24,7 +24,7 @@ from pyrenew.observation import (
     PopulationCounts,
     SubpopulationCounts,
 )
-from pyrenew.time import MMWR_WEEK, WeekCycle
+from pyrenew.time import ISO_WEEK, MMWR_WEEK
 
 # Standard population structure for tests (3 subpopulations)
 SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
@@ -314,7 +314,7 @@ class TestMultiSignalModelSampling:
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
             single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                week=MMWR_WEEK,
+                start_dow=MMWR_WEEK,
             ),
             n_initialization_points=3,
         )
@@ -346,7 +346,7 @@ class TestMultiSignalModelSampling:
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
             single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                week=MMWR_WEEK,
+                start_dow=MMWR_WEEK,
             ),
             n_initialization_points=3,
         )
@@ -372,7 +372,7 @@ class TestMultiSignalModelSampling:
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                week=MMWR_WEEK,
+                start_dow=MMWR_WEEK,
             ),
             observations=[_weekly_hosp_counts(), _daily_ed_counts()],
         )
@@ -429,6 +429,7 @@ class TestMultiSignalModelValidation:
             hospital_subpop={
                 "obs": jnp.array([10, 20]),
                 "period_end_times": jnp.array([5, 10]),
+                "subpop_indices": jnp.array([0, 1]),
             },
         )
 
@@ -444,6 +445,7 @@ class TestMultiSignalModelValidation:
                 hospital_subpop={
                     "obs": jnp.array([10]),
                     "period_end_times": jnp.array([n_total + 10]),
+                    "subpop_indices": jnp.array([0]),
                 },
             )
 
@@ -458,6 +460,7 @@ class TestMultiSignalModelValidation:
                 hospital_subpop={
                     "obs": jnp.array([10]),
                     "period_end_times": jnp.array([-1]),
+                    "subpop_indices": jnp.array([0]),
                 },
             )
 
@@ -488,6 +491,7 @@ class TestMultiSignalModelValidation:
                 hospital_subpop={
                     "obs": jnp.array([10, 20, 30]),  # 3 elements
                     "period_end_times": jnp.array([5, 10]),  # 2 elements
+                    "subpop_indices": jnp.array([0, 1]),
                 },
             )
 
@@ -619,14 +623,14 @@ def _coherence_builder(
     return builder
 
 
-def _weekly_hosp_counts(name="hospital", week=MMWR_WEEK):
+def _weekly_hosp_counts(name="hospital", start_dow=MMWR_WEEK):
     """
     Build a weekly-aggregated PopulationCounts observation with PoissonNoise.
 
     Returns
     -------
     PopulationCounts
-        Weekly-regular observation anchored to the specified ``WeekCycle``.
+        Weekly-regular observation anchored to the specified ``start_dow``.
     """
     return PopulationCounts(
         name=name,
@@ -635,7 +639,7 @@ def _weekly_hosp_counts(name="hospital", week=MMWR_WEEK):
         noise=PoissonNoise(),
         aggregation="weekly",
         reporting_schedule="regular",
-        week=week,
+        start_dow=start_dow,
     )
 
 
@@ -700,24 +704,24 @@ class TestBuilderConfigurations:
         assert isinstance(model, MultiSignalModel)
 
     def test_mismatched_weekly_week_passes(self):
-        """Weekly observations can use different WeekCycles; each aggregates independently."""
+        """Weekly observations can use different start_dow; each aggregates independently."""
         builder = _coherence_builder(
             single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
             observations=[
-                _weekly_hosp_counts(name="hospital", week=MMWR_WEEK),
-                _weekly_hosp_counts(name="other", week=WeekCycle(start_dow=0)),
+                _weekly_hosp_counts(name="hospital", start_dow=MMWR_WEEK),
+                _weekly_hosp_counts(name="other", start_dow=ISO_WEEK),
             ],
         )
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
     def test_matching_weekly_week_passes(self):
-        """Two weekly observations sharing a WeekCycle build normally."""
+        """Two weekly observations sharing a start_dow build normally."""
         builder = _coherence_builder(
             single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
             observations=[
-                _weekly_hosp_counts(name="hospital", week=MMWR_WEEK),
-                _weekly_hosp_counts(name="other", week=MMWR_WEEK),
+                _weekly_hosp_counts(name="hospital", start_dow=MMWR_WEEK),
+                _weekly_hosp_counts(name="other", start_dow=MMWR_WEEK),
             ],
         )
         model = builder.build()
@@ -739,9 +743,9 @@ class TestBuilderConfigurations:
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                week=MMWR_WEEK,
+                start_dow=MMWR_WEEK,
             ),
-            observations=[_weekly_hosp_counts(week=MMWR_WEEK)],
+            observations=[_weekly_hosp_counts(start_dow=MMWR_WEEK)],
         )
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
@@ -751,9 +755,9 @@ class TestBuilderConfigurations:
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                week=WeekCycle(start_dow=0),
+                start_dow=ISO_WEEK,
             ),
-            observations=[_weekly_hosp_counts(week=MMWR_WEEK)],
+            observations=[_weekly_hosp_counts(start_dow=MMWR_WEEK)],
         )
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
@@ -763,7 +767,7 @@ class TestBuilderConfigurations:
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                week=MMWR_WEEK,
+                start_dow=MMWR_WEEK,
             ),
             observations=[_daily_ed_counts()],
         )
@@ -776,7 +780,7 @@ class TestBuilderConfigurations:
             single_rt_process=StepwiseTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
             ),
-            observations=[_weekly_hosp_counts(week=MMWR_WEEK)],
+            observations=[_weekly_hosp_counts(start_dow=MMWR_WEEK)],
         )
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
@@ -837,7 +841,7 @@ class TestMultiSignalValidateDataAnchor:
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                week=MMWR_WEEK,
+                start_dow=MMWR_WEEK,
             ),
             observations=[_daily_ed_counts()],
         )

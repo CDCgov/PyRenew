@@ -246,7 +246,7 @@ def he_weekly_rt_model(
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
         single_rt_process=WeeklyTemporalProcess(
             AR1(autoreg=0.9, innovation_sd=0.05),
-            week=MMWR_WEEK,
+            start_dow=MMWR_WEEK,
         ),
     )
 
@@ -259,7 +259,7 @@ def he_weekly_rt_model(
         ),
         aggregation="weekly",
         reporting_schedule="regular",
-        week=MMWR_WEEK,
+        start_dow=MMWR_WEEK,
     )
     builder.add_observation(hospital_obs)
 
@@ -328,7 +328,7 @@ def he_weekly_model(
         ),
         aggregation="weekly",
         reporting_schedule="regular",
-        week=MMWR_WEEK,
+        start_dow=MMWR_WEEK,
     )
     builder.add_observation(hospital_obs)
 

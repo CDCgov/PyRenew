@@ -61,7 +61,7 @@ def _build_hospital_obs_on_period_grid(
     hosp = model.observations["hospital"]
     n_init = model.latent.n_initialization_points
     n_total = n_init + N_DAYS_FIT
-    offset = hosp._compute_period_offset(first_day_dow, hosp.week)
+    offset = hosp._compute_period_offset(first_day_dow, hosp.start_dow)
     n_periods = (n_total - offset) // hosp.aggregation_period
     n_pre = n_periods - len(weekly_values)
     return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])

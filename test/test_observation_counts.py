@@ -895,18 +895,20 @@ class TestPopulationCountsAggregationConstruction:
         process = self._make(simple_delay_pmf)
         assert process.aggregation == "daily"
         assert process.reporting_schedule == "regular"
-        assert process.week is None
+        assert process.start_dow is None
 
-    def test_weekly_requires_week(self, simple_delay_pmf):
-        """aggregation='weekly' without week must raise."""
-        with pytest.raises(ValueError, match="week is required"):
+    def test_weekly_requires_start_dow(self, simple_delay_pmf):
+        """aggregation='weekly' without start_dow must raise."""
+        with pytest.raises(ValueError, match="start_dow is required"):
             self._make(simple_delay_pmf, aggregation="weekly")
 
     def test_weekly_with_mmwr_anchor_constructs(self, simple_delay_pmf):
         """aggregation='weekly' with MMWR_WEEK is valid."""
-        process = self._make(simple_delay_pmf, aggregation="weekly", week=MMWR_WEEK)
+        process = self._make(
+            simple_delay_pmf, aggregation="weekly", start_dow=MMWR_WEEK
+        )
         assert process.aggregation == "weekly"
-        assert process.week == MMWR_WEEK
+        assert process.start_dow == MMWR_WEEK
 
     def test_dow_effect_with_weekly_aggregation_raises(self, simple_delay_pmf):
         """day_of_week_rv cannot be combined with aggregation='weekly'."""
@@ -914,7 +916,7 @@ class TestPopulationCountsAggregationConstruction:
             self._make(
                 simple_delay_pmf,
                 aggregation="weekly",
-                week=MMWR_WEEK,
+                start_dow=MMWR_WEEK,
                 day_of_week_rv=DeterministicVariable("dow", jnp.ones(7)),
             )
 
@@ -1310,6 +1312,7 @@ class TestSubpopulationCountsAggregationValidateData:
                 n_subpops=3,
                 obs=obs,
                 period_end_times=mmwr_saturday_indices_first_three,
+                subpop_indices=jnp.array([0, 1, 2]),
                 first_day_dow=6,
             )
 

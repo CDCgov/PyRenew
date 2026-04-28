@@ -17,7 +17,6 @@ from pyrenew.observation.base import BaseObservationProcess
 from pyrenew.observation.noise import CountNoise
 from pyrenew.observation.types import ObservationSample
 from pyrenew.time import (
-    WeekCycle,
     daily_to_weekly,
     get_sequential_day_of_week_indices,
 )
@@ -46,7 +45,7 @@ class CountObservation(BaseObservationProcess):
         day_of_week_rv: RandomVariable | None = None,
         aggregation: Literal["daily", "weekly"] = "daily",
         reporting_schedule: Literal["regular", "irregular"] = "regular",
-        week: WeekCycle | None = None,
+        start_dow: int | None = None,
     ) -> None:
         """
         Initialize count observation base.
@@ -87,19 +86,20 @@ class CountObservation(BaseObservationProcess):
             per period, NaN for unobserved periods) or ``"irregular"``
             (sparse observation array with user-supplied period-end
             time indices).
-        week
-            Calendar-week anchor used for weekly aggregation (e.g.,
-            :data:`pyrenew.time.MMWR_WEEK` for Sunday-Saturday
-            epiweeks, :data:`pyrenew.time.ISO_WEEK` for Monday-Sunday
-            weeks). Required when ``aggregation == "weekly"``; ignored
-            otherwise. Daily predictions are bucketed into weeks
-            according to ``week`` and summed before scoring.
+        start_dow
+            Day-of-week on which the weekly aggregation cycle begins
+            (0=Monday, 6=Sunday, ISO convention). Use ``6`` for
+            MMWR Sunday-Saturday epiweeks or ``0`` for ISO
+            Monday-Sunday weeks. Required when
+            ``aggregation == "weekly"``; ignored otherwise. Daily
+            predictions are bucketed into weeks starting on
+            ``start_dow`` and summed before scoring.
 
         Raises
         ------
         ValueError
-            If ``aggregation``, ``reporting_schedule``, or ``week`` are
-            invalid, or if a day-of-week effect is combined with
+            If ``aggregation``, ``reporting_schedule``, or ``start_dow``
+            are invalid, or if a day-of-week effect is combined with
             ``aggregation == "weekly"`` (within-period structure is
             destroyed by aggregation).
         """
@@ -108,7 +108,7 @@ class CountObservation(BaseObservationProcess):
         self.noise = noise
         self.right_truncation_rv = right_truncation_rv
         self.day_of_week_rv = day_of_week_rv
-        self._validate_week(aggregation, week)
+        self._validate_aggregation_start_dow(aggregation, start_dow)
         if reporting_schedule not in self._SUPPORTED_SCHEDULES:
             raise ValueError(
                 f"reporting_schedule must be one of {self._SUPPORTED_SCHEDULES}, "
@@ -121,7 +121,7 @@ class CountObservation(BaseObservationProcess):
             )
         self.aggregation = aggregation
         self.reporting_schedule = reporting_schedule
-        self.week = week
+        self.start_dow = start_dow
 
     @property
     def aggregation_period(self) -> int:
@@ -354,7 +354,7 @@ class CountObservation(BaseObservationProcess):
         return daily_to_weekly(
             predicted_daily,
             input_data_first_dow=first_day_dow,
-            week_start_dow=self.week.start_dow,
+            week_start_dow=self.start_dow,
         )
 
     def _compute_predicted(
@@ -496,7 +496,7 @@ class CountObservation(BaseObservationProcess):
             Period-grid indices, one per entry in ``period_end_times``.
         """
         P = self.aggregation_period
-        offset = self._compute_period_offset(first_day_dow, self.week)
+        offset = self._compute_period_offset(first_day_dow, self.start_dow)
         return (jnp.asarray(period_end_times) - offset - (P - 1)) // P
 
     def _n_periods(self, n_total: int, first_day_dow: int | None) -> int:
@@ -521,7 +521,7 @@ class CountObservation(BaseObservationProcess):
         if self.aggregation == "daily":
             return n_total
         P = self.aggregation_period
-        offset = self._compute_period_offset(first_day_dow, self.week)
+        offset = self._compute_period_offset(first_day_dow, self.start_dow)
         return (n_total - offset) // P
 
 
@@ -639,7 +639,7 @@ class PopulationCounts(CountObservation):
                 f"Observation '{self.name}': period_end_times is required "
                 f"when reporting_schedule='irregular' and obs is provided."
             )
-        offset = self._compute_period_offset(first_day_dow, self.week)
+        offset = self._compute_period_offset(first_day_dow, self.start_dow)
         self._validate_period_end_times(
             period_end_times, n_total, offset, self.aggregation_period
         )
@@ -822,9 +822,16 @@ class SubpopulationCounts(CountObservation):
         ------
         ValueError
             If any index array is out of bounds, any shape check
-            fails, or ``first_day_dow`` is missing when
+            fails, ``subpop_indices`` is missing when ``obs`` is
+            provided, or ``first_day_dow`` is missing when
             ``aggregation == "weekly"``.
         """
+        if obs is not None and subpop_indices is None:
+            raise ValueError(
+                f"Observation '{self.name}': subpop_indices is required "
+                f"when obs is provided."
+            )
+
         if subpop_indices is not None:
             self._validate_subpop_indices(subpop_indices, n_subpops)
 
@@ -861,7 +868,7 @@ class SubpopulationCounts(CountObservation):
                 f"Observation '{self.name}': period_end_times is required "
                 f"when reporting_schedule='irregular' and obs is provided."
             )
-        offset = self._compute_period_offset(first_day_dow, self.week)
+        offset = self._compute_period_offset(first_day_dow, self.start_dow)
         self._validate_period_end_times(
             period_end_times, n_total, offset, self.aggregation_period
         )

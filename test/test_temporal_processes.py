@@ -364,30 +364,32 @@ class TestWeeklyTemporalProcessConstruction:
     def test_step_size_attribute(self):
         """step_size is exposed on the instance for builder inspection."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), week=MMWR_WEEK
+            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
         )
         assert wrapper.step_size == 7
 
     def test_requires_calendar_anchor_attribute(self):
         """WeeklyTemporalProcess reports that it needs a calendar anchor."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), week=MMWR_WEEK
+            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
         )
         assert wrapper.requires_calendar_anchor is True
 
-    def test_requires_week(self):
-        """WeeklyTemporalProcess requires a WeekCycle."""
-        with pytest.raises(ValueError, match="week is required"):
-            WeeklyTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), week=None)
+    def test_requires_valid_start_dow(self):
+        """WeeklyTemporalProcess requires a valid integer start_dow."""
+        with pytest.raises(ValueError, match="Day-of-week"):
+            WeeklyTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), start_dow=None)
+        with pytest.raises(ValueError, match="Day-of-week"):
+            WeeklyTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), start_dow=7)
 
-    def test_repr_includes_inner_and_week(self):
-        """__repr__ shows the inner process and week."""
+    def test_repr_includes_inner_and_start_dow(self):
+        """__repr__ shows the inner process and start_dow."""
         inner = AR1(autoreg=0.9, innovation_sd=0.05)
-        wrapper = WeeklyTemporalProcess(inner, week=MMWR_WEEK)
+        wrapper = WeeklyTemporalProcess(inner, start_dow=MMWR_WEEK)
         rendered = repr(wrapper)
         assert rendered.startswith("WeeklyTemporalProcess(")
         assert f"inner={inner!r}" in rendered
-        assert f"week={MMWR_WEEK!r}" in rendered
+        assert f"start_dow={MMWR_WEEK!r}" in rendered
 
 
 class TestWeeklyTemporalProcessSample:
@@ -396,16 +398,16 @@ class TestWeeklyTemporalProcessSample:
     def test_requires_first_day_dow_at_sample_time(self):
         """WeeklyTemporalProcess needs the model-axis day of week."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), week=MMWR_WEEK
+            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
         )
         with numpyro.handlers.seed(rng_seed=42):
             with pytest.raises(ValueError, match="first_day_dow"):
                 wrapper.sample(n_timepoints=20, n_processes=1)
 
     def test_alignment_with_leading_partial_week(self):
-        """WeeklyTemporalProcess starts full blocks on week.start_dow."""
+        """WeeklyTemporalProcess starts full blocks on start_dow."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), week=MMWR_WEEK
+            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
         )
         # first_day_dow=3 means day 0 is Thursday. With Sunday week starts,
         # days 0-2 are a leading partial week, then days 3-9 are the first
@@ -423,9 +425,9 @@ class TestWeeklyTemporalProcessSample:
         assert not jnp.allclose(result[2], result[3])
 
     def test_alignment_without_leading_partial_week(self):
-        """WeeklyTemporalProcess handles model axes starting on week.start_dow."""
+        """WeeklyTemporalProcess handles model axes starting on start_dow."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), week=MMWR_WEEK
+            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
         )
         with numpyro.handlers.seed(rng_seed=42):
             result = wrapper.sample(
@@ -441,7 +443,7 @@ class TestWeeklyTemporalProcessSample:
     def test_weekly_trajectory_is_recorded(self):
         """WeeklyTemporalProcess records the weekly trajectory."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), week=MMWR_WEEK
+            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
         )
         traced = numpyro.handlers.trace(
             numpyro.handlers.seed(wrapper.sample, rng_seed=42)

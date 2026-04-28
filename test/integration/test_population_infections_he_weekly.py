@@ -64,7 +64,7 @@ def _build_hospital_obs_on_period_grid(
     hosp = model.observations["hospital"]
     n_init = model.latent.n_initialization_points
     n_total = n_init + N_DAYS_FIT
-    offset = hosp._compute_period_offset(first_day_dow, hosp.week)
+    offset = hosp._compute_period_offset(first_day_dow, hosp.start_dow)
     n_periods = (n_total - offset) // hosp.aggregation_period
     n_pre = n_periods - len(weekly_values)
     return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
@@ -113,7 +113,7 @@ class TestDataAssembly:
         h = he_weekly_model.observations["hospital"]
         assert h.aggregation == "weekly"
         assert h.reporting_schedule == "regular"
-        assert h.week == MMWR_WEEK
+        assert h.start_dow == MMWR_WEEK
 
     def test_ed_stays_daily(
         self,
@@ -157,7 +157,7 @@ class TestDataAssembly:
         n_init = he_weekly_model.latent.n_initialization_points
         n_total = n_init + N_DAYS_FIT
         hosp = he_weekly_model.observations["hospital"]
-        offset = hosp._compute_period_offset(first_day_dow, hosp.week)
+        offset = hosp._compute_period_offset(first_day_dow, hosp.start_dow)
         n_periods = (n_total - offset) // hosp.aggregation_period
 
         assert hosp_obs.shape == (n_periods,)

@@ -7,7 +7,7 @@ so 0 is Monday and 6 is Sunday.
 Calendar concepts used elsewhere in pyrenew
 -------------------------------------------
 
-Two calendar concepts appear across the codebase. They name distinct
+Two day-of-week concepts appear across the codebase. They name distinct
 things; do not conflate them.
 
 - ``first_day_dow`` — day-of-week of element 0 of a model's shared
@@ -15,18 +15,16 @@ things; do not conflate them.
   being fit). Threaded through ``MultiSignalModel.sample`` and the
   ``TemporalProcess.sample`` protocol.
 
-- :class:`WeekCycle` — a 7-day calendar cycle identified by its
-  ``start_dow``. Construction-time modeling choice, set independently on
-  each model component that does calendar-week work (weekly
-  :class:`CountObservation` and :class:`WeeklyTemporalProcess`). Different
-  components can use
-  different cycles; each performs its own trimming and aggregation
-  relative to the shared daily axis. The module-level constants
-  :data:`MMWR_WEEK` (Sun-Sat) and :data:`ISO_WEEK` (Mon-Sun) cover
-  the common conventions; custom cycles use ``WeekCycle(start_dow=k)``.
+- ``start_dow`` — day-of-week on which a calendar-week cycle begins
+  (0=Monday, 6=Sunday, ISO convention). Construction-time modeling
+  choice on weekly :class:`CountObservation` and
+  :class:`WeeklyTemporalProcess`. Common values are ``6`` for MMWR
+  weeks (Sun-Sat) and ``0`` for ISO weeks (Mon-Sun). Different
+  components can use different cycles; each performs its own trimming
+  and aggregation relative to the shared daily axis.
 
-Worked example: ``first_day_dow=3`` (Thursday), ``week=MMWR_WEEK``
-(Sunday start), 17-day axis::
+Worked example: ``first_day_dow=3`` (Thursday), ``start_dow=6``
+(Sunday-start MMWR week), 17-day axis::
 
     model index:    0  1  2 | 3  4  5  6  7  8  9 | 10 11 12 13 14 15 16
     weekday:        Th Fr Sa | Su Mo Tu We Th Fr Sa | Su Mo Tu We Th Fr Sa
@@ -39,12 +37,10 @@ week and shares one Rt sample.
 The low-level functions :func:`daily_to_weekly` and
 :func:`weekly_to_daily` take integer day-of-week parameters
 (``input_data_first_dow``, ``output_data_first_dow``,
-``week_start_dow``) directly so that callers outside pyrenew can use
-them without the :class:`WeekCycle` abstraction.
+``week_start_dow``) directly.
 """
 
 import datetime as dt
-from dataclasses import dataclass
 
 import jax.numpy as jnp
 import numpy as np
@@ -92,44 +88,11 @@ def validate_dow(day_of_week: int, variable_name: str) -> None:
     return None
 
 
-@dataclass(frozen=True)
-class WeekCycle:
-    """
-    A 7-day calendar cycle identified by its start day.
+MMWR_WEEK: int = 6
+"""Start-of-week ``start_dow`` for MMWR Sunday-Saturday epiweeks."""
 
-    Value object that names a single weekly convention (MMWR,
-    ISO, or custom) and is shared by any model component that
-    must agree on it. Equality is structural, so a builder-level
-    coherence check reduces to ``a == b``.
-
-    Attributes
-    ----------
-    start_dow
-        Day-of-week on which the cycle begins
-        (0=Monday, 6=Sunday, ISO convention).
-    """
-
-    start_dow: int
-
-    def __post_init__(self) -> None:
-        """Validate ``start_dow`` via :func:`validate_dow`."""
-        validate_dow(self.start_dow, "start_dow")
-
-    @property
-    def end_dow(self) -> int:
-        """
-        Day-of-week on which the cycle ends.
-
-        Returns
-        -------
-        int
-            ``(start_dow + 6) % 7``.
-        """
-        return (self.start_dow + 6) % 7
-
-
-MMWR_WEEK: WeekCycle = WeekCycle(start_dow=6)
-ISO_WEEK: WeekCycle = WeekCycle(start_dow=0)
+ISO_WEEK: int = 0
+"""Start-of-week ``start_dow`` for ISO Monday-Sunday weeks."""
 
 
 def get_sequential_day_of_week_indices(
