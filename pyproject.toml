@@ -15,7 +15,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "arviz>=1.0.0",
+    "arviz>=1.1.0",
     "beautifulsoup4>=4.13.5",
     "deptry>=0.23.1",
     "ipykernel>=6.30.1",
