@@ -82,9 +82,13 @@ class BaseLatentInfectionProcess(RandomVariable):
     gen_int_rv
         Generation interval PMF
     n_initialization_points
-        Number of initialization days before day 0. Must be at least
-        ``len(gen_int_rv())`` to provide enough history for the renewal
-        equation convolution.
+      Number of initialization days before the first observation day.
+      Latent and observation arrays use a shared padded time axis with
+      element 0 at the start of this initialization period. In observation
+      natural coordinates, day 0 is the first observed data day; on the
+      shared padded axis, that same day is index ``n_initialization_points``.
+      Must be at least ``len(gen_int_rv())`` to provide enough history for
+      the renewal equation convolution.
 
     Notes
     -----
@@ -114,9 +118,8 @@ class BaseLatentInfectionProcess(RandomVariable):
         gen_int_rv
             Generation interval PMF
         n_initialization_points
-            Number of initialization days before day 0. Must be at least
-            ``len(gen_int_rv())`` to provide enough history for the renewal
-            equation convolution.
+            Number of initialization days; see the class-level parameter
+            documentation for the shared padded-axis convention.
 
         Raises
         ------

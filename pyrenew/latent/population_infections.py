@@ -169,8 +169,12 @@ class PopulationInfections(BaseLatentInfectionProcess):
             Population fractions. Defaults to ``[1.0]`` (single population).
             Must be ``[1.0]`` if provided.
         first_day_dow
-            Forwarded to ``single_rt_process``. See
-            [pyrenew.latent.TemporalProcess][].
+            Day of week for element 0 of the full latent infection time axis,
+            including initialization days. When this latent process is used
+            inside MultiSignalModel, the caller passes obs_start_date to the
+            model and it converts the first observation day to this axis-origin
+            day of week by subtracting n_initialization_points. Forwarded to
+            ``single_rt_process``. See [pyrenew.latent.TemporalProcess][].
         **kwargs
             Additional arguments (unused, for compatibility)
 
