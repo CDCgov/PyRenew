@@ -270,9 +270,7 @@ class TestAscertainmentContextSafety:
 
     def test_context_restores_outer_context_after_nested_context(self):
         """Test nested contexts restore previous values on exit."""
-        with ascertainment_context(
-            {"he_ascertainment": {"hospital": jnp.array(0.1)}}
-        ):
+        with ascertainment_context({"he_ascertainment": {"hospital": jnp.array(0.1)}}):
             assert get_ascertainment_value("he_ascertainment", "hospital") == 0.1
             with ascertainment_context(
                 {"he_ascertainment": {"hospital": jnp.array(0.2)}}

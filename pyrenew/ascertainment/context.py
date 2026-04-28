@@ -5,10 +5,9 @@ Temporary execution context for sampled ascertainment values.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
-from typing import Any
 
 from jax.typing import ArrayLike
 
@@ -53,7 +52,7 @@ def _validate_ascertainment_values(values: _AscertainmentValues) -> None:
 
 
 @contextmanager
-def ascertainment_context(values: _AscertainmentValues) -> Any:
+def ascertainment_context(values: _AscertainmentValues) -> Iterator[None]:
     """
     Temporarily make sampled ascertainment values available to accessors.
 

@@ -63,6 +63,12 @@ class JointAscertainment(AscertainmentModel):
     def _optional_array(value: ArrayLike | None) -> ArrayLike | None:
         """
         Convert optional array-like values to JAX arrays.
+
+        Returns
+        -------
+        ArrayLike | None
+            ``None`` if ``value`` is ``None``; otherwise ``value`` converted
+            to a JAX array.
         """
         if value is None:
             return None
@@ -75,8 +81,7 @@ class JointAscertainment(AscertainmentModel):
         n_signals = len(self.signals)
         if self.loc.shape != (n_signals,):
             raise ValueError(
-                "loc must have shape "
-                f"({n_signals},), got shape {self.loc.shape}."
+                f"loc must have shape ({n_signals},), got shape {self.loc.shape}."
             )
 
         covariance_params = (
@@ -106,6 +111,11 @@ class JointAscertainment(AscertainmentModel):
     def _distribution(self) -> dist.MultivariateNormal:
         """
         Construct the joint latent distribution.
+
+        Returns
+        -------
+        numpyro.distributions.MultivariateNormal
+            Joint latent distribution on the logit scale.
         """
         if self.scale_tril is not None:
             return dist.MultivariateNormal(
