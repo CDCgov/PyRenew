@@ -15,6 +15,7 @@ from pyrenew.latent import (
     RandomWalk,
     StepwiseTemporalProcess,
     SubpopulationInfections,
+    WeeklyTemporalProcess,
 )
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import (
@@ -311,10 +312,8 @@ class TestMultiSignalModelSampling:
             gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            single_rt_process=StepwiseTemporalProcess(
+            single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                step_size=7,
-                alignment="calendar_week",
                 week=MMWR_WEEK,
             ),
             n_initialization_points=3,
@@ -331,10 +330,10 @@ class TestMultiSignalModelSampling:
                 )
 
         log_rt = trace["PopulationInfections::log_rt_single"]["value"]
-        coarse = trace["log_rt_single_coarse"]["value"]
+        weekly = trace["log_rt_single_weekly"]["value"]
 
         assert log_rt.shape == (model.latent.n_initialization_points + 10, 1)
-        assert coarse.shape[0] < log_rt.shape[0]
+        assert weekly.shape[0] < log_rt.shape[0]
         assert jnp.allclose(log_rt[:3], log_rt[0])
         assert jnp.allclose(log_rt[3:10], log_rt[3])
 
@@ -345,10 +344,8 @@ class TestMultiSignalModelSampling:
             gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            single_rt_process=StepwiseTemporalProcess(
+            single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                step_size=7,
-                alignment="calendar_week",
                 week=MMWR_WEEK,
             ),
             n_initialization_points=3,
@@ -356,9 +353,7 @@ class TestMultiSignalModelSampling:
         model = MultiSignalModel(latent, {"ed": _daily_ed_counts()})
 
         with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(
-                ValueError, match="obs_start_date is required.*calendar_week"
-            ):
+            with pytest.raises(ValueError, match="obs_start_date is required"):
                 model.sample(
                     n_days_post_init=10,
                     population_size=1_000_000,
@@ -375,10 +370,8 @@ class TestMultiSignalModelSampling:
         scale.
         """
         builder = _coherence_builder(
-            single_rt_process=StepwiseTemporalProcess(
+            single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                step_size=7,
-                alignment="calendar_week",
                 week=MMWR_WEEK,
             ),
             observations=[_weekly_hosp_counts(), _daily_ed_counts()],
@@ -408,7 +401,7 @@ class TestMultiSignalModelSampling:
                     ed={"obs": ed_obs},
                 )
 
-        assert trace["log_rt_single_coarse"]["value"].shape == (5, 1)
+        assert trace["log_rt_single_weekly"]["value"].shape == (5, 1)
         assert trace["PopulationInfections::log_rt_single"]["value"].shape == (
             n_total,
             1,
@@ -741,13 +734,11 @@ class TestBuilderConfigurations:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_calendar_week_alignment_matches_weekly_week_passes(self):
+    def test_weekly_rt_matches_weekly_observation_week_passes(self):
         """Sunday-start weeks pair with Saturday-ending weekly observations."""
         builder = _coherence_builder(
-            single_rt_process=StepwiseTemporalProcess(
+            single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                step_size=7,
-                alignment="calendar_week",
                 week=MMWR_WEEK,
             ),
             observations=[_weekly_hosp_counts(week=MMWR_WEEK)],
@@ -755,13 +746,11 @@ class TestBuilderConfigurations:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_calendar_week_alignment_mismatches_weekly_week_passes(self):
+    def test_weekly_rt_mismatches_weekly_observation_week_passes(self):
         """A weekly Rt anchor can differ from a weekly observation anchor."""
         builder = _coherence_builder(
-            single_rt_process=StepwiseTemporalProcess(
+            single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                step_size=7,
-                alignment="calendar_week",
                 week=WeekCycle(start_dow=0),
             ),
             observations=[_weekly_hosp_counts(week=MMWR_WEEK)],
@@ -769,13 +758,11 @@ class TestBuilderConfigurations:
         model = builder.build()
         assert isinstance(model, MultiSignalModel)
 
-    def test_calendar_week_alignment_with_only_daily_observations_passes(self):
+    def test_weekly_rt_with_only_daily_observations_passes(self):
         """Calendar-week-aligned R(t) pairs with daily observations."""
         builder = _coherence_builder(
-            single_rt_process=StepwiseTemporalProcess(
+            single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                step_size=7,
-                alignment="calendar_week",
                 week=MMWR_WEEK,
             ),
             observations=[_daily_ed_counts()],
@@ -848,19 +835,15 @@ class TestMultiSignalValidateDataAnchor:
     def test_missing_obs_start_date_for_calendar_aligned_latent_raises(self):
         """A calendar-week-aligned latent temporal process requires obs_start_date."""
         builder = _coherence_builder(
-            single_rt_process=StepwiseTemporalProcess(
+            single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                step_size=7,
-                alignment="calendar_week",
                 week=MMWR_WEEK,
             ),
             observations=[_daily_ed_counts()],
         )
         model = builder.build()
         n_total = model.latent.n_initialization_points + 30
-        with pytest.raises(
-            ValueError, match="obs_start_date is required.*calendar_week"
-        ):
+        with pytest.raises(ValueError, match="obs_start_date is required"):
             model.validate_data(
                 n_days_post_init=30,
                 ed={"obs": jnp.ones(n_total) * 5.0},

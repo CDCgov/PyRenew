@@ -21,7 +21,7 @@ from pyrenew.datasets import (
     load_synthetic_weekly_hospital_admissions,
 )
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import AR1, StepwiseTemporalProcess
+from pyrenew.latent import AR1, WeeklyTemporalProcess
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
@@ -217,8 +217,8 @@ def he_weekly_rt_model(
     Same observation configuration as ``he_weekly_model`` (weekly hospital
     admissions on the MMWR epiweek grid + daily ED visits with a day-of-week
     effect), but R(t) is sampled weekly and broadcast to daily via
-    ``StepwiseTemporalProcess`` with calendar-week alignment. This mirrors the
-    production pyrenew-hew configuration.
+    ``WeeklyTemporalProcess``. This mirrors the production pyrenew-hew
+    configuration.
 
     Parameters
     ----------
@@ -244,10 +244,8 @@ def he_weekly_rt_model(
         gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
-        single_rt_process=StepwiseTemporalProcess(
+        single_rt_process=WeeklyTemporalProcess(
             AR1(autoreg=0.9, innovation_sd=0.05),
-            step_size=7,
-            alignment="calendar_week",
             week=MMWR_WEEK,
         ),
     )

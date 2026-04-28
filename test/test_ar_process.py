@@ -244,9 +244,7 @@ def test_ar_process_asymptotics(ar_inits, autoreg, noise_sd, n):
     ]
 
     # Closed-form stationary standard deviation for the AR(p) process.
-    # The previous assertion used `3 * noise_sd`, which is only correct when
-    # the stationary variance equals the innovation variance (p=0); for AR(1)
-    # and AR(2) with non-zero autoreg, the stationary SD is strictly larger.
+    # Tests AR(1) and AR(2) processes.
     sigma2 = noise_sd**2
     if order == 1:
         stationary_sd = jnp.sqrt(sigma2 / (1 - autoreg[0] ** 2))

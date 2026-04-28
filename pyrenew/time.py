@@ -18,8 +18,8 @@ things; do not conflate them.
 - :class:`WeekCycle` — a 7-day calendar cycle identified by its
   ``start_dow``. Construction-time modeling choice, set independently on
   each model component that does calendar-week work (weekly
-  :class:`CountObservation` and calendar-week-aligned
-  :class:`StepwiseTemporalProcess`). Different components can use
+  :class:`CountObservation` and :class:`WeeklyTemporalProcess`). Different
+  components can use
   different cycles; each performs its own trimming and aggregation
   relative to the shared daily axis. The module-level constants
   :data:`MMWR_WEEK` (Sun-Sat) and :data:`ISO_WEEK` (Mon-Sun) cover

@@ -69,6 +69,7 @@ from pyrenew.latent import (
     AR1,
     RandomWalk,
     StepwiseTemporalProcess,
+    WeeklyTemporalProcess,
     GammaGroupSdPrior,
     HierarchicalNormalPrior,
 )
@@ -255,25 +256,23 @@ The AR(1) process above samples one value per model day:
 baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
 ```
 
-To use a  weekly $\mathcal{R}(t)$ while still running the renewal equation daily, wrap the temporal process in `StepwiseTemporalProcess`.
-The wrapper samples a coarse trajectory and broadcasts it to the daily model axis before the latent infection process uses it.
+To use a weekly $\mathcal{R}(t)$ while still running the renewal equation daily, wrap the temporal process in `WeeklyTemporalProcess`.
+The wrapper samples a weekly trajectory and broadcasts it to the daily model axis before the latent infection process uses it.
 
 ```python
-weekly_baseline_rt_process = StepwiseTemporalProcess(
+weekly_baseline_rt_process = WeeklyTemporalProcess(
     inner=AR1(autoreg=0.9, innovation_sd=0.05),
-    step_size=7,
-    alignment="calendar_week",
     week=MMWR_WEEK,
 )
 ```
 
-Use `alignment="calendar_week"` when the weekly Rt blocks should align to a calendar week.
+Use `WeeklyTemporalProcess` when the weekly Rt blocks should align to a calendar week.
 PyRenew provides class `WeekCycle` which identifies the start day of a calendar week by ISO convention, e.g. `0 == Monday`, `6 == Sunday`
 and two pre-defined instances: `MMWR_WEEK: WeekCycle = WeekCycle(start_dow=6)` and `ISO_WEEK: WeekCycle = WeekCycle(start_dow=0)`.
 `pyrenew.time` exports `MMWR_WEEK` (Sunday-Saturday epiweeks) and `ISO_WEEK` (Monday-Sunday); use `WeekCycle(start_dow=k)` for any other convention.
 At sample or run time, pass the date of the first observation day as `obs_start_date`.
-Argument `obs_start_date` is required whenever any component performs calendar-aligned work: a latent temporal process with `alignment="calendar_week"`, a count observation with `aggregation="weekly"`, or any observation with a day-of-week effect.
-For `alignment="model_index"` and daily observations with no day-of-week effect, `obs_start_date` can be omitted.
+Argument `obs_start_date` is required whenever any component performs calendar-aligned work: a `WeeklyTemporalProcess`, a count observation with `aggregation="weekly"`, or any observation with a day-of-week effect.
+For `StepwiseTemporalProcess` and daily observations with no day-of-week effect, `obs_start_date` can be omitted.
 The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it.
 
 ## Observation Processes

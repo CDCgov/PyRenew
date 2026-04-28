@@ -346,7 +346,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         The default implementation inspects this instance's attributes
         for :class:`pyrenew.latent.temporal_processes.TemporalProcess`
         instances and returns ``True`` if any of them has
-        ``alignment="calendar_week"``. Subclasses may override to add
+        ``requires_calendar_anchor=True``. Subclasses may override to add
         additional calendar-aligned components.
 
         Returns
@@ -356,13 +356,11 @@ class BaseLatentInfectionProcess(RandomVariable):
             ``first_day_dow`` (derived from ``obs_start_date`` at the
             model entry point); ``False`` otherwise.
         """
-        for value in vars(self).values():
-            if (
-                isinstance(value, TemporalProcess)
-                and getattr(value, "alignment", None) == "calendar_week"
-            ):
-                return True
-        return False
+        return any(
+            isinstance(value, TemporalProcess)
+            and getattr(value, "requires_calendar_anchor", False)
+            for value in vars(self).values()
+        )
 
     @abstractmethod
     def sample(

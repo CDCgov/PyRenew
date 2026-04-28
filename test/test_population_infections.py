@@ -7,7 +7,7 @@ import numpyro
 import pytest
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent import AR1, RandomWalk, StepwiseTemporalProcess
+from pyrenew.latent import AR1, RandomWalk, WeeklyTemporalProcess
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.time import MMWR_WEEK
 
@@ -127,16 +127,14 @@ class TestPopulationInfectionsSample:
         assert "my_infections::rt_single" in trace
 
     def test_first_day_dow_reaches_calendar_aligned_rt_process(self, gen_int_rv):
-        """Calendar-aligned stepwise Rt receives model-axis day of week."""
+        """Weekly Rt receives model-axis day of week."""
         process = PopulationInfections(
             name="population",
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-            single_rt_process=StepwiseTemporalProcess(
+            single_rt_process=WeeklyTemporalProcess(
                 AR1(autoreg=0.9, innovation_sd=0.05),
-                step_size=7,
-                alignment="calendar_week",
                 week=MMWR_WEEK,
             ),
             n_initialization_points=7,
@@ -147,10 +145,10 @@ class TestPopulationInfectionsSample:
                 process.sample(n_days_post_init=10, first_day_dow=3)
 
         log_rt = trace["population::log_rt_single"]["value"]
-        coarse = trace["log_rt_single_coarse"]["value"]
+        weekly = trace["log_rt_single_weekly"]["value"]
 
         assert log_rt.shape == (17, 1)
-        assert coarse.shape == (3, 1)
+        assert weekly.shape == (3, 1)
         assert jnp.allclose(log_rt[:3], log_rt[0])
         assert jnp.allclose(log_rt[3:10], log_rt[3])
         assert jnp.allclose(log_rt[10:17], log_rt[10])

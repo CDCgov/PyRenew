@@ -2,10 +2,9 @@
 Integration test: PopulationInfections H+E model with WEEKLY R(t).
 
 Mirrors ``test_population_infections_he_weekly`` but parameterizes R(t)
-weekly via ``StepwiseTemporalProcess(step_size=7, alignment="calendar_week")``
-and broadcasts to the daily renewal axis. This is the production
-pyrenew-hew configuration: weekly hospital admissions + daily ED visits +
-weekly calendar-aligned R(t).
+weekly via ``WeeklyTemporalProcess`` and broadcasts to the daily renewal axis.
+This is the production pyrenew-hew configuration: weekly hospital admissions +
+daily ED visits + weekly calendar-aligned R(t).
 """
 
 from __future__ import annotations
@@ -68,12 +67,9 @@ def _build_hospital_obs_on_period_grid(
     return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
 
 
-def _expected_n_coarse(model: MultiSignalModel, first_day_dow: int) -> int:
+def _expected_n_weekly(model: MultiSignalModel, first_day_dow: int) -> int:
     """
-    Expected number of coarse R(t) samples for calendar-week alignment.
-
-    Mirrors ``StepwiseTemporalProcess._resolve_n_coarse`` for ``step_size=7``
-    and ``alignment="calendar_week"``.
+    Expected number of weekly R(t) samples for calendar-week alignment.
 
     Parameters
     ----------
@@ -93,17 +89,17 @@ def _expected_n_coarse(model: MultiSignalModel, first_day_dow: int) -> int:
 
 
 class TestPriorPredictiveStructure:
-    """Verify the weekly-Rt graph records a coarse trajectory at the right shape."""
+    """Verify the weekly-Rt graph records a weekly trajectory at the right shape."""
 
-    def test_coarse_rt_recorded(
+    def test_weekly_rt_recorded(
         self,
         he_weekly_rt_model: MultiSignalModel,
         weekly_hosp: pl.DataFrame,
         daily_ed: pl.DataFrame,
     ) -> None:
         """
-        Single prior-predictive sample exposes ``log_rt_single_coarse`` at the
-        expected coarse length and a daily-length broadcast Rt.
+        Single prior-predictive sample exposes ``log_rt_single_weekly`` at the
+        expected weekly length and a daily-length broadcast Rt.
 
         Parameters
         ----------
@@ -137,14 +133,14 @@ class TestPriorPredictiveStructure:
                 )
 
         n_total = he_weekly_rt_model.latent.n_initialization_points + N_DAYS_FIT
-        n_coarse = _expected_n_coarse(he_weekly_rt_model, first_day_dow)
+        n_weekly = _expected_n_weekly(he_weekly_rt_model, first_day_dow)
 
-        coarse = trace["log_rt_single_coarse"]["value"]
+        weekly = trace["log_rt_single_weekly"]["value"]
         daily = trace["PopulationInfections::log_rt_single"]["value"]
 
-        assert coarse.shape == (n_coarse, 1)
+        assert weekly.shape == (n_weekly, 1)
         assert daily.shape == (n_total, 1)
-        assert n_coarse < n_total
+        assert n_weekly < n_total
 
         # Each block of 7 daily values past the leading partial week should be
         # constant (the calendar-week broadcast invariant).
@@ -239,7 +235,7 @@ class TestModelFit:
                 "PopulationInfections::infections_aggregate": ["time"],
                 "PopulationInfections::log_rt_single": ["time", "dummy"],
                 "PopulationInfections::rt_single": ["time", "dummy"],
-                "log_rt_single_coarse": ["coarse_week", "dummy"],
+                "log_rt_single_weekly": ["rt_week", "dummy"],
                 "hospital_predicted_daily": ["time"],
                 "hospital_predicted": ["week"],
                 "ed_predicted": ["time"],
@@ -289,13 +285,13 @@ class TestModelFit:
         assert (rhat < 1.05).all(), f"Rhat exceeded 1.05:\n{summary[rhat >= 1.05]}"
         assert (ess > 100).all(), f"ESS_bulk below 100:\n{summary[ess <= 100]}"
 
-    def test_coarse_rt_posterior_shape(
+    def test_weekly_rt_posterior_shape(
         self,
         fitted_model: MultiSignalModel,
         posterior_dt,
     ) -> None:
         """
-        Check the coarse Rt site lives on the weekly cadence in the posterior.
+        Check the weekly Rt site lives on the weekly cadence in the posterior.
 
         Parameters
         ----------
@@ -305,10 +301,10 @@ class TestModelFit:
             ArviZ DataTree with posterior group.
         """
         first_day_dow = fitted_model._resolve_first_day_dow(OBS_START_DATE)
-        n_coarse = _expected_n_coarse(fitted_model, first_day_dow)
+        n_weekly = _expected_n_weekly(fitted_model, first_day_dow)
 
-        coarse = posterior_dt.posterior["log_rt_single_coarse"]
-        assert coarse.sizes["coarse_week"] == n_coarse
+        weekly = posterior_dt.posterior["log_rt_single_weekly"]
+        assert weekly.sizes["rt_week"] == n_weekly
 
     def test_rt_posterior_covers_truth(
         self,

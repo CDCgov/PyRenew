@@ -40,8 +40,11 @@ low-level building blocks in [pyrenew.process][]. The key differences:
 - ``RandomWalk``: No mean reversion. Rt can drift without bound.
   Wraps [pyrenew.process.RandomWalk][].
 - ``StepwiseTemporalProcess``: Wrapper that parameterizes any inner
-  ``TemporalProcess`` at a coarser cadence and broadcasts to the per-timepoint
-  scale by repetition.
+  ``TemporalProcess`` at a coarser model-index cadence and broadcasts to the
+  per-timepoint scale by repetition.
+- ``WeeklyTemporalProcess``: Wrapper that parameterizes any inner
+  ``TemporalProcess`` at a calendar-week cadence and broadcasts to the
+  per-timepoint scale by repetition.
 
 All implementations satisfy the ``TemporalProcess`` protocol and can be
 used interchangeably in hierarchical infection models.
@@ -49,7 +52,7 @@ used interchangeably in hierarchical infection models.
 
 from __future__ import annotations
 
-from typing import Literal, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import jax.numpy as jnp
 import numpyro
@@ -76,9 +79,9 @@ class TemporalProcess(Protocol):
     step_size : int
         Number of consecutive timepoints that share the same sampled value.
         Defaults to ``1`` for the standard processes (one independent sample
-        per timepoint). Wrapper processes like ``StepwiseTemporalProcess``
-        expose a larger value so that model builders can enforce coherence
-        between R(t) parametrization cadence and observation aggregation.
+        per timepoint). Wrapper processes like ``StepwiseTemporalProcess`` and
+        ``WeeklyTemporalProcess`` expose a larger value so that model builders
+        can inspect R(t) parametrization cadence.
     """
 
     step_size: int
@@ -443,13 +446,12 @@ class RandomWalk(TemporalProcess):
 class StepwiseTemporalProcess(TemporalProcess):
     """
     Parameterize an inner temporal process at a coarser cadence and
-    broadcast to the per-timepoint scale by repetition.
+    broadcast to the per-timepoint scale by model-index repetition.
 
     Each ``step_size`` consecutive output timepoints share a single sampled
     value from the inner process. Use when a parameter should be estimated at
     a coarser cadence while downstream model components still need one value
-    per evaluation timepoint. For example, a weekly-parameterized R(t) process
-    can return daily R(t) values for a daily deterministic renewal equation.
+    per evaluation timepoint. Blocks always start at output index 0.
 
     Parameters
     ----------
@@ -459,32 +461,17 @@ class StepwiseTemporalProcess(TemporalProcess):
     step_size
         Number of per-timepoint units that share each inner sample.
         Must be a positive integer.
-    alignment
-        How repeated blocks align to the output time axis. ``"model_index"``
-        starts blocks at output index 0. ``"calendar_week"`` aligns blocks
-        to calendar weeks using ``week`` and the ``first_day_dow``
-        supplied to ``sample()``.
-    week
-        Calendar-week anchor used when ``alignment="calendar_week"``
-        (e.g., :data:`pyrenew.time.MMWR_WEEK`,
-        :data:`pyrenew.time.ISO_WEEK`). Required for calendar-week
-        alignment; must be ``None`` otherwise.
 
     Raises
     ------
     ValueError
-        If ``step_size`` is not a positive integer, or if alignment
-        arguments are inconsistent.
+        If ``step_size`` is not a positive integer.
     """
-
-    _SUPPORTED_ALIGNMENTS = {"model_index", "calendar_week"}
 
     def __init__(
         self,
         inner: TemporalProcess,
         step_size: int,
-        alignment: Literal["model_index", "calendar_week"] = "model_index",
-        week: WeekCycle | None = None,
     ) -> None:
         """
         Initialize stepwise temporal process.
@@ -495,52 +482,24 @@ class StepwiseTemporalProcess(TemporalProcess):
             Inner ``TemporalProcess`` that generates the coarse trajectory.
         step_size
             Number of per-timepoint units that share each inner sample.
-        alignment
-            How repeated blocks align to the output time axis. ``"model_index"``
-            starts blocks at output index 0. ``"calendar_week"`` aligns
-            weekly blocks to ``week`` using ``first_day_dow`` at
-            sample time.
-        week
-            Calendar-week anchor used when
-            ``alignment="calendar_week"``.
 
         Raises
         ------
         ValueError
-            If ``step_size`` is not a positive integer, or if alignment
-            arguments are inconsistent.
+            If ``step_size`` is not a positive integer.
         """
         if not isinstance(step_size, int) or step_size < 1:
             raise ValueError(f"step_size must be a positive integer, got {step_size!r}")
-        if alignment not in self._SUPPORTED_ALIGNMENTS:
-            raise ValueError(
-                f"alignment must be one of {self._SUPPORTED_ALIGNMENTS}, "
-                f"got {alignment!r}"
-            )
-        if alignment == "calendar_week":
-            if step_size != 7:
-                raise ValueError(
-                    "calendar_week alignment requires step_size=7, "
-                    f"got step_size={step_size}"
-                )
-            if week is None:
-                raise ValueError("week is required when alignment='calendar_week'")
-        elif week is not None:
-            raise ValueError("week is only used when alignment='calendar_week'")
         self.inner = inner
         self.step_size = step_size
-        self.alignment = alignment
-        self.week = week
 
     def __repr__(self) -> str:
         """Return string representation."""
         return (
-            f"StepwiseTemporalProcess(inner={self.inner!r}, "
-            f"step_size={self.step_size}, alignment={self.alignment!r}, "
-            f"week={self.week!r})"
+            f"StepwiseTemporalProcess(inner={self.inner!r}, step_size={self.step_size})"
         )
 
-    def _resolve_n_coarse(self, n_timepoints: int, first_day_dow: int | None) -> int:
+    def _resolve_n_coarse(self, n_timepoints: int) -> int:
         """
         Return the number of inner-process samples needed.
 
@@ -548,18 +507,9 @@ class StepwiseTemporalProcess(TemporalProcess):
         -------
         int
             Number of coarse samples required to cover ``n_timepoints`` under
-            the configured alignment.
+            model-index-aligned repetition.
         """
-        if self.alignment == "model_index":
-            return (n_timepoints + self.step_size - 1) // self.step_size
-        if first_day_dow is None:
-            raise ValueError(
-                "first_day_dow is required at sample time when "
-                "alignment='calendar_week'"
-            )
-        validate_dow(first_day_dow, "first_day_dow")
-        trim = (first_day_dow - self.week.start_dow) % 7
-        return (n_timepoints + trim + 6) // 7
+        return (n_timepoints + self.step_size - 1) // self.step_size
 
     def sample(
         self,
@@ -574,10 +524,10 @@ class StepwiseTemporalProcess(TemporalProcess):
         Sample coarse trajectory from inner process and broadcast.
 
         Computes the number of coarse time steps needed for the requested
-        alignment, samples the inner process at that cadence, then broadcasts
-        each coarse value to the per-timepoint axis and trims to
-        ``n_timepoints``. The returned value always has one row per evaluation
-        timepoint, regardless of the inner parameter cadence. The coarse
+        length, samples the inner process at that cadence, then broadcasts each
+        coarse value to the per-timepoint axis and trims to ``n_timepoints``.
+        The returned value always has one row per evaluation timepoint,
+        regardless of the inner parameter cadence. The coarse
         trajectory is recorded as a NumPyro deterministic site named
         ``"{name_prefix}_coarse"``.
 
@@ -592,9 +542,8 @@ class StepwiseTemporalProcess(TemporalProcess):
         name_prefix
             Prefix for numpyro sample sites; forwarded to the inner process.
         first_day_dow
-            Day of week for element 0 of the shared model time axis
-            (0=Monday, ..., 6=Sunday). Required when
-            ``alignment="calendar_week"``.
+            Ignored. Accepted for compatibility with the
+            ``TemporalProcess`` protocol.
 
         Returns
         -------
@@ -602,9 +551,7 @@ class StepwiseTemporalProcess(TemporalProcess):
             Trajectories of shape ``(n_timepoints, n_processes)``, constant
             within each block of ``step_size`` consecutive rows.
         """
-        n_steps = self._resolve_n_coarse(n_timepoints, first_day_dow)
-        # first_day_dow intentionally not forwarded: inner operates on the
-        # coarse axis; the outer's axis-origin day-of-week does not apply.
+        n_steps = self._resolve_n_coarse(n_timepoints)
         coarse = self.inner.sample(
             n_timepoints=n_steps,
             initial_value=initial_value,
@@ -612,10 +559,122 @@ class StepwiseTemporalProcess(TemporalProcess):
             name_prefix=name_prefix,
         )
         numpyro.deterministic(f"{name_prefix}_coarse", coarse)
-        if self.alignment == "model_index":
-            return jnp.repeat(coarse, repeats=self.step_size, axis=0)[:n_timepoints]
+        return jnp.repeat(coarse, repeats=self.step_size, axis=0)[:n_timepoints]
+
+
+class WeeklyTemporalProcess(TemporalProcess):
+    """
+    Parameterize an inner temporal process at a calendar-week cadence.
+
+    Each output timepoint in the same calendar week shares a single sampled
+    value from the inner process. Use when a parameter should be estimated once
+    per week while downstream model components still need one value per
+    evaluation timepoint. For example, a weekly-parameterized R(t) process can
+    return daily R(t) values for a daily deterministic renewal equation.
+
+    Parameters
+    ----------
+    inner
+        Inner ``TemporalProcess`` that generates the weekly trajectory.
+        Must satisfy the ``TemporalProcess`` protocol.
+    week
+        Calendar-week cycle used to align repeated blocks (e.g.,
+        :data:`pyrenew.time.MMWR_WEEK`, :data:`pyrenew.time.ISO_WEEK`).
+    """
+
+    step_size = 7
+    requires_calendar_anchor = True
+
+    def __init__(self, inner: TemporalProcess, week: WeekCycle) -> None:
+        """
+        Initialize weekly temporal process.
+
+        Parameters
+        ----------
+        inner
+            Inner ``TemporalProcess`` that generates the weekly trajectory.
+        week
+            Calendar-week cycle used to align repeated blocks.
+        """
+        if week is None:
+            raise ValueError("week is required")
+        self.inner = inner
+        self.week = week
+
+    def __repr__(self) -> str:
+        """Return string representation."""
+        return f"WeeklyTemporalProcess(inner={self.inner!r}, week={self.week!r})"
+
+    def _resolve_n_weekly(self, n_timepoints: int, first_day_dow: int | None) -> int:
+        """
+        Return the number of weekly samples needed.
+
+        Returns
+        -------
+        int
+            Number of weekly samples required to cover ``n_timepoints`` under
+            the configured calendar-week cycle.
+        """
+        if first_day_dow is None:
+            raise ValueError(
+                "first_day_dow is required at sample time for WeeklyTemporalProcess"
+            )
+        validate_dow(first_day_dow, "first_day_dow")
+        trim = (first_day_dow - self.week.start_dow) % 7
+        return (n_timepoints + trim + 6) // 7
+
+    def sample(
+        self,
+        n_timepoints: int,
+        initial_value: float | ArrayLike | None = None,
+        n_processes: int = 1,
+        name_prefix: str = "weekly",
+        *,
+        first_day_dow: int | None = None,
+    ) -> ArrayLike:
+        """
+        Sample weekly trajectory from inner process and broadcast.
+
+        Computes the number of weekly time steps needed for the configured
+        calendar-week cycle, samples the inner process at that cadence, then
+        broadcasts each weekly value to the per-timepoint axis and trims to
+        ``n_timepoints``. The returned value always has one row per evaluation
+        timepoint, regardless of the inner parameter cadence. The weekly
+        trajectory is recorded as a NumPyro deterministic site named
+        ``"{name_prefix}_weekly"``.
+
+        Parameters
+        ----------
+        n_timepoints
+            Number of per-timepoint outputs to produce.
+        initial_value
+            Initial value(s) for the inner process. Defaults to 0.0.
+        n_processes
+            Number of parallel processes.
+        name_prefix
+            Prefix for numpyro sample sites; forwarded to the inner process.
+        first_day_dow
+            Day of week for element 0 of the shared model time axis
+            (0=Monday, ..., 6=Sunday). Required.
+
+        Returns
+        -------
+        ArrayLike
+            Trajectories of shape ``(n_timepoints, n_processes)``, constant
+            within each calendar week.
+        """
+        n_steps = self._resolve_n_weekly(n_timepoints, first_day_dow)
+        # first_day_dow intentionally not forwarded: inner operates on the
+        # weekly axis; the outer's axis-origin day-of-week does not apply.
+        weekly = self.inner.sample(
+            n_timepoints=n_steps,
+            initial_value=initial_value,
+            n_processes=n_processes,
+            name_prefix=name_prefix,
+        )
+        numpyro.deterministic(f"{name_prefix}_weekly", weekly)
         return weekly_to_daily(
-            coarse,
+            weekly,
             week_start_dow=self.week.start_dow,
             output_data_first_dow=first_day_dow,
         )[:n_timepoints]

@@ -203,7 +203,7 @@ class MultiSignalModel(Model):
         if self.latent.requires_calendar_anchor():
             raise ValueError(
                 "obs_start_date is required when the latent process uses a "
-                "temporal process with alignment='calendar_week'."
+                "calendar-aligned temporal process."
             )
 
     def shift_times(self, times: jnp.ndarray) -> jnp.ndarray:
