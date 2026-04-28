@@ -12,6 +12,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.util import not_jax_tracer
 
+from pyrenew.latent.temporal_processes import TemporalProcess
 from pyrenew.metaclass import RandomVariable
 
 
@@ -81,9 +82,13 @@ class BaseLatentInfectionProcess(RandomVariable):
     gen_int_rv
         Generation interval PMF
     n_initialization_points
-        Number of initialization days before day 0. Must be at least
-        ``len(gen_int_rv())`` to provide enough history for the renewal
-        equation convolution.
+      Number of initialization days before the first observation day.
+      Latent and observation arrays use a shared padded time axis with
+      element 0 at the start of this initialization period. In observation
+      natural coordinates, day 0 is the first observed data day; on the
+      shared padded axis, that same day is index ``n_initialization_points``.
+      Must be at least ``len(gen_int_rv())`` to provide enough history for
+      the renewal equation convolution.
 
     Notes
     -----
@@ -113,9 +118,8 @@ class BaseLatentInfectionProcess(RandomVariable):
         gen_int_rv
             Generation interval PMF
         n_initialization_points
-            Number of initialization days before day 0. Must be at least
-            ``len(gen_int_rv())`` to provide enough history for the renewal
-            equation convolution.
+            Number of initialization days; see the class-level parameter
+            documentation for the shared padded-axis convention.
 
         Raises
         ------
@@ -337,6 +341,29 @@ class BaseLatentInfectionProcess(RandomVariable):
             Length of generation interval PMF
         """
         return len(self.gen_int_rv())
+
+    def requires_calendar_anchor(self) -> bool:
+        """
+        Report whether this latent process needs a calendar anchor at sample time.
+
+        The default implementation inspects this instance's attributes
+        for :class:`pyrenew.latent.temporal_processes.TemporalProcess`
+        instances and returns ``True`` if any of them has
+        ``requires_calendar_anchor=True``. Subclasses may override to add
+        additional calendar-aligned components.
+
+        Returns
+        -------
+        bool
+            ``True`` if the caller of :meth:`sample` must supply a
+            ``first_day_dow`` (derived from ``obs_start_date`` at the
+            model entry point); ``False`` otherwise.
+        """
+        return any(
+            isinstance(value, TemporalProcess)
+            and getattr(value, "requires_calendar_anchor", False)
+            for value in vars(self).values()
+        )
 
     @abstractmethod
     def sample(

@@ -2,11 +2,13 @@
 Integration test: PopulationInfections H+E model with posterior recovery.
 
 Fits a PopulationInfections model with hospital admissions and ED visit
-observation processes to synthetic 120-day CA data, then checks that
+observation processes to synthetic 126-day CA data, then checks that
 posterior estimates recover known true parameters.
 """
 
 from __future__ import annotations
+
+from datetime import date
 
 import arviz as az
 import jax
@@ -21,7 +23,7 @@ from pyrenew.model import MultiSignalModel
 pytestmark = pytest.mark.integration
 
 
-N_DAYS_FIT = 120
+N_DAYS_FIT = 126
 NUM_WARMUP = 500
 NUM_SAMPLES = 500
 NUM_CHAINS = 4
@@ -48,9 +50,9 @@ class TestDataAssembly:
         daily_infections : pl.DataFrame
             True infections and R(t).
         """
-        assert len(daily_hosp) == 120
-        assert len(daily_ed) == 120
-        assert len(daily_infections) == 120
+        assert len(daily_hosp) == 126
+        assert len(daily_ed) == 126
+        assert len(daily_infections) == 126
         assert "daily_hosp_admits" in daily_hosp.columns
         assert "ed_visits" in daily_ed.columns
         assert "true_rt" in daily_infections.columns
@@ -130,7 +132,6 @@ class TestModelFit:
         )
 
         population_size = float(daily_hosp["pop"][0])
-        first_dow = 0  # 2023-11-06 is a Monday
 
         he_model.run(
             num_warmup=NUM_WARMUP,
@@ -139,11 +140,9 @@ class TestModelFit:
             mcmc_args={"num_chains": NUM_CHAINS, "progress_bar": False},
             n_days_post_init=N_DAYS_FIT,
             population_size=population_size,
+            obs_start_date=date(2023, 11, 6),
             hospital={"obs": hosp_obs},
-            ed={
-                "obs": ed_obs,
-                "first_day_dow": he_model.compute_first_day_dow(first_dow),
-            },
+            ed={"obs": ed_obs},
         )
 
         samples = he_model.mcmc.get_samples()

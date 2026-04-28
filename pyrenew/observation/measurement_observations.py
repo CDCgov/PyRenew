@@ -146,7 +146,7 @@ class MeasurementObservation(BaseObservationProcess):
         if times is not None:
             self._validate_times(times, n_total)
             if obs is not None:
-                self._validate_obs_times_shape(obs, times)
+                self._validate_shapes_match(obs, times, "obs", "times")
         if subpop_indices is not None:
             self._validate_subpop_indices(subpop_indices, n_subpops)
         if sensor_indices is not None and n_sensors is not None:
@@ -160,6 +160,7 @@ class MeasurementObservation(BaseObservationProcess):
         sensor_indices: ArrayLike,
         n_sensors: int,
         obs: ArrayLike | None = None,
+        **kwargs: object,
     ) -> ObservationSample:
         """
         Sample measurements from observed sensors.
@@ -189,6 +190,10 @@ class MeasurementObservation(BaseObservationProcess):
             Total number of measurement sensors.
         obs
             Observed measurements (n_obs,), or None for prior sampling.
+        **kwargs
+            Additional keyword arguments forwarded by the model
+            dispatch (e.g., ``first_day_dow``); ignored here because
+            measurement observations index the shared axis directly.
 
         Returns
         -------
