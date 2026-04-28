@@ -390,7 +390,10 @@ class MultiSignalModel(Model):
 
         n_total = self.latent.n_initialization_points + n_days_post_init
         ascertainment_values = {
-            name: ascertainment_model.sample(n_timepoints=n_total)
+            name: ascertainment_model.sample(
+                n_timepoints=n_total,
+                first_day_dow=first_day_dow,
+            )
             for name, ascertainment_model in self.ascertainment_models.items()
         }
 

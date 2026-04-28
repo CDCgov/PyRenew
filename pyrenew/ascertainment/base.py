@@ -16,10 +16,14 @@ from pyrenew.metaclass import RandomVariable
 
 class AscertainmentSignal(RandomVariable):
     """
-    Signal-specific accessor for a sampled ascertainment model value.
+    Accessor for one signal's ascertainment value.
 
-    This class intentionally creates no NumPyro sites. It reads values sampled
-    once by an ``AscertainmentModel`` within the active model execution context.
+    Users usually do not instantiate this class directly. It is returned by
+    ``AscertainmentModel.for_signal(...)`` and passed to an observation process
+    as ``ascertainment_rate_rv``. During model execution, the parent
+    ``AscertainmentModel`` samples the actual rate or rate trajectory once, and
+    this accessor retrieves the signal-specific value without creating
+    additional NumPyro sample sites.
     """
 
     def __init__(
@@ -73,11 +77,32 @@ class AscertainmentSignal(RandomVariable):
 
 class AscertainmentModel(metaclass=ABCMeta):
     """
-    Base class for models that produce signal-specific ascertainment rates.
+    Base class for shared ascertainment structure.
 
-    Ascertainment models own any NumPyro sites needed for shared structure.
-    Signal-specific RandomVariables returned by ``for_signal()`` are accessors
-    that read already-sampled values.
+    An ascertainment rate is the probability that latent incidence is observed
+    in a particular data stream. Examples include an infection-hospitalization
+    ratio for hospital admissions or an infection-ED-visit ratio for emergency
+    department visits.
+
+    ``AscertainmentModel`` objects make shared structure explicit in a model
+    specification. A user defines the shared model once, registers it with
+    ``PyrenewBuilder.add_ascertainment(...)``, and passes signal-specific
+    accessors into observation processes:
+
+    ```python
+    ascertainment = JointAscertainment(...)
+    builder.add_ascertainment(ascertainment)
+
+    PopulationCounts(
+        name="hospital",
+        ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+        ...
+    )
+    ```
+
+    Subclasses own any NumPyro sites needed for the shared structure.
+    Accessors returned by ``for_signal()`` read the sampled values from the
+    active model context and do not sample independently.
     """
 
     def __init__(
@@ -111,17 +136,22 @@ class AscertainmentModel(metaclass=ABCMeta):
 
     def for_signal(self, signal_name: str) -> AscertainmentSignal:
         """
-        Return a RandomVariable accessor for a signal-specific rate.
+        Return an observation-process accessor for one signal.
 
         Parameters
         ----------
         signal_name
-            Name of the signal.
+            Name of the signal produced by this ascertainment model. This name
+            should match the signal name used when the ascertainment model was
+            constructed. It does not have to match the observation process name,
+            but using the same name usually makes model specifications easier
+            to read.
 
         Returns
         -------
         AscertainmentSignal
-            RandomVariable accessor for the signal's sampled ascertainment rate.
+            RandomVariable-compatible accessor for the signal's sampled
+            ascertainment rate or rate trajectory.
 
         Raises
         ------
@@ -141,16 +171,19 @@ class AscertainmentModel(metaclass=ABCMeta):
     @abstractmethod
     def sample(self, **kwargs: object) -> Mapping[str, ArrayLike]:
         """
-        Sample signal-specific ascertainment rates.
+        Sample all signal-specific ascertainment values owned by this model.
 
         Parameters
         ----------
         **kwargs
-            Additional keyword arguments passed by the model.
+            Additional model-context arguments supplied by ``MultiSignalModel``.
+            Subclasses may use values such as ``n_timepoints`` or
+            ``first_day_dow``.
 
         Returns
         -------
         Mapping[str, ArrayLike]
-            Mapping from signal name to sampled ascertainment rate.
+            Mapping from signal name to sampled ascertainment rate or rate
+            trajectory.
         """
         pass

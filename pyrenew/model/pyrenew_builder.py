@@ -154,18 +154,43 @@ class PyrenewBuilder:
         ascertainment_model: AscertainmentModel,
     ) -> PyrenewBuilder:
         """
-        Add an ascertainment model to the model.
+        Add shared ascertainment structure to the model.
+
+        Use this method when observation probabilities are related across
+        signals or vary through time. Independent scalar ascertainment rates do
+        not require an ascertainment model; those can be passed directly to an
+        observation process as ordinary ``RandomVariable`` objects.
+
+        A registered ascertainment model is sampled once per model execution,
+        before observation processes run. Observation processes receive
+        signal-specific accessors from ``ascertainment_model.for_signal(...)``:
+
+        ```python
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed_visits"),
+            loc=...,
+            scale_tril=...,
+        )
+        builder.add_ascertainment(ascertainment)
+
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital",
+                ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+                ...
+            )
+        )
+        ```
 
         The ascertainment model's ``name`` attribute is used as the unique
-        identifier. During model sampling, each registered ascertainment model
-        is sampled once before observation processes run. Signal-specific
-        accessors returned by ``ascertainment_model.for_signal(...)`` then read
-        those sampled values from the active model execution context.
+        identifier in the built ``MultiSignalModel``.
 
         Parameters
         ----------
         ascertainment_model
-            Configured ascertainment model instance.
+            Configured ascertainment model instance, such as
+            ``JointAscertainment`` or ``TimeVaryingAscertainment``.
 
         Returns
         -------

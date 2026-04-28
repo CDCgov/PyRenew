@@ -18,10 +18,25 @@ from pyrenew.ascertainment.base import AscertainmentModel
 
 class JointAscertainment(AscertainmentModel):
     """
-    Joint logit-normal prior over signal-specific ascertainment rates.
+    Joint prior for scalar ascertainment rates across multiple signals.
 
-    Samples one vector-valued latent parameter on the logit scale and maps each
-    component to ``(0, 1)`` with the sigmoid function.
+    This model is useful when multiple observation streams have distinct but
+    related probabilities of observing latent incidence. For example, hospital
+    admissions and emergency department visits may have different
+    infection-to-observation ratios, while still being correlated because both
+    depend on care-seeking behavior, testing practices, or reporting systems.
+
+    The model samples one multivariate normal vector on the logit scale and
+    transforms each component to a probability:
+
+    ```text
+    eta ~ MultivariateNormal(loc, covariance)
+    ascertainment_rate_j = sigmoid(eta_j)
+    ```
+
+    Each returned rate is scalar and constant over the model time axis. Use
+    ``TimeVaryingAscertainment`` when the probability of observing incidence
+    should vary through time.
     """
 
     def __init__(
@@ -34,23 +49,29 @@ class JointAscertainment(AscertainmentModel):
         precision_matrix: ArrayLike | None = None,
     ) -> None:
         """
-        Initialize a joint ascertainment model.
+        Initialize a joint scalar ascertainment model.
 
         Parameters
         ----------
         name
             Name of the ascertainment model.
         signals
-            Unique signal names. Order corresponds to entries in ``loc`` and
-            the multivariate normal covariance parameter.
+            Unique signal names, such as ``("hospital", "ed_visits")``. The
+            order corresponds to entries in ``loc`` and the covariance
+            parameter.
         loc
-            Mean vector on the logit scale. Shape ``(n_signals,)``.
+            Mean vector on the logit scale. Shape ``(n_signals,)``. A value of
+            ``logit(0.01)`` centers the corresponding ascertainment rate near
+            1 percent before accounting for covariance.
         scale_tril
-            Lower-triangular scale matrix for the multivariate normal.
+            Lower-triangular scale matrix for the multivariate normal on the
+            logit scale. Exactly one covariance parameter must be supplied.
         covariance_matrix
-            Covariance matrix for the multivariate normal.
+            Covariance matrix for the multivariate normal on the logit scale.
+            Exactly one covariance parameter must be supplied.
         precision_matrix
-            Precision matrix for the multivariate normal.
+            Precision matrix for the multivariate normal on the logit scale.
+            Exactly one covariance parameter must be supplied.
         """
         super().__init__(name=name, signals=signals)
         self.loc = jnp.asarray(loc)
@@ -134,17 +155,17 @@ class JointAscertainment(AscertainmentModel):
 
     def sample(self, **kwargs: object) -> Mapping[str, ArrayLike]:
         """
-        Sample jointly distributed ascertainment rates.
+        Sample jointly distributed scalar ascertainment rates.
 
         Parameters
         ----------
         **kwargs
-            Additional keyword arguments, ignored.
+            Additional model-context arguments, ignored.
 
         Returns
         -------
         Mapping[str, ArrayLike]
-            Mapping from signal name to sampled ascertainment rate.
+            Mapping from signal name to sampled scalar ascertainment rate.
         """
         eta = numpyro.sample(
             f"{self.name}_eta",

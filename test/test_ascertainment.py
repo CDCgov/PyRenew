@@ -6,11 +6,17 @@ import jax.numpy as jnp
 import numpyro
 import pytest
 
-from pyrenew.ascertainment import AscertainmentSignal, JointAscertainment
+from pyrenew.ascertainment import (
+    AscertainmentSignal,
+    JointAscertainment,
+    TimeVaryingAscertainment,
+)
 from pyrenew.ascertainment.context import (
     ascertainment_context,
     get_ascertainment_value,
 )
+from pyrenew.latent import AR1, WeeklyTemporalProcess
+from pyrenew.time import MMWR_WEEK
 
 
 class TestJointAscertainmentValidation:
@@ -232,6 +238,123 @@ class TestJointAscertainmentSampling:
 
         with pytest.raises(RuntimeError, match="before ascertainment values"):
             ascertainment.for_signal("hospital")()
+
+
+class TestTimeVaryingAscertainmentValidation:
+    """Test TimeVaryingAscertainment constructor validation."""
+
+    @pytest.mark.parametrize("processes", [{}, [], None])
+    def test_requires_non_empty_process_mapping(self, processes):
+        """Test that processes must be a non-empty mapping."""
+        with pytest.raises(ValueError, match="processes must be a non-empty mapping"):
+            TimeVaryingAscertainment(
+                name="tv_ascertainment",
+                processes=processes,
+            )
+
+    def test_rejects_invalid_process(self):
+        """Test that each process must satisfy TemporalProcess."""
+        with pytest.raises(TypeError, match="TemporalProcess"):
+            TimeVaryingAscertainment(
+                name="tv_ascertainment",
+                processes={"ed": object()},
+            )
+
+    def test_rejects_unknown_loc_signal(self):
+        """Test that locs cannot name signals without processes."""
+        with pytest.raises(ValueError, match="unknown signal"):
+            TimeVaryingAscertainment(
+                name="tv_ascertainment",
+                processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
+                locs={"hospital": -5.0},
+            )
+
+    def test_rejects_non_scalar_loc(self):
+        """Test that loc values must be scalar."""
+        with pytest.raises(ValueError, match="must be scalar"):
+            TimeVaryingAscertainment(
+                name="tv_ascertainment",
+                processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
+                locs={"ed": jnp.array([-5.0, -4.0])},
+            )
+
+
+class TestTimeVaryingAscertainmentSampling:
+    """Test TimeVaryingAscertainment sampling behavior."""
+
+    def test_sample_records_rate_trajectory(self):
+        """Test sampled rates have expected shape and support."""
+        ascertainment = TimeVaryingAscertainment(
+            name="tv_ascertainment",
+            processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
+            locs={"ed": -5.0},
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                values = ascertainment.sample(n_timepoints=8)
+
+        assert set(values) == {"ed"}
+        assert values["ed"].shape == (8,)
+        assert jnp.all(values["ed"] > 0)
+        assert jnp.all(values["ed"] < 1)
+        assert trace["tv_ascertainment_ed"]["type"] == "deterministic"
+        assert trace["tv_ascertainment_ed"]["value"].shape == (8,)
+
+    def test_weekly_process_uses_calendar_anchor(self):
+        """Test weekly temporal processes receive first_day_dow."""
+        ascertainment = TimeVaryingAscertainment(
+            name="tv_ascertainment",
+            processes={
+                "ed": WeeklyTemporalProcess(
+                    AR1(autoreg=0.8, innovation_sd=0.1),
+                    start_dow=MMWR_WEEK,
+                )
+            },
+            locs={"ed": -5.0},
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                values = ascertainment.sample(
+                    n_timepoints=10,
+                    first_day_dow=MMWR_WEEK,
+                )
+
+        assert values["ed"].shape == (10,)
+        assert trace["tv_ascertainment_ed_weekly"]["value"].shape == (2, 1)
+
+    def test_weekly_process_requires_calendar_anchor(self):
+        """Test missing first_day_dow errors for weekly processes."""
+        ascertainment = TimeVaryingAscertainment(
+            name="tv_ascertainment",
+            processes={
+                "ed": WeeklyTemporalProcess(
+                    AR1(autoreg=0.8, innovation_sd=0.1),
+                    start_dow=MMWR_WEEK,
+                )
+            },
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(ValueError, match="first_day_dow is required"):
+                ascertainment.sample(n_timepoints=10)
+
+    def test_signal_accessor_reads_trajectory_from_context(self):
+        """Test accessors return sampled trajectories without creating sites."""
+        ascertainment = TimeVaryingAscertainment(
+            name="tv_ascertainment",
+            processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
+        )
+        ed = ascertainment.for_signal("ed")
+        trajectory = jnp.array([0.1, 0.2, 0.3])
+
+        with numpyro.handlers.trace() as trace:
+            with ascertainment_context({"tv_ascertainment": {"ed": trajectory}}):
+                value = ed()
+
+        assert jnp.array_equal(value, trajectory)
+        assert trace == {}
 
 
 class TestAscertainmentContextSafety:

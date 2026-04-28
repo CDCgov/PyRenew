@@ -1,6 +1,11 @@
 # numpydoc ignore=GL08
 """
-Temporary execution context for sampled ascertainment values.
+Execution context for sampled ascertainment values.
+
+Ascertainment models sample shared structure once per model execution. Their
+signal-specific accessors are evaluated later by observation processes. This
+module provides the context used to pass those sampled values from the model
+level to the observation level without creating duplicate NumPyro sites.
 """
 
 from __future__ import annotations
@@ -32,7 +37,7 @@ def _validate_name(name: str, parameter: str) -> None:
 
 def _validate_ascertainment_values(values: _AscertainmentValues) -> None:
     """
-    Validate the nested mapping used for sampled ascertainment values.
+    Validate sampled values before making them available to accessors.
     """
     if not isinstance(values, Mapping):
         raise TypeError(
@@ -54,12 +59,18 @@ def _validate_ascertainment_values(values: _AscertainmentValues) -> None:
 @contextmanager
 def ascertainment_context(values: _AscertainmentValues) -> Iterator[None]:
     """
-    Temporarily make sampled ascertainment values available to accessors.
+    Make sampled ascertainment values available to signal accessors.
+
+    The context is entered by ``MultiSignalModel`` after all registered
+    ascertainment models have been sampled. Observation processes can then call
+    their ``ascertainment_rate_rv`` accessors and retrieve the corresponding
+    sampled value or trajectory.
 
     Parameters
     ----------
     values
-        Mapping from ascertainment model name to signal-specific values.
+        Mapping from ascertainment model name to signal-specific values. A
+        signal-specific value may be a scalar rate or a rate trajectory.
 
     Yields
     ------
@@ -79,7 +90,7 @@ def get_ascertainment_value(
     signal_name: str,
 ) -> ArrayLike:
     """
-    Retrieve a sampled signal-specific ascertainment value from context.
+    Retrieve one signal's sampled ascertainment value from context.
 
     Parameters
     ----------
@@ -91,12 +102,13 @@ def get_ascertainment_value(
     Returns
     -------
     ArrayLike
-        The sampled ascertainment value for the requested signal.
+        The sampled ascertainment value or trajectory for the requested signal.
 
     Raises
     ------
     RuntimeError
-        If no ascertainment context is active or the requested value is absent.
+        If no ascertainment context is active, or if the requested model or
+        signal was not sampled in the active context.
     """
     _validate_name(ascertainment_name, "ascertainment_name")
     _validate_name(signal_name, "signal_name")

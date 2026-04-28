@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import numpyro
 import pytest
 
-from pyrenew.ascertainment import JointAscertainment
+from pyrenew.ascertainment import JointAscertainment, TimeVaryingAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
     AR1,
@@ -470,6 +470,66 @@ class TestMultiSignalModelSampling:
             2,
             model.latent.n_initialization_points + 10,
         )
+
+    def test_prior_predictive_with_time_varying_ascertainment(self):
+        """Test builder sampling with a time-varying ascertainment trajectory."""
+        import jax.random
+        from numpyro.infer import Predictive
+
+        builder = PyrenewBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+        builder.configure_latent(
+            SubpopulationInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_rt_process=RandomWalk(),
+            subpop_rt_deviation_process=RandomWalk(),
+        )
+
+        ascertainment = TimeVaryingAscertainment(
+            name="ed_ascertainment",
+            processes={
+                "ed": WeeklyTemporalProcess(
+                    AR1(autoreg=0.8, innovation_sd=0.1),
+                    start_dow=MMWR_WEEK,
+                )
+            },
+            locs={"ed": -5.0},
+        )
+        builder.add_ascertainment(ascertainment)
+
+        delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
+        builder.add_observation(
+            PopulationCounts(
+                name="ed",
+                ascertainment_rate_rv=ascertainment.for_signal("ed"),
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("ed_conc", 10.0)),
+            )
+        )
+
+        model = builder.build()
+        n_days = 10
+        n_total = model.latent.n_initialization_points + n_days
+        obs_start_date = _obs_date_for_dow(
+            target_first_day_dow=MMWR_WEEK,
+            n_init=model.latent.n_initialization_points,
+        )
+
+        predictive = Predictive(model.sample, num_samples=2)
+        prior_samples = predictive(
+            jax.random.PRNGKey(42),
+            n_days_post_init=n_days,
+            population_size=1_000_000,
+            subpop_fractions=SUBPOP_FRACTIONS,
+            obs_start_date=obs_start_date,
+            ed={"obs": None},
+        )
+
+        assert prior_samples["ed_ascertainment_ed"].shape == (2, n_total)
+        assert prior_samples["ed_ascertainment_ed_weekly"].shape == (2, 2, 1)
+        assert prior_samples["ed_predicted"].shape == (2, n_total)
 
     def test_manual_model_rejects_invalid_ascertainment_model(self, simple_builder):
         """Test direct MultiSignalModel construction validates ascertainment models."""
