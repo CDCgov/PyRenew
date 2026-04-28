@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from pyrenew.ascertainment import AscertainmentModel
 from pyrenew.latent.base import BaseLatentInfectionProcess
 from pyrenew.model.multisignal_model import MultiSignalModel
 from pyrenew.observation.base import BaseObservationProcess
@@ -49,6 +50,7 @@ class PyrenewBuilder:
         self.latent_class: type[BaseLatentInfectionProcess] | None = None
         self.latent_params: dict[str, Any] = {}
         self.observations: dict[str, BaseObservationProcess] = {}
+        self.ascertainment_models: dict[str, AscertainmentModel] = {}
 
     def configure_latent(
         self,
@@ -147,6 +149,52 @@ class PyrenewBuilder:
         self.observations[name] = obs_process
         return self
 
+    def add_ascertainment(
+        self,
+        ascertainment_model: AscertainmentModel,
+    ) -> PyrenewBuilder:
+        """
+        Add an ascertainment model to the model.
+
+        The ascertainment model's ``name`` attribute is used as the unique
+        identifier. During model sampling, each registered ascertainment model
+        is sampled once before observation processes run. Signal-specific
+        accessors returned by ``ascertainment_model.for_signal(...)`` then read
+        those sampled values from the active model execution context.
+
+        Parameters
+        ----------
+        ascertainment_model
+            Configured ascertainment model instance.
+
+        Returns
+        -------
+        PyrenewBuilder
+            Self, for method chaining.
+
+        Raises
+        ------
+        TypeError
+            If ``ascertainment_model`` is not an ``AscertainmentModel``.
+        ValueError
+            If an ascertainment model with this name already exists.
+        """
+        if not isinstance(ascertainment_model, AscertainmentModel):
+            raise TypeError(
+                "ascertainment_model must be an AscertainmentModel, "
+                f"got {type(ascertainment_model).__name__}."
+            )
+
+        name = ascertainment_model.name
+        if name in self.ascertainment_models:
+            raise ValueError(
+                f"Ascertainment model '{name}' already added. "
+                "Each ascertainment model must have a unique name."
+            )
+
+        self.ascertainment_models[name] = ascertainment_model
+        return self
+
     def compute_n_initialization_points(self) -> int:
         """
         Compute required n_initialization_points from all components.
@@ -234,6 +282,7 @@ class PyrenewBuilder:
         model = MultiSignalModel(
             latent_process=latent_process,
             observations=self.observations,
+            ascertainment_models=self.ascertainment_models,
         )
 
         return model
