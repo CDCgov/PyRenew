@@ -232,9 +232,7 @@ We place a prior on the log(Rt) at time $0$, centered at 0.0 (Rt = 1.0) with mod
 ```{python}
 #| label: log-rt-time-0
 
-log_rt_time_0_rv = DistributionalVariable(
-    "log_rt_time_0", dist.Normal(0.0, 0.5)
-)
+log_rt_time_0_rv = DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5))
 ```
 
 ### Temporal Processes for $\mathcal{R}(t)$
@@ -331,9 +329,7 @@ print("State: California")
 print(f"Population: {population_size:,}")
 print(f"Date range: {ca_hosp_data['dates'][0]} to {ca_hosp_data['dates'][-1]}")
 print(f"Number of days: {n_hosp_days}")
-print(
-    f"Admissions range: {int(hosp_admits.min())} to {int(hosp_admits.max())}"
-)
+print(f"Admissions range: {int(hosp_admits.min())} to {int(hosp_admits.max())}")
 ```
 
 The hospital admissions data is aggregated at the jurisdiction level, therefore we specify a `PopulationCounts` observation process.
@@ -437,9 +433,7 @@ class Wastewater(MeasurementObservation):
         ml_per_person_per_day: float,
         noise: MeasurementNoise,
     ) -> None:
-        super().__init__(
-            name=name, temporal_pmf_rv=shedding_kinetics_rv, noise=noise
-        )
+        super().__init__(name=name, temporal_pmf_rv=shedding_kinetics_rv, noise=noise)
         self.log10_genome_per_infection_rv = log10_genome_per_infection_rv
         self.ml_per_person_per_day = ml_per_person_per_day
 
@@ -461,13 +455,9 @@ class Wastewater(MeasurementObservation):
             )
             return convolved
 
-        shedding_signal = jax.vmap(convolve_site, in_axes=1, out_axes=1)(
-            infections
-        )
+        shedding_signal = jax.vmap(convolve_site, in_axes=1, out_axes=1)(infections)
         genome_copies = 10**log10_genome
-        concentration = (
-            shedding_signal * genome_copies / self.ml_per_person_per_day
-        )
+        concentration = shedding_signal * genome_copies / self.ml_per_person_per_day
         return jnp.log(concentration)
 ```
 
@@ -492,9 +482,7 @@ print("State: California")
 print(f"Number of sites: {ww_n_sites}")
 print(f"Number of observations: {ww_n_obs}")
 print(f"Date range: {ca_ww_data['dates'][0]} to {ca_ww_data['dates'][-1]}")
-print(
-    f"Time index range: {int(ww_time_indices.min())} to {int(ww_time_indices.max())}"
-)
+print(f"Time index range: {int(ww_time_indices.min())} to {int(ww_time_indices.max())}")
 print("\nSites:")
 for i, name in enumerate(ww_wwtp_names[:5]):
     print(f"  {i}: {name}")
@@ -653,8 +641,8 @@ The model provides helper methods to align your data with this shared axis:
 Each observation process's `name` attribute becomes the keyword argument for passing data to `model.run()`:
 
 ```python
-builder.add_observation(hosp_obs)   # hosp_obs.name="hospital" → hospital={...}
-builder.add_observation(ww_obs)     # ww_obs.name="wastewater" → wastewater={...}
+builder.add_observation(hosp_obs)  # hosp_obs.name="hospital" → hospital={...}
+builder.add_observation(ww_obs)  # ww_obs.name="wastewater" → wastewater={...}
 ```
 
 #### Jurisdiction-level signals (dense)
@@ -662,7 +650,7 @@ builder.add_observation(ww_obs)     # ww_obs.name="wastewater" → wastewater={.
 The jurisdiction-level hospital admissions data is specified as a `PopulationCounts` observations process with dense data padded to length `n_total`:
 
 ```python
-hospital={
+hospital = {
     "obs": model.pad_observations(hosp_counts),  # shape: (n_total,), NaN-padded
 }
 ```
@@ -676,12 +664,16 @@ You can also use NaN to mark missing data within the observation period.
 The subpopulation-level wastewater data is specified as a `Wastewater` observations process with sparse indexing on the shared time axis:
 
 ```python
-wastewater={
-    "obs": jnp.array([...]),                      # observed log concentrations (n_obs,)
-    "times": model.shift_times(ww_times),         # time indices on shared axis
-    "subpop_indices": jnp.array([...]),           # which subpopulation (selects infection column)
-    "sensor_indices": jnp.array([...]),           # which WWTP/lab pair (selects noise parameters)
-    "n_sensors": int,                             # total number of WWTP/lab pairs
+wastewater = {
+    "obs": jnp.array([...]),  # observed log concentrations (n_obs,)
+    "times": model.shift_times(ww_times),  # time indices on shared axis
+    "subpop_indices": jnp.array(
+        [...]
+    ),  # which subpopulation (selects infection column)
+    "sensor_indices": jnp.array(
+        [...]
+    ),  # which WWTP/lab pair (selects noise parameters)
+    "n_sensors": int,  # total number of WWTP/lab pairs
 }
 ```
 
@@ -780,9 +772,7 @@ ww_monitored_subpops = jnp.array(
 )  # subpop 5 has no wastewater monitoring
 
 print(f"Total subpopulations: {n_subpops}")
-print(
-    f"Subpopulations with wastewater monitoring: {list(ww_monitored_subpops)}"
-)
+print(f"Subpopulations with wastewater monitoring: {list(ww_monitored_subpops)}")
 print(
     f"Wastewater coverage: {float(jnp.sum(subpop_fractions[ww_monitored_subpops])):.0%}"
 )
@@ -842,12 +832,9 @@ def prepare_observation_data(
     n_ww_sensors = ww_data["n_sites"]
     n_monitored = len(ww_monitored_subpops)
     sensor_to_subpop = {
-        i: int(ww_monitored_subpops[i % n_monitored])
-        for i in range(n_ww_sensors)
+        i: int(ww_monitored_subpops[i % n_monitored]) for i in range(n_ww_sensors)
     }
-    ww_subpop_indices = jnp.array(
-        [sensor_to_subpop[int(s)] for s in ww_sensors]
-    )
+    ww_subpop_indices = jnp.array([sensor_to_subpop[int(s)] for s in ww_sensors])
 
     return {
         "obs_start_date": obs_start_date,
@@ -945,9 +932,7 @@ idata_90 = az.from_numpyro(
 )
 
 idata_90_trimmed = idata_90.map_over_datasets(trim_time)
-az.summary(
-    idata_90_trimmed, var_names=["latent_infections", "hospital_predicted"]
-)
+az.summary(idata_90_trimmed, var_names=["latent_infections", "hospital_predicted"])
 ```
 
 We extract the posterior quantiles and print summary statistics.
@@ -991,9 +976,7 @@ infections_df_90 = pd.DataFrame(
 
 # Add 14-day moving average to smooth noisy daily admissions
 hosp_raw_90 = np.array(hosp_admits[:n_days_90], dtype=float)
-hosp_ma_90 = (
-    pd.Series(hosp_raw_90).rolling(window=14, center=True).mean().values
-)
+hosp_ma_90 = pd.Series(hosp_raw_90).rolling(window=14, center=True).mean().values
 
 hosp_df_90 = pd.DataFrame(
     {
@@ -1104,9 +1087,7 @@ idata_180 = az.from_numpyro(
 )
 
 idata_180_trimmed = idata_180.map_over_datasets(trim_time)
-az.summary(
-    idata_180_trimmed, var_names=["latent_infections", "hospital_predicted"]
-)
+az.summary(idata_180_trimmed, var_names=["latent_infections", "hospital_predicted"])
 ```
 
 ```{python}
@@ -1144,9 +1125,7 @@ infections_df_180 = pd.DataFrame(
 
 # Add 14-day moving average to smooth noisy daily admissions
 hosp_raw_180 = np.array(hosp_admits[:n_days_180], dtype=float)
-hosp_ma_180 = (
-    pd.Series(hosp_raw_180).rolling(window=14, center=True).mean().values
-)
+hosp_ma_180 = pd.Series(hosp_raw_180).rolling(window=14, center=True).mean().values
 
 hosp_df_180 = pd.DataFrame(
     {
@@ -1213,12 +1192,8 @@ ci_diff = ci_width_90_overlap - ci_width_180_overlap
 ci_ratio = ci_width_90_overlap / ci_width_180_overlap
 
 print("CI Width Comparison (first 90 days):")
-print(
-    f"  90-day fit mean CI width:  {ci_width_90_overlap.mean():,.0f} infections"
-)
-print(
-    f"  180-day fit mean CI width: {ci_width_180_overlap.mean():,.0f} infections"
-)
+print(f"  90-day fit mean CI width:  {ci_width_90_overlap.mean():,.0f} infections")
+print(f"  180-day fit mean CI width: {ci_width_180_overlap.mean():,.0f} infections")
 print(f"  Mean difference:           {ci_diff.mean():,.0f} infections")
 print(f"  Mean ratio (90/180):       {ci_ratio.mean():.2f}x")
 print(

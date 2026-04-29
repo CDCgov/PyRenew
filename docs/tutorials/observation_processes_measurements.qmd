@@ -273,9 +273,7 @@ class Wastewater(MeasurementObservation):
         noise : MeasurementNoise
             Noise model (e.g., HierarchicalNormalNoise).
         """
-        super().__init__(
-            name=name, temporal_pmf_rv=shedding_kinetics_rv, noise=noise
-        )
+        super().__init__(name=name, temporal_pmf_rv=shedding_kinetics_rv, noise=noise)
         self.log10_genome_per_infection_rv = log10_genome_per_infection_rv
         self.ml_per_person_per_day = ml_per_person_per_day
 
@@ -307,15 +305,11 @@ class Wastewater(MeasurementObservation):
             return convolved
 
         # Apply to all subpops (infections shape: n_days x n_subpops)
-        shedding_signal = jax.vmap(convolve_site, in_axes=1, out_axes=1)(
-            infections
-        )
+        shedding_signal = jax.vmap(convolve_site, in_axes=1, out_axes=1)(infections)
 
         # Convert to concentration: genomes per mL
         genome_copies = 10**log10_genome
-        concentration = (
-            shedding_signal * genome_copies / self.ml_per_person_per_day
-        )
+        concentration = shedding_signal * genome_copies / self.ml_per_person_per_day
 
         # Return log-concentration (what we model)
         return jnp.log(concentration)
@@ -331,9 +325,7 @@ The shedding PMF describes what fraction of total viral shedding occurs on each 
 #| label: shedding-pmf
 
 # Peak shedding ~3 days after infection, continues for ~10 days
-shedding_pmf = jnp.array(
-    [0.0, 0.05, 0.15, 0.25, 0.20, 0.15, 0.10, 0.05, 0.03, 0.02]
-)
+shedding_pmf = jnp.array([0.0, 0.05, 0.15, 0.25, 0.20, 0.15, 0.10, 0.05, 0.03, 0.02])
 print(f"PMF sums to: {shedding_pmf.sum():.2f}")
 
 shedding_rv = DeterministicPMF("viral_shedding", shedding_pmf)
@@ -349,9 +341,7 @@ print(f"Mode: {mode_shedding_day} days, Mean: {mean_shedding_day:.1f} days")
 #| label: plot-shedding
 
 # Visualize the shedding distribution
-shedding_df = pd.DataFrame(
-    {"days": days, "probability": np.array(shedding_pmf)}
-)
+shedding_df = pd.DataFrame({"days": days, "probability": np.array(shedding_pmf)})
 
 (
     p9.ggplot(shedding_df, p9.aes(x="days", y="probability"))
@@ -567,9 +557,7 @@ ww_samples_df = pd.DataFrame(ww_samples_list)
 #| label: plot-sampled-concentrations
 
 # Compute mean across samples for each day
-mean_by_day = (
-    ww_samples_df.groupby("day")["log_concentration"].mean().reset_index()
-)
+mean_by_day = ww_samples_df.groupby("day")["log_concentration"].mean().reset_index()
 mean_by_day["sample"] = -1
 
 # Relative peak day for plotting (using mode, not mean, since distribution is skewed)
@@ -664,9 +652,7 @@ num_sensors = 4
 
 # Use the same observation times and infections as the sampled-concentrations plot
 sensor_obs_times = jnp.tile(observation_days, num_sensors)
-sensor_ids = jnp.repeat(
-    jnp.arange(num_sensors, dtype=jnp.int32), len(observation_days)
-)
+sensor_ids = jnp.repeat(jnp.arange(num_sensors, dtype=jnp.int32), len(observation_days))
 subpop_ids = jnp.zeros(num_sensors * len(observation_days), dtype=jnp.int32)
 
 with numpyro.handlers.seed(rng_seed=42):
@@ -693,9 +679,7 @@ multi_sensor_df = pd.DataFrame(
 #| label: plot-multi-sensor
 
 (
-    p9.ggplot(
-        multi_sensor_df, p9.aes(x="day", y="log_concentration", color="sensor")
-    )
+    p9.ggplot(multi_sensor_df, p9.aes(x="day", y="log_concentration", color="sensor"))
     + p9.geom_line(size=1)
     + p9.geom_point(size=2)
     + p9.labs(
@@ -730,12 +714,8 @@ The observed concentrations reflect both the underlying infection differences AN
 
 # Two subpopulations with different infection patterns
 n_days_mp = 40
-infections_subpop1 = 1000.0 * jnp.exp(
-    -jnp.arange(n_days_mp) / 20.0
-)  # Slow decay
-infections_subpop2 = 2000.0 * jnp.exp(
-    -jnp.arange(n_days_mp) / 10.0
-)  # Fast decay
+infections_subpop1 = 1000.0 * jnp.exp(-jnp.arange(n_days_mp) / 20.0)  # Slow decay
+infections_subpop2 = 2000.0 * jnp.exp(-jnp.arange(n_days_mp) / 10.0)  # Fast decay
 infections_multi = jnp.stack([infections_subpop1, infections_subpop2], axis=1)
 
 # Two sensors, each observing a different subpopulation

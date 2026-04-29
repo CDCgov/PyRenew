@@ -144,27 +144,19 @@ days = np.arange(len(hosp_delay_pmf))
 mean_delay = float(np.sum(days * hosp_delay_pmf))
 mode_delay = int(np.argmax(hosp_delay_pmf))
 sd = float(np.sqrt(np.sum(days**2 * hosp_delay_pmf) - mean_delay**2))
-print(
-    f"mode delay: {mode_delay},  mean delay: {mean_delay:.1f},  sd: {sd:.1f}"
-)
+print(f"mode delay: {mode_delay},  mean delay: {mean_delay:.1f},  sd: {sd:.1f}")
 ```
 
 ```{python}
 #| label: plot-delay-distribution
 
-delay_df = pd.DataFrame(
-    {"days": days, "probability": np.array(hosp_delay_pmf)}
-)
+delay_df = pd.DataFrame({"days": days, "probability": np.array(hosp_delay_pmf)})
 
 plot_delay = (
     p9.ggplot(delay_df, p9.aes(x="days", y="probability"))
     + p9.geom_col(fill="steelblue", alpha=0.7, color="black")
-    + p9.geom_vline(
-        xintercept=mode_delay, color="purple", linetype="solid", size=1
-    )
-    + p9.geom_vline(
-        xintercept=mean_delay, color="red", linetype="dashed", size=1
-    )
+    + p9.geom_vline(xintercept=mode_delay, color="purple", linetype="solid", size=1)
+    + p9.geom_vline(xintercept=mean_delay, color="red", linetype="dashed", size=1)
     + p9.labs(
         x="Days from infection to hospitalization",
         y="Probability",

@@ -76,9 +76,7 @@ print(f"Sum: {float(jnp.sum(dow_values)):.2f}")
 #| label: plot-dow-effect
 
 dow_df = pd.DataFrame({"day": day_names, "effect": np.array(dow_values)})
-dow_df["day"] = pd.Categorical(
-    dow_df["day"], categories=day_names, ordered=True
-)
+dow_df["day"] = pd.Categorical(dow_df["day"], categories=day_names, ordered=True)
 
 (
     p9.ggplot(dow_df, p9.aes(x="day", y="effect"))
@@ -105,9 +103,7 @@ The only difference is whether `day_of_week_rv` is provided.
 #| label: create-processes
 
 hosp_delay_pmf = jnp.array(
-    datasets.load_example_infection_admission_interval()[
-        "probability_mass"
-    ].to_numpy()
+    datasets.load_example_infection_admission_interval()["probability_mass"].to_numpy()
 )
 delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
 ihr_rv = DeterministicVariable("ihr", 0.01)
@@ -177,9 +173,7 @@ pred_df["type"] = pd.Categorical(
 )
 
 (
-    p9.ggplot(
-        pred_df, p9.aes(x="day", y="admissions", color="type", linetype="type")
-    )
+    p9.ggplot(pred_df, p9.aes(x="day", y="admissions", color="type", linetype="type"))
     + p9.geom_line(size=1)
     + p9.scale_color_manual(values=["steelblue", "#e41a1c"])
     + p9.scale_linetype_manual(values=["solid", "dashed"])
@@ -315,9 +309,7 @@ mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
 
 (
     p9.ggplot(noisy_df, p9.aes(x="day", y="admissions"))
-    + p9.geom_line(
-        p9.aes(group="sample"), alpha=0.15, size=0.4, color="steelblue"
-    )
+    + p9.geom_line(p9.aes(group="sample"), alpha=0.15, size=0.4, color="steelblue")
     + p9.geom_line(
         data=mean_df,
         mapping=p9.aes(x="day", y="admissions"),
@@ -357,9 +349,7 @@ process_both = PopulationCounts(
     delay_distribution_rv=delay_rv,
     noise=NegativeBinomialNoise(concentration_rv),
     day_of_week_rv=DeterministicVariable("dow_effect", dow_values),
-    right_truncation_rv=DeterministicPMF(
-        "reporting_delay", reporting_delay_pmf
-    ),
+    right_truncation_rv=DeterministicPMF("reporting_delay", reporting_delay_pmf),
 )
 
 with numpyro.handlers.seed(rng_seed=0):

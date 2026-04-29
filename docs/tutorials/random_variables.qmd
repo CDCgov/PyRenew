@@ -160,9 +160,7 @@ The model code is identical whether the rate is fixed or estimated:
 #| label: interchangeability
 
 hosp_delay_pmf = jnp.array(
-    datasets.load_example_infection_admission_interval()[
-        "probability_mass"
-    ].to_numpy()
+    datasets.load_example_infection_admission_interval()["probability_mass"].to_numpy()
 )
 
 # Fixed ascertainment rate
@@ -264,15 +262,12 @@ class AscertainmentWithDayOfWeek(RandomVariable):
         dow_concentration = jnp.asarray(dow_concentration)
         if dow_concentration.shape != (7,):
             raise ValueError(
-                f"dow_concentration must have shape (7,), "
-                f"got {dow_concentration.shape}"
+                f"dow_concentration must have shape (7,), got {dow_concentration.shape}"
             )
         if jnp.any(dow_concentration <= 0):
             raise ValueError("dow_concentration values must be positive")
         if not (0 <= first_day_offset <= 6):
-            raise ValueError(
-                f"first_day_offset must be 0-6, got {first_day_offset}"
-            )
+            raise ValueError(f"first_day_offset must be 0-6, got {first_day_offset}")
 
     def sample(self, n_days: int, **kwargs) -> tuple:
         """
@@ -303,9 +298,7 @@ class AscertainmentWithDayOfWeek(RandomVariable):
 
         # Tile the 7-element vector across the timeseries
         full_cycle = jnp.tile(dow_effect, (n_days // 7) + 1)
-        daily_dow = full_cycle[
-            self.first_day_offset : self.first_day_offset + n_days
-        ]
+        daily_dow = full_cycle[self.first_day_offset : self.first_day_offset + n_days]
 
         # Combine: daily rate = baseline * day-of-week multiplier
         daily_rate = baseline * daily_dow
@@ -347,18 +340,14 @@ rates_df = pd.DataFrame(
         "day": np.arange(n_days),
         "rate": np.array(daily_rates),
         "dow": [day_labels[i % 7] for i in range(n_days)],
-        "day_type": [
-            "Weekend" if i % 7 >= 5 else "Weekday" for i in range(n_days)
-        ],
+        "day_type": ["Weekend" if i % 7 >= 5 else "Weekday" for i in range(n_days)],
     }
 )
 
 (
     p9.ggplot(rates_df, p9.aes(x="day", y="rate", fill="day_type"))
     + p9.geom_col(alpha=0.7, color="black", size=0.3)
-    + p9.scale_fill_manual(
-        values={"Weekday": "lightblue", "Weekend": "orange"}
-    )
+    + p9.scale_fill_manual(values={"Weekday": "lightblue", "Weekend": "orange"})
     + p9.labs(
         x="Day",
         y="Daily Ascertainment Rate",
@@ -433,9 +422,7 @@ for seed in range(n_samples):
         # Apply day-of-week *after* the delay convolution
         obs_with_dow = numpyro.sample(
             "obs_with_dow",
-            dist.NegativeBinomial2(
-                expected_admissions * dow_multiplier, concentration
-            ),
+            dist.NegativeBinomial2(expected_admissions * dow_multiplier, concentration),
         )
 
     for i in range(n_days):
