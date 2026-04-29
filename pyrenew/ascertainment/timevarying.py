@@ -111,6 +111,21 @@ class TimeVaryingAscertainment(AscertainmentModel):
         """
         return self.locs.get(signal, jnp.asarray(0.0))
 
+    def calendar_anchor_requirements(self) -> tuple[str, ...]:
+        """
+        Return signals whose temporal process requires a calendar anchor.
+
+        Returns
+        -------
+        tuple of str
+            Signal names backed by calendar-aligned temporal processes.
+        """
+        return tuple(
+            signal
+            for signal, process in self.processes.items()
+            if getattr(process, "requires_calendar_anchor", False)
+        )
+
     def sample(
         self,
         n_timepoints: int,

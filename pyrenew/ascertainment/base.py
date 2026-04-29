@@ -168,6 +168,34 @@ class AscertainmentModel(metaclass=ABCMeta):
             signal_name=signal_name,
         )
 
+    def calendar_anchor_requirements(self) -> tuple[str, ...]:
+        """
+        Return signals that require a calendar anchor at sample time.
+
+        Subclasses with calendar-aligned components should override this
+        method so model-level validation can raise an actionable error before
+        downstream sampling starts.
+
+        Returns
+        -------
+        tuple of str
+            Signal names requiring ``first_day_dow`` derived from
+            ``obs_start_date``.
+        """
+        return ()
+
+    def requires_calendar_anchor(self) -> bool:
+        """
+        Report whether this ascertainment model needs a calendar anchor.
+
+        Returns
+        -------
+        bool
+            ``True`` if any signal owned by this model requires
+            ``first_day_dow`` at sample time.
+        """
+        return len(self.calendar_anchor_requirements()) > 0
+
     @abstractmethod
     def sample(self, **kwargs: object) -> Mapping[str, ArrayLike]:
         """

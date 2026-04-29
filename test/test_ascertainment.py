@@ -187,6 +187,36 @@ class TestJointAscertainmentSampling:
             trace["he_ascertainment_ed"]["value"],
         )
 
+    def test_sample_accepts_covariance_matrix_parameterization(self):
+        """Test joint ascertainment sampling with a covariance matrix."""
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            loc=jnp.zeros(2),
+            covariance_matrix=jnp.eye(2),
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            values = ascertainment.sample()
+
+        assert set(values) == {"hospital", "ed"}
+        assert not ascertainment.requires_calendar_anchor()
+
+    def test_sample_accepts_precision_matrix_parameterization(self):
+        """Test joint ascertainment sampling with a precision matrix."""
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            loc=jnp.zeros(2),
+            precision_matrix=jnp.eye(2),
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            values = ascertainment.sample()
+
+        assert set(values) == {"hospital", "ed"}
+        assert ascertainment.calendar_anchor_requirements() == ()
+
     def test_signal_accessor_reads_context_without_creating_sites(self):
         """Test that signal accessors read context values and create no sites."""
         ascertainment = JointAscertainment(
@@ -323,6 +353,22 @@ class TestTimeVaryingAscertainmentSampling:
 
         assert values["ed"].shape == (10,)
         assert trace["tv_ascertainment_ed_weekly"]["value"].shape == (2, 1)
+
+    def test_weekly_process_reports_calendar_anchor_requirement(self):
+        """Test weekly temporal processes are visible to model-level checks."""
+        ascertainment = TimeVaryingAscertainment(
+            name="tv_ascertainment",
+            processes={
+                "ed": WeeklyTemporalProcess(
+                    AR1(autoreg=0.8, innovation_sd=0.1),
+                    start_dow=MMWR_WEEK,
+                ),
+                "hospital": AR1(autoreg=0.8, innovation_sd=0.1),
+            },
+        )
+
+        assert ascertainment.calendar_anchor_requirements() == ("ed",)
+        assert ascertainment.requires_calendar_anchor()
 
     def test_weekly_process_requires_calendar_anchor(self):
         """Test missing first_day_dow errors for weekly processes."""

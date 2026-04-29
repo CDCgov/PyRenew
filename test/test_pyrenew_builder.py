@@ -1107,6 +1107,104 @@ class TestMultiSignalValidateDataAnchor:
                 ed={"obs": jnp.ones(n_total) * 5.0},
             )
 
+    def test_missing_obs_start_date_for_calendar_aligned_ascertainment_raises(self):
+        """Calendar-aligned ascertainment temporal processes require obs_start_date."""
+        builder = _coherence_builder(
+            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            observations=[_daily_ed_counts()],
+        )
+        ascertainment = TimeVaryingAscertainment(
+            name="ed_ascertainment",
+            processes={
+                "ed": WeeklyTemporalProcess(
+                    AR1(autoreg=0.8, innovation_sd=0.1),
+                    start_dow=MMWR_WEEK,
+                )
+            },
+        )
+        builder.add_ascertainment(ascertainment)
+        model = builder.build()
+        n_total = model.latent.n_initialization_points + 30
+
+        with pytest.raises(
+            ValueError,
+            match=("ascertainment model 'ed_ascertainment'.*signal\\(s\\): 'ed'"),
+        ):
+            model.validate_data(
+                n_days_post_init=30,
+                ed={"obs": jnp.ones(n_total) * 5.0},
+            )
+
+    def test_sample_missing_obs_start_date_for_ascertainment_raises_before_sampling(
+        self,
+    ):
+        """The model-entry check names the ascertainment model before sampling."""
+        builder = _coherence_builder(
+            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            observations=[_daily_ed_counts()],
+        )
+        ascertainment = TimeVaryingAscertainment(
+            name="ed_ascertainment",
+            processes={
+                "ed": WeeklyTemporalProcess(
+                    AR1(autoreg=0.8, innovation_sd=0.1),
+                    start_dow=MMWR_WEEK,
+                )
+            },
+        )
+        builder.add_ascertainment(ascertainment)
+        model = builder.build()
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(
+                ValueError,
+                match=("ascertainment model 'ed_ascertainment'.*signal\\(s\\): 'ed'"),
+            ):
+                model.sample(
+                    n_days_post_init=10,
+                    population_size=1_000_000,
+                    ed={"obs": None},
+                )
+
+    def test_sample_with_calendar_aligned_ascertainment_accepts_obs_start_date(
+        self,
+    ):
+        """Supplying obs_start_date lets weekly ascertainment sample successfully."""
+        builder = _coherence_builder(
+            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            observations=[_daily_ed_counts()],
+        )
+        ascertainment = TimeVaryingAscertainment(
+            name="ed_ascertainment",
+            processes={
+                "ed": WeeklyTemporalProcess(
+                    AR1(autoreg=0.8, innovation_sd=0.1),
+                    start_dow=MMWR_WEEK,
+                )
+            },
+        )
+        builder.add_ascertainment(ascertainment)
+        model = builder.build()
+        n_days = 10
+        obs_start_date = _obs_date_for_dow(
+            target_first_day_dow=MMWR_WEEK,
+            n_init=model.latent.n_initialization_points,
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                result = model.sample(
+                    n_days_post_init=n_days,
+                    population_size=1_000_000,
+                    obs_start_date=obs_start_date,
+                    ed={"obs": None},
+                )
+
+        n_total = model.latent.n_initialization_points + n_days
+        assert result is None
+        assert trace["ed_ascertainment_ed"]["value"].shape == (n_total,)
+        assert trace["ed_ascertainment_ed_weekly"]["value"].shape == (2, 1)
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

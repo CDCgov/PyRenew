@@ -195,7 +195,8 @@ class MultiSignalModel(Model):
 
         Observations with ``aggregation="weekly"`` or a
         ``day_of_week_rv`` require a calendar anchor, as do latent
-        processes with a calendar-week-aligned temporal process.
+        processes and ascertainment models with a calendar-week-aligned
+        temporal process.
         Rather than surface a downstream error, raise at the model
         entry naming the offending component.
 
@@ -208,7 +209,8 @@ class MultiSignalModel(Model):
         ------
         ValueError
             If ``obs_start_date`` is ``None`` and any observation or
-            the latent process requires a calendar anchor.
+            ascertainment model or the latent process requires a
+            calendar anchor.
         """
         if obs_start_date is not None:
             return
@@ -222,6 +224,15 @@ class MultiSignalModel(Model):
                 raise ValueError(
                     f"obs_start_date is required when any observation uses "
                     f"a day-of-week effect; observation '{name}' does."
+                )
+        for name, ascertainment_model in self.ascertainment_models.items():
+            required_signals = ascertainment_model.calendar_anchor_requirements()
+            if required_signals:
+                signals = ", ".join(repr(signal) for signal in required_signals)
+                raise ValueError(
+                    "obs_start_date is required when any ascertainment model uses "
+                    "a calendar-aligned temporal process; ascertainment model "
+                    f"'{name}' requires it for signal(s): {signals}."
                 )
         if self.latent.requires_calendar_anchor():
             raise ValueError(
