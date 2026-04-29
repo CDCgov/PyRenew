@@ -21,8 +21,9 @@ This tutorial demonstrates how to use the `MeasurementObservation` observation p
 We first explain the general framework, then illustrate with a wastewater viral concentration example.
 
 ```{python}
-# | label: setup
-# | output: false
+#| label: setup
+#| output: false
+
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -108,7 +109,8 @@ The sensor-level RVs must implement `sample(n_groups=...)`.
 Use `VectorizedVariable` to wrap simple distributions:
 
 ```{python}
-# | label: noise-model-general
+#| label: noise-model-general
+
 # Sensor modes: zero-centered, allowing positive or negative bias
 sensor_mode_rv = VectorizedVariable(
     "vec_sensor_mode",
@@ -232,7 +234,8 @@ The key difference from count data is that measurements are modeled on a continu
 ### Implementing the Wastewater class
 
 ```{python}
-# | label: wastewater-class
+#| label: wastewater-class
+
 from jax.typing import ArrayLike
 from pyrenew.metaclass import RandomVariable
 from pyrenew.observation.noise import MeasurementNoise
@@ -325,7 +328,8 @@ class Wastewater(MeasurementObservation):
 The shedding PMF describes what fraction of total viral shedding occurs on each day after infection:
 
 ```{python}
-# | label: shedding-pmf
+#| label: shedding-pmf
+
 # Peak shedding ~3 days after infection, continues for ~10 days
 shedding_pmf = jnp.array(
     [0.0, 0.05, 0.15, 0.25, 0.20, 0.15, 0.10, 0.05, 0.03, 0.02]
@@ -342,7 +346,8 @@ print(f"Mode: {mode_shedding_day} days, Mean: {mean_shedding_day:.1f} days")
 ```
 
 ```{python}
-# | label: plot-shedding
+#| label: plot-shedding
+
 # Visualize the shedding distribution
 shedding_df = pd.DataFrame(
     {"days": days, "probability": np.array(shedding_pmf)}
@@ -385,7 +390,8 @@ shedding_df = pd.DataFrame(
 **Genome copies and wastewater volume**
 
 ```{python}
-# | label: scaling-params
+#| label: scaling-params
+
 # Log10 genome copies shed per infection (typical range: 8-10)
 log10_genome_rv = DeterministicVariable("log10_genome", 9.0)
 
@@ -398,7 +404,8 @@ ml_per_person_per_day = 1000.0
 For wastewater, a "sensor" is a WWTP/lab pair---the combination of treatment plant and laboratory that determines measurement characteristics:
 
 ```{python}
-# | label: ww-noise-model
+#| label: ww-noise-model
+
 # Sensor-level mode: systematic differences between WWTP/lab pairs
 ww_sensor_mode_rv = VectorizedVariable(
     "vec_ww_sensor_mode",
@@ -422,7 +429,8 @@ ww_noise = HierarchicalNormalNoise(
 ### Creating the wastewater observation process
 
 ```{python}
-# | label: create-process
+#| label: create-process
+
 ww_process = Wastewater(
     name="wastewater",
     shedding_kinetics_rv=shedding_rv,
@@ -443,7 +451,8 @@ A temporal PMF of length $L$ covers lags 0 to $L-1$, requiring $L-1$ days of pri
 The method `lookback_days()` returns $L-1$; the first valid observation day is at index `lookback_days()`.
 
 ```{python}
-# | label: helper-function
+#| label: helper-function
+
 def first_valid_observation_day(obs_process) -> int:
     """Return the first day index with complete infection history."""
     return obs_process.lookback_days()
@@ -454,7 +463,8 @@ def first_valid_observation_day(obs_process) -> int:
 To see how infections spread into concentrations via shedding kinetics, we simulate from a single-day spike:
 
 ```{python}
-# | label: simulate-spike
+#| label: simulate-spike
+
 n_days = 50
 day_one = first_valid_observation_day(ww_process)
 
@@ -485,7 +495,8 @@ with numpyro.handlers.seed(rng_seed=42):
 We plot the resulting observations starting from the first valid observation day.
 
 ```{python}
-# | label: plot-spike-infections
+#| label: plot-spike-infections
+
 infections_df = pd.DataFrame(
     {
         "day": np.arange(n_plot_days),
@@ -525,7 +536,8 @@ plot_infections
 Sampling multiple times from the same infections shows the range of possible observations:
 
 ```{python}
-# | label: sample-realizations
+#| label: sample-realizations
+
 n_samples = 50
 ww_samples_list = []
 
@@ -552,7 +564,8 @@ ww_samples_df = pd.DataFrame(ww_samples_list)
 ```
 
 ```{python}
-# | label: plot-sampled-concentrations
+#| label: plot-sampled-concentrations
+
 # Compute mean across samples for each day
 mean_by_day = (
     ww_samples_df.groupby("day")["log_concentration"].mean().reset_index()
@@ -645,7 +658,8 @@ Each sensor has:
 These parameters are sampled once per sensor, then held fixed across all observations from that sensor.
 
 ```{python}
-# | label: multi-sensor
+#| label: multi-sensor
+
 num_sensors = 4
 
 # Use the same observation times and infections as the sampled-concentrations plot
@@ -676,7 +690,8 @@ multi_sensor_df = pd.DataFrame(
 ```
 
 ```{python}
-# | label: plot-multi-sensor
+#| label: plot-multi-sensor
+
 (
     p9.ggplot(
         multi_sensor_df, p9.aes(x="day", y="log_concentration", color="sensor")
@@ -711,7 +726,8 @@ Each subpopulation is observed by its own sensor.
 The observed concentrations reflect both the underlying infection differences AND the sensor-specific measurement characteristics.
 
 ```{python}
-# | label: multi-subpop
+#| label: multi-subpop
+
 # Two subpopulations with different infection patterns
 n_days_mp = 40
 infections_subpop1 = 1000.0 * jnp.exp(
@@ -748,7 +764,8 @@ multi_subpop_df = pd.DataFrame(
 ```
 
 ```{python}
-# | label: plot-multi-subpop
+#| label: plot-multi-subpop
+
 (
     p9.ggplot(
         multi_subpop_df,

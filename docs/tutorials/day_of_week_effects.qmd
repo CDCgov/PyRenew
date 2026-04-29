@@ -18,8 +18,9 @@ jupyter:
 ---
 
 ```{python}
-# | label: setup
-# | output: false
+#| label: setup
+#| output: false
+
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -62,7 +63,8 @@ When the effects sum to 7.0, the average daily multiplier is 1.0, preserving wee
 A typical pattern for ED visits might show weekday effects above 1.0 and weekend effects below 1.0:
 
 ```{python}
-# | label: define-dow-effect
+#| label: define-dow-effect
+
 dow_values = jnp.array([1.20, 1.15, 1.10, 1.05, 1.00, 0.75, 0.75])
 day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -71,7 +73,8 @@ print(f"Sum: {float(jnp.sum(dow_values)):.2f}")
 ```
 
 ```{python}
-# | label: plot-dow-effect
+#| label: plot-dow-effect
+
 dow_df = pd.DataFrame({"day": day_names, "effect": np.array(dow_values)})
 dow_df["day"] = pd.Categorical(
     dow_df["day"], categories=day_names, ordered=True
@@ -99,7 +102,8 @@ We construct two `PopulationCounts` observation processes using the same delay d
 The only difference is whether `day_of_week_rv` is provided.
 
 ```{python}
-# | label: create-processes
+#| label: create-processes
+
 hosp_delay_pmf = jnp.array(
     datasets.load_example_infection_admission_interval()[
         "probability_mass"
@@ -130,7 +134,8 @@ The `first_day_dow` parameter tells PyRenew which day of the week corresponds to
 Here we set `first_day_dow=0` (Monday).
 
 ```{python}
-# | label: simulate-and-sample
+#| label: simulate-and-sample
+
 day_one = process_no_dow.lookback_days()
 n_total = 130
 infections = 5000.0 * jnp.exp(0.03 * jnp.arange(n_total))
@@ -144,7 +149,8 @@ with numpyro.handlers.seed(rng_seed=0):
 ```
 
 ```{python}
-# | label: plot-predicted-comparison
+#| label: plot-predicted-comparison
+
 n_plot_days = n_total - day_one
 pred_rows = []
 for i in range(n_plot_days):
@@ -198,7 +204,8 @@ Changing it shifts which days receive which multiplier.
 Here we compare starting on Monday vs. Wednesday:
 
 ```{python}
-# | label: offset-comparison
+#| label: offset-comparison
+
 with numpyro.handlers.seed(rng_seed=0):
     result_monday = process_with_dow.sample(
         infections=infections, obs=None, first_day_dow=0
@@ -210,7 +217,8 @@ with numpyro.handlers.seed(rng_seed=0):
 ```
 
 ```{python}
-# | label: plot-offset-comparison
+#| label: plot-offset-comparison
+
 offset_rows = []
 for i in range(21):
     day_idx = day_one + i
@@ -268,7 +276,8 @@ Day-of-week effects shape the noise draws, not just the predicted means.
 The noise model samples from a distribution centered on the adjusted predictions, so sampled observations inherit the weekly pattern.
 
 ```{python}
-# | label: sample-noisy
+#| label: sample-noisy
+
 n_samples = 30
 noisy_results = []
 for seed in range(n_samples):
@@ -299,7 +308,8 @@ for seed in range(n_samples):
 ```
 
 ```{python}
-# | label: plot-noisy
+#| label: plot-noisy
+
 noisy_df = pd.DataFrame(noisy_results)
 mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
 
@@ -337,7 +347,8 @@ $$
 $$
 
 ```{python}
-# | label: compose-with-truncation
+#| label: compose-with-truncation
+
 reporting_delay_pmf = jnp.array([0.4, 0.3, 0.15, 0.08, 0.04, 0.02, 0.01])
 
 process_both = PopulationCounts(
@@ -361,7 +372,8 @@ with numpyro.handlers.seed(rng_seed=0):
 ```
 
 ```{python}
-# | label: plot-composed
+#| label: plot-composed
+
 compose_rows = []
 for i in range(n_plot_days):
     day_idx = day_one + i

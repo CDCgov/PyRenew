@@ -20,8 +20,9 @@ jupyter:
 This tutorial demonstrates how to use the `PopulationCounts` observation process to model count data such as hospital admissions, emergency department visits, or deaths.
 
 ```{python}
-# | label: setup
-# | output: false
+#| label: setup
+#| output: false
+
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -132,7 +133,8 @@ We load a delay distribution from PyRenew's example datasets, compute summary st
 The distribution peaks around day 8-9 post-infection.
 
 ```{python}
-# | label: delay-distribution
+#| label: delay-distribution
+
 inf_hosp_int = datasets.load_example_infection_admission_interval()
 hosp_delay_pmf = jnp.array(inf_hosp_int["probability_mass"].to_numpy())
 delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
@@ -148,7 +150,8 @@ print(
 ```
 
 ```{python}
-# | label: plot-delay-distribution
+#| label: plot-delay-distribution
+
 delay_df = pd.DataFrame(
     {"days": days, "probability": np.array(hosp_delay_pmf)}
 )
@@ -206,7 +209,8 @@ The concentration parameter for the negative binomial noise model is also fixed.
 In practice, both of these parameters would be given a somewhat informative prior and then inferred.
 
 ```{python}
-# | label: create-counts-process
+#| label: create-counts-process
+
 # Infection-hospitalization ratio (1% of infections lead to hospitalization)
 ihr_rv = DeterministicVariable("ihr", 0.01)
 
@@ -232,7 +236,8 @@ The method `lookback_days()` returns $L-1$; the first valid observation day is a
 Earlier days are marked invalid.
 
 ```{python}
-# | label: helper-function
+#| label: helper-function
+
 print(f"Required lookback: {hosp_process.lookback_days()} days")
 
 
@@ -246,7 +251,8 @@ def first_valid_observation_day(obs_process) -> int:
 To demonstrate how a `PopulationCounts` observation process works, we examine how infections occurring on a single day result in observed hospital admissions.
 
 ```{python}
-# | label: simulate-spike
+#| label: simulate-spike
+
 n_days = 100
 day_one = first_valid_observation_day(hosp_process)
 
@@ -259,7 +265,8 @@ infections = infections.at[infection_spike_day].set(2000)
 We plot the infections starting from day_one (the first valid observation day, after the lookback period).
 
 ```{python}
-# | label: plot-infections
+#| label: plot-infections
+
 # Plot relative to first valid observation day
 n_plot_days = n_days - day_one
 rel_spike_day = infection_spike_day - day_one
@@ -305,7 +312,8 @@ First, we compute the predicted admissions from the convolution alone, without o
 This gives the predicted number of observations $\mu(t)$.
 
 ```{python}
-# | label: predicted-no-noise
+#| label: predicted-no-noise
+
 # Compute predicted admissions (convolution only, no observation noise)
 from pyrenew.convolve import compute_delay_ascertained_incidence
 
@@ -324,7 +332,8 @@ predicted_admissions, offset = compute_delay_ascertained_incidence(
 This is equivalent to applying $\alpha$ after the convolution in the observation equation.
 
 ```{python}
-# | label: plot-predicted-no-noise
+#| label: plot-predicted-no-noise
+
 # Relative peak day for plotting
 peak_day = rel_spike_day + mode_delay
 
@@ -389,7 +398,8 @@ The negative binomial distribution adds stochastic variation around $\mu(t)$, co
 Sampling multiple times from the same infections shows the range of possible observations:
 
 ```{python}
-# | label: sample-realizations
+#| label: sample-realizations
+
 # Sample 50 realizations of hospital admissions from the same infection spike
 n_samples = 50
 samples_list = []
@@ -422,7 +432,8 @@ for i, val in enumerate(predicted_admissions[day_one:]):
 ```
 
 ```{python}
-# | label: plot-realizations
+#| label: plot-realizations
+
 samples_df = pd.DataFrame(samples_list)
 sampled_df = samples_df[samples_df["type"] == "sampled"]
 predicted_noise_df = samples_df[samples_df["type"] == "predicted"]
@@ -471,7 +482,8 @@ plot_50_samples
 ```
 
 ```{python}
-# | label: timeline-stats
+#| label: timeline-stats
+
 # Print timeline statistics
 print("Timeline Analysis:")
 print(
@@ -489,7 +501,8 @@ The ascertainment rate (here, the infection-hospitalization rate or IHR) directl
 We compare two contrasting IHR values: **0.5%** and **2.5%**.
 
 ```{python}
-# | label: compare-ihr
+#| label: compare-ihr
+
 # Two contrasting IHR values
 ihr_values = [0.005, 0.025]
 peak_value = 3000  # Peak infections
@@ -517,7 +530,8 @@ for ihr_val in ihr_values:
 ```
 
 ```{python}
-# | label: plot-ihr-comparisons
+#| label: plot-ihr-comparisons
+
 results_df = pd.DataFrame(results_list)
 
 plot_ihr = (
@@ -551,7 +565,8 @@ We compare three concentration values spanning two orders of magnitude:
 We hold daily infections constant over time so that any variation in the observed counts comes entirely from the observation model.
 
 ```{python}
-# | label: concentration-comparisons
+#| label: concentration-comparisons
+
 # Use constant infections
 peak_value = 2000
 infections_constant = peak_value * jnp.ones(n_days)
@@ -591,7 +606,8 @@ for conc_val in concentration_values:
 ```
 
 ```{python}
-# | label: plot-concentration-comparisons
+#| label: plot-concentration-comparisons
+
 conc_df = pd.DataFrame(conc_results)
 
 # Convert to ordered categorical
@@ -620,7 +636,8 @@ plot_concentration
 To use Poisson noise instead of negative binomial, change the noise model:
 
 ```{python}
-# | label: poisson-noise
+#| label: poisson-noise
+
 hosp_process_poisson = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=ihr_rv,
@@ -645,7 +662,8 @@ Since Poisson assumes variance equals the mean, it produces less variability tha
 To see the reduction in noise, it is necessary to keep the y-axis on the same scale as in the previous plot.
 
 ```{python}
-# | label: poisson-realizations
+#| label: poisson-realizations
+
 # Sample multiple realizations with Poisson noise
 n_replicates_poisson = 10
 
