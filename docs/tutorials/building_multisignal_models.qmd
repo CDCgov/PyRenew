@@ -9,7 +9,7 @@ jupyter:
     text_representation:
       extension: .qmd
       format_name: quarto
-      format_version: '1.0'
+      format_version: "1.0"
       jupytext_version: 1.18.1
   kernelspec:
     display_name: Python 3 (ipykernel)
@@ -89,20 +89,23 @@ from pyrenew.time import MMWR_WEEK
 
 Renewal models in PyRenew combine two types of components:
 
-1.  **Latent infection process**: Generates unobserved infections via the renewal equation, driven by a time-varying reproduction number $\mathcal{R}(t)$
+1. **Latent infection process**: Generates unobserved infections via the renewal equation, driven by a time-varying reproduction number $\mathcal{R}(t)$
 
-2.  **Observation processes**: Transform latent infections into observable signals (hospital admissions, wastewater concentrations, etc.) by applying delays, ascertainment, and noise
+2. **Observation processes**: Transform latent infections into observable signals (hospital admissions, wastewater concentrations, etc.) by applying delays, ascertainment, and noise
 
-A **multi-signal model** combines multiple observation processes—each representing a different data stream, e.g., hospital admissions, emergency deparatment visits, wastewater concentrations, which stem from the same underlying latent infection process. By jointly modeling these signals, we can improve estimation and prediction of the time-varying reproduction number $\mathcal{R}(t)$. Such a model must:
+A **multi-signal model** combines multiple observation processes---each representing a different data stream, e.g., hospital admissions, emergency deparatment visits, wastewater concentrations, which stem from the same underlying latent infection process.
+By jointly modeling these signals, we can improve estimation and prediction of the time-varying reproduction number $\mathcal{R}(t)$.
+Such a model must:
 
--   Generate a single coherent infection trajectory (or set of trajectories for subpopulations)
--   Route those infections to each observation process appropriately
--   Handle the initialization period required by delay distributions
+- Generate a single coherent infection trajectory (or set of trajectories for subpopulations)
+- Route those infections to each observation process appropriately
+- Handle the initialization period required by delay distributions
 
-The `PyrenewBuilder` class handles this plumbing. You specify:
+The `PyrenewBuilder` class handles this plumbing.
+You specify:
 
-1.  A single **latent process** (e.g., `SubpopulationInfections`) that defines how infections evolve.
-2.  One or more **observation processes** (e.g., `PopulationCounts`, `MeasurementObservation`) that define how infections become data.
+1. A single **latent process** (e.g., `SubpopulationInfections`) that defines how infections evolve.
+2. One or more **observation processes** (e.g., `PopulationCounts`, `MeasurementObservation`) that define how infections become data.
 
 The builder computes initialization requirements, wires components together, and produces a model ready for inference.
 
@@ -110,9 +113,9 @@ The builder computes initialization requirements, wires components together, and
 
 Before diving into multi-signal models, you may want to review these foundational tutorials:
 
--   **[Latent Infections](latent_infections.md)** and **[Latent Subpopulation Infections](latent_subpopulation_infections.md)**: Understanding temporal process choices for $\mathcal{R}(t)$
--   **[Observation Processes: Counts](observation_processes_counts.md)**: Modeling count data (admissions, deaths)
--   **[Observation Processes: Measurements](observation_processes_measurements.md)**: Modeling continuous data (wastewater)
+- **[Latent Infections](latent_infections.md)** and **[Latent Subpopulation Infections](latent_subpopulation_infections.md)**: Understanding temporal process choices for $\mathcal{R}(t)$
+- **[Observation Processes: Counts](observation_processes_counts.md)**: Modeling count data (admissions, deaths)
+- **[Observation Processes: Measurements](observation_processes_measurements.md)**: Modeling continuous data (wastewater)
 
 This tutorial shows how to combine these components into a complete multi-signal model.
 
@@ -120,18 +123,20 @@ This tutorial shows how to combine these components into a complete multi-signal
 
 This tutorial demonstrates building a multi-signal renewal model using:
 
--   `SubpopulationInfections` — subpopulations share a jurisdiction-level baseline $\mathcal{R}(t)$ with subpopulation-specific deviations
--   `PopulationCounts` — hospital admissions (jurisdiction-level)
--   A custom `Wastewater` class — viral concentrations (subpopulation-level)
+- `SubpopulationInfections` --- subpopulations share a jurisdiction-level baseline $\mathcal{R}(t)$ with subpopulation-specific deviations
+- `PopulationCounts` --- hospital admissions (jurisdiction-level)
+- A custom `Wastewater` class --- viral concentrations (subpopulation-level)
 
 ## Model Structure
 
 In this tutorial, we build a model that jointly fits two data streams to a shared latent infection process:
 
-- **Hospital admissions** — jurisdiction-level counts that reflect *total* infections across all subpopulations, delayed and underascertained
-- **Wastewater concentrations** — site-level measurements from a subset of subpopulations (catchment areas), reflecting viral shedding and dilution
+- **Hospital admissions** --- jurisdiction-level counts that reflect *total* infections across all subpopulations, delayed and underascertained
+- **Wastewater concentrations** --- site-level measurements from a subset of subpopulations (catchment areas), reflecting viral shedding and dilution
 
-The diagram below shows how data flows through the model. The latent process generates infection trajectories for all subpopulations. Each observation process receives the infections it needs — aggregated totals or per-subpopulation arrays — and transforms them into predicted observations via delays, ascertainment, shedding kinetics, and noise.
+The diagram below shows how data flows through the model.
+The latent process generates infection trajectories for all subpopulations.
+Each observation process receives the infections it needs --- aggregated totals or per-subpopulation arrays --- and transforms them into predicted observations via delays, ascertainment, shedding kinetics, and noise.
 
 ```mermaid
 flowchart TB
@@ -165,26 +170,29 @@ flowchart TB
 
 ### Infection Resolution
 
-Different observation processes observe different levels of the model hierarchy. Each observation process declares an **infection resolution** that determines what infection data it receives:
+Different observation processes observe different levels of the model hierarchy.
+Each observation process declares an **infection resolution** that determines what infection data it receives:
 
-| Resolution | Receives | Example signals |
-|----------------------|-------------------|-------------------------------|
-| `"aggregate"` | Aggregated infections (sum across all subpopulations), shape `(T,)` | Hospital admissions, case counts |
-| `"subpop"` | Infection matrix for all subpopulations, shape `(T, n_subpops)` | Wastewater, site-specific surveillance |
+  | Resolution    | Receives                                                            | Example signals                        |
+  | ------------- | ------------------------------------------------------------------- | -------------------------------------- |
+  | `"aggregate"` | Aggregated infections (sum across all subpopulations), shape `(T,)` | Hospital admissions, case counts       |
+  | `"subpop"`    | Infection matrix for all subpopulations, shape `(T, n_subpops)`     | Wastewater, site-specific surveillance |
 
 The `PyrenewBuilder` routes latent infections to observation processes based on each process's declared resolution.
 
-For subpopulation-level observations, the observation process selects which subpopulations it observes using `subpop_indices` provided at sample/fit time. This allows flexible observation patterns—for example, wastewater samples might only cover 5 of 6 subpopulations (catchment areas), while the 6th represents areas without wastewater monitoring.
+For subpopulation-level observations, the observation process selects which subpopulations it observes using `subpop_indices` provided at sample/fit time.
+This allows flexible observation patterns---for example, wastewater samples might only cover 5 of 6 subpopulations (catchment areas), while the 6th represents areas without wastewater monitoring.
 
 With this structure in mind, we'll now define each component following the generative direction: first the latent infection process, then the observation processes.
 
 ## Latent Infection Process
 
-Latent infection processes implement the renewal equation to generate infection trajectories. All latent processes share common components:
+Latent infection processes implement the renewal equation to generate infection trajectories.
+All latent processes share common components:
 
--   **Generation interval**: PMF for secondary infection timing
--   **Initial infections (I0)**: Starting condition for the renewal process
--   **Temporal dynamics**: How $\mathcal{R}(t)$ evolves over time
+- **Generation interval**: PMF for secondary infection timing
+- **Initial infections (I0)**: Starting condition for the renewal process
+- **Temporal dynamics**: How $\mathcal{R}(t)$ evolves over time
 
 ### Generation Interval
 
@@ -203,14 +211,14 @@ print(f"Generation interval length: {len(gen_int_pmf)} days")
 
 ### I0: Initial Infections
 
-The initial infections RV `I0_rv` specifies the **proportion of the population infected** at the first observation time. This must be a value in the interval (0, 1]. We use a Beta prior centered near a small value:
+The initial infections RV `I0_rv` specifies the **proportion of the population infected** at the first observation time.
+This must be a value in the interval (0, 1\].
+We use a Beta prior centered near a small value:
 
 ```{python}
 # | label: initial-infections
 I0_rv = DistributionalVariable("I0", dist.Beta(1, 100))
 ```
-
-
 
 ### Log Rt at time $0$
 
@@ -227,8 +235,8 @@ log_rt_time_0_rv = DistributionalVariable(
 
 We configure two temporal processes:
 
--   **Jurisdiction-level** (`baseline_rt_process`): AR(1) process for the baseline $\mathcal{R}(t)$
--   **Subpopulation-level** (`subpop_rt_deviation_process`): RandomWalk for subpopulation deviations
+- **Jurisdiction-level** (`baseline_rt_process`): AR(1) process for the baseline $\mathcal{R}(t)$
+- **Subpopulation-level** (`subpop_rt_deviation_process`): RandomWalk for subpopulation deviations
 
 The RandomWalk allows flexible evolution of subpopulation-specific transmission without mean reversion.
 
@@ -246,9 +254,9 @@ subpop_rt_deviation_process = RandomWalk(innovation_sd=0.025)
 The renewal equation is evaluated on the model's daily time axis, but the temporal process for $\mathcal{R}(t)$ does not have to sample a new parameter every day.
 This separates three model choices:
 
--   **Parameter cadence**: how often the $\mathcal{R}(t)$ temporal process samples a new latent value
--   **Model time axis**: the daily axis used by the renewal equation and delay convolutions
--   **Observation cadence**: the temporal granularity for each signal, such as daily ED visits or weekly hospital admissions
+- **Parameter cadence**: how often the $\mathcal{R}(t)$ temporal process samples a new latent value
+- **Model time axis**: the daily axis used by the renewal equation and delay convolutions
+- **Observation cadence**: the temporal granularity for each signal, such as daily ED visits or weekly hospital admissions
 
 The AR(1) process above samples one value per model day:
 
@@ -276,30 +284,31 @@ The model handles the calendar bookkeeping and forwards the day-of-week informat
 
 ## Observation Processes
 
-Observation processes transform latent infections into observable signals and define the statistical model linking predictions to data. Each observation process:
+Observation processes transform latent infections into observable signals and define the statistical model linking predictions to data.
+Each observation process:
 
--   Has a unique **name** that identifies the signal in model outputs
--   Declares what **infection resolution** it needs (`"aggregate"` or `"subpop"`)
--   Applies signal-specific transformations (ascertainment, delay convolution, shedding kinetics)
--   Defines the noise model
+- Has a unique **name** that identifies the signal in model outputs
+- Declares what **infection resolution** it needs (`"aggregate"` or `"subpop"`)
+- Applies signal-specific transformations (ascertainment, delay convolution, shedding kinetics)
+- Defines the noise model
 
 ### Signal Naming
 
-Each observation process requires a `name` parameter—a short, meaningful identifier like `"hospital"` or `"wastewater"`. This name serves as the single identifier for the signal throughout the model:
+Each observation process requires a `name` parameter---a short, meaningful identifier like `"hospital"` or `"wastewater"`.
+This name serves as the single identifier for the signal throughout the model:
 
--   **Numpyro sites**: Prefixes all sample and deterministic sites (e.g., `hospital_obs`, `hospital_predicted`)
--   **Data binding**: Becomes the keyword argument for passing data to `model.run()` (e.g., `hospital={...}`)
+- **Numpyro sites**: Prefixes all sample and deterministic sites (e.g., `hospital_obs`, `hospital_predicted`)
+- **Data binding**: Becomes the keyword argument for passing data to `model.run()` (e.g., `hospital={...}`)
 
 This unified naming provides several benefits:
 
--   **Interpretable outputs**: When examining MCMC samples or posterior diagnostics, site names like `hospital_predicted` immediately indicate which signal each quantity refers to
--   **Multiple signals of the same type**: You can include multiple count observations (e.g., hospital admissions and deaths) by giving each a distinct name
--   **Clearer debugging**: Error messages and trace inspection show meaningful signal names rather than generic identifiers
+- **Interpretable outputs**: When examining MCMC samples or posterior diagnostics, site names like `hospital_predicted` immediately indicate which signal each quantity refers to
+- **Multiple signals of the same type**: You can include multiple count observations (e.g., hospital admissions and deaths) by giving each a distinct name
+- **Clearer debugging**: Error messages and trace inspection show meaningful signal names rather than generic identifiers
 
 ### Hospital Admissions
 
-In this example we use a dataset consisting of hospital admissions for COVID-19 across California
-for the first 10 months of 2023 (as reported to the CDC).
+In this example we use a dataset consisting of hospital admissions for COVID-19 across California for the first 10 months of 2023 (as reported to the CDC).
 
 ```{python}
 # | label: load-hospital-data
@@ -396,9 +405,9 @@ print(f"  Delay PMF length: {len(inf_to_hosp_pmf)} days")
 
 #### Wastewater Observation Process
 
-The `MeasurementObservation` base class handles continuous observation processes. Domain-specific
-implementations subclass it and implement `_predicted_obs()` to transform infections
-into predicted values. See `observation_processes_measurements.md` for a detailed tutorial.
+The `MeasurementObservation` base class handles continuous observation processes.
+Domain-specific implementations subclass it and implement `_predicted_obs()` to transform infections into predicted values.
+See `observation_processes_measurements.md` for a detailed tutorial.
 
 ```{python}
 # | label: wastewater-class
@@ -454,8 +463,7 @@ class Wastewater(MeasurementObservation):
 
 #### Wastewater Data
 
-For the wastewater data, we use a simulated dataset for California with realistic noise patterns
-that covers the same time period.
+For the wastewater data, we use a simulated dataset for California with realistic noise patterns that covers the same time period.
 
 ```{python}
 # | label: load-wastewater-data
@@ -483,7 +491,9 @@ if ww_n_sites > 5:
     print(f"  ... and {ww_n_sites - 5} more")
 ```
 
-Wastewater observations are site-level: each measurement is associated with a specific measurement site. The Wastewater observation process uses LogNormalNoise, which takes hierarchical priors for the site-level mode and standard deviation parameters. This enables partial pooling across measurement sites.
+Wastewater observations are site-level: each measurement is associated with a specific measurement site.
+The Wastewater observation process uses LogNormalNoise, which takes hierarchical priors for the site-level mode and standard deviation parameters.
+This enables partial pooling across measurement sites.
 
 Here we specify HierarchicalNormalPrior for the site-level mode and GammaGroupSdPrior for the standard deviation.
 
@@ -551,11 +561,12 @@ builder = PyrenewBuilder()
 
 The `PyrenewBuilder` object has 3 key methods:
 
--   `configure_latent`
--   `add_observation`
--   `build`
+- `configure_latent`
+- `add_observation`
+- `build`
 
-Methods `configure_latent` and `add_observation` can be called in any order. Method `build` is called once all processes have been specified in the model.
+Methods `configure_latent` and `add_observation` can be called in any order.
+Method `build` is called once all processes have been specified in the model.
 
 ### Configuring the Latent Process
 
@@ -596,22 +607,22 @@ print(f"  Observation processes: {list(model.observations.keys())}")
 ### Model  Identifiability.
 
 The renewal equation is linear in the initial infections `I0_rv`, so scaling `I0_rv` by a factor $c$ scales the entire infection trajectory by $c$.
-In practice, `I0_rv` is weakly identified because each observation process links infections to data through a signal-specific ascertainment rate $\alpha_s$ — the probability that an infection is observed as an event in signal $s$.
+In practice, `I0_rv` is weakly identified because each observation process links infections to data through a signal-specific ascertainment rate $\alpha_s$ --- the probability that an infection is observed as an event in signal $s$.
 Doubling `I0_rv` while halving all ascertainment rates produces identical expected observations.
 Without external information to anchor either the ascertainment rates or the absolute infection level, the data cannot distinguish "more infections, lower ascertainment" from "fewer infections, higher ascertainment."
 The priors on `I0_rv` and on the ascertainment rates resolve this ambiguity.
-
 
 ## Fitting the Model to Data:  `model.run()`
 
 When you call `model.run()`, you supply two types of information:
 
-- **Observation data** — one data dictionary per registered observation process
-- **Population structure** — how the jurisdiction is divided into subpopulations
+- **Observation data** --- one data dictionary per registered observation process
+- **Population structure** --- how the jurisdiction is divided into subpopulations
 
 ### Shared Time Axis
 
-All observation data uses a **shared time axis** `[0, n_total)` where `n_total = n_init + n_days`. This shared axis aligns observations with the internal infection vectors:
+All observation data uses a **shared time axis** `[0, n_total)` where `n_total = n_init + n_days`.
+This shared axis aligns observations with the internal infection vectors:
 
 - Index 0 corresponds to the first day of the initialization period
 - Index `n_init` corresponds to the first day of actual observations
@@ -619,8 +630,8 @@ All observation data uses a **shared time axis** `[0, n_total)` where `n_total =
 
 The model provides helper methods to align your data with this shared axis:
 
-- `model.pad_observations(obs)` — prepends `n_init` NaN values to dense observation vectors
-- `model.shift_times(times)` — adds `n_init` to sparse time indices
+- `model.pad_observations(obs)` --- prepends `n_init` NaN values to dense observation vectors
+- `model.shift_times(times)` --- adds `n_init` to sparse time indices
 
 ### Observation Data by Signal Type
 
@@ -641,7 +652,9 @@ hospital={
 }
 ```
 
-The `pad_observations` method prepends `n_init` NaN values. NaN marks the initialization period where predictions exist but observations do not. You can also use NaN to mark missing data within the observation period.
+The `pad_observations` method prepends `n_init` NaN values.
+NaN marks the initialization period where predictions exist but observations do not.
+You can also use NaN to mark missing data within the observation period.
 
 #### Subpopulation-level signals (sparse)
 
@@ -659,14 +672,22 @@ wastewater={
 
 The `shift_times` method adds `n_init` to convert from natural coordinates (0 = first observation day) to the shared time axis.
 
-**Understanding `subpop_indices`**: The latent process generates infections for all subpopulations as a matrix of shape `(T, n_subpops)`. Each observation selects which column (subpopulation) it came from using `subpop_indices`. This is how observation processes "know" which subpopulations they observe—the user specifies this mapping at sample/run time.
+**Understanding `subpop_indices`**: The latent process generates infections for all subpopulations as a matrix of shape `(T, n_subpops)`.
+Each observation selects which column (subpopulation) it came from using `subpop_indices`.
+This is how observation processes "know" which subpopulations they observe---the user specifies this mapping at sample/run time.
 
-A **subpopulation** is a portion of the jurisdiction's population (e.g., a catchment area). A **sensor** is a measurement source — typically a WWTP/lab pair — that produces observations. Multiple sensors can observe the same subpopulation (e.g., different labs processing samples from the same catchment), so `subpop_indices` and `sensor_indices` may differ.
+A **subpopulation** is a portion of the jurisdiction's population (e.g., a catchment area).
+A **sensor** is a measurement source --- typically a WWTP/lab pair --- that produces observations.
+Multiple sensors can observe the same subpopulation (e.g., different labs processing samples from the same catchment), so `subpop_indices` and `sensor_indices` may differ.
 
--   `subpop_indices` links each observation to the appropriate infection column (0-indexed into the subpopulations)
--   `sensor_indices` selects which sensor's noise parameters (mode and sd) to apply
+- `subpop_indices` links each observation to the appropriate infection column (0-indexed into the subpopulations)
+- `sensor_indices` selects which sensor's noise parameters (mode and sd) to apply
 
-**Example**: A jurisdiction has 6 subpopulations (indices 0-5), where 5 have wastewater monitoring and 1 does not. The `subpop_fractions` array has 6 elements. If subpopulation 2 lacks wastewater monitoring, wastewater observations would have `subpop_indices` values only in {0, 1, 3, 4, 5}—never 2. The monitored subpopulations need not be contiguous. The latent process still generates infections for all 6 subpopulations; the wastewater observation just doesn't see subpopulation 2.
+**Example**: A jurisdiction has 6 subpopulations (indices 0-5), where 5 have wastewater monitoring and 1 does not.
+The `subpop_fractions` array has 6 elements.
+If subpopulation 2 lacks wastewater monitoring, wastewater observations would have `subpop_indices` values only in {0, 1, 3, 4, 5}---never 2.
+The monitored subpopulations need not be contiguous.
+The latent process still generates infections for all 6 subpopulations; the wastewater observation just doesn't see subpopulation 2.
 
 ### Population Structure
 
@@ -679,10 +700,13 @@ model.run(
 )
 ```
 
-This specifies 6 subpopulations with their population fractions. The fractions must sum to 1.0. The latent process generates infections for all 6 subpopulations.
+This specifies 6 subpopulations with their population fractions.
+The fractions must sum to 1.0.
+The latent process generates infections for all 6 subpopulations.
 
-Which subpopulations each observation process "sees" is determined by the `subpop_indices` in the observation data, not by the population structure. For example, if wastewater monitoring covers only 5 of the 6 subpopulations (say, all except subpopulation 2), the wastewater observation data would have `subpop_indices` values in {0, 1, 3, 4, 5} but never 2. The monitored subpopulations can be any subset of {0, ..., n_subpops-1}.
-
+Which subpopulations each observation process "sees" is determined by the `subpop_indices` in the observation data, not by the population structure.
+For example, if wastewater monitoring covers only 5 of the 6 subpopulations (say, all except subpopulation 2), the wastewater observation data would have `subpop_indices` values in {0, 1, 3, 4, 5} but never 2.
+The monitored subpopulations can be any subset of {0, ..., n_subpops-1}.
 
 ### Example `model.run()` Call
 
@@ -700,8 +724,8 @@ model.run(
 samples = model.mcmc.get_samples()
 ```
 
-where `**obs_data` is a data dictionary which supplies the observation start date as `obs_start_date`  and a data dictionary for each set of signal data, where the name of the data dictionary corresponds to the signal name registered on the builder.
-For this example,  such a data dictionary would have the following structure:
+where `**obs_data` is a data dictionary which supplies the observation start date as `obs_start_date` and a data dictionary for each set of signal data, where the name of the data dictionary corresponds to the signal name registered on the builder.
+For this example, such a data dictionary would have the following structure:
 
 ```python
 {
@@ -719,10 +743,11 @@ For this example,  such a data dictionary would have the following structure:
 }
 ```
 
-
 ## Running the Model
 
-First we declare the population structure. We have 6 subpopulations, where 5 have wastewater monitoring and 1 does not. The subpopulations with wastewater monitoring need not be contiguous indices—they could be any subset of {0, 1, ..., n_subpops-1}.
+First we declare the population structure.
+We have 6 subpopulations, where 5 have wastewater monitoring and 1 does not.
+The subpopulations with wastewater monitoring need not be contiguous indices---they could be any subset of {0, 1, ..., n_subpops-1}.
 
 ```{python}
 # | label: population-structure
@@ -866,8 +891,7 @@ print(f"Elapsed time: {elapsed_90:.1f} seconds")
 
 We use [ArviZ](https://python.arviz.org/en/stable/) to assess MCMC convergence and mixing via the $\hat{R}$ statistic and effective sample size (ESS).
 Before running these diagnostics, it is necessary to we trim the first `n_init` time steps from all time-series variables.
-Since the model cannot estimate latent infections until it has seen a full generation interval's worth of data,
-these early time steps have no meaningful epidemiological interpretation and therefore should be excluded from summaries and visualizations.
+Since the model cannot estimate latent infections until it has seen a full generation interval's worth of data, these early time steps have no meaningful epidemiological interpretation and therefore should be excluded from summaries and visualizations.
 
 ```{python}
 # | label: helper-trim-time
@@ -925,7 +949,9 @@ print(f"  Mean 90% CI width: {ci_width_90.mean():,.0f} infections")
 print(f"  Median infections (day 45): {quantiles_90['q50'][45]:,.0f}")
 ```
 
-Finally, we visualize the posterior latent infections alongside observed hospitalizations. Note that **hospital admissions lag behind infections** by the infection-to-hospitalization delay (mode ~10 days in our delay PMF). When comparing the two panels, peaks in the infection curve should precede corresponding peaks in hospitalizations by roughly 10-14 days.
+Finally, we visualize the posterior latent infections alongside observed hospitalizations.
+Note that **hospital admissions lag behind infections** by the infection-to-hospitalization delay (mode \~10 days in our delay PMF).
+When comparing the two panels, peaks in the infection curve should precede corresponding peaks in hospitalizations by roughly 10-14 days.
 
 ```{python}
 # | label: fig-posterior-90
@@ -1146,7 +1172,7 @@ plot_df_180["signal"] = pd.Categorical(
 
 ### Comparing 90-Day vs 180-Day Fits
 
-Comparing the two fits reveals where uncertainty reduction occurs—and why it matters for forecasting.
+Comparing the two fits reveals where uncertainty reduction occurs---and why it matters for forecasting.
 
 ```{python}
 # | label: compare-fits
@@ -1188,27 +1214,30 @@ for start, end, label in [
     )
 ```
 
-Notice that the uncertainty reduction is concentrated in days 60-90—the final month of the 90-day window. Earlier periods (days 0-60) show little change because both fits have sufficient future data to constrain those estimates.
+Notice that the uncertainty reduction is concentrated in days 60-90---the final month of the 90-day window.
+Earlier periods (days 0-60) show little change because both fits have sufficient future data to constrain those estimates.
 
-This pattern has a direct implication for forecasting: **renewal models are most uncertain at the edge of the observation window**. Future observations constrain past latent infections through the renewal equation, but when predicting beyond available data, this constraint disappears. The high uncertainty in days 60-90 of the 90-day fit is exactly what we'd expect when forecasting 30 days ahead—there's no future signal to anchor the estimates.
+This pattern has a direct implication for forecasting: **renewal models are most uncertain at the edge of the observation window**.
+Future observations constrain past latent infections through the renewal equation, but when predicting beyond available data, this constraint disappears.
+The high uncertainty in days 60-90 of the 90-day fit is exactly what we'd expect when forecasting 30 days ahead---there's no future signal to anchor the estimates.
 
 ## Summary
 
 This tutorial demonstrated composing a multi-signal renewal model using `PyrenewBuilder`:
 
-1.  **Configure latent process** (`configure_latent`): generation interval, initial infections, temporal dynamics
-2.  **Add observation processes** (`add_observation`): each declares its infection resolution and gets a name for data binding
-3.  **Build and run** (`build`, `model.run`): the model routes infections to observations based on resolution and runs NUTS inference
+1. **Configure latent process** (`configure_latent`): generation interval, initial infections, temporal dynamics
+2. **Add observation processes** (`add_observation`): each declares its infection resolution and gets a name for data binding
+3. **Build and run** (`build`, `model.run`): the model routes infections to observations based on resolution and runs NUTS inference
 
 ### Key Concepts
 
--   **Two-part structure**: Renewal models separate latent infection dynamics from observation processes
--   **Infection resolution**: Observation processes declare whether they need aggregate or subpop-level infections
--   **Data routing**: `PyrenewBuilder` automatically routes infection trajectories to the appropriate observation processes
--   **Time alignment**: Observations must be offset by `n_initialization_points` to align with model time
+- **Two-part structure**: Renewal models separate latent infection dynamics from observation processes
+- **Infection resolution**: Observation processes declare whether they need aggregate or subpop-level infections
+- **Data routing**: `PyrenewBuilder` automatically routes infection trajectories to the appropriate observation processes
+- **Time alignment**: Observations must be offset by `n_initialization_points` to align with model time
 
 ### Next Steps
 
--   Explore different temporal processes for $\mathcal{R}(t)$ in the [Latent Infections](latent_infections.md) and [Latent Subpopulation Infections](latent_subpopulation_infections.md) tutorials
--   Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.md)
--   Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.md)
+- Explore different temporal processes for $\mathcal{R}(t)$ in the [Latent Infections](latent_infections.md) and [Latent Subpopulation Infections](latent_subpopulation_infections.md) tutorials
+- Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.md)
+- Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.md)

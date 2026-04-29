@@ -9,7 +9,7 @@ jupyter:
     text_representation:
       extension: .qmd
       format_name: quarto
-      format_version: '1.0'
+      format_version: "1.0"
       jupytext_version: 1.18.1
   kernelspec:
     display_name: Python 3 (ipykernel)
@@ -48,7 +48,9 @@ Ignoring this weekly periodicity forces the noise model to absorb systematic var
 
 PyRenew models day-of-week effects as a **multiplicative adjustment** applied to predicted counts after the delay convolution and ascertainment scaling:
 
-$$\lambda(t) = d_{w(t)} \cdot \alpha \sum_{s} I(t-s)\,\pi(s)$$
+$$
+\lambda(t) = d_{w(t)} \cdot \alpha \sum_{s} I(t-s)\,\pi(s)
+$$
 
 where $d_{w(t)}$ is the day-of-week multiplier for the weekday of timepoint $t$, $\alpha$ is the ascertainment rate, and $\pi(s)$ is the delay PMF.
 The effect vector $\mathbf{d} = (d_0, d_1, \ldots, d_6)$ has one entry per day (0=Monday through 6=Sunday, ISO convention).
@@ -187,7 +189,7 @@ pred_df["type"] = pd.Categorical(
 ```
 
 Without the day-of-week effect the predicted curve is smooth.
-With it, the curve oscillates with a 7-day period — dipping on weekends and rising on weekdays — while following the same overall trend.
+With it, the curve oscillates with a 7-day period --- dipping on weekends and rising on weekdays --- while following the same overall trend.
 
 ## Effect of the offset
 
@@ -255,7 +257,7 @@ offset_df["offset"] = pd.Categorical(
 ```
 
 The two curves have the same shape but are phase-shifted: their weekend dips fall on different days.
-Getting `first_day_dow` right matters — a misaligned offset would attribute Monday's high to Sunday or vice versa.
+Getting `first_day_dow` right matters --- a misaligned offset would attribute Monday's high to Sunday or vice versa.
 
 When using `MultiSignalModel`, pass `obs_start_date` (the date of the first observation day) to `model.sample()` or `model.run()`.
 The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it.
@@ -323,14 +325,16 @@ mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
 ```
 
 The top panel shows smooth variation around the trend.
-The bottom panel shows systematic weekly oscillation in both the mean (red) and individual samples (blue) — the weekend dips are visible even through the noise.
+The bottom panel shows systematic weekly oscillation in both the mean (red) and individual samples (blue) --- the weekend dips are visible even through the noise.
 
 ## Composing with right-truncation
 
 Day-of-week effects and right-truncation are independent adjustments that compose naturally.
 Day-of-week is applied first (adjusting the expected counts for reporting patterns), then right-truncation scales down recent counts for incomplete reporting:
 
-$$\lambda(t) = F(k_t) \cdot d_{w(t)} \cdot \alpha \sum_s I(t-s)\,\pi(s)$$
+$$
+\lambda(t) = F(k_t) \cdot d_{w(t)} \cdot \alpha \sum_s I(t-s)\,\pi(s)
+$$
 
 ```{python}
 # | label: compose-with-truncation
@@ -403,16 +407,16 @@ compose_df["type"] = pd.Categorical(
 
 The two curves agree in the early period.
 Near the right edge, right-truncation pulls the curve downward on top of the weekly oscillation.
-Each adjustment operates on its own concern — weekly reporting patterns vs. incomplete recent data — and they combine multiplicatively without interfering.
+Each adjustment operates on its own concern --- weekly reporting patterns vs. incomplete recent data --- and they combine multiplicatively without interfering.
 
 ## Summary
 
 Day-of-week adjustment is enabled by passing a `day_of_week_rv` at construction time and a `first_day_dow` at sample time.
 
-| Parameter | Where | Purpose |
-|-----------|-------|---------|
-| `day_of_week_rv` | Constructor | 7-element multiplicative effect vector (0=Mon, 6=Sun) |
-| `first_day_dow` | `sample()` | Day of the week for element 0 of the time axis |
+  | Parameter        | Where       | Purpose                                               |
+  | ---------------- | ----------- | ----------------------------------------------------- |
+  | `day_of_week_rv` | Constructor | 7-element multiplicative effect vector (0=Mon, 6=Sun) |
+  | `first_day_dow`  | `sample()`  | Day of the week for element 0 of the time axis        |
 
 When either is `None`, the adjustment is disabled and the process behaves identically to one without day-of-week effects.
 

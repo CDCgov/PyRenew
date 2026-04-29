@@ -9,7 +9,7 @@ jupyter:
     text_representation:
       extension: .qmd
       format_name: quarto
-      format_version: '1.0'
+      format_version: "1.0"
       jupytext_version: 1.18.1
   kernelspec:
     display_name: Python 3 (ipykernel)
@@ -48,10 +48,10 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 
 ## Overview
 
-
 `SubpopulationInfections` extends the renewal model to a population composed of $K$ subpopulations, each with its own latent infection trajectory.
 
-As in the single-population case, infections evolve according to the renewal equation. For each subpopulation $k = 1, \dots, K$, we define
+As in the single-population case, infections evolve according to the renewal equation.
+For each subpopulation $k = 1, \dots, K$, we define
 
 $$
 I_k(t) = \mathcal{R}_k(t) \sum_{\tau=1}^{G} I_k(t - \tau)\, w_\tau,
@@ -89,7 +89,8 @@ Because deviations are additive on the log scale, they act multiplicatively on $
 
 ### Aggregation
 
-Each subpopulation produces its own infection trajectory $I_k(t)$. These are combined into an aggregate infection process using population fractions $p_k$, where $p_k$ is the fraction of the total population in subpopulation $k$, with
+Each subpopulation produces its own infection trajectory $I_k(t)$.
+These are combined into an aggregate infection process using population fractions $p_k$, where $p_k$ is the fraction of the total population in subpopulation $k$, with
 
 $$
 \sum_{k=1}^{K} p_k = 1, \qquad p_k \ge 0.
@@ -112,9 +113,10 @@ This model generalizes the single-population renewal model:
 
 When all $\delta_k(t) = 0$, the model reduces to the shared (single-population) case.
 
-This tutorial assumes familiarity with the renewal equation, generation interval, initial conditions (`I0`, `log_rt_time_0`), and temporal processes. See [Latent Infections](latent_infections.md) for that background.
+This tutorial assumes familiarity with the renewal equation, generation interval, initial conditions (`I0`, `log_rt_time_0`), and temporal processes.
+See [Latent Infections](latent_infections.md) for that background.
 
----
+--------------------------------------------------------------------------------
 
 ## Model Structure
 
@@ -130,12 +132,10 @@ This tutorial assumes familiarity with the renewal equation, generation interval
 
 Two temporal processes define the evolution of $\log \mathcal{R}_k(t)$:
 
-- **`baseline_rt_process`**
-  Temporal process for $\log \mathcal{R}_{\text{baseline}}(t)$.
+- **`baseline_rt_process`** Temporal process for $\log \mathcal{R}_{\text{baseline}}(t)$.
   Produces a single trajectory shared across all subpopulations.
 
-- **`subpop_rt_deviation_process`**
-  Temporal process for $\delta_k(t)$.
+- **`subpop_rt_deviation_process`** Temporal process for $\delta_k(t)$.
   Produces $K$ trajectories (one per subpopulation), which are centered at each time point to satisfy the sum-to-zero constraint.
 
 Together, these define the full set of reproduction numbers:
@@ -147,10 +147,10 @@ $$
 \mathcal{R}_k(t) = \exp\big(\log \mathcal{R}_k(t)\big).
 $$
 
-
 ### Population structure
 
-Population fractions $p_k$ are provided at **sample time**, not at model construction. This allows a single model specification to be reused across different jurisdictions or stratifications.
+Population fractions $p_k$ are provided at **sample time**, not at model construction.
+This allows a single model specification to be reused across different jurisdictions or stratifications.
 
 ### Random variables
 
@@ -160,7 +160,6 @@ As in other PyRenew models, all inputs are specified as `RandomVariable`s:
 - `DistributionalVariable` for parameters with priors (used in inference)
 
 In practice, the temporal processes and initial conditions are typically given prior distributions, allowing the model to infer both shared and subpopulation-specific transmission dynamics.
-
 
 ```{python}
 # | label: model-setup
@@ -197,10 +196,13 @@ model = SubpopulationInfections(
 
 ## The Sum-to-Zero Constraint
 
-Without a constraint, the baseline and deviations are not identifiable: shifting the baseline up by some amount $c$ and all deviations down by $c$ produces the same subpopulation $\mathcal{R}_k(t)$ values. `SubpopulationInfections` enforces $\sum_k \delta_k(t) = 0$ at every time step by centering the raw deviation trajectories.
+Without a constraint, the baseline and deviations are not identifiable: shifting the baseline up by some amount $c$ and all deviations down by $c$ produces the same subpopulation $\mathcal{R}_k(t)$ values.
+`SubpopulationInfections` enforces $\sum_k \delta_k(t) = 0$ at every time step by centering the raw deviation trajectories.
 This ensures $\mathcal{R}_{\text{baseline}}(t)$ is the *unweighted* geometric mean of the subpopulation $\mathcal{R}_k(t)$ values, so the baseline represents the typical transmission level across subpopulations.
 
-Note that this is the unweighted mean across subpopulations, not population-weighted by $p_k$. As a result, $\mathcal{R}_{\text{baseline}}(t)$ does **not** in general equal the jurisdiction-level reproduction number implied by the aggregate infection trajectory $I_{\text{aggregate}}(t)$. When subpopulations differ in size, a small subpopulation with a large $\mathcal{R}_k(t)$ contributes equally to the baseline but only marginally to the aggregate.
+Note that this is the unweighted mean across subpopulations, not population-weighted by $p_k$.
+As a result, $\mathcal{R}_{\text{baseline}}(t)$ does **not** in general equal the jurisdiction-level reproduction number implied by the aggregate infection trajectory $I_{\text{aggregate}}(t)$.
+When subpopulations differ in size, a small subpopulation with a large $\mathcal{R}_k(t)$ contributes equally to the baseline but only marginally to the aggregate.
 
 ```{python}
 # | label: verify-constraint
@@ -224,29 +226,34 @@ print(
 The baseline process governs the jurisdiction-level trend in $\mathcal{R}(t)$.
 The same temporal process options apply as in `PopulationInfections` (see [Temporal Process Choice](latent_infections.md#temporal-process-choice)): AR(1) for mean reversion, DifferencedAR1 for persistent trends with stabilizing rate of change, RandomWalk for unconstrained drift.
 
-We use DifferencedAR1 with small `innovation_sd` for the baseline throughout this tutorial. The prior predictive for baseline $\mathcal{R}(t)$ behaves much like the corresponding `PopulationInfections` example, so we do not repeat that full comparison here. The focus of this tutorial is the deviation process and how it changes the spread of subpopulation trajectories around the baseline.
+We use DifferencedAR1 with small `innovation_sd` for the baseline throughout this tutorial.
+The prior predictive for baseline $\mathcal{R}(t)$ behaves much like the corresponding `PopulationInfections` example, so we do not repeat that full comparison here.
+The focus of this tutorial is the deviation process and how it changes the spread of subpopulation trajectories around the baseline.
 
 The same high-level decision rules apply here:
 
-| If you believe... | Consider |
-|-------------------|----------|
-| Jurisdiction-wide $\mathcal{R}(t)$ should stay near a long-run level | `AR1` for the baseline |
-| Jurisdiction-wide $\mathcal{R}(t)$ may drift over the modeled horizon | `DifferencedAR1` for the baseline |
-| Local differences should fade back toward the baseline | `AR1` for deviations |
-| Local differences can persist or accumulate | `RandomWalk` for deviations |
+  | If you believe...                                                     | Consider                          |
+  | --------------------------------------------------------------------- | --------------------------------- |
+  | Jurisdiction-wide $\mathcal{R}(t)$ should stay near a long-run level  | `AR1` for the baseline            |
+  | Jurisdiction-wide $\mathcal{R}(t)$ may drift over the modeled horizon | `DifferencedAR1` for the baseline |
+  | Local differences should fade back toward the baseline                | `AR1` for deviations              |
+  | Local differences can persist or accumulate                           | `RandomWalk` for deviations       |
 
 Two parameters matter most when tuning these processes:
 
-- **`autoreg`**: Controls how strongly AR(1)-type processes revert. Values near 1 imply slow reversion; smaller values imply faster pullback.
-- **`innovation_sd`**: Controls day-to-day volatility. Larger values produce wider prior spreads and more abrupt movement.
+- **`autoreg`**: Controls how strongly AR(1)-type processes revert.
+  Values near 1 imply slow reversion; smaller values imply faster pullback.
+- **`innovation_sd`**: Controls day-to-day volatility.
+  Larger values produce wider prior spreads and more abrupt movement.
 
 ## Choosing the Deviation Temporal Process
 
 The deviation process controls how subpopulation $\mathcal{R}_k(t)$ values move relative to the baseline $\mathcal{R}_{\text{baseline}}(t)$, not the overall trend itself.
-How $\delta_k(t)$ behaves at $t = 0$ depends on the process. `AR1` draws its initial value from the stationary distribution, so the prior spread of $\delta_k(0)$ already matches the stationary standard deviation and stays at that width throughout. `RandomWalk` starts at exactly $\delta_k(0) = 0$ and its spread grows over time.
+How $\delta_k(t)$ behaves at $t = 0$ depends on the process.
+`AR1` draws its initial value from the stationary distribution, so the prior spread of $\delta_k(0)$ already matches the stationary standard deviation and stays at that width throughout.
+`RandomWalk` starts at exactly $\delta_k(0) = 0$ and its spread grows over time.
 
-The key question: **are local differences transient or persistent?**
-This determines whether subpopulations quickly return to the baseline or can diverge and remain different over time.
+The key question: **are local differences transient or persistent?** This determines whether subpopulations quickly return to the baseline or can diverge and remain different over time.
 
 ```{python}
 # | label: helpers
@@ -289,12 +296,15 @@ def sample_hierarchical(baseline_process, deviation_process, label):
 baseline_process = DifferencedAR1(autoreg=0.5, innovation_sd=0.01)
 ```
 
-
 ### AR(1) Deviations
 
-AR(1) deviations have **bounded variance**. `AR1` draws its initial value from the stationary distribution of the process, so $\delta_k(0)$ is already dispersed at the stationary standard deviation $\sigma / \sqrt{1 - \phi^2}$ and the envelope stays at that width. With `autoreg = 0.8` and `innovation_sd = 0.05`, the stationary standard deviation is approximately $0.083$ on the log scale.
+AR(1) deviations have **bounded variance**.
+`AR1` draws its initial value from the stationary distribution of the process, so $\delta_k(0)$ is already dispersed at the stationary standard deviation $\sigma / \sqrt{1 - \phi^2}$ and the envelope stays at that width.
+With `autoreg = 0.8` and `innovation_sd = 0.05`, the stationary standard deviation is approximately $0.083$ on the log scale.
 
-The `autoreg` coefficient still matters: if a subpopulation drifts away from zero by chance, $\phi$ controls how quickly it is pulled back. Values near 1 produce slow pullback (local differences linger), values near 0 produce fast pullback (subpopulations snap back to the baseline). What this looks like in a prior predictive plot is a **constant-width band** rather than a fanning-out cloud.
+The `autoreg` coefficient still matters: if a subpopulation drifts away from zero by chance, $\phi$ controls how quickly it is pulled back.
+Values near 1 produce slow pullback (local differences linger), values near 0 produce fast pullback (subpopulations snap back to the baseline).
+What this looks like in a prior predictive plot is a **constant-width band** rather than a fanning-out cloud.
 
 ```{python}
 # | label: ar1-deviations-sample
@@ -387,7 +397,10 @@ ar1_dev_summary = deviation_summary_df(ar1_dev_samples)
 
 ### RandomWalk Deviations
 
-RandomWalk deviations have **unbounded variance**. The spread of $\delta_k(t)$ grows linearly with time as $\sigma^2 t$, so over a 28-day horizon with `innovation_sd = 0.05` the standard deviation reaches roughly $0.265$ on the log scale — about three times the AR(1) stationary value above. There is no pullback toward zero: subpopulations that drift away from the baseline stay drifted, and differences that emerge early persist and can grow. The visual signature is a **fanning-out cloud** rather than a constant-width band.
+RandomWalk deviations have **unbounded variance**.
+The spread of $\delta_k(t)$ grows linearly with time as $\sigma^2 t$, so over a 28-day horizon with `innovation_sd = 0.05` the standard deviation reaches roughly $0.265$ on the log scale --- about three times the AR(1) stationary value above.
+There is no pullback toward zero: subpopulations that drift away from the baseline stay drifted, and differences that emerge early persist and can grow.
+The visual signature is a **fanning-out cloud** rather than a constant-width band.
 
 ```{python}
 # | label: rw-deviations-sample
@@ -459,14 +472,21 @@ for label, s in [("AR(1)", ar1_dev_samples), ("RandomWalk", rw_dev_samples)]:
 pd.DataFrame(deviation_summary_rows)
 ```
 
-AR(1) deviations stay close to zero because mean reversion continuously pulls them back. RandomWalk deviations accumulate over time. As in the PopulationInfections tutorial, this is prior-modeling guidance rather than a uniquely determined epidemiologic rule. The choice depends on the epidemiological setting:
+AR(1) deviations stay close to zero because mean reversion continuously pulls them back.
+RandomWalk deviations accumulate over time.
+As in the PopulationInfections tutorial, this is prior-modeling guidance rather than a uniquely determined epidemiologic rule.
+The choice depends on the epidemiological setting:
 
-- **AR(1) deviations** when subpopulations are expected to track the jurisdiction average. Local outbreaks or lulls are temporary. This is typical for geographically close subpopulations (e.g., counties within a metropolitan area) where mobility mixes transmission.
-- **RandomWalk deviations** when local differences can persist. This may be appropriate for subpopulations with distinct contact patterns, demographics, or intervention histories (e.g., urban vs. rural areas).
+- **AR(1) deviations** when subpopulations are expected to track the jurisdiction average.
+  Local outbreaks or lulls are temporary.
+  This is typical for geographically close subpopulations (e.g., counties within a metropolitan area) where mobility mixes transmission.
+- **RandomWalk deviations** when local differences can persist.
+  This may be appropriate for subpopulations with distinct contact patterns, demographics, or intervention histories (e.g., urban vs. rural areas).
 
 ## Baseline and Deviation Pairs
 
-The baseline and deviation processes interact to determine the full prior over subpopulation $\mathcal{R}_k(t)$ trajectories. We compare two configurations: DifferencedAR1 baseline with AR(1) deviations, and DifferencedAR1 baseline with RandomWalk deviations.
+The baseline and deviation processes interact to determine the full prior over subpopulation $\mathcal{R}_k(t)$ trajectories.
+We compare two configurations: DifferencedAR1 baseline with AR(1) deviations, and DifferencedAR1 baseline with RandomWalk deviations.
 
 ```{python}
 # | label: pairs-rt-data
@@ -692,7 +712,8 @@ single_draw_df["config"] = pd.Categorical(
 
 ## Connecting to Observation Processes
 
-The latent infection trajectory is not observed directly. Each observation process selects a subset of subpopulations (via `subpop_indices`) and applies its own ascertainment rate and delay distribution.
+The latent infection trajectory is not observed directly.
+Each observation process selects a subset of subpopulations (via `subpop_indices`) and applies its own ascertainment rate and delay distribution.
 
 The `PyrenewBuilder` handles the wiring:
 

@@ -14,18 +14,18 @@
 Vintaged snapshot of COVID-19 hospital admissions data as it would have been available on 2023-11-06.
 
 - **Coverage**: California (CA) only
-- **Date range**: 2023-01-01 to 2023-11-06 (~310 days)
+- **Date range**: 2023-01-01 to 2023-11-06 (\~310 days)
 - **Size**: 12 KB, 311 rows
 - **Use case**: Tutorials, single-jurisdiction model development
 
 ### Schema
 
-| Column | Type | Description |
-|--------|------|-------------|
-| `date` | string | Date in ISO 8601 format (YYYY-MM-DD) |
-| `location` | string | State 2-letter abbreviation |
-| `daily_hosp_admits` | integer | Daily COVID-19 hospital admissions count |
-| `pop` | integer | State population |
+  | Column              | Type    | Description                              |
+  | ------------------- | ------- | ---------------------------------------- |
+  | `date`              | string  | Date in ISO 8601 format (YYYY-MM-DD)     |
+  | `location`          | string  | State 2-letter abbreviation              |
+  | `daily_hosp_admits` | integer | Daily COVID-19 hospital admissions count |
+  | `pop`               | integer | State population                         |
 
 ## Usage
 

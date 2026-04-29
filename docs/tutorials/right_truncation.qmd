@@ -9,7 +9,7 @@ jupyter:
     text_representation:
       extension: .qmd
       format_name: quarto
-      format_version: '1.0'
+      format_version: "1.0"
       jupytext_version: 1.18.1
   kernelspec:
     display_name: Python 3 (ipykernel)
@@ -45,7 +45,9 @@ Ignoring this produces a spurious decline in recent counts.
 
 PyRenew's observation equation defines the expected observation count as:
 
-$$\mu(t) = \alpha \sum_{s} I(t-s) \, \pi(s)$$
+$$
+\mu(t) = \alpha \sum_{s} I(t-s) \, \pi(s)
+$$
 
 where $\alpha$ is the ascertainment rate and $\pi(s)$ is the infection-to-observation delay distribution.
 
@@ -53,13 +55,17 @@ Right-truncation introduces a second delay: the **reporting delay**, which is th
 PyRenew models this as a multiplicative adjustment applied after the delay convolution.
 The predicted observation rate becomes:
 
-$$\lambda(t) = F(k_t) \cdot \mu(t)$$
+$$
+\lambda(t) = F(k_t) \cdot \mu(t)
+$$
 
 where $F$ is the CDF of the reporting delay and $k_t$ is the number of days between timepoint $t$ and the **data pull date** (the date on which the dataset was extracted from the surveillance system).
 Concretely, let $T$ denote the last observation day and let $\text{offset} = \text{data pull date} - T$ be the number of additional days between day $T$ and the data pull (the `right_truncation_offset` parameter).
 Then:
 
-$$k_t = (T - t) + \text{offset} = (T - t) + (\text{data pull date} - T) = \text{data pull date} - t$$
+$$
+k_t = (T - t) + \text{offset} = (T - t) + (\text{data pull date} - T) = \text{data pull date} - t
+$$
 
 Because $k_t$ depends only on the data pull date and the timepoint $t$, its behavior is straightforward: timepoints far in the past (small $t$) have large $k_t$, so $F(k_t) \approx 1$ and counts are fully reported.
 Recent timepoints (large $t$, close to the data pull date) have small $k_t$ and $F(k_t) < 1$, reducing the predicted counts to reflect incomplete reporting.
@@ -100,7 +106,7 @@ delay_df = pd.DataFrame(
 ```
 
 The `right_truncation_offset` parameter specifies how many additional days of reporting have elapsed beyond the last observation.
-An offset of 0 means the data was pulled on the same day as the last observation — only delay-0 reports have arrived for that day.
+An offset of 0 means the data was pulled on the same day as the last observation --- only delay-0 reports have arrived for that day.
 An offset of 3 means three additional days have passed, allowing more reports to trickle in.
 
 ```{python}
@@ -247,9 +253,8 @@ pred_df["type"] = pd.Categorical(
 ```
 
 The two curves agree perfectly in the early period when all reports have arrived.
-Near the right edge the truncated curve turns downward — recent counts are depressed because reports have not yet arrived.
-Without the right-truncation adjustment, a model fit to the dashed curve would infer that the epidemic is slowing down — a dangerous misinterpretation during an active outbreak.
-
+Near the right edge the truncated curve turns downward --- recent counts are depressed because reports have not yet arrived.
+Without the right-truncation adjustment, a model fit to the dashed curve would infer that the epidemic is slowing down --- a dangerous misinterpretation during an active outbreak.
 
 ## Sampled observations
 
@@ -314,20 +319,20 @@ mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
 
 The red line is the mean across samples.
 In the top panel (complete reporting), the mean tracks the growing epidemic.
-In the bottom panel (right-truncated), the mean turns downward at the right edge — a spurious decline caused entirely by incomplete reporting.
+In the bottom panel (right-truncated), the mean turns downward at the right edge --- a spurious decline caused entirely by incomplete reporting.
 
 ## Summary
 
 Right-truncation adjustment is enabled by passing a `right_truncation_rv` (reporting delay PMF) at construction time and a `right_truncation_offset` at sample time.
 
-| Parameter | Where | Purpose |
-|-----------|-------|---------|
-| `right_truncation_rv` | Constructor | Reporting delay PMF |
-| `right_truncation_offset` | `sample()` | Days between last observation and data pull |
+  | Parameter                 | Where       | Purpose                                     |
+  | ------------------------- | ----------- | ------------------------------------------- |
+  | `right_truncation_rv`     | Constructor | Reporting delay PMF                         |
+  | `right_truncation_offset` | `sample()`  | Days between last observation and data pull |
 
 When either is `None`, the adjustment is disabled and the process behaves identically to one without right-truncation.
 This makes it straightforward to compare models with and without the adjustment, or to supply the reporting delay as either a fixed PMF or an inferred distribution.
 
 In practice, right-truncation adjustment should be enabled when **fitting** to observed data, so the model correctly attributes low recent counts to incomplete reporting rather than a true decline.
-However, it should be **disabled when forecasting**: future timepoints have not yet occurred, so there is no reporting delay to account for — applying the adjustment would nonsensically shrink forecasted counts toward zero.
+However, it should be **disabled when forecasting**: future timepoints have not yet occurred, so there is no reporting delay to account for --- applying the adjustment would nonsensically shrink forecasted counts toward zero.
 A typical workflow is to fit with `right_truncation_offset` set to the actual offset, then generate forecasts with `right_truncation_offset=None`.
