@@ -2,5 +2,6 @@ flavor = "gfm"
 [format]
 wrap = "sentence"
 [formatters]
-r = "air"
+python = "ruff"
+[linters]
 python = "ruff"
