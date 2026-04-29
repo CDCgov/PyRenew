@@ -9,6 +9,7 @@ import numpyro
 from jax.typing import ArrayLike
 from numpyro.util import not_jax_tracer
 
+from pyrenew.arrayutils import require_shape
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.latent.base import (
@@ -147,13 +148,18 @@ class PopulationInfections(BaseLatentInfectionProcess):
         self,
         n_days_post_init: int,
         subpop_fractions: ArrayLike | None = None,
+        first_day_dow: int | None = None,
         **kwargs: object,
     ) -> LatentSample:
         """
         Sample population infections using a single renewal process.
 
-        Generates a single $\\mathcal{R}(t)$ trajectory, computes initial infections via
-        exponential backprojection, and runs one renewal equation.
+        Generates a single daily $\\mathcal{R}(t)$ trajectory, computes initial
+        infections via exponential backprojection, and runs one deterministic
+        daily renewal equation. The temporal process may sample parameters at
+        any supported cadence (for example daily or weekly/stepwise), but it
+        must return a daily-length trajectory before the renewal equation is
+        evaluated.
 
         Parameters
         ----------
@@ -162,6 +168,13 @@ class PopulationInfections(BaseLatentInfectionProcess):
         subpop_fractions
             Population fractions. Defaults to ``[1.0]`` (single population).
             Must be ``[1.0]`` if provided.
+        first_day_dow
+            Day of week for element 0 of the full latent infection time axis,
+            including initialization days. When this latent process is used
+            inside MultiSignalModel, the caller passes obs_start_date to the
+            model and it converts the first observation day to this axis-origin
+            day of week by subtracting n_initialization_points. Forwarded to
+            ``single_rt_process``. See [pyrenew.latent.TemporalProcess][].
         **kwargs
             Additional arguments (unused, for compatibility)
 
@@ -196,7 +209,9 @@ class PopulationInfections(BaseLatentInfectionProcess):
             n_timepoints=n_total_days,
             initial_value=initial_log_rt,
             name_prefix="log_rt_single",
+            first_day_dow=first_day_dow,
         )
+        require_shape(log_rt_single, (n_total_days, 1), "single_rt_process")
 
         rt_single = jnp.exp(log_rt_single)
 

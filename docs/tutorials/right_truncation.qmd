@@ -25,7 +25,7 @@ import numpy as np
 import numpyro
 import pandas as pd
 
-from pyrenew.observation import Counts, NegativeBinomialNoise
+from pyrenew.observation import PopulationCounts, NegativeBinomialNoise
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
 from pyrenew.convolve import compute_prop_already_reported
 from pyrenew import datasets
@@ -153,7 +153,7 @@ Larger offsets mean more time has elapsed for reports to arrive, shifting the tr
 
 ## Observation process with and without right-truncation
 
-We construct two `Counts` observation processes: one without right-truncation (the default) and one with a `right_truncation_rv` that supplies the reporting delay PMF.
+We construct two `PopulationCounts` observation processes: one without right-truncation (the default) and one with a `right_truncation_rv` that supplies the reporting delay PMF.
 
 ```{python}
 # | label: create-processes
@@ -166,14 +166,14 @@ delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
 ihr_rv = DeterministicVariable("ihr", 0.01)
 concentration_rv = DeterministicVariable("concentration", 10.0)
 
-process_no_trunc = Counts(
+process_no_trunc = PopulationCounts(
     name="hosp_no_trunc",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=delay_rv,
     noise=NegativeBinomialNoise(concentration_rv),
 )
 
-process_with_trunc = Counts(
+process_with_trunc = PopulationCounts(
     name="hosp_trunc",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=delay_rv,

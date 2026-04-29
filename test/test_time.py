@@ -762,3 +762,15 @@ def test_create_date_time_spine_date_values():
     assert dates[0] == dt.date(2025, 1, 1)
     assert dates[1] == dt.date(2025, 1, 2)
     assert dates[2] == dt.date(2025, 1, 3)
+
+
+class TestWeekConstants:
+    """Tests for the ``MMWR_WEEK`` and ``ISO_WEEK`` start-of-week constants."""
+
+    def test_mmwr_week_is_sunday(self):
+        """``MMWR_WEEK`` is 6 (Sunday-Saturday epiweeks)."""
+        assert ptime.MMWR_WEEK == 6
+
+    def test_iso_week_is_monday(self):
+        """``ISO_WEEK`` is 0 (Monday-Sunday weeks)."""
+        assert ptime.ISO_WEEK == 0

@@ -124,8 +124,8 @@ class PyrenewBuilder:
         Parameters
         ----------
         obs_process
-            Configured observation process instance (e.g., Counts,
-            Wastewater, CountsBySubpop). Must have a ``name`` attribute.
+            Configured observation process instance (e.g., PopulationCounts,
+            Wastewater, SubpopulationCounts). Must have a ``name`` attribute.
 
         Returns
         -------
@@ -203,7 +203,6 @@ class PyrenewBuilder:
         1. Computes n_initialization_points from all components
         2. Constructs the latent process with the computed value
         3. Creates a MultiSignalModel with automatic infection routing
-        4. Validates that observation/latent types are compatible
 
         Can be called multiple times to create multiple model instances.
 
@@ -215,7 +214,7 @@ class PyrenewBuilder:
         Raises
         ------
         ValueError
-            If latent process not configured
+            If latent process not configured.
         """
         if self.latent_class is None:
             raise ValueError("Must call configure_latent() before build()")

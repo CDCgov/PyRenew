@@ -39,6 +39,7 @@ import plotnine as p9
 import pandas as pd
 import time
 import warnings
+from datetime import date
 
 warnings.filterwarnings("ignore")
 
@@ -67,18 +68,21 @@ from pyrenew.latent import (
     SubpopulationInfections,
     AR1,
     RandomWalk,
+    StepwiseTemporalProcess,
+    WeeklyTemporalProcess,
     GammaGroupSdPrior,
     HierarchicalNormalPrior,
 )
 from pyrenew.model import PyrenewBuilder
 
 from pyrenew.observation import (
-    Counts,
+    PopulationCounts,
     HierarchicalNormalNoise,
-    Measurements,
+    MeasurementObservation,
     MeasurementNoise,
     NegativeBinomialNoise,
 )
+from pyrenew.time import MMWR_WEEK
 ```
 
 ## Overview
@@ -98,7 +102,7 @@ A **multi-signal model** combines multiple observation processes—each represen
 The `PyrenewBuilder` class handles this plumbing. You specify:
 
 1.  A single **latent process** (e.g., `SubpopulationInfections`) that defines how infections evolve.
-2.  One or more **observation processes** (e.g., `Counts`, `Measurements`) that define how infections become data.
+2.  One or more **observation processes** (e.g., `PopulationCounts`, `MeasurementObservation`) that define how infections become data.
 
 The builder computes initialization requirements, wires components together, and produces a model ready for inference.
 
@@ -117,7 +121,7 @@ This tutorial shows how to combine these components into a complete multi-signal
 This tutorial demonstrates building a multi-signal renewal model using:
 
 -   `SubpopulationInfections` — subpopulations share a jurisdiction-level baseline $\mathcal{R}(t)$ with subpopulation-specific deviations
--   `Counts` — hospital admissions (jurisdiction-level)
+-   `PopulationCounts` — hospital admissions (jurisdiction-level)
 -   A custom `Wastewater` class — viral concentrations (subpopulation-level)
 
 ## Model Structure
@@ -142,8 +146,8 @@ flowchart TB
     end
 
     subgraph Obs["Observation Processes"]
-        C["Hospital admissions<br/>(Counts)"]
-        W["Wastewater concentrations<br/>(Measurements)"]
+        C["Hospital admissions<br/>(PopulationCounts)"]
+        W["Wastewater concentrations<br/>(MeasurementObservation)"]
     end
 
     subgraph Data["Observed Data"]
@@ -237,6 +241,39 @@ baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
 subpop_rt_deviation_process = RandomWalk(innovation_sd=0.025)
 ```
 
+### Choosing the Rt Parameter Cadence
+
+The renewal equation is evaluated on the model's daily time axis, but the temporal process for $\mathcal{R}(t)$ does not have to sample a new parameter every day.
+This separates three model choices:
+
+-   **Parameter cadence**: how often the $\mathcal{R}(t)$ temporal process samples a new latent value
+-   **Model time axis**: the daily axis used by the renewal equation and delay convolutions
+-   **Observation cadence**: the temporal granularity for each signal, such as daily ED visits or weekly hospital admissions
+
+The AR(1) process above samples one value per model day:
+
+```python
+baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
+```
+
+To use a weekly $\mathcal{R}(t)$ while still running the renewal equation daily, wrap the temporal process in `WeeklyTemporalProcess`.
+The wrapper samples a weekly trajectory and broadcasts it to the daily model axis before the latent infection process uses it.
+
+```python
+weekly_baseline_rt_process = WeeklyTemporalProcess(
+    inner=AR1(autoreg=0.9, innovation_sd=0.05),
+    start_dow=MMWR_WEEK,
+)
+```
+
+Use `WeeklyTemporalProcess` when the weekly Rt blocks should align to a calendar week.
+The `start_dow` parameter is the day of week on which the calendar-week cycle begins (0=Monday, 6=Sunday, ISO convention).
+`pyrenew.time` exports `MMWR_WEEK = 6` (Sunday-Saturday epiweeks) and `ISO_WEEK = 0` (Monday-Sunday); pass any integer in `[0, 6]` for other conventions.
+At sample or run time, pass the date of the first observation day as `obs_start_date`.
+Argument `obs_start_date` is required whenever any component performs calendar-aligned work: a `WeeklyTemporalProcess`, a count observation with `aggregation="weekly"`, or any observation with a day-of-week effect.
+For `StepwiseTemporalProcess` and daily observations with no day-of-week effect, `obs_start_date` can be omitted.
+The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it.
+
 ## Observation Processes
 
 Observation processes transform latent infections into observable signals and define the statistical model linking predictions to data. Each observation process:
@@ -268,7 +305,7 @@ for the first 10 months of 2023 (as reported to the CDC).
 # | label: load-hospital-data
 # Load daily hospital admissions for California
 ca_hosp_data = datasets.load_hospital_data_for_state("CA", "2023-11-06.csv")
-
+obs_start_date = ca_hosp_data["dates"][0]
 hosp_admits = ca_hosp_data["daily_admits"]
 population_size = ca_hosp_data["population"]
 n_hosp_days = ca_hosp_data["n_days"]
@@ -282,7 +319,7 @@ print(
 )
 ```
 
-The hospital admissions data is aggregated at the jurisdiction level, therefore we specify a `Counts` observation process.
+The hospital admissions data is aggregated at the jurisdiction level, therefore we specify a `PopulationCounts` observation process.
 
 ```{python}
 # | label: hospital-obs-process
@@ -343,7 +380,7 @@ ihr_rv = DeterministicVariable("ihr", 0.01)
 hosp_concentration_rv = DeterministicVariable("hosp_concentration", 10.0)
 
 # Create hospital observation process
-hosp_obs = Counts(
+hosp_obs = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=ihr_rv,
     delay_distribution_rv=hosp_delay_rv,
@@ -359,13 +396,13 @@ print(f"  Delay PMF length: {len(inf_to_hosp_pmf)} days")
 
 #### Wastewater Observation Process
 
-The `Measurements` base class handles continuous observation processes. Domain-specific
+The `MeasurementObservation` base class handles continuous observation processes. Domain-specific
 implementations subclass it and implement `_predicted_obs()` to transform infections
 into predicted values. See `observation_processes_measurements.md` for a detailed tutorial.
 
 ```{python}
 # | label: wastewater-class
-class Wastewater(Measurements):
+class Wastewater(MeasurementObservation):
     """
     Wastewater viral concentration observation process.
 
@@ -596,7 +633,7 @@ builder.add_observation(ww_obs)     # ww_obs.name="wastewater" → wastewater={.
 
 #### Jurisdiction-level signals (dense)
 
-The jurisdiction-level hospital admissions data is specified as a `Counts` observations process with dense data padded to length `n_total`:
+The jurisdiction-level hospital admissions data is specified as a `PopulationCounts` observations process with dense data padded to length `n_total`:
 
 ```python
 hospital={
@@ -658,17 +695,30 @@ model.run(
     n_days_post_init=n_days,
     population_size=population_size,
     subpop_fractions=subpop_fractions,
-    hospital={"obs": model.pad_observations(hosp_counts)},
-    wastewater={
-        "obs": ww_conc,
-        "times": model.shift_times(ww_times),
-        "subpop_indices": ww_subpop_indices,
-        "sensor_indices": ww_sensor_indices,
-        "n_sensors": n_ww_sensors,
-    },
+    **obs_data,
 )
 samples = model.mcmc.get_samples()
 ```
+
+where `**obs_data` is a data dictionary which supplies the observation start date as `obs_start_date`  and a data dictionary for each set of signal data, where the name of the data dictionary corresponds to the signal name registered on the builder.
+For this example,  such a data dictionary would have the following structure:
+
+```python
+{
+    "obs_start_date": ...,
+    "hospital": {
+        "obs": ...
+    },
+    "wastewater": {
+        "obs": ...
+        "times": ...
+        "subpop_indices": ...
+        "sensor_indices": ...
+        "n_sensors": ...
+    },
+}
+```
+
 
 ## Running the Model
 
@@ -699,11 +749,18 @@ print(f"Total population: {float(jnp.sum(subpop_fractions)):.0%}")
 ```
 
 We define a function to prepare observation data using the model's helper methods to align with the shared time axis.
+The returned dictionary is structured to match the keyword arguments of `model.run()`: `obs_start_date` at the top level, plus one sub-dictionary per observation process, keyed by the name registered on the builder (`hospital`, `wastewater`).
+At call time the returned dict is unpacked with `**` (for example, `**obs_data_90` in the 90-day fit below), forwarding each entry as a keyword argument to `model.run()`.
 
 ```{python}
 # | label: prepare-observation-data
 def prepare_observation_data(
-    model, n_days_fit, hosp_admits, ww_data, ww_monitored_subpops
+    model,
+    n_days_fit,
+    obs_start_date,
+    hosp_admits,
+    ww_data,
+    ww_monitored_subpops,
 ):
     """
     Prepare observation data for fitting.
@@ -717,6 +774,8 @@ def prepare_observation_data(
         The model (provides padding/shifting helpers)
     n_days_fit : int
         Number of days to include in fit
+    obs_start_date : date
+        Date of first observation
     hosp_admits : array
         Hospital admissions time series
     ww_data : dict
@@ -749,6 +808,7 @@ def prepare_observation_data(
     )
 
     return {
+        "obs_start_date": obs_start_date,
         "hospital": {
             "obs": hosp_obs,
         },
@@ -774,7 +834,12 @@ jax.clear_caches()
 
 n_days_90 = 90
 obs_data_90 = prepare_observation_data(
-    model, n_days_90, hosp_admits, ca_ww_data, ww_monitored_subpops
+    model,
+    n_days_90,
+    obs_start_date,
+    hosp_admits,
+    ca_ww_data,
+    ww_monitored_subpops,
 )
 
 print(f"Fitting model with {n_days_90} days of data...")
@@ -939,7 +1004,12 @@ jax.clear_caches()
 
 n_days_180 = 180
 obs_data_180 = prepare_observation_data(
-    model, n_days_180, hosp_admits, ca_ww_data, ww_monitored_subpops
+    model,
+    n_days_180,
+    obs_start_date,
+    hosp_admits,
+    ca_ww_data,
+    ww_monitored_subpops,
 )
 
 print(f"Fitting model with {n_days_180} days of data...")

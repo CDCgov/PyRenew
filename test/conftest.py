@@ -3,7 +3,21 @@ Shared pytest fixtures for PyRenew tests.
 
 This module provides reusable fixtures for creating observation processes,
 test data, and common configurations used across multiple test files.
+
+The module also sets two JAX environment variables before any jax import so
+that all tests (unit and integration) run with 64-bit precision and with
+four logical host devices available for parallel MCMC chains. JAX reads
+these variables at import time, so they must be set before the first
+``import jax`` anywhere in the test process; placing them at the top of
+this file (loaded by pytest before any test module) satisfies that
+requirement. The ``setdefault`` form respects any value the caller already
+set at the shell level (e.g., a CI with different configuration).
 """
+
+import os
+
+os.environ.setdefault("JAX_ENABLE_X64", "true")
+os.environ.setdefault("XLA_FLAGS", "--xla_force_host_platform_device_count=4")
 
 import jax.numpy as jnp
 import numpyro.distributions as dist
@@ -17,11 +31,14 @@ from pyrenew.latent import (
     SubpopulationInfections,
 )
 from pyrenew.observation import (
-    Counts,
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
+    PoissonNoise,
+    PopulationCounts,
+    SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
+from pyrenew.time import MMWR_WEEK
 
 # =============================================================================
 # PMF Fixtures
@@ -197,21 +214,21 @@ def population_infections(gen_int_rv):
 
 
 # =============================================================================
-# Counts Process Fixtures
+# PopulationCounts Process Fixtures
 # =============================================================================
 
 
 @pytest.fixture
 def counts_process(simple_delay_pmf):
     """
-    Standard Counts observation process with simple delay.
+    Standard PopulationCounts observation process with simple delay.
 
     Returns
     -------
-    Counts
-        A Counts observation process with no delay.
+    PopulationCounts
+        A PopulationCounts observation process with no delay.
     """
-    return Counts(
+    return PopulationCounts(
         name="test_counts",
         ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
         delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
@@ -220,7 +237,7 @@ def counts_process(simple_delay_pmf):
 
 
 class CountsProcessFactory:
-    """Factory for creating Counts processes with custom parameters."""
+    """Factory for creating PopulationCounts observation processes with custom parameters."""
 
     @staticmethod
     def create(
@@ -230,16 +247,16 @@ class CountsProcessFactory:
         concentration=10.0,
     ):
         """
-        Create a Counts process with specified parameters.
+        Create a PopulationCounts observation process with specified parameters.
 
         Returns
         -------
-        Counts
-            A Counts observation process with the specified parameters.
+        PopulationCounts
+            A PopulationCounts observation process with the specified parameters.
         """
         if delay_pmf is None:
             delay_pmf = jnp.array([1.0])
-        return Counts(
+        return PopulationCounts(
             name=name,
             ascertainment_rate_rv=DeterministicVariable("ihr", ascertainment_rate),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
@@ -250,7 +267,7 @@ class CountsProcessFactory:
 @pytest.fixture
 def counts_factory():
     """
-    Factory fixture for creating custom Counts processes.
+    Factory fixture for creating custom PopulationCounts observation processes.
 
     Returns
     -------
@@ -260,6 +277,266 @@ def counts_factory():
     return CountsProcessFactory()
 
 
+@pytest.fixture
+def weekly_regular_counts(simple_delay_pmf):
+    """
+    PopulationCounts with weekly aggregation and regular (dense) reporting.
+
+    Uses MMWR Sunday-Saturday epiweeks (``start_dow=6``).
+
+    Returns
+    -------
+    PopulationCounts
+        A weekly-regular PopulationCounts process.
+    """
+    return PopulationCounts(
+        name="hosp",
+        ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        aggregation="weekly",
+        reporting_schedule="regular",
+        start_dow=MMWR_WEEK,
+    )
+
+
+@pytest.fixture
+def weekly_irregular_counts(simple_delay_pmf):
+    """
+    PopulationCounts with weekly aggregation and irregular (sparse) reporting.
+
+    Uses MMWR Sunday-Saturday epiweeks (``start_dow=6``).
+
+    Returns
+    -------
+    PopulationCounts
+        A weekly-irregular PopulationCounts process.
+    """
+    return PopulationCounts(
+        name="hosp",
+        ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        aggregation="weekly",
+        reporting_schedule="irregular",
+        start_dow=MMWR_WEEK,
+    )
+
+
+@pytest.fixture
+def daily_irregular_counts(simple_delay_pmf):
+    """
+    PopulationCounts with daily scale and irregular (sparse) reporting.
+
+    Returns
+    -------
+    PopulationCounts
+        A daily-irregular PopulationCounts process.
+    """
+    return PopulationCounts(
+        name="hosp",
+        ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        reporting_schedule="irregular",
+    )
+
+
+@pytest.fixture
+def weekly_regular_subpop_counts(simple_delay_pmf):
+    """
+    SubpopulationCounts with weekly aggregation and regular (dense) reporting.
+
+    Uses MMWR Sunday-Saturday epiweeks (``start_dow=6``).
+
+    Returns
+    -------
+    SubpopulationCounts
+        A weekly-regular SubpopulationCounts process.
+    """
+    return SubpopulationCounts(
+        name="ed",
+        ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        aggregation="weekly",
+        reporting_schedule="regular",
+        start_dow=MMWR_WEEK,
+    )
+
+
+@pytest.fixture
+def weekly_irregular_subpop_counts(simple_delay_pmf):
+    """
+    SubpopulationCounts with weekly aggregation and irregular (sparse) reporting.
+
+    Uses MMWR Sunday-Saturday epiweeks (``start_dow=6``).
+
+    Returns
+    -------
+    SubpopulationCounts
+        A weekly-irregular SubpopulationCounts process.
+    """
+    return SubpopulationCounts(
+        name="ed",
+        ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        aggregation="weekly",
+        reporting_schedule="irregular",
+        start_dow=MMWR_WEEK,
+    )
+
+
+@pytest.fixture
+def daily_irregular_subpop_counts(simple_delay_pmf):
+    """
+    SubpopulationCounts with daily scale and irregular (sparse) reporting.
+
+    Returns
+    -------
+    SubpopulationCounts
+        A daily-irregular SubpopulationCounts process.
+    """
+    return SubpopulationCounts(
+        name="ed",
+        ascertainment_rate_rv=DeterministicVariable("iedr", 0.01),
+        delay_distribution_rv=DeterministicPMF("delay", simple_delay_pmf),
+        noise=PoissonNoise(),
+        reporting_schedule="irregular",
+    )
+
+
 # =============================================================================
 # Infection Fixtures
 # =============================================================================
+
+
+@pytest.fixture
+def subpop_infections_28d():
+    """
+    Four-week ``(28, 3)`` infections array at 100/day/subpop.
+
+    Used by weekly-aggregation tests on ``SubpopulationCounts``.
+
+    Returns
+    -------
+    jnp.ndarray
+        Shape ``(28, 3)`` filled with 100.0.
+    """
+    return jnp.ones((28, 3)) * 100.0
+
+
+@pytest.fixture
+def subpop_infections_30d():
+    """
+    Thirty-day ``(30, 3)`` infections array at 100/day/subpop.
+
+    Used by daily-scale tests on ``SubpopulationCounts``.
+
+    Returns
+    -------
+    jnp.ndarray
+        Shape ``(30, 3)`` filled with 100.0.
+    """
+    return jnp.ones((30, 3)) * 100.0
+
+
+@pytest.fixture
+def mmwr_saturday_indices_first_three():
+    """
+    Daily-axis indices of the first three MMWR Saturdays for a Sunday-start axis.
+
+    When element 0 of the daily axis is a Sunday (``first_day_dow=6``),
+    Saturdays fall on indices 6, 13, 20, ...
+
+    Returns
+    -------
+    jnp.ndarray
+        Shape ``(3,)`` containing ``[6, 13, 20]``.
+    """
+    return jnp.array([6, 13, 20])
+
+
+# =============================================================================
+# Temporal Process Stubs
+# =============================================================================
+
+
+class WrongShapeTemporalProcess:
+    """Temporal process stub that returns a fixed wrong-shaped array."""
+
+    step_size = 1
+
+    def __init__(self, value):
+        """
+        Store the wrong-shaped value to return from ``sample``.
+
+        Parameters
+        ----------
+        value
+            Array returned by ``sample`` regardless of requested shape.
+        """
+        self.value = value
+
+    def sample(self, **kwargs):
+        """
+        Return the configured wrong-shaped value.
+
+        Returns
+        -------
+        ArrayLike
+            The array passed to ``__init__``.
+        """
+        return self.value
+
+
+class ConstantTemporalProcess:
+    """Temporal process stub that returns zeros with the requested shape."""
+
+    step_size = 1
+
+    def sample(self, n_timepoints, n_processes=1, **kwargs):
+        """
+        Return a correctly shaped zero trajectory.
+
+        Parameters
+        ----------
+        n_timepoints
+            Number of time points.
+        n_processes
+            Number of parallel processes.
+
+        Returns
+        -------
+        jnp.ndarray
+            Zeros of shape ``(n_timepoints, n_processes)``.
+        """
+        return jnp.zeros((n_timepoints, n_processes))
+
+
+@pytest.fixture
+def wrong_shape_temporal_process_cls():
+    """
+    Class producing a temporal-process stub that returns a fixed wrong shape.
+
+    Returns
+    -------
+    type
+        The ``WrongShapeTemporalProcess`` class. Instantiate with the array
+        the stub should return from ``sample``.
+    """
+    return WrongShapeTemporalProcess
+
+
+@pytest.fixture
+def constant_temporal_process():
+    """
+    Temporal-process stub that returns a correctly shaped zero trajectory.
+
+    Returns
+    -------
+    ConstantTemporalProcess
+        Instance whose ``sample`` returns zeros of the requested shape.
+    """
+    return ConstantTemporalProcess()
