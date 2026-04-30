@@ -18,8 +18,8 @@ jupyter:
 ---
 
 ```{python}
-#| label: setup
-#| output: false
+# | label: setup
+# | output: false
 import jax.nn as jnn
 import jax.numpy as jnp
 import jax.random as random
@@ -61,7 +61,7 @@ we show how to specify a multi-signal model where the signals are modeled indepe
 In this model, each observation process has its own scalar ascertainment prior.
 
 ```{python}
-#| label: independent-observation-processes
+# | label: independent-observation-processes
 hosp_delay_pmf = jnp.array([0.05, 0.10, 0.15, 0.15, 0.20, 0.15, 0.15, 0.05])
 hosp_delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
 
@@ -73,7 +73,9 @@ hospital_obs_independent = PopulationCounts(
     ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
     delay_distribution_rv=hosp_delay_rv,
     noise=NegativeBinomialNoise(
-        DistributionalVariable("hospital_concentration", dist.LogNormal(4.0, 0.5))
+        DistributionalVariable(
+            "hospital_concentration", dist.LogNormal(4.0, 0.5)
+        )
     ),
 )
 
@@ -88,7 +90,7 @@ ed_obs_independent = PopulationCounts(
 ```
 
 ```{python}
-#| label: independent-prior-draws
+# | label: independent-prior-draws
 n_draws = 1500
 key_ihr, key_iedr = random.split(random.PRNGKey(1))
 
@@ -129,7 +131,7 @@ The model samples the rates jointly on the logit scale and returns one probabili
 These rates are constant over the model time axis.
 
 ```{python}
-#| label: joint-ascertainment-object
+# | label: joint-ascertainment-object
 def logit(value):
     return float(jnp.log(value) - jnp.log1p(-value))
 
@@ -154,7 +156,7 @@ In a NumPyro trace, this object creates one sample site, `he_ascertainment_eta`,
 The next block samples directly from the same logit-normal prior used by JointAscertainment. This is only for visualization; in a fitted PyRenew model, JointAscertainment handles this sampling internally.
 
 ```{python}
-#| label: joint-prior-draws
+# | label: joint-prior-draws
 joint_eta = dist.MultivariateNormal(
     loc=joint_ascertainment.loc,
     scale_tril=joint_ascertainment.scale_tril,
@@ -189,21 +191,17 @@ The prior draws from independent priors show that high IHR draws do not imply hi
 The joint prior keeps the same approximate scale while inducing positive dependence between the two rates.
 
 ```{python}
-#| label: plot-joint-priors
-#| fig-cap: |
-#|   Joint ascertainment induces correlation between scalar signal rates.
-#|   The dashed line marks the prior-center ratio, IEDR = 2 × IHR.
-#|   The joint prior keeps the same approximate scale while inducing
-#|   positive dependence between the two rates.
+# | label: plot-joint-priors
+# | fig-cap: |
+# |   Joint ascertainment induces correlation between scalar signal rates.
+# |   The dashed line marks the prior-center ratio, IEDR = 2 × IHR.
+# |   The joint prior keeps the same approximate scale while inducing
+# |   positive dependence between the two rates.
 
 (
     p9.ggplot(compare_df, p9.aes(x="hospital_ihr", y="ed_iedr"))
     + p9.geom_point(alpha=0.2, size=1.0, color="steelblue")
-    + p9.geom_abline(
-      intercept=0,
-      slope=2,
-      linetype="dashed",
-      color="gray")
+    + p9.geom_abline(intercept=0, slope=2, linetype="dashed", color="gray")
     + p9.facet_wrap("~prior", nrow=1)
     + p9.labs(
         x="Hospital ascertainment rate (IHR)",
@@ -233,7 +231,7 @@ Here $\ell_j$ is the baseline logit ascertainment level from `locs`, and $z_j(t)
 The example below samples weekly AR(1) deviations and broadcasts them to the daily model axis.
 
 ```{python}
-#| label: timevarying-ascertainment-object
+# | label: timevarying-ascertainment-object
 timevarying_ascertainment = TimeVaryingAscertainment(
     name="he_timevarying_ascertainment",
     processes={
@@ -259,7 +257,7 @@ Because the weekly blocks are calendar-aligned, a model using this component mus
 The innovation scale here is chosen to make prior variation visible; in an applied model it should be set from domain knowledge about how quickly ascertainment can plausibly change.
 
 ```{python}
-#| label: sample-timevarying-prior
+# | label: sample-timevarying-prior
 def sample_timevarying_rates():
     rates = timevarying_ascertainment.sample(
         n_timepoints=126,
@@ -288,7 +286,7 @@ Ascertainment scales the infection curve before the delay convolution.
 The example below fixes a synthetic infection curve and compares constant ascertainment with one sampled time-varying trajectory.
 
 ```{python}
-#| label: expected-counts-example
+# | label: expected-counts-example
 n_days = 126
 days = jnp.arange(n_days)
 infections = 500 + 4500 * jnp.exp(-0.5 * ((days - 65) / 18) ** 2)
@@ -328,8 +326,8 @@ expected_df["quantity"] = pd.Categorical(
 ```
 
 ```{python}
-#| label: plot-expected-counts
-#| fig-cap: The same infection curve can imply different expected observations under time-varying ascertainment.
+# | label: plot-expected-counts
+# | fig-cap: The same infection curve can imply different expected observations under time-varying ascertainment.
 (
     p9.ggplot(expected_df, p9.aes(x="day", y="value"))
     + p9.geom_line(color="steelblue", size=1)
