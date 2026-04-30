@@ -15,6 +15,12 @@ from jax.typing import ArrayLike
 
 from pyrenew.ascertainment.base import AscertainmentModel
 
+_COVARIANCE_PARAMETER_NAMES = (
+    "scale_tril",
+    "covariance_matrix",
+    "precision_matrix",
+)
+
 
 class JointAscertainment(AscertainmentModel):
     """
@@ -105,12 +111,9 @@ class JointAscertainment(AscertainmentModel):
                 f"loc must have shape ({n_signals},), got shape {self.loc.shape}."
             )
 
-        covariance_params = (
-            self.scale_tril,
-            self.covariance_matrix,
-            self.precision_matrix,
+        n_covariance_params = sum(
+            getattr(self, name) is not None for name in _COVARIANCE_PARAMETER_NAMES
         )
-        n_covariance_params = sum(param is not None for param in covariance_params)
         if n_covariance_params != 1:
             raise ValueError(
                 "Exactly one of scale_tril, covariance_matrix, or "
@@ -118,15 +121,11 @@ class JointAscertainment(AscertainmentModel):
             )
 
         matrix_shape = (n_signals, n_signals)
-        for param_name, param in (
-            ("scale_tril", self.scale_tril),
-            ("covariance_matrix", self.covariance_matrix),
-            ("precision_matrix", self.precision_matrix),
-        ):
+        for name in _COVARIANCE_PARAMETER_NAMES:
+            param = getattr(self, name)
             if param is not None and param.shape != matrix_shape:
                 raise ValueError(
-                    f"{param_name} must have shape {matrix_shape}, "
-                    f"got shape {param.shape}."
+                    f"{name} must have shape {matrix_shape}, got shape {param.shape}."
                 )
 
     def _distribution(self) -> dist.MultivariateNormal:
@@ -138,19 +137,14 @@ class JointAscertainment(AscertainmentModel):
         numpyro.distributions.MultivariateNormal
             Joint latent distribution on the logit scale.
         """
-        if self.scale_tril is not None:
-            return dist.MultivariateNormal(
-                loc=self.loc,
-                scale_tril=self.scale_tril,
-            )
-        if self.covariance_matrix is not None:
-            return dist.MultivariateNormal(
-                loc=self.loc,
-                covariance_matrix=self.covariance_matrix,
-            )
-        return dist.MultivariateNormal(
-            loc=self.loc,
-            precision_matrix=self.precision_matrix,
+        for name in _COVARIANCE_PARAMETER_NAMES:
+            value = getattr(self, name)
+            if value is not None:
+                return dist.MultivariateNormal(loc=self.loc, **{name: value})
+
+        raise ValueError(
+            "Exactly one of scale_tril, covariance_matrix, or "
+            "precision_matrix must be provided."
         )
 
     def sample(self, **kwargs: object) -> Mapping[str, ArrayLike]:
@@ -174,8 +168,7 @@ class JointAscertainment(AscertainmentModel):
         rates = jnn.sigmoid(eta)
 
         result = {}
-        for i, signal in enumerate(self.signals):
-            rate = rates[i]
+        for signal, rate in zip(self.signals, rates):
             numpyro.deterministic(f"{self.name}_{signal}", rate)
             result[signal] = rate
 

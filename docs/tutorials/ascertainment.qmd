@@ -222,12 +222,12 @@ Those mechanisms typically change over weeks or months, while the latent infecti
 Each ascertainment trajectory is sampled on the logit scale and transformed to a probability:
 
 $$
-\eta_j(t) = \ell_j + z_j(t),
+\eta_j(t) = \operatorname{logit}(\alpha_{j,0}) + z_j(t),
 \qquad
 \alpha_j(t) = \operatorname{logit}^{-1}(\eta_j(t)).
 $$
 
-Here $\ell_j$ is the baseline logit ascertainment level from `locs`, and $z_j(t)$ is a temporal deviation.
+Here $\alpha_{j,0}$ is the natural-scale baseline ascertainment rate from `baseline_rates`, and $z_j(t)$ is a temporal deviation on the logit scale.
 The example below samples weekly AR(1) deviations and broadcasts them to the daily model axis.
 
 ```{python}
@@ -244,9 +244,9 @@ timevarying_ascertainment = TimeVaryingAscertainment(
             start_dow=MMWR_WEEK,
         ),
     },
-    locs={
-        "hospital": logit(0.01),
-        "ed_visits": logit(0.02),
+    baseline_rates={
+        "hospital": 0.01,
+        "ed_visits": 0.02,
     },
 )
 ```

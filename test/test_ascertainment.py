@@ -280,6 +280,7 @@ class TestTimeVaryingAscertainmentValidation:
             TimeVaryingAscertainment(
                 name="tv_ascertainment",
                 processes=processes,
+                baseline_rates={},
             )
 
     def test_rejects_invalid_process(self):
@@ -288,24 +289,44 @@ class TestTimeVaryingAscertainmentValidation:
             TimeVaryingAscertainment(
                 name="tv_ascertainment",
                 processes={"ed": object()},
+                baseline_rates={"ed": 0.02},
             )
 
-    def test_rejects_unknown_loc_signal(self):
-        """Test that locs cannot name signals without processes."""
-        with pytest.raises(ValueError, match="unknown signal"):
+    def test_requires_baseline_rates_mapping(self):
+        """Test that baseline_rates must be a mapping."""
+        with pytest.raises(TypeError, match="baseline_rates must be a mapping"):
             TimeVaryingAscertainment(
                 name="tv_ascertainment",
                 processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
-                locs={"hospital": -5.0},
+                baseline_rates=None,
             )
 
-    def test_rejects_non_scalar_loc(self):
-        """Test that loc values must be scalar."""
+    def test_requires_baseline_rates_to_match_process_signals(self):
+        """Test that baseline_rates must match process signals exactly."""
+        with pytest.raises(ValueError, match="exactly the same signal names"):
+            TimeVaryingAscertainment(
+                name="tv_ascertainment",
+                processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
+                baseline_rates={"hospital": 0.01},
+            )
+
+    def test_rejects_non_scalar_baseline_rate(self):
+        """Test that baseline rate values must be scalar."""
         with pytest.raises(ValueError, match="must be scalar"):
             TimeVaryingAscertainment(
                 name="tv_ascertainment",
                 processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
-                locs={"ed": jnp.array([-5.0, -4.0])},
+                baseline_rates={"ed": jnp.array([0.01, 0.02])},
+            )
+
+    @pytest.mark.parametrize("baseline_rate", [0.0, 1.0, -0.1, 1.1])
+    def test_rejects_baseline_rate_outside_open_unit_interval(self, baseline_rate):
+        """Test that baseline rate values must be probabilities in (0, 1)."""
+        with pytest.raises(ValueError, match=r"must be in \(0, 1\)"):
+            TimeVaryingAscertainment(
+                name="tv_ascertainment",
+                processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
+                baseline_rates={"ed": baseline_rate},
             )
 
 
@@ -317,7 +338,7 @@ class TestTimeVaryingAscertainmentSampling:
         ascertainment = TimeVaryingAscertainment(
             name="tv_ascertainment",
             processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
-            locs={"ed": -5.0},
+            baseline_rates={"ed": 0.02},
         )
 
         with numpyro.handlers.seed(rng_seed=42):
@@ -341,7 +362,7 @@ class TestTimeVaryingAscertainmentSampling:
                     start_dow=MMWR_WEEK,
                 )
             },
-            locs={"ed": -5.0},
+            baseline_rates={"ed": 0.02},
         )
 
         with numpyro.handlers.seed(rng_seed=42):
@@ -365,6 +386,7 @@ class TestTimeVaryingAscertainmentSampling:
                 ),
                 "hospital": AR1(autoreg=0.8, innovation_sd=0.1),
             },
+            baseline_rates={"ed": 0.02, "hospital": 0.01},
         )
 
         assert ascertainment.calendar_anchor_requirements() == ("ed",)
@@ -380,6 +402,7 @@ class TestTimeVaryingAscertainmentSampling:
                     start_dow=MMWR_WEEK,
                 )
             },
+            baseline_rates={"ed": 0.02},
         )
 
         with numpyro.handlers.seed(rng_seed=42):
@@ -391,6 +414,7 @@ class TestTimeVaryingAscertainmentSampling:
         ascertainment = TimeVaryingAscertainment(
             name="tv_ascertainment",
             processes={"ed": AR1(autoreg=0.8, innovation_sd=0.1)},
+            baseline_rates={"ed": 0.02},
         )
         ed = ascertainment.for_signal("ed")
         trajectory = jnp.array([0.1, 0.2, 0.3])

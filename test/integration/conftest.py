@@ -499,9 +499,9 @@ def he_weekly_timevarying_ascertainment_model(
                 start_dow=MMWR_WEEK,
             ),
         },
-        locs={
-            "hospital": _logit(true_ihr),
-            "ed_visits": _logit(true_iedr),
+        baseline_rates={
+            "hospital": true_ihr,
+            "ed_visits": true_iedr,
         },
     )
 

@@ -495,7 +495,7 @@ class TestMultiSignalModelSampling:
                     start_dow=MMWR_WEEK,
                 )
             },
-            locs={"ed": -5.0},
+            baseline_rates={"ed": 0.02},
         )
         builder.add_ascertainment(ascertainment)
 
@@ -1121,6 +1121,7 @@ class TestMultiSignalValidateDataAnchor:
                     start_dow=MMWR_WEEK,
                 )
             },
+            baseline_rates={"ed": 0.02},
         )
         builder.add_ascertainment(ascertainment)
         model = builder.build()
@@ -1151,6 +1152,7 @@ class TestMultiSignalValidateDataAnchor:
                     start_dow=MMWR_WEEK,
                 )
             },
+            baseline_rates={"ed": 0.02},
         )
         builder.add_ascertainment(ascertainment)
         model = builder.build()
@@ -1182,6 +1184,7 @@ class TestMultiSignalValidateDataAnchor:
                     start_dow=MMWR_WEEK,
                 )
             },
+            baseline_rates={"ed": 0.02},
         )
         builder.add_ascertainment(ascertainment)
         model = builder.build()
