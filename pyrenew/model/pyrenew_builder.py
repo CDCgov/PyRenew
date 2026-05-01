@@ -169,7 +169,7 @@ class PyrenewBuilder:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed_visits"),
-            loc=...,
+            baseline_rates=...,
             scale_tril=...,
         )
         builder.add_ascertainment(ascertainment)

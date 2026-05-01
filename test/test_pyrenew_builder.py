@@ -216,7 +216,7 @@ class TestPyrenewBuilderConfiguration:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
 
@@ -231,7 +231,7 @@ class TestPyrenewBuilderConfiguration:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
 
@@ -361,7 +361,7 @@ class TestMultiSignalModelSampling:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
         builder.add_ascertainment(ascertainment)
@@ -425,7 +425,7 @@ class TestMultiSignalModelSampling:
         ascertainment = JointAscertainment(
             name="shared_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
         builder.add_ascertainment(ascertainment)
@@ -548,7 +548,7 @@ class TestMultiSignalModelSampling:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
 

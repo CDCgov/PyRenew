@@ -29,7 +29,7 @@ class TestJointAscertainmentValidation:
             JointAscertainment(
                 name=name,
                 signals=("hospital", "ed"),
-                loc=jnp.zeros(2),
+                baseline_rates=jnp.full(2, 0.5),
                 scale_tril=jnp.eye(2),
             )
 
@@ -48,7 +48,7 @@ class TestJointAscertainmentValidation:
             JointAscertainment(
                 name="he_ascertainment",
                 signals=signals,
-                loc=jnp.zeros(2),
+                baseline_rates=jnp.full(2, 0.5),
                 scale_tril=jnp.eye(2),
             )
 
@@ -58,7 +58,7 @@ class TestJointAscertainmentValidation:
             JointAscertainment(
                 name="he_ascertainment",
                 signals=("hospital", "hospital"),
-                loc=jnp.zeros(2),
+                baseline_rates=jnp.full(2, 0.5),
                 scale_tril=jnp.eye(2),
             )
 
@@ -67,20 +67,31 @@ class TestJointAscertainmentValidation:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
 
         with pytest.raises(ValueError, match="Unknown signal"):
             ascertainment.for_signal("wastewater")
 
-    def test_requires_loc_shape_to_match_signals(self):
-        """Test that loc must have one entry per signal."""
-        with pytest.raises(ValueError, match="loc must have shape"):
+    def test_requires_baseline_rates_shape_to_match_signals(self):
+        """Test that baseline_rates must have one entry per signal."""
+        with pytest.raises(ValueError, match="baseline_rates must have shape"):
             JointAscertainment(
                 name="he_ascertainment",
                 signals=("hospital", "ed"),
-                loc=jnp.zeros(3),
+                baseline_rates=jnp.full(3, 0.5),
+                scale_tril=jnp.eye(2),
+            )
+
+    @pytest.mark.parametrize("baseline_rates", [[0.0, 0.5], [1.0, 0.5], [-0.1, 0.5]])
+    def test_requires_baseline_rates_in_open_unit_interval(self, baseline_rates):
+        """Test that baseline_rates must be natural-scale probabilities."""
+        with pytest.raises(ValueError, match="baseline_rates must contain"):
+            JointAscertainment(
+                name="he_ascertainment",
+                signals=("hospital", "ed"),
+                baseline_rates=jnp.array(baseline_rates),
                 scale_tril=jnp.eye(2),
             )
 
@@ -90,14 +101,14 @@ class TestJointAscertainmentValidation:
             JointAscertainment(
                 name="he_ascertainment",
                 signals=("hospital", "ed"),
-                loc=jnp.zeros(2),
+                baseline_rates=jnp.full(2, 0.5),
             )
 
         with pytest.raises(ValueError, match="Exactly one"):
             JointAscertainment(
                 name="he_ascertainment",
                 signals=("hospital", "ed"),
-                loc=jnp.zeros(2),
+                baseline_rates=jnp.full(2, 0.5),
                 scale_tril=jnp.eye(2),
                 covariance_matrix=jnp.eye(2),
             )
@@ -108,7 +119,7 @@ class TestJointAscertainmentValidation:
             JointAscertainment(
                 name="he_ascertainment",
                 signals=("hospital", "ed"),
-                loc=jnp.zeros(2),
+                baseline_rates=jnp.full(2, 0.5),
                 scale_tril=jnp.eye(3),
             )
 
@@ -117,7 +128,7 @@ class TestJointAscertainmentValidation:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             covariance_matrix=jnp.eye(2),
         )
 
@@ -128,7 +139,7 @@ class TestJointAscertainmentValidation:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             precision_matrix=jnp.eye(2),
         )
 
@@ -165,7 +176,7 @@ class TestJointAscertainmentSampling:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
 
@@ -192,7 +203,7 @@ class TestJointAscertainmentSampling:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             covariance_matrix=jnp.eye(2),
         )
 
@@ -207,7 +218,7 @@ class TestJointAscertainmentSampling:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             precision_matrix=jnp.eye(2),
         )
 
@@ -222,7 +233,7 @@ class TestJointAscertainmentSampling:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
         hospital = ascertainment.for_signal("hospital")
@@ -241,7 +252,7 @@ class TestJointAscertainmentSampling:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
         hospital = ascertainment.for_signal("hospital")
@@ -262,7 +273,7 @@ class TestJointAscertainmentSampling:
         ascertainment = JointAscertainment(
             name="he_ascertainment",
             signals=("hospital", "ed"),
-            loc=jnp.zeros(2),
+            baseline_rates=jnp.full(2, 0.5),
             scale_tril=jnp.eye(2),
         )
 

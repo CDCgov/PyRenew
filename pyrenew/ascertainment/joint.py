@@ -32,24 +32,23 @@ class JointAscertainment(AscertainmentModel):
     infection-to-observation ratios, while still being correlated because both
     depend on care-seeking behavior, testing practices, or reporting systems.
 
-    The model samples one multivariate normal vector on the logit scale and
-    transforms each component to a probability:
+    The model samples one multivariate normal vector around natural-scale
+    baseline ascertainment rates, which are converted to the logit scale
+    internally:
 
     ```text
-    eta ~ MultivariateNormal(loc, covariance)
+    eta ~ MultivariateNormal(logit(baseline_rates), covariance)
     ascertainment_rate_j = sigmoid(eta_j)
     ```
 
-    Each returned rate is scalar and constant over the model time axis. Use
-    ``TimeVaryingAscertainment`` when the probability of observing incidence
-    should vary through time.
+    Each returned rate is scalar and constant over the model time axis.
     """
 
     def __init__(
         self,
         name: str,
         signals: tuple[str, ...],
-        loc: ArrayLike,
+        baseline_rates: ArrayLike,
         scale_tril: ArrayLike | None = None,
         covariance_matrix: ArrayLike | None = None,
         precision_matrix: ArrayLike | None = None,
@@ -63,12 +62,13 @@ class JointAscertainment(AscertainmentModel):
             Name of the ascertainment model.
         signals
             Unique signal names, such as ``("hospital", "ed_visits")``. The
-            order corresponds to entries in ``loc`` and the covariance
+            order corresponds to entries in ``baseline_rates`` and the covariance
             parameter.
-        loc
-            Mean vector on the logit scale. Shape ``(n_signals,)``. A value of
-            ``logit(0.01)`` centers the corresponding ascertainment rate near
-            1 percent before accounting for covariance.
+        baseline_rates
+            Natural-scale baseline ascertainment rates. Shape ``(n_signals,)``.
+            Values must be probabilities in ``(0, 1)``. A value of ``0.01``
+            centers the corresponding ascertainment rate near 1 percent before
+            accounting for covariance.
         scale_tril
             Lower-triangular scale matrix for the multivariate normal on the
             logit scale. Exactly one covariance parameter must be supplied.
@@ -80,11 +80,14 @@ class JointAscertainment(AscertainmentModel):
             Exactly one covariance parameter must be supplied.
         """
         super().__init__(name=name, signals=signals)
-        self.loc = jnp.asarray(loc)
+        self.baseline_rates = jnp.asarray(baseline_rates)
         self.scale_tril = self._optional_array(scale_tril)
         self.covariance_matrix = self._optional_array(covariance_matrix)
         self.precision_matrix = self._optional_array(precision_matrix)
         self._validate_parameters()
+        self.baseline_logits = jnp.log(self.baseline_rates) - jnp.log1p(
+            -self.baseline_rates
+        )
 
     @staticmethod
     def _optional_array(value: ArrayLike | None) -> ArrayLike | None:
@@ -106,9 +109,15 @@ class JointAscertainment(AscertainmentModel):
         Validate constructor parameters.
         """
         n_signals = len(self.signals)
-        if self.loc.shape != (n_signals,):
+        if self.baseline_rates.shape != (n_signals,):
             raise ValueError(
-                f"loc must have shape ({n_signals},), got shape {self.loc.shape}."
+                "baseline_rates must have shape "
+                f"({n_signals},), got shape {self.baseline_rates.shape}."
+            )
+        if jnp.any(self.baseline_rates <= 0) or jnp.any(self.baseline_rates >= 1):
+            raise ValueError(
+                "baseline_rates must contain probabilities in (0, 1), "
+                f"got {self.baseline_rates}."
             )
 
         n_covariance_params = sum(
@@ -140,7 +149,10 @@ class JointAscertainment(AscertainmentModel):
         for name in _COVARIANCE_PARAMETER_NAMES:
             value = getattr(self, name)
             if value is not None:
-                return dist.MultivariateNormal(loc=self.loc, **{name: value})
+                return dist.MultivariateNormal(
+                    loc=self.baseline_logits,
+                    **{name: value},
+                )
 
         raise ValueError(
             "Exactly one of scale_tril, covariance_matrix, or "

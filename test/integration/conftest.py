@@ -30,23 +30,6 @@ from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 
 
-def _logit(value: float) -> float:
-    """
-    Convert a probability to the logit scale.
-
-    Parameters
-    ----------
-    value : float
-        Probability in (0, 1).
-
-    Returns
-    -------
-    float
-        Logit-transformed value.
-    """
-    return float(jnp.log(value) - jnp.log1p(-value))
-
-
 @pytest.fixture(scope="module")
 def true_params() -> dict:
     """
@@ -405,7 +388,7 @@ def he_weekly_joint_ascertainment_model(
     ascertainment = JointAscertainment(
         name="he_ascertainment",
         signals=("hospital", "ed_visits"),
-        loc=jnp.array([_logit(true_ihr), _logit(true_iedr)]),
+        baseline_rates=jnp.array([true_ihr, true_iedr]),
         scale_tril=jnp.array(
             [
                 [0.7, 0.0],
