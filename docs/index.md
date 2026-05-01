@@ -18,7 +18,8 @@ It combines two distinct discrete convolutions which describe different processe
 New infections arise from past infections through a generation interval distribution.
 
 Let $I(t)$ denote the latent number of new infections at time $t$, and let $\mathcal{R}(t)$ denote the time-varying reproduction number.
-Assume the generation interval distribution has finite support over lags $\tau = 1, \dots, G$. Let $w_\tau$ denote the probability that a secondary infection occurs $\tau$ days after infection in the primary case, with
+Assume the generation interval distribution has finite support over lags $\tau = 1, \dots, G$.
+Let $w_\tau$ denote the probability that a secondary infection occurs $\tau$ days after infection in the primary case, with
 
 $$
 \sum_{\tau=1}^{G} w_\tau = 1, \qquad w_\tau \ge 0.
@@ -38,7 +39,9 @@ In PyRenew, the latent process is represented on a **per-capita scale** (infecti
 
 Infections are latent and are not directly observed; instead, the data consist of events that occur some time after infection, such as hospitalizations or emergency department visits.
 
-Let $\mu(t)$ denote the expected number of observed events at time $t$, and let $\alpha$ denote an **ascertainment rate**, the probability an infection is observed as an event. Assume the delay from infection to observation has finite support over lags $d = 0, \dots, D$. Let $\pi_d$ denote the probability that an infection is observed $d$ days later, with
+Let $\mu(t)$ denote the expected number of observed events at time $t$, and let $\alpha$ denote an **ascertainment rate**, the probability an infection is observed as an event.
+Assume the delay from infection to observation has finite support over lags $d = 0, \dots, D$.
+Let $\pi_d$ denote the probability that an infection is observed $d$ days later, with
 
 $$
 \sum_{d=0}^{D} \pi_d = 1, \qquad \pi_d \ge 0.
@@ -56,14 +59,16 @@ Here, $d$ indexes lags in the infection-to-observation delay distribution.
 
 The observation equation defines the expected number of observed events at time $t$, but the actual observed data are stochastic.
 
-Let $Y(t)$ denote the observed number of events at time $t$. We model observations as draws from a count distribution with central value (typically mean) $\mu(t)$:
+Let $Y(t)$ denote the observed number of events at time $t$.
+We model observations as draws from a count distribution with central value (typically mean) $\mu(t)$:
 
 $$
 Y(t) \sim \text{Distribution}(\mu(t), \theta).
 $$
 
 One possible choice is the Poisson distribution, which assumes the variance equals the mean.
-In practice, epidemiological count data are often overdispersed relative to the Poisson. Negative binomial distributions are a common choice for modeling these overdispersed counts.
+In practice, epidemiological count data are often overdispersed relative to the Poisson.
+Negative binomial distributions are a common choice for modeling these overdispersed counts.
 
 The model thus has two layers:
 
@@ -82,7 +87,6 @@ PyRenew's building blocks are:
 
 Components (generation interval, reproduction number process, observation process) are specified independently, so each can be swapped without changing the rest of the model.
 This makes it straightforward to move a quantity between "known" and "inferred" and keeps modeling choices explicit and reviewable.
-
 
 ## Multi-signal models
 

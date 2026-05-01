@@ -7,7 +7,7 @@ jupyter:
     text_representation:
       extension: .qmd
       format_name: quarto
-      format_version: '1.0'
+      format_version: "1.0"
       jupytext_version: 1.18.1
   kernelspec:
     display_name: Python 3 (ipykernel)
@@ -17,21 +17,18 @@ jupyter:
 
 ## Design principle: all quantities are RandomVariables
 
-In a Bayesian model, all quantities — data, parameters, hyperparameters, derived computations —
-are random variables living in a single joint probability model (Gelman et al., BDA3 §1.3).
+In a Bayesian model, all quantities --- data, parameters, hyperparameters, derived computations --- are random variables living in a single joint probability model (Gelman et al., BDA3 §1.3).
 The only distinction is whether a given quantity is known (observed, conditioned on) or unknown (to be inferred).
 A fixed constant is just a degenerate random variable; an estimated rate is a draw from a prior.
 Both participate in the same joint distribution.
 
 PyRenew embodies this through its `RandomVariable` abstract base class.
-All model components implement the same `sample()` interface,
-so you can swap a fixed quantity for an estimated one — or vice versa —
-without changing any surrounding model code.
-
+All model components implement the same `sample()` interface, so you can swap a fixed quantity for an estimated one --- or vice versa --- without changing any surrounding model code.
 
 ```{python}
-# | label: setup
-# | output: false
+#| label: setup
+#| output: false
+
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -68,7 +65,8 @@ A degenerate random variable that returns a fixed value.
 Its `sample()` method simply returns the stored value, unchanged.
 
 ```{python}
-# | label: deterministic-example
+#| label: deterministic-example
+
 ihr_fixed = DeterministicVariable("ihr", 0.01)
 
 with numpyro.handlers.seed(rng_seed=0):
@@ -76,11 +74,11 @@ with numpyro.handlers.seed(rng_seed=0):
     print(f"IHR (fixed): {value}")
 ```
 
-`DeterministicPMF` specializes this for probability mass functions,
-validating at construction time that the values sum to 1:
+`DeterministicPMF` specializes this for probability mass functions, validating at construction time that the values sum to 1:
 
 ```{python}
-# | label: deterministic-pmf-example
+#| label: deterministic-pmf-example
+
 delay_pmf = DeterministicPMF(
     "delay",
     jnp.array([0.0, 0.1, 0.3, 0.3, 0.2, 0.1]),
@@ -94,13 +92,13 @@ with numpyro.handlers.seed(rng_seed=0):
 ### DistributionalVariable
 
 A random variable that draws from a numpyro distribution via `numpyro.sample()`.
-The `DistributionalVariable` factory function dispatches to one of two classes
-depending on whether the distribution is known at construction time or built at sample time.
+The `DistributionalVariable` factory function dispatches to one of two classes depending on whether the distribution is known at construction time or built at sample time.
 
 **StaticDistributionalVariable**: the distribution is fully specified at construction time.
 
 ```{python}
-# | label: static-distributional-example
+#| label: static-distributional-example
+
 # IHR with a Beta(2, 198) prior: mean ~1%, moderate uncertainty
 ihr_estimated = DistributionalVariable("ihr", dist.Beta(2, 198))
 print(f"Type: {type(ihr_estimated).__name__}")
@@ -109,12 +107,12 @@ with numpyro.handlers.seed(rng_seed=0):
     print(f"IHR (sampled): {ihr_estimated():.4f}")
 ```
 
-**DynamicDistributionalVariable**: the distribution is constructed at sample time
-from a callable. This is useful when distribution parameters depend on
-other sampled quantities.
+**DynamicDistributionalVariable**: the distribution is constructed at sample time from a callable.
+This is useful when distribution parameters depend on other sampled quantities.
 
 ```{python}
-# | label: dynamic-distributional-example
+#| label: dynamic-distributional-example
+
 # A Normal whose location is determined at sample time
 dynamic_rv = DistributionalVariable(
     "dynamic_normal",
@@ -133,7 +131,8 @@ Wraps another `RandomVariable` and applies a deterministic transformation to its
 This is useful for reparameterizations and derived quantities.
 
 ```{python}
-# | label: transformed-example
+#| label: transformed-example
+
 # Day-of-week effect: Dirichlet draw scaled by 7
 # so effects are multiplicative and preserve weekly totals
 dow_effect = TransformedVariable(
@@ -153,17 +152,15 @@ with numpyro.handlers.seed(rng_seed=0):
 
 ### Interchangeability
 
-Because all implementations share the `sample()` interface,
-you can swap them freely. For example, the `PopulationCounts` observation process
-accepts any `RandomVariable` as its `ascertainment_rate_rv`.
+Because all implementations share the `sample()` interface, you can swap them freely.
+For example, the `PopulationCounts` observation process accepts any `RandomVariable` as its `ascertainment_rate_rv`.
 The model code is identical whether the rate is fixed or estimated:
 
 ```{python}
-# | label: interchangeability
+#| label: interchangeability
+
 hosp_delay_pmf = jnp.array(
-    datasets.load_example_infection_admission_interval()[
-        "probability_mass"
-    ].to_numpy()
+    datasets.load_example_infection_admission_interval()["probability_mass"].to_numpy()
 )
 
 # Fixed ascertainment rate
@@ -185,51 +182,42 @@ hosp_estimated = PopulationCounts(
 
 ## The RandomVariable public API
 
-The `RandomVariable` metaclass (defined in `pyrenew.metaclass`) requires
-subclasses to implement:
+The `RandomVariable` metaclass (defined in `pyrenew.metaclass`) requires subclasses to implement:
 
-| Method | Signature | Purpose |
-|--------|-----------|---------|
-| `sample` | `sample(**kwargs) -> tuple` | Core computation: return a value, draw from a distribution, or perform a calculation |
+  | Method   | Signature                   | Purpose                                                                              |
+  | -------- | --------------------------- | ------------------------------------------------------------------------------------ |
+  | `sample` | `sample(**kwargs) -> tuple` | Core computation: return a value, draw from a distribution, or perform a calculation |
 
 The metaclass also provides:
 
-| Method | Behavior |
-|--------|----------|
-| `__call__(**kwargs)` | Alias for `sample(**kwargs)`, so `my_rv()` is equivalent to `my_rv.sample()` |
+  | Method               | Behavior                                                                     |
+  | -------------------- | ---------------------------------------------------------------------------- |
+  | `__call__(**kwargs)` | Alias for `sample(**kwargs)`, so `my_rv()` is equivalent to `my_rv.sample()` |
 
-The `**kwargs` pattern is central to composability: a `RandomVariable`
-accepts whatever arguments its `sample()` method needs, and passes
-through any additional keyword arguments to internal calls.
+The `**kwargs` pattern is central to composability: a `RandomVariable` accepts whatever arguments its `sample()` method needs, and passes through any additional keyword arguments to internal calls.
 
 ## Writing a custom RandomVariable
 
-The built-in classes handle most cases, but sometimes you need a component with
-custom logic---for instance, one that makes multiple `numpyro.sample()` calls,
-performs domain-specific validation, or records derived quantities
-via `numpyro.deterministic()`.
+The built-in classes handle most cases, but sometimes you need a component with custom logic---for instance, one that makes multiple `numpyro.sample()` calls, performs domain-specific validation, or records derived quantities via `numpyro.deterministic()`.
 
 ### Example: ascertainment with day-of-week effects
 
-Hospital admissions data typically shows day-of-week reporting patterns:
-fewer admissions are reported on weekends, more on weekdays.
+Hospital admissions data typically shows day-of-week reporting patterns: fewer admissions are reported on weekends, more on weekdays.
 We can model this as a multiplicative adjustment to a baseline ascertainment rate.
 
 The predicted hospital admissions on day $t$ are:
 
-$$\lambda_t = \alpha \cdot w_{t \bmod 7} \cdot \sum_{d=0}^{D} I_{t-d} \cdot p_d$$
+$$
+\lambda_t = \alpha \cdot w_{t \bmod 7} \cdot \sum_{d=0}^{D} I_{t-d} \cdot p_d
+$$
 
-where $\alpha$ is the baseline ascertainment rate,
-$w_j$ for $j = 0, \ldots, 6$ are day-of-week multipliers
-(positive, summing to 7 so that the weekly total is preserved),
-and the summation is the delay convolution.
+where $\alpha$ is the baseline ascertainment rate, $w_j$ for $j = 0, \ldots, 6$ are day-of-week multipliers (positive, summing to 7 so that the weekly total is preserved), and the summation is the delay convolution.
 
-We define a custom `RandomVariable` that bundles the
-ascertainment rate and day-of-week effect into a single component,
-returning a daily rate vector.
+We define a custom `RandomVariable` that bundles the ascertainment rate and day-of-week effect into a single component, returning a daily rate vector.
 
 ```{python}
-# | label: custom-rv-definition
+#| label: custom-rv-definition
+
 from jax.typing import ArrayLike
 
 
@@ -274,15 +262,12 @@ class AscertainmentWithDayOfWeek(RandomVariable):
         dow_concentration = jnp.asarray(dow_concentration)
         if dow_concentration.shape != (7,):
             raise ValueError(
-                f"dow_concentration must have shape (7,), "
-                f"got {dow_concentration.shape}"
+                f"dow_concentration must have shape (7,), got {dow_concentration.shape}"
             )
         if jnp.any(dow_concentration <= 0):
             raise ValueError("dow_concentration values must be positive")
         if not (0 <= first_day_offset <= 6):
-            raise ValueError(
-                f"first_day_offset must be 0-6, got {first_day_offset}"
-            )
+            raise ValueError(f"first_day_offset must be 0-6, got {first_day_offset}")
 
     def sample(self, n_days: int, **kwargs) -> tuple:
         """
@@ -313,9 +298,7 @@ class AscertainmentWithDayOfWeek(RandomVariable):
 
         # Tile the 7-element vector across the timeseries
         full_cycle = jnp.tile(dow_effect, (n_days // 7) + 1)
-        daily_dow = full_cycle[
-            self.first_day_offset : self.first_day_offset + n_days
-        ]
+        daily_dow = full_cycle[self.first_day_offset : self.first_day_offset + n_days]
 
         # Combine: daily rate = baseline * day-of-week multiplier
         daily_rate = baseline * daily_dow
@@ -332,7 +315,8 @@ This class bundles three things that belong together:
 ### Sampling from the custom RV
 
 ```{python}
-# | label: sample-custom-rv
+#| label: sample-custom-rv
+
 ascertainment_rv = AscertainmentWithDayOfWeek(
     name="hosp",
     baseline_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
@@ -347,7 +331,8 @@ with numpyro.handlers.seed(rng_seed=42):
 ```
 
 ```{python}
-# | label: plot-custom-rv
+#| label: plot-custom-rv
+
 day_labels = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 rates_df = pd.DataFrame(
@@ -355,18 +340,14 @@ rates_df = pd.DataFrame(
         "day": np.arange(n_days),
         "rate": np.array(daily_rates),
         "dow": [day_labels[i % 7] for i in range(n_days)],
-        "day_type": [
-            "Weekend" if i % 7 >= 5 else "Weekday" for i in range(n_days)
-        ],
+        "day_type": ["Weekend" if i % 7 >= 5 else "Weekday" for i in range(n_days)],
     }
 )
 
 (
     p9.ggplot(rates_df, p9.aes(x="day", y="rate", fill="day_type"))
     + p9.geom_col(alpha=0.7, color="black", size=0.3)
-    + p9.scale_fill_manual(
-        values={"Weekday": "lightblue", "Weekend": "orange"}
-    )
+    + p9.scale_fill_manual(values={"Weekday": "lightblue", "Weekend": "orange"})
     + p9.labs(
         x="Day",
         y="Daily Ascertainment Rate",
@@ -377,39 +358,35 @@ rates_df = pd.DataFrame(
 )
 ```
 
-The weekly pattern is clear: weekday rates are higher than weekend rates,
-reflecting reduced reporting on weekends.
+The weekly pattern is clear: weekday rates are higher than weekend rates, reflecting reduced reporting on weekends.
 
 ### Applying to a simulated observation process
 
-We now use the `AscertainmentWithDayOfWeek` instance defined above
-to generate day-of-week multipliers within a realistic observation
-pipeline, showing how a custom `RandomVariable` integrates into a
-data-generating process.
+We now use the `AscertainmentWithDayOfWeek` instance defined above to generate day-of-week multipliers within a realistic observation pipeline, showing how a custom `RandomVariable` integrates into a data-generating process.
 
 In a hospital surveillance system, the observation pipeline is:
 
 1. **Infections** occur over time (the latent process).
 2. **Delay**: each infection leads to a hospital admission after some delay, modeled as a convolution with a delay PMF.
-3. **Reporting**: the admission is *reported* with day-of-week effects — fewer reports on weekends, more on weekdays.
+3. **Reporting**: the admission is *reported* with day-of-week effects --- fewer reports on weekends, more on weekdays.
 4. **Noise**: observed counts include measurement noise.
 
-The day-of-week effect is a *reporting* artifact, so it is
-applied **after** the delay convolution.
+The day-of-week effect is a *reporting* artifact, so it is applied **after** the delay convolution.
 We walk through each step explicitly to make the pipeline clear.
 
 ```{python}
-# | label: simulate-infections
+#| label: simulate-infections
+
 # Epidemic curve: exponential growth then decay
 n_days = 60
 infections = 10000.0 * jnp.exp(-((jnp.arange(n_days) - 25.0) ** 2) / 200.0)
 ```
 
-We convolve infections with the delay PMF and apply a baseline
-ascertainment rate to get the expected admissions before noise:
+We convolve infections with the delay PMF and apply a baseline ascertainment rate to get the expected admissions before noise:
 
 ```{python}
-# | label: delay-convolve
+#| label: delay-convolve
+
 baseline_rate = 0.01
 expected_admissions = jnp.convolve(
     baseline_rate * infections,
@@ -420,12 +397,11 @@ expected_admissions = jnp.convolve(
 
 Now we simulate observed admissions with and without day-of-week effects.
 Without effects, we add noise directly to the smooth expected curve.
-With effects, we first call our custom `ascertainment_rv` to get a
-day-of-week multiplier, apply it to the expected admissions
-(post-convolution, at the reporting stage), then add noise.
+With effects, we first call our custom `ascertainment_rv` to get a day-of-week multiplier, apply it to the expected admissions (post-convolution, at the reporting stage), then add noise.
 
 ```{python}
-# | label: simulate-with-dow
+#| label: simulate-with-dow
+
 n_samples = 20
 concentration = 50.0
 
@@ -446,9 +422,7 @@ for seed in range(n_samples):
         # Apply day-of-week *after* the delay convolution
         obs_with_dow = numpyro.sample(
             "obs_with_dow",
-            dist.NegativeBinomial2(
-                expected_admissions * dow_multiplier, concentration
-            ),
+            dist.NegativeBinomial2(expected_admissions * dow_multiplier, concentration),
         )
 
     for i in range(n_days):
@@ -471,7 +445,8 @@ for seed in range(n_samples):
 ```
 
 ```{python}
-# | label: plot-comparison
+#| label: plot-comparison
+
 results_df = pd.DataFrame(results)
 
 (
@@ -491,22 +466,20 @@ results_df = pd.DataFrame(results)
 ```
 
 The left panel shows smooth variation from noise alone.
-The right panel shows the additional weekly oscillation introduced by
-day-of-week reporting effects — the sawtooth pattern of weekend dips
-and weekday peaks that is characteristic of real hospital admissions data.
+The right panel shows the additional weekly oscillation introduced by day-of-week reporting effects --- the sawtooth pattern of weekend dips and weekday peaks that is characteristic of real hospital admissions data.
 
 ## Summary
 
 ### Choosing a RandomVariable implementation
 
-| Need | Use |
-|------|-----|
-| Fixed known value | `DeterministicVariable` |
-| Fixed known PMF | `DeterministicPMF` |
-| Sample from a fixed distribution | `DistributionalVariable` (static) |
-| Sample from a distribution parameterized at sample time | `DistributionalVariable` (dynamic, pass a callable) |
-| Deterministic transformation of another RV | `TransformedVariable` |
-| Multiple sample statements, custom validation, or derived computation | Custom `RandomVariable` subclass |
+  | Need                                                                  | Use                                                 |
+  | --------------------------------------------------------------------- | --------------------------------------------------- |
+  | Fixed known value                                                     | `DeterministicVariable`                             |
+  | Fixed known PMF                                                       | `DeterministicPMF`                                  |
+  | Sample from a fixed distribution                                      | `DistributionalVariable` (static)                   |
+  | Sample from a distribution parameterized at sample time               | `DistributionalVariable` (dynamic, pass a callable) |
+  | Deterministic transformation of another RV                            | `TransformedVariable`                               |
+  | Multiple sample statements, custom validation, or derived computation | Custom `RandomVariable` subclass                    |
 
 ### Writing a custom RandomVariable
 

@@ -1,0 +1,7 @@
+flavor = "gfm"
+[format]
+wrap = "sentence"
+[formatters]
+python = "ruff"
+[linters]
+python = "ruff"

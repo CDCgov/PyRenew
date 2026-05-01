@@ -9,7 +9,7 @@ jupyter:
     text_representation:
       extension: .qmd
       format_name: quarto
-      format_version: '1.0'
+      format_version: "1.0"
       jupytext_version: 1.18.1
   kernelspec:
     display_name: Python 3 (ipykernel)
@@ -18,8 +18,9 @@ jupyter:
 ---
 
 ```{python}
-# | label: setup
-# | output: false
+#| label: setup
+#| output: false
+
 import jax.numpy as jnp
 import numpy as np
 import numpyro
@@ -48,7 +49,9 @@ Ignoring this weekly periodicity forces the noise model to absorb systematic var
 
 PyRenew models day-of-week effects as a **multiplicative adjustment** applied to predicted counts after the delay convolution and ascertainment scaling:
 
-$$\lambda(t) = d_{w(t)} \cdot \alpha \sum_{s} I(t-s)\,\pi(s)$$
+$$
+\lambda(t) = d_{w(t)} \cdot \alpha \sum_{s} I(t-s)\,\pi(s)
+$$
 
 where $d_{w(t)}$ is the day-of-week multiplier for the weekday of timepoint $t$, $\alpha$ is the ascertainment rate, and $\pi(s)$ is the delay PMF.
 The effect vector $\mathbf{d} = (d_0, d_1, \ldots, d_6)$ has one entry per day (0=Monday through 6=Sunday, ISO convention).
@@ -60,7 +63,8 @@ When the effects sum to 7.0, the average daily multiplier is 1.0, preserving wee
 A typical pattern for ED visits might show weekday effects above 1.0 and weekend effects below 1.0:
 
 ```{python}
-# | label: define-dow-effect
+#| label: define-dow-effect
+
 dow_values = jnp.array([1.20, 1.15, 1.10, 1.05, 1.00, 0.75, 0.75])
 day_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
@@ -69,11 +73,10 @@ print(f"Sum: {float(jnp.sum(dow_values)):.2f}")
 ```
 
 ```{python}
-# | label: plot-dow-effect
+#| label: plot-dow-effect
+
 dow_df = pd.DataFrame({"day": day_names, "effect": np.array(dow_values)})
-dow_df["day"] = pd.Categorical(
-    dow_df["day"], categories=day_names, ordered=True
-)
+dow_df["day"] = pd.Categorical(dow_df["day"], categories=day_names, ordered=True)
 
 (
     p9.ggplot(dow_df, p9.aes(x="day", y="effect"))
@@ -97,11 +100,10 @@ We construct two `PopulationCounts` observation processes using the same delay d
 The only difference is whether `day_of_week_rv` is provided.
 
 ```{python}
-# | label: create-processes
+#| label: create-processes
+
 hosp_delay_pmf = jnp.array(
-    datasets.load_example_infection_admission_interval()[
-        "probability_mass"
-    ].to_numpy()
+    datasets.load_example_infection_admission_interval()["probability_mass"].to_numpy()
 )
 delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
 ihr_rv = DeterministicVariable("ihr", 0.01)
@@ -128,7 +130,8 @@ The `first_day_dow` parameter tells PyRenew which day of the week corresponds to
 Here we set `first_day_dow=0` (Monday).
 
 ```{python}
-# | label: simulate-and-sample
+#| label: simulate-and-sample
+
 day_one = process_no_dow.lookback_days()
 n_total = 130
 infections = 5000.0 * jnp.exp(0.03 * jnp.arange(n_total))
@@ -142,7 +145,8 @@ with numpyro.handlers.seed(rng_seed=0):
 ```
 
 ```{python}
-# | label: plot-predicted-comparison
+#| label: plot-predicted-comparison
+
 n_plot_days = n_total - day_one
 pred_rows = []
 for i in range(n_plot_days):
@@ -169,9 +173,7 @@ pred_df["type"] = pd.Categorical(
 )
 
 (
-    p9.ggplot(
-        pred_df, p9.aes(x="day", y="admissions", color="type", linetype="type")
-    )
+    p9.ggplot(pred_df, p9.aes(x="day", y="admissions", color="type", linetype="type"))
     + p9.geom_line(size=1)
     + p9.scale_color_manual(values=["steelblue", "#e41a1c"])
     + p9.scale_linetype_manual(values=["solid", "dashed"])
@@ -187,7 +189,7 @@ pred_df["type"] = pd.Categorical(
 ```
 
 Without the day-of-week effect the predicted curve is smooth.
-With it, the curve oscillates with a 7-day period — dipping on weekends and rising on weekdays — while following the same overall trend.
+With it, the curve oscillates with a 7-day period --- dipping on weekends and rising on weekdays --- while following the same overall trend.
 
 ## Effect of the offset
 
@@ -196,7 +198,8 @@ Changing it shifts which days receive which multiplier.
 Here we compare starting on Monday vs. Wednesday:
 
 ```{python}
-# | label: offset-comparison
+#| label: offset-comparison
+
 with numpyro.handlers.seed(rng_seed=0):
     result_monday = process_with_dow.sample(
         infections=infections, obs=None, first_day_dow=0
@@ -208,7 +211,8 @@ with numpyro.handlers.seed(rng_seed=0):
 ```
 
 ```{python}
-# | label: plot-offset-comparison
+#| label: plot-offset-comparison
+
 offset_rows = []
 for i in range(21):
     day_idx = day_one + i
@@ -255,7 +259,7 @@ offset_df["offset"] = pd.Categorical(
 ```
 
 The two curves have the same shape but are phase-shifted: their weekend dips fall on different days.
-Getting `first_day_dow` right matters — a misaligned offset would attribute Monday's high to Sunday or vice versa.
+Getting `first_day_dow` right matters --- a misaligned offset would attribute Monday's high to Sunday or vice versa.
 
 When using `MultiSignalModel`, pass `obs_start_date` (the date of the first observation day) to `model.sample()` or `model.run()`.
 The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it.
@@ -266,7 +270,8 @@ Day-of-week effects shape the noise draws, not just the predicted means.
 The noise model samples from a distribution centered on the adjusted predictions, so sampled observations inherit the weekly pattern.
 
 ```{python}
-# | label: sample-noisy
+#| label: sample-noisy
+
 n_samples = 30
 noisy_results = []
 for seed in range(n_samples):
@@ -297,15 +302,14 @@ for seed in range(n_samples):
 ```
 
 ```{python}
-# | label: plot-noisy
+#| label: plot-noisy
+
 noisy_df = pd.DataFrame(noisy_results)
 mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
 
 (
     p9.ggplot(noisy_df, p9.aes(x="day", y="admissions"))
-    + p9.geom_line(
-        p9.aes(group="sample"), alpha=0.15, size=0.4, color="steelblue"
-    )
+    + p9.geom_line(p9.aes(group="sample"), alpha=0.15, size=0.4, color="steelblue")
     + p9.geom_line(
         data=mean_df,
         mapping=p9.aes(x="day", y="admissions"),
@@ -323,17 +327,20 @@ mean_df = noisy_df.groupby(["day", "type"])["admissions"].mean().reset_index()
 ```
 
 The top panel shows smooth variation around the trend.
-The bottom panel shows systematic weekly oscillation in both the mean (red) and individual samples (blue) — the weekend dips are visible even through the noise.
+The bottom panel shows systematic weekly oscillation in both the mean (red) and individual samples (blue) --- the weekend dips are visible even through the noise.
 
 ## Composing with right-truncation
 
 Day-of-week effects and right-truncation are independent adjustments that compose naturally.
 Day-of-week is applied first (adjusting the expected counts for reporting patterns), then right-truncation scales down recent counts for incomplete reporting:
 
-$$\lambda(t) = F(k_t) \cdot d_{w(t)} \cdot \alpha \sum_s I(t-s)\,\pi(s)$$
+$$
+\lambda(t) = F(k_t) \cdot d_{w(t)} \cdot \alpha \sum_s I(t-s)\,\pi(s)
+$$
 
 ```{python}
-# | label: compose-with-truncation
+#| label: compose-with-truncation
+
 reporting_delay_pmf = jnp.array([0.4, 0.3, 0.15, 0.08, 0.04, 0.02, 0.01])
 
 process_both = PopulationCounts(
@@ -342,9 +349,7 @@ process_both = PopulationCounts(
     delay_distribution_rv=delay_rv,
     noise=NegativeBinomialNoise(concentration_rv),
     day_of_week_rv=DeterministicVariable("dow_effect", dow_values),
-    right_truncation_rv=DeterministicPMF(
-        "reporting_delay", reporting_delay_pmf
-    ),
+    right_truncation_rv=DeterministicPMF("reporting_delay", reporting_delay_pmf),
 )
 
 with numpyro.handlers.seed(rng_seed=0):
@@ -357,7 +362,8 @@ with numpyro.handlers.seed(rng_seed=0):
 ```
 
 ```{python}
-# | label: plot-composed
+#| label: plot-composed
+
 compose_rows = []
 for i in range(n_plot_days):
     day_idx = day_one + i
@@ -403,16 +409,16 @@ compose_df["type"] = pd.Categorical(
 
 The two curves agree in the early period.
 Near the right edge, right-truncation pulls the curve downward on top of the weekly oscillation.
-Each adjustment operates on its own concern — weekly reporting patterns vs. incomplete recent data — and they combine multiplicatively without interfering.
+Each adjustment operates on its own concern --- weekly reporting patterns vs. incomplete recent data --- and they combine multiplicatively without interfering.
 
 ## Summary
 
 Day-of-week adjustment is enabled by passing a `day_of_week_rv` at construction time and a `first_day_dow` at sample time.
 
-| Parameter | Where | Purpose |
-|-----------|-------|---------|
-| `day_of_week_rv` | Constructor | 7-element multiplicative effect vector (0=Mon, 6=Sun) |
-| `first_day_dow` | `sample()` | Day of the week for element 0 of the time axis |
+  | Parameter        | Where       | Purpose                                               |
+  | ---------------- | ----------- | ----------------------------------------------------- |
+  | `day_of_week_rv` | Constructor | 7-element multiplicative effect vector (0=Mon, 6=Sun) |
+  | `first_day_dow`  | `sample()`  | Day of the week for element 0 of the time axis        |
 
 When either is `None`, the adjustment is disabled and the process behaves identically to one without day-of-week effects.
 
