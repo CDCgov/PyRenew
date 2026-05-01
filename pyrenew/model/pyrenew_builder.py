@@ -157,9 +157,9 @@ class PyrenewBuilder:
         Add shared ascertainment structure to the model.
 
         Use this method when observation probabilities are related across
-        signals or vary through time. Independent scalar ascertainment rates do
-        not require an ascertainment model; those can be passed directly to an
-        observation process as ordinary ``RandomVariable`` objects.
+        signals. Independent scalar ascertainment rates do not require an
+        ascertainment model; those can be passed directly to an observation
+        process as ordinary ``RandomVariable`` objects.
 
         A registered ascertainment model is sampled once per model execution,
         before observation processes run. Observation processes receive
@@ -190,7 +190,7 @@ class PyrenewBuilder:
         ----------
         ascertainment_model
             Configured ascertainment model instance, such as
-            ``JointAscertainment`` or ``TimeVaryingAscertainment``.
+            ``JointAscertainment``.
 
         Returns
         -------

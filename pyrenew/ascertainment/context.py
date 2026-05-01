@@ -64,13 +64,12 @@ def ascertainment_context(values: _AscertainmentValues) -> Iterator[None]:
     The context is entered by ``MultiSignalModel`` after all registered
     ascertainment models have been sampled. Observation processes can then call
     their ``ascertainment_rate_rv`` accessors and retrieve the corresponding
-    sampled value or trajectory.
+    sampled value.
 
     Parameters
     ----------
     values
-        Mapping from ascertainment model name to signal-specific values. A
-        signal-specific value may be a scalar rate or a rate trajectory.
+        Mapping from ascertainment model name to signal-specific values.
 
     Yields
     ------
@@ -102,7 +101,7 @@ def get_ascertainment_value(
     Returns
     -------
     ArrayLike
-        The sampled ascertainment value or trajectory for the requested signal.
+        The sampled ascertainment value for the requested signal.
 
     Raises
     ------

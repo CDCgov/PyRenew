@@ -21,9 +21,9 @@ class AscertainmentSignal(RandomVariable):
     Users usually do not instantiate this class directly. It is returned by
     ``AscertainmentModel.for_signal(...)`` and passed to an observation process
     as ``ascertainment_rate_rv``. During model execution, the parent
-    ``AscertainmentModel`` samples the actual rate or rate trajectory once, and
-    this accessor retrieves the signal-specific value without creating
-    additional NumPyro sample sites.
+    ``AscertainmentModel`` samples the actual rate once, and this accessor
+    retrieves the signal-specific value without creating additional NumPyro
+    sample sites.
     """
 
     def __init__(
@@ -151,7 +151,7 @@ class AscertainmentModel(metaclass=ABCMeta):
         -------
         AscertainmentSignal
             RandomVariable-compatible accessor for the signal's sampled
-            ascertainment rate or rate trajectory.
+            ascertainment rate.
 
         Raises
         ------
@@ -168,34 +168,6 @@ class AscertainmentModel(metaclass=ABCMeta):
             signal_name=signal_name,
         )
 
-    def calendar_anchor_requirements(self) -> tuple[str, ...]:
-        """
-        Return signals that require a calendar anchor at sample time.
-
-        Subclasses with calendar-aligned components should override this
-        method so model-level validation can raise an actionable error before
-        downstream sampling starts.
-
-        Returns
-        -------
-        tuple of str
-            Signal names requiring ``first_day_dow`` derived from
-            ``obs_start_date``.
-        """
-        return ()
-
-    def requires_calendar_anchor(self) -> bool:
-        """
-        Report whether this ascertainment model needs a calendar anchor.
-
-        Returns
-        -------
-        bool
-            ``True`` if any signal owned by this model requires
-            ``first_day_dow`` at sample time.
-        """
-        return len(self.calendar_anchor_requirements()) > 0
-
     @abstractmethod
     def sample(self, **kwargs: object) -> Mapping[str, ArrayLike]:
         """
@@ -205,13 +177,11 @@ class AscertainmentModel(metaclass=ABCMeta):
         ----------
         **kwargs
             Additional model-context arguments supplied by ``MultiSignalModel``.
-            Subclasses may use values such as ``n_timepoints`` or
-            ``first_day_dow``.
+            Subclasses may ignore unused values.
 
         Returns
         -------
         Mapping[str, ArrayLike]
-            Mapping from signal name to sampled ascertainment rate or rate
-            trajectory.
+            Mapping from signal name to sampled ascertainment rate.
         """
         pass

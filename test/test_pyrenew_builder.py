@@ -8,7 +8,7 @@ import jax.numpy as jnp
 import numpyro
 import pytest
 
-from pyrenew.ascertainment import JointAscertainment, TimeVaryingAscertainment
+from pyrenew.ascertainment import JointAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
     AR1,
@@ -470,66 +470,6 @@ class TestMultiSignalModelSampling:
             2,
             model.latent.n_initialization_points + 10,
         )
-
-    def test_prior_predictive_with_time_varying_ascertainment(self):
-        """Test builder sampling with a time-varying ascertainment trajectory."""
-        import jax.random
-        from numpyro.infer import Predictive
-
-        builder = PyrenewBuilder()
-        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
-        builder.configure_latent(
-            SubpopulationInfections,
-            gen_int_rv=gen_int,
-            I0_rv=DeterministicVariable("I0", 0.001),
-            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_rt_process=RandomWalk(),
-            subpop_rt_deviation_process=RandomWalk(),
-        )
-
-        ascertainment = TimeVaryingAscertainment(
-            name="ed_ascertainment",
-            processes={
-                "ed": WeeklyTemporalProcess(
-                    AR1(autoreg=0.8, innovation_sd=0.1),
-                    start_dow=MMWR_WEEK,
-                )
-            },
-            baseline_rates={"ed": 0.02},
-        )
-        builder.add_ascertainment(ascertainment)
-
-        delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
-        builder.add_observation(
-            PopulationCounts(
-                name="ed",
-                ascertainment_rate_rv=ascertainment.for_signal("ed"),
-                delay_distribution_rv=delay,
-                noise=NegativeBinomialNoise(DeterministicVariable("ed_conc", 10.0)),
-            )
-        )
-
-        model = builder.build()
-        n_days = 10
-        n_total = model.latent.n_initialization_points + n_days
-        obs_start_date = _obs_date_for_dow(
-            target_first_day_dow=MMWR_WEEK,
-            n_init=model.latent.n_initialization_points,
-        )
-
-        predictive = Predictive(model.sample, num_samples=2)
-        prior_samples = predictive(
-            jax.random.PRNGKey(42),
-            n_days_post_init=n_days,
-            population_size=1_000_000,
-            subpop_fractions=SUBPOP_FRACTIONS,
-            obs_start_date=obs_start_date,
-            ed={"obs": None},
-        )
-
-        assert prior_samples["ed_ascertainment_ed"].shape == (2, n_total)
-        assert prior_samples["ed_ascertainment_ed_weekly"].shape == (2, 2, 1)
-        assert prior_samples["ed_predicted"].shape == (2, n_total)
 
     def test_manual_model_rejects_invalid_ascertainment_model(self, simple_builder):
         """Test direct MultiSignalModel construction validates ascertainment models."""
@@ -1106,107 +1046,6 @@ class TestMultiSignalValidateDataAnchor:
                 n_days_post_init=30,
                 ed={"obs": jnp.ones(n_total) * 5.0},
             )
-
-    def test_missing_obs_start_date_for_calendar_aligned_ascertainment_raises(self):
-        """Calendar-aligned ascertainment temporal processes require obs_start_date."""
-        builder = _coherence_builder(
-            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
-            observations=[_daily_ed_counts()],
-        )
-        ascertainment = TimeVaryingAscertainment(
-            name="ed_ascertainment",
-            processes={
-                "ed": WeeklyTemporalProcess(
-                    AR1(autoreg=0.8, innovation_sd=0.1),
-                    start_dow=MMWR_WEEK,
-                )
-            },
-            baseline_rates={"ed": 0.02},
-        )
-        builder.add_ascertainment(ascertainment)
-        model = builder.build()
-        n_total = model.latent.n_initialization_points + 30
-
-        with pytest.raises(
-            ValueError,
-            match=("ascertainment model 'ed_ascertainment'.*signal\\(s\\): 'ed'"),
-        ):
-            model.validate_data(
-                n_days_post_init=30,
-                ed={"obs": jnp.ones(n_total) * 5.0},
-            )
-
-    def test_sample_missing_obs_start_date_for_ascertainment_raises_before_sampling(
-        self,
-    ):
-        """The model-entry check names the ascertainment model before sampling."""
-        builder = _coherence_builder(
-            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
-            observations=[_daily_ed_counts()],
-        )
-        ascertainment = TimeVaryingAscertainment(
-            name="ed_ascertainment",
-            processes={
-                "ed": WeeklyTemporalProcess(
-                    AR1(autoreg=0.8, innovation_sd=0.1),
-                    start_dow=MMWR_WEEK,
-                )
-            },
-            baseline_rates={"ed": 0.02},
-        )
-        builder.add_ascertainment(ascertainment)
-        model = builder.build()
-
-        with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(
-                ValueError,
-                match=("ascertainment model 'ed_ascertainment'.*signal\\(s\\): 'ed'"),
-            ):
-                model.sample(
-                    n_days_post_init=10,
-                    population_size=1_000_000,
-                    ed={"obs": None},
-                )
-
-    def test_sample_with_calendar_aligned_ascertainment_accepts_obs_start_date(
-        self,
-    ):
-        """Supplying obs_start_date lets weekly ascertainment sample successfully."""
-        builder = _coherence_builder(
-            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
-            observations=[_daily_ed_counts()],
-        )
-        ascertainment = TimeVaryingAscertainment(
-            name="ed_ascertainment",
-            processes={
-                "ed": WeeklyTemporalProcess(
-                    AR1(autoreg=0.8, innovation_sd=0.1),
-                    start_dow=MMWR_WEEK,
-                )
-            },
-            baseline_rates={"ed": 0.02},
-        )
-        builder.add_ascertainment(ascertainment)
-        model = builder.build()
-        n_days = 10
-        obs_start_date = _obs_date_for_dow(
-            target_first_day_dow=MMWR_WEEK,
-            n_init=model.latent.n_initialization_points,
-        )
-
-        with numpyro.handlers.seed(rng_seed=42):
-            with numpyro.handlers.trace() as trace:
-                result = model.sample(
-                    n_days_post_init=n_days,
-                    population_size=1_000_000,
-                    obs_start_date=obs_start_date,
-                    ed={"obs": None},
-                )
-
-        n_total = model.latent.n_initialization_points + n_days
-        assert result is None
-        assert trace["ed_ascertainment_ed"]["value"].shape == (n_total,)
-        assert trace["ed_ascertainment_ed_weekly"]["value"].shape == (2, 1)
 
 
 if __name__ == "__main__":

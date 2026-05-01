@@ -1,5 +1,5 @@
 ---
-title: Joint and time-varying ascertainment
+title: Joint ascertainment
 format:
   gfm:
     code-fold: true
@@ -34,7 +34,6 @@ from _tutorial_theme import theme_tutorial
 
 from pyrenew.ascertainment import JointAscertainment
 from pyrenew.deterministic import DeterministicPMF
-from pyrenew.latent import AR1, WeeklyTemporalProcess
 from pyrenew.model import PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
@@ -256,11 +255,10 @@ model = builder.build()
 Signal names in `for_signal()` must match the names used when the ascertainment model was created.
 They do not have to match observation names, but matching them usually makes model code and posterior outputs easier to read.
 
-When running a model that uses `WeeklyTemporalProcess`, pass `obs_start_date` so PyRenew can align weekly ascertainment to the calendar.
+When running a model that uses weekly observations or day-of-week effects, pass `obs_start_date` so PyRenew can align the model axis to the calendar.
 
 ## Summary
 
 - Use ordinary `RandomVariable` objects for independent scalar ascertainment rates.
 - Use `JointAscertainment` for correlated scalar rates across signals.
-- Use `WeeklyTemporalProcess` when ascertainment should vary by calendar week but downstream observations need daily-length rates.
 - Ascertainment and latent infection scale are weakly identified without informative priors or external information.

@@ -195,8 +195,7 @@ class MultiSignalModel(Model):
 
         Observations with ``aggregation="weekly"`` or a
         ``day_of_week_rv`` require a calendar anchor, as do latent
-        processes and ascertainment models with a calendar-week-aligned
-        temporal process.
+        processes with a calendar-week-aligned temporal process.
         Rather than surface a downstream error, raise at the model
         entry naming the offending component.
 
@@ -209,8 +208,7 @@ class MultiSignalModel(Model):
         ------
         ValueError
             If ``obs_start_date`` is ``None`` and any observation or
-            ascertainment model or the latent process requires a
-            calendar anchor.
+            the latent process requires a calendar anchor.
         """
         if obs_start_date is not None:
             return
@@ -224,15 +222,6 @@ class MultiSignalModel(Model):
                 raise ValueError(
                     f"obs_start_date is required when any observation uses "
                     f"a day-of-week effect; observation '{name}' does."
-                )
-        for name, ascertainment_model in self.ascertainment_models.items():
-            required_signals = ascertainment_model.calendar_anchor_requirements()
-            if required_signals:
-                signals = ", ".join(repr(signal) for signal in required_signals)
-                raise ValueError(
-                    "obs_start_date is required when any ascertainment model uses "
-                    "a calendar-aligned temporal process; ascertainment model "
-                    f"'{name}' requires it for signal(s): {signals}."
                 )
         if self.latent.requires_calendar_anchor():
             raise ValueError(
@@ -399,12 +388,8 @@ class MultiSignalModel(Model):
             "subpop": inf_all,
         }
 
-        n_total = self.latent.n_initialization_points + n_days_post_init
         ascertainment_values = {
-            name: ascertainment_model.sample(
-                n_timepoints=n_total,
-                first_day_dow=first_day_dow,
-            )
+            name: ascertainment_model.sample()
             for name, ascertainment_model in self.ascertainment_models.items()
         }
 
