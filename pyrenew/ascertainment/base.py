@@ -184,4 +184,4 @@ class AscertainmentModel(metaclass=ABCMeta):
         Mapping[str, ArrayLike]
             Mapping from signal name to sampled ascertainment rate.
         """
-        pass
+        pass  # pragma: no cover
