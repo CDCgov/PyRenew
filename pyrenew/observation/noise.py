@@ -28,8 +28,6 @@ from jax.typing import ArrayLike
 
 from pyrenew.metaclass import RandomVariable
 
-_EPSILON = 1e-10
-
 
 class CountNoise(ABC):
     """
@@ -127,7 +125,7 @@ class PoissonNoise(CountNoise):
         with numpyro.handlers.mask(mask=True if mask is None else mask):
             return numpyro.sample(
                 name,
-                dist.Poisson(rate=predicted + _EPSILON),
+                dist.Poisson(rate=predicted),
                 obs=obs,
             )
 
@@ -214,7 +212,7 @@ class NegativeBinomialNoise(CountNoise):
             return numpyro.sample(
                 name,
                 dist.NegativeBinomial2(
-                    mean=predicted + _EPSILON,
+                    mean=predicted,
                     concentration=concentration,
                 ),
                 obs=obs,
