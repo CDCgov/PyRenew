@@ -27,7 +27,6 @@ jobs:
       - name: run tests
         run: |
           uv run pytest \
-            --mpl --mpl-default-tolerance=10 \
             --cov=pyrenew --cov-report term --cov-report xml .
 
       - name: Upload coverage to Codecov

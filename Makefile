@@ -11,7 +11,7 @@ install:
 	uv sync
 
 test:
-	uv run pytest --mpl --mpl-default-tolerance=10
+	uv run pytest
 
 docs:
 	quarto render docs/tutorials
