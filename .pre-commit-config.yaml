@@ -27,7 +27,7 @@ repos:
   #####
   # Quarto
   - repo: https://github.com/jolars/panache
-    rev: v2.41.0
+    rev: panache-formatter-v0.4.1
 
     hooks:
       - id: panache-format
