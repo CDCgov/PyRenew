@@ -3,11 +3,13 @@ Tests for PyrenewBuilder and MultiSignalModel.
 """
 
 from datetime import date, timedelta
+from types import SimpleNamespace
 
 import jax.numpy as jnp
 import numpyro
 import pytest
 
+from pyrenew.ascertainment import JointAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
     AR1,
@@ -209,6 +211,42 @@ class TestPyrenewBuilderConfiguration:
         with pytest.raises(ValueError, match="already added"):
             simple_builder.add_observation(obs)
 
+    def test_add_ascertainment_registers_model(self):
+        """Test that add_ascertainment stores ascertainment models by name."""
+        builder = PyrenewBuilder()
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+
+        result = builder.add_ascertainment(ascertainment)
+
+        assert result is builder
+        assert builder.ascertainment_models["he_ascertainment"] is ascertainment
+
+    def test_add_ascertainment_rejects_duplicate_name(self):
+        """Test that duplicate ascertainment model names are rejected."""
+        builder = PyrenewBuilder()
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+
+        builder.add_ascertainment(ascertainment)
+        with pytest.raises(ValueError, match="already added"):
+            builder.add_ascertainment(ascertainment)
+
+    def test_add_ascertainment_rejects_wrong_type(self):
+        """Test that add_ascertainment requires an AscertainmentModel."""
+        builder = PyrenewBuilder()
+
+        with pytest.raises(TypeError, match="AscertainmentModel"):
+            builder.add_ascertainment(object())
+
     def test_build_creates_model(self, simple_builder):
         """Test that build() creates a MultiSignalModel."""
         model = simple_builder.build()
@@ -304,6 +342,163 @@ class TestMultiSignalModelSampling:
         assert prior_samples["latent_infections"].shape == (5, n_total)
         # All prior predictive infections should be positive
         assert jnp.all(prior_samples["latent_infections"] > 0)
+
+    def test_prior_predictive_with_joint_ascertainment(self):
+        """Test model-scoped sampling for shared joint ascertainment."""
+        import jax.random
+        from numpyro.infer import Predictive
+
+        builder = PyrenewBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+        builder.configure_latent(
+            SubpopulationInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_rt_process=RandomWalk(),
+            subpop_rt_deviation_process=RandomWalk(),
+        )
+
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+        builder.add_ascertainment(ascertainment)
+
+        delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital",
+                ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("hosp_conc", 10.0)),
+            )
+        )
+        builder.add_observation(
+            PopulationCounts(
+                name="ed",
+                ascertainment_rate_rv=ascertainment.for_signal("ed"),
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("ed_conc", 10.0)),
+            )
+        )
+
+        model = builder.build()
+        assert model.ascertainment_models["he_ascertainment"] is ascertainment
+
+        predictive = Predictive(model.sample, num_samples=3)
+        prior_samples = predictive(
+            jax.random.PRNGKey(42),
+            n_days_post_init=10,
+            population_size=1_000_000,
+            subpop_fractions=SUBPOP_FRACTIONS,
+            hospital={"obs": None},
+            ed={"obs": None},
+        )
+
+        assert prior_samples["he_ascertainment_eta"].shape == (3, 2)
+        assert prior_samples["he_ascertainment_hospital"].shape == (3,)
+        assert prior_samples["he_ascertainment_ed"].shape == (3,)
+        assert "hospital_predicted" in prior_samples
+        assert "ed_predicted" in prior_samples
+
+        with pytest.raises(RuntimeError, match="before ascertainment values"):
+            ascertainment.for_signal("hospital")()
+
+    def test_prior_predictive_reuses_same_ascertainment_signal(self):
+        """Test two observations can reuse one signal accessor without site conflicts."""
+        import jax.random
+        from numpyro.infer import Predictive
+
+        builder = PyrenewBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+        builder.configure_latent(
+            SubpopulationInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_rt_process=RandomWalk(),
+            subpop_rt_deviation_process=RandomWalk(),
+        )
+
+        ascertainment = JointAscertainment(
+            name="shared_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+        builder.add_ascertainment(ascertainment)
+        hospital_rate = ascertainment.for_signal("hospital")
+
+        delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital_a",
+                ascertainment_rate_rv=hospital_rate,
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("conc_a", 10.0)),
+            )
+        )
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital_b",
+                ascertainment_rate_rv=hospital_rate,
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("conc_b", 12.0)),
+            )
+        )
+
+        model = builder.build()
+        predictive = Predictive(model.sample, num_samples=2)
+        prior_samples = predictive(
+            jax.random.PRNGKey(42),
+            n_days_post_init=10,
+            population_size=1_000_000,
+            subpop_fractions=SUBPOP_FRACTIONS,
+            hospital_a={"obs": None},
+            hospital_b={"obs": None},
+        )
+
+        assert prior_samples["shared_ascertainment_eta"].shape == (2, 2)
+        assert prior_samples["shared_ascertainment_hospital"].shape == (2,)
+        assert prior_samples["hospital_a_predicted"].shape == (
+            2,
+            model.latent.n_initialization_points + 10,
+        )
+        assert prior_samples["hospital_b_predicted"].shape == (
+            2,
+            model.latent.n_initialization_points + 10,
+        )
+
+    def test_manual_model_rejects_invalid_ascertainment_model(self, simple_builder):
+        """Test direct MultiSignalModel construction validates ascertainment models."""
+        model = simple_builder.build()
+
+        with pytest.raises(TypeError, match="AscertainmentModel"):
+            MultiSignalModel(
+                latent_process=model.latent,
+                observations=model.observations,
+                ascertainment_models={"bad": object()},
+            )
+
+    def test_manual_model_rejects_mismatched_ascertainment_key(self, simple_builder):
+        """Test ascertainment model dictionary keys must match model names."""
+        model = simple_builder.build()
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+
+        with pytest.raises(ValueError, match="dictionary key"):
+            MultiSignalModel(
+                latent_process=model.latent,
+                observations=model.observations,
+                ascertainment_models={"wrong_name": ascertainment},
+            )
 
     def test_first_day_dow_reaches_calendar_aligned_latent_process(self):
         """MultiSignalModel forwards model-axis day of week to the latent process."""
@@ -500,6 +695,44 @@ class TestMultiSignalModelValidation:
         model = simple_builder.build()
         # Should not raise
         model.validate()
+
+    def test_sample_rejects_observation_resolution_that_changes_after_validation(
+        self,
+    ):
+        """Test sample-time infection_resolution validation."""
+
+        class Latent:  # numpydoc ignore=GL08
+            n_initialization_points = 0
+
+            def requires_calendar_anchor(self):  # numpydoc ignore=GL08
+                return False
+
+            def sample(self, **kwargs):  # numpydoc ignore=GL08
+                return SimpleNamespace(
+                    aggregate=jnp.ones(2),
+                    all_subpops=jnp.ones((2, 1)),
+                )
+
+        class Observation:  # numpydoc ignore=GL08
+            def __init__(self):
+                self.calls = 0
+
+            def infection_resolution(self):  # numpydoc ignore=GL08
+                self.calls += 1
+                if self.calls == 1:
+                    return "aggregate"
+                return "invalid"
+
+            def sample(self, **kwargs):  # numpydoc ignore=GL08
+                raise AssertionError("sample should not be called")
+
+        model = MultiSignalModel(
+            latent_process=Latent(),
+            observations={"unstable": Observation()},
+        )
+
+        with pytest.raises(ValueError, match="invalid infection_resolution"):
+            model.sample(n_days_post_init=2, population_size=1.0)
 
     def test_validate_data_rejects_negative_subpop_indices(self, validation_builder):
         """Test that negative subpop_indices raises error."""
