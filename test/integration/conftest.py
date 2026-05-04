@@ -29,6 +29,21 @@ from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 
 
+def fixed_ar1(autoreg=0.9, innovation_sd=0.05):
+    """
+    Construct an AR1 process with fixed parameters.
+
+    Returns
+    -------
+    AR1
+        Temporal process with deterministic autoregression and innovation scale.
+    """
+    return AR1(
+        autoreg_rv=DeterministicVariable("autoreg", autoreg),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+    )
+
+
 @pytest.fixture(scope="module")
 def true_params() -> dict:
     """
@@ -178,7 +193,7 @@ def he_model(
         gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
-        single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+        single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
     )
 
     hospital_obs = PopulationCounts(
@@ -245,7 +260,7 @@ def he_weekly_rt_model(
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
         single_rt_process=WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05),
+            fixed_ar1(autoreg=0.9, innovation_sd=0.05),
             start_dow=MMWR_WEEK,
         ),
     )
@@ -316,7 +331,7 @@ def he_weekly_model(
         gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
-        single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+        single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
     )
 
     hospital_obs = PopulationCounts(

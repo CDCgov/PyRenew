@@ -88,6 +88,9 @@ from pyrenew.observation import (
 from pyrenew.time import MMWR_WEEK
 ```
 
+Temporal process parameters are `RandomVariable`s.
+This tutorial uses `DeterministicVariable` wrappers to keep those hyperparameters fixed.
+
 ## Overview
 
 Renewal models in PyRenew combine two types of components:
@@ -248,10 +251,15 @@ The RandomWalk allows flexible evolution of subpopulation-specific transmission 
 #| label: temporal-processes
 
 # AR1 provides mean-reverting behavior for baseline Rt
-baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
+baseline_rt_process = AR1(
+    autoreg_rv=DeterministicVariable("autoreg", 0.9),
+    innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+)
 
 # RandomWalk allows flexible subpopulation deviations
-subpop_rt_deviation_process = RandomWalk(innovation_sd=0.025)
+subpop_rt_deviation_process = RandomWalk(
+    innovation_sd_rv=DeterministicVariable("innovation_sd", 0.025),
+)
 ```
 
 ### Choosing the Rt Parameter Cadence
@@ -266,7 +274,10 @@ This separates three model choices:
 The AR(1) process above samples one value per model day:
 
 ```python
-baseline_rt_process = AR1(autoreg=0.9, innovation_sd=0.05)
+baseline_rt_process = AR1(
+    autoreg_rv=DeterministicVariable("autoreg", 0.9),
+    innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+)
 ```
 
 To use a weekly $\mathcal{R}(t)$ while still running the renewal equation daily, wrap the temporal process in `WeeklyTemporalProcess`.
@@ -274,7 +285,10 @@ The wrapper samples a weekly trajectory and broadcasts it to the daily model axi
 
 ```python
 weekly_baseline_rt_process = WeeklyTemporalProcess(
-    inner=AR1(autoreg=0.9, innovation_sd=0.05),
+    inner=AR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.9),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+    ),
     start_dow=MMWR_WEEK,
 )
 ```

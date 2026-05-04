@@ -55,6 +55,50 @@ from test.test_helpers import ConcreteMeasurementObservation
 # =============================================================================
 
 
+def fixed_ar1(autoreg=0.9, innovation_sd=0.05):
+    """
+    Construct an AR1 process with fixed parameters.
+
+    Returns
+    -------
+    AR1
+        Temporal process with deterministic autoregression and innovation scale.
+    """
+    return AR1(
+        autoreg_rv=DeterministicVariable("autoreg", autoreg),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+    )
+
+
+def fixed_differenced_ar1(autoreg=0.9, innovation_sd=0.05):
+    """
+    Construct a DifferencedAR1 process with fixed parameters.
+
+    Returns
+    -------
+    DifferencedAR1
+        Temporal process with deterministic autoregression and innovation scale.
+    """
+    return DifferencedAR1(
+        autoreg_rv=DeterministicVariable("autoreg", autoreg),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+    )
+
+
+def fixed_random_walk(innovation_sd=1.0):
+    """
+    Construct a RandomWalk with a fixed innovation scale.
+
+    Returns
+    -------
+    RandomWalk
+        Temporal process with deterministic innovation standard deviation.
+    """
+    return RandomWalk(
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd)
+    )
+
+
 def _make_counts():
     """
     Build a PopulationCounts instance.
@@ -154,11 +198,12 @@ def _make_infections_with_feedback():
 @pytest.mark.parametrize(
     "instance",
     [
-        pytest.param(AR1(autoreg=0.9, innovation_sd=0.1), id="AR1"),
+        pytest.param(fixed_ar1(autoreg=0.9, innovation_sd=0.1), id="AR1"),
         pytest.param(
-            DifferencedAR1(autoreg=0.8, innovation_sd=0.2), id="DifferencedAR1"
+            fixed_differenced_ar1(autoreg=0.8, innovation_sd=0.2),
+            id="DifferencedAR1",
         ),
-        pytest.param(RandomWalk(innovation_sd=0.5), id="RandomWalk"),
+        pytest.param(fixed_random_walk(innovation_sd=0.5), id="RandomWalk"),
         pytest.param(_make_counts(), id="Counts"),
         pytest.param(_make_counts_by_subpop(), id="SubpopulationCounts"),
         pytest.param(_make_measurements(), id="Measurements"),
@@ -230,8 +275,8 @@ def test_get_required_lookback(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
-        subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
+        baseline_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
         n_initialization_points=7,
     )
     expected_length = len(gen_int_rv())
@@ -250,8 +295,8 @@ def test_subpopulation_infections_validate(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
-        subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
+        baseline_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
         n_initialization_points=7,
     )
     infections.validate()
@@ -441,8 +486,8 @@ def test_subpopulation_infections_name(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
-        subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
+        baseline_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
         n_initialization_points=7,
     )
     assert infections.name == "test_hi"
@@ -457,12 +502,12 @@ def test_subpopulation_infections_name(gen_int_rv):
     "instance, expected_names",
     [
         pytest.param(
-            AR1(autoreg=0.9, innovation_sd=0.1),
+            fixed_ar1(autoreg=0.9, innovation_sd=0.1),
             [("ar_process", "ar1")],
             id="AR1",
         ),
         pytest.param(
-            DifferencedAR1(autoreg=0.8, innovation_sd=0.2),
+            fixed_differenced_ar1(autoreg=0.8, innovation_sd=0.2),
             [
                 ("process", "diff_ar1"),
                 ("process.fundamental_process", "diff_ar1_fundamental"),

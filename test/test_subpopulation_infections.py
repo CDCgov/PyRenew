@@ -10,6 +10,20 @@ from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import RandomWalk, SubpopulationInfections
 
 
+def fixed_random_walk(innovation_sd=1.0):
+    """
+    Construct a RandomWalk with a fixed innovation scale.
+
+    Returns
+    -------
+    RandomWalk
+        Temporal process with deterministic innovation standard deviation.
+    """
+    return RandomWalk(
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd)
+    )
+
+
 class TestSubpopulationInfectionsSample:
     """Test sample method with population structure at sample time."""
 
@@ -94,7 +108,7 @@ class TestSubpopulationInfectionsSample:
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
             baseline_rt_process=wrong_shape_temporal_process_cls(jnp.zeros((16, 2))),
-            subpop_rt_deviation_process=RandomWalk(),
+            subpop_rt_deviation_process=fixed_random_walk(),
             n_initialization_points=7,
         )
 
@@ -140,8 +154,8 @@ class TestSubpopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=None,
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=RandomWalk(),
-                subpop_rt_deviation_process=RandomWalk(),
+                baseline_rt_process=fixed_random_walk(),
+                subpop_rt_deviation_process=fixed_random_walk(),
                 n_initialization_points=7,
             )
 
@@ -153,8 +167,8 @@ class TestSubpopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=None,
-                baseline_rt_process=RandomWalk(),
-                subpop_rt_deviation_process=RandomWalk(),
+                baseline_rt_process=fixed_random_walk(),
+                subpop_rt_deviation_process=fixed_random_walk(),
                 n_initialization_points=7,
             )
 
@@ -167,7 +181,7 @@ class TestSubpopulationInfectionsValidation:
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
                 baseline_rt_process=None,
-                subpop_rt_deviation_process=RandomWalk(),
+                subpop_rt_deviation_process=fixed_random_walk(),
                 n_initialization_points=7,
             )
 
@@ -179,7 +193,7 @@ class TestSubpopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=RandomWalk(),
+                baseline_rt_process=fixed_random_walk(),
                 subpop_rt_deviation_process=None,
                 n_initialization_points=7,
             )
@@ -192,8 +206,8 @@ class TestSubpopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", -0.1),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=RandomWalk(),
-                subpop_rt_deviation_process=RandomWalk(),
+                baseline_rt_process=fixed_random_walk(),
+                subpop_rt_deviation_process=fixed_random_walk(),
                 n_initialization_points=7,
             )
 
@@ -207,8 +221,8 @@ class TestSubpopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=RandomWalk(),
-                subpop_rt_deviation_process=RandomWalk(),
+                baseline_rt_process=fixed_random_walk(),
+                subpop_rt_deviation_process=fixed_random_walk(),
                 n_initialization_points=2,
             )
 
@@ -232,8 +246,8 @@ class TestSubpopulationInfectionsPerSubpopI0:
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", jnp.array([0.001, 0.002, 0.0015])),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_rt_process=RandomWalk(),
-            subpop_rt_deviation_process=RandomWalk(),
+            baseline_rt_process=fixed_random_walk(),
+            subpop_rt_deviation_process=fixed_random_walk(),
             n_initialization_points=7,
         )
 

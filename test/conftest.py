@@ -40,6 +40,36 @@ from pyrenew.observation import (
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from pyrenew.time import MMWR_WEEK
 
+
+def fixed_ar1(autoreg=0.9, innovation_sd=0.05):
+    """
+    Construct an AR1 process with fixed parameters.
+
+    Returns
+    -------
+    AR1
+        Temporal process with deterministic autoregression and innovation scale.
+    """
+    return AR1(
+        autoreg_rv=DeterministicVariable("autoreg", autoreg),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+    )
+
+
+def fixed_random_walk(innovation_sd=1.0):
+    """
+    Construct a RandomWalk with a fixed innovation scale.
+
+    Returns
+    -------
+    RandomWalk
+        Temporal process with deterministic innovation standard deviation.
+    """
+    return RandomWalk(
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd)
+    )
+
+
 # =============================================================================
 # PMF Fixtures
 # =============================================================================
@@ -187,8 +217,8 @@ def subpopulation_infections(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
-        subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
+        baseline_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
         n_initialization_points=7,
     )
 
@@ -208,7 +238,7 @@ def population_infections(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+        single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
         n_initialization_points=7,
     )
 
