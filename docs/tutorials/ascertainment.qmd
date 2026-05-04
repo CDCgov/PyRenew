@@ -9,7 +9,7 @@ jupyter:
     text_representation:
       extension: .qmd
       format_name: quarto
-      format_version: '1.0'
+      format_version: "1.0"
       jupytext_version: 1.19.1
   kernelspec:
     display_name: Python 3 (ipykernel)
@@ -50,13 +50,12 @@ PyRenew count observations accept an `ascertainment_rate_rv`.
 For simple models this can be any ordinary `RandomVariable`.
 
 For multi-signal models, PyRenew also provides model-level ascertainment components that let multiple observation processes share related ascertainment structure.
-These components are intended for count signals whose observation probabilities are logically related because they are different event streams generated from the same latent
-infections. Hospital admissions and ED visits are a natural example: they have different observation probabilities, but both depend on clinical care-seeking and reporting.
+These components are intended for count signals whose observation probabilities are logically related because they are different event streams generated from the same latent infections.
+Hospital admissions and ED visits are a natural example: they have different observation probabilities, but both depend on clinical care-seeking and reporting.
 
 ## Independent scalar ascertainment
 
-Before considering multi-signal models with related ascertainment structure,
-we show how to specify a multi-signal model where the signals are modeled independently.
+Before considering multi-signal models with related ascertainment structure, we show how to specify a multi-signal model where the signals are modeled independently.
 In this model, each observation process has its own scalar ascertainment prior.
 
 ```{python}
@@ -157,7 +156,8 @@ The order of the specified `signals` determines how arguments `baseline_rates` a
 In the above example, the first entry is hospitalizations and the second is ED visits.
 In a NumPyro trace, this object creates one sample site, `he_ascertainment_eta`, and deterministic signal-specific rates such as `he_ascertainment_hospital` and `he_ascertainment_ed_visits`.
 
-The next block samples directly from the same logit-normal prior used by JointAscertainment. This is only for visualization; in a fitted PyRenew model, JointAscertainment handles this sampling internally.
+The next block samples directly from the same logit-normal prior used by JointAscertainment.
+This is only for visualization; in a fitted PyRenew model, JointAscertainment handles this sampling internally.
 
 ```{python}
 # | label: joint-prior-draws
@@ -222,7 +222,6 @@ The joint prior keeps the same approximate scale while inducing positive depende
     + theme_tutorial
 )
 ```
-
 
 ## Using ascertainment with a builder
 
