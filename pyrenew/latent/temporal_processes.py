@@ -59,6 +59,7 @@ import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 
+from pyrenew.metaclass import RandomVariable
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
 from pyrenew.randomvariable import DistributionalVariable
@@ -136,42 +137,54 @@ class AR1(TemporalProcess):
 
     Parameters
     ----------
-    autoreg
-        Autoregressive coefficient. For stationarity, |autoreg| < 1, but
-        this is not enforced (use priors to constrain if needed).
-    innovation_sd
-        Standard deviation of noise at each time step. Larger values produce
-        more volatile trajectories; smaller values produce smoother ones.
+    autoreg_rv
+        RandomVariable that returns the autoregressive coefficient. For
+        stationarity, |autoreg| < 1, but this is not enforced (use priors
+        to constrain if needed).
+    innovation_sd_rv
+        RandomVariable that returns the standard deviation of noise at each
+        time step. Larger values produce more volatile trajectories; smaller
+        values produce smoother ones.
     """
 
     step_size: int = 1
 
-    def __init__(self, autoreg: float, innovation_sd: float = 1.0) -> None:
+    def __init__(
+        self,
+        autoreg_rv: RandomVariable,
+        innovation_sd_rv: RandomVariable,
+    ) -> None:
         """
         Initialize AR(1) process.
 
         Parameters
         ----------
-        autoreg
-            Autoregressive coefficient. For stationarity, |autoreg| < 1,
-            but this is not enforced (use priors to constrain if needed).
-        innovation_sd
-            Standard deviation of innovations
+        autoreg_rv
+            RandomVariable that returns the autoregressive coefficient. For
+            stationarity, |autoreg| < 1, but this is not enforced (use priors
+            to constrain if needed).
+        innovation_sd_rv
+            RandomVariable that returns the standard deviation of innovations.
 
         Raises
         ------
-        ValueError
-            If innovation_sd <= 0
+        TypeError
+            If autoreg_rv or innovation_sd_rv are not RandomVariable instances
         """
-        if innovation_sd <= 0:
-            raise ValueError(f"innovation_sd must be positive, got {innovation_sd}")
-        self.autoreg = autoreg
-        self.innovation_sd = innovation_sd
+        if not isinstance(autoreg_rv, RandomVariable):
+            raise TypeError("autoreg_rv must be a RandomVariable")
+        if not isinstance(innovation_sd_rv, RandomVariable):
+            raise TypeError("innovation_sd_rv must be a RandomVariable")
+        self.autoreg_rv = autoreg_rv
+        self.innovation_sd_rv = innovation_sd_rv
         self.ar_process = ARProcess(name="ar1")
 
     def __repr__(self) -> str:
         """Return string representation."""
-        return f"AR1(autoreg={self.autoreg}, innovation_sd={self.innovation_sd})"
+        return (
+            f"AR1(autoreg_rv={self.autoreg_rv}, "
+            f"innovation_sd_rv={self.innovation_sd_rv})"
+        )
 
     def sample(
         self,
@@ -208,7 +221,11 @@ class AR1(TemporalProcess):
         elif jnp.isscalar(initial_value):
             initial_value = jnp.full(n_processes, initial_value)
 
-        stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
+        autoreg = self.autoreg_rv()
+        innovation_sd = self.innovation_sd_rv()
+        autoreg_broadcast = jnp.broadcast_to(jnp.asarray(autoreg), (n_processes,))
+
+        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
 
         with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
             init_states = numpyro.sample(
@@ -219,8 +236,8 @@ class AR1(TemporalProcess):
         trajectories = self.ar_process(
             n=n_timepoints,
             init_vals=init_states[jnp.newaxis, :],
-            autoreg=jnp.full((1, n_processes), self.autoreg),
-            noise_sd=self.innovation_sd,
+            autoreg=autoreg_broadcast[jnp.newaxis, :],
+            noise_sd=innovation_sd,
             noise_name=f"{name_prefix}_noise",
         )
 
@@ -241,39 +258,46 @@ class DifferencedAR1(TemporalProcess):
 
     Parameters
     ----------
-    autoreg
-        Autoregressive coefficient for differences. For stationarity,
-        |autoreg| < 1, but this is not enforced (use priors to constrain
-        if needed).
-    innovation_sd
-        Standard deviation of noise added to changes. Larger values produce
-        more erratic growth rates; smaller values produce smoother trends.
+    autoreg_rv
+        RandomVariable that returns the autoregressive coefficient for
+        differences. For stationarity, |autoreg| < 1, but this is not
+        enforced (use priors to constrain if needed).
+    innovation_sd_rv
+        RandomVariable that returns the standard deviation of noise added to
+        changes. Larger values produce more erratic growth rates; smaller
+        values produce smoother trends.
     """
 
     step_size: int = 1
 
-    def __init__(self, autoreg: float, innovation_sd: float = 1.0) -> None:
+    def __init__(
+        self,
+        autoreg_rv: RandomVariable,
+        innovation_sd_rv: RandomVariable,
+    ) -> None:
         """
         Initialize differenced AR(1) process.
 
         Parameters
         ----------
-        autoreg
-            Autoregressive coefficient for differences. For stationarity,
-            |autoreg| < 1, but this is not enforced (use priors to constrain
-            if needed).
-        innovation_sd
-            Standard deviation of innovations
+        autoreg_rv
+            RandomVariable that returns the autoregressive coefficient for
+            differences. For stationarity, |autoreg| < 1, but this is not
+            enforced (use priors to constrain if needed).
+        innovation_sd_rv
+            RandomVariable that returns the standard deviation of innovations.
 
         Raises
         ------
-        ValueError
-            If innovation_sd <= 0
+        TypeError
+            If autoreg_rv or innovation_sd_rv are not RandomVariable instances
         """
-        if innovation_sd <= 0:
-            raise ValueError(f"innovation_sd must be positive, got {innovation_sd}")
-        self.autoreg = autoreg
-        self.innovation_sd = innovation_sd
+        if not isinstance(autoreg_rv, RandomVariable):
+            raise TypeError("autoreg_rv must be a RandomVariable")
+        if not isinstance(innovation_sd_rv, RandomVariable):
+            raise TypeError("innovation_sd_rv must be a RandomVariable")
+        self.autoreg_rv = autoreg_rv
+        self.innovation_sd_rv = innovation_sd_rv
         self.process = DifferencedProcess(
             name="diff_ar1",
             fundamental_process=ARProcess(name="diff_ar1_fundamental"),
@@ -282,7 +306,10 @@ class DifferencedAR1(TemporalProcess):
 
     def __repr__(self) -> str:
         """Return string representation."""
-        return f"DifferencedAR1(autoreg={self.autoreg}, innovation_sd={self.innovation_sd})"
+        return (
+            f"DifferencedAR1(autoreg_rv={self.autoreg_rv}, "
+            f"innovation_sd_rv={self.innovation_sd_rv})"
+        )
 
     def sample(
         self,
@@ -319,7 +346,11 @@ class DifferencedAR1(TemporalProcess):
         elif jnp.isscalar(initial_value):
             initial_value = jnp.full(n_processes, initial_value)
 
-        stationary_sd = self.innovation_sd / jnp.sqrt(1 - self.autoreg**2)
+        autoreg = self.autoreg_rv()
+        innovation_sd = self.innovation_sd_rv()
+        autoreg_broadcast = jnp.broadcast_to(jnp.asarray(autoreg), (n_processes,))
+
+        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
 
         with numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes):
             init_rates = numpyro.sample(
@@ -330,8 +361,8 @@ class DifferencedAR1(TemporalProcess):
         trajectories = self.process(
             n=n_timepoints,
             init_vals=initial_value[jnp.newaxis, :],
-            autoreg=jnp.full((1, n_processes), self.autoreg),
-            noise_sd=self.innovation_sd,
+            autoreg=autoreg_broadcast[jnp.newaxis, :],
+            noise_sd=innovation_sd,
             fundamental_process_init_vals=init_rates[jnp.newaxis, :],
             noise_name=f"{name_prefix}_noise",
         )
@@ -352,9 +383,10 @@ class RandomWalk(TemporalProcess):
 
     Parameters
     ----------
-    innovation_sd
-        Standard deviation of noise at each time step. Larger values produce
-        faster drift; smaller values produce more gradual changes.
+    innovation_sd_rv
+        RandomVariable that returns the standard deviation of noise at each
+        time step. Larger values produce faster drift; smaller values produce
+        more gradual changes.
 
     Notes
     -----
@@ -369,27 +401,27 @@ class RandomWalk(TemporalProcess):
 
     step_size: int = 1
 
-    def __init__(self, innovation_sd: float = 1.0) -> None:
+    def __init__(self, innovation_sd_rv: RandomVariable) -> None:
         """
         Initialize random walk process.
 
         Parameters
         ----------
-        innovation_sd
-            Standard deviation of innovations
+        innovation_sd_rv
+            RandomVariable that returns the standard deviation of innovations.
 
         Raises
         ------
-        ValueError
-            If innovation_sd <= 0
+        TypeError
+            If innovation_sd_rv is not a RandomVariable instance
         """
-        if innovation_sd <= 0:
-            raise ValueError(f"innovation_sd must be positive, got {innovation_sd}")
-        self.innovation_sd = innovation_sd
+        if not isinstance(innovation_sd_rv, RandomVariable):
+            raise TypeError("innovation_sd_rv must be a RandomVariable")
+        self.innovation_sd_rv = innovation_sd_rv
 
     def __repr__(self) -> str:
         """Return string representation."""
-        return f"RandomWalk(innovation_sd={self.innovation_sd})"
+        return f"RandomWalk(innovation_sd_rv={self.innovation_sd_rv})"
 
     def sample(
         self,
@@ -426,13 +458,15 @@ class RandomWalk(TemporalProcess):
         elif jnp.isscalar(initial_value):
             initial_value = jnp.full(n_processes, initial_value)
 
+        innovation_sd = self.innovation_sd_rv()
+
         rw = ProcessRandomWalk(
             name=f"{name_prefix}_random_walk",
             step_rv=DistributionalVariable(
                 name=f"{name_prefix}_step",
                 distribution=dist.Normal(
                     jnp.zeros(n_processes),
-                    self.innovation_sd,
+                    innovation_sd,
                 ),
             ),
         )

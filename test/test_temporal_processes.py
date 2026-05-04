@@ -4,8 +4,10 @@ Unit tests for temporal processes.
 
 import jax.numpy as jnp
 import numpyro
+import numpyro.distributions as dist
 import pytest
 
+from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
     AR1,
     DifferencedAR1,
@@ -13,13 +15,165 @@ from pyrenew.latent import (
     StepwiseTemporalProcess,
     WeeklyTemporalProcess,
 )
+from pyrenew.process import ARProcess, DifferencedProcess
+from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
+from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 
+
+def fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05):
+    """
+    Build constructor kwargs for an AR1-like process with fixed parameters.
+
+    Returns
+    -------
+    dict
+        Keyword arguments containing deterministic parameter random variables.
+    """
+    return {
+        "autoreg_rv": DeterministicVariable("autoreg", autoreg),
+        "innovation_sd_rv": DeterministicVariable("innovation_sd", innovation_sd),
+    }
+
+
+def fixed_rw_kwargs(innovation_sd=0.05):
+    """
+    Build constructor kwargs for a RandomWalk with a fixed innovation scale.
+
+    Returns
+    -------
+    dict
+        Keyword arguments containing a deterministic innovation scale RV.
+    """
+    return {
+        "innovation_sd_rv": DeterministicVariable("innovation_sd", innovation_sd),
+    }
+
+
 INNER_PROCESS_PARAMS = [
-    (AR1, {"autoreg": 0.9, "innovation_sd": 0.05}),
-    (DifferencedAR1, {"autoreg": 0.9, "innovation_sd": 0.05}),
-    (RandomWalk, {"innovation_sd": 0.05}),
+    (AR1, fixed_ar1_kwargs()),
+    (DifferencedAR1, fixed_ar1_kwargs()),
+    (RandomWalk, fixed_rw_kwargs()),
 ]
+
+
+def fixed_ar1_reference(
+    n_timepoints,
+    initial_value,
+    n_processes,
+    name_prefix,
+    autoreg,
+    innovation_sd,
+):
+    """
+    Sample the former fixed-parameter AR1 implementation.
+
+    Returns
+    -------
+    ArrayLike
+        Reference trajectory with shape ``(n_timepoints, n_processes)``.
+    """
+    if initial_value is None:
+        initial_value = jnp.zeros(n_processes)
+    elif jnp.isscalar(initial_value):
+        initial_value = jnp.full(n_processes, initial_value)
+
+    stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
+
+    with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
+        init_states = numpyro.sample(
+            f"{name_prefix}_init",
+            dist.Normal(initial_value, stationary_sd),
+        )
+
+    return ARProcess(name="ar1")(
+        n=n_timepoints,
+        init_vals=init_states[jnp.newaxis, :],
+        autoreg=jnp.full((1, n_processes), autoreg),
+        noise_sd=innovation_sd,
+        noise_name=f"{name_prefix}_noise",
+    )
+
+
+def fixed_differenced_ar1_reference(
+    n_timepoints,
+    initial_value,
+    n_processes,
+    name_prefix,
+    autoreg,
+    innovation_sd,
+):
+    """
+    Sample the former fixed-parameter DifferencedAR1 implementation.
+
+    Returns
+    -------
+    ArrayLike
+        Reference trajectory with shape ``(n_timepoints, n_processes)``.
+    """
+    if initial_value is None:
+        initial_value = jnp.zeros(n_processes)
+    elif jnp.isscalar(initial_value):
+        initial_value = jnp.full(n_processes, initial_value)
+
+    stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
+
+    with numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes):
+        init_rates = numpyro.sample(
+            f"{name_prefix}_init_rate",
+            dist.Normal(0, stationary_sd),
+        )
+
+    process = DifferencedProcess(
+        name="diff_ar1",
+        fundamental_process=ARProcess(name="diff_ar1_fundamental"),
+        differencing_order=1,
+    )
+    return process(
+        n=n_timepoints,
+        init_vals=initial_value[jnp.newaxis, :],
+        autoreg=jnp.full((1, n_processes), autoreg),
+        noise_sd=innovation_sd,
+        fundamental_process_init_vals=init_rates[jnp.newaxis, :],
+        noise_name=f"{name_prefix}_noise",
+    )
+
+
+def fixed_random_walk_reference(
+    n_timepoints,
+    initial_value,
+    n_processes,
+    name_prefix,
+    innovation_sd,
+):
+    """
+    Sample the former fixed-parameter RandomWalk implementation.
+
+    Returns
+    -------
+    ArrayLike
+        Reference trajectory with shape ``(n_timepoints, n_processes)``.
+    """
+    if initial_value is None:
+        initial_value = jnp.zeros(n_processes)
+    elif jnp.isscalar(initial_value):
+        initial_value = jnp.full(n_processes, initial_value)
+
+    rw = ProcessRandomWalk(
+        name=f"{name_prefix}_random_walk",
+        step_rv=DistributionalVariable(
+            name=f"{name_prefix}_step",
+            distribution=dist.Normal(
+                jnp.zeros(n_processes),
+                innovation_sd,
+            ),
+        ),
+    )
+
+    return rw.sample(
+        init_vals=initial_value[jnp.newaxis, :],
+        n=n_timepoints,
+    )
 
 
 class TestTemporalProcessVectorizedSampling:
@@ -28,9 +182,9 @@ class TestTemporalProcessVectorizedSampling:
     @pytest.mark.parametrize(
         "process_cls,kwargs",
         [
-            (AR1, {"autoreg": 0.9, "innovation_sd": 0.05}),
-            (DifferencedAR1, {"autoreg": 0.9, "innovation_sd": 0.05}),
-            (RandomWalk, {"innovation_sd": 0.05}),
+            (AR1, fixed_ar1_kwargs()),
+            (DifferencedAR1, fixed_ar1_kwargs()),
+            (RandomWalk, fixed_rw_kwargs()),
         ],
     )
     def test_vectorized_shape_and_initial_values_array(self, process_cls, kwargs):
@@ -53,9 +207,9 @@ class TestTemporalProcessVectorizedSampling:
     @pytest.mark.parametrize(
         "process_cls,kwargs",
         [
-            (AR1, {"autoreg": 0.9, "innovation_sd": 0.05}),
-            (DifferencedAR1, {"autoreg": 0.9, "innovation_sd": 0.05}),
-            (RandomWalk, {"innovation_sd": 0.05}),
+            (AR1, fixed_ar1_kwargs()),
+            (DifferencedAR1, fixed_ar1_kwargs()),
+            (RandomWalk, fixed_rw_kwargs()),
         ],
     )
     def test_vectorized_shape_with_scalar_initial_value(self, process_cls, kwargs):
@@ -84,7 +238,7 @@ class TestRandomWalkInitialValues:
         n_processes = 4
         initial_values = jnp.array([0.0, 1.0, -1.0, 2.0])
 
-        rw = RandomWalk(innovation_sd=0.3)
+        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.3))
 
         with numpyro.handlers.seed(rng_seed=42):
             trajectories = rw.sample(
@@ -101,7 +255,7 @@ class TestRandomWalkInitialValues:
         n_timepoints = 30
         n_processes = 3
 
-        rw = RandomWalk(innovation_sd=0.3)
+        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.3))
 
         with numpyro.handlers.seed(rng_seed=42):
             trajectories = rw.sample(
@@ -114,6 +268,188 @@ class TestRandomWalkInitialValues:
         assert jnp.allclose(trajectories[0, :], 1.0)
 
 
+class TestTemporalProcessRandomVariableParameters:
+    """Focused tests for RandomVariable-backed temporal process parameters."""
+
+    @pytest.mark.parametrize(
+        "process_cls,kwargs,error_match",
+        [
+            (
+                AR1,
+                {
+                    "autoreg_rv": 0.9,
+                    "innovation_sd_rv": DeterministicVariable("innovation_sd", 0.05),
+                },
+                "autoreg_rv must be a RandomVariable",
+            ),
+            (
+                AR1,
+                {
+                    "autoreg_rv": DeterministicVariable("autoreg", 0.9),
+                    "innovation_sd_rv": 0.05,
+                },
+                "innovation_sd_rv must be a RandomVariable",
+            ),
+            (
+                DifferencedAR1,
+                {
+                    "autoreg_rv": 0.9,
+                    "innovation_sd_rv": DeterministicVariable("innovation_sd", 0.05),
+                },
+                "autoreg_rv must be a RandomVariable",
+            ),
+            (
+                DifferencedAR1,
+                {
+                    "autoreg_rv": DeterministicVariable("autoreg", 0.9),
+                    "innovation_sd_rv": 0.05,
+                },
+                "innovation_sd_rv must be a RandomVariable",
+            ),
+            (
+                RandomWalk,
+                {"innovation_sd_rv": 0.05},
+                "innovation_sd_rv must be a RandomVariable",
+            ),
+        ],
+    )
+    def test_constructor_rejects_non_random_variable_args(
+        self, process_cls, kwargs, error_match
+    ):
+        """Reject constructor parameters that are not RandomVariables."""
+        with pytest.raises(TypeError, match=error_match):
+            process_cls(**kwargs)
+
+    @pytest.mark.parametrize(
+        "process,expected_sites",
+        [
+            (
+                AR1(
+                    autoreg_rv=DistributionalVariable("autoreg", dist.Beta(9, 1)),
+                    innovation_sd_rv=DistributionalVariable(
+                        "innovation_sd", dist.HalfNormal(0.1)
+                    ),
+                ),
+                {"autoreg", "innovation_sd", "ar1_init", "ar1_noise_decentered"},
+            ),
+            (
+                DifferencedAR1(
+                    autoreg_rv=DistributionalVariable("autoreg", dist.Beta(9, 1)),
+                    innovation_sd_rv=DistributionalVariable(
+                        "innovation_sd", dist.HalfNormal(0.1)
+                    ),
+                ),
+                {
+                    "autoreg",
+                    "innovation_sd",
+                    "diff_ar1_init_rate",
+                    "diff_ar1_noise_decentered",
+                },
+            ),
+            (
+                RandomWalk(
+                    innovation_sd_rv=DistributionalVariable(
+                        "innovation_sd", dist.HalfNormal(0.1)
+                    )
+                ),
+                {"innovation_sd", "rw_step"},
+            ),
+        ],
+    )
+    def test_distributional_parameter_rvs_create_expected_sample_sites(
+        self, process, expected_sites
+    ):
+        """Distributional parameter RVs create parameter and process sample sites."""
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(process.sample, rng_seed=42)
+        ).get_trace(n_timepoints=10, n_processes=2)
+
+        for site in expected_sites:
+            assert site in traced
+            assert traced[site]["type"] == "sample"
+
+    @pytest.mark.parametrize(
+        "process",
+        [
+            AR1(
+                autoreg_rv=DistributionalVariable("autoreg", dist.Beta(9, 1)),
+                innovation_sd_rv=DistributionalVariable(
+                    "innovation_sd", dist.HalfNormal(0.1)
+                ),
+            ),
+            DifferencedAR1(
+                autoreg_rv=DistributionalVariable("autoreg", dist.Beta(9, 1)),
+                innovation_sd_rv=DistributionalVariable(
+                    "innovation_sd", dist.HalfNormal(0.1)
+                ),
+            ),
+            RandomWalk(
+                innovation_sd_rv=DistributionalVariable(
+                    "innovation_sd", dist.HalfNormal(0.1)
+                )
+            ),
+        ],
+    )
+    def test_distributional_parameter_rvs_preserve_vectorized_shape(self, process):
+        """Distributional parameter RVs preserve the temporal process output shape."""
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(n_timepoints=10, n_processes=2)
+
+        assert result.shape == (10, 2)
+
+    @pytest.mark.parametrize(
+        "process,reference",
+        [
+            (
+                AR1(**fixed_ar1_kwargs(autoreg=0.7, innovation_sd=0.2)),
+                lambda: fixed_ar1_reference(
+                    n_timepoints=30,
+                    initial_value=1.0,
+                    n_processes=3,
+                    name_prefix="ar1",
+                    autoreg=0.7,
+                    innovation_sd=0.2,
+                ),
+            ),
+            (
+                DifferencedAR1(**fixed_ar1_kwargs(autoreg=0.7, innovation_sd=0.2)),
+                lambda: fixed_differenced_ar1_reference(
+                    n_timepoints=30,
+                    initial_value=1.0,
+                    n_processes=3,
+                    name_prefix="diff_ar1",
+                    autoreg=0.7,
+                    innovation_sd=0.2,
+                ),
+            ),
+            (
+                RandomWalk(**fixed_rw_kwargs(innovation_sd=0.2)),
+                lambda: fixed_random_walk_reference(
+                    n_timepoints=30,
+                    initial_value=1.0,
+                    n_processes=3,
+                    name_prefix="rw",
+                    innovation_sd=0.2,
+                ),
+            ),
+        ],
+    )
+    def test_deterministic_variable_parameters_match_fixed_numeric_reference(
+        self, process, reference
+    ):
+        """DeterministicVariable parameters match the old fixed-value behavior."""
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(
+                n_timepoints=30,
+                n_processes=3,
+                initial_value=1.0,
+            )
+        with numpyro.handlers.seed(rng_seed=42):
+            expected = reference()
+
+        assert jnp.allclose(result, expected)
+
+
 class TestTemporalProcessInnovationSD:
     """Test that temporal processes correctly use innovation_sd parameter."""
 
@@ -124,11 +460,11 @@ class TestTemporalProcessInnovationSD:
         n_timepoints = 100
 
         with numpyro.handlers.seed(rng_seed=42):
-            rw_small = RandomWalk(innovation_sd=0.1)
+            rw_small = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.1))
             trajectory_small = rw_small.sample(n_timepoints=n_timepoints)
 
         with numpyro.handlers.seed(rng_seed=42):
-            rw_large = RandomWalk(innovation_sd=1.0)
+            rw_large = RandomWalk(**fixed_rw_kwargs(innovation_sd=1.0))
             trajectory_large = rw_large.sample(n_timepoints=n_timepoints)
 
         steps_small = jnp.abs(jnp.diff(trajectory_small[:, 0]))
@@ -143,11 +479,11 @@ class TestTemporalProcessInnovationSD:
         autoreg = 0.7
 
         with numpyro.handlers.seed(rng_seed=42):
-            ar_small = AR1(autoreg=autoreg, innovation_sd=0.2)
+            ar_small = AR1(**fixed_ar1_kwargs(autoreg=autoreg, innovation_sd=0.2))
             trajectory_small = ar_small.sample(n_timepoints=n_timepoints)
 
         with numpyro.handlers.seed(rng_seed=42):
-            ar_large = AR1(autoreg=autoreg, innovation_sd=1.0)
+            ar_large = AR1(**fixed_ar1_kwargs(autoreg=autoreg, innovation_sd=1.0))
             trajectory_large = ar_large.sample(n_timepoints=n_timepoints)
 
         burn_in = 20
@@ -164,11 +500,15 @@ class TestTemporalProcessInnovationSD:
         autoreg = 0.6
 
         with numpyro.handlers.seed(rng_seed=42):
-            dar_small = DifferencedAR1(autoreg=autoreg, innovation_sd=0.15)
+            dar_small = DifferencedAR1(
+                **fixed_ar1_kwargs(autoreg=autoreg, innovation_sd=0.15)
+            )
             trajectory_small = dar_small.sample(n_timepoints=n_timepoints)
 
         with numpyro.handlers.seed(rng_seed=42):
-            dar_large = DifferencedAR1(autoreg=autoreg, innovation_sd=0.8)
+            dar_large = DifferencedAR1(
+                **fixed_ar1_kwargs(autoreg=autoreg, innovation_sd=0.8)
+            )
             trajectory_large = dar_large.sample(n_timepoints=n_timepoints)
 
         diffs_small = jnp.diff(trajectory_small[:, 0])
@@ -182,13 +522,13 @@ class TestTemporalProcessInnovationSD:
         n_timepoints = 50
 
         with numpyro.handlers.seed(rng_seed=42):
-            rw_small = RandomWalk(innovation_sd=0.2)
+            rw_small = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.2))
             trajs_small = rw_small.sample(
                 n_timepoints=n_timepoints, n_processes=n_processes
             )
 
         with numpyro.handlers.seed(rng_seed=42):
-            rw_large = RandomWalk(innovation_sd=1.0)
+            rw_large = RandomWalk(**fixed_rw_kwargs(innovation_sd=1.0))
             trajs_large = rw_large.sample(
                 n_timepoints=n_timepoints, n_processes=n_processes
             )
@@ -198,19 +538,63 @@ class TestTemporalProcessInnovationSD:
 
         assert jnp.mean(steps_small) < jnp.mean(steps_large)
 
-    def test_validation_rejects_non_positive_innovation_sd(self):
-        """Verify that non-positive innovation_sd values are rejected."""
-        with pytest.raises(ValueError, match="innovation_sd must be positive"):
-            RandomWalk(innovation_sd=0.0)
+    def test_validation_rejects_non_random_variable_parameters(self):
+        """Temporal process parameters must be RandomVariable instances."""
+        with pytest.raises(
+            TypeError, match="innovation_sd_rv must be a RandomVariable"
+        ):
+            RandomWalk(innovation_sd_rv=0.0)
 
-        with pytest.raises(ValueError, match="innovation_sd must be positive"):
-            RandomWalk(innovation_sd=-0.5)
+        with pytest.raises(TypeError, match="autoreg_rv must be a RandomVariable"):
+            AR1(autoreg_rv=0.5, innovation_sd_rv=DeterministicVariable("sd", 0.1))
 
-        with pytest.raises(ValueError, match="innovation_sd must be positive"):
-            AR1(autoreg=0.5, innovation_sd=-0.1)
+        with pytest.raises(
+            TypeError, match="innovation_sd_rv must be a RandomVariable"
+        ):
+            DifferencedAR1(
+                autoreg_rv=DeterministicVariable("autoreg", 0.5),
+                innovation_sd_rv=0.1,
+            )
 
-        with pytest.raises(ValueError, match="innovation_sd must be positive"):
-            DifferencedAR1(autoreg=0.5, innovation_sd=0.0)
+    @pytest.mark.parametrize("process_cls", [AR1, DifferencedAR1])
+    def test_ar_processes_accept_distributional_parameter_rvs(self, process_cls):
+        """Distributional parameter RVs create sample sites and preserve shape."""
+        process = process_cls(
+            autoreg_rv=DistributionalVariable("autoreg", dist.Beta(9, 1)),
+            innovation_sd_rv=DistributionalVariable(
+                "innovation_sd", dist.HalfNormal(0.1)
+            ),
+        )
+
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(process.sample, rng_seed=42)
+        ).get_trace(n_timepoints=10, n_processes=2)
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(n_timepoints=10, n_processes=2)
+
+        assert "autoreg" in traced
+        assert "innovation_sd" in traced
+        assert traced["autoreg"]["type"] == "sample"
+        assert traced["innovation_sd"]["type"] == "sample"
+        assert result.shape == (10, 2)
+
+    def test_random_walk_accepts_distributional_innovation_sd_rv(self):
+        """RandomWalk samples innovation_sd_rv before constructing step noise."""
+        process = RandomWalk(
+            innovation_sd_rv=DistributionalVariable(
+                "innovation_sd", dist.HalfNormal(0.1)
+            )
+        )
+
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(process.sample, rng_seed=42)
+        ).get_trace(n_timepoints=10, n_processes=2)
+        with numpyro.handlers.seed(rng_seed=42):
+            result = process.sample(n_timepoints=10, n_processes=2)
+
+        assert "innovation_sd" in traced
+        assert traced["innovation_sd"]["type"] == "sample"
+        assert result.shape == (10, 2)
 
 
 class TestTemporalProcessBehavior:
@@ -218,7 +602,7 @@ class TestTemporalProcessBehavior:
 
     def test_ar1_mean_reversion(self):
         """Test that AR1 reverts toward zero from a displaced initial value."""
-        ar1 = AR1(autoreg=0.95, innovation_sd=0.05)
+        ar1 = AR1(**fixed_ar1_kwargs(autoreg=0.95, innovation_sd=0.05))
 
         with numpyro.handlers.seed(rng_seed=42):
             trajectory = ar1.sample(
@@ -233,7 +617,7 @@ class TestTemporalProcessBehavior:
 
     def test_differenced_ar1_trend_persistence(self):
         """Test that DifferencedAR1 produces persistent trends."""
-        dar1 = DifferencedAR1(autoreg=0.95, innovation_sd=0.01)
+        dar1 = DifferencedAR1(**fixed_ar1_kwargs(autoreg=0.95, innovation_sd=0.01))
 
         with numpyro.handlers.seed(rng_seed=42):
             trajectory = dar1.sample(
@@ -261,34 +645,70 @@ class TestTemporalProcessStepSizeDefault:
         assert process_cls.step_size == 1
 
 
+class TestTemporalProcessRepr:
+    """String representations show RandomVariable constructor arguments."""
+
+    @pytest.mark.parametrize(
+        "process,expected",
+        [
+            (
+                AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+                ("AR1(", "autoreg_rv=", "innovation_sd_rv="),
+            ),
+            (
+                DifferencedAR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+                ("DifferencedAR1(", "autoreg_rv=", "innovation_sd_rv="),
+            ),
+            (
+                RandomWalk(**fixed_rw_kwargs(innovation_sd=0.05)),
+                ("RandomWalk(", "innovation_sd_rv="),
+            ),
+        ],
+    )
+    def test_repr_uses_random_variable_argument_names(self, process, expected):
+        """Representations use *_rv constructor argument names."""
+        rendered = repr(process)
+        for text in expected:
+            assert text in rendered
+
+
 class TestStepwiseTemporalProcessConstruction:
     """Construction-time validation for StepwiseTemporalProcess."""
 
     def test_step_size_attribute(self):
         """step_size is exposed on the instance for builder inspection."""
         wrapper = StepwiseTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+            AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)), step_size=7
         )
         assert wrapper.step_size == 7
 
     def test_zero_step_size_raises(self):
         """step_size=0 raises."""
         with pytest.raises(ValueError, match="positive integer"):
-            StepwiseTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), step_size=0)
+            StepwiseTemporalProcess(
+                AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+                step_size=0,
+            )
 
     def test_negative_step_size_raises(self):
         """Negative step_size raises."""
         with pytest.raises(ValueError, match="positive integer"):
-            StepwiseTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), step_size=-1)
+            StepwiseTemporalProcess(
+                AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+                step_size=-1,
+            )
 
     def test_float_step_size_raises(self):
         """Non-integer step_size raises."""
         with pytest.raises(ValueError, match="positive integer"):
-            StepwiseTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), step_size=7.0)
+            StepwiseTemporalProcess(
+                AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+                step_size=7.0,
+            )
 
     def test_repr_includes_inner_and_step_size(self):
         """__repr__ shows the inner process and step_size."""
-        inner = AR1(autoreg=0.9, innovation_sd=0.05)
+        inner = AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05))
         wrapper = StepwiseTemporalProcess(inner, step_size=7)
         rendered = repr(wrapper)
         assert rendered.startswith("StepwiseTemporalProcess(")
@@ -338,7 +758,7 @@ class TestStepwiseTemporalProcessSample:
     def test_step_size_one_passthrough_shape(self):
         """step_size=1 yields (n_timepoints, n_processes), same as inner directly."""
         wrapper = StepwiseTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), step_size=1
+            AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)), step_size=1
         )
         with numpyro.handlers.seed(rng_seed=42):
             result = wrapper.sample(n_timepoints=20, n_processes=2)
@@ -347,7 +767,7 @@ class TestStepwiseTemporalProcessSample:
     def test_coarse_trajectory_is_recorded(self):
         """StepwiseTemporalProcess records the coarse trajectory."""
         wrapper = StepwiseTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+            AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)), step_size=7
         )
         traced = numpyro.handlers.trace(
             numpyro.handlers.seed(wrapper.sample, rng_seed=42)
@@ -364,27 +784,35 @@ class TestWeeklyTemporalProcessConstruction:
     def test_step_size_attribute(self):
         """step_size is exposed on the instance for builder inspection."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
+            AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+            start_dow=MMWR_WEEK,
         )
         assert wrapper.step_size == 7
 
     def test_requires_calendar_anchor_attribute(self):
         """WeeklyTemporalProcess reports that it needs a calendar anchor."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
+            AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+            start_dow=MMWR_WEEK,
         )
         assert wrapper.requires_calendar_anchor is True
 
     def test_requires_valid_start_dow(self):
         """WeeklyTemporalProcess requires a valid integer start_dow."""
         with pytest.raises(ValueError, match="Day-of-week"):
-            WeeklyTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), start_dow=None)
+            WeeklyTemporalProcess(
+                AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+                start_dow=None,
+            )
         with pytest.raises(ValueError, match="Day-of-week"):
-            WeeklyTemporalProcess(AR1(autoreg=0.9, innovation_sd=0.05), start_dow=7)
+            WeeklyTemporalProcess(
+                AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+                start_dow=7,
+            )
 
     def test_repr_includes_inner_and_start_dow(self):
         """__repr__ shows the inner process and start_dow."""
-        inner = AR1(autoreg=0.9, innovation_sd=0.05)
+        inner = AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05))
         wrapper = WeeklyTemporalProcess(inner, start_dow=MMWR_WEEK)
         rendered = repr(wrapper)
         assert rendered.startswith("WeeklyTemporalProcess(")
@@ -398,7 +826,8 @@ class TestWeeklyTemporalProcessSample:
     def test_requires_first_day_dow_at_sample_time(self):
         """WeeklyTemporalProcess needs the model-axis day of week."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
+            AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+            start_dow=MMWR_WEEK,
         )
         with numpyro.handlers.seed(rng_seed=42):
             with pytest.raises(ValueError, match="first_day_dow"):
@@ -407,7 +836,8 @@ class TestWeeklyTemporalProcessSample:
     def test_alignment_with_leading_partial_week(self):
         """WeeklyTemporalProcess starts full blocks on start_dow."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
+            AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+            start_dow=MMWR_WEEK,
         )
         # first_day_dow=3 means day 0 is Thursday. With Sunday week starts,
         # days 0-2 are a leading partial week, then days 3-9 are the first
@@ -427,7 +857,8 @@ class TestWeeklyTemporalProcessSample:
     def test_alignment_without_leading_partial_week(self):
         """WeeklyTemporalProcess handles model axes starting on start_dow."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
+            AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+            start_dow=MMWR_WEEK,
         )
         with numpyro.handlers.seed(rng_seed=42):
             result = wrapper.sample(
@@ -443,7 +874,8 @@ class TestWeeklyTemporalProcessSample:
     def test_weekly_trajectory_is_recorded(self):
         """WeeklyTemporalProcess records the weekly trajectory."""
         wrapper = WeeklyTemporalProcess(
-            AR1(autoreg=0.9, innovation_sd=0.05), start_dow=MMWR_WEEK
+            AR1(**fixed_ar1_kwargs(autoreg=0.9, innovation_sd=0.05)),
+            start_dow=MMWR_WEEK,
         )
         traced = numpyro.handlers.trace(
             numpyro.handlers.seed(wrapper.sample, rng_seed=42)
