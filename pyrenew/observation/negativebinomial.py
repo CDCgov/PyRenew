@@ -16,7 +16,6 @@ class NegativeBinomialObservation(RandomVariable):
         self,
         name: str,
         concentration_rv: RandomVariable,
-        eps: float = 1e-10,
     ) -> None:
         """
         Default constructor
@@ -32,9 +31,6 @@ class NegativeBinomialObservation(RandomVariable):
             despite the fact that larger values imply that the distribution
             becomes more Poissonian, while smaller ones imply a greater degree
             of dispersion.
-        eps
-            Small value to add to the predicted mean to prevent numerical
-            instability. Defaults to 1e-10.
 
         Returns
         -------
@@ -42,7 +38,6 @@ class NegativeBinomialObservation(RandomVariable):
         """
         super().__init__(name=name)
         self.concentration_rv = concentration_rv
-        self.eps = eps
 
     def sample(
         self,
@@ -71,7 +66,7 @@ class NegativeBinomialObservation(RandomVariable):
         negative_binomial_sample = numpyro.sample(
             name=self.name,
             fn=dist.NegativeBinomial2(
-                mean=mu + self.eps,
+                mean=mu,
                 concentration=concentration,
             ),
             obs=obs,

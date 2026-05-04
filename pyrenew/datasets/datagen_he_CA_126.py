@@ -245,7 +245,7 @@ def sample_negbinom(
     Parameters
     ----------
     mu : np.ndarray
-        Mean values (must be positive).
+        Mean values (must be non-negative).
     concentration : float
         Concentration parameter (higher = less overdispersion).
     rng : np.random.Generator
@@ -256,7 +256,6 @@ def sample_negbinom(
     np.ndarray
         Integer counts.
     """
-    mu = np.maximum(mu, 1e-10)
     p = concentration / (concentration + mu)
     return rng.negative_binomial(n=concentration, p=p)
 
