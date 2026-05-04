@@ -7,19 +7,14 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-import jax.nn as jnn
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
+from jax import Array
+from jax.scipy.special import expit, logit
 from jax.typing import ArrayLike
 
 from pyrenew.ascertainment.base import AscertainmentModel
-
-_COVARIANCE_PARAMETER_NAMES = (
-    "scale_tril",
-    "covariance_matrix",
-    "precision_matrix",
-)
 
 
 class JointAscertainment(AscertainmentModel):
@@ -32,9 +27,8 @@ class JointAscertainment(AscertainmentModel):
     infection-to-observation ratios, while still being correlated because both
     depend on care-seeking behavior, testing practices, or reporting systems.
 
-    The model samples one multivariate normal vector around natural-scale
-    baseline ascertainment rates, which are converted to the logit scale
-    internally:
+    The model samples one logit multivariate normal vector given natural-scale
+    baseline ascertainment rates.
 
     ```text
     eta ~ MultivariateNormal(logit(baseline_rates), covariance)
@@ -80,23 +74,27 @@ class JointAscertainment(AscertainmentModel):
             Exactly one covariance parameter must be supplied.
         """
         super().__init__(name=name, signals=signals)
-        self.baseline_rates = jnp.asarray(baseline_rates)
-        self.scale_tril = self._optional_array(scale_tril)
-        self.covariance_matrix = self._optional_array(covariance_matrix)
-        self.precision_matrix = self._optional_array(precision_matrix)
+        self.baseline_rates: Array = jnp.asarray(baseline_rates)
+        self.scale_tril: Array | None = self._optional_array(scale_tril)
+        self.covariance_matrix: Array | None = self._optional_array(covariance_matrix)
+        self.precision_matrix: Array | None = self._optional_array(precision_matrix)
         self._validate_parameters()
-        self.baseline_logits = jnp.log(self.baseline_rates) - jnp.log1p(
-            -self.baseline_rates
+        self.baseline_logits: Array = logit(self.baseline_rates)
+        self.distribution: dist.MultivariateNormal = dist.MultivariateNormal(
+            loc=self.baseline_logits,
+            scale_tril=self.scale_tril,
+            covariance_matrix=self.covariance_matrix,
+            precision_matrix=self.precision_matrix,
         )
 
     @staticmethod
-    def _optional_array(value: ArrayLike | None) -> ArrayLike | None:
+    def _optional_array(value: ArrayLike | None) -> Array | None:
         """
         Convert optional array-like values to JAX arrays.
 
         Returns
         -------
-        ArrayLike | None
+        Array | None
             ``None`` if ``value`` is ``None``; otherwise ``value`` converted
             to a JAX array.
         """
@@ -120,45 +118,6 @@ class JointAscertainment(AscertainmentModel):
                 f"got {self.baseline_rates}."
             )
 
-        n_covariance_params = sum(
-            getattr(self, name) is not None for name in _COVARIANCE_PARAMETER_NAMES
-        )
-        if n_covariance_params != 1:
-            raise ValueError(
-                "Exactly one of scale_tril, covariance_matrix, or "
-                "precision_matrix must be provided."
-            )
-
-        matrix_shape = (n_signals, n_signals)
-        for name in _COVARIANCE_PARAMETER_NAMES:
-            param = getattr(self, name)
-            if param is not None and param.shape != matrix_shape:
-                raise ValueError(
-                    f"{name} must have shape {matrix_shape}, got shape {param.shape}."
-                )
-
-    def _distribution(self) -> dist.MultivariateNormal:
-        """
-        Construct the joint latent distribution.
-
-        Returns
-        -------
-        numpyro.distributions.MultivariateNormal
-            Joint latent distribution on the logit scale.
-        """
-        for name in _COVARIANCE_PARAMETER_NAMES:
-            value = getattr(self, name)
-            if value is not None:
-                return dist.MultivariateNormal(
-                    loc=self.baseline_logits,
-                    **{name: value},
-                )
-
-        raise ValueError(
-            "Exactly one of scale_tril, covariance_matrix, or "
-            "precision_matrix must be provided."
-        )
-
     def sample(self, **kwargs: object) -> Mapping[str, ArrayLike]:
         """
         Sample jointly distributed scalar ascertainment rates.
@@ -175,9 +134,9 @@ class JointAscertainment(AscertainmentModel):
         """
         eta = numpyro.sample(
             f"{self.name}_eta",
-            self._distribution(),
+            self.distribution,
         )
-        rates = jnn.sigmoid(eta)
+        rates = expit(eta)
 
         result = {}
         for signal, rate in zip(self.signals, rates):

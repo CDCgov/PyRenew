@@ -112,7 +112,7 @@ class TestJointAscertainmentValidation:
 
     def test_requires_matrix_shape_to_match_signals(self):
         """Test that the covariance parameter must match signal count."""
-        with pytest.raises(ValueError, match="scale_tril must have shape"):
+        with pytest.raises(ValueError, match="Incompatible shapes"):
             JointAscertainment(
                 name="he_ascertainment",
                 signals=("hospital", "ed"),

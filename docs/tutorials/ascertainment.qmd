@@ -43,8 +43,8 @@ warnings.filterwarnings("ignore", category=PlotnineWarning)
 ```
 
 Ascertainment is the probability that a latent infection appears in an observed signal, e.g., a hospitalization or visit to the emergency department.
-For hospital admissions this probability is often called an infection-hospitalization ratio (IHR).
-For emergency department visits it might be called an infection-ED-visit ratio (IEDR).
+For hospital admissions this probability is often called an infection-hospitalization rate (IHR).
+For emergency department visits it might be called an infection-ED-visit rate (IEDR).
 
 PyRenew count observations accept an `ascertainment_rate_rv`.
 For simple models this can be any ordinary `RandomVariable`.
@@ -95,13 +95,6 @@ key_ihr, key_iedr = random.split(random.PRNGKey(1))
 
 independent_ihr = dist.Beta(2, 198).sample(key_ihr, (n_draws,))
 independent_iedr = dist.Beta(2, 98).sample(key_iedr, (n_draws,))
-
-independent_df = pd.DataFrame(
-    {
-        "hospital_ihr": np.array(independent_ihr),
-        "ed_iedr": np.array(independent_iedr),
-    }
-)
 ```
 
 ## Model-level ascertainment
@@ -111,11 +104,27 @@ Each observation process receives the appropriate signal-specific accessor from 
 
 ```python
 builder = PyrenewBuilder()
-builder.add_ascertainment(ascertainment)
+
+joint_ascertainment = JointAscertainment(
+    name="he_ascertainment",
+    signals=("hospital", "ed_visits"),
+    baseline_rates=jnp.array([0.01, 0.02]),
+    scale_tril=jnp.array(
+        [[0.7, 0.0],
+         [0.35, 0.606],]),
+)
+
+builder.add_ascertainment(joint_ascertainment)
 
 PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+    ...
+)
+
+PopulationCounts(
+    name="ed_visits",
+    ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
     ...
 )
 ```
@@ -157,6 +166,13 @@ joint_eta = dist.MultivariateNormal(
     scale_tril=joint_ascertainment.scale_tril,
 ).sample(random.PRNGKey(2), (n_draws,))
 joint_rates = jnn.sigmoid(joint_eta)
+
+independent_df = pd.DataFrame(
+    {
+        "hospital_ihr": np.array(independent_ihr),
+        "ed_iedr": np.array(independent_iedr),
+    }
+)
 
 joint_df = pd.DataFrame(
     {
@@ -254,11 +270,3 @@ model = builder.build()
 
 Signal names in `for_signal()` must match the names used when the ascertainment model was created.
 They do not have to match observation names, but matching them usually makes model code and posterior outputs easier to read.
-
-When running a model that uses weekly observations or day-of-week effects, pass `obs_start_date` so PyRenew can align the model axis to the calendar.
-
-## Summary
-
-- Use ordinary `RandomVariable` objects for independent scalar ascertainment rates.
-- Use `JointAscertainment` for correlated scalar rates across signals.
-- Ascertainment and latent infection scale are weakly identified without informative priors or external information.
