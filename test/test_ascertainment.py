@@ -142,6 +142,18 @@ class TestJointAscertainmentValidation:
 
         assert ascertainment.distribution.precision_matrix.shape == (2, 2)
 
+    def test_baseline_rates_returns_natural_scale_rates(self):
+        """Test that baseline_rates returns rates on the probability scale."""
+        baseline_rates = jnp.array([0.2, 0.7])
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=baseline_rates,
+            scale_tril=jnp.eye(2),
+        )
+
+        assert jnp.allclose(ascertainment.baseline_rates, baseline_rates)
+
 
 class TestAscertainmentSignalValidation:
     """Test AscertainmentSignal constructor validation."""
@@ -325,6 +337,12 @@ class TestAscertainmentContextSafety:
         with ascertainment_context({"he_ascertainment": {"hospital": jnp.array(0.1)}}):
             with pytest.raises(RuntimeError, match="not available"):
                 get_ascertainment_value("he_ascertainment", "ed")
+
+    def test_missing_context_model_raises_clear_error(self):
+        """Test unavailable ascertainment model keys raise a clear RuntimeError."""
+        with ascertainment_context({"he_ascertainment": {"hospital": jnp.array(0.1)}}):
+            with pytest.raises(RuntimeError, match="Values for ascertainment model"):
+                get_ascertainment_value("ww_ascertainment", "hospital")
 
     def test_context_clears_after_exception(self):
         """Test context is cleared even when an exception is raised."""
