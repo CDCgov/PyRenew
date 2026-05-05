@@ -129,7 +129,7 @@ class TestJointAscertainmentValidation:
             covariance_matrix=jnp.eye(2),
         )
 
-        assert ascertainment.covariance_matrix.shape == (2, 2)
+        assert ascertainment.distribution.covariance_matrix.shape == (2, 2)
 
     def test_accepts_precision_matrix(self):
         """Test that precision_matrix is accepted as the covariance parameter."""
@@ -140,7 +140,7 @@ class TestJointAscertainmentValidation:
             precision_matrix=jnp.eye(2),
         )
 
-        assert ascertainment.precision_matrix.shape == (2, 2)
+        assert ascertainment.distribution.precision_matrix.shape == (2, 2)
 
 
 class TestAscertainmentSignalValidation:
@@ -320,6 +320,12 @@ class TestAscertainmentContextSafety:
                 assert get_ascertainment_value("he_ascertainment", "hospital") == 0.2
             assert get_ascertainment_value("he_ascertainment", "hospital") == 0.1
 
+    def test_missing_context_value_raises_clear_error(self):
+        """Test unavailable context keys raise a clear RuntimeError."""
+        with ascertainment_context({"he_ascertainment": {"hospital": jnp.array(0.1)}}):
+            with pytest.raises(RuntimeError, match="not available"):
+                get_ascertainment_value("he_ascertainment", "ed")
+
     def test_context_clears_after_exception(self):
         """Test context is cleared even when an exception is raised."""
         with pytest.raises(RuntimeError, match="boom"):
@@ -330,9 +336,3 @@ class TestAscertainmentContextSafety:
 
         with pytest.raises(RuntimeError, match="before ascertainment values"):
             get_ascertainment_value("he_ascertainment", "hospital")
-
-    def test_missing_context_value_raises_clear_error(self):
-        """Test unavailable context keys raise a clear RuntimeError."""
-        with ascertainment_context({"he_ascertainment": {"hospital": jnp.array(0.1)}}):
-            with pytest.raises(RuntimeError, match="not available"):
-                get_ascertainment_value("he_ascertainment", "ed")

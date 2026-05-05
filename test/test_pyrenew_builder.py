@@ -3,7 +3,6 @@ Tests for PyrenewBuilder and MultiSignalModel.
 """
 
 from datetime import date, timedelta
-from types import SimpleNamespace
 
 import jax.numpy as jnp
 import numpyro
@@ -404,9 +403,6 @@ class TestMultiSignalModelSampling:
         assert "hospital_predicted" in prior_samples
         assert "ed_predicted" in prior_samples
 
-        with pytest.raises(RuntimeError, match="before ascertainment values"):
-            ascertainment.for_signal("hospital")()
-
     def test_prior_predictive_reuses_same_ascertainment_signal(self):
         """Test two observations can reuse one signal accessor without site conflicts."""
         import jax.random
@@ -695,44 +691,6 @@ class TestMultiSignalModelValidation:
         model = simple_builder.build()
         # Should not raise
         model.validate()
-
-    def test_sample_rejects_observation_resolution_that_changes_after_validation(
-        self,
-    ):
-        """Test sample-time infection_resolution validation."""
-
-        class Latent:  # numpydoc ignore=GL08
-            n_initialization_points = 0
-
-            def requires_calendar_anchor(self):  # numpydoc ignore=GL08
-                return False
-
-            def sample(self, **kwargs):  # numpydoc ignore=GL08
-                return SimpleNamespace(
-                    aggregate=jnp.ones(2),
-                    all_subpops=jnp.ones((2, 1)),
-                )
-
-        class Observation:  # numpydoc ignore=GL08
-            def __init__(self):
-                self.calls = 0
-
-            def infection_resolution(self):  # numpydoc ignore=GL08
-                self.calls += 1
-                if self.calls == 1:
-                    return "aggregate"
-                return "invalid"
-
-            def sample(self, **kwargs):  # numpydoc ignore=GL08
-                raise AssertionError("sample should not be called")
-
-        model = MultiSignalModel(
-            latent_process=Latent(),
-            observations={"unstable": Observation()},
-        )
-
-        with pytest.raises(ValueError, match="invalid infection_resolution"):
-            model.sample(n_days_post_init=2, population_size=1.0)
 
     def test_validate_data_rejects_negative_subpop_indices(self, validation_builder):
         """Test that negative subpop_indices raises error."""

@@ -120,10 +120,17 @@ def get_ascertainment_value(
             "values were sampled."
         )
 
-    try:
-        return values[ascertainment_name][signal_name]
-    except KeyError as exc:
+    if ascertainment_name not in values:
+        raise RuntimeError(
+            f"Values for ascertainment model {ascertainment_name!r} are not "
+            "available in the current context."
+        )
+
+    ascertainment_model_values = values[ascertainment_name]
+    if signal_name not in ascertainment_model_values:
         raise RuntimeError(
             f"Ascertainment signal {signal_name!r} from model "
             f"{ascertainment_name!r} is not available in the current context."
-        ) from exc
+        )
+
+    return ascertainment_model_values[signal_name]

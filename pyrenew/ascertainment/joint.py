@@ -74,18 +74,30 @@ class JointAscertainment(AscertainmentModel):
             Exactly one covariance parameter must be supplied.
         """
         super().__init__(name=name, signals=signals)
-        self.baseline_rates: Array = jnp.asarray(baseline_rates)
-        self.scale_tril: Array | None = self._optional_array(scale_tril)
-        self.covariance_matrix: Array | None = self._optional_array(covariance_matrix)
-        self.precision_matrix: Array | None = self._optional_array(precision_matrix)
-        self._validate_parameters()
-        self.baseline_logits: Array = logit(self.baseline_rates)
+        baseline_rates_array = jnp.asarray(baseline_rates)
+        scale_tril_array = self._optional_array(scale_tril)
+        covariance_matrix_array = self._optional_array(covariance_matrix)
+        precision_matrix_array = self._optional_array(precision_matrix)
+        self._validate_parameters(baseline_rates_array)
         self.distribution: dist.MultivariateNormal = dist.MultivariateNormal(
-            loc=self.baseline_logits,
-            scale_tril=self.scale_tril,
-            covariance_matrix=self.covariance_matrix,
-            precision_matrix=self.precision_matrix,
+            loc=logit(baseline_rates_array),
+            scale_tril=scale_tril_array,
+            covariance_matrix=covariance_matrix_array,
+            precision_matrix=precision_matrix_array,
         )
+
+    @property
+    def baseline_rates(self) -> Array:
+        """
+        Natural-scale baseline ascertainment rates.
+
+        Returns
+        -------
+        Array
+            Distribution location transformed from logit scale to probability
+            scale.
+        """
+        return expit(self.distribution.loc)
 
     @staticmethod
     def _optional_array(value: ArrayLike | None) -> Array | None:
@@ -102,20 +114,20 @@ class JointAscertainment(AscertainmentModel):
             return None
         return jnp.asarray(value)
 
-    def _validate_parameters(self) -> None:
+    def _validate_parameters(self, baseline_rates: Array) -> None:
         """
         Validate constructor parameters.
         """
         n_signals = len(self.signals)
-        if self.baseline_rates.shape != (n_signals,):
+        if baseline_rates.shape != (n_signals,):
             raise ValueError(
                 "baseline_rates must have shape "
-                f"({n_signals},), got shape {self.baseline_rates.shape}."
+                f"({n_signals},), got shape {baseline_rates.shape}."
             )
-        if jnp.any(self.baseline_rates <= 0) or jnp.any(self.baseline_rates >= 1):
+        if jnp.any(baseline_rates <= 0) or jnp.any(baseline_rates >= 1):
             raise ValueError(
                 "baseline_rates must contain probabilities in (0, 1), "
-                f"got {self.baseline_rates}."
+                f"got {baseline_rates}."
             )
 
     def sample(self, **kwargs: object) -> Mapping[str, ArrayLike]:
