@@ -538,23 +538,29 @@ class TestTemporalProcessInnovationSD:
 
         assert jnp.mean(steps_small) < jnp.mean(steps_large)
 
-    def test_validation_rejects_non_random_variable_parameters(self):
-        """Temporal process parameters must be RandomVariable instances."""
-        with pytest.raises(
-            TypeError, match="innovation_sd_rv must be a RandomVariable"
-        ):
-            RandomWalk(innovation_sd_rv=0.0)
-
-        with pytest.raises(TypeError, match="autoreg_rv must be a RandomVariable"):
-            AR1(autoreg_rv=0.5, innovation_sd_rv=DeterministicVariable("sd", 0.1))
-
-        with pytest.raises(
-            TypeError, match="innovation_sd_rv must be a RandomVariable"
-        ):
-            DifferencedAR1(
+    @pytest.mark.parametrize(
+        "process_factory",
+        [
+            lambda innovation_sd: AR1(
                 autoreg_rv=DeterministicVariable("autoreg", 0.5),
-                innovation_sd_rv=0.1,
-            )
+                innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+            ),
+            lambda innovation_sd: DifferencedAR1(
+                autoreg_rv=DeterministicVariable("autoreg", 0.5),
+                innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+            ),
+            lambda innovation_sd: RandomWalk(
+                innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+            ),
+        ],
+    )
+    @pytest.mark.parametrize("innovation_sd", [0.0, -0.1, jnp.array([0.1, 0.0])])
+    def test_validation_rejects_non_positive_deterministic_innovation_sd(
+        self, process_factory, innovation_sd
+    ):
+        """Deterministic innovation scales must be positive."""
+        with pytest.raises(ValueError, match="innovation_sd_rv must return positive"):
+            process_factory(innovation_sd)
 
     @pytest.mark.parametrize("process_cls", [AR1, DifferencedAR1])
     def test_ar_processes_accept_distributional_parameter_rvs(self, process_cls):

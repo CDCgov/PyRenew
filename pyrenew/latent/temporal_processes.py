@@ -59,6 +59,7 @@ import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 
+from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
@@ -124,6 +125,25 @@ class TemporalProcess(Protocol):
         ...
 
 
+def _validate_deterministic_innovation_sd(innovation_sd_rv: RandomVariable) -> None:
+    """
+    Validate statically-known innovation scales.
+
+    Stochastic RandomVariables should encode positivity through their prior
+    support. DeterministicVariable values are known at construction time, so
+    reject invalid scales before they reach NumPyro distributions.
+    """
+    if not isinstance(innovation_sd_rv, DeterministicVariable):
+        return
+
+    innovation_sd = jnp.asarray(innovation_sd_rv.value)
+    if bool(jnp.any(innovation_sd <= 0)):
+        raise ValueError(
+            "innovation_sd_rv must return positive values; "
+            f"got {innovation_sd_rv.value}"
+        )
+
+
 class AR1(TemporalProcess):
     """
     AR(1) process.
@@ -170,11 +190,14 @@ class AR1(TemporalProcess):
         ------
         TypeError
             If autoreg_rv or innovation_sd_rv are not RandomVariable instances
+        ValueError
+            If innovation_sd_rv is a DeterministicVariable with any value <= 0
         """
         if not isinstance(autoreg_rv, RandomVariable):
             raise TypeError("autoreg_rv must be a RandomVariable")
         if not isinstance(innovation_sd_rv, RandomVariable):
             raise TypeError("innovation_sd_rv must be a RandomVariable")
+        _validate_deterministic_innovation_sd(innovation_sd_rv)
         self.autoreg_rv = autoreg_rv
         self.innovation_sd_rv = innovation_sd_rv
         self.ar_process = ARProcess(name="ar1")
@@ -291,11 +314,14 @@ class DifferencedAR1(TemporalProcess):
         ------
         TypeError
             If autoreg_rv or innovation_sd_rv are not RandomVariable instances
+        ValueError
+            If innovation_sd_rv is a DeterministicVariable with any value <= 0
         """
         if not isinstance(autoreg_rv, RandomVariable):
             raise TypeError("autoreg_rv must be a RandomVariable")
         if not isinstance(innovation_sd_rv, RandomVariable):
             raise TypeError("innovation_sd_rv must be a RandomVariable")
+        _validate_deterministic_innovation_sd(innovation_sd_rv)
         self.autoreg_rv = autoreg_rv
         self.innovation_sd_rv = innovation_sd_rv
         self.process = DifferencedProcess(
@@ -414,9 +440,12 @@ class RandomWalk(TemporalProcess):
         ------
         TypeError
             If innovation_sd_rv is not a RandomVariable instance
+        ValueError
+            If innovation_sd_rv is a DeterministicVariable with any value <= 0
         """
         if not isinstance(innovation_sd_rv, RandomVariable):
             raise TypeError("innovation_sd_rv must be a RandomVariable")
+        _validate_deterministic_innovation_sd(innovation_sd_rv)
         self.innovation_sd_rv = innovation_sd_rv
 
     def __repr__(self) -> str:
