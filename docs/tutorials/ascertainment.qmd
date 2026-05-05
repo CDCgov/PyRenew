@@ -117,13 +117,13 @@ builder.add_ascertainment(joint_ascertainment)
 
 PopulationCounts(
     name="hospital",
-    ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+    ascertainment_rate_rv=joint_ascertainment.for_signal("hospital"),
     ...
 )
 
 PopulationCounts(
     name="ed_visits",
-    ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
+    ascertainment_rate_rv=joint_ascertainment.for_signal("ed_visits"),
     ...
 )
 ```
@@ -161,10 +161,9 @@ This is only for visualization; in a fitted PyRenew model, JointAscertainment ha
 
 ```{python}
 # | label: joint-prior-draws
-joint_eta = dist.MultivariateNormal(
-    loc=joint_ascertainment.baseline_logits,
-    scale_tril=joint_ascertainment.scale_tril,
-).sample(random.PRNGKey(2), (n_draws,))
+joint_eta = joint_ascertainment.distribution.sample(
+    random.PRNGKey(2), (n_draws,)
+)
 joint_rates = jnn.sigmoid(joint_eta)
 
 independent_df = pd.DataFrame(

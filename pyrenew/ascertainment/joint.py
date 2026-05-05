@@ -126,7 +126,7 @@ class JointAscertainment(AscertainmentModel):
             )
         if jnp.any(baseline_rates <= 0) or jnp.any(baseline_rates >= 1):
             raise ValueError(
-                "baseline_rates must contain probabilities in (0, 1), "
+                "baseline_rates must contain probabilities in [0, 1], "
                 f"got {baseline_rates}."
             )
 
