@@ -211,13 +211,15 @@ The joint prior keeps the same approximate scale while inducing positive depende
 (
     p9.ggplot(compare_df, p9.aes(x="hospital_ihr", y="ed_iedr"))
     + p9.geom_point(alpha=0.2, size=1.0, color="steelblue")
-    + p9.geom_abline(intercept=0, slope=2, linetype="dashed", color="gray")
     + p9.facet_wrap("~prior", nrow=1)
     + p9.labs(
         x="Hospital ascertainment rate (IHR)",
         y="ED ascertainment rate (IEDR)",
         title="Independent vs. joint scalar ascertainment",
     )
+    + p9.geom_abline(slope=1, intercept=jnp.log10(2), linetype="dashed", color="gray")
+    + p9.scale_y_log10()
+    + p9.scale_x_log10()
     + theme_tutorial
 )
 ```
