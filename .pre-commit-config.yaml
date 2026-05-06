@@ -26,9 +26,8 @@ repos:
       - id: numpydoc-validation
   #####
   # Quarto
-  - repo: https://github.com/jolars/panache
+  - repo: https://github.com/jolars/panache-pre-commit
     rev: v2.43.1
-
     hooks:
       - id: panache-format
       - id: panache-lint
