@@ -14,6 +14,8 @@ import numpyro
 import numpyro.handlers
 from jax.typing import ArrayLike
 
+from pyrenew.ascertainment import AscertainmentModel
+from pyrenew.ascertainment.context import ascertainment_context
 from pyrenew.latent.base import BaseLatentInfectionProcess
 from pyrenew.metaclass import Model
 from pyrenew.observation.base import BaseObservationProcess
@@ -40,6 +42,10 @@ class MultiSignalModel(Model):
     observations
         Dictionary mapping names to observation process instances. Names are
         used when passing observation data to sample().
+    ascertainment_models
+        Optional dictionary mapping names to ascertainment model instances.
+        Each ascertainment model is sampled once per model execution before
+        observation processes run.
 
     Notes
     -----
@@ -53,6 +59,7 @@ class MultiSignalModel(Model):
         self,
         latent_process: BaseLatentInfectionProcess,
         observations: dict[str, BaseObservationProcess],
+        ascertainment_models: dict[str, AscertainmentModel] | None = None,
     ) -> None:
         """
         Initialize multi-signal model.
@@ -63,6 +70,8 @@ class MultiSignalModel(Model):
             Configured latent infection process
         observations
             Dictionary mapping observation names to observation process instances
+        ascertainment_models
+            Optional dictionary mapping names to ascertainment model instances
 
         Raises
         ------
@@ -72,6 +81,9 @@ class MultiSignalModel(Model):
         """
         self.latent = latent_process
         self.observations = observations
+        if ascertainment_models is None:
+            ascertainment_models = {}
+        self.ascertainment_models = ascertainment_models
         self.validate()
 
     _SUPPORTED_RESOLUTIONS = {"aggregate", "subpop"}
@@ -99,6 +111,17 @@ class MultiSignalModel(Model):
                 raise ValueError(
                     f"Observation '{name}' returned invalid infection_resolution "
                     f"'{resolution}'. Expected one of {self._SUPPORTED_RESOLUTIONS}."
+                )
+        for name, ascertainment_model in self.ascertainment_models.items():
+            if not isinstance(ascertainment_model, AscertainmentModel):
+                raise TypeError(
+                    f"Ascertainment model '{name}' must be an AscertainmentModel, "
+                    f"got {type(ascertainment_model).__name__}."
+                )
+            if ascertainment_model.name != name:
+                raise ValueError(
+                    f"Ascertainment model dictionary key {name!r} must match "
+                    f"the model name {ascertainment_model.name!r}."
                 )
 
     def pad_observations(
@@ -365,25 +388,32 @@ class MultiSignalModel(Model):
             "subpop": inf_all,
         }
 
-        # Apply each observation process
-        for name, obs_process in self.observations.items():
-            # Get the appropriate latent infections based on observation type
-            resolution = obs_process.infection_resolution()
-            if resolution not in latent_map:
-                raise ValueError(
-                    f"Observation '{name}' returned invalid infection_resolution "
-                    f"'{resolution}'. Expected one of {self._SUPPORTED_RESOLUTIONS}."
+        ascertainment_values = {
+            name: ascertainment_model.sample()
+            for name, ascertainment_model in self.ascertainment_models.items()
+        }
+
+        with ascertainment_context(ascertainment_values):
+            # Apply each observation process
+            for name, obs_process in self.observations.items():
+                # Get the appropriate latent infections based on observation type
+                resolution = obs_process.infection_resolution()
+                if resolution not in latent_map:
+                    raise ValueError(
+                        f"Observation '{name}' returned invalid infection_resolution "
+                        f"'{resolution}'. Expected one of "
+                        f"{self._SUPPORTED_RESOLUTIONS}."
+                    )
+                latent_infections = latent_map[resolution]
+
+                # Get observation-specific data
+                obs_data = observation_data.get(name, {})
+
+                # Sample from observation process
+                obs_process.sample(
+                    infections=latent_infections,
+                    first_day_dow=first_day_dow,
+                    **obs_data,
                 )
-            latent_infections = latent_map[resolution]
-
-            # Get observation-specific data
-            obs_data = observation_data.get(name, {})
-
-            # Sample from observation process
-            obs_process.sample(
-                infections=latent_infections,
-                first_day_dow=first_day_dow,
-                **obs_data,
-            )
 
         return None
