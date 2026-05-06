@@ -12,6 +12,7 @@ import numpyro.distributions as dist
 import polars as pl
 import pytest
 
+from pyrenew.ascertainment import JointAscertainment
 from pyrenew.datasets import (
     load_example_infection_admission_interval,
     load_synthetic_daily_ed_visits,
@@ -335,6 +336,93 @@ def he_weekly_model(
     ed_obs = PopulationCounts(
         name="ed",
         ascertainment_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
+        delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
+        noise=NegativeBinomialNoise(
+            DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
+        ),
+        day_of_week_rv=DeterministicVariable("ed_dow", ed_day_of_week_effects),
+    )
+    builder.add_observation(ed_obs)
+
+    return builder.build()
+
+
+@pytest.fixture(scope="module")
+def he_weekly_joint_ascertainment_model(
+    true_params: dict,
+    hosp_delay_pmf: jnp.ndarray,
+    ed_delay_pmf: jnp.ndarray,
+    ed_day_of_week_effects: jnp.ndarray,
+) -> MultiSignalModel:
+    """
+    Build a weekly-hospital + daily-ED model with joint ascertainment.
+
+    The hospital observation is aggregated to MMWR epiweeks, the ED visit
+    observation stays daily, and both signal-specific ascertainment rates are
+    sampled once from a shared ``JointAscertainment`` model. This is
+    structurally comparable to the pyrenew-multisignal H+E model while keeping
+    PyRenew's scalar ascertainment-rate interface.
+
+    Parameters
+    ----------
+    true_params : dict
+        Ground-truth parameter dictionary used to center the prior.
+    hosp_delay_pmf : jnp.ndarray
+        Infection-to-hospitalization delay PMF.
+    ed_delay_pmf : jnp.ndarray
+        Infection-to-ED-visit delay PMF.
+    ed_day_of_week_effects : jnp.ndarray
+        Day-of-week multipliers used in synthetic ED generation.
+
+    Returns
+    -------
+    MultiSignalModel
+        Built model ready for fitting.
+    """
+    gen_int_pmf = jnp.array(
+        [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
+    )
+
+    true_ihr = true_params["hospitalizations"]["ihr"]
+    true_iedr = true_params["ed_visits"]["iedr"]
+    ascertainment = JointAscertainment(
+        name="he_ascertainment",
+        signals=("hospital", "ed_visits"),
+        baseline_rates=jnp.array([true_ihr, true_iedr]),
+        scale_tril=jnp.array(
+            [
+                [0.7, 0.0],
+                [0.35, 0.606],
+            ]
+        ),
+    )
+
+    builder = PyrenewBuilder()
+    builder.configure_latent(
+        PopulationInfections,
+        gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
+        I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
+        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+        single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+    )
+    builder.add_ascertainment(ascertainment)
+
+    hospital_obs = PopulationCounts(
+        name="hospital",
+        ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+        delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
+        noise=NegativeBinomialNoise(
+            DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
+        ),
+        aggregation="weekly",
+        reporting_schedule="regular",
+        start_dow=MMWR_WEEK,
+    )
+    builder.add_observation(hospital_obs)
+
+    ed_obs = PopulationCounts(
+        name="ed_visits",
+        ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
         delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
         noise=NegativeBinomialNoise(
             DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
