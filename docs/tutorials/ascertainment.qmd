@@ -71,9 +71,7 @@ hospital_obs_independent = PopulationCounts(
     ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
     delay_distribution_rv=hosp_delay_rv,
     noise=NegativeBinomialNoise(
-        DistributionalVariable(
-            "hospital_concentration", dist.LogNormal(4.0, 0.5)
-        )
+        DistributionalVariable("hospital_concentration", dist.LogNormal(4.0, 0.5))
     ),
 )
 
@@ -161,9 +159,7 @@ This is only for visualization; in a fitted PyRenew model, JointAscertainment ha
 
 ```{python}
 # | label: joint-prior-draws
-joint_eta = joint_ascertainment.distribution.sample(
-    random.PRNGKey(2), (n_draws,)
-)
+joint_eta = joint_ascertainment.distribution.sample(random.PRNGKey(2), (n_draws,))
 joint_rates = jnn.sigmoid(joint_eta)
 
 independent_df = pd.DataFrame(
