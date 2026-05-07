@@ -37,35 +37,7 @@ from pyrenew.observation import (
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from pyrenew.time import MMWR_WEEK
-from test.test_helpers import fixed_ar1 as make_fixed_ar1
-from test.test_helpers import fixed_random_walk as make_fixed_random_walk
-
-
-@pytest.fixture
-def fixed_ar1():
-    """
-    Factory fixture for AR1 processes with fixed parameters.
-
-    Returns
-    -------
-    callable
-        Function accepting ``autoreg`` and ``innovation_sd``.
-    """
-    return make_fixed_ar1
-
-
-@pytest.fixture
-def fixed_random_walk():
-    """
-    Factory fixture for RandomWalk processes with fixed parameters.
-
-    Returns
-    -------
-    callable
-        Function accepting ``innovation_sd``.
-    """
-    return make_fixed_random_walk
-
+from test.test_helpers import fixed_ar1, fixed_random_walk
 
 # =============================================================================
 # PMF Fixtures
@@ -214,8 +186,8 @@ def subpopulation_infections(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        baseline_rt_process=make_fixed_ar1(autoreg=0.9, innovation_sd=0.05),
-        subpop_rt_deviation_process=make_fixed_random_walk(innovation_sd=0.025),
+        baseline_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
         n_initialization_points=7,
     )
 
@@ -235,7 +207,7 @@ def population_infections(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        single_rt_process=make_fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
         n_initialization_points=7,
     )
 

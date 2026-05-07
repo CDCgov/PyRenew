@@ -9,7 +9,7 @@ import jax
 import jax.numpy as jnp
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent import AR1, RandomWalk
+from pyrenew.latent import AR1, DifferencedAR1, RandomWalk
 from pyrenew.observation import MeasurementObservation
 
 
@@ -51,6 +51,28 @@ def fixed_random_walk(innovation_sd):
     """
     return RandomWalk(
         innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd)
+    )
+
+
+def fixed_differenced_ar1(autoreg, innovation_sd):
+    """
+    Construct a DifferencedAR1 process with fixed parameters.
+
+    Parameters
+    ----------
+    autoreg
+        Deterministic autoregressive coefficient.
+    innovation_sd
+        Deterministic innovation standard deviation.
+
+    Returns
+    -------
+    DifferencedAR1
+        Temporal process with deterministic autoregression and innovation scale.
+    """
+    return DifferencedAR1(
+        autoreg_rv=DeterministicVariable("autoreg", autoreg),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
     )
 
 

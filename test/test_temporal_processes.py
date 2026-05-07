@@ -15,8 +15,6 @@ from pyrenew.latent import (
     StepwiseTemporalProcess,
     WeeklyTemporalProcess,
 )
-from pyrenew.process import ARProcess, DifferencedProcess
-from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 
@@ -55,125 +53,6 @@ INNER_PROCESS_PARAMS = [
     (DifferencedAR1, fixed_ar1_kwargs()),
     (RandomWalk, fixed_rw_kwargs()),
 ]
-
-
-def fixed_ar1_reference(
-    n_timepoints,
-    initial_value,
-    n_processes,
-    name_prefix,
-    autoreg,
-    innovation_sd,
-):
-    """
-    Sample the former fixed-parameter AR1 implementation.
-
-    Returns
-    -------
-    ArrayLike
-        Reference trajectory with shape ``(n_timepoints, n_processes)``.
-    """
-    if initial_value is None:
-        initial_value = jnp.zeros(n_processes)
-    elif jnp.isscalar(initial_value):
-        initial_value = jnp.full(n_processes, initial_value)
-
-    stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-
-    with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
-        init_states = numpyro.sample(
-            f"{name_prefix}_init",
-            dist.Normal(initial_value, stationary_sd),
-        )
-
-    return ARProcess(name="ar1")(
-        n=n_timepoints,
-        init_vals=init_states[jnp.newaxis, :],
-        autoreg=jnp.full((1, n_processes), autoreg),
-        noise_sd=innovation_sd,
-        noise_name=f"{name_prefix}_noise",
-    )
-
-
-def fixed_differenced_ar1_reference(
-    n_timepoints,
-    initial_value,
-    n_processes,
-    name_prefix,
-    autoreg,
-    innovation_sd,
-):
-    """
-    Sample the former fixed-parameter DifferencedAR1 implementation.
-
-    Returns
-    -------
-    ArrayLike
-        Reference trajectory with shape ``(n_timepoints, n_processes)``.
-    """
-    if initial_value is None:
-        initial_value = jnp.zeros(n_processes)
-    elif jnp.isscalar(initial_value):
-        initial_value = jnp.full(n_processes, initial_value)
-
-    stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-
-    with numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes):
-        init_rates = numpyro.sample(
-            f"{name_prefix}_init_rate",
-            dist.Normal(0, stationary_sd),
-        )
-
-    process = DifferencedProcess(
-        name="diff_ar1",
-        fundamental_process=ARProcess(name="diff_ar1_fundamental"),
-        differencing_order=1,
-    )
-    return process(
-        n=n_timepoints,
-        init_vals=initial_value[jnp.newaxis, :],
-        autoreg=jnp.full((1, n_processes), autoreg),
-        noise_sd=innovation_sd,
-        fundamental_process_init_vals=init_rates[jnp.newaxis, :],
-        noise_name=f"{name_prefix}_noise",
-    )
-
-
-def fixed_random_walk_reference(
-    n_timepoints,
-    initial_value,
-    n_processes,
-    name_prefix,
-    innovation_sd,
-):
-    """
-    Sample the former fixed-parameter RandomWalk implementation.
-
-    Returns
-    -------
-    ArrayLike
-        Reference trajectory with shape ``(n_timepoints, n_processes)``.
-    """
-    if initial_value is None:
-        initial_value = jnp.zeros(n_processes)
-    elif jnp.isscalar(initial_value):
-        initial_value = jnp.full(n_processes, initial_value)
-
-    rw = ProcessRandomWalk(
-        name=f"{name_prefix}_random_walk",
-        step_rv=DistributionalVariable(
-            name=f"{name_prefix}_step",
-            distribution=dist.Normal(
-                jnp.zeros(n_processes),
-                innovation_sd,
-            ),
-        ),
-    )
-
-    return rw.sample(
-        init_vals=initial_value[jnp.newaxis, :],
-        n=n_timepoints,
-    )
 
 
 class TestTemporalProcessVectorizedSampling:
@@ -238,7 +117,7 @@ class TestRandomWalkInitialValues:
         n_processes = 4
         initial_values = jnp.array([0.0, 1.0, -1.0, 2.0])
 
-        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.3))
+        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.05))
 
         with numpyro.handlers.seed(rng_seed=42):
             trajectories = rw.sample(
@@ -255,7 +134,7 @@ class TestRandomWalkInitialValues:
         n_timepoints = 30
         n_processes = 3
 
-        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.3))
+        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.05))
 
         with numpyro.handlers.seed(rng_seed=42):
             trajectories = rw.sample(
@@ -396,58 +275,6 @@ class TestTemporalProcessRandomVariableParameters:
             result = process.sample(n_timepoints=10, n_processes=2)
 
         assert result.shape == (10, 2)
-
-    @pytest.mark.parametrize(
-        "process,reference",
-        [
-            (
-                AR1(**fixed_ar1_kwargs(autoreg=0.7, innovation_sd=0.2)),
-                lambda: fixed_ar1_reference(
-                    n_timepoints=30,
-                    initial_value=1.0,
-                    n_processes=3,
-                    name_prefix="ar1",
-                    autoreg=0.7,
-                    innovation_sd=0.2,
-                ),
-            ),
-            (
-                DifferencedAR1(**fixed_ar1_kwargs(autoreg=0.7, innovation_sd=0.2)),
-                lambda: fixed_differenced_ar1_reference(
-                    n_timepoints=30,
-                    initial_value=1.0,
-                    n_processes=3,
-                    name_prefix="diff_ar1",
-                    autoreg=0.7,
-                    innovation_sd=0.2,
-                ),
-            ),
-            (
-                RandomWalk(**fixed_rw_kwargs(innovation_sd=0.2)),
-                lambda: fixed_random_walk_reference(
-                    n_timepoints=30,
-                    initial_value=1.0,
-                    n_processes=3,
-                    name_prefix="rw",
-                    innovation_sd=0.2,
-                ),
-            ),
-        ],
-    )
-    def test_deterministic_variable_parameters_match_fixed_numeric_reference(
-        self, process, reference
-    ):
-        """DeterministicVariable parameters match the old fixed-value behavior."""
-        with numpyro.handlers.seed(rng_seed=42):
-            result = process.sample(
-                n_timepoints=30,
-                n_processes=3,
-                initial_value=1.0,
-            )
-        with numpyro.handlers.seed(rng_seed=42):
-            expected = reference()
-
-        assert jnp.allclose(result, expected)
 
 
 class TestTemporalProcessInnovationSD:

@@ -20,7 +20,6 @@ from pyrenew.deterministic import (
     NullVariable,
 )
 from pyrenew.latent import (
-    DifferencedAR1,
     GammaGroupSdPrior,
     HierarchicalNormalPrior,
     Infections,
@@ -49,27 +48,13 @@ from pyrenew.randomvariable import (
 from test.test_helpers import (
     ConcreteMeasurementObservation,
     fixed_ar1,
+    fixed_differenced_ar1,
     fixed_random_walk,
 )
 
 # =============================================================================
 # Shared instance builders
 # =============================================================================
-
-
-def fixed_differenced_ar1(autoreg=0.9, innovation_sd=0.05):
-    """
-    Construct a DifferencedAR1 process with fixed parameters.
-
-    Returns
-    -------
-    DifferencedAR1
-        Temporal process with deterministic autoregression and innovation scale.
-    """
-    return DifferencedAR1(
-        autoreg_rv=DeterministicVariable("autoreg", autoreg),
-        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
-    )
 
 
 def _make_counts():
