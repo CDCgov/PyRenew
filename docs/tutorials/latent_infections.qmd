@@ -50,6 +50,9 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.randomvariable import DistributionalVariable
 ```
 
+Temporal process parameters are `RandomVariable`s.
+This tutorial uses `DeterministicVariable` wrappers to compare fixed hyperparameter choices; choosing priors for these parameters is a separate modeling decision.
+
 ## Overview
 
 In infectious disease modeling, the true number of new infections at each time point is not directly observed.
@@ -365,7 +368,12 @@ With `innovation_sd = 0.05`, each day's $\log \mathcal{R}$ changes by roughly $\
 ```{python}
 #| label: rw-sample
 
-rw_samples = sample_process(RandomWalk(innovation_sd=0.05), "RandomWalk")
+rw_samples = sample_process(
+    RandomWalk(
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+    ),
+    "RandomWalk",
+)
 ```
 
 ```{python}
@@ -406,7 +414,13 @@ For example, `autoreg = 0.9` and `innovation_sd = 0.05` give $\sigma_{\text{stat
 ```{python}
 #| label: ar1-sample
 
-ar1_samples = sample_process(AR1(autoreg=0.9, innovation_sd=0.05), "AR1")
+ar1_samples = sample_process(
+    AR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.9),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+    ),
+    "AR1",
+)
 ```
 
 ```{python}
@@ -451,7 +465,11 @@ We use `innovation_sd = 0.01` (smaller than the 0.05 used for Random Walk and AR
 #| label: dar1-sample
 
 dar1_samples = sample_process(
-    DifferencedAR1(autoreg=0.5, innovation_sd=0.01), "DifferencedAR1"
+    DifferencedAR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.5),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.01),
+    ),
+    "DifferencedAR1",
 )
 ```
 
@@ -611,9 +629,18 @@ We illustrate these effects below for DifferencedAR1 by varying both parameters:
 #| label: hyperparam-sample
 
 hyperparam_configs = {
-    "autoreg=0.5, sd=0.01": DifferencedAR1(autoreg=0.5, innovation_sd=0.01),
-    "autoreg=0.9, sd=0.02": DifferencedAR1(autoreg=0.9, innovation_sd=0.02),
-    "autoreg=0.95, sd=0.05": DifferencedAR1(autoreg=0.95, innovation_sd=0.05),
+    "autoreg=0.5, sd=0.01": DifferencedAR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.5),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.01),
+    ),
+    "autoreg=0.9, sd=0.02": DifferencedAR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.9),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.02),
+    ),
+    "autoreg=0.95, sd=0.05": DifferencedAR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.95),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+    ),
 }
 
 hyperparam_samples = {}
