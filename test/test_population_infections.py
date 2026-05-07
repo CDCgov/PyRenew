@@ -7,9 +7,10 @@ import numpyro
 import pytest
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent import AR1, RandomWalk, WeeklyTemporalProcess
+from pyrenew.latent import WeeklyTemporalProcess
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.time import MMWR_WEEK
+from test.test_helpers import fixed_ar1, fixed_random_walk
 
 
 class TestPopulationInfectionsSample:
@@ -116,7 +117,7 @@ class TestPopulationInfectionsSample:
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-            single_rt_process=RandomWalk(),
+            single_rt_process=fixed_random_walk(innovation_sd=1.0),
             n_initialization_points=7,
         )
 
@@ -134,7 +135,7 @@ class TestPopulationInfectionsSample:
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
             single_rt_process=WeeklyTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05),
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=MMWR_WEEK,
             ),
             n_initialization_points=7,
@@ -179,7 +180,7 @@ class TestPopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=None,
                 log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-                single_rt_process=RandomWalk(),
+                single_rt_process=fixed_random_walk(innovation_sd=1.0),
                 n_initialization_points=7,
             )
 
@@ -191,7 +192,7 @@ class TestPopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=None,
-                single_rt_process=RandomWalk(),
+                single_rt_process=fixed_random_walk(innovation_sd=1.0),
                 n_initialization_points=7,
             )
 
@@ -215,7 +216,7 @@ class TestPopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", -0.1),
                 log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-                single_rt_process=RandomWalk(),
+                single_rt_process=fixed_random_walk(innovation_sd=1.0),
                 n_initialization_points=7,
             )
 
@@ -227,7 +228,7 @@ class TestPopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 1.5),
                 log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-                single_rt_process=RandomWalk(),
+                single_rt_process=fixed_random_walk(innovation_sd=1.0),
                 n_initialization_points=7,
             )
 
@@ -241,7 +242,7 @@ class TestPopulationInfectionsValidation:
                 gen_int_rv=gen_int_rv,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-                single_rt_process=RandomWalk(),
+                single_rt_process=fixed_random_walk(innovation_sd=1.0),
                 n_initialization_points=2,
             )
 
@@ -275,7 +276,7 @@ class TestPopulationInfectionsValidation:
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", jnp.array([0.001, 0.002])),
             log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-            single_rt_process=RandomWalk(),
+            single_rt_process=fixed_random_walk(innovation_sd=1.0),
             n_initialization_points=7,
         )
 

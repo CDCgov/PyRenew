@@ -48,6 +48,9 @@ from pyrenew.latent import (
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 ```
 
+Temporal process parameters are `RandomVariable`s.
+This tutorial uses `DeterministicVariable` wrappers to keep those hyperparameters fixed.
+
 ## Overview
 
 `SubpopulationInfections` extends the renewal model to a population composed of $K$ subpopulations, each with its own latent infection trajectory.
@@ -192,8 +195,14 @@ model = SubpopulationInfections(
     gen_int_rv=gen_int_rv,
     I0_rv=DeterministicVariable("I0", I0_val),
     log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", log_rt_time_0),
-    baseline_rt_process=DifferencedAR1(autoreg=0.5, innovation_sd=0.01),
-    subpop_rt_deviation_process=AR1(autoreg=0.8, innovation_sd=0.05),
+    baseline_rt_process=DifferencedAR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.5),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.01),
+    ),
+    subpop_rt_deviation_process=AR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.8),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+    ),
     n_initialization_points=n_init,
 )
 ```
@@ -299,7 +308,10 @@ def sample_hierarchical(baseline_process, deviation_process, label):
     }
 
 
-baseline_process = DifferencedAR1(autoreg=0.5, innovation_sd=0.01)
+baseline_process = DifferencedAR1(
+    autoreg_rv=DeterministicVariable("autoreg", 0.5),
+    innovation_sd_rv=DeterministicVariable("innovation_sd", 0.01),
+)
 ```
 
 ### AR(1) Deviations
@@ -317,7 +329,10 @@ What this looks like in a prior predictive plot is a **constant-width band** rat
 
 ar1_dev_samples = sample_hierarchical(
     baseline_process,
-    AR1(autoreg=0.8, innovation_sd=0.05),
+    AR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.8),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+    ),
     "AR1 deviations",
 )
 ```
@@ -416,7 +431,9 @@ The visual signature is a **fanning-out cloud** rather than a constant-width ban
 
 rw_dev_samples = sample_hierarchical(
     baseline_process,
-    RandomWalk(innovation_sd=0.05),
+    RandomWalk(
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+    ),
     "RandomWalk deviations",
 )
 ```
