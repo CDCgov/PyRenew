@@ -353,8 +353,8 @@ class TestMultiSignalModelSampling:
             gen_int_rv=gen_int,
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_rt_process=RandomWalk(),
-            subpop_rt_deviation_process=RandomWalk(),
+            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
         )
 
         ascertainment = JointAscertainment(
@@ -414,8 +414,8 @@ class TestMultiSignalModelSampling:
             gen_int_rv=gen_int,
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_rt_process=RandomWalk(),
-            subpop_rt_deviation_process=RandomWalk(),
+            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
         )
 
         ascertainment = JointAscertainment(
