@@ -107,6 +107,7 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 - [Latent subpopulation infections](tutorials/latent_subpopulation_infections.md) -- modeling latent infections with subpopulation structure.
 - [Observation processes: count data](tutorials/observation_processes_counts.md) -- connecting latent infections to observed counts.
 - [Observation processes: measurements](tutorials/observation_processes_measurements.md) -- connecting latent infections to continuous measurements.
+- [Joint ascertainment](tutorials/ascertainment.md) -- sharing ascertainment structure across count signals.
 
 ## Resources
 
