@@ -10,9 +10,7 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
-    AR1,
     PopulationInfections,
-    RandomWalk,
     StepwiseTemporalProcess,
     SubpopulationInfections,
     WeeklyTemporalProcess,
@@ -25,38 +23,10 @@ from pyrenew.observation import (
     SubpopulationCounts,
 )
 from pyrenew.time import ISO_WEEK, MMWR_WEEK
+from test.test_helpers import fixed_ar1, fixed_random_walk
 
 # Standard population structure for tests (3 subpopulations)
 SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
-
-
-def fixed_ar1(autoreg=0.9, innovation_sd=0.05):
-    """
-    Construct an AR1 process with fixed parameters.
-
-    Returns
-    -------
-    AR1
-        Temporal process with deterministic autoregression and innovation scale.
-    """
-    return AR1(
-        autoreg_rv=DeterministicVariable("autoreg", autoreg),
-        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
-    )
-
-
-def fixed_random_walk(innovation_sd=1.0):
-    """
-    Construct a RandomWalk with a fixed innovation scale.
-
-    Returns
-    -------
-    RandomWalk
-        Temporal process with deterministic innovation standard deviation.
-    """
-    return RandomWalk(
-        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd)
-    )
 
 
 def _obs_date_for_dow(target_first_day_dow: int, n_init: int) -> date:
@@ -102,8 +72,8 @@ def simple_builder():
         gen_int_rv=gen_int,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-        baseline_rt_process=fixed_random_walk(),
-        subpop_rt_deviation_process=fixed_random_walk(),
+        baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
     )
 
     delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
@@ -140,8 +110,8 @@ def validation_builder():
         gen_int_rv=gen_int,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-        baseline_rt_process=fixed_random_walk(),
-        subpop_rt_deviation_process=fixed_random_walk(),
+        baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
     )
 
     delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
@@ -180,8 +150,8 @@ class TestPyrenewBuilderConfiguration:
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=fixed_random_walk(),
-                subpop_rt_deviation_process=fixed_random_walk(),
+                baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+                subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
                 subpop_fractions=jnp.array([0.5, 0.5]),
             )
 
@@ -196,8 +166,8 @@ class TestPyrenewBuilderConfiguration:
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=fixed_random_walk(),
-                subpop_rt_deviation_process=fixed_random_walk(),
+                baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+                subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
                 n_initialization_points=10,
             )
 
@@ -211,8 +181,8 @@ class TestPyrenewBuilderConfiguration:
             gen_int_rv=gen_int,
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_rt_process=fixed_random_walk(),
-            subpop_rt_deviation_process=fixed_random_walk(),
+            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
         )
 
         with pytest.raises(RuntimeError, match="already configured"):
@@ -221,8 +191,8 @@ class TestPyrenewBuilderConfiguration:
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=fixed_random_walk(),
-                subpop_rt_deviation_process=fixed_random_walk(),
+                baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+                subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
             )
 
     def test_rejects_duplicate_observation_name(self, simple_builder):

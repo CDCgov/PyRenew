@@ -21,27 +21,13 @@ from pyrenew.datasets import (
     load_synthetic_weekly_hospital_admissions,
 )
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import AR1, WeeklyTemporalProcess
+from pyrenew.latent import WeeklyTemporalProcess
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
-
-
-def fixed_ar1(autoreg=0.9, innovation_sd=0.05):
-    """
-    Construct an AR1 process with fixed parameters.
-
-    Returns
-    -------
-    AR1
-        Temporal process with deterministic autoregression and innovation scale.
-    """
-    return AR1(
-        autoreg_rv=DeterministicVariable("autoreg", autoreg),
-        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
-    )
+from test.test_helpers import fixed_ar1
 
 
 @pytest.fixture(scope="module")

@@ -25,9 +25,7 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
-    AR1,
     PopulationInfections,
-    RandomWalk,
     SubpopulationInfections,
 )
 from pyrenew.observation import (
@@ -39,35 +37,34 @@ from pyrenew.observation import (
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from pyrenew.time import MMWR_WEEK
+from test.test_helpers import fixed_ar1 as make_fixed_ar1
+from test.test_helpers import fixed_random_walk as make_fixed_random_walk
 
 
-def fixed_ar1(autoreg=0.9, innovation_sd=0.05):
+@pytest.fixture
+def fixed_ar1():
     """
-    Construct an AR1 process with fixed parameters.
+    Factory fixture for AR1 processes with fixed parameters.
 
     Returns
     -------
-    AR1
-        Temporal process with deterministic autoregression and innovation scale.
+    callable
+        Function accepting ``autoreg`` and ``innovation_sd``.
     """
-    return AR1(
-        autoreg_rv=DeterministicVariable("autoreg", autoreg),
-        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
-    )
+    return make_fixed_ar1
 
 
-def fixed_random_walk(innovation_sd=1.0):
+@pytest.fixture
+def fixed_random_walk():
     """
-    Construct a RandomWalk with a fixed innovation scale.
+    Factory fixture for RandomWalk processes with fixed parameters.
 
     Returns
     -------
-    RandomWalk
-        Temporal process with deterministic innovation standard deviation.
+    callable
+        Function accepting ``innovation_sd``.
     """
-    return RandomWalk(
-        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd)
-    )
+    return make_fixed_random_walk
 
 
 # =============================================================================
@@ -217,8 +214,8 @@ def subpopulation_infections(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        baseline_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
-        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
+        baseline_rt_process=make_fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        subpop_rt_deviation_process=make_fixed_random_walk(innovation_sd=0.025),
         n_initialization_points=7,
     )
 
@@ -238,7 +235,7 @@ def population_infections(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        single_rt_process=make_fixed_ar1(autoreg=0.9, innovation_sd=0.05),
         n_initialization_points=7,
     )
 

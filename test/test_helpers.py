@@ -8,7 +8,50 @@ For pytest fixtures, see conftest.py.
 import jax
 import jax.numpy as jnp
 
+from pyrenew.deterministic import DeterministicVariable
+from pyrenew.latent import AR1, RandomWalk
 from pyrenew.observation import MeasurementObservation
+
+
+def fixed_ar1(autoreg, innovation_sd):
+    """
+    Construct an AR1 process with fixed parameters.
+
+    Parameters
+    ----------
+    autoreg
+        Deterministic autoregressive coefficient.
+    innovation_sd
+        Deterministic innovation standard deviation.
+
+    Returns
+    -------
+    AR1
+        Temporal process with deterministic autoregression and innovation scale.
+    """
+    return AR1(
+        autoreg_rv=DeterministicVariable("autoreg", autoreg),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+    )
+
+
+def fixed_random_walk(innovation_sd):
+    """
+    Construct a RandomWalk with a fixed innovation scale.
+
+    Parameters
+    ----------
+    innovation_sd
+        Deterministic innovation standard deviation.
+
+    Returns
+    -------
+    RandomWalk
+        Temporal process with deterministic innovation standard deviation.
+    """
+    return RandomWalk(
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd)
+    )
 
 
 class ConcreteMeasurementObservation(MeasurementObservation):

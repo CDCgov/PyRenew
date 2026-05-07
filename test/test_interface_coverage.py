@@ -20,13 +20,11 @@ from pyrenew.deterministic import (
     NullVariable,
 )
 from pyrenew.latent import (
-    AR1,
     DifferencedAR1,
     GammaGroupSdPrior,
     HierarchicalNormalPrior,
     Infections,
     InfectionsWithFeedback,
-    RandomWalk,
     StudentTGroupModePrior,
     SubpopulationInfections,
 )
@@ -48,26 +46,15 @@ from pyrenew.randomvariable import (
     TransformedVariable,
     VectorizedVariable,
 )
-from test.test_helpers import ConcreteMeasurementObservation
+from test.test_helpers import (
+    ConcreteMeasurementObservation,
+    fixed_ar1,
+    fixed_random_walk,
+)
 
 # =============================================================================
 # Shared instance builders
 # =============================================================================
-
-
-def fixed_ar1(autoreg=0.9, innovation_sd=0.05):
-    """
-    Construct an AR1 process with fixed parameters.
-
-    Returns
-    -------
-    AR1
-        Temporal process with deterministic autoregression and innovation scale.
-    """
-    return AR1(
-        autoreg_rv=DeterministicVariable("autoreg", autoreg),
-        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
-    )
 
 
 def fixed_differenced_ar1(autoreg=0.9, innovation_sd=0.05):
@@ -82,20 +69,6 @@ def fixed_differenced_ar1(autoreg=0.9, innovation_sd=0.05):
     return DifferencedAR1(
         autoreg_rv=DeterministicVariable("autoreg", autoreg),
         innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
-    )
-
-
-def fixed_random_walk(innovation_sd=1.0):
-    """
-    Construct a RandomWalk with a fixed innovation scale.
-
-    Returns
-    -------
-    RandomWalk
-        Temporal process with deterministic innovation standard deviation.
-    """
-    return RandomWalk(
-        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd)
     )
 
 
