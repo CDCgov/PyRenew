@@ -18,8 +18,9 @@ jupyter:
 ---
 
 ```{python}
-# | label: setup
-# | output: false
+#| label: setup
+#| output: false
+
 import jax.nn as jnn
 import jax.numpy as jnp
 import jax.random as random
@@ -59,7 +60,8 @@ Before considering multi-signal models with related ascertainment structure, we 
 In this model, each observation process has its own scalar ascertainment prior.
 
 ```{python}
-# | label: independent-observation-processes
+#| label: independent-observation-processes
+
 hosp_delay_pmf = jnp.array([0.05, 0.10, 0.15, 0.15, 0.20, 0.15, 0.15, 0.05])
 hosp_delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
 
@@ -71,9 +73,7 @@ hospital_obs_independent = PopulationCounts(
     ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
     delay_distribution_rv=hosp_delay_rv,
     noise=NegativeBinomialNoise(
-        DistributionalVariable(
-            "hospital_concentration", dist.LogNormal(4.0, 0.5)
-        )
+        DistributionalVariable("hospital_concentration", dist.LogNormal(4.0, 0.5))
     ),
 )
 
@@ -88,7 +88,8 @@ ed_obs_independent = PopulationCounts(
 ```
 
 ```{python}
-# | label: independent-prior-draws
+#| label: independent-prior-draws
+
 n_draws = 1500
 key_ihr, key_iedr = random.split(random.PRNGKey(1))
 
@@ -138,7 +139,8 @@ The model samples the rates jointly on the logit scale and returns one probabili
 These rates are constant over the model time axis.
 
 ```{python}
-# | label: joint-ascertainment-object
+#| label: joint-ascertainment-object
+
 joint_ascertainment = JointAscertainment(
     name="he_ascertainment",
     signals=("hospital", "ed_visits"),
@@ -160,10 +162,9 @@ The next block samples directly from the same logit-normal prior used by JointAs
 This is only for visualization; in a fitted PyRenew model, JointAscertainment handles this sampling internally.
 
 ```{python}
-# | label: joint-prior-draws
-joint_eta = joint_ascertainment.distribution.sample(
-    random.PRNGKey(2), (n_draws,)
-)
+#| label: joint-prior-draws
+
+joint_eta = joint_ascertainment.distribution.sample(random.PRNGKey(2), (n_draws,))
 joint_rates = jnn.sigmoid(joint_eta)
 
 independent_df = pd.DataFrame(
@@ -201,12 +202,12 @@ The prior draws from independent priors show that high IHR draws do not imply hi
 The joint prior keeps the same approximate scale while inducing positive dependence between the two rates.
 
 ```{python}
-# | label: plot-joint-priors
-# | fig-cap: |
-# |   Joint ascertainment induces correlation between scalar signal rates.
-# |   The dashed line marks the prior-center ratio, IEDR = 2 × IHR.
-# |   The joint prior keeps the same approximate scale while inducing
-# |   positive dependence between the two rates.
+#| label: plot-joint-priors
+#| fig-cap: |
+#|   Joint ascertainment induces correlation between scalar signal rates.
+#|   The dashed line marks the prior-center ratio, IEDR = 2 × IHR.
+#|   The joint prior keeps the same approximate scale while inducing
+#|   positive dependence between the two rates.
 
 (
     p9.ggplot(compare_df, p9.aes(x="hospital_ihr", y="ed_iedr"))
