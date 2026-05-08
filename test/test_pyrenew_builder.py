@@ -8,11 +8,10 @@ import jax.numpy as jnp
 import numpyro
 import pytest
 
+from pyrenew.ascertainment import JointAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
-    AR1,
     PopulationInfections,
-    RandomWalk,
     StepwiseTemporalProcess,
     SubpopulationInfections,
     WeeklyTemporalProcess,
@@ -25,6 +24,7 @@ from pyrenew.observation import (
     SubpopulationCounts,
 )
 from pyrenew.time import ISO_WEEK, MMWR_WEEK
+from test.test_helpers import fixed_ar1, fixed_random_walk
 
 # Standard population structure for tests (3 subpopulations)
 SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
@@ -73,8 +73,8 @@ def simple_builder():
         gen_int_rv=gen_int,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-        baseline_rt_process=RandomWalk(),
-        subpop_rt_deviation_process=RandomWalk(),
+        baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
     )
 
     delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
@@ -111,8 +111,8 @@ def validation_builder():
         gen_int_rv=gen_int,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-        baseline_rt_process=RandomWalk(),
-        subpop_rt_deviation_process=RandomWalk(),
+        baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
     )
 
     delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
@@ -151,8 +151,8 @@ class TestPyrenewBuilderConfiguration:
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=RandomWalk(),
-                subpop_rt_deviation_process=RandomWalk(),
+                baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+                subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
                 subpop_fractions=jnp.array([0.5, 0.5]),
             )
 
@@ -167,8 +167,8 @@ class TestPyrenewBuilderConfiguration:
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=RandomWalk(),
-                subpop_rt_deviation_process=RandomWalk(),
+                baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+                subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
                 n_initialization_points=10,
             )
 
@@ -182,8 +182,8 @@ class TestPyrenewBuilderConfiguration:
             gen_int_rv=gen_int,
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_rt_process=RandomWalk(),
-            subpop_rt_deviation_process=RandomWalk(),
+            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
         )
 
         with pytest.raises(RuntimeError, match="already configured"):
@@ -192,8 +192,8 @@ class TestPyrenewBuilderConfiguration:
                 gen_int_rv=gen_int,
                 I0_rv=DeterministicVariable("I0", 0.001),
                 log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-                baseline_rt_process=RandomWalk(),
-                subpop_rt_deviation_process=RandomWalk(),
+                baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+                subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
             )
 
     def test_rejects_duplicate_observation_name(self, simple_builder):
@@ -208,6 +208,42 @@ class TestPyrenewBuilderConfiguration:
 
         with pytest.raises(ValueError, match="already added"):
             simple_builder.add_observation(obs)
+
+    def test_add_ascertainment_registers_model(self):
+        """Test that add_ascertainment stores ascertainment models by name."""
+        builder = PyrenewBuilder()
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+
+        result = builder.add_ascertainment(ascertainment)
+
+        assert result is builder
+        assert builder.ascertainment_models["he_ascertainment"] is ascertainment
+
+    def test_add_ascertainment_rejects_duplicate_name(self):
+        """Test that duplicate ascertainment model names are rejected."""
+        builder = PyrenewBuilder()
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+
+        builder.add_ascertainment(ascertainment)
+        with pytest.raises(ValueError, match="already added"):
+            builder.add_ascertainment(ascertainment)
+
+    def test_add_ascertainment_rejects_wrong_type(self):
+        """Test that add_ascertainment requires an AscertainmentModel."""
+        builder = PyrenewBuilder()
+
+        with pytest.raises(TypeError, match="AscertainmentModel"):
+            builder.add_ascertainment(object())
 
     def test_build_creates_model(self, simple_builder):
         """Test that build() creates a MultiSignalModel."""
@@ -305,6 +341,160 @@ class TestMultiSignalModelSampling:
         # All prior predictive infections should be positive
         assert jnp.all(prior_samples["latent_infections"] > 0)
 
+    def test_prior_predictive_with_joint_ascertainment(self):
+        """Test model-scoped sampling for shared joint ascertainment."""
+        import jax.random
+        from numpyro.infer import Predictive
+
+        builder = PyrenewBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+        builder.configure_latent(
+            SubpopulationInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
+        )
+
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+        builder.add_ascertainment(ascertainment)
+
+        delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital",
+                ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("hosp_conc", 10.0)),
+            )
+        )
+        builder.add_observation(
+            PopulationCounts(
+                name="ed",
+                ascertainment_rate_rv=ascertainment.for_signal("ed"),
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("ed_conc", 10.0)),
+            )
+        )
+
+        model = builder.build()
+        assert model.ascertainment_models["he_ascertainment"] is ascertainment
+
+        predictive = Predictive(model.sample, num_samples=3)
+        prior_samples = predictive(
+            jax.random.PRNGKey(42),
+            n_days_post_init=10,
+            population_size=1_000_000,
+            subpop_fractions=SUBPOP_FRACTIONS,
+            hospital={"obs": None},
+            ed={"obs": None},
+        )
+
+        assert prior_samples["he_ascertainment_eta"].shape == (3, 2)
+        assert prior_samples["he_ascertainment_hospital"].shape == (3,)
+        assert prior_samples["he_ascertainment_ed"].shape == (3,)
+        assert "hospital_predicted" in prior_samples
+        assert "ed_predicted" in prior_samples
+
+    def test_prior_predictive_reuses_same_ascertainment_signal(self):
+        """Test two observations can reuse one signal accessor without site conflicts."""
+        import jax.random
+        from numpyro.infer import Predictive
+
+        builder = PyrenewBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+        builder.configure_latent(
+            SubpopulationInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
+        )
+
+        ascertainment = JointAscertainment(
+            name="shared_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+        builder.add_ascertainment(ascertainment)
+        hospital_rate = ascertainment.for_signal("hospital")
+
+        delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital_a",
+                ascertainment_rate_rv=hospital_rate,
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("conc_a", 10.0)),
+            )
+        )
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital_b",
+                ascertainment_rate_rv=hospital_rate,
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("conc_b", 12.0)),
+            )
+        )
+
+        model = builder.build()
+        predictive = Predictive(model.sample, num_samples=2)
+        prior_samples = predictive(
+            jax.random.PRNGKey(42),
+            n_days_post_init=10,
+            population_size=1_000_000,
+            subpop_fractions=SUBPOP_FRACTIONS,
+            hospital_a={"obs": None},
+            hospital_b={"obs": None},
+        )
+
+        assert prior_samples["shared_ascertainment_eta"].shape == (2, 2)
+        assert prior_samples["shared_ascertainment_hospital"].shape == (2,)
+        assert prior_samples["hospital_a_predicted"].shape == (
+            2,
+            model.latent.n_initialization_points + 10,
+        )
+        assert prior_samples["hospital_b_predicted"].shape == (
+            2,
+            model.latent.n_initialization_points + 10,
+        )
+
+    def test_manual_model_rejects_invalid_ascertainment_model(self, simple_builder):
+        """Test direct MultiSignalModel construction validates ascertainment models."""
+        model = simple_builder.build()
+
+        with pytest.raises(TypeError, match="AscertainmentModel"):
+            MultiSignalModel(
+                latent_process=model.latent,
+                observations=model.observations,
+                ascertainment_models={"bad": object()},
+            )
+
+    def test_manual_model_rejects_mismatched_ascertainment_key(self, simple_builder):
+        """Test ascertainment model dictionary keys must match model names."""
+        model = simple_builder.build()
+        ascertainment = JointAscertainment(
+            name="he_ascertainment",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.full(2, 0.5),
+            scale_tril=jnp.eye(2),
+        )
+
+        with pytest.raises(ValueError, match="dictionary key"):
+            MultiSignalModel(
+                latent_process=model.latent,
+                observations=model.observations,
+                ascertainment_models={"wrong_name": ascertainment},
+            )
+
     def test_first_day_dow_reaches_calendar_aligned_latent_process(self):
         """MultiSignalModel forwards model-axis day of week to the latent process."""
         latent = PopulationInfections(
@@ -313,7 +503,7 @@ class TestMultiSignalModelSampling:
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
             single_rt_process=WeeklyTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05),
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=MMWR_WEEK,
             ),
             n_initialization_points=3,
@@ -345,7 +535,7 @@ class TestMultiSignalModelSampling:
             I0_rv=DeterministicVariable("I0", 0.001),
             log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
             single_rt_process=WeeklyTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05),
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=MMWR_WEEK,
             ),
             n_initialization_points=3,
@@ -371,7 +561,7 @@ class TestMultiSignalModelSampling:
         """
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05),
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=MMWR_WEEK,
             ),
             observations=[_weekly_hosp_counts(), _daily_ed_counts()],
@@ -666,7 +856,7 @@ class TestBuilderConfigurations:
     def test_daily_rt_with_daily_observation_passes(self):
         """step_size=1 and P=1: valid."""
         builder = _coherence_builder(
-            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
             observations=[_daily_ed_counts()],
         )
         model = builder.build()
@@ -676,7 +866,7 @@ class TestBuilderConfigurations:
         """step_size=7 and P=7: valid when weekly is the only obs cadence."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05), step_size=7
             ),
             observations=[_weekly_hosp_counts()],
         )
@@ -686,7 +876,7 @@ class TestBuilderConfigurations:
     def test_daily_rt_with_mixed_observations_passes(self):
         """step_size=1 with mixed P=1 + P=7: valid (R(t) at finest cadence)."""
         builder = _coherence_builder(
-            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
             observations=[_weekly_hosp_counts(), _daily_ed_counts()],
         )
         model = builder.build()
@@ -696,7 +886,7 @@ class TestBuilderConfigurations:
         """Coarse Rt parameter cadence is allowed with daily observations."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05), step_size=7
             ),
             observations=[_weekly_hosp_counts(), _daily_ed_counts()],
         )
@@ -706,7 +896,7 @@ class TestBuilderConfigurations:
     def test_mismatched_weekly_week_passes(self):
         """Weekly observations can use different start_dow; each aggregates independently."""
         builder = _coherence_builder(
-            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
             observations=[
                 _weekly_hosp_counts(name="hospital", start_dow=MMWR_WEEK),
                 _weekly_hosp_counts(name="other", start_dow=ISO_WEEK),
@@ -718,7 +908,7 @@ class TestBuilderConfigurations:
     def test_matching_weekly_week_passes(self):
         """Two weekly observations sharing a start_dow build normally."""
         builder = _coherence_builder(
-            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
             observations=[
                 _weekly_hosp_counts(name="hospital", start_dow=MMWR_WEEK),
                 _weekly_hosp_counts(name="other", start_dow=MMWR_WEEK),
@@ -731,7 +921,7 @@ class TestBuilderConfigurations:
         """Parameter cadence need not match observation aggregation period."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05), step_size=2
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05), step_size=2
             ),
             observations=[_weekly_hosp_counts()],
         )
@@ -742,7 +932,7 @@ class TestBuilderConfigurations:
         """Sunday-start weeks pair with Saturday-ending weekly observations."""
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05),
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=MMWR_WEEK,
             ),
             observations=[_weekly_hosp_counts(start_dow=MMWR_WEEK)],
@@ -754,7 +944,7 @@ class TestBuilderConfigurations:
         """A weekly Rt anchor can differ from a weekly observation anchor."""
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05),
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=ISO_WEEK,
             ),
             observations=[_weekly_hosp_counts(start_dow=MMWR_WEEK)],
@@ -766,7 +956,7 @@ class TestBuilderConfigurations:
         """Calendar-week-aligned R(t) pairs with daily observations."""
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05),
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=MMWR_WEEK,
             ),
             observations=[_daily_ed_counts()],
@@ -778,7 +968,7 @@ class TestBuilderConfigurations:
         """Model-index-aligned R(t) pairs with weekly observations."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05), step_size=7
             ),
             observations=[_weekly_hosp_counts(start_dow=MMWR_WEEK)],
         )
@@ -793,7 +983,7 @@ class TestMultiSignalValidateDataAnchor:
         """An observation with aggregation='weekly' must have obs_start_date supplied."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05), step_size=7
             ),
             observations=[_weekly_hosp_counts()],
         )
@@ -808,7 +998,7 @@ class TestMultiSignalValidateDataAnchor:
         """Supplying obs_start_date satisfies the anchor check."""
         builder = _coherence_builder(
             single_rt_process=StepwiseTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05), step_size=7
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05), step_size=7
             ),
             observations=[_weekly_hosp_counts()],
         )
@@ -826,7 +1016,7 @@ class TestMultiSignalValidateDataAnchor:
     def test_anchor_check_skipped_for_daily_obs(self):
         """Daily observations do not require obs_start_date at validate_data time."""
         builder = _coherence_builder(
-            single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
             observations=[_daily_ed_counts()],
         )
         model = builder.build()
@@ -840,7 +1030,7 @@ class TestMultiSignalValidateDataAnchor:
         """A calendar-week-aligned latent temporal process requires obs_start_date."""
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
-                AR1(autoreg=0.9, innovation_sd=0.05),
+                fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=MMWR_WEEK,
             ),
             observations=[_daily_ed_counts()],

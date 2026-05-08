@@ -25,9 +25,7 @@ import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
-    AR1,
     PopulationInfections,
-    RandomWalk,
     SubpopulationInfections,
 )
 from pyrenew.observation import (
@@ -39,6 +37,7 @@ from pyrenew.observation import (
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from pyrenew.time import MMWR_WEEK
+from test.test_helpers import fixed_ar1, fixed_random_walk
 
 # =============================================================================
 # PMF Fixtures
@@ -187,8 +186,8 @@ def subpopulation_infections(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        baseline_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
-        subpop_rt_deviation_process=RandomWalk(innovation_sd=0.025),
+        baseline_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
         n_initialization_points=7,
     )
 
@@ -208,7 +207,7 @@ def population_infections(gen_int_rv):
         gen_int_rv=gen_int_rv,
         I0_rv=DeterministicVariable("I0", 0.001),
         log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        single_rt_process=AR1(autoreg=0.9, innovation_sd=0.05),
+        single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
         n_initialization_points=7,
     )
 
