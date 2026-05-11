@@ -3,12 +3,6 @@ title: Building Multi-Signal Renewal Models
 format:
   gfm:
     code-fold: true
-  html:
-    toc: true
-    embed-resources: true
-    self-contained-math: true
-    code-fold: true
-    code-tools: true
 engine: jupyter
 jupyter:
   jupytext:
@@ -75,7 +69,7 @@ from pyrenew.randomvariable import DistributionalVariable
 
 from pyrenew.latent import (
     SubpopulationInfections,
-    AR1,
+    DifferencedAR1,
     RandomWalk,
     StepwiseTemporalProcess,
     WeeklyTemporalProcess,
@@ -94,9 +88,6 @@ from pyrenew.observation import (
 from pyrenew.time import MMWR_WEEK
 ```
 
-Temporal process parameters are `RandomVariable`s.
-This tutorial uses `DeterministicVariable` wrappers to keep those hyperparameters fixed.
-
 ## Overview
 
 Renewal models in PyRenew combine two types of components:
@@ -105,7 +96,7 @@ Renewal models in PyRenew combine two types of components:
 
 2. **Observation processes**: Transform latent infections into observable signals (hospital admissions, wastewater concentrations, etc.) by applying delays, ascertainment, and noise
 
-A **multi-signal model** combines multiple observation processes---each representing a different data stream, e.g., hospital admissions, emergency deparatment visits, wastewater concentrations, which stem from the same underlying latent infection process.
+A **multi-signal model** combines multiple observation processes---each representing a different data stream, e.g., hospital admissions, emergency department visits, wastewater concentrations, which stem from the same underlying latent infection process.
 By jointly modeling these signals, we can improve estimation and prediction of the time-varying reproduction number $\mathcal{R}(t)$.
 Such a model must:
 
@@ -143,7 +134,7 @@ This tutorial demonstrates building a multi-signal renewal model using:
 
 In this tutorial, we build a model that jointly fits two data streams to a shared latent infection process:
 
-- **Hospital admissions** --- jurisdiction-level counts that reflect *total* infections across all subpopulations, delayed and underascertained
+- **Hospital admissions** --- jurisdiction-level counts that reflect a delayed and partially observed subset of total infections across all subpopulations
 - **Wastewater concentrations** --- site-level measurements from a subset of subpopulations (catchment areas), reflecting viral shedding and dilution
 
 The diagram below shows how data flows through the model.
@@ -248,7 +239,7 @@ log_rt_time_0_rv = DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)
 
 We configure two temporal processes:
 
-- **Jurisdiction-level** (`baseline_rt_process`): AR(1) process for the baseline $\mathcal{R}(t)$
+- **Jurisdiction-level** (`baseline_rt_process`): DifferencedAR(1) process for the baseline $\mathcal{R}(t)$
 - **Subpopulation-level** (`subpop_rt_deviation_process`): RandomWalk for subpopulation deviations
 
 The RandomWalk allows flexible evolution of subpopulation-specific transmission without mean reversion.
@@ -256,10 +247,10 @@ The RandomWalk allows flexible evolution of subpopulation-specific transmission 
 ```{python}
 #| label: temporal-processes
 
-# AR1 provides mean-reverting behavior for baseline Rt
-baseline_rt_process = AR1(
-    autoreg_rv=DeterministicVariable("autoreg", 0.9),
-    innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+# DifferencedAR1 allows persistent trends while stabilizing the growth rate.
+baseline_rt_process = DifferencedAR1(
+    autoreg_rv=DeterministicVariable("autoreg", 0.5),
+    innovation_sd_rv=DeterministicVariable("innovation_sd", 0.01),
 )
 
 # RandomWalk allows flexible subpopulation deviations
@@ -277,12 +268,12 @@ This separates three model choices:
 - **Model time axis**: the daily axis used by the renewal equation and delay convolutions
 - **Observation cadence**: the temporal granularity for each signal, such as daily ED visits or weekly hospital admissions
 
-The AR(1) process above samples one value per model day:
+The DifferencedAR(1) process above samples one value per model day:
 
 ```python
-baseline_rt_process = AR1(
-    autoreg_rv=DeterministicVariable("autoreg", 0.9),
-    innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+baseline_rt_process = DifferencedAR1(
+    autoreg_rv=DeterministicVariable("autoreg", 0.5),
+    innovation_sd_rv=DeterministicVariable("innovation_sd", 0.01),
 )
 ```
 
@@ -291,9 +282,9 @@ The wrapper samples a weekly trajectory and broadcasts it to the daily model axi
 
 ```python
 weekly_baseline_rt_process = WeeklyTemporalProcess(
-    inner=AR1(
-        autoreg_rv=DeterministicVariable("autoreg", 0.9),
-        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+    inner=DifferencedAR1(
+        autoreg_rv=DeterministicVariable("autoreg", 0.5),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.01),
     ),
     start_dow=MMWR_WEEK,
 )
@@ -714,82 +705,68 @@ print(f"Total population: {float(jnp.sum(subpop_fractions)):.0%}")
 
 The `subpop_fractions` array defines all subpopulations in the latent infection process, and its entries must sum to 1.0.
 Which subpopulations each observation process sees is determined by the observation data.
-For wastewater, `subpop_indices` links each observation to the appropriate subpopulation, while `sensor_indices` selects the sensor-specific noise parameters.
+
+Measurement data typically exhibits sensor-level variability: different instruments, labs, or sampling locations may have systematic biases and different precision levels.
+The wastewater observations record both the wastewater treatment plant from which the sample was collected and the laboratory at which the sample was processed.
+For wastewater, a "sensor" is a WWTP/lab pair - the combination of treatment plant and laboratory associated with sensor-specific bias and measurement variability.
+Because the wastewater component's `HierarchicalNormalNoise` samples one mode and one standard deviation parameter.
+Therefore, the wastewater signal's data dictionary includes:
+
+- `subpop_indices` links each observation to the appropriate subpopulation
+- `sensor_indices` selects the sensor-specific noise parameters.
+- `n_sensors` the total number of sensors, used to size the sensor-level noise parameters.
 
 ### Preparing Observation Data
 
-We define a function to prepare observation data using the model's helper methods to align with the shared time axis.
-The returned dictionary is structured to match the keyword arguments of `model.run()`: `obs_start_date` at the top level, plus one sub-dictionary per observation process.
+The observation data dictionary is structured to match the keyword arguments of `model.run()`: `obs_start_date` at the top level, plus one sub-dictionary per observation process.
+The entries in the sub-dictionaries are forwarded as arguments to each observation process's `sample` method.
+
+The two observation streams are aligned differently because they are represented differently.
+Hospital admissions are a dense daily series: every day in the fitting window has a position in the vector, so `model.pad_observations()` prepends `n_init` missing values for the initialization period.
+Wastewater measurements are sparse rows: only sampled days appear in the table, so the observations themselves are not padded.
+Instead, `model.shift_times()` adds `n_init` to each wastewater time index so those rows point to the correct days on the model's shared time axis.
 
 ```{python}
 #| label: prepare-observation-data
 
-def prepare_observation_data(
-    model,
-    n_days_fit,
-    obs_start_date,
-    hosp_admits,
-    ww_data,
-    ww_monitored_subpops,
-):
-    """
-    Prepare observation data for fitting.
+n_days_90 = 90
 
-    Uses model.pad_observations() and model.shift_times() to align data
-    with the shared time axis.
+# Hospital: dense, NaN-padded to length n_total
+hosp_obs = model.pad_observations(hosp_admits[:n_days_90])
 
-    Parameters
-    ----------
-    model : MultiSignalModel
-        The model (provides padding/shifting helpers)
-    n_days_fit : int
-        Number of days to include in fit
-    obs_start_date : date
-        Date of first observation
-    hosp_admits : array
-        Hospital admissions time series
-    ww_data : dict
-        Wastewater data dictionary
-    ww_monitored_subpops : array
-        Indices of subpopulations that have wastewater monitoring.
-        These are the valid values for subpop_indices in wastewater data.
-    """
-    # Hospital: dense, NaN-padded to length n_total
-    hosp_obs = model.pad_observations(hosp_admits[:n_days_fit])
+# Wastewater: sparse, times shifted to shared axis
+ww_mask = ca_ww_data["time_indices"] < n_days_90
+ww_times = model.shift_times(ca_ww_data["time_indices"][ww_mask])
+ww_conc = ca_ww_data["observed_conc"][ww_mask]
+ww_sites = ca_ww_data["site_ids"][ww_mask]
 
-    # Wastewater: sparse, times shifted to shared axis
-    ww_mask = ww_data["time_indices"] < n_days_fit
-    ww_times = model.shift_times(ww_data["time_indices"][ww_mask])
-    ww_conc = ww_data["observed_conc"][ww_mask]
-    ww_sensors = ww_data["site_ids"][ww_mask]
+# Map wastewater sensors to subpopulation indices.
+# In practice, this mapping comes from your data
+# (which WWTP serves which catchment). For this demo, we cycle
+# sensors through the monitored subpopulations.
+n_ww_sites = ca_ww_data["n_sites"]
+n_monitored = len(ww_monitored_subpops)
+sensor_to_subpop = {
+    i: int(ww_monitored_subpops[i % n_monitored]) for i in range(n_ww_sites)
+}
+ww_subpop_indices = jnp.array([sensor_to_subpop[int(s)] for s in ww_sites])
 
-    # Map wastewater sensors to subpopulation indices.
-    # In practice, this mapping comes from your data
-    # (which WWTP serves which catchment). For this demo, we cycle
-    # sensors through the monitored subpopulations.
-    n_ww_sensors = ww_data["n_sites"]
-    n_monitored = len(ww_monitored_subpops)
-    sensor_to_subpop = {
-        i: int(ww_monitored_subpops[i % n_monitored]) for i in range(n_ww_sensors)
-    }
-    ww_subpop_indices = jnp.array([sensor_to_subpop[int(s)] for s in ww_sensors])
-
-    return {
-        "obs_start_date": obs_start_date,
-        "hospital": {
-            "obs": hosp_obs,
-        },
-        "wastewater": {
-            "obs": ww_conc,
-            "times": ww_times,
-            "subpop_indices": ww_subpop_indices,
-            "sensor_indices": ww_sensors,
-            "n_sensors": n_ww_sensors,
-        },
-    }
+obs_data_90 = {
+    "obs_start_date": obs_start_date,
+    "hospital": {
+        "obs": hosp_obs,
+    },
+    "wastewater": {
+        "obs": ww_conc,
+        "times": ww_times,
+        "subpop_indices": ww_subpop_indices,
+        "sensor_indices": ww_sites,
+        "n_sensors": n_ww_sites,
+    },
+}
 ```
 
-The returned dictionary has the following structure:
+The observation dictionary has the following structure:
 
 ```python
 {
@@ -819,7 +796,7 @@ For this introductory example, the main controls are:
 - `rng_key`, the random seed for sampling
 - `mcmc_args`, optional NumPyro MCMC settings
 
-In the fits below, we use 4 chains and turn off the progress bar:
+For this fit, we use 4 chains and turn off the progress bar:
 
 ```python
 mcmc_args = {"num_chains": 4, "progress_bar": False}
@@ -829,8 +806,8 @@ See the [NumPyro MCMC reference](https://num.pyro.ai/en/stable/mcmc.html) for mo
 
 ## Running the Model
 
-We now prepare the observation dictionaries described above and unpack them into `model.run()`.
-The first fit uses 90 days of data.
+We now unpack the observation dictionary prepared above into `model.run()`.
+The fit uses 90 days of data.
 
 ### Fit: 90 Days
 
@@ -839,16 +816,6 @@ The first fit uses 90 days of data.
 
 # Clear JAX caches to avoid interference from earlier cells
 jax.clear_caches()
-
-n_days_90 = 90
-obs_data_90 = prepare_observation_data(
-    model,
-    n_days_90,
-    obs_start_date,
-    hosp_admits,
-    ca_ww_data,
-    ww_monitored_subpops,
-)
 
 print(f"Fitting model with {n_days_90} days of data...")
 print("  This may take a few minutes...")
@@ -1003,202 +970,70 @@ plot_df_90["signal"] = pd.Categorical(
 )
 ```
 
-### Fit: 180 Days
+### Month-by-month uncertainty
+
+The posterior ribbon above shows the infection trajectory and its 90% credible interval, but the ribbon width itself is hard to compare across days.
+To focus directly on uncertainty, we compute the daily 90% interval width and summarize it over each 30-day period.
 
 ```{python}
-#| label: fit-180-days
+#| label: monthly-CI
 
-# Clear JAX caches to avoid interference
-jax.clear_caches()
+ci_width_90 = quantiles_90["q95"] - quantiles_90["q05"]
 
-n_days_180 = 180
-obs_data_180 = prepare_observation_data(
-    model,
-    n_days_180,
-    obs_start_date,
-    hosp_admits,
-    ca_ww_data,
-    ww_monitored_subpops,
-)
-
-print(f"Fitting model with {n_days_180} days of data...")
-print("  This may take a few minutes...")
-
-start_time = time.time()
-model.run(
-    num_warmup=1000,
-    num_samples=500,
-    rng_key=make_rng_key(),
-    mcmc_args={"num_chains": 4, "progress_bar": False},
-    n_days_post_init=n_days_180,
-    population_size=population_size,
-    subpop_fractions=subpop_fractions,
-    **obs_data_180,
-)
-# Block until sampling completes for accurate timing
-samples_180 = model.mcmc.get_samples()
-jax.block_until_ready(samples_180)
-elapsed_180 = time.time() - start_time
-print(f"Elapsed time: {elapsed_180:.1f} seconds")
-```
-
-We check the model fit, as before.
-
-```{python}
-#| label: arviz-diagnostics-180
-
-# ArviZ diagnostics for 180-day fit
-
-idata_180 = az.from_numpyro(
-    model.mcmc,
-    dims={
-        "latent_infections": ["time"],
-        "SubpopulationInfections::infections_aggregate": ["time"],
-        "SubpopulationInfections::log_rt_baseline": ["time", "dummy"],
-        "SubpopulationInfections::rt_baseline": ["time", "dummy"],
-        "SubpopulationInfections::rt_subpop": ["time", "subpop"],
-        "SubpopulationInfections::subpop_deviations": ["time", "subpop"],
-        "latent_infections_by_subpop": ["time", "subpop"],
-        "hospital_predicted": ["time"],
-        "wastewater_predicted": ["time", "subpop"],
-    },
-)
-
-idata_180_trimmed = idata_180.map_over_datasets(trim_time)
-az.summary(idata_180_trimmed, var_names=["latent_infections", "hospital_predicted"])
-```
-
-```{python}
-#| label: extract-quantiles-180
-
-latent_inf = idata_180_trimmed.posterior["latent_infections"]
-
-quantiles_180 = {
-    "q05": latent_inf.quantile(0.05, dim=["chain", "draw"]).values,
-    "q50": latent_inf.quantile(0.50, dim=["chain", "draw"]).values,
-    "q95": latent_inf.quantile(0.95, dim=["chain", "draw"]).values,
-}
-
-ci_width_180 = quantiles_180["q95"] - quantiles_180["q05"]
-print(f"Posterior summary for {n_days_180} days:")
-print(f"  Mean 90% CI width: {ci_width_180.mean():,.0f} infections")
-print(f"  Median infections (day 90): {quantiles_180['q50'][90]:,.0f}")
-```
-
-```{python}
-#| label: fig-posterior-180
-#| fig-cap: Posterior latent infections and observed hospitalizations (180
-#|   days).
-
-# Visualize posterior latent infections and observed hospitalizations (180 days)
-infections_df_180 = pd.DataFrame(
+ci_width_df = pd.DataFrame(
     {
-        "day": np.arange(n_days_180),
-        "median": quantiles_180["q50"],
-        "q05": quantiles_180["q05"],
-        "q95": quantiles_180["q95"],
-        "signal": "Latent Infections",
+        "day": np.arange(n_days_90),
+        "ci_width": ci_width_90,
+        "period": pd.cut(
+            np.arange(n_days_90),
+            bins=[-1, 29, 59, 89],
+            labels=["Days 0-29", "Days 30-59", "Days 60-89"],
+        ),
     }
 )
 
-# Add 14-day moving average to smooth noisy daily admissions
-hosp_raw_180 = np.array(hosp_admits[:n_days_180], dtype=float)
-hosp_ma_180 = pd.Series(hosp_raw_180).rolling(window=14, center=True).mean().values
-
-hosp_df_180 = pd.DataFrame(
-    {
-        "day": np.arange(n_days_180),
-        "median": hosp_ma_180,
-        "raw": hosp_raw_180,
-        "q05": np.nan,
-        "q95": np.nan,
-        "signal": "Hospital Admissions (14-day MA)",
-    }
+period_summary_df = (
+    ci_width_df.groupby("period", observed=True)
+    .agg(
+        start=("day", "min"),
+        end=("day", "max"),
+        mean_ci_width=("ci_width", "mean"),
+    )
+    .reset_index()
 )
 
-plot_df_180 = pd.concat([infections_df_180, hosp_df_180], ignore_index=True)
-plot_df_180["signal"] = pd.Categorical(
-    plot_df_180["signal"],
-    categories=["Hospital Admissions (14-day MA)", "Latent Infections"],
-    ordered=True,
-)
+print("\nMean 90% interval width by time period:")
+for row in period_summary_df.itertuples(index=False):
+    print(f"  {row.period}: {row.mean_ci_width:,.0f}")
 
 (
-    p9.ggplot(plot_df_180, p9.aes(x="day"))
-    + p9.geom_ribbon(
-        p9.aes(ymin="q05", ymax="q95"),
-        fill="steelblue",
-        alpha=0.3,
+    p9.ggplot(ci_width_df, p9.aes(x="day", y="ci_width"))
+    + p9.geom_line(color="gray", alpha=0.6, size=0.7)
+    + p9.geom_segment(
+        data=period_summary_df,
+        mapping=p9.aes(
+            x="start",
+            xend="end",
+            y="mean_ci_width",
+            yend="mean_ci_width",
+            color="period",
+        ),
+        size=1.6,
     )
-    + p9.geom_point(
-        p9.aes(y="raw"),
-        color="gray",
-        alpha=0.3,
-        size=1,
-    )
-    + p9.geom_line(
-        p9.aes(y="median"),
-        color="darkblue",
-        size=1,
-    )
-    + p9.facet_wrap("~signal", ncol=1, scales="free_y")
-    + p9.scale_y_log10()
     + p9.labs(
         x="Day",
-        y="Count",
-        title="Posterior Latent Infections vs Observed Hospitalizations (180 days)",
+        y="90% interval width",
+        color="Period",
+        title="Posterior uncertainty over the 90-day fit",
     )
     + theme_tutorial
 )
 ```
 
-### Comparing 90-Day vs 180-Day Fits
-
-Comparing the two fits reveals where uncertainty reduction occurs---and why it matters for forecasting.
-
-```{python}
-#| label: compare-fits
-
-# Compare CI widths for the overlapping 90-day period
-ci_width_90_overlap = quantiles_90["q95"] - quantiles_90["q05"]
-ci_width_180_overlap = (
-    quantiles_180["q95"][:n_days_90] - quantiles_180["q05"][:n_days_90]
-)
-
-# Compute difference in CI widths
-ci_diff = ci_width_90_overlap - ci_width_180_overlap
-ci_ratio = ci_width_90_overlap / ci_width_180_overlap
-
-print("CI Width Comparison (first 90 days):")
-print(f"  90-day fit mean CI width:  {ci_width_90_overlap.mean():,.0f} infections")
-print(f"  180-day fit mean CI width: {ci_width_180_overlap.mean():,.0f} infections")
-print(f"  Mean difference:           {ci_diff.mean():,.0f} infections")
-print(f"  Mean ratio (90/180):       {ci_ratio.mean():.2f}x")
-print(
-    f"\nThe 180-day fit has {(1 - ci_width_180_overlap.mean() / ci_width_90_overlap.mean()) * 100:.1f}% narrower CIs on average"
-)
-
-# Per-day comparison
-print("\nCI width by time period:")
-for start, end, label in [
-    (0, 30, "Days 0-30"),
-    (30, 60, "Days 30-60"),
-    (60, 90, "Days 60-90"),
-]:
-    mean_90 = ci_width_90_overlap[start:end].mean()
-    mean_180 = ci_width_180_overlap[start:end].mean()
-    reduction = (1 - mean_180 / mean_90) * 100
-    print(
-        f"  {label}: 90-day={mean_90:,.0f}, 180-day={mean_180:,.0f}, reduction={reduction:.1f}%"
-    )
-```
-
-Notice that the uncertainty reduction is concentrated in days 60-90---the final month of the 90-day window.
-Earlier periods (days 0-60) show little change because both fits have sufficient future data to constrain those estimates.
-
 This pattern has a direct implication for forecasting: **renewal models are most uncertain at the edge of the observation window**.
-Future observations constrain past latent infections through the renewal equation, but when predicting beyond available data, this constraint disappears.
-The high uncertainty in days 60-90 of the 90-day fit is exactly what we'd expect when forecasting 30 days ahead---there's no future signal to anchor the estimates.
+The daily line shows local changes in posterior uncertainty, while the monthly means make the broader edge effect easier to see.
+Future observations constrain past latent infections through the renewal equation and observation delays, but the most recent days have less future signal available to anchor them.
+That edge uncertainty is the same uncertainty that carries forward when the model is used for forecasting.
 
 ## Summary
 
@@ -1221,7 +1056,7 @@ A few details are especially important when adapting this pattern:
 - `subpop_fractions` defines the latent subpopulations; `subpop_indices` tells an observation process which subpopulation each measurement observes.
 - The model time axis starts before the first observed day because PyRenew adds an initialization period for the renewal process.
 
-The 90-day and 180-day fits also show why the end of the observation window matters.
+The 90-day fit shows why the end of the observation window matters.
 Future observations help constrain past latent infections, so posterior uncertainty is usually largest near the most recent observed days.
 That same edge uncertainty is what carries forward when the model is used for forecasting.
 
