@@ -1558,7 +1558,7 @@ wheels = [
 
 [[package]]
 name = "plotnine"
-version = "0.15.3"
+version = "0.15.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "matplotlib" },
@@ -1566,11 +1566,12 @@ dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "scipy" },
-    { name = "statsmodels" },
+    { name = "statsmodels", version = "0.14.4", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform == 'emscripten'" },
+    { name = "statsmodels", version = "0.14.6", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'emscripten'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/63/d5/4eeed62b101aa879b87e9bbc9d0650700b5ebd1ffa743902286b039135a2/plotnine-0.15.3.tar.gz", hash = "sha256:2e8130db4673e0daccb1fd1dfc9f2a6cd2e7843b14f861f4ab861dde1639045f", size = 6788365, upload-time = "2026-01-28T16:35:34.708Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/96/5d/01f3c8780b536d9b723ae92ed2be6e7aea7ef3a158902736aec608b8829a/plotnine-0.15.4.tar.gz", hash = "sha256:4cc47539575670dbcbeed9cd44d0c3bb7973f815f679136ff3b70314266719b4", size = 6854979, upload-time = "2026-05-05T12:03:14.071Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d8/79/eb59d10e13b151a514a8af3b1dcefb5e998b6c8c26bf0cf82d2b98f02c23/plotnine-0.15.3-py3-none-any.whl", hash = "sha256:39fd2ab8b6465275c8a283ce20d4b743dd865e94c74ae7d7d6f21a7eb31f62c1", size = 1332831, upload-time = "2026-01-28T16:35:32.241Z" },
+    { url = "https://files.pythonhosted.org/packages/35/c8/5e28681073e583e76ca043d0f1e84057743c68017f0ae50ae1401c442612/plotnine-0.15.4-py3-none-any.whl", hash = "sha256:a55dde4bd00bf4c395bb4c99b36f25960625bf63e10ae4777cc7d83d878b1625", size = 1572543, upload-time = "2026-05-05T12:03:12.082Z" },
 ]
 
 [[package]]
@@ -1779,7 +1780,7 @@ dev = [
     { name = "mkdocstrings-python", specifier = ">=1.18.2" },
     { name = "nbconvert", specifier = ">=7.17.1" },
     { name = "pandas", specifier = ">=3.0.2" },
-    { name = "plotnine", specifier = ">=0.14.0" },
+    { name = "plotnine", specifier = ">=0.15.4" },
     { name = "pre-commit", specifier = ">=4.6.0" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-cov", specifier = ">=6.3.0" },
@@ -2149,14 +2150,37 @@ wheels = [
 
 [[package]]
 name = "statsmodels"
+version = "0.14.4"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'emscripten'",
+    "python_full_version < '3.14' and sys_platform == 'emscripten'",
+]
+dependencies = [
+    { name = "numpy", marker = "sys_platform == 'emscripten'" },
+    { name = "packaging", marker = "sys_platform == 'emscripten'" },
+    { name = "pandas", marker = "sys_platform == 'emscripten'" },
+    { name = "patsy", marker = "sys_platform == 'emscripten'" },
+    { name = "scipy", marker = "sys_platform == 'emscripten'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1f/3b/963a015dd8ea17e10c7b0e2f14d7c4daec903baf60a017e756b57953a4bf/statsmodels-0.14.4.tar.gz", hash = "sha256:5d69e0f39060dc72c067f9bb6e8033b6dccdb0bae101d76a7ef0bcc94e898b67", size = 20354802, upload-time = "2024-10-03T16:15:36.273Z" }
+
+[[package]]
+name = "statsmodels"
 version = "0.14.6"
 source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.14' and sys_platform == 'win32'",
+    "python_full_version >= '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+    "python_full_version < '3.14' and sys_platform == 'win32'",
+    "python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
+]
 dependencies = [
-    { name = "numpy" },
-    { name = "packaging" },
-    { name = "pandas" },
-    { name = "patsy" },
-    { name = "scipy" },
+    { name = "numpy", marker = "sys_platform != 'emscripten'" },
+    { name = "packaging", marker = "sys_platform != 'emscripten'" },
+    { name = "pandas", marker = "sys_platform != 'emscripten'" },
+    { name = "patsy", marker = "sys_platform != 'emscripten'" },
+    { name = "scipy", marker = "sys_platform != 'emscripten'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0d/81/e8d74b34f85285f7335d30c5e3c2d7c0346997af9f3debf9a0a9a63de184/statsmodels-0.14.6.tar.gz", hash = "sha256:4d17873d3e607d398b85126cd4ed7aad89e4e9d89fc744cdab1af3189a996c2a", size = 20689085, upload-time = "2025-12-05T23:08:39.522Z" }
 wheels = [
