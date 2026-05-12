@@ -46,12 +46,6 @@ from datetime import date
 warnings.filterwarnings("ignore")
 
 from _tutorial_theme import theme_tutorial
-
-
-def make_rng_key():
-    """Generate a time-based random seed."""
-    seed = int(time.time() * 1000) % (2**32)
-    return random.PRNGKey(seed)
 ```
 
 ```{python}
@@ -194,7 +188,7 @@ Latent infection processes implement the renewal equation to generate infection 
 All latent processes share common components:
 
 - **Generation interval**: PMF for secondary infection timing
-- **Initial infections (I0)**: Starting condition for the renewal process
+- **Initial infections ($I(0)$)**: Starting condition for the renewal process
 - **Temporal dynamics**: How $\mathcal{R}(t)$ evolves over time
 
 ### Generation Interval
@@ -208,9 +202,8 @@ covid_gen_int = [0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02]
 gen_int_pmf = jnp.array(covid_gen_int)
 gen_int_rv = DeterministicPMF("gen_int", gen_int_pmf)
 
-# Mean generation time
 days = np.arange(len(gen_int_pmf))
-print(f"Generation interval length: {len(gen_int_pmf)} days")
+print(f"Generation interval: {gen_int_pmf}")
 ```
 
 ### I0: Initial Infections
@@ -227,7 +220,7 @@ I0_rv = DistributionalVariable("I0", dist.Beta(1, 100))
 
 ### Log Rt at time $0$
 
-We place a prior on the log(Rt) at time $0$, centered at 0.0 (Rt = 1.0) with moderate uncertainty:
+We place a prior on the log $\mathcal{R}(t)$ at time $0$, centered at $0.0$ ($\mathcal{R}(t) = 1.0$) with moderate uncertainty:
 
 ```{python}
 #| label: log-rt-time-0
@@ -259,7 +252,7 @@ subpop_rt_deviation_process = RandomWalk(
 )
 ```
 
-### Choosing the Rt Parameter Cadence
+### Choosing the $\mathcal{R}(t)$ Parameter Cadence
 
 The renewal equation is evaluated on the model's daily time axis, but the temporal process for $\mathcal{R}(t)$ does not have to sample a new parameter every day.
 This separates three model choices:
@@ -268,7 +261,7 @@ This separates three model choices:
 - **Model time axis**: the daily axis used by the renewal equation and delay convolutions
 - **Observation cadence**: the temporal granularity for each signal, such as daily ED visits or weekly hospital admissions
 
-The DifferencedAR(1) process above samples one value per model day:
+The `DifferencedAR1` process above samples one value per model day:
 
 ```python
 baseline_rt_process = DifferencedAR1(
@@ -502,10 +495,10 @@ if ww_n_sites > 5:
 ```
 
 Wastewater observations are site-level: each measurement is associated with a specific measurement site.
-The Wastewater observation process uses LogNormalNoise, which takes hierarchical priors for the site-level mode and standard deviation parameters.
+The `Wastewater` observation process uses `LogNormalNoise`, which takes hierarchical priors for the site-level mode and standard deviation parameters.
 This enables partial pooling across measurement sites.
 
-Here we specify HierarchicalNormalPrior for the site-level mode and GammaGroupSdPrior for the standard deviation.
+Here we specify `HierarchicalNormalPrior` for the site-level mode and `GammaGroupSdPrior` for the standard deviation.
 
 ```{python}
 #| label: wastewater-obs-process
@@ -640,7 +633,7 @@ For this model, a complete call has the following structure:
 model.run(
     num_warmup=500,
     num_samples=500,
-    rng_key=make_rng_key(),
+    rng_key=random.PRNGKey(42),
     mcmc_args={"num_chains": 4, "progress_bar": False},
     n_days_post_init=n_days,
     population_size=population_size,
@@ -784,7 +777,9 @@ The observation dictionary has the following structure:
 }
 ```
 
-At call time, this dictionary is unpacked with `**`, forwarding each entry as a keyword argument to `model.run()`.
+At call time, we unpack this dictionary with `**`, forwarding each entry as a keyword argument to `model.run()`.
+Note that we could also have manually passed each dictionary entry to `model.run()`.
+We chose to create (and then unpack) an `obs_data` dictionary to keep our data organized in one place.
 
 ### MCMC Controls
 
@@ -824,7 +819,7 @@ start_time = time.time()
 model.run(
     num_warmup=500,
     num_samples=500,
-    rng_key=make_rng_key(),
+    rng_key=random.PRNGKey(42),
     mcmc_args={"num_chains": 4, "progress_bar": False},
     n_days_post_init=n_days_90,
     population_size=population_size,
@@ -1020,11 +1015,12 @@ for row in period_summary_df.itertuples(index=False):
         ),
         size=1.6,
     )
+    + p9.scale_y_log10()
     + p9.labs(
         x="Day",
         y="90% interval width",
         color="Period",
-        title="Posterior uncertainty over the 90-day fit",
+        title="Posterior uncertainty in latent infections over the 90-day fit",
     )
     + theme_tutorial
 )
