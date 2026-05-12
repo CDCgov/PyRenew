@@ -192,6 +192,9 @@ class TestPriorPredictiveStructure:
         assert trace["he_ascertainment_eta"]["value"].shape == (2,)
         assert trace["he_ascertainment_hospital"]["type"] == "deterministic"
         assert trace["he_ascertainment_ed_visits"]["type"] == "deterministic"
+        assert trace["log_rt_single_weekly"]["type"] == "deterministic"
+        assert trace["log_rt_single_weekly"]["value"].shape[-1] == 1
+        assert trace["log_rt_single_weekly"]["value"].shape[0] < n_total
         assert trace["hospital_predicted"]["value"].shape == (n_periods,)
         assert trace["hospital_predicted_daily"]["value"].shape == (n_total,)
         assert trace["ed_visits_predicted"]["value"].shape == (n_total,)

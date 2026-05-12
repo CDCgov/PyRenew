@@ -28,7 +28,7 @@ from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
-from test.test_helpers import fixed_ar1
+from test.test_helpers import fixed_ar1, fixed_differenced_ar1
 
 
 @pytest.fixture(scope="module")
@@ -404,7 +404,10 @@ def he_weekly_joint_ascertainment_model(
         gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
-        single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        single_rt_process=WeeklyTemporalProcess(
+            fixed_differenced_ar1(autoreg=0.5, innovation_sd=0.01),
+            start_dow=MMWR_WEEK,
+        ),
     )
     builder.add_ascertainment(ascertainment)
 
