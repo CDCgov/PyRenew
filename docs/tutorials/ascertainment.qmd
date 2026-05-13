@@ -99,8 +99,16 @@ independent_iedr = dist.Beta(2, 98).sample(key_iedr, (n_draws,))
 
 ## Model-level ascertainment
 
-To share ascertainment structure across count signals, define an ascertainment model once and register it with the builder.
-Each observation process receives the appropriate signal-specific accessor from `for_signal()`.
+To share ascertainment structure across count signals, define an `AscertainmentModel` object and register it with the builder.
+Each observation process receives the appropriate signal-specific accessor via the object's `for_signal()` method.
+
+All all `AscertainmentModel` objects are specified with arguments `name` which identified this component
+in larger multisignal model and `signals` which is a list of unique signal names.
+
+The `JointAscertainment` model is the joint prior for scalar  ascertainment rates across multiple signals.
+It samples from a logit multivariate normal vector given natural-scale baseline ascertainment rates
+and a covariance structure on the logit scale which can be specified either as a lower-triangular scale matrix,
+a covariance matrix, or a precision matrix.
 
 ```python
 builder = PyrenewBuilder()

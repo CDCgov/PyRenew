@@ -52,9 +52,9 @@ Here we use PyRenew's high-level components and `PyrenewBuilder` class to specif
 
 - one latent population-level infection process,
 - weekly hospital admissions,
-- daily ED visits, with a day of the week effect
 - a weekly-parameterized reproduction number,
 - joint scalar ascertainment for the two clinical signals.
+- daily ED visits, with a day of the week effect
 
 The renewal equation and delay convolutions run on a daily model axis, while the hospital likelihood is evaluated on weekly totals and the ED likelihood is evaluated on daily counts.
 
@@ -102,14 +102,60 @@ flowchart TB
 The components are:
 
 - **Latent infections**: `PopulationInfections` produces a single aggregate infection trajectory.
-- **Rt process**: `WeeklyTemporalProcess(DifferencedAR1(...), start_dow=MMWR_WEEK)` samples weekly values and broadcasts them to the daily renewal equation.
+- **$\mathcal{R}(t)$ process**: `WeeklyTemporalProcess` samples weekly values and broadcasts them to the daily renewal equation.
 - **Ascertainment**: `JointAscertainment` samples scalar hospital and ED ascertainment rates from one joint prior.
-- **Hospital observation**: `PopulationCounts(..., aggregation="weekly", start_dow=MMWR_WEEK)` scores weekly hospital totals.
-- **ED observation**: `PopulationCounts(...)` scores daily ED counts and includes a day-of-week effect.
+- **Hospital observation**: `PopulationCounts` scores weekly hospital totals.
+- **ED observation**: `PopulationCounts` scores daily ED counts and includes a day-of-week effect.
 
-## Production Extensions and Model Comparison
+### Temporal Cadence and Aggregation
 
-The model implemented here uses the same high-level H+E structure as the production model, but omits several production-specific components: We keep these components out of the tutorial model so the example can focus on the mixed daily/weekly observation cadence.
+This model has two different temporal questions:
+
+1. How often should latent transmission parameters vary?
+2. On what time grid is each observation likelihood evaluated?
+
+PyRenew treats these as separate modeling choices.
+
+The renewal equation always runs on the shared daily model axis.
+The latent process therefore produces daily infections, even when the temporal process for $\mathcal{R}(t)$ is parameterized more coarsely.
+If `single_rt_process` is a daily process, PyRenew estimates a daily $\mathcal{R}(t)$ trajectory.
+If it is wrapped in `WeeklyTemporalProcess`, PyRenew estimates weekly $\mathcal{R}(t)$ values and broadcasts them to the daily axis before computing infections.
+
+Observation aggregation happens later, inside each count observation process.
+For weekly hospital admissions, `PopulationCounts(..., aggregation="weekly", start_dow=MMWR_WEEK)` first computes daily predicted admissions from daily infections using ascertainment and the delay distribution.
+It then sums those daily predictions to the weekly grid, so the negative-binomial observation model is evaluated against weekly observed admissions rather than daily counts.
+For daily ED visits, no aggregation is applied. Each observed daily count is modeled with a negative-binomial distribution whose mean is the corresponding daily prediction.
+
+The end-to-end flow for the weekly hospital signal is:
+
+1. Sample or construct daily $\mathcal{R}(t)$, possibly by broadcasting weekly values.
+2. Run the daily renewal equation to produce daily infections.
+3. Convert daily infections to daily predicted hospital admissions using hospital delay and joint ascertainment component's `for_signal("hospital")`.
+4. Sum daily predicted admissions to MMWR weeks.
+5. Evaluate the negative-binomoial observation model on the weekly hospital observations.
+
+The daily ED signal shares steps 1--3, but remains on the daily grid for the likelihood.
+
+1. Sample or construct daily $\mathcal{R}(t)$, possibly by broadcasting weekly values.
+2. Run the daily renewal equation to produce daily infections.
+3. Convert daily infections to daily predicted ED visits using delay and joint ascertainment component's `for_signal("ed_visits")`.
+4. Evaluate the negative-binomoial observation model on the daily ED visits.
+
+This separation means that mixed-cadence models are natural: weekly hospital admissions and daily ED visits can share the same latent daily infection trajectory, regardless of whether $\mathcal{R}(t)$ is parameterized daily, weekly, or with another stepwise cadence.
+
+The cadence of the temporal process affects both model flexibility and computational cost.
+A daily $\mathcal{R}(t)$ process estimates one latent $\mathcal{R}(t)$ state per day,
+while a `WeeklyTemporalProcess` estimates one latent $\mathcal{R}(t)$ state per week and broadcasts the weekly trajectory to the daily renewal equation.
+The daily infections and expected observations are still computed on the daily axis, but they are deterministic functions of the sampled parameters.
+
+A coarser $\mathcal{R}(t)$ cadence reduces the number of latent dimensions sampled by HMC/NUTS.
+It also regularizes the latent process: the model cannot use day-to-day changes in $\mathcal{R}(t)$ to explain short-term noise or reporting artifacts.
+This can improve sampling and forecast stability when the data do not support daily transmission changes, but it is a modeling assumption rather than a universal improvement.
+
+### Production Extensions
+
+The model implemented here uses the same high-level H+E structure as the production model, but omits several production-specific components.
+We keep these components out of the tutorial model so the example can focus on the mixed daily/weekly observation cadence.
 
 - **Infection feedback**: the latent infection process includes a state-dependent damping term, so higher infection levels can reduce future transmission.
   This can help regularize epidemic trajectories, but it is a substantive modeling assumption.
@@ -127,10 +173,178 @@ One advantage of specifying the model with `PyrenewBuilder` is that closely rela
 In practice, each candidate model can be defined as a named Python object, factory function, or separate model specification file.
 This makes it easier to compare posterior predictive checks, held-out forecast performance, and the stability of inferred latent infections across model variants.
 
-## Load Synthetic Inputs
+## Specifying Model Components for `PyrenewBuilder`
 
-We use the synthetic H+E data bundled with PyRenew.
-The true parameters are used only to keep the tutorial priors on a reasonable scale.
+The `PyrenewBuilder` class assembles the model components.
+It checks component compatibility and coherence, computes initialization requirements, and produces a model ready for inference.
+
+### Latent Infection Process
+
+The `PyrenewBuilder` object's `configure_latent` method handles configuration of the latent process.
+It requires the following:
+
+- **Generation interval**: PMF for secondary infection timing.
+- **Initial conditions ($I(0)$ and $\log(\mathcal{R}(0))$)**: Infection prevalence at time $0$ as a proportion of the population, and the starting point of the $\log(\mathcal{R}(t))$ trajectory.
+- **Temporal dynamics**: How $\mathcal{R}(t)$ evolves over time.
+
+We use the same seven-day generation interval PMF used to generate the synthetic data; this PMF also matches the default/test-data parameterization used in the H+E pipeline.
+For the initial infection level and initial $\mathcal{R}(t)$ value, we specify priors rather than fixing them to the true synthetic-data values.
+
+Following the production model, we use a weekly differenced AR(1) process for log $\mathcal{R}(t)$ temporal dynamics.
+The differenced process allows persistent upward or downward movement.
+The weekly wrapper estimates one latent $\mathcal{R}(t)$ state per week and broadcasts the weekly trajectory to the daily renewal equation.
+
+```python
+weekly_rt_process = WeeklyTemporalProcess(
+    DifferencedAR1(
+        autoreg_rv=DeterministicVariable("rt_diff_autoreg", 0.5),
+        innovation_sd_rv=DeterministicVariable("rt_diff_innovation_sd", 0.01),
+    ),
+    start_dow=MMWR_WEEK,
+)
+```
+
+`WeeklyTemporalProcess` uses calendar weeks, not arbitrary 7-day blocks starting at index 0.
+The `start_dow=MMWR_WEEK` argument says that each $\mathcal{R}(t)$ value applies to an MMWR week, which runs Sunday through Saturday.
+
+At model runtime, `obs_start_date` is used to align the weekly $\mathcal{R}(t)$ blocks with the daily model axis.
+The same calendar anchor is used when daily predicted hospital admissions are aggregated to MMWR weeks.
+
+
+### Ascertainment
+
+`JointAscertainment` defines one shared ascertainment component for the hospital and ED signals.
+The component has a `name`, used to identify it in the multisignal model, and a tuple of signal names supplied through `signals`.
+
+For each signal, the model samples a scalar ascertainment rate.
+The rates are modeled jointly: `baseline_rates` gives their prior centers on the probability scale, while `covariance_matrix` describes uncertainty and dependence on the logit scale.
+The logit-scale representation keeps sampled rates between 0 and 1 after transformation back to the probability scale.
+
+Here the prior centers are 0.005 for the hospital infection-hospitalization ratio and 0.0075 for the ED infection-to-ED-visit ratio.
+We choose a logit-scale standard deviation of 0.7 for both rates and a prior correlation of 0.5.
+This says that the two rates may differ, but prior draws that are high for hospital ascertainment also tend to be high for ED ascertainment.
+
+```python
+ascertainment_sd = 0.7
+ascertainment_corr = 0.5
+ascertainment_cov = jnp.array(
+    [
+        [ascertainment_sd**2, ascertainment_corr * ascertainment_sd**2],
+        [ascertainment_corr * ascertainment_sd**2, ascertainment_sd**2],
+    ]
+)
+
+ascertainment = JointAscertainment(
+    name="he_ascertainment",
+    signals=("hospital", "ed_visits"),
+    baseline_rates=jnp.array([0.005, 0.0075]),
+    covariance_matrix=ascertainment_cov,
+)
+```
+The order of `signals` determines how `baseline_rates` and the rows and columns of `covariance_matrix` are interpreted.
+Observation processes do not access those values by row or column index.
+Instead, the ascertainment object provides signal-specific accessors: `ascertainment.for_signal("hospital")` returns the hospital ascertainment rate, and `ascertainment.for_signal("ed_visits")` returns the ED ascertainment rate.
+
+### Observation Processes
+
+Both hospital admissions and ED visits are count observations, so both components are specified as `PopulationCount` objects.
+They share the same daily latent infection trajectory, but the observation model is evaluated at different reporting cadences:
+weekly totals for hospital admissions and daily counts for ED visits.
+
+To define a `PopulationCount` object, you must specify its
+
+- **Ascertainment rate**: the probability that an infection results in an observed event
+- **Delay distribution**: the distribution of times from infection to the corresponding event
+- **Noise model**: the count distribution used to model variation around the expected number of event.
+
+In addition, count data observation processes have optional parameters for:
+
+- **Day-of-week effects**: recurring multiplicative adjustments for systematic differences among days of the week.
+- **Right truncation**: adjustment for recent observations that may be incomplete because not all reports have arrived.
+
+#### ED Visits
+
+For ED visits, we include a day-of-week effect.
+
+ED visits often have systematic day-of-week patterns.
+Day-to-day volumes may differ because of care-seeking behavior, clinic availability, staffing, coding, or reporting workflows.
+Those patterns are part of the observation process, not necessarily evidence that infections changed from one day to the next.
+
+The ED observation model includes $7$ multiplicative effects, one for each day of the week.
+The day-of-week effect multiplies the expected daily ED visits before the count observation model is applied.
+Each day of the week has its own multiplier: a value above 1 increases expected ED visits on that day, and a value below 1 decreases them.
+
+Following the production H+E model, we place a symmetric Dirichlet prior with concentration value $5$ on these weights and scale the draw by $7$.
+Because the prior is symmetric, it does not assume in advance which days have higher or lower ED volume.
+It centers the multipliers near equal day-of-week effects while still allowing per-day variation.
+
+```python
+ed_day_of_week_rv = TransformedVariable(
+    name="ed_day_of_week_effect",
+    base_rv=DistributionalVariable(
+        name="ed_day_of_week_effect_raw",
+        distribution=dist.Dirichlet(jnp.ones(7) * 5),
+    ),
+    transforms=transformation.AffineTransform(loc=0.0, scale=7.0),
+)
+```
+
+This is passed to `PopulationCounts` constructor as `day_of_week_rv`.
+
+In this tutorial, `ascertainment.for_signal("ed_visits")` connects the ED observation process to the ED component of the joint ascertainment model.
+The delay PMF matches the synthetic data-generating process, and the observation model uses negative-binomial noise.
+
+
+```python
+ed_obs = PopulationCounts(
+    name="ed_visits",
+    ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
+    delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
+    noise=NegativeBinomialNoise(
+        DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
+    ),
+    day_of_week_rv=ed_day_of_week_rv,
+)
+```
+
+Count observation processes also support an optional `right_truncation_rv` for incomplete recent reports.
+The synthetic ED data used here are complete, so the tutorial model omits right truncation.
+The production H+E model applies a right-truncation adjustment to recent ED observations when reports are incomplete;
+the reporting-delay PMF is supplied as an external input rather than inferred by the model.
+
+
+#### Hospital Admissions
+
+Hospital admissions are also modeled with `PopulationCounts`.
+The hospital signal uses the hospital component of the joint ascertainment model, a fixed infection-to-hospital-admission delay PMF, and negative-binomial observation noise.
+
+The hospital data are reported as weekly MMWR totals.
+PyRenew still computes daily predicted hospital admissions from the shared daily infection trajectory, delay distribution, and ascertainment rate.
+The argument `aggregation="weekly"` then sums those daily predictions before comparing them with the observed weekly totals.
+The argument `start_dow=MMWR_WEEK` aligns the aggregation to MMWR weeks, and `reporting_schedule="regular"` indicates that the data are supplied as one value per week.
+
+```python
+hospital_obs = PopulationCounts(
+    name="hospital",
+    ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+    delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
+    noise=NegativeBinomialNoise(
+        DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
+    ),
+    aggregation="weekly",
+    reporting_schedule="regular",
+    start_dow=MMWR_WEEK,
+)
+```
+
+The hospital and ED observation processes therefore share the same latent infections,
+but differ in reporting cadence and signal-specific observation details.
+
+### Full model specification via `PyrenewBuilder`
+
+The full specification of the model requires defining all model `RandomVariable` objects passed in to all components.
+In this example we use the synthetic H+E data bundled with PyRenew, which includes the parameters used to generate the data,
+including the generation interval pmf and hospitalization and ED visits delay pmfs and ascertainment rates.
 
 ```{python}
 #| label: load-data
@@ -154,13 +368,10 @@ print(f"Daily ED rows: {len(daily_ed)}")
 print(f"Population size: {population_size:,.0f}")
 ```
 
-## Latent Infection Process
-
-The production model uses a weekly process for transmission.
-Here we use a weekly differenced AR(1) process for log $\mathcal{R}(t)$.
-The differenced process allows persistent upward or downward movement, while the weekly wrapper keeps the parameter cadence coarser than the daily renewal equation.
+First we specify the latent components
 
 ```{python}
+#| code-fold: false
 #| label: latent-components
 
 gen_int_pmf = jnp.array(
@@ -183,90 +394,38 @@ weekly_rt_process = WeeklyTemporalProcess(
 )
 ```
 
-The weekly process is calendar-aligned.
-When fitting or sampling this model, pass `obs_start_date` so PyRenew can compute the day of week for the padded daily model axis.
+Next we specify the joint ascertainment
 
-## Joint Ascertainment
-
-Hospital admissions and ED visits are different clinical event streams generated from the same latent infections.
-Their ascertainment rates can differ, but it is reasonable to model them as related because both depend on clinical care-seeking and reporting.
 
 ```{python}
+#| code-fold: false
 #| label: joint-ascertainment
 
 true_ihr = true_params["hospitalizations"]["ihr"]
 true_iedr = true_params["ed_visits"]["iedr"]
 
+ascertainment_sd = 0.7
+ascertainment_corr = 0.5
+ascertainment_cov = jnp.array(
+    [
+        [ascertainment_sd**2, ascertainment_corr * ascertainment_sd**2],
+        [ascertainment_corr * ascertainment_sd**2, ascertainment_sd**2],
+    ]
+)
+
 ascertainment = JointAscertainment(
     name="he_ascertainment",
     signals=("hospital", "ed_visits"),
     baseline_rates=jnp.array([true_ihr, true_iedr]),
-    scale_tril=jnp.array(
-        [
-            [0.7, 0.0],
-            [0.35, 0.606],
-        ]
-    ),
+    covariance_matrix=ascertainment_cov,
 )
 ```
 
-The order of `signals` determines how `baseline_rates` and `scale_tril` are interpreted.
-Here the first entry is hospital admissions and the second is ED visits.
-
-## Observation Processes
-
-Both signals are count observations, so both use `PopulationCounts`.
-The difference is the reporting grid.
-
-### ED day-of-week effect
-
-ED visits often have a weekly reporting pattern.
-The production H+E model samples seven weekday multipliers from a symmetric Dirichlet prior and repeats them across the ED time series.
-
-```mermaid
-flowchart LR
-    D["Dirichlet(5,...,5)<br/>7 weekday weights"] --> S["scale by 7<br/>average multiplier = 1"]
-    S --> T["tile across daily ED axis"]
-    T --> M["multiply daily ED predictions"]
-```
-
-PyRenew's `PopulationCounts` exposes this as `day_of_week_rv`.
-The concentration value of 5 keeps the prior centered near equal weekday effects while still allowing weekday variation.
-Scaling the Dirichlet draw by 7 preserves the average daily scale, so the ED ascertainment rate remains interpretable as an average infection-to-ED-visit ratio.
-
-### ED right truncation
-
-Recent ED observations may be incomplete if not all visits have been reported by the data pull date.
-PyRenew's `right_truncation_rv` takes a reporting-delay PMF and converts it into the proportion of each recent day's events expected to have been reported.
-
-```mermaid
-flowchart LR
-    P["Reporting-delay PMF"] --> C["CDF:<br/>proportion reported by lag"]
-    O["right_truncation_offset"] --> C
-    C --> R["recent-day reporting fractions"]
-    R --> M["multiply recent ED predictions"]
-```
-
-The adjustment is activated at fit time by passing `right_truncation_offset`, the number of days between the last observation and the data pull.
-The synthetic data used here are complete, so later calls omit the offset.
+Next we specify the hospital and ED visit observation processes
 
 ```{python}
+#| code-fold: false
 #| label: observation-processes
-
-ed_day_of_week_rv = TransformedVariable(
-    name="ed_day_of_week_effect",
-    base_rv=DistributionalVariable(
-        name="ed_day_of_week_effect_raw",
-        distribution=dist.Dirichlet(jnp.ones(7) * 5),
-    ),
-    transforms=transformation.AffineTransform(loc=0.0, scale=7.0),
-)
-
-ed_reporting_delay_pmf = jnp.array([0.40, 0.30, 0.15, 0.08, 0.04, 0.02, 0.01])
-ed_right_truncation_rv = DeterministicPMF(
-    "ed_right_truncation_delay",
-    ed_reporting_delay_pmf,
-)
 
 hospital_obs = PopulationCounts(
     name="hospital",
@@ -280,6 +439,15 @@ hospital_obs = PopulationCounts(
     start_dow=MMWR_WEEK,
 )
 
+ed_day_of_week_rv = TransformedVariable(
+    name="ed_day_of_week_effect",
+    base_rv=DistributionalVariable(
+        name="ed_day_of_week_effect_raw",
+        distribution=dist.Dirichlet(jnp.ones(7) * 5),
+    ),
+    transforms=transformation.AffineTransform(loc=0.0, scale=7.0),
+)
+
 ed_obs = PopulationCounts(
     name="ed_visits",
     ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
@@ -288,26 +456,13 @@ ed_obs = PopulationCounts(
         DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
     ),
     day_of_week_rv=ed_day_of_week_rv,
-    right_truncation_rv=ed_right_truncation_rv,
 )
 ```
 
-For hospital admissions, daily predicted admissions are aggregated to MMWR weeks before the likelihood is evaluated.
-For ED visits, the likelihood is evaluated on the daily axis and a multiplicative day-of-week effect is applied before sampling counts.
-If the most recent ED observations are incomplete, pass `right_truncation_offset` in the `ed_visits` data dictionary:
-
-```python
-ed_visits = {
-    "obs": ed_observed,
-    "right_truncation_offset": 0,
-}
-```
-
-## Build the Model
-
-`PyrenewBuilder` computes the initialization period from the generation interval and both observation delay distributions, then wires the latent and observation components together.
+Finally we instantiate a `PyrenewBuilder object`.
 
 ```{python}
+#| code-fold: false
 #| label: build-model
 
 builder = PyrenewBuilder()
@@ -323,19 +478,50 @@ builder.add_observation(hospital_obs)
 builder.add_observation(ed_obs)
 
 model = builder.build()
+```
+
+The `PyrenewBuilder` computes the initialization period from the generation interval and both observation delay distributions.
+
+```{python}
+#| code-fold: false
+#| label: inspect-model
 
 print(f"Initialization points: {model.latent.n_initialization_points}")
 print(f"Observations: {list(model.observations)}")
 print(f"Ascertainment models: {list(model.ascertainment_models)}")
 ```
 
-## Align Observed Data
+## Fit the Model
 
-Daily observations are padded with `NaN` for the initialization period.
-Weekly observations live on the weekly period grid, so they need a dense weekly array with leading `NaN` values for unobserved pre-data periods.
+After the model is built, we prepare the observed data for `model.run()`.
+Each observation process receives a data dictionary whose keyword matches
+the name registered with the builder: `hospital={...}` and `ed_visits={...}`.
+
+The model includes an initialization period before the first observed day.
+During that period, PyRenew computes latent infections and predicted observations,
+but there are no data to condition on.
+We mark those unobserved positions with `NaN`.
+
+For daily ED visits, alignment is simple: `model.pad_observations()` prepends the required number of daily `NaN` values.
 
 ```{python}
-#| label: align-data
+#| code-fold: false
+#| label: align-ed-data
+
+ed_observed = model.pad_observations(
+    jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
+)
+print(f"ED observation array shape: {ed_observed.shape}")
+```
+
+For weekly hospital admissions, the CSV contains only observed weekly totals.
+Because the hospital observation process aggregates daily predictions to MMWR weeks,
+we construct the corresponding weekly observation array and prepend `NaN` values for any pre-observation weeks.
+
+
+```{python}
+#| code-fold: false
+#| label: align-hosp-data
 
 def build_hospital_obs_on_period_grid(model, weekly_values, n_days_fit, obs_start_date):
     hospital = model.observations["hospital"]
@@ -347,21 +533,15 @@ def build_hospital_obs_on_period_grid(model, weekly_values, n_days_fit, obs_star
     n_pre = n_periods - len(weekly_values)
     return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
 
-
 hospital_observed = build_hospital_obs_on_period_grid(
     model,
     jnp.array(weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32),
     N_DAYS_FIT,
     OBS_START_DATE,
 )
-
-ed_observed = model.pad_observations(
-    jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
-)
-
 print(f"Hospital observation array shape: {hospital_observed.shape}")
-print(f"ED observation array shape: {ed_observed.shape}")
 ```
+
 
 ## Inspect the Model Graph
 
