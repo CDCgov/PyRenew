@@ -22,16 +22,29 @@ jupyter:
 #| output: false
 
 from datetime import date
+import time
 import warnings
 
-import jax.numpy as jnp
+import arviz as az
 import numpyro
+
+numpyro.set_host_device_count(4)
+numpyro.enable_x64()
+
+import jax
+import jax.numpy as jnp
+import jax.random as random
+import numpy as np
 import numpyro.distributions as dist
+import pandas as pd
+import plotnine as p9
 
 warnings.filterwarnings("ignore")
 
+from _tutorial_theme import theme_tutorial
 from pyrenew.ascertainment import JointAscertainment
 from pyrenew.datasets import (
+    load_synthetic_daily_infections,
     load_example_infection_admission_interval,
     load_synthetic_daily_ed_visits,
     load_synthetic_true_parameters,
@@ -50,11 +63,11 @@ This tutorial builds a small hospital + emergency department model using PyRenew
 The production model is coded directly in NumPyro.
 Here we use PyRenew's high-level components and `PyrenewBuilder` class to specify a model with the same core shape:
 
-- one latent population-level infection process,
-- weekly hospital admissions,
-- a weekly-parameterized reproduction number,
-- joint scalar ascertainment for the two clinical signals.
-- daily ED visits, with a day of the week effect
+- one latent population-level infection process
+- a weekly-parameterized $\mathcal{R}(t)$ process
+- weekly hospital admissions
+- daily ED visits with a day-of-week effect
+- joint scalar ascertainment for the two clinical signals
 
 The renewal equation and delay convolutions run on a daily model axis, while the hospital likelihood is evaluated on weekly totals and the ED likelihood is evaluated on daily counts.
 
@@ -67,7 +80,7 @@ Both observations receive the same aggregate infection trajectory, but they map 
 flowchart TB
 
     subgraph Latent["Latent Infection Process"]
-        R["Weekly DifferencedAR1<br/>for log R(t)"]
+        R["Weekly DifferencedAR1<br/>for log $\\mathcal{R}(t)$"]
         I["Daily renewal equation<br/>(PopulationInfections)"]
     end
 
@@ -102,7 +115,7 @@ flowchart TB
 The components are:
 
 - **Latent infections**: `PopulationInfections` produces a single aggregate infection trajectory.
-- **$\mathcal{R}(t)$process**: `WeeklyTemporalProcess` samples weekly values and broadcasts them to the daily renewal equation.
+- **$\mathcal{R}(t)$ process**: `WeeklyTemporalProcess` samples weekly values and broadcasts them to the daily renewal equation.
 - **Ascertainment**: `JointAscertainment` samples scalar hospital and ED ascertainment rates from one joint prior.
 - **Hospital observation**: `PopulationCounts` scores weekly hospital totals.
 - **ED observation**: `PopulationCounts` scores daily ED counts and includes a day-of-week effect.
@@ -133,14 +146,14 @@ The end-to-end flow for the weekly hospital signal is:
 2. Run the daily renewal equation to produce daily infections.
 3. Convert daily infections to daily predicted hospital admissions using hospital delay and joint ascertainment component's `for_signal("hospital")`.
 4. Sum daily predicted admissions to MMWR weeks.
-5. Evaluate the negative-binomoial observation model on the weekly hospital observations.
+5. Evaluate the negative-binomial observation model on the weekly hospital observations.
 
 The daily ED signal shares steps 1--3, but remains on the daily grid for the likelihood.
 
 1. Sample or construct daily $\mathcal{R}(t)$, possibly by broadcasting weekly values.
 2. Run the daily renewal equation to produce daily infections.
 3. Convert daily infections to daily predicted ED visits using delay and joint ascertainment component's `for_signal("ed_visits")`.
-4. Evaluate the negative-binomoial observation model on the daily ED visits.
+4. Evaluate the negative-binomial observation model on the daily ED visits.
 
 This separation means that mixed-cadence models are natural: weekly hospital admissions and daily ED visits can share the same latent daily infection trajectory, regardless of whether $\mathcal{R}(t)$ is parameterized daily, weekly, or with another stepwise cadence.
 
@@ -246,14 +259,14 @@ Instead, the ascertainment object provides signal-specific accessors: `ascertain
 
 ### Observation Processes
 
-Both hospital admissions and ED visits are count observations, so both components are specified as `PopulationCount` objects.
+Both hospital admissions and ED visits are count observations, so both components are specified as `PopulationCounts` objects.
 They share the same daily latent infection trajectory, but the observation model is evaluated at different reporting cadences: weekly totals for hospital admissions and daily counts for ED visits.
 
-To define a `PopulationCount` object, you must specify its
+To define a `PopulationCounts` object, you must specify its
 
 - **Ascertainment rate**: the probability that an infection results in an observed event
 - **Delay distribution**: the distribution of times from infection to the corresponding event
-- **Noise model**: the count distribution used to model variation around the expected number of event.
+- **Noise model**: the count distribution used to model variation around the expected number of events.
 
 In addition, count data observation processes have optional parameters for:
 
@@ -346,6 +359,7 @@ N_DAYS_FIT = 126
 OBS_START_DATE = date(2023, 11, 5)
 
 true_params = load_synthetic_true_parameters()
+daily_infections = load_synthetic_daily_infections()
 weekly_hosp = load_synthetic_weekly_hospital_admissions()
 daily_ed = load_synthetic_daily_ed_visits()
 
@@ -451,7 +465,7 @@ ed_obs = PopulationCounts(
 )
 ```
 
-Finally we instantiate a `PyrenewBuilder object`.
+Finally, we instantiate a `PyrenewBuilder` object.
 
 ```{python}
 #| code-fold: false
@@ -492,51 +506,36 @@ The model includes an initialization period before the first observed day.
 During that period, PyRenew computes latent infections and predicted observations, but there are no data to condition on.
 We mark those unobserved positions with `NaN`.
 
-For daily ED visits, alignment is simple: `model.pad_observations()` prepends the required number of daily `NaN` values.
+We prepare one observed array for each signal.
+Daily ED observations are padded with `model.pad_observations()`.
+Weekly hospital observations are padded with `model.pad_aggregated_observations()`, which pads on the hospital observation process's weekly reporting cadence.
 
 ```{python}
 #| code-fold: false
-#| label: align-ed-data
+#| label: align-observed-data
 
 ed_observed = model.pad_observations(
     jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
 )
-print(f"ED observation array shape: {ed_observed.shape}")
-```
 
-For weekly hospital admissions, the CSV contains only observed weekly totals.
-Because the hospital observation process aggregates daily predictions to MMWR weeks, we construct the corresponding weekly observation array and prepend `NaN` values for any pre-observation weeks.
-
-```{python}
-#| code-fold: false
-#| label: align-hosp-data
-
-def build_hospital_obs_on_period_grid(model, weekly_values, n_days_fit, obs_start_date):
-    hospital = model.observations["hospital"]
-    first_day_dow = model._resolve_first_day_dow(obs_start_date)
-    n_init = model.latent.n_initialization_points
-    n_total = n_init + n_days_fit
-    offset = hospital._compute_period_offset(first_day_dow, hospital.start_dow)
-    n_periods = (n_total - offset) // hospital.aggregation_period
-    n_pre = n_periods - len(weekly_values)
-    return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
-
-
-hospital_observed = build_hospital_obs_on_period_grid(
-    model,
+hospital_observed = model.pad_aggregated_observations(
     jnp.array(weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32),
-    N_DAYS_FIT,
-    OBS_START_DATE,
+    observation_name="hospital",
+    n_days_post_init=N_DAYS_FIT,
+    obs_start_date=OBS_START_DATE,
 )
+
+print(f"ED observation array shape: {ed_observed.shape}")
 print(f"Hospital observation array shape: {hospital_observed.shape}")
 ```
 
-## Inspect the Model Graph
+### Check the Mixed-Cadence Structure
 
-Before running MCMC, it is useful to inspect one model trace.
-This confirms that the latent process is weekly-parameterized while predictions still live on the daily axis where needed.
+Before fitting, it can be useful to run one seeded model execution and inspect selected site shapes.
+This is a quick check that the weekly and daily pieces are aligned as intended.
 
 ```{python}
+#| code-fold: false
 #| label: trace-model
 
 with numpyro.handlers.seed(rng_seed=0):
@@ -552,33 +551,256 @@ with numpyro.handlers.seed(rng_seed=0):
 for site in [
     "log_rt_single_weekly",
     "PopulationInfections::log_rt_single",
-    "he_ascertainment_eta",
     "hospital_predicted_daily",
     "hospital_predicted",
     "ed_visits_predicted",
 ]:
-    value = trace[site]["value"]
-    print(f"{site}: {value.shape}")
+    print(f"{site}: {trace[site]['value'].shape}")
 ```
 
 The expected pattern is:
 
-- `log_rt_single_weekly` is shorter than the daily model axis.
+- `log_rt_single_weekly` has one value for each calendar week touched by the padded daily model axis, including a leading partial week.
 - `PopulationInfections::log_rt_single` is daily, because the renewal equation runs daily.
 - `hospital_predicted_daily` is daily before aggregation.
-- `hospital_predicted` is weekly, matching the hospital data.
+- `hospital_predicted` contains complete weekly hospital reporting periods only, so it can be one shorter than `log_rt_single_weekly`.
 - `ed_visits_predicted` is daily, matching the ED data.
 
-## What This Leaves Out
+### Fit the Model to Synthetic Data
 
-This tutorial uses high-level PyRenew components to specify a vanilla H+E model.
-Several production features are intentionally omitted:
+We now run MCMC on the synthetic hospital and ED observations.
+The model arguments are the same ones used in the trace check above.
 
-- infection feedback,
-- time-varying ED ascertainment,
-- IHR derived as a ratio relative to IEDR,
-- inferred hospital delay distributions,
-- production nowcasting inputs upstream of the PyRenew model.
+```{python}
+#| code-fold: false
+#| label: fit-synthetic-data
 
-Those features require additional model components or stronger assumptions.
-The model here is meant to show the core high-level PyRenew interface for mixed-cadence hospital and ED signals.
+jax.clear_caches()
+
+start_time = time.time()
+model.run(
+    num_warmup=500,
+    num_samples=500,
+    rng_key=random.PRNGKey(42),
+    mcmc_args={"num_chains": 4, "progress_bar": False},
+    n_days_post_init=N_DAYS_FIT,
+    population_size=population_size,
+    obs_start_date=OBS_START_DATE,
+    hospital={"obs": hospital_observed},
+    ed_visits={"obs": ed_observed},
+)
+samples = model.mcmc.get_samples()
+jax.block_until_ready(samples)
+print(f"Elapsed time: {time.time() - start_time:.1f} seconds")
+```
+
+We use ArviZ for a small convergence check and a synthetic-data recovery check.
+The first `n_init` daily time points are initialization points, so we trim them from daily posterior quantities before summarizing or plotting.
+
+```{python}
+#| code-fold: false
+#| label: arviz-checks
+
+n_init = model.latent.n_initialization_points
+
+
+def trim_time(ds):
+    if "time" in ds.dims:
+        ds = ds.isel(time=slice(n_init, None))
+        ds = ds.assign_coords(time=range(ds.sizes["time"]))
+    return ds
+
+
+idata = az.from_numpyro(
+    model.mcmc,
+    dims={
+        "latent_infections": ["time"],
+        "PopulationInfections::infections_aggregate": ["time"],
+        "PopulationInfections::log_rt_single": ["time", "dummy"],
+        "PopulationInfections::rt_single": ["time", "dummy"],
+        "log_rt_single_weekly": ["rt_week", "dummy"],
+        "hospital_predicted_daily": ["time"],
+        "hospital_predicted": ["week"],
+        "ed_visits_predicted": ["time"],
+    },
+)
+idata_trimmed = idata.map_over_datasets(trim_time)
+
+summary = az.summary(
+    idata_trimmed,
+    var_names=[
+        "I0",
+        "log_rt_time_0",
+        "he_ascertainment_hospital",
+        "he_ascertainment_ed_visits",
+    ],
+)
+summary
+```
+
+For this synthetic example, the sampler should mix well for the core scalar parameters.
+The posterior $\mathcal{R}(t)$ interval should also cover most of the true synthetic $\mathcal{R}(t)$ trajectory.
+
+```{python}
+#| code-fold: false
+#| label: synthetic-recovery-check
+
+rhat = summary["r_hat"].astype(float)
+ess = summary["ess_bulk"].astype(float)
+print(f"Max R-hat: {rhat.max():.3f}")
+print(f"Min bulk ESS: {ess.min():.0f}")
+
+rt_posterior = idata_trimmed.posterior["PopulationInfections::rt_single"]
+rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values.squeeze()
+rt_q50 = rt_posterior.quantile(0.50, dim=["chain", "draw"]).values.squeeze()
+rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values.squeeze()
+
+true_rt = daily_infections["true_rt"].to_numpy()
+n_compare = min(len(true_rt), len(rt_q05))
+rt_covered = (true_rt[:n_compare] >= rt_q05[:n_compare]) & (
+    true_rt[:n_compare] <= rt_q95[:n_compare]
+)
+print(f"90% interval coverage for true R(t): {np.mean(rt_covered):.1%}")
+```
+
+Finally, we plot the observed signals against the inferred $\mathcal{R}(t)$ trajectory.
+The panels use separate y-axes because hospital admissions, ED visits, and $\mathcal{R}(t)$ are on different scales.
+
+```{python}
+#| label: fig-fit-synthetic-data
+#| fig-cap: Observed synthetic hospital and ED data with inferred time-varying reproduction number.
+
+rt_dates = pd.to_datetime(daily_infections["date"].to_numpy())[:n_compare]
+rt_df = pd.DataFrame(
+    {
+        "date": rt_dates,
+        "median": rt_q50[:n_compare],
+        "q05": rt_q05[:n_compare],
+        "q95": rt_q95[:n_compare],
+        "true": true_rt[:n_compare],
+        "panel": "$\\mathcal{R}(t)$",
+    }
+)
+
+hosp_df = pd.DataFrame(
+    {
+        "date": pd.to_datetime(weekly_hosp["week_end"].to_numpy()),
+        "observed": weekly_hosp["weekly_hosp_admits"].to_numpy(),
+        "panel": "Weekly hospital admissions",
+    }
+)
+
+ed_df = pd.DataFrame(
+    {
+        "date": pd.to_datetime(daily_ed["date"].to_numpy()),
+        "observed": daily_ed["ed_visits"].to_numpy(),
+        "panel": "Daily ED visits",
+    }
+)
+
+plot_df = pd.concat(
+    [
+        rt_df[["date", "median", "q05", "q95", "true", "panel"]],
+        hosp_df.assign(median=np.nan, q05=np.nan, q95=np.nan, true=np.nan),
+        ed_df.assign(median=np.nan, q05=np.nan, q95=np.nan, true=np.nan),
+    ],
+    ignore_index=True,
+)
+plot_df["panel"] = pd.Categorical(
+    plot_df["panel"],
+    categories=[
+        "$\\mathcal{R}(t)$",
+        "Weekly hospital admissions",
+        "Daily ED visits",
+    ],
+    ordered=True,
+)
+
+(
+    p9.ggplot(plot_df, p9.aes(x="date"))
+    + p9.geom_ribbon(
+        p9.aes(ymin="q05", ymax="q95"),
+        data=rt_df,
+        fill="steelblue",
+        alpha=0.25,
+    )
+    + p9.geom_line(
+        p9.aes(y="median"),
+        data=rt_df,
+        color="steelblue",
+        size=1.0,
+    )
+    + p9.geom_line(
+        p9.aes(y="true"),
+        data=rt_df,
+        color="black",
+        linetype="dashed",
+        size=0.8,
+    )
+    + p9.geom_point(
+        p9.aes(y="observed"),
+        data=hosp_df,
+        color="firebrick",
+        size=1.8,
+        alpha=0.85,
+    )
+    + p9.geom_point(
+        p9.aes(y="observed"),
+        data=ed_df,
+        color="darkgreen",
+        size=0.8,
+        alpha=0.35,
+    )
+    + p9.facet_wrap("~panel", ncol=1, scales="free_y")
+    + p9.labs(x=None, y=None)
+    + theme_tutorial
+)
+```
+
+### Optional: Run the Production HEW Model
+
+The bundled synthetic H+E data can also be exported to the `model_dir` layout expected by the production HEW fitting code.
+This is useful for development checks, but it requires local checkouts of `pyrenew-multisignal` and `cfa-stf-routine-forecasting`.
+For that reason, this block is not evaluated when the tutorial is rendered.
+
+```{python}
+#| label: optional-run-production-hew
+#| eval: false
+#| code-fold: false
+
+from pathlib import Path
+import sys
+
+from pyrenew.datasets import write_synthetic_hew_model_dir
+
+PYRENEW_MULTISIGNAL_DIR = Path("~/github/CDC/pyrenew-multisignal").expanduser()
+CFA_STF_DIR = Path("~/github/CDC/cfa-stf-routine-forecasting").expanduser()
+
+sys.path.insert(0, str(PYRENEW_MULTISIGNAL_DIR / "src"))
+sys.path.insert(0, str(CFA_STF_DIR))
+
+from pipelines.pyrenew_hew.fit_pyrenew_model import fit_and_save_model
+
+model_dir = Path("scratch/synthetic_pyrenew_hew_model")
+
+write_synthetic_hew_model_dir(
+    model_dir,
+    overwrite=True,
+    # Optional: use downstream priors instead of the PyRenew synthetic default.
+    # priors_path=CFA_STF_DIR / "pipelines/priors/test_data_generation_priors.py",
+)
+
+fit_and_save_model(
+    model_dir=model_dir,
+    fit_ed_visits=True,
+    fit_hospital_admissions=True,
+    fit_wastewater=False,
+    n_warmup=500,
+    n_samples=500,
+    n_chains=4,
+    rng_key=42,
+)
+```
+
+The exporter writes `priors.py`, `metadata.json`, `data/data_for_model_fit.json`, and `data/model_params.json`.
+The production fit writes posterior samples to `posterior_samples.pickle` inside the same `model_dir`.
