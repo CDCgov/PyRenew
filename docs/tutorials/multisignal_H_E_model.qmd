@@ -211,7 +211,7 @@ The weekly wrapper estimates one latent $\mathcal{R}(t)$ state per week and broa
 weekly_rt_process = WeeklyTemporalProcess(
     DifferencedAR1(
         autoreg_rv=DeterministicVariable("rt_diff_autoreg", 0.5),
-        innovation_sd_rv=DeterministicVariable("rt_diff_innovation_sd", 0.01),
+        innovation_sd_rv=DeterministicVariable("rt_diff_innovation_sd", 0.05),
     ),
     start_dow=MMWR_WEEK,
 )
@@ -232,12 +232,14 @@ For each signal, the model samples a scalar ascertainment rate.
 The rates are modeled jointly: `baseline_rates` gives their prior centers on the probability scale, while `covariance_matrix` describes uncertainty and dependence on the logit scale.
 The logit-scale representation keeps sampled rates between 0 and 1 after transformation back to the probability scale.
 
-Here the prior centers are 0.005 for the hospital infection-hospitalization ratio and 0.0075 for the ED infection-to-ED-visit ratio.
-We choose a logit-scale standard deviation of 0.7 for both rates and a prior correlation of 0.5.
+Here the prior centers are the synthetic data-generating hospital infection-hospitalization ratio and ED infection-to-ED-visit ratio.
+We choose a logit-scale standard deviation of 0.1 for both rates and a prior correlation of 0.5.
 This says that the two rates may differ, but prior draws that are high for hospital ascertainment also tend to be high for ED ascertainment.
+The small standard deviation intentionally anchors the ascertainment rates for this synthetic recovery example.
+A later sensitivity analysis can relax this prior to show how weakly identified ascertainment affects the latent infection estimates.
 
 ```python
-ascertainment_sd = 0.7
+ascertainment_sd = 0.1
 ascertainment_corr = 0.5
 ascertainment_cov = jnp.array(
     [
@@ -249,7 +251,7 @@ ascertainment_cov = jnp.array(
 ascertainment = JointAscertainment(
     name="he_ascertainment",
     signals=("hospital", "ed_visits"),
-    baseline_rates=jnp.array([0.005, 0.0075]),
+    baseline_rates=jnp.array([true_ihr, true_iedr]),
     covariance_matrix=ascertainment_cov,
 )
 ```
@@ -386,7 +388,20 @@ gen_int_pmf = jnp.array(
 )
 
 gen_int_rv = DeterministicPMF("gen_int", gen_int_pmf)
-I0_rv = DistributionalVariable("I0", dist.Beta(1, 10))
+
+I0_rv = TransformedVariable(
+    name="I0",
+    base_rv=DistributionalVariable(
+        name="logit_I0",
+        distribution=dist.Normal(
+            transformation.SigmoidTransform().inv(true_params["i0_per_capita"]),
+            0.1,
+        ),
+    ),
+    transforms=transformation.SigmoidTransform(),
+)
+
+
 log_rt_time_0_rv = DistributionalVariable(
     "log_rt_time_0",
     dist.Normal(0.0, 0.5),
@@ -395,11 +410,17 @@ log_rt_time_0_rv = DistributionalVariable(
 weekly_rt_process = WeeklyTemporalProcess(
     DifferencedAR1(
         autoreg_rv=DeterministicVariable("rt_diff_autoreg", 0.5),
-        innovation_sd_rv=DeterministicVariable("rt_diff_innovation_sd", 0.01),
+        innovation_sd_rv=DeterministicVariable("rt_diff_innovation_sd", 0.03),
     ),
     start_dow=MMWR_WEEK,
 )
 ```
+
+Because this is a synthetic recovery example, we center the initial infection and ascertainment
+priors at the data-generating values and make them intentionally informative.
+A later sensitivity analysis relaxes these priors to show how the latent infection scale depends
+on external information about initial prevalence and ascertainment.
+
 
 Next we specify the joint ascertainment
 
@@ -410,7 +431,7 @@ Next we specify the joint ascertainment
 true_ihr = true_params["hospitalizations"]["ihr"]
 true_iedr = true_params["ed_visits"]["iedr"]
 
-ascertainment_sd = 0.7
+ascertainment_sd = 0.1
 ascertainment_corr = 0.5
 ascertainment_cov = jnp.array(
     [
@@ -445,13 +466,18 @@ hospital_obs = PopulationCounts(
     start_dow=MMWR_WEEK,
 )
 
-ed_day_of_week_rv = TransformedVariable(
-    name="ed_day_of_week_effect",
-    base_rv=DistributionalVariable(
-        name="ed_day_of_week_effect_raw",
-        distribution=dist.Dirichlet(jnp.ones(7) * 5),
-    ),
-    transforms=transformation.AffineTransform(loc=0.0, scale=7.0),
+# ed_day_of_week_rv = TransformedVariable(
+#     name="ed_day_of_week_effect",
+#     base_rv=DistributionalVariable(
+#         name="ed_day_of_week_effect_raw",
+#         distribution=dist.Dirichlet(jnp.ones(7) * 5),
+#     ),
+#     transforms=transformation.AffineTransform(loc=0.0, scale=7.0),
+# )
+
+ed_day_of_week_rv = DeterministicVariable(
+    "ed_day_of_week_effect",
+    jnp.array(true_params["ed_visits"]["day_of_week_effects"]),
 )
 
 ed_obs = PopulationCounts(
@@ -625,6 +651,7 @@ idata = az.from_numpyro(
     },
 )
 idata_trimmed = idata.map_over_datasets(trim_time)
+idata_trimmed.posterior["I0"] = 1 / (1 + np.exp(-idata_trimmed.posterior["logit_I0"]))
 
 summary = az.summary(
     idata_trimmed,
@@ -639,7 +666,7 @@ summary
 ```
 
 For this synthetic example, the sampler should mix well for the core scalar parameters.
-The posterior $\mathcal{R}(t)$ interval should also cover most of the true synthetic $\mathcal{R}(t)$ trajectory.
+The posterior latent infection interval should also cover most of the true synthetic infection trajectory.
 
 ```{python}
 #| code-fold: false
@@ -650,109 +677,166 @@ ess = summary["ess_bulk"].astype(float)
 print(f"Max R-hat: {rhat.max():.3f}")
 print(f"Min bulk ESS: {ess.min():.0f}")
 
-rt_posterior = idata_trimmed.posterior["PopulationInfections::rt_single"]
-rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values.squeeze()
-rt_q50 = rt_posterior.quantile(0.50, dim=["chain", "draw"]).values.squeeze()
-rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values.squeeze()
+latent_inf = idata_trimmed.posterior["latent_infections"]
+inf_q05 = latent_inf.quantile(0.05, dim=["chain", "draw"]).values
+inf_q50 = latent_inf.quantile(0.50, dim=["chain", "draw"]).values
+inf_q95 = latent_inf.quantile(0.95, dim=["chain", "draw"]).values
 
-true_rt = daily_infections["true_rt"].to_numpy()
-n_compare = min(len(true_rt), len(rt_q05))
-rt_covered = (true_rt[:n_compare] >= rt_q05[:n_compare]) & (
-    true_rt[:n_compare] <= rt_q95[:n_compare]
+true_infections = daily_infections["true_infections"].to_numpy()
+n_compare = min(len(true_infections), len(inf_q05))
+inf_covered = (true_infections[:n_compare] >= inf_q05[:n_compare]) & (
+    true_infections[:n_compare] <= inf_q95[:n_compare]
 )
-print(f"90% interval coverage for true R(t): {np.mean(rt_covered):.1%}")
+print(f"90% interval coverage for true infections: {np.mean(inf_covered):.1%}")
 ```
 
-Finally, we plot the observed signals against the inferred $\mathcal{R}(t)$ trajectory.
-The panels use separate y-axes because hospital admissions, ED visits, and $\mathcal{R}(t)$ are on different scales.
+Finally, we visualize posterior latent infections alongside the observed hospital and ED signals.
+The panels use separate y-axes because latent infections, weekly hospital admissions, and daily ED visits are on different scales.
 
 ```{python}
 #| label: fig-fit-synthetic-data
-#| fig-cap: Observed synthetic hospital and ED data with inferred time-varying reproduction number.
+#| fig-cap: Posterior latent infections and observed synthetic H+E data.
 
-rt_dates = pd.to_datetime(daily_infections["date"].to_numpy())[:n_compare]
-rt_df = pd.DataFrame(
+infections_df = pd.DataFrame(
     {
-        "date": rt_dates,
-        "median": rt_q50[:n_compare],
-        "q05": rt_q05[:n_compare],
-        "q95": rt_q95[:n_compare],
-        "true": true_rt[:n_compare],
-        "panel": "$\\mathcal{R}(t)$",
+        "day": np.arange(n_compare),
+        "median": inf_q50[:n_compare],
+        "q05": inf_q05[:n_compare],
+        "q95": inf_q95[:n_compare],
+        "raw": np.nan,
+        "signal": "Latent Infections",
     }
 )
 
+week_end_dates = pd.to_datetime(weekly_hosp["week_end"].to_numpy())
 hosp_df = pd.DataFrame(
     {
-        "date": pd.to_datetime(weekly_hosp["week_end"].to_numpy()),
-        "observed": weekly_hosp["weekly_hosp_admits"].to_numpy(),
-        "panel": "Weekly hospital admissions",
+        "day": (week_end_dates - pd.Timestamp(OBS_START_DATE)).days,
+        "median": weekly_hosp["weekly_hosp_admits"].to_numpy(),
+        "raw": weekly_hosp["weekly_hosp_admits"].to_numpy(),
+        "q05": np.nan,
+        "q95": np.nan,
+        "signal": "Weekly Hospital Admissions",
     }
 )
 
+ed_raw = np.array(daily_ed["ed_visits"].to_numpy(), dtype=float)
+ed_ma = pd.Series(ed_raw).rolling(window=7, center=True).mean().values
 ed_df = pd.DataFrame(
     {
-        "date": pd.to_datetime(daily_ed["date"].to_numpy()),
-        "observed": daily_ed["ed_visits"].to_numpy(),
-        "panel": "Daily ED visits",
+        "day": np.arange(len(ed_raw)),
+        "median": ed_ma,
+        "raw": ed_raw,
+        "q05": np.nan,
+        "q95": np.nan,
+        "signal": "Daily ED Visits (7-day MA)",
     }
 )
 
-plot_df = pd.concat(
-    [
-        rt_df[["date", "median", "q05", "q95", "true", "panel"]],
-        hosp_df.assign(median=np.nan, q05=np.nan, q95=np.nan, true=np.nan),
-        ed_df.assign(median=np.nan, q05=np.nan, q95=np.nan, true=np.nan),
-    ],
-    ignore_index=True,
-)
-plot_df["panel"] = pd.Categorical(
-    plot_df["panel"],
+plot_df = pd.concat([infections_df, hosp_df, ed_df], ignore_index=True)
+plot_df["signal"] = pd.Categorical(
+    plot_df["signal"],
     categories=[
-        "$\\mathcal{R}(t)$",
-        "Weekly hospital admissions",
-        "Daily ED visits",
+        "Weekly Hospital Admissions",
+        "Daily ED Visits (7-day MA)",
+        "Latent Infections",
     ],
     ordered=True,
 )
 
 (
-    p9.ggplot(plot_df, p9.aes(x="date"))
+    p9.ggplot(plot_df, p9.aes(x="day"))
     + p9.geom_ribbon(
         p9.aes(ymin="q05", ymax="q95"),
-        data=rt_df,
         fill="steelblue",
-        alpha=0.25,
+        alpha=0.3,
+    )
+    + p9.geom_point(
+        p9.aes(y="raw"),
+        color="gray",
+        alpha=0.35,
+        size=1,
     )
     + p9.geom_line(
         p9.aes(y="median"),
-        data=rt_df,
-        color="steelblue",
-        size=1.0,
+        color="darkblue",
+        size=1,
     )
-    + p9.geom_line(
-        p9.aes(y="true"),
-        data=rt_df,
-        color="black",
-        linetype="dashed",
-        size=0.8,
+    + p9.facet_wrap("~signal", ncol=1, scales="free_y")
+    + p9.scale_y_log10()
+    + p9.labs(
+        x="Day",
+        y="Count",
+        title="Posterior Latent Infections vs Observed H+E Data",
     )
-    + p9.geom_point(
-        p9.aes(y="observed"),
-        data=hosp_df,
-        color="firebrick",
-        size=1.8,
-        alpha=0.85,
+    + theme_tutorial
+)
+```
+
+The relative width of the posterior interval is another simple way to inspect uncertainty in the inferred latent infections.
+This scales the 90% interval width by the posterior median, so the diagnostic is not dominated by periods with larger infection counts.
+
+```{python}
+#| label: fig-latent-infection-interval-width
+#| fig-cap: Relative posterior interval width for latent infections over the synthetic H+E fit.
+
+inf_relative_width = (inf_q95[:n_compare] - inf_q05[:n_compare]) / np.maximum(
+    inf_q50[:n_compare], 1.0
+)
+period_edges = list(range(-1, n_compare, 14))
+if period_edges[-1] != n_compare - 1:
+    period_edges.append(n_compare - 1)
+period_labels = [
+    f"Days {start + 1}-{end}"
+    for start, end in zip(period_edges[:-1], period_edges[1:], strict=True)
+]
+
+ci_width_df = pd.DataFrame(
+    {
+        "day": np.arange(n_compare),
+        "relative_width": inf_relative_width,
+        "period": pd.cut(
+            np.arange(n_compare),
+            bins=period_edges,
+            labels=period_labels,
+        ),
+    }
+)
+
+period_summary_df = (
+    ci_width_df.groupby("period", observed=True)
+    .agg(
+        start=("day", "min"),
+        end=("day", "max"),
+        mean_relative_width=("relative_width", "mean"),
     )
-    + p9.geom_point(
-        p9.aes(y="observed"),
-        data=ed_df,
-        color="darkgreen",
-        size=0.8,
-        alpha=0.35,
+    .reset_index()
+)
+
+print("\nMean relative 90% interval width by time period:")
+for row in period_summary_df.itertuples(index=False):
+    print(f"  {row.period}: {row.mean_relative_width:.2f}")
+
+(
+    p9.ggplot(ci_width_df, p9.aes(x="day", y="relative_width"))
+    + p9.geom_line(color="gray", alpha=0.6, size=0.7)
+    + p9.geom_segment(
+        data=period_summary_df,
+        mapping=p9.aes(
+            x="start",
+            xend="end",
+            y="mean_relative_width",
+            yend="mean_relative_width",
+            color="period",
+        ),
+        size=1.6,
     )
-    + p9.facet_wrap("~panel", ncol=1, scales="free_y")
-    + p9.labs(x=None, y=None)
+    + p9.labs(
+        x="Day",
+        y="Relative 90% interval width",
+        color="Period",
+        title="Posterior Uncertainty in Latent Infections",
+    )
     + theme_tutorial
 )
 ```
