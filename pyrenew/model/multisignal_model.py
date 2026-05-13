@@ -157,6 +157,100 @@ class MultiSignalModel(Model):
         padding = jnp.full(pad_shape, jnp.nan)
         return jnp.concatenate([padding, obs], axis=axis)
 
+    def pad_aggregated_observations(
+        self,
+        obs: ArrayLike,
+        observation_name: str,
+        n_days_post_init: int,
+        obs_start_date: dt.date | dt.datetime | np.datetime64 | None,
+        axis: int = 0,
+    ) -> jnp.ndarray:
+        """
+        Pad regular aggregated observations to the expected period sequence.
+
+        User data for weekly observations usually contains only observed
+        weekly totals. This method prepends one NaN per unobserved reporting
+        period before the first observed period, including periods created by
+        the model's initialization window. The result is the dense array
+        expected by regular aggregated observation processes such as
+        ``PopulationCounts(aggregation="weekly", reporting_schedule="regular")``.
+
+        Parameters
+        ----------
+        obs
+            Observations in natural coordinates. Integer arrays are converted
+            to float so NaN padding can be represented.
+        observation_name
+            Name of the registered observation process whose reporting cadence
+            should be used for padding.
+        n_days_post_init
+            Number of modeled days after the initialization period.
+        obs_start_date
+            Date of the first observed day. Required for aggregated
+            observations that need calendar alignment.
+        axis
+            Axis along which to pad (typically 0 for time or reporting period).
+
+        Returns
+        -------
+        jnp.ndarray
+            Padded observations with leading NaN values.
+
+        Raises
+        ------
+        ValueError
+            If ``observation_name`` is unknown, if the observation is not
+            aggregated, if it uses an irregular reporting schedule, if a
+            calendar anchor is missing, or if ``obs`` is longer than the
+            model's reporting-period sequence.
+        """
+        if observation_name not in self.observations:
+            raise ValueError(
+                f"Unknown observation '{observation_name}'. "
+                f"Available: {list(self.observations.keys())}"
+            )
+
+        observation = self.observations[observation_name]
+        aggregation = getattr(observation, "aggregation", "daily")
+        if aggregation == "daily":
+            raise ValueError(
+                "pad_aggregated_observations is only for aggregated "
+                f"observations; observation '{observation_name}' has "
+                "aggregation='daily'. Use pad_observations for daily "
+                "observations."
+            )
+
+        if getattr(observation, "reporting_schedule", "regular") != "regular":
+            raise ValueError(
+                "pad_aggregated_observations requires a regular reporting "
+                f"schedule; observation '{observation_name}' has "
+                f"reporting_schedule={observation.reporting_schedule!r}."
+            )
+
+        if obs_start_date is None:
+            raise ValueError(
+                "obs_start_date is required to pad aggregated observations "
+                f"for observation '{observation_name}'."
+            )
+
+        first_day_dow = self._resolve_first_day_dow(obs_start_date)
+        n_total = self.latent.n_initialization_points + n_days_post_init
+        n_periods = observation._n_periods(n_total, first_day_dow)
+
+        obs = jnp.asarray(obs, dtype=float)
+        n_pre = n_periods - obs.shape[axis]
+        if n_pre < 0:
+            raise ValueError(
+                f"Observation '{observation_name}' has length {obs.shape[axis]} "
+                f"along axis {axis}, which exceeds the model reporting-period "
+                f"length {n_periods}."
+            )
+
+        pad_shape = list(obs.shape)
+        pad_shape[axis] = n_pre
+        padding = jnp.full(pad_shape, jnp.nan)
+        return jnp.concatenate([padding, obs], axis=axis)
+
     def _resolve_first_day_dow(
         self,
         obs_start_date: dt.date | dt.datetime | np.datetime64 | None,
