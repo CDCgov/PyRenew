@@ -59,6 +59,67 @@ from pyrenew.time import MMWR_WEEK
 import pyrenew.transformation as transformation
 ```
 
+```{python}
+#| label: helper functions
+#| output: false
+
+def plot_delay_distribution(delay_pmf, title):
+    """Plot a discrete delay probability distribution over days."""
+    delay_pmf = np.asarray(delay_pmf)
+
+    days = np.arange(len(delay_pmf))
+    mean_delay = float(np.sum(days * delay_pmf))
+    mode_delay = int(np.argmax(delay_pmf))
+
+    delay_df = pd.DataFrame(
+        {
+            "days": days,
+            "probability": delay_pmf,
+        }
+    )
+
+    max_probability = delay_df["probability"].max()
+
+    return (
+        p9.ggplot(delay_df, p9.aes(x="days", y="probability"))
+        + p9.geom_col(fill="steelblue", alpha=0.7, color="black")
+        + p9.geom_vline(
+            xintercept=mode_delay,
+            color="purple",
+            linetype="solid",
+            size=1,
+        )
+        + p9.geom_vline(
+            xintercept=mean_delay,
+            color="red",
+            linetype="dashed",
+            size=1,
+        )
+        + p9.labs(
+            x="Days",
+            y="Probability",
+            title=title,
+        )
+        + theme_tutorial
+        + p9.annotate(
+            "text",
+            x=mode_delay + 8,
+            y=max_probability * 0.95,
+            label=f"Mode: {mode_delay} days",
+            color="purple",
+            size=10,
+        )
+        + p9.annotate(
+            "text",
+            x=mean_delay + 8,
+            y=max_probability * 0.8,
+            label=f"Mean: {mean_delay:.1f} days",
+            color="red",
+            size=10,
+        )
+    )
+```
+
 This tutorial builds a small hospital + emergency department model using PyRenew's high-level components which approximates a production model used to produce weekly short-term forecasts of Covid, flu, and RSV for the [CDC ensemble forecast hubs](https://www.cdc.gov/cfa-modeling-and-forecasting/covid19-data-vis).
 The production model is coded directly in NumPyro.
 Here we use PyRenew's high-level components and `PyrenewBuilder` class to specify a model with the same core shape:
@@ -115,7 +176,7 @@ flowchart TB
 The components are:
 
 - **Latent infections**: `PopulationInfections` produces a single aggregate infection trajectory.
-- **$\mathcal{R}(t)$ process**: `WeeklyTemporalProcess` samples weekly values and broadcasts them to the daily renewal equation.
+- **$\mathcal{R}(t)$process**: `WeeklyTemporalProcess` samples weekly values and broadcasts them to the daily renewal equation.
 - **Ascertainment**: `JointAscertainment` samples scalar hospital and ED ascertainment rates from one joint prior.
 - **Hospital observation**: `PopulationCounts` scores weekly hospital totals.
 - **ED observation**: `PopulationCounts` scores daily ED counts and includes a day-of-week effect.
@@ -372,9 +433,46 @@ ed_delay_pmf = jnp.array(true_params["ed_visits"]["delay_pmf"])
 
 population_size = float(weekly_hosp["pop"][0])
 
+true_i0 = float(true_params["i0_per_capita"])
+true_ihr = float(true_params["hospitalizations"]["ihr"])
+true_iedr = float(true_params["ed_visits"]["iedr"])
+true_dow_effects = jnp.array(true_params["ed_visits"]["day_of_week_effects"])
+
+
 print(f"Weekly hospital rows: {len(weekly_hosp)}")
 print(f"Daily ED rows: {len(daily_ed)}")
 print(f"Population size: {population_size:,.0f}")
+print()
+print("Data-generating values we will try to recover:")
+print(f"  Initial infections per capita (I0): {true_i0:.5f}")
+print(f"  Hospital ascertainment (IHR):       {true_ihr:.5f}")
+print(f"  ED ascertainment (IEDR):            {true_iedr:.5f}")
+print(f"  Ratio IHR / IEDR:                   {true_ihr / true_iedr:.3f}")
+print(f"  ED visits day-of-week effects:      {true_dow_effects}")
+```
+
+```{python}
+#| label: delay-pmf-plots
+#| layout-ncol: 2
+#| fig-height: 4
+#| fig-width: 6
+
+from IPython.display import display
+
+max_days = max(len(hosp_delay_pmf), len(ed_delay_pmf)) - 1
+x_limits = (0, max_days)
+
+plot_hosp_delay = plot_delay_distribution(
+    hosp_delay_pmf,
+    "Infection-to-Hospitalization Delay Distribution",
+) + p9.coord_cartesian(xlim=x_limits)
+plot_ed_delay = plot_delay_distribution(
+    ed_delay_pmf,
+    "Infection-to-ED Visit Delay Distribution",
+) + p9.coord_cartesian(xlim=x_limits)
+
+display(plot_hosp_delay)
+display(plot_ed_delay)
 ```
 
 First we specify the latent components
@@ -386,26 +484,19 @@ First we specify the latent components
 gen_int_pmf = jnp.array(
     [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
 )
-
 gen_int_rv = DeterministicPMF("gen_int", gen_int_pmf)
-
 I0_rv = TransformedVariable(
     name="I0",
     base_rv=DistributionalVariable(
         name="logit_I0",
         distribution=dist.Normal(
             transformation.SigmoidTransform().inv(true_params["i0_per_capita"]),
-            0.1,
+            0.25,
         ),
     ),
     transforms=transformation.SigmoidTransform(),
 )
-
-
-log_rt_time_0_rv = DistributionalVariable(
-    "log_rt_time_0",
-    dist.Normal(0.0, 0.5),
-)
+log_rt_time_0_rv = DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5))
 
 weekly_rt_process = WeeklyTemporalProcess(
     DifferencedAR1(
@@ -416,20 +507,14 @@ weekly_rt_process = WeeklyTemporalProcess(
 )
 ```
 
-Because this is a synthetic recovery example, we center the initial infection and ascertainment
-priors at the data-generating values and make them intentionally informative.
-A later sensitivity analysis relaxes these priors to show how the latent infection scale depends
-on external information about initial prevalence and ascertainment.
-
+Because this is a synthetic recovery example, we center the initial infection and ascertainment priors at the data-generating values and make them intentionally informative.
+A later sensitivity analysis relaxes these priors to show how the latent infection scale depends on external information about initial prevalence and ascertainment.
 
 Next we specify the joint ascertainment
 
 ```{python}
 #| code-fold: false
 #| label: joint-ascertainment
-
-true_ihr = true_params["hospitalizations"]["ihr"]
-true_iedr = true_params["ed_visits"]["iedr"]
 
 ascertainment_sd = 0.1
 ascertainment_corr = 0.5
@@ -449,6 +534,8 @@ ascertainment = JointAscertainment(
 ```
 
 Next we specify the hospital and ED visit observation processes
+
+Here we don't try to estimate the day-of-week effect on ED visits, we supply the true day-of-week effects.
 
 ```{python}
 #| code-fold: false
@@ -553,6 +640,62 @@ hospital_observed = model.pad_aggregated_observations(
 
 print(f"ED observation array shape: {ed_observed.shape}")
 print(f"Hospital observation array shape: {hospital_observed.shape}")
+
+# Raw observations on a shared calendar axis
+ed_dates = pd.date_range(
+    start=pd.Timestamp(OBS_START_DATE),
+    periods=len(daily_ed),
+    freq="D",
+)
+
+ed_plot_df = pd.DataFrame(
+    {
+        "date": ed_dates,
+        "count": daily_ed["ed_visits"].to_numpy(),
+        "signal": "Daily ED visits",
+    }
+)
+
+hosp_plot_df = pd.DataFrame(
+    {
+        "week_end": pd.to_datetime(weekly_hosp["week_end"]),
+        "count": weekly_hosp["weekly_hosp_admits"].to_numpy(),
+        "signal": "Weekly hospital admissions",
+    }
+)
+hosp_plot_df["week_start"] = hosp_plot_df["week_end"] - pd.Timedelta(days=6)
+
+raw_obs_plot = (
+    p9.ggplot()
+    + p9.geom_rect(
+        hosp_plot_df,
+        p9.aes(
+            xmin="week_start",
+            xmax="week_end",
+            ymin=0,
+            ymax="count",
+        ),
+        fill="steelblue",
+        alpha=0.7,
+        color="black",
+    )
+    + p9.geom_col(
+        ed_plot_df,
+        p9.aes(x="date", y="count"),
+        fill="darkorange",
+        alpha=0.65,
+        width=0.9,
+    )
+    + p9.facet_wrap("~signal", ncol=1, scales="free_y")
+    + p9.labs(
+        x="Date",
+        y="Observed count",
+        title="Observed Hospital Admissions and ED Visits",
+    )
+    + theme_tutorial
+)
+
+raw_obs_plot
 ```
 
 ### Check the Mixed-Cadence Structure
@@ -624,8 +767,7 @@ We use ArviZ for a small convergence check and a synthetic-data recovery check.
 The first `n_init` daily time points are initialization points, so we trim them from daily posterior quantities before summarizing or plotting.
 
 ```{python}
-#| code-fold: false
-#| label: arviz-checks
+#| label: arviz-checks-recovered-params
 
 n_init = model.latent.n_initialization_points
 
@@ -665,11 +807,115 @@ summary = az.summary(
 summary
 ```
 
-For this synthetic example, the sampler should mix well for the core scalar parameters.
-The posterior latent infection interval should also cover most of the true synthetic infection trajectory.
+The model recovers the data-generating parameters.
 
 ```{python}
-#| code-fold: false
+print("Data-generating values we will try to recover:")
+print(f"  Initial infections per capita (I0): {true_i0:.5f}")
+print(f"  Hospital ascertainment (IHR):       {true_ihr:.5f}")
+print(f"  ED ascertainment (IEDR):            {true_iedr:.5f}")
+```
+
+Next we inspect the estimates for $\mathcal{R}(t)$.
+
+```{python}
+#| label: arviz-checks-recovered-rt
+
+rt_days = list(range(0, 126, 7))
+summary = az.summary(
+    idata_trimmed,
+    var_names=[
+        "PopulationInfections::rt_single",
+    ],
+    coords={
+        "time": rt_days,
+        "dummy": [0],
+    },
+)
+summary
+```
+
+The synthetic data-generating program creates a true $\mathcal{R}(t)$ trajectory which has a falling, rising, falling cadence:
+
+```python
+def build_true_rt() -> np.ndarray:
+    """
+    Build a piecewise-linear true R(t) trajectory.
+
+    Phases: decline from 1.2 to 0.8 (63 d), rise from 0.8 to 1.1 (42 d),
+    decline from 1.1 to 0.85 (21 d). Total 126 days = 18 weeks.
+```
+
+```{python}
+#| label: plot-recovered-rt
+
+rt = idata.posterior["PopulationInfections::rt_single"].squeeze()
+rt_q = rt.quantile([0.05, 0.5, 0.95], dim=["chain", "draw"])
+rt_q05 = rt_q.sel(quantile=0.05).values
+rt_q50 = rt_q.sel(quantile=0.5).values
+rt_q95 = rt_q.sel(quantile=0.95).values
+
+n_init = model.latent.n_initialization_points
+days = np.arange(len(rt_q50)) - n_init
+
+rt_df = pd.DataFrame(
+    {
+        "day": days,
+        "q05": rt_q05,
+        "median": rt_q50,
+        "q95": rt_q95,
+        "period": np.where(days < 0, "Initialization", "Observed period"),
+    }
+)
+
+rt_plot = (
+    p9.ggplot(rt_df, p9.aes(x="day"))
+    + p9.geom_ribbon(
+        p9.aes(ymin="q05", ymax="q95"),
+        fill="steelblue",
+        alpha=0.25,
+    )
+    + p9.geom_line(
+        p9.aes(y="median"),
+        color="steelblue",
+        size=1,
+    )
+    + p9.geom_hline(yintercept=1.0, linetype="dashed", alpha=0.6)
+    + p9.geom_vline(xintercept=0, linetype="dotted", alpha=0.8)
+    + p9.annotate(
+        "text",
+        x=-n_init / 2,
+        y=max(rt_q95) * 0.95,
+        label="Initialization period",
+        size=9,
+        color="gray",
+    )
+    + p9.annotate(
+        "text",
+        x=20,
+        y=max(rt_q95) * 0.95,
+        label="Observed period",
+        size=9,
+        color="gray",
+    )
+    + p9.labs(
+        x="Day relative to first observation",
+        y="Rt",
+        title="Posterior Rt Over Initialization and Observation Periods",
+    )
+    + theme_tutorial
+)
+
+rt_plot
+```
+
+For this synthetic example, the sampler should mix well for the core scalar parameters.
+The posterior latent infection interval should contain the true synthetic infection trajectory for most timepoints; in this run, coverage may be higher than 90% because the check uses a small, temporally correlated set of timepoints.
+
+The 90% posterior interval covers the full true latent infection trajectory in this run.
+This should be interpreted together with the interval widths: the median relative width is about 33%, while uncertainty increases near the right edge of the time series.
+
+```{python}
 #| label: synthetic-recovery-check
 
 rhat = summary["r_hat"].astype(float)
@@ -690,7 +936,7 @@ inf_covered = (true_infections[:n_compare] >= inf_q05[:n_compare]) & (
 print(f"90% interval coverage for true infections: {np.mean(inf_covered):.1%}")
 ```
 
-Finally, we visualize posterior latent infections alongside the observed hospital and ED signals.
+We visualize posterior latent infections alongside the observed hospital and ED signals.
 The panels use separate y-axes because latent infections, weekly hospital admissions, and daily ED visits are on different scales.
 
 ```{python}
@@ -778,7 +1024,8 @@ This scales the 90% interval width by the posterior median, so the diagnostic is
 
 ```{python}
 #| label: fig-latent-infection-interval-width
-#| fig-cap: Relative posterior interval width for latent infections over the synthetic H+E fit.
+#| fig-cap: Relative posterior interval width for latent infections over the
+#|   synthetic H+E fit.
 
 inf_relative_width = (inf_q95[:n_compare] - inf_q05[:n_compare]) / np.maximum(
     inf_q50[:n_compare], 1.0
@@ -849,11 +1096,14 @@ For that reason, this block is not evaluated when the tutorial is rendered.
 
 ```{python}
 #| label: optional-run-production-hew
-#| eval: false
 #| code-fold: false
 
 from pathlib import Path
 import sys
+import contextlib
+import io
+import time
+
 
 from pyrenew.datasets import write_synthetic_hew_model_dir
 
@@ -874,16 +1124,37 @@ write_synthetic_hew_model_dir(
     # priors_path=CFA_STF_DIR / "pipelines/priors/test_data_generation_priors.py",
 )
 
-fit_and_save_model(
-    model_dir=model_dir,
-    fit_ed_visits=True,
-    fit_hospital_admissions=True,
-    fit_wastewater=False,
-    n_warmup=500,
-    n_samples=500,
-    n_chains=4,
-    rng_key=42,
-)
+jax.clear_caches()
+
+stdout = io.StringIO()
+stderr = io.StringIO()
+start_time = time.time()
+
+try:
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        fit_and_save_model(
+            model_dir=model_dir,
+            fit_ed_visits=True,
+            fit_hospital_admissions=True,
+            fit_wastewater=False,
+            n_warmup=500,
+            n_samples=500,
+            n_chains=4,
+            rng_key=42,
+        )
+
+    # Usually fit_and_save_model is already synchronous, but this is harmless on newer JAX versions.
+    if hasattr(jax, "effects_barrier"):
+        jax.effects_barrier()
+
+    print(f"Elapsed time: {time.time() - start_time:.1f} seconds")
+
+except Exception:
+    print("fit_and_save_model failed. Last captured stdout:")
+    print(stdout.getvalue()[-4000:])
+    print("Last captured stderr:")
+    print(stderr.getvalue()[-4000:])
+    raise
 ```
 
 The exporter writes `priors.py`, `metadata.json`, `data/data_for_model_fit.json`, and `data/model_params.json`.

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from collections.abc import Iterable
 from pathlib import Path
 from textwrap import dedent
 
@@ -24,14 +25,18 @@ from pyrenew.datasets.synthetic_data import (
     load_synthetic_weekly_hospital_admissions,
 )
 
-
 DEFAULT_RIGHT_TRUNCATION_PMF = [1.0]
 """Default PMF used when synthetic ED reports are treated as complete."""
 
 
-def _as_float_list(values) -> list[float]:
+def _as_float_list(values: Iterable[float]) -> list[float]:
     """
     Convert an array-like object to a JSON-serializable list of floats.
+
+    Returns
+    -------
+    list of float
+        Values converted to built-in Python floats.
     """
     return [float(x) for x in values]
 
@@ -43,6 +48,11 @@ def _lognormal_moment_match(pmf: list[float]) -> tuple[float, float]:
     The production HEW model expects a lognormal reference location and scale
     for the inferred hospital delay. The pipeline derives these from the delay
     PMF; here we use a moment-matching approximation over positive day indices.
+
+    Returns
+    -------
+    tuple of float
+        Moment-matched lognormal location and scale parameters.
     """
     probs = np.asarray(pmf, dtype=float)
     probs = probs / probs.sum()
@@ -67,6 +77,11 @@ def _default_priors_text() -> str:
 
     These priors are intended for synthetic-data smoke tests, not production
     forecasting.
+
+    Returns
+    -------
+    str
+        Python source code defining the default synthetic-data priors.
     """
     return dedent(
         """
