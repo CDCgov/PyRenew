@@ -4,6 +4,8 @@ format:
   gfm:
     code-fold: true
 engine: jupyter
+execute:
+  eval: false
 jupyter:
   jupytext:
     text_representation:

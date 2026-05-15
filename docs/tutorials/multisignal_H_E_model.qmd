@@ -735,7 +735,7 @@ The expected pattern is:
 - `hospital_predicted` contains complete weekly hospital reporting periods only, so it can be one shorter than `log_rt_single_weekly`.
 - `ed_visits_predicted` is daily, matching the ED data.
 
-### Fit the Model to Synthetic Data
+### Fit pyrenew-H-E
 
 We now run MCMC on the synthetic hospital and ED observations.
 The model arguments are the same ones used in the trace check above.
@@ -760,7 +760,8 @@ model.run(
 )
 samples = model.mcmc.get_samples()
 jax.block_until_ready(samples)
-print(f"Elapsed time: {time.time() - start_time:.1f} seconds")
+pyrenew_elapsed = time.time() - start_time
+print(f"Elapsed time: {pyrenew_elapsed:.1f} seconds")
 ```
 
 We use ArviZ for a small convergence check and a synthetic-data recovery check.
@@ -795,7 +796,7 @@ idata = az.from_numpyro(
 idata_trimmed = idata.map_over_datasets(trim_time)
 idata_trimmed.posterior["I0"] = 1 / (1 + np.exp(-idata_trimmed.posterior["logit_I0"]))
 
-summary = az.summary(
+pyrenew_parameter_summary = az.summary(
     idata_trimmed,
     var_names=[
         "I0",
@@ -804,10 +805,10 @@ summary = az.summary(
         "he_ascertainment_ed_visits",
     ],
 )
-summary
+pyrenew_parameter_summary
 ```
 
-The model recovers the data-generating parameters.
+The pyrenew-H-E model recovers the data-generating parameters.
 
 ```{python}
 print("Data-generating values we will try to recover:")
@@ -822,7 +823,7 @@ Next we inspect the estimates for $\mathcal{R}(t)$.
 #| label: arviz-checks-recovered-rt
 
 rt_days = list(range(0, 126, 7))
-summary = az.summary(
+pyrenew_rt_summary = az.summary(
     idata_trimmed,
     var_names=[
         "PopulationInfections::rt_single",
@@ -832,7 +833,7 @@ summary = az.summary(
         "dummy": [0],
     },
 )
-summary
+pyrenew_rt_summary
 ```
 
 The synthetic data-generating program creates a true $\mathcal{R}(t)$ trajectory which has a falling, rising, falling cadence:
@@ -918,8 +919,8 @@ This should be interpreted together with the interval widths: the median relativ
 ```{python}
 #| label: synthetic-recovery-check
 
-rhat = summary["r_hat"].astype(float)
-ess = summary["ess_bulk"].astype(float)
+rhat = pyrenew_parameter_summary["r_hat"].astype(float)
+ess = pyrenew_parameter_summary["ess_bulk"].astype(float)
 print(f"Max R-hat: {rhat.max():.3f}")
 print(f"Min bulk ESS: {ess.min():.0f}")
 
@@ -1024,7 +1025,8 @@ This scales the 90% interval width by the posterior median, so the diagnostic is
 
 ```{python}
 #| label: fig-latent-infection-interval-width
-#| fig-cap: Relative posterior interval width for latent infections over the
+#| fig-cap: |-
+#|   Relative posterior interval width for latent infections over the
 #|   synthetic H+E fit.
 
 inf_relative_width = (inf_q95[:n_compare] - inf_q05[:n_compare]) / np.maximum(
@@ -1088,20 +1090,21 @@ for row in period_summary_df.itertuples(index=False):
 )
 ```
 
-### Optional: Run the Production HEW Model
+### Fit prod-H-E
 
 The bundled synthetic H+E data can also be exported to the `model_dir` layout expected by the production HEW fitting code.
-This is useful for development checks, but it requires local checkouts of `pyrenew-multisignal` and `cfa-stf-routine-forecasting`.
-For that reason, this block is not evaluated when the tutorial is rendered.
+This requires local checkouts of `pyrenew-multisignal` and `cfa-stf-routine-forecasting`.
 
 ```{python}
-#| label: optional-run-production-hew
+#| label: run-production-hew
 #| code-fold: false
 
 from pathlib import Path
 import sys
 import contextlib
 import io
+import pickle
+import runpy
 import time
 
 
@@ -1147,7 +1150,8 @@ try:
     if hasattr(jax, "effects_barrier"):
         jax.effects_barrier()
 
-    print(f"Elapsed time: {time.time() - start_time:.1f} seconds")
+    production_elapsed = time.time() - start_time
+    print(f"Elapsed time: {production_elapsed:.1f} seconds")
 
 except Exception:
     print("fit_and_save_model failed. Last captured stdout:")
@@ -1159,3 +1163,274 @@ except Exception:
 
 The exporter writes `priors.py`, `metadata.json`, `data/data_for_model_fit.json`, and `data/model_params.json`.
 The production fit writes posterior samples to `posterior_samples.pickle` inside the same `model_dir`.
+
+We can load that saved MCMC object into ArviZ and summarize the comparable scalar parameters.
+In prod-H-E, the ED ascertainment is time-varying, so we summarize both the first-day IEDR and its posterior mean over time.
+
+```{python}
+#| label: production-summary
+#| code-fold: false
+
+with open(model_dir / "posterior_samples.pickle", "rb") as file:
+    production_mcmc = pickle.load(file)
+
+production_idata = az.from_dict(
+    {
+        "posterior": production_mcmc.get_samples(group_by_chain=True),
+    },
+    sample_dims=["chain", "draw"],
+)
+
+def get_posterior_variable(posterior, candidates):
+    for name in candidates:
+        if name in posterior.data_vars:
+            return posterior[name]
+    raise KeyError(f"Could not find any of {candidates} in production posterior.")
+
+
+production_posterior = production_idata.posterior
+production_ihr = get_posterior_variable(production_posterior, ["IHR", "ihr"])
+production_iedr = get_posterior_variable(production_posterior, ["IEDR", "iedr"])
+try:
+    production_i0_values = get_posterior_variable(
+        production_posterior,
+        ["I0", "i0_first_obs_n_rv", "i0_first_obs_n"],
+    ).values
+except KeyError:
+    production_priors = runpy.run_path(str(model_dir / "priors.py"))
+    production_i0_value = float(production_priors["i0_first_obs_n_rv"]())
+    production_i0_values = np.full_like(production_ihr.values, production_i0_value)
+
+iedr_non_sample_dims = [
+    dim for dim in production_iedr.dims if dim not in ("chain", "draw")
+]
+if iedr_non_sample_dims:
+    production_iedr_first_day = production_iedr.isel(
+        {dim: 0 for dim in iedr_non_sample_dims}
+    )
+    production_iedr_mean = production_iedr.mean(dim=iedr_non_sample_dims)
+else:
+    production_iedr_first_day = production_iedr
+    production_iedr_mean = production_iedr
+
+production_scalar_idata = az.from_dict(
+    {
+        "posterior": {
+            "I0": production_i0_values,
+            "IHR": production_ihr.values,
+            "IEDR_first_day": production_iedr_first_day.values,
+            "IEDR_mean": production_iedr_mean.values,
+        }
+    },
+    sample_dims=["chain", "draw"],
+)
+
+production_parameter_summary = az.summary(production_scalar_idata)
+production_parameter_summary
+```
+
+The two models parameterize some quantities differently, so this table compares only the closest scalar summaries.
+For prod-H-E, ED ascertainment is time-varying; `IEDR_mean` is the posterior mean across that time-varying trajectory for each posterior draw.
+
+```{python}
+#| label: inference-comparison
+
+inference_comparison = pd.DataFrame(
+    [
+        {
+            "quantity": "I0",
+            "truth": true_i0,
+            "pyrenew-H-E median": float(
+                idata_trimmed.posterior["I0"].median(dim=["chain", "draw"])
+            ),
+            "prod-H-E median": float(
+                production_scalar_idata.posterior["I0"].median(dim=["chain", "draw"])
+            ),
+        },
+        {
+            "quantity": "IHR",
+            "truth": true_ihr,
+            "pyrenew-H-E median": float(
+                idata_trimmed.posterior["he_ascertainment_hospital"].median(
+                    dim=["chain", "draw"]
+                )
+            ),
+            "prod-H-E median": float(
+                production_scalar_idata.posterior["IHR"].median(dim=["chain", "draw"])
+            ),
+        },
+        {
+            "quantity": "IEDR",
+            "truth": true_iedr,
+            "pyrenew-H-E median": float(
+                idata_trimmed.posterior["he_ascertainment_ed_visits"].median(
+                    dim=["chain", "draw"]
+                )
+            ),
+            "prod-H-E median": float(
+                production_scalar_idata.posterior["IEDR_mean"].median(
+                    dim=["chain", "draw"]
+                )
+            ),
+        },
+    ]
+)
+
+inference_comparison
+```
+
+### Runtime Comparison
+
+The two runtimes are comparable in this synthetic example.
+They should not be interpreted as a formal benchmark because pyrenew-H-E and prod-H-E use different implementations, priors, time aggregation choices, and production-oriented components.
+Both fits are relatively slow for a small synthetic data set because H+E observations alone leave some absolute-scale quantities weakly identified.
+
+```{python}
+#| label: runtime-comparison
+#| code-fold: false
+
+pd.DataFrame(
+    [
+        {"model": "pyrenew-H-E", "elapsed_seconds": pyrenew_elapsed},
+        {"model": "prod-H-E", "elapsed_seconds": production_elapsed},
+    ]
+)
+```
+
+### Identifiability Check
+
+The workflow tutorial explores this identifiability issue in more detail.
+The short version is that H+E observations identify the latent trajectory and the relative magnitude of the two clinical signals better than they identify the absolute infection scale.
+Here we compare the posterior distributions of the three absolute-scale quantities that matter most for H+E alone: $I_0$, IHR, and IEDR.
+For prod-H-E, IEDR is time-varying, so we use `IEDR_mean` as a scalar summary for each posterior draw.
+
+```{python}
+#| label: identifiability-scale-data
+
+pyrenew_i0 = idata_trimmed.posterior["I0"].values.ravel()
+pyrenew_ihr = idata_trimmed.posterior["he_ascertainment_hospital"].values.ravel()
+pyrenew_iedr = idata_trimmed.posterior["he_ascertainment_ed_visits"].values.ravel()
+
+prod_i0 = production_scalar_idata.posterior["I0"].values.ravel()
+prod_ihr = production_scalar_idata.posterior["IHR"].values.ravel()
+prod_iedr = production_scalar_idata.posterior["IEDR_mean"].values.ravel()
+
+scale_draws_df = pd.concat(
+    [
+        pd.DataFrame(
+            {
+                "model": "pyrenew-H-E",
+                "I0": pyrenew_i0,
+                "IHR": pyrenew_ihr,
+                "IEDR": pyrenew_iedr,
+                "ratio": pyrenew_ihr / pyrenew_iedr,
+            }
+        ),
+        pd.DataFrame(
+            {
+                "model": "prod-H-E",
+                "I0": prod_i0,
+                "IHR": prod_ihr,
+                "IEDR": prod_iedr,
+                "ratio": prod_ihr / prod_iedr,
+            }
+        ),
+    ],
+    ignore_index=True,
+)
+
+scale_density_df = scale_draws_df.melt(
+    id_vars="model",
+    value_vars=["I0", "IHR", "IEDR"],
+    var_name="quantity",
+    value_name="value",
+)
+
+truth_scale_df = pd.DataFrame(
+    {
+        "quantity": ["I0", "IHR", "IEDR"],
+        "truth": [true_i0, true_ihr, true_iedr],
+    }
+)
+```
+
+The marginal densities show how each model places posterior mass for the absolute-scale quantities.
+
+```{python}
+#| label: identifiability-scale-densities
+#| fig-cap: Posterior densities for $I_0$, IHR, and IEDR under pyrenew-H-E and
+#|   prod-H-E. Red dashed lines mark data-generating values.
+
+(
+    p9.ggplot(scale_density_df, p9.aes(x="value", fill="model", color="model"))
+    + p9.geom_density(alpha=0.35)
+    + p9.geom_vline(
+        truth_scale_df,
+        p9.aes(xintercept="truth"),
+        color="red",
+        linetype="dashed",
+    )
+    + p9.facet_wrap("~quantity", scales="free")
+    + p9.scale_x_log10()
+    + p9.labs(
+        x="Value",
+        y="Density",
+        fill="Model",
+        color="Model",
+        title="Posterior Scale Parameters",
+    )
+    + theme_tutorial
+)
+```
+
+The joint posterior for IHR and IEDR shows how each model constrains the two clinical ascertainment rates together.
+The red point marks the data-generating values.
+
+```{python}
+#| label: identifiability-ihr-iedr
+#| fig-cap: Joint posterior of hospital and ED ascertainment rates under both
+#|   models.
+
+truth_asc_df = pd.DataFrame({"IHR": [true_ihr], "IEDR": [true_iedr]})
+
+(
+    p9.ggplot(scale_draws_df, p9.aes(x="IHR", y="IEDR", color="model"))
+    + p9.geom_point(alpha=0.16, size=0.7)
+    + p9.geom_point(data=truth_asc_df, color="red", size=3)
+    + p9.facet_wrap("~model")
+    + p9.scale_x_log10()
+    + p9.scale_y_log10()
+    + p9.labs(
+        x="Hospital ascertainment (IHR)",
+        y="ED ascertainment (IEDR)",
+        color="Model",
+        title="Hospital and ED Ascertainment Are Jointly Constrained",
+    )
+    + theme_tutorial
+)
+```
+
+The ratio is the most directly interpretable relative-scale quantity for the two clinical signals.
+
+```{python}
+#| label: identifiability-ratio
+#| fig-cap: Posterior distribution of the IHR / IEDR ratio under both models.
+
+(
+    p9.ggplot(scale_draws_df, p9.aes(x="ratio", fill="model", color="model"))
+    + p9.geom_density(alpha=0.35)
+    + p9.geom_vline(xintercept=true_ihr / true_iedr, color="red", linetype="dashed")
+    + p9.scale_x_log10()
+    + p9.labs(
+        x="IHR / IEDR",
+        y="Density",
+        fill="Model",
+        color="Model",
+        title="Relative Ascertainment Is Better Identified Than Absolute Scale",
+    )
+    + theme_tutorial
+)
+```
+
+These plots are diagnostic rather than corrective.
+They show why external information matters: H+E data alone generally need either informative priors or another signal, such as wastewater or prevalence data, to anchor the absolute infection scale.
