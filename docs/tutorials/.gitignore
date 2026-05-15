@@ -8,3 +8,9 @@ _compiled
 *.ipynb
 *.py
 *.md
+!data/
+!data/multisignal_he/
+!data/multisignal_he/README.md
+!data/multisignal_he/*.csv
+!data/multisignal_he/*.json
+!data/multisignal_he/*.npz

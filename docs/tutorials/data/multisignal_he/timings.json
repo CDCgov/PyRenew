@@ -1,0 +1,23 @@
+{
+  "pyrenew-H-E": {
+    "elapsed_seconds": 65.24473595619202,
+    "num_warmup": 500,
+    "num_samples": 500,
+    "num_chains": 4,
+    "rng_key": 42
+  },
+  "custom-H-E": {
+    "elapsed_seconds": 67.23963212966919,
+    "num_warmup": 500,
+    "num_samples": 500,
+    "num_chains": 4,
+    "rng_key": 42
+  },
+  "linked-pyrenew-H-E": {
+    "elapsed_seconds": 70.60192012786865,
+    "num_warmup": 500,
+    "num_samples": 500,
+    "num_chains": 4,
+    "rng_key": 42
+  }
+}
