@@ -814,6 +814,34 @@ class TestMultiSignalModelHelpers:
                 obs_start_date=None,
             )
 
+    def test_pad_aggregated_observations_rejects_irregular_reporting_schedule(self):
+        """Aggregated padding only supports regular reporting schedules."""
+        builder = _coherence_builder(
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+            observations=[
+                PopulationCounts(
+                    name="hospital",
+                    ascertainment_rate_rv=DeterministicVariable("hospital_ihr", 0.01),
+                    delay_distribution_rv=DeterministicPMF(
+                        "hospital_delay", jnp.array([1.0])
+                    ),
+                    noise=PoissonNoise(),
+                    aggregation="weekly",
+                    reporting_schedule="irregular",
+                    start_dow=MMWR_WEEK,
+                )
+            ],
+        )
+        model = builder.build()
+
+        with pytest.raises(ValueError, match="requires a regular reporting schedule"):
+            model.pad_aggregated_observations(
+                jnp.array([1, 2, 3]),
+                observation_name="hospital",
+                n_days_post_init=28,
+                obs_start_date=date(2024, 1, 7),
+            )
+
     def test_pad_aggregated_observations_weekly_requires_obs_start_date(self):
         """Calendar-aligned aggregated padding requires obs_start_date."""
         builder = _coherence_builder(

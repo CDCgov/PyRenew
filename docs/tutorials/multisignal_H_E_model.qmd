@@ -9,7 +9,7 @@ jupyter:
     text_representation:
       extension: .qmd
       format_name: quarto
-      format_version: '1.0'
+      format_version: "1.0"
       jupytext_version: 1.19.1
   kernelspec:
     display_name: Python 3 (ipykernel)
@@ -120,13 +120,10 @@ def plot_delay_distribution(delay_pmf, title):
     )
 ```
 
+This tutorial builds a small hospital + emergency department model using PyRenew's high-level components and `PyrenewBuilder` class to specify a `MultiSignalModel` object, then fits it to a synthetic dataset.
 
-This tutorial builds a small hospital + emergency department model using PyRenew's high-level components and `PyrenewBuilder` class to specify a `MultiSignalModel` object,
-then fits it to a synthetic dataset.
-
-We then compare this PyRenew model with the production model used to produce weekly short-term forecasts of Covid, flu, and RSV for the [CDC ensemble forecast hubs](https://
-www.cdc.gov/cfa-modeling-and-forecasting/covid19-data-vis). The production model is coded directly in NumPyro and uses a more specialized H+E ascertainment structure, so the
-comparison below is a structural comparison rather than a direct benchmark.
+We then compare this PyRenew model with the production model used to produce weekly short-term forecasts of Covid, flu, and RSV for the [CDC ensemble forecast hubs](https:// www.cdc.gov/cfa-modeling-and-forecasting/covid19-data-vis).
+The production model is coded directly in NumPyro and uses a more specialized H+E ascertainment structure, so the comparison below is a structural comparison rather than a direct benchmark.
 
 The PyRenew model has the following components:
 
@@ -244,8 +241,8 @@ We keep these components out of the tutorial model so the example can focus on t
   PyRenew's observation API accepts delay distributions as `RandomVariable` objects, so fixed delays can be replaced by inferred PMFs or custom parametric delay models, provided the sampled value is a valid fixed-length PMF.
   In this tutorial we keep the delays fixed.
 
-- **Time-varying ED ascertainment with a hospital-to-ED link**: the production H+E model uses a time-varying ED ascertainment rate and defines scalar hospital ascertainment
-  as a multiplier of the first ED ascertainment value. In this tutorial model, `JointAscertainment` instead samples two scalar rates from one joint prior.
+- **Time-varying ED ascertainment with a hospital-to-ED link**: the production H+E model uses a time-varying ED ascertainment rate and defines scalar hospital ascertainment as a multiplier of the first ED ascertainment value.
+  In this tutorial model, `JointAscertainment` instead samples two scalar rates from one joint prior.
 
 These alternatives are good candidates for model comparison and sensitivity analysis.
 One advantage of specifying the model with `PyrenewBuilder` is that closely related models can be built from the same components while changing only the feature under study: fixed versus inferred delays, scalar versus time-varying ascertainment, or renewal dynamics with versus without feedback.
@@ -299,8 +296,7 @@ The rates are modeled jointly: `baseline_rates` gives their prior centers on the
 The logit-scale representation keeps sampled rates between 0 and 1 after transformation back to the probability scale.
 
 We use a common generic baseline rate and a broad logit-scale covariance.
-The prior correlation of $0.5$ says that the two rates may differ,
-but prior draws that are high for hospital ascertainment also tend to be high for ED ascertainment.
+The prior correlation of $0.5$ says that the two rates may differ, but prior draws that are high for hospital ascertainment also tend to be high for ED ascertainment.
 
 ```python
 ascertainment_center = 0.004
@@ -805,12 +801,12 @@ print("Data-generating values (used as reference points):")
 print(f"  Initial infections per capita (I0): {true_i0:.5f}")
 print(f"  Hospital ascertainment (IHR):       {true_ihr:.5f}")
 print(f"  ED ascertainment (IEDR):            {true_iedr:.5f}")
-print(f"  IHR/IEDR:                           {true_ihr/true_iedr:.5f}")
+print(f"  IHR/IEDR:                           {true_ihr / true_iedr:.5f}")
 ```
 
-The pyrenew-H-E model learns the structure of the synthetic data rather than recovering every data-generating parameter. Its posterior $\mathcal{R}(t)$ trajectory follows the
-true falling-rising-falling pattern, and the fitted hospital and ED signals match the observations well. However, with a diffuse ascertainment prior, the absolute IHR and
-IEDR can shift away from their data-generating values because H+E observations weakly identify the absolute infection scale.
+The pyrenew-H-E model learns the structure of the synthetic data rather than recovering every data-generating parameter.
+Its posterior $\mathcal{R}(t)$ trajectory follows the true falling-rising-falling pattern, and the fitted hospital and ED signals match the observations well.
+However, with a diffuse ascertainment prior, the absolute IHR and IEDR can shift away from their data-generating values because H+E observations weakly identify the absolute infection scale.
 
 Next we inspect the estimates for $\mathcal{R}(t)$.
 
@@ -907,7 +903,6 @@ rt_plot
 
 For this synthetic example, the sampler should mix well for the core scalar parameters.
 The latent infection interval should be interpreted as a scale diagnostic, not just a coverage check: with diffuse ascertainment, uncertainty in the absolute infection-to-observation rates propagates directly into uncertainty in latent infections.
-
 
 ```{python}
 #| label: synthetic-recovery-check
@@ -1020,9 +1015,9 @@ The interval width check shows how the ascertainment uncertainty propagates into
 ```{python}
 #| label: fig-latent-infection-interval-width
 #| fig-cap: |-
-#| 
+#|
 #|   Relative posterior interval width for latent infections over the
-#| 
+#|
 #|   synthetic H+E fit.
 
 inf_relative_width = (inf_q95[:n_compare] - inf_q05[:n_compare]) / np.maximum(
