@@ -451,30 +451,6 @@ print(f"  Ratio IHR / IEDR:                   {true_ihr / true_iedr:.3f}")
 print(f"  ED visits day-of-week effects:      {true_dow_effects}")
 ```
 
-```{python}
-#| label: delay-pmf-plots
-#| layout-ncol: 2
-#| fig-height: 4
-#| fig-width: 6
-
-from IPython.display import display
-
-max_days = max(len(hosp_delay_pmf), len(ed_delay_pmf)) - 1
-x_limits = (0, max_days)
-
-plot_hosp_delay = plot_delay_distribution(
-    hosp_delay_pmf,
-    "Infection-to-Hospitalization Delay Distribution",
-) + p9.coord_cartesian(xlim=x_limits)
-plot_ed_delay = plot_delay_distribution(
-    ed_delay_pmf,
-    "Infection-to-ED Visit Delay Distribution",
-) + p9.coord_cartesian(xlim=x_limits)
-
-display(plot_hosp_delay)
-display(plot_ed_delay)
-```
-
 First we specify the latent components
 
 ```{python}
@@ -553,14 +529,6 @@ hospital_obs = PopulationCounts(
     start_dow=MMWR_WEEK,
 )
 
-# ed_day_of_week_rv = TransformedVariable(
-#     name="ed_day_of_week_effect",
-#     base_rv=DistributionalVariable(
-#         name="ed_day_of_week_effect_raw",
-#         distribution=dist.Dirichlet(jnp.ones(7) * 5),
-#     ),
-#     transforms=transformation.AffineTransform(loc=0.0, scale=7.0),
-# )
 
 ed_day_of_week_rv = DeterministicVariable(
     "ed_day_of_week_effect",
@@ -640,6 +608,10 @@ hospital_observed = model.pad_aggregated_observations(
 
 print(f"ED observation array shape: {ed_observed.shape}")
 print(f"Hospital observation array shape: {hospital_observed.shape}")
+```
+
+```{python}
+#| label: plot-observed-data
 
 # Raw observations on a shared calendar axis
 ed_dates = pd.date_range(
@@ -811,6 +783,8 @@ pyrenew_parameter_summary
 The pyrenew-H-E model recovers the data-generating parameters.
 
 ```{python}
+#| label: print-data-generatingd-params
+
 print("Data-generating values we will try to recover:")
 print(f"  Initial infections per capita (I0): {true_i0:.5f}")
 print(f"  Hospital ascertainment (IHR):       {true_ihr:.5f}")
@@ -1169,7 +1143,6 @@ In prod-H-E, the ED ascertainment is time-varying, so we summarize both the firs
 
 ```{python}
 #| label: production-summary
-#| code-fold: false
 
 with open(model_dir / "posterior_samples.pickle", "rb") as file:
     production_mcmc = pickle.load(file)
@@ -1287,7 +1260,6 @@ Both fits are relatively slow for a small synthetic data set because H+E observa
 
 ```{python}
 #| label: runtime-comparison
-#| code-fold: false
 
 pd.DataFrame(
     [
