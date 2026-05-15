@@ -9,7 +9,7 @@ jupyter:
     text_representation:
       extension: .qmd
       format_name: quarto
-      format_version: "1.0"
+      format_version: '1.0'
       jupytext_version: 1.19.1
   kernelspec:
     display_name: Python 3 (ipykernel)
@@ -120,9 +120,15 @@ def plot_delay_distribution(delay_pmf, title):
     )
 ```
 
-This tutorial builds a small hospital + emergency department model using PyRenew's high-level components which approximates a production model used to produce weekly short-term forecasts of Covid, flu, and RSV for the [CDC ensemble forecast hubs](https://www.cdc.gov/cfa-modeling-and-forecasting/covid19-data-vis).
-The production model is coded directly in NumPyro.
-Here we use PyRenew's high-level components and `PyrenewBuilder` class to specify a model with the same core shape:
+
+This tutorial builds a small hospital + emergency department model using PyRenew's high-level components and `PyrenewBuilder` class to specify a `MultiSignalModel` object,
+then fits it to a synthetic dataset.
+
+We then compare this PyRenew model with the production model used to produce weekly short-term forecasts of Covid, flu, and RSV for the [CDC ensemble forecast hubs](https://
+www.cdc.gov/cfa-modeling-and-forecasting/covid19-data-vis). The production model is coded directly in NumPyro and uses a more specialized H+E ascertainment structure, so the
+comparison below is a structural comparison rather than a direct benchmark.
+
+The PyRenew model has the following components:
 
 - one latent population-level infection process
 - a weekly-parameterized $\mathcal{R}(t)$ process
@@ -238,9 +244,8 @@ We keep these components out of the tutorial model so the example can focus on t
   PyRenew's observation API accepts delay distributions as `RandomVariable` objects, so fixed delays can be replaced by inferred PMFs or custom parametric delay models, provided the sampled value is a valid fixed-length PMF.
   In this tutorial we keep the delays fixed.
 
-- **Time-varying ED ascertainment**: the ED visit rate can vary over time, while the hospital ascertainment rate is modeled relative to the ED rate.
-  In the tutorial model, we use `JointAscertainment` instead.
-  This relates the hospital and ED ascertainment rates through a joint prior, while keeping both rates scalar over time.
+- **Time-varying ED ascertainment with a hospital-to-ED link**: the production H+E model uses a time-varying ED ascertainment rate and defines scalar hospital ascertainment
+  as a multiplier of the first ED ascertainment value. In this tutorial model, `JointAscertainment` instead samples two scalar rates from one joint prior.
 
 These alternatives are good candidates for model comparison and sensitivity analysis.
 One advantage of specifying the model with `PyrenewBuilder` is that closely related models can be built from the same components while changing only the feature under study: fixed versus inferred delays, scalar versus time-varying ascertainment, or renewal dynamics with versus without feedback.
@@ -293,14 +298,13 @@ For each signal, the model samples a scalar ascertainment rate.
 The rates are modeled jointly: `baseline_rates` gives their prior centers on the probability scale, while `covariance_matrix` describes uncertainty and dependence on the logit scale.
 The logit-scale representation keeps sampled rates between 0 and 1 after transformation back to the probability scale.
 
-Here the prior centers are the synthetic data-generating hospital infection-hospitalization ratio and ED infection-to-ED-visit ratio.
-We choose a logit-scale standard deviation of 0.1 for both rates and a prior correlation of 0.5.
-This says that the two rates may differ, but prior draws that are high for hospital ascertainment also tend to be high for ED ascertainment.
-The small standard deviation intentionally anchors the ascertainment rates for this synthetic recovery example.
-A later sensitivity analysis can relax this prior to show how weakly identified ascertainment affects the latent infection estimates.
+We use a common generic baseline rate and a broad logit-scale covariance.
+The prior correlation of $0.5$ says that the two rates may differ,
+but prior draws that are high for hospital ascertainment also tend to be high for ED ascertainment.
 
 ```python
-ascertainment_sd = 0.1
+ascertainment_center = 0.004
+ascertainment_sd = 1.0
 ascertainment_corr = 0.5
 ascertainment_cov = jnp.array(
     [
@@ -312,7 +316,7 @@ ascertainment_cov = jnp.array(
 ascertainment = JointAscertainment(
     name="he_ascertainment",
     signals=("hospital", "ed_visits"),
-    baseline_rates=jnp.array([true_ihr, true_iedr]),
+    baseline_rates=jnp.array([ascertainment_center, ascertainment_center]),
     covariance_matrix=ascertainment_cov,
 )
 ```
@@ -443,7 +447,7 @@ print(f"Weekly hospital rows: {len(weekly_hosp)}")
 print(f"Daily ED rows: {len(daily_ed)}")
 print(f"Population size: {population_size:,.0f}")
 print()
-print("Data-generating values we will try to recover:")
+print("Data-generating values (used as reference points):")
 print(f"  Initial infections per capita (I0): {true_i0:.5f}")
 print(f"  Hospital ascertainment (IHR):       {true_ihr:.5f}")
 print(f"  ED ascertainment (IEDR):            {true_iedr:.5f}")
@@ -483,16 +487,14 @@ weekly_rt_process = WeeklyTemporalProcess(
 )
 ```
 
-Because this is a synthetic recovery example, we center the initial infection and ascertainment priors at the data-generating values and make them intentionally informative.
-A later sensitivity analysis relaxes these priors to show how the latent infection scale depends on external information about initial prevalence and ascertainment.
-
 Next we specify the joint ascertainment
 
 ```{python}
 #| code-fold: false
 #| label: joint-ascertainment
 
-ascertainment_sd = 0.1
+ascertainment_center = 0.004
+ascertainment_sd = 1.0
 ascertainment_corr = 0.5
 ascertainment_cov = jnp.array(
     [
@@ -504,7 +506,7 @@ ascertainment_cov = jnp.array(
 ascertainment = JointAscertainment(
     name="he_ascertainment",
     signals=("hospital", "ed_visits"),
-    baseline_rates=jnp.array([true_ihr, true_iedr]),
+    baseline_rates=jnp.array([ascertainment_center, ascertainment_center]),
     covariance_matrix=ascertainment_cov,
 )
 ```
@@ -736,7 +738,7 @@ pyrenew_elapsed = time.time() - start_time
 print(f"Elapsed time: {pyrenew_elapsed:.1f} seconds")
 ```
 
-We use ArviZ for a small convergence check and a synthetic-data recovery check.
+We use ArviZ for convergence checks and posterior summaries.
 The first `n_init` daily time points are initialization points, so we trim them from daily posterior quantities before summarizing or plotting.
 
 ```{python}
@@ -780,16 +782,35 @@ pyrenew_parameter_summary = az.summary(
 pyrenew_parameter_summary
 ```
 
-The pyrenew-H-E model recovers the data-generating parameters.
+```{python}
+pyrenew_ratio = (
+    idata_trimmed.posterior["he_ascertainment_hospital"]
+    / idata_trimmed.posterior["he_ascertainment_ed_visits"]
+)
+
+az.summary(
+    az.from_dict(
+        {"posterior": {"IHR_over_IEDR": pyrenew_ratio.values}},
+        sample_dims=["chain", "draw"],
+    )
+)
+```
+
+We compare the model estimates to the data-generating parameters.
 
 ```{python}
-#| label: print-data-generatingd-params
+#| label: print-data-generating-params
 
-print("Data-generating values we will try to recover:")
+print("Data-generating values (used as reference points):")
 print(f"  Initial infections per capita (I0): {true_i0:.5f}")
 print(f"  Hospital ascertainment (IHR):       {true_ihr:.5f}")
 print(f"  ED ascertainment (IEDR):            {true_iedr:.5f}")
+print(f"  IHR/IEDR:                           {true_ihr/true_iedr:.5f}")
 ```
+
+The pyrenew-H-E model learns the structure of the synthetic data rather than recovering every data-generating parameter. Its posterior $\mathcal{R}(t)$ trajectory follows the
+true falling-rising-falling pattern, and the fitted hospital and ED signals match the observations well. However, with a diffuse ascertainment prior, the absolute IHR and
+IEDR can shift away from their data-generating values because H+E observations weakly identify the absolute infection scale.
 
 Next we inspect the estimates for $\mathcal{R}(t)$.
 
@@ -885,10 +906,8 @@ rt_plot
 ```
 
 For this synthetic example, the sampler should mix well for the core scalar parameters.
-The posterior latent infection interval should contain the true synthetic infection trajectory for most timepoints; in this run, coverage may be higher than 90% because the check uses a small, temporally correlated set of timepoints.
+The latent infection interval should be interpreted as a scale diagnostic, not just a coverage check: with diffuse ascertainment, uncertainty in the absolute infection-to-observation rates propagates directly into uncertainty in latent infections.
 
-The 90% posterior interval covers the full true latent infection trajectory in this run.
-This should be interpreted together with the interval widths: the median relative width is about 33%, while uncertainty increases near the right edge of the time series.
 
 ```{python}
 #| label: synthetic-recovery-check
@@ -996,11 +1015,14 @@ plot_df["signal"] = pd.Categorical(
 
 The relative width of the posterior interval is another simple way to inspect uncertainty in the inferred latent infections.
 This scales the 90% interval width by the posterior median, so the diagnostic is not dominated by periods with larger infection counts.
+The interval width check shows how the ascertainment uncertainty propagates into latent infections.
 
 ```{python}
 #| label: fig-latent-infection-interval-width
 #| fig-cap: |-
+#| 
 #|   Relative posterior interval width for latent infections over the
+#| 
 #|   synthetic H+E fit.
 
 inf_relative_width = (inf_q95[:n_compare] - inf_q05[:n_compare]) / np.maximum(
@@ -1205,6 +1227,8 @@ production_parameter_summary
 
 The two models parameterize some quantities differently, so this table compares only the closest scalar summaries.
 For prod-H-E, ED ascertainment is time-varying; `IEDR_mean` is the posterior mean across that time-varying trajectory for each posterior draw.
+Differences from the data-generating values should not be read as a win/loss ranking.
+The PyRenew model and prod-H-E use different ascertainment structures, so this table is a compact way to compare their implied absolute scales rather than a direct test of which implementation is correct.
 
 ```{python}
 #| label: inference-comparison
@@ -1257,7 +1281,6 @@ inference_comparison
 
 The two runtimes are comparable in this synthetic example.
 They should not be interpreted as a formal benchmark because pyrenew-H-E and prod-H-E use different implementations, priors, time aggregation choices, and production-oriented components.
-Both fits are relatively slow for a small synthetic data set because H+E observations alone leave some absolute-scale quantities weakly identified.
 
 ```{python}
 #| label: runtime-comparison
@@ -1272,8 +1295,10 @@ pd.DataFrame(
 
 ### Identifiability Check
 
-The workflow tutorial explores this identifiability issue in more detail.
-The short version is that H+E observations identify the latent trajectory and the relative magnitude of the two clinical signals better than they identify the absolute infection scale.
+The comparison above points back to the main identifiability issue in H+E-only models.
+Both fits are useful diagnostics for scale and structure, not a contest between implementations.
+H+E observations identify the epidemic shape and the relative magnitude of the two clinical signals better than they identify the absolute infection scale.
+
 Here we compare the posterior distributions of the three absolute-scale quantities that matter most for H+E alone: $I_0$, IHR, and IEDR.
 For prod-H-E, IEDR is time-varying, so we use `IEDR_mean` as a scalar summary for each posterior draw.
 
@@ -1331,7 +1356,8 @@ The marginal densities show how each model places posterior mass for the absolut
 
 ```{python}
 #| label: identifiability-scale-densities
-#| fig-cap: Posterior densities for $I_0$, IHR, and IEDR under pyrenew-H-E and
+#| fig-cap: |-
+#|   Posterior densities for $I_0$, IHR, and IEDR under pyrenew-H-E and
 #|   prod-H-E. Red dashed lines mark data-generating values.
 
 (
@@ -1361,7 +1387,8 @@ The red point marks the data-generating values.
 
 ```{python}
 #| label: identifiability-ihr-iedr
-#| fig-cap: Joint posterior of hospital and ED ascertainment rates under both
+#| fig-cap: |-
+#|   Joint posterior of hospital and ED ascertainment rates under both
 #|   models.
 
 truth_asc_df = pd.DataFrame({"IHR": [true_ihr], "IEDR": [true_iedr]})
@@ -1407,3 +1434,8 @@ The ratio is the most directly interpretable relative-scale quantity for the two
 
 These plots are diagnostic rather than corrective.
 They show why external information matters: H+E data alone generally need either informative priors or another signal, such as wastewater or prevalence data, to anchor the absolute infection scale.
+
+If the PyRenew fit lies closer to the synthetic truth for some quantities, that should be interpreted in light of the data-generating process.
+The synthetic data were generated with scalar hospital and ED ascertainment rates, which is closer to the `JointAscertainment` model used here than to the production H+E model.
+The production model allows ED ascertainment to vary over time and defines hospital ascertainment through a multiplier on the first ED ascertainment value.
+Those features are useful for production forecasting, but they are additional structure relative to this simplified synthetic generator.
