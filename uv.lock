@@ -1756,6 +1756,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "scipy" },
+    { name = "xarray" },
 ]
 
 [package.metadata]
@@ -1786,6 +1787,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=6.3.0" },
     { name = "ruff", specifier = ">=0.15.0" },
     { name = "scipy", specifier = ">=1.16.1" },
+    { name = "xarray", specifier = ">=2026.4.0" },
 ]
 
 [[package]]

@@ -33,6 +33,7 @@ dev = [
     "pytest-cov>=6.3.0",
     "ruff>=0.15.0",
     "scipy>=1.16.1",
+    "xarray>=2026.4.0",
 ]
 
 [build-system]
@@ -71,10 +72,11 @@ exclude = [  # don't report on objects that match any of these regex
 
 
 [tool.deptry]
-known_first_party = ["pyrenew", "test"]
+known_first_party = ["pyrenew", "test", "_tutorial_theme"]
 
 [tool.deptry.per_rule_ignores]
-DEP004 = ["arviz", "pytest", "scipy", "bs4"]
+DEP001 = ["pipelines"]
+DEP004 = ["arviz", "pytest", "scipy", "bs4", "pandas", "plotnine", "xarray"]
 
 [tool.pytest.ini_options]
 markers = [
