@@ -1,5 +1,5 @@
 ---
-title: Multi-signal Model for Weekly Hospital and Daily ED Data 
+title: Multi-signal Model for Weekly Hospital and Daily ED Data
 format:
   gfm:
     code-fold: true
