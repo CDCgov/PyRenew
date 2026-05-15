@@ -1154,6 +1154,7 @@ production_idata = az.from_dict(
     sample_dims=["chain", "draw"],
 )
 
+
 def get_posterior_variable(posterior, candidates):
     for name in candidates:
         if name in posterior.data_vars:
