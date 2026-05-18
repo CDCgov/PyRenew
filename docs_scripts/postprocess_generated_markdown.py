@@ -35,7 +35,7 @@ def _add_alt_text_paragraphs(soup: BeautifulSoup) -> None:  # numpydoc ignore=GL
         img.insert_after(caption)
 
 
-def add_markdown_to_divs(html: str) -> str:  # numpydoc ignore=GL08
+def postprocess_generated_markdown(html: str) -> str:  # numpydoc ignore=GL08
     soup = BeautifulSoup(html, "html.parser")
     for div in soup.find_all("div"):
         if "markdown" not in div.attrs:
@@ -51,12 +51,12 @@ if __name__ == "__main__":
     target = Path(sys.argv[1])
     if target.is_file():
         text = target.read_text(encoding="utf-8")
-        updated = add_markdown_to_divs(text)
+        updated = postprocess_generated_markdown(text)
         target.write_text(updated, encoding="utf-8")
         print(f"Processed {target}")
     elif target.is_dir():
         for f in target.rglob("*.md"):
             text = f.read_text(encoding="utf-8")
-            updated = add_markdown_to_divs(text)
+            updated = postprocess_generated_markdown(text)
             f.write_text(updated, encoding="utf-8")
             print(f"Processed {f}")
