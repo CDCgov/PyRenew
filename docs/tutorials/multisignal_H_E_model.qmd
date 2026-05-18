@@ -183,7 +183,7 @@ flowchart TB
 The components are:
 
 - **Latent infections**: `PopulationInfections` produces a single aggregate infection trajectory.
-- **$\mathcal{R}(t)$ process**: `WeeklyTemporalProcess` samples weekly values and broadcasts them to the daily renewal equation.
+- **$\mathcal{R}(t)$process**: `WeeklyTemporalProcess` samples weekly values and broadcasts them to the daily renewal equation.
 - **Ascertainment**: `JointAscertainment` samples scalar hospital and ED ascertainment rates from one joint prior.
 - **Hospital observation**: `PopulationCounts` scores weekly hospital totals.
 - **ED observation**: `PopulationCounts` scores daily ED counts and includes a day-of-week effect.
@@ -1001,7 +1001,7 @@ rt_plot = (
 rt_plot
 ```
 
-$\mathcal{R}(t)$  is useful as a companion to latent infections because it focuses on epidemic shape rather than absolute infection scale.
+$\mathcal{R}(t)$ is useful as a companion to latent infections because it focuses on epidemic shape rather than absolute infection scale.
 The plot below compares Rt across all three models against the synthetic data-generating Rt trajectory.
 The dashed black line is the synthetic truth, and the gray horizontal line marks Rt = 1.
 
