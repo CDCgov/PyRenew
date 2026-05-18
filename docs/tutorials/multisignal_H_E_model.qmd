@@ -311,7 +311,7 @@ ed_day_of_week_rv = TransformedVariable(
 )
 ```
 
-The ED visit observaton process is defined as follows:
+The ED visit observation process is defined as follows:
 
 ```python
 ed_obs = PopulationCounts(
@@ -612,12 +612,12 @@ raw_obs_plot = (
     )
     + theme_tutorial
     + p9.theme(
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 
 raw_obs_plot
@@ -986,12 +986,12 @@ rt_plot = (
     )
     + theme_tutorial
     + p9.theme(
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 
 rt_plot
@@ -1075,13 +1075,13 @@ rt_comparison_df = pd.concat(rt_comparison_parts, ignore_index=True)
     )
     + theme_tutorial
     + p9.theme(
-          figure_size=(8, 10),
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        figure_size=(8, 10),
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 ```
 *Figure: Posterior Rt under the two PyRenew parameterizations and custom-H-E.
@@ -1193,13 +1193,13 @@ plot_df["signal"] = pd.Categorical(
     )
     + theme_tutorial
     + p9.theme(
-          figure_size=(8, 10),
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        figure_size=(8, 10),
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 ```
 
@@ -1273,12 +1273,12 @@ We compare the relative width of the posterior interval across all three models.
     )
     + theme_tutorial
     + p9.theme(
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 ```
 *Figure: Relative posterior interval width for latent infections over the synthetic H+E fit.*
@@ -1539,12 +1539,12 @@ linked_ratio_density_df = pd.concat(
     )
     + theme_tutorial
     + p9.theme(
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 ```
 *Figure: Prior and posterior for the linked PyRenew IHR / IEDR multiplier.*
@@ -1675,13 +1675,13 @@ latent_width_summary.style.hide(axis="index")
     )
     + theme_tutorial
     + p9.theme(
-          figure_size=(8, 10),
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        figure_size=(8, 10),
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 ```
 *Figure: Posterior latent infections under the two PyRenew parameterizations and custom-H-E.
@@ -1704,12 +1704,12 @@ The dashed black line is the synthetic data-generating latent infection trajecto
     )
     + theme_tutorial
     + p9.theme(
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 ```
 *Figure: Posterior uncertainty intervals over infections under the two PyRenew parameterizations and custom-H-E.*
@@ -1935,12 +1935,12 @@ The marginal densities show how each model places posterior mass for the absolut
     )
     + theme_tutorial
     + p9.theme(
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 ```
 *Figure: Posterior densities for $I_0$, IHR, and IEDR under all three models.
@@ -1992,12 +1992,12 @@ This plot checks whether each model captures the data-generating IHR / IEDR rela
     )
     + theme_tutorial
     + p9.theme(
-          text=p9.element_text(size=16),
-          plot_title=p9.element_text(size=18, weight="bold"),
-          axis_title=p9.element_text(size=15),
-          axis_text=p9.element_text(size=13),
-          strip_text=p9.element_text(size=14),
-      )
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
 )
 ```
 *Figure: Posterior distribution of the IHR / IEDR ratio under all three models.*
