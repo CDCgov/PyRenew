@@ -124,7 +124,7 @@ def plot_delay_distribution(delay_pmf, title):
     )
 ```
 
-This tutorial builds a small hospital + emergency department model using PyRenew's high-level components and `PyrenewBuilder` class to specify a `MultiSignalModel` object, then fits it to a synthetic dataset.
+This tutorial builds a small hospital (H) + emergency department (E) model using PyRenew's high-level components and `PyrenewBuilder` class to specify a `MultiSignalModel` object, then fits it to a synthetic dataset.
 
 We then compare this PyRenew model with a custom H+E model coded directly in NumPyro.
 The custom model uses a more specialized H+E ascertainment structure, so the comparison below is a structural comparison rather than a direct benchmark.
@@ -264,7 +264,7 @@ The `PyrenewBuilder` object's `configure_latent` method handles configuration of
 It requires the following:
 
 - **Generation interval**: PMF for secondary infection timing.
-- **Initial conditions ($I(0)$ and $\log(\mathcal{R}(0))$)**: Infection prevalence at time $0$ as a proportion of the population, and the starting point of the $\log(\mathcal{R}(t))$ trajectory.
+- **Initial conditions ($I(0)$ and $\log(\mathcal{R}(0))$)**: Infection incidence at time $0$ as a proportion of the population, and the starting point of the $\log(\mathcal{R}(t))$ trajectory.
 - **Temporal dynamics**: How $\mathcal{R}(t)$ evolves over time.
 
 We use the same seven-day generation interval PMF used to generate the synthetic data; this PMF also matches the default/test-data parameterization used in the H+E pipeline.
@@ -1001,7 +1001,7 @@ rt_plot = (
 rt_plot
 ```
 
-Rt is useful as a companion to latent infections because it focuses on epidemic shape rather than absolute infection scale.
+$\mathcal{R}(t)$ is useful as a companion to latent infections because it focuses on epidemic shape rather than absolute infection scale.
 The plot below compares Rt across all three models against the synthetic data-generating Rt trajectory.
 The dashed black line is the synthetic truth, and the gray horizontal line marks Rt = 1.
 
