@@ -420,7 +420,7 @@ class CountObservation(BaseObservationProcess):
         if self.day_of_week_rv is not None:
             if first_observed_dow is None:
                 raise ValueError(
-                    "first_day_dow is required when day_of_week_rv is set."
+                    "first_observed_dow is required when day_of_week_rv is set."
                 )
             predicted_daily = self._apply_day_of_week(
                 predicted_daily, first_observed_idx, first_observed_dow
