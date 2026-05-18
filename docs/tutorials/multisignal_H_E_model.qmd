@@ -286,8 +286,7 @@ ED visits often have systematic day-of-week patterns.
 Day-to-day volumes may differ because of care-seeking behavior, clinic availability, staffing, coding, or reporting workflows.
 Those patterns are part of the observation process, not necessarily evidence that infections changed from one day to the next.
 
-The custom H+E model estimates a seven-element day-of-week multiplier using a symmetric Dirichlet prior with concentration parameter $5$ on each day, then rescales the draw by $7$ so the multipliers have mean $1$,
-encoding a mild prior belief that day-of-week effects are modest deviations from a flat week.
+The custom H+E model estimates a seven-element day-of-week multiplier using a symmetric Dirichlet prior with concentration parameter $5$ on each day, then rescales the draw by $7$ so the multipliers have mean $1$, encoding a mild prior belief that day-of-week effects are modest deviations from a flat week.
 
 In this tutorial, we fix the ED day-of-week multipliers to the synthetic data-generating values.
 This keeps the PyRenew example focused on the mixed daily/weekly H+E structure and avoids adding another weakly identified observation-process component.
@@ -895,8 +894,7 @@ posterior_comparison.round(4).style.hide(axis="index")
 ```
 
 The pyrenew-H-E model learns the structure of the synthetic data rather than recovering every data-generating parameter.
-With a diffuse ascertainment prior, the absolute IHR and IEDR can shift away from their data-generating values
-because H+E observations weakly identify the absolute infection scale.
+With a diffuse ascertainment prior, the absolute IHR and IEDR can shift away from their data-generating values because H+E observations weakly identify the absolute infection scale.
 
 Next we inspect the estimates for $\mathcal{R}(t)$.
 
@@ -1248,7 +1246,6 @@ for row in period_summary_df.itertuples(index=False):
     print(f"  {row.period}: {row.mean_relative_width:.2f}")
 ```
 
-
 We compare the relative width of the posterior interval across all three models.
 
 ```{python}
@@ -1286,15 +1283,13 @@ We compare the relative width of the posterior interval across all three models.
 ```
 *Figure: Relative posterior interval width for latent infections over the synthetic H+E fit.*
 
-
 ### Linked PyRenew Ascertainment
 
 The joint ascertainment fit above leaves substantial uncertainty in the absolute IHR and IEDR levels.
 That is expected for H+E-only data: counts constrain the relative scale of the two clinical signals more strongly than they constrain the absolute infection-to-observation rates.
 
 A linked ascertainment component makes that relative scale explicit.
-Instead of sampling hospital and ED ascertainment as two rates from one joint prior,
-it samples ED ascertainment as a base rate and samples the multiplier `IHR / IEDR` directly.
+Instead of sampling hospital and ED ascertainment as two rates from one joint prior, it samples ED ascertainment as a base rate and samples the multiplier `IHR / IEDR` directly.
 Hospital ascertainment is then computed as `IEDR * (IHR / IEDR)`.
 
 ```{python}
@@ -1689,8 +1684,8 @@ latent_width_summary.style.hide(axis="index")
       )
 )
 ```
-*Figure: Posterior latent infections under the two PyRenew parameterizations and custom-H-E. The dashed black line is the synthetic data-generating latent infection trajectory, not an observed signal used for fitting.*
-
+*Figure: Posterior latent infections under the two PyRenew parameterizations and custom-H-E.
+The dashed black line is the synthetic data-generating latent infection trajectory, not an observed signal used for fitting.*
 
 ```{python}
 #| label: linked-latent-infection-uncertainty
@@ -1718,7 +1713,6 @@ latent_width_summary.style.hide(axis="index")
 )
 ```
 *Figure: Posterior uncertainty intervals over infections under the two PyRenew parameterizations and custom-H-E.*
-
 
 The linked parameterization is a useful sensitivity analysis because it asks whether the model can learn the relative hospital-to-ED scale directly.
 It should not be interpreted as an absolute-scale fix.
@@ -1976,9 +1970,7 @@ truth_asc_df = pd.DataFrame({"IHR": [true_ihr], "IEDR": [true_iedr]})
     + theme_tutorial
 )
 ```
-*Figure: Joint posterior of hospital and ED ascertainment rates under both
-PyRenew parameterizations and custom-H-E.*
-
+*Figure: Joint posterior of hospital and ED ascertainment rates under both PyRenew parameterizations and custom-H-E.*
 
 The ratio is the most directly interpretable relative-scale quantity for the two clinical signals.
 This plot checks whether each model captures the data-generating IHR / IEDR relationship, even when the absolute IHR and IEDR scales are weakly identified.
