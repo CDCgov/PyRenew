@@ -8,7 +8,7 @@ authors = [{name = "CFA"}]
 requires-python = ">= 3.13"
 dependencies = [
     "jax>=0.7.0",
-    "numpy>=2.4.4",
+    "numpy>=2.4.5",
     "polars>=1.2.1",
     "numpyro>=0.21.0",
 ]
