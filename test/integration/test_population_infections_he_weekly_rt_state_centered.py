@@ -174,7 +174,12 @@ class TestModelFit:
         posterior_dt,
         daily_infections: pl.DataFrame,
     ) -> None:
-        """Check that R(t) 90% intervals cover truth for at least 80% of days."""
+        """Check that R(t) 90% intervals cover truth for at least 75% of days.
+
+        Weekly Rt gives only 18 independent week-level coverage outcomes,
+        so the per-seed binomial noise around a calibrated 90% CI is large
+        and an 80% threshold is unreliable at this n.
+        """
         rt_posterior = posterior_dt.posterior["PopulationInfections::rt_single"]
         rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values
         rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values
@@ -190,8 +195,8 @@ class TestModelFit:
             true_rt[:n_compare] <= rt_q95[:n_compare]
         )
         coverage = float(np.mean(covered))
-        assert coverage >= 0.80, (
-            f"R(t) 90% CI coverage was {coverage:.1%}, expected >= 80%"
+        assert coverage >= 0.75, (
+            f"R(t) 90% CI coverage was {coverage:.1%}, expected >= 75%"
         )
 
     def test_ascertainment_rates_recover_order_of_magnitude(
