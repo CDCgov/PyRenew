@@ -186,35 +186,6 @@ class MultiSignalModel(Model):
         n_init = self.latent.n_initialization_points
         return (convert_date(obs_start_date).weekday() - n_init) % 7
 
-    def _resolve_first_observed_dow(
-        self,
-        obs_start_date: dt.date | dt.datetime | np.datetime64 | None,
-    ) -> int | None:
-        """
-        Derive the observation-axis day-of-week from ``obs_start_date``.
-
-        Returns the day-of-week of the first observed day directly,
-        without the initialization-period offset that
-        ``_resolve_first_day_dow`` applies. Used to anchor reporting
-        effects (day-of-week multipliers) that should apply only to
-        observation days, not to the padded initialization period.
-
-        Parameters
-        ----------
-        obs_start_date
-            Date of the first observation day, or ``None``.
-
-        Returns
-        -------
-        int or None
-            Day-of-week index in ``{0, ..., 6}`` (0=Monday, ISO
-            convention) of the first observed day. ``None`` when
-            ``obs_start_date`` is ``None``.
-        """
-        if obs_start_date is None:
-            return None
-        return convert_date(obs_start_date).weekday()
-
     def _check_obs_start_date(
         self,
         obs_start_date: dt.date | dt.datetime | np.datetime64 | None,
@@ -395,8 +366,6 @@ class MultiSignalModel(Model):
         """
         self._check_obs_start_date(obs_start_date)
         first_day_dow = self._resolve_first_day_dow(obs_start_date)
-        first_observed_dow = self._resolve_first_observed_dow(obs_start_date)
-        first_observed_idx = self.latent.n_initialization_points
 
         # Generate latent infections (proportions)
         latent_sample = self.latent.sample(
@@ -444,8 +413,6 @@ class MultiSignalModel(Model):
                 obs_process.sample(
                     infections=latent_infections,
                     first_day_dow=first_day_dow,
-                    first_observed_idx=first_observed_idx,
-                    first_observed_dow=first_observed_dow,
                     **obs_data,
                 )
 

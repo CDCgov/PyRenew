@@ -275,45 +275,50 @@ class CountObservation(BaseObservationProcess):
     def _apply_day_of_week(
         self,
         predicted: ArrayLike,
-        first_observed_idx: int,
-        first_observed_dow: int,
+        first_day_dow: int,
     ) -> ArrayLike:
         """
         Apply day-of-week multiplicative adjustment to predicted counts.
 
-        Multiplies ``predicted[first_observed_idx:]`` by the weekday
-        cycle anchored at ``first_observed_dow``. Positions before
-        ``first_observed_idx`` (initialization / pre-observation period)
-        are left unchanged so that ``NaN`` entries in the delay-tail do
-        not feed the multiplier.
+        Multiplies the finite entries of ``predicted`` by the weekday
+        cycle anchored at ``first_day_dow``. ``NaN`` entries (the
+        delay-tail at the start of the shared time axis) are preserved
+        through the JAX "double-where" idiom: the inner product is
+        evaluated against a NaN-free surrogate so its backward
+        cotangent is finite at every position, then the outer
+        ``jnp.where`` restores ``NaN`` to its original positions in
+        the output.
 
         Parameters
         ----------
         predicted : ArrayLike
             Predicted counts. Shape: (n_timepoints,) or
             (n_timepoints, n_subpops).
-        first_observed_idx : int
-            Index on the shared time axis where the first observation
-            period begins. Positions before this index receive no
-            day-of-week adjustment.
-        first_observed_dow : int
-            Day-of-week of ``predicted[first_observed_idx]``
+        first_day_dow : int
+            Day-of-week of ``predicted[0]`` on the shared time axis
             (0=Monday, 6=Sunday, ISO convention).
 
         Returns
         -------
         ArrayLike
             Adjusted predicted counts, same shape as input.
+
+        Notes
+        -----
+        See https://docs.jax.dev/en/latest/faq.html#gradients-contain-nan-where-using-where
+        for the double-where pattern.
         """
         dow_effect = self.day_of_week_rv()
         self._deterministic("day_of_week_effect", dow_effect)
-        n_obs_days = predicted.shape[0] - first_observed_idx
-        obs_effect = dow_effect[
-            get_sequential_day_of_week_indices(first_observed_dow, n_obs_days)
+        n_timepoints = predicted.shape[0]
+        daily_effect = dow_effect[
+            get_sequential_day_of_week_indices(first_day_dow, n_timepoints)
         ]
         if predicted.ndim == 2:
-            obs_effect = obs_effect[:, None]
-        return predicted.at[first_observed_idx:].multiply(obs_effect)
+            daily_effect = daily_effect[:, None]
+        finite_pred = ~jnp.isnan(predicted)
+        safe_predicted = jnp.where(finite_pred, predicted, 0.0)
+        return jnp.where(finite_pred, safe_predicted * daily_effect, predicted)
 
     def _aggregate(
         self,
@@ -368,8 +373,6 @@ class CountObservation(BaseObservationProcess):
         infections: ArrayLike,
         first_day_dow: int | None,
         right_truncation_offset: int | None,
-        first_observed_idx: int = 0,
-        first_observed_dow: int | None = None,
     ) -> ArrayLike:
         """
         Build the predicted counts on the reporting-period grid.
@@ -388,20 +391,12 @@ class CountObservation(BaseObservationProcess):
         first_day_dow
             Day-of-week index of element 0 of the shared time axis
             (0=Monday, 6=Sunday, ISO convention). Required when
+            ``day_of_week_rv`` was set at construction or when
             ``aggregation == "weekly"``.
         right_truncation_offset
             If set (together with ``right_truncation_rv``), the
             number of additional reporting days that have occurred
             since the last observation.
-        first_observed_idx
-            Index on the shared time axis where the first observation
-            period begins. The day-of-week effect is applied only to
-            positions ``[first_observed_idx:]``. Defaults to ``0`` for
-            unpadded direct callers.
-        first_observed_dow
-            Day-of-week of ``predicted[first_observed_idx]``
-            (0=Monday, 6=Sunday, ISO convention). Required when
-            ``day_of_week_rv`` was set at construction.
 
         Returns
         -------
@@ -413,18 +408,16 @@ class CountObservation(BaseObservationProcess):
         Raises
         ------
         ValueError
-            If ``day_of_week_rv`` was set but ``first_observed_dow``
-            is ``None``.
+            If ``day_of_week_rv`` was set but ``first_day_dow`` is
+            ``None``.
         """
         predicted_daily = self._predicted_obs(infections)
         if self.day_of_week_rv is not None:
-            if first_observed_dow is None:
+            if first_day_dow is None:
                 raise ValueError(
-                    "first_observed_dow is required when day_of_week_rv is set."
+                    "first_day_dow is required when day_of_week_rv is set."
                 )
-            predicted_daily = self._apply_day_of_week(
-                predicted_daily, first_observed_idx, first_observed_dow
-            )
+            predicted_daily = self._apply_day_of_week(predicted_daily, first_day_dow)
         if self.right_truncation_rv is not None and right_truncation_offset is not None:
             predicted_daily = self._apply_right_truncation(
                 predicted_daily, right_truncation_offset
@@ -673,8 +666,6 @@ class PopulationCounts(CountObservation):
         right_truncation_offset: int | None = None,
         first_day_dow: int | None = None,
         period_end_times: ArrayLike | None = None,
-        first_observed_idx: int | None = None,
-        first_observed_dow: int | None = None,
     ) -> ObservationSample:
         """
         Sample aggregated counts.
@@ -709,28 +700,15 @@ class PopulationCounts(CountObservation):
             construction), apply right-truncation adjustment to the
             daily predictions.
         first_day_dow
-            Day-of-week index of element 0 of the shared time axis
-            (0=Monday, 6=Sunday, ISO convention). Required when
-            ``aggregation == "weekly"``; also serves as the
-            backwards-compatible day-of-week anchor for direct
-            callers without padding (used as ``first_observed_dow``
-            when the latter is not supplied).
+            Day-of-week index of the first timepoint on the shared
+            time axis (0=Monday, 6=Sunday, ISO convention). Required
+            when ``day_of_week_rv`` was set at construction or when
+            ``aggregation == "weekly"``. This aligns observation-level
+            day-of-week effects or weekly aggregation to the shared daily
+            model axis.
         period_end_times
             Daily-axis indices of each observed period's final day.
             Required when ``reporting_schedule == "irregular"``.
-        first_observed_idx
-            Index on the shared time axis where the first observation
-            period begins. Day-of-week effects are applied only to
-            positions ``[first_observed_idx:]``. Supplied by
-            ``MultiSignalModel`` as ``n_initialization_points``.
-            Defaults to ``0`` for direct callers without padding.
-        first_observed_dow
-            Day-of-week of the first observed period
-            (0=Monday, 6=Sunday, ISO convention). Required when
-            ``day_of_week_rv`` was set at construction. Supplied by
-            ``MultiSignalModel`` as ``obs_start_date.weekday()``.
-            When not supplied, falls back to ``first_day_dow`` for
-            backwards compatibility with direct unpadded callers.
 
         Returns
         -------
@@ -740,16 +718,8 @@ class PopulationCounts(CountObservation):
             grid; equal to daily predictions when
             ``aggregation == "daily"``).
         """
-        if first_observed_idx is None:
-            first_observed_idx = 0
-        if first_observed_dow is None:
-            first_observed_dow = first_day_dow
         predicted = self._compute_predicted(
-            infections,
-            first_day_dow,
-            right_truncation_offset,
-            first_observed_idx=first_observed_idx,
-            first_observed_dow=first_observed_dow,
+            infections, first_day_dow, right_truncation_offset
         )
 
         if self.reporting_schedule == "regular":
@@ -933,8 +903,6 @@ class SubpopulationCounts(CountObservation):
         first_day_dow: int | None = None,
         period_end_times: ArrayLike | None = None,
         subpop_indices: ArrayLike | None = None,
-        first_observed_idx: int | None = None,
-        first_observed_dow: int | None = None,
     ) -> ObservationSample:
         """
         Sample subpopulation-level counts.
@@ -970,11 +938,12 @@ class SubpopulationCounts(CountObservation):
             construction), apply right-truncation adjustment to the
             daily predictions.
         first_day_dow
-            Day-of-week index of element 0 of the shared time axis
-            (0=Monday, 6=Sunday, ISO convention). Required when
-            ``aggregation == "weekly"``; also serves as the
-            backwards-compatible day-of-week anchor for direct
-            callers without padding.
+            Day-of-week index of the first timepoint on the shared
+            time axis (0=Monday, 6=Sunday, ISO convention). Required
+            when ``day_of_week_rv`` was set at construction or when
+            ``aggregation == "weekly"``. This aligns observation-level
+            day-of-week effects or weekly aggregation to the shared daily
+            model axis.
         period_end_times
             Daily-axis indices of each observed period's final day.
             Required when ``reporting_schedule == "irregular"``.
@@ -985,18 +954,6 @@ class SubpopulationCounts(CountObservation):
             columns of the aggregated array enter the likelihood.
             For ``reporting_schedule="irregular"``: shape ``(n_obs,)``
             with one subpopulation per observation.
-        first_observed_idx
-            Index on the shared time axis where the first observation
-            period begins. Day-of-week effects are applied only to
-            positions ``[first_observed_idx:]``. Supplied by
-            ``MultiSignalModel`` as ``n_initialization_points``.
-            Defaults to ``0`` for direct callers without padding.
-        first_observed_dow
-            Day-of-week of the first observed period
-            (0=Monday, 6=Sunday, ISO convention). Required when
-            ``day_of_week_rv`` was set at construction. Supplied by
-            ``MultiSignalModel`` as ``obs_start_date.weekday()``.
-            When not supplied, falls back to ``first_day_dow``.
 
         Returns
         -------
@@ -1009,16 +966,8 @@ class SubpopulationCounts(CountObservation):
         if subpop_indices is None:
             raise ValueError(f"Observation '{self.name}': subpop_indices is required.")
 
-        if first_observed_idx is None:
-            first_observed_idx = 0
-        if first_observed_dow is None:
-            first_observed_dow = first_day_dow
         predicted = self._compute_predicted(
-            infections,
-            first_day_dow,
-            right_truncation_offset,
-            first_observed_idx=first_observed_idx,
-            first_observed_dow=first_observed_dow,
+            infections, first_day_dow, right_truncation_offset
         )
 
         if self.reporting_schedule == "regular":

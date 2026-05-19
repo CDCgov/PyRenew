@@ -610,7 +610,7 @@ class TestDayOfWeek:
         infections = jnp.ones(20) * 1000
 
         with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(ValueError, match="first_observed_dow is required"):
+            with pytest.raises(ValueError, match="first_day_dow is required"):
                 process.sample(infections=infections, obs=None, first_day_dow=None)
 
     def test_uniform_dow_effect_unchanged(self, simple_delay_pmf):
@@ -856,7 +856,7 @@ class TestDayOfWeek:
         subpop_indices = jnp.array([0, 1])
 
         with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(ValueError, match="first_observed_dow is required"):
+            with pytest.raises(ValueError, match="first_day_dow is required"):
                 process.sample(
                     infections=infections,
                     period_end_times=period_end_times,
@@ -1651,17 +1651,20 @@ class TestScoreMaskedSafeObs:
         assert jnp.all(jnp.isfinite(grad))
 
 
-class TestDayOfWeekObservationAxis:
+class TestDayOfWeekNanGradientSafety:
     """
-    Tests for applying the day-of-week effect on the observation axis.
+    Tests for gradient-safe handling of the delay-tail NaN region.
 
-    Issue #824: the day-of-week multiplier must apply only to
-    positions at and after the first observed day, not across the
-    padded initialization period. Multiplying through the delay-tail
-    NaN region of ``predicted`` produces a second ``0 * NaN = NaN``
-    cotangent path back to the day-of-week effect under autodiff,
-    independent of the masked-obs leak that ``TestScoreMaskedSafeObs``
-    covers.
+    Issue #824: a multi-day delay PMF leaves
+    ``predicted[:len(delay_pmf)-1]`` as NaN before the day-of-week
+    multiplier is applied. The previous implementation tiled the
+    multiplier across the entire array; multiplying NaN by the
+    day-of-week vector produced a NaN cotangent through ``jnp.where``
+    that leaked back to the day-of-week parameters under autodiff,
+    causing stochastic-DOW priors to diverge under NUTS. The
+    double-where pattern in ``_apply_day_of_week`` keeps the
+    multiplication gradient-safe while preserving the original NaN
+    positions in the output.
     """
 
     @staticmethod
@@ -1698,32 +1701,18 @@ class TestDayOfWeekObservationAxis:
         obs = jnp.full(n_total, value, dtype=jnp.float32)
         return obs.at[:n_init].set(jnp.nan)
 
-    def test_prefix_unchanged_by_dow_multiplier(self):
+    def test_delay_tail_nan_preserved_through_dow(self):
         """
-        Positions before ``first_observed_idx`` are not multiplied.
+        ``predicted`` NaN entries remain NaN after the multiplier runs.
 
-        Built two processes with identical setup except for the DOW
-        effect (one uniform ``ones(7)``, the other non-uniform). On
-        the observation suffix the predictions differ by the DOW
-        ratio; on the initialization prefix the predictions are
-        identical because the prefix is excluded from the multiplier.
+        The double-where idiom restores the original NaN values at the
+        delay-tail positions, regardless of the day-of-week vector.
         """
-        delay_pmf = jnp.array([1.0])
+        delay_pmf = self._multi_day_delay_pmf()
+        n_tail = delay_pmf.shape[0] - 1
         n_total = 21
-        first_observed_idx = 7
-        first_observed_dow = 0
-
-        infections = jnp.ones(n_total) * 1000.0
-
-        process_uniform = PopulationCounts(
-            name="uniform",
-            ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
-            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
-            noise=PoissonNoise(),
-            day_of_week_rv=DeterministicVariable("dow", jnp.ones(7)),
-        )
-        process_nonuniform = PopulationCounts(
-            name="nonuniform",
+        process = PopulationCounts(
+            name="test",
             ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
             delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
             noise=PoissonNoise(),
@@ -1731,129 +1720,39 @@ class TestDayOfWeekObservationAxis:
                 "dow", jnp.array([2.0, 1.5, 1.0, 1.0, 0.5, 0.5, 0.5])
             ),
         )
-
-        with numpyro.handlers.seed(rng_seed=0):
-            uniform = process_uniform.sample(
-                infections=infections,
-                obs=None,
-                first_observed_idx=first_observed_idx,
-                first_observed_dow=first_observed_dow,
-            )
-        with numpyro.handlers.seed(rng_seed=0):
-            nonuniform = process_nonuniform.sample(
-                infections=infections,
-                obs=None,
-                first_observed_idx=first_observed_idx,
-                first_observed_dow=first_observed_dow,
-            )
-
-        assert jnp.allclose(
-            uniform.predicted[:first_observed_idx],
-            nonuniform.predicted[:first_observed_idx],
-        )
-        assert not jnp.allclose(
-            uniform.predicted[first_observed_idx:],
-            nonuniform.predicted[first_observed_idx:],
-        )
-
-    def test_suffix_starts_at_first_observed_dow(self):
-        """
-        The suffix multiplier starts at the supplied observed DOW.
-
-        With ``first_observed_dow=6`` (Sunday), the multiplier at
-        ``predicted[first_observed_idx]`` is ``dow_effect[6]``, the
-        next position is ``dow_effect[0]`` (Monday), and so on.
-        """
-        delay_pmf = jnp.array([1.0])
-        n_total = 14
-        first_observed_idx = 4
-        first_observed_dow = 6
-        dow_effect = jnp.array([2.0, 1.5, 1.0, 1.0, 0.5, 0.5, 3.0])
-
-        process = PopulationCounts(
-            name="test",
-            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
-            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
-            noise=PoissonNoise(),
-            day_of_week_rv=DeterministicVariable("dow", dow_effect),
-        )
-        infections = jnp.ones(n_total) * 100.0
+        infections = jnp.ones(n_total) * 1000.0
 
         with numpyro.handlers.seed(rng_seed=0):
             result = process.sample(
                 infections=infections,
                 obs=None,
-                first_observed_idx=first_observed_idx,
-                first_observed_dow=first_observed_dow,
+                first_day_dow=0,
             )
 
-        assert jnp.isclose(result.predicted[first_observed_idx], 100.0 * dow_effect[6])
-        assert jnp.isclose(
-            result.predicted[first_observed_idx + 1], 100.0 * dow_effect[0]
-        )
-        assert jnp.isclose(
-            result.predicted[first_observed_idx + 7], 100.0 * dow_effect[6]
-        )
-
-    def test_zero_offset_matches_legacy_behavior(self):
-        """
-        ``first_observed_idx=0`` reproduces the legacy "DOW across whole axis" behavior.
-
-        Direct callers that pass only ``first_day_dow`` (e.g., the
-        existing ``TestDayOfWeek`` tests) must continue to see DOW
-        applied starting at index 0 with the supplied phase.
-        """
-        delay_pmf = jnp.array([1.0])
-        n_total = 14
-        first_day_dow = 2
-        dow_effect = jnp.array([2.0, 1.5, 1.0, 0.8, 0.7, 0.5, 0.5])
-
-        process = PopulationCounts(
-            name="test",
-            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
-            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
-            noise=PoissonNoise(),
-            day_of_week_rv=DeterministicVariable("dow", dow_effect),
-        )
-        infections = jnp.ones(n_total) * 100.0
-
-        with numpyro.handlers.seed(rng_seed=0):
-            legacy = process.sample(
-                infections=infections,
-                obs=None,
-                first_day_dow=first_day_dow,
-            )
-        with numpyro.handlers.seed(rng_seed=0):
-            explicit = process.sample(
-                infections=infections,
-                obs=None,
-                first_observed_idx=0,
-                first_observed_dow=first_day_dow,
-            )
-
-        assert jnp.allclose(legacy.predicted, explicit.predicted)
+        assert jnp.all(jnp.isnan(result.predicted[:n_tail]))
+        assert jnp.all(jnp.isfinite(result.predicted[n_tail:]))
 
     def test_dow_gradient_finite_with_delay_tail_nan(self):
         """
         Gradients are finite when ``predicted`` has a NaN delay-tail.
 
-        Reproduces the issue-#824 gradient blow-up in its full form:
-        a multi-day delay PMF makes ``predicted[:len(delay)-1]`` NaN,
-        and a non-trivial ``first_observed_idx`` places the DOW
-        multiplier outside that region. Before Fix B the DOW
-        multiplier was tiled across the NaN tail and ``0 * NaN``
-        leaked NaN back to the DOW effect; after Fix B the gradient
-        is finite at every slot.
+        Reproduces the issue-#824 gradient blow-up: a multi-day delay
+        PMF makes ``predicted[:len(delay)-1]`` NaN, and the
+        day-of-week multiplier is tiled across the whole array. Before
+        the fix, ``NaN * dow_effect[i]`` at delay-tail positions
+        leaked a NaN cotangent back to ``dow_effect[i]`` through
+        ``jnp.where``. With the double-where pattern the inner
+        multiplication operates on a NaN-free surrogate, so the
+        gradient is finite at every slot.
         """
         delay_pmf = self._multi_day_delay_pmf()
         n_total = 21
-        first_observed_idx = 5
-        first_observed_dow = 0
+        n_init = 5
         infections = jnp.ones(n_total) * 1000.0
-        obs = self._padded_obs(n_total, first_observed_idx, value=5.0)
+        obs = self._padded_obs(n_total, n_init, value=5.0)
 
         def model(dow_value: jnp.ndarray) -> None:
-            """Sample with the given DOW effect on the observation suffix."""
+            """Sample with the given DOW effect over the full time axis."""
             process = PopulationCounts(
                 name="test",
                 ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
@@ -1864,8 +1763,7 @@ class TestDayOfWeekObservationAxis:
             process.sample(
                 infections=infections,
                 obs=obs,
-                first_observed_idx=first_observed_idx,
-                first_observed_dow=first_observed_dow,
+                first_day_dow=2,
             )
 
         def log_p(dow_value: jnp.ndarray) -> jnp.ndarray:
