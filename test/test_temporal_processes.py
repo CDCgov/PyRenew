@@ -20,6 +20,7 @@ from pyrenew.latent import (
 from pyrenew.latent.state_centered_distributions import (
     StateAR1,
     StateDifferencedAR1,
+    StateRandomWalk,
 )
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
@@ -63,6 +64,31 @@ INNER_PROCESS_PARAMS = [
 
 class TestStateCenteredDistributionLogProb:
     """Exact density checks for state-centered temporal-process distributions."""
+
+    def test_state_random_walk_log_prob_matches_manual_transition_sum(self):
+        """Batched StateRandomWalk log_prob equals the explicit RW transition density."""
+        scale = jnp.array([0.3, 0.7])
+        initial_loc = jnp.array([1.0, -0.5])
+        value = jnp.array(
+            [
+                [1.2, 0.6, 0.1, -0.2],
+                [-0.3, 0.4, 0.0, 0.2],
+            ]
+        )
+
+        distribution = StateRandomWalk(
+            scale=scale,
+            initial_loc=initial_loc,
+            num_steps=value.shape[-1],
+        )
+
+        full_path = jnp.concatenate([initial_loc[:, None], value], axis=-1)
+        expected = dist.Normal(full_path[:, :-1], scale[:, None]).log_prob(
+            full_path[:, 1:]
+        )
+        expected = expected.sum(axis=-1)
+
+        assert jnp.allclose(distribution.log_prob(value), expected)
 
     def test_state_ar1_log_prob_matches_manual_transition_sum(self):
         """Batched StateAR1 log_prob equals the explicit AR1 transition density."""
@@ -655,6 +681,29 @@ class TestStateCenteredRandomWalk:
         ).get_trace(n_timepoints=8, n_processes=2, name_prefix="rw")
         assert "rw_state" in traced
         assert "rw_step" not in traced
+
+    def test_state_site_contains_actual_post_initial_states(self):
+        """The ``_state`` site stores shifted states, not zero-origin offsets."""
+        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.1), parameterization="state")
+        init = jnp.array([10.0, -10.0])
+
+        def model():
+            """Record the sampled path for comparison with the latent state site."""
+            path = rw.sample(
+                n_timepoints=6,
+                n_processes=2,
+                initial_value=init,
+                name_prefix="rw",
+            )
+            numpyro.deterministic("path", path)
+
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(model, rng_seed=0)
+        ).get_trace()
+        state_site = traced["rw_state"]["value"]
+        path = traced["path"]["value"]
+        assert state_site.shape == (2, 5)
+        assert jnp.allclose(state_site, path[1:].T)
 
     @pytest.mark.parametrize(
         "innovation_sd",

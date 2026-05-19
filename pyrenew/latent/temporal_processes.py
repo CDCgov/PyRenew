@@ -63,6 +63,7 @@ from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent.state_centered_distributions import (
     StateAR1,
     StateDifferencedAR1,
+    StateRandomWalk,
 )
 from pyrenew.metaclass import RandomVariable
 from pyrenew.process import ARProcess, DifferencedProcess
@@ -622,13 +623,16 @@ class RandomWalk(TemporalProcess):
         if n_timepoints == 1:
             return initial_value[jnp.newaxis, :]
 
-        walk_scale = jnp.broadcast_to(jnp.asarray(innovation_sd), (n_processes,))
-        walk = numpyro.sample(
+        scale_broadcast = jnp.broadcast_to(jnp.asarray(innovation_sd), (n_processes,))
+        post_init = numpyro.sample(
             f"{name_prefix}_state",
-            dist.GaussianRandomWalk(scale=walk_scale, num_steps=n_timepoints - 1),
+            StateRandomWalk(
+                scale=scale_broadcast,
+                initial_loc=initial_value,
+                num_steps=n_timepoints - 1,
+            ),
         )
-        offsets = walk + initial_value[:, jnp.newaxis]
-        x = jnp.concatenate([initial_value[:, jnp.newaxis], offsets], axis=-1)
+        x = jnp.concatenate([initial_value[:, jnp.newaxis], post_init], axis=-1)
         return x.T
 
 
