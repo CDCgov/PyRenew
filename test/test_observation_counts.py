@@ -610,7 +610,7 @@ class TestDayOfWeek:
         infections = jnp.ones(20) * 1000
 
         with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(ValueError, match="first_day_dow is required"):
+            with pytest.raises(ValueError, match="first_observed_dow is required"):
                 process.sample(infections=infections, obs=None, first_day_dow=None)
 
     def test_uniform_dow_effect_unchanged(self, simple_delay_pmf):
@@ -856,7 +856,7 @@ class TestDayOfWeek:
         subpop_indices = jnp.array([0, 1])
 
         with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(ValueError, match="first_day_dow is required"):
+            with pytest.raises(ValueError, match="first_observed_dow is required"):
                 process.sample(
                     infections=infections,
                     period_end_times=period_end_times,
