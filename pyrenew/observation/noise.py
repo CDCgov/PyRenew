@@ -207,12 +207,13 @@ class NegativeBinomialNoise(CountNoise):
         ArrayLike
             Negative Binomial-distributed counts.
         """
+        padded_mean = jnp.asarray(predicted) + jnp.finfo(float).eps
         concentration = self.concentration_rv()
         with numpyro.handlers.mask(mask=True if mask is None else mask):
             return numpyro.sample(
                 name,
                 dist.NegativeBinomial2(
-                    mean=predicted,
+                    mean=padded_mean,
                     concentration=concentration,
                 ),
                 obs=obs,

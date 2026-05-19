@@ -382,6 +382,21 @@ class TestNoiseValidation:
         with pytest.raises(ValueError, match="concentration must be positive"):
             noise.validate_concentration_rv()
 
+    def test_negative_binomial_noise_zero_mean_has_finite_log_prob(self):
+        """Test NegativeBinomialNoise yields finite log-probability at zero mean."""
+        noise = NegativeBinomialNoise(DeterministicVariable("conc", 10.0))
+        with numpyro.handlers.seed(rng_seed=223):
+            tr = numpyro.handlers.trace(
+                lambda: noise.sample(
+                    "noise_obs",
+                    predicted=jnp.array([0.0, 0.0]),
+                    obs=jnp.array([0, 0]),
+                )
+            ).get_trace()
+
+        log_prob = tr["noise_obs"]["fn"].log_prob(tr["noise_obs"]["value"])
+        assert jnp.all(jnp.isfinite(log_prob))
+
 
 class TestBaseObservationProcessValidation:
     """Test base observation process PMF validation."""

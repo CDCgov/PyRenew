@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
@@ -61,12 +62,13 @@ class NegativeBinomialObservation(RandomVariable):
         -------
         ArrayLike
         """
+        padded_mean = jnp.asarray(mu) + jnp.finfo(float).eps
         concentration = self.concentration_rv.sample()
 
         negative_binomial_sample = numpyro.sample(
             name=self.name,
             fn=dist.NegativeBinomial2(
-                mean=mu,
+                mean=padded_mean,
                 concentration=concentration,
             ),
             obs=obs,
