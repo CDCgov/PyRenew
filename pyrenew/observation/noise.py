@@ -207,6 +207,7 @@ class NegativeBinomialNoise(CountNoise):
         ArrayLike
             Negative Binomial-distributed counts.
         """
+        # NB2 log_prob can be NaN at exact zero mean; pad by epsilon for stability.
         padded_mean = jnp.asarray(predicted) + jnp.finfo(float).eps
         concentration = self.concentration_rv()
         with numpyro.handlers.mask(mask=True if mask is None else mask):
