@@ -1055,7 +1055,8 @@ rt_comparison_df = pd.concat(rt_comparison_parts, ignore_index=True)
 ```
 
 ```{python}
-#| label: all-model-rt
+#| label: fig-all-model-rt
+#| fig-cap: Posterior Rt under the two PyRenew parameterizations and custom-H-E. The dashed black line is the synthetic data-generating Rt trajectory.
 
 (
     p9.ggplot(rt_comparison_df, p9.aes(x="day"))
@@ -1084,8 +1085,6 @@ rt_comparison_df = pd.concat(rt_comparison_parts, ignore_index=True)
     )
 )
 ```
-*Figure: Posterior Rt under the two PyRenew parameterizations and custom-H-E.
-The dashed black line is the synthetic data-generating Rt trajectory.*
 
 The latent infection interval should be interpreted as a scale diagnostic, not just a coverage check: uncertainty in the absolute infection-to-observation rates propagates directly into uncertainty in latent infections.
 The direction of the scale trade-off is simple.
@@ -1117,7 +1116,7 @@ We visualize posterior latent infections alongside the observed hospital and ED 
 The panels use separate y-axes because latent infections, weekly hospital admissions, and daily ED visits are on different scales.
 
 ```{python}
-#| label: fig-fit-synthetic-data
+#| label: fit-synthetic-data
 
 infections_df = pd.DataFrame(
     {
@@ -1250,6 +1249,7 @@ We compare the relative width of the posterior interval across all three models.
 
 ```{python}
 #| label: fig-latent-infection-interval-width
+#| fig-cap: Relative posterior interval width for latent infections over the synthetic H+E fit.
 
 (
     p9.ggplot(ci_width_df, p9.aes(x="day", y="relative_width"))
@@ -1281,7 +1281,6 @@ We compare the relative width of the posterior interval across all three models.
     )
 )
 ```
-*Figure: Relative posterior interval width for latent infections over the synthetic H+E fit.*
 
 ### Linked PyRenew Ascertainment
 
@@ -1509,7 +1508,8 @@ sampler_diagnostics.style.hide(axis="index")
 ```
 
 ```{python}
-#| label: linked-ratio-prior-posterior
+#| label: fig-linked-ratio-prior-posterior
+#| fig-cap: Prior and posterior for the linked PyRenew IHR / IEDR multiplier.
 
 linked_ratio_post = linked_idata_trimmed.posterior["ihr_rel_iedr"].values.ravel()
 linked_prior_ratio = np.random.default_rng(42).lognormal(
@@ -1547,7 +1547,6 @@ linked_ratio_density_df = pd.concat(
     )
 )
 ```
-*Figure: Prior and posterior for the linked PyRenew IHR / IEDR multiplier.*
 
 The three models infer similar ratio values, but they do not imply the same uncertainty in the absolute latent infection scale.
 The linked parameterization improves sampler geometry for the ascertainment block in this fit, but its latent infection intervals are wider than the joint PyRenew intervals.
@@ -1655,7 +1654,8 @@ latent_width_summary.style.hide(axis="index")
 ```
 
 ```{python}
-#| label: linked-latent-infections
+#| label: fig-linked-latent-infections
+#| fig-cap: Posterior latent infections under the two PyRenew parameterizations and custom-H-E. The dashed black line is the synthetic data-generating latent infection trajectory, not an observed signal used for fitting.
 
 (
     p9.ggplot(latent_comparison_df, p9.aes(x="day"))
@@ -1684,11 +1684,10 @@ latent_width_summary.style.hide(axis="index")
     )
 )
 ```
-*Figure: Posterior latent infections under the two PyRenew parameterizations and custom-H-E.
-The dashed black line is the synthetic data-generating latent infection trajectory, not an observed signal used for fitting.*
 
 ```{python}
-#| label: linked-latent-infection-uncertainty
+#| label: fig-linked-latent-infection-uncertainty
+#| fig-cap: Posterior uncertainty intervals over infections under the two PyRenew parameterizations and custom-H-E.
 
 (
     p9.ggplot(
@@ -1712,7 +1711,6 @@ The dashed black line is the synthetic data-generating latent infection trajecto
     )
 )
 ```
-*Figure: Posterior uncertainty intervals over infections under the two PyRenew parameterizations and custom-H-E.*
 
 The linked parameterization is a useful sensitivity analysis because it asks whether the model can learn the relative hospital-to-ED scale directly.
 It should not be interpreted as an absolute-scale fix.
@@ -1913,7 +1911,8 @@ truth_scale_df = pd.DataFrame(
 The marginal densities show how each model places posterior mass for the absolute-scale quantities.
 
 ```{python}
-#| label: identifiability-scale-densities
+#| label: fig-identifiability-scale-densities
+#| fig-cap: Posterior densities for $I_0$, IHR, and IEDR under all three models. Red dashed lines mark data-generating values.
 
 (
     p9.ggplot(scale_density_df, p9.aes(x="value", fill="model", color="model"))
@@ -1943,14 +1942,13 @@ The marginal densities show how each model places posterior mass for the absolut
     )
 )
 ```
-*Figure: Posterior densities for $I_0$, IHR, and IEDR under all three models.
-Red dashed lines mark data-generating values.*
 
 The joint posterior for IHR and IEDR shows how each model constrains the two clinical ascertainment rates together.
 The red point marks the data-generating values.
 
 ```{python}
-#| label: identifiability-ihr-iedr
+#| label: fig-identifiability-ihr-iedr
+#| fig-cap: Joint posterior of hospital and ED ascertainment rates under both PyRenew parameterizations and custom-H-E.
 
 truth_asc_df = pd.DataFrame({"IHR": [true_ihr], "IEDR": [true_iedr]})
 
@@ -1970,13 +1968,13 @@ truth_asc_df = pd.DataFrame({"IHR": [true_ihr], "IEDR": [true_iedr]})
     + theme_tutorial
 )
 ```
-*Figure: Joint posterior of hospital and ED ascertainment rates under both PyRenew parameterizations and custom-H-E.*
 
 The ratio is the most directly interpretable relative-scale quantity for the two clinical signals.
 This plot checks whether each model captures the data-generating IHR / IEDR relationship, even when the absolute IHR and IEDR scales are weakly identified.
 
 ```{python}
-#| label: identifiability-ratio
+#| label: fig-identifiability-ratio
+#| fig-cap: Posterior distribution of the IHR / IEDR ratio under all three models.
 
 (
     p9.ggplot(scale_draws_df, p9.aes(x="ratio", fill="model", color="model"))
@@ -2000,7 +1998,6 @@ This plot checks whether each model captures the data-generating IHR / IEDR rela
     )
 )
 ```
-*Figure: Posterior distribution of the IHR / IEDR ratio under all three models.*
 
 All three models put the hospital-to-ED ascertainment ratio in roughly the same part of parameter space.
 That is the main quantity the H+E data can learn directly.
