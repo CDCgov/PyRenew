@@ -33,30 +33,12 @@ OBS_START_DATE = date(2023, 11, 5)
 WEEK_START_DOW = 6
 
 
-def _build_hospital_obs_on_period_grid(
+def _build_hospital_obs_on_period_grid(  # numpydoc ignore=RT01
     model: MultiSignalModel,
     weekly_values: jnp.ndarray,
     first_day_dow: int,
 ) -> jnp.ndarray:
-    """
-    Build a dense weekly-observation array on the model's period grid.
-
-    Parameters
-    ----------
-    model : MultiSignalModel
-        Built model exposing ``latent.n_initialization_points``.
-    weekly_values : jnp.ndarray
-        Observed weekly hospital admissions, one per MMWR epiweek.
-    first_day_dow : int
-        Day-of-week index of element 0 of the shared daily axis.
-
-    Returns
-    -------
-    jnp.ndarray
-        Dense array of shape ``(n_periods,)`` with NaN for unobserved
-        periods and observed counts for periods covered by
-        ``weekly_values``.
-    """
+    """Build a dense weekly-observation array on the model's period grid."""
     hosp = model.observations["hospital"]
     n_init = model.latent.n_initialization_points
     n_total = n_init + N_DAYS_FIT
@@ -66,22 +48,10 @@ def _build_hospital_obs_on_period_grid(
     return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
 
 
-def _expected_n_weekly(model: MultiSignalModel, first_day_dow: int) -> int:
-    """
-    Expected number of weekly R(t) samples for calendar-week alignment.
-
-    Parameters
-    ----------
-    model : MultiSignalModel
-        Built model exposing ``latent.n_initialization_points``.
-    first_day_dow : int
-        Day-of-week index of element 0 of the shared daily axis.
-
-    Returns
-    -------
-    int
-        Number of weekly Rt samples covering the daily model axis.
-    """
+def _expected_n_weekly(  # numpydoc ignore=RT01
+    model: MultiSignalModel, first_day_dow: int
+) -> int:
+    """Expected number of weekly R(t) samples for calendar-week alignment."""
     n_total = model.latent.n_initialization_points + N_DAYS_FIT
     trim = (first_day_dow - WEEK_START_DOW) % 7
     return (n_total + trim + 6) // 7
@@ -91,30 +61,13 @@ class TestModelFit:
     """Fit the state-centered weekly-Rt H+E model and check posterior recovery."""
 
     @pytest.fixture(scope="class")
-    def fitted_model(
+    def fitted_model(  # numpydoc ignore=RT01
         self,
         he_weekly_rt_model_state_centered: MultiSignalModel,
         weekly_hosp: pl.DataFrame,
         daily_ed: pl.DataFrame,
     ) -> MultiSignalModel:
-        """
-        Fit the state-centered weekly-Rt H+E model via MCMC.
-
-        Parameters
-        ----------
-        he_weekly_rt_model_state_centered : MultiSignalModel
-            Built model with calendar-aligned weekly Rt under
-            ``parameterization='state'``.
-        weekly_hosp : pl.DataFrame
-            Weekly hospital admissions.
-        daily_ed : pl.DataFrame
-            Daily ED visits.
-
-        Returns
-        -------
-        MultiSignalModel
-            Model with MCMC results attached.
-        """
+        """Fit the state-centered weekly-Rt H+E model via MCMC."""
         model = he_weekly_rt_model_state_centered
         first_day_dow = model._resolve_first_day_dow(OBS_START_DATE)
 
@@ -148,23 +101,11 @@ class TestModelFit:
         return model
 
     @pytest.fixture(scope="class")
-    def posterior_dt(
+    def posterior_dt(  # numpydoc ignore=RT01
         self,
         fitted_model: MultiSignalModel,
     ):
-        """
-        Convert MCMC samples to an ArviZ DataTree, trimming the init period.
-
-        Parameters
-        ----------
-        fitted_model : MultiSignalModel
-            Model with MCMC results.
-
-        Returns
-        -------
-        xarray.DataTree
-            ArviZ DataTree with posterior group, initialization period trimmed.
-        """
+        """Convert MCMC samples to an ArviZ DataTree with initialization trimmed."""
         n_init = fitted_model.latent.n_initialization_points
         dt = az.from_numpyro(
             fitted_model.mcmc,
@@ -180,21 +121,8 @@ class TestModelFit:
             },
         )
 
-        def trim_init(ds):
-            """
-            Trim the initialization period from the ``time`` dimension only.
-
-            Parameters
-            ----------
-            ds
-                Dataset to trim.
-
-            Returns
-            -------
-            xarray.Dataset
-                Dataset with ``time`` sliced to ``[n_init:]``; other dims
-                pass through unchanged.
-            """
+        def trim_init(ds):  # numpydoc ignore=RT01
+            """Trim initialization rows from datasets with a time dimension."""
             if "time" in ds.dims:
                 ds = ds.isel(time=slice(n_init, None))
                 ds = ds.assign_coords(time=range(ds.sizes["time"]))
@@ -206,14 +134,7 @@ class TestModelFit:
         self,
         posterior_dt,
     ) -> None:
-        """
-        Check that core parameters have acceptable Rhat and ESS.
-
-        Parameters
-        ----------
-        posterior_dt : xarray.DataTree
-            ArviZ DataTree with posterior group.
-        """
+        """Check that core parameters have acceptable Rhat and ESS."""
         summary = az.summary(
             posterior_dt,
             var_names=["I0", "log_rt_time_0", "ihr", "iedr"],
@@ -227,14 +148,7 @@ class TestModelFit:
         self,
         fitted_model: MultiSignalModel,
     ) -> None:
-        """
-        Confirm the fit used the state-centered path.
-
-        Parameters
-        ----------
-        fitted_model : MultiSignalModel
-            Model with MCMC results.
-        """
+        """Confirm the fit used the state-centered path."""
         samples = fitted_model.mcmc.get_samples()
         state_sites = [k for k in samples if k.endswith("_state")]
         noise_sites = [k for k in samples if k.endswith("_noise")]
@@ -248,16 +162,7 @@ class TestModelFit:
         fitted_model: MultiSignalModel,
         posterior_dt,
     ) -> None:
-        """
-        Check the weekly Rt site lives on the weekly cadence in the posterior.
-
-        Parameters
-        ----------
-        fitted_model : MultiSignalModel
-            Fitted model.
-        posterior_dt : xarray.DataTree
-            ArviZ DataTree with posterior group.
-        """
+        """Check the weekly Rt site lives on the weekly cadence."""
         first_day_dow = fitted_model._resolve_first_day_dow(OBS_START_DATE)
         n_weekly = _expected_n_weekly(fitted_model, first_day_dow)
 
@@ -269,17 +174,7 @@ class TestModelFit:
         posterior_dt,
         daily_infections: pl.DataFrame,
     ) -> None:
-        """
-        Check that the 90% credible interval for R(t) covers the true value
-        for at least 80% of time points.
-
-        Parameters
-        ----------
-        posterior_dt : xarray.DataTree
-            ArviZ DataTree with posterior group.
-        daily_infections : pl.DataFrame
-            True R(t) trajectory.
-        """
+        """Check that R(t) 90% intervals cover truth for at least 80% of days."""
         rt_posterior = posterior_dt.posterior["PopulationInfections::rt_single"]
         rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values
         rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values
@@ -304,17 +199,7 @@ class TestModelFit:
         posterior_dt,
         true_params: dict,
     ) -> None:
-        """
-        Check that posterior median IHR and IEDR are within a factor
-        of 5 of the true values.
-
-        Parameters
-        ----------
-        posterior_dt : xarray.DataTree
-            ArviZ DataTree with posterior group.
-        true_params : dict
-            Ground-truth parameter dictionary.
-        """
+        """Check posterior median IHR and IEDR are within 5x of truth."""
         true_ihr = true_params["hospitalizations"]["ihr"]
         true_iedr = true_params["ed_visits"]["iedr"]
 

@@ -17,6 +17,10 @@ from pyrenew.latent import (
     StepwiseTemporalProcess,
     WeeklyTemporalProcess,
 )
+from pyrenew.latent.state_centered_distributions import (
+    StateAR1,
+    StateDifferencedAR1,
+)
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 
@@ -55,6 +59,70 @@ INNER_PROCESS_PARAMS = [
     (DifferencedAR1, fixed_ar1_kwargs()),
     (RandomWalk, fixed_rw_kwargs()),
 ]
+
+
+class TestStateCenteredDistributionLogProb:
+    """Exact density checks for state-centered temporal-process distributions."""
+
+    def test_state_ar1_log_prob_matches_manual_transition_sum(self):
+        """Batched StateAR1 log_prob equals the explicit AR1 transition density."""
+        autoreg = jnp.array([0.4, -0.2])
+        scale = jnp.array([0.3, 0.7])
+        initial_loc = jnp.array([1.0, -0.5])
+        value = jnp.array(
+            [
+                [1.2, 0.6, 0.1, -0.2],
+                [-0.3, 0.4, 0.0, 0.2],
+            ]
+        )
+
+        distribution = StateAR1(
+            autoreg=autoreg,
+            scale=scale,
+            initial_loc=initial_loc,
+            num_steps=value.shape[-1],
+        )
+
+        stationary_sd = scale / jnp.sqrt(1 - autoreg**2)
+        init_prob = dist.Normal(initial_loc, stationary_sd).log_prob(value[:, 0])
+        transition_locs = autoreg[:, None] * value[:, :-1]
+        transition_probs = dist.Normal(transition_locs, scale[:, None]).log_prob(
+            value[:, 1:]
+        )
+        expected = init_prob + transition_probs.sum(axis=-1)
+
+        assert jnp.allclose(distribution.log_prob(value), expected)
+
+    def test_state_differenced_ar1_log_prob_matches_manual_transition_sum(self):
+        """Batched StateDifferencedAR1 log_prob equals the explicit transition density."""
+        autoreg = jnp.array([0.6, -0.3])
+        scale = jnp.array([0.2, 0.5])
+        initial_loc = jnp.array([1.0, -0.5])
+        value = jnp.array(
+            [
+                [1.1, 1.4, 1.45, 1.7],
+                [-0.6, -0.4, -0.1, -0.2],
+            ]
+        )
+
+        distribution = StateDifferencedAR1(
+            autoreg=autoreg,
+            scale=scale,
+            initial_loc=initial_loc,
+            num_steps=value.shape[-1],
+        )
+
+        stationary_sd = scale / jnp.sqrt(1 - autoreg**2)
+        init_prob = dist.Normal(initial_loc, stationary_sd).log_prob(value[:, 0])
+        full_path = jnp.concatenate([initial_loc[:, None], value], axis=-1)
+        previous_delta = full_path[:, 1:-1] - full_path[:, :-2]
+        transition_locs = full_path[:, 1:-1] + autoreg[:, None] * previous_delta
+        transition_probs = dist.Normal(transition_locs, scale[:, None]).log_prob(
+            full_path[:, 2:]
+        )
+        expected = init_prob + transition_probs.sum(axis=-1)
+
+        assert jnp.allclose(distribution.log_prob(value), expected)
 
 
 class TestTemporalProcessVectorizedSampling:

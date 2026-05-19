@@ -35,29 +35,13 @@ class TestModelFit:
     """Fit the state-centered H+E model and check posterior recovery."""
 
     @pytest.fixture(scope="class")
-    def fitted_model(
+    def fitted_model(  # numpydoc ignore=RT01
         self,
         he_model_state_centered: MultiSignalModel,
         daily_hosp: pl.DataFrame,
         daily_ed: pl.DataFrame,
     ) -> MultiSignalModel:
-        """
-        Fit the state-centered model to synthetic data via MCMC.
-
-        Parameters
-        ----------
-        he_model_state_centered : MultiSignalModel
-            State-centered H+E model fixture from ``conftest.py``.
-        daily_hosp : pl.DataFrame
-            Daily hospital admissions.
-        daily_ed : pl.DataFrame
-            Daily ED visits.
-
-        Returns
-        -------
-        MultiSignalModel
-            Model with MCMC results attached.
-        """
+        """Fit the state-centered model to synthetic data via MCMC."""
         hosp_obs = he_model_state_centered.pad_observations(
             jnp.array(daily_hosp["daily_hosp_admits"].to_numpy(), dtype=jnp.float32)
         )
@@ -84,23 +68,11 @@ class TestModelFit:
         return he_model_state_centered
 
     @pytest.fixture(scope="class")
-    def posterior_dt(
+    def posterior_dt(  # numpydoc ignore=RT01
         self,
         fitted_model: MultiSignalModel,
     ):
-        """
-        Convert MCMC samples to an ArviZ DataTree.
-
-        Parameters
-        ----------
-        fitted_model : MultiSignalModel
-            Model with MCMC results.
-
-        Returns
-        -------
-        xarray.DataTree
-            ArviZ DataTree with posterior group, initialization period trimmed.
-        """
+        """Convert MCMC samples to an ArviZ DataTree with initialization trimmed."""
         n_init = fitted_model.latent.n_initialization_points
         dt = az.from_numpyro(
             fitted_model.mcmc,
@@ -114,20 +86,8 @@ class TestModelFit:
             },
         )
 
-        def trim_init(ds):
-            """
-            Trim initialization period from time dimension.
-
-            Parameters
-            ----------
-            ds : xarray.Dataset
-                Dataset to trim.
-
-            Returns
-            -------
-            xarray.Dataset
-                Trimmed dataset.
-            """
+        def trim_init(ds):  # numpydoc ignore=RT01
+            """Trim initialization rows from datasets with a time dimension."""
             if "time" in ds.dims:
                 ds = ds.isel(time=slice(n_init, None))
                 ds = ds.assign_coords(time=range(ds.sizes["time"]))
@@ -139,14 +99,7 @@ class TestModelFit:
         self,
         posterior_dt,
     ) -> None:
-        """
-        Check that all parameters have acceptable Rhat and ESS.
-
-        Parameters
-        ----------
-        posterior_dt : xarray.DataTree
-            ArviZ DataTree with posterior group.
-        """
+        """Check that core parameters have acceptable Rhat and ESS."""
         summary = az.summary(
             posterior_dt,
             var_names=["I0", "log_rt_time_0", "ihr", "iedr"],
@@ -160,14 +113,7 @@ class TestModelFit:
         self,
         fitted_model: MultiSignalModel,
     ) -> None:
-        """
-        Confirm the fit used the state-centered path.
-
-        Parameters
-        ----------
-        fitted_model : MultiSignalModel
-            Model with MCMC results.
-        """
+        """Confirm the fit used the state-centered path."""
         samples = fitted_model.mcmc.get_samples()
         state_sites = [k for k in samples if k.endswith("_state")]
         noise_sites = [k for k in samples if k.endswith("_noise")]
@@ -181,17 +127,7 @@ class TestModelFit:
         posterior_dt,
         daily_infections: pl.DataFrame,
     ) -> None:
-        """
-        Check that 90% credible interval for R(t) covers the true value
-        for at least 80% of time points.
-
-        Parameters
-        ----------
-        posterior_dt : xarray.DataTree
-            ArviZ DataTree with posterior group.
-        daily_infections : pl.DataFrame
-            True infections and R(t) trajectory.
-        """
+        """Check that R(t) 90% intervals cover truth for at least 80% of days."""
         rt_posterior = posterior_dt.posterior["PopulationInfections::rt_single"]
         rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values
         rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values
@@ -216,14 +152,7 @@ class TestModelFit:
         self,
         posterior_dt,
     ) -> None:
-        """
-        Check posterior infection trajectory has correct shape and is positive.
-
-        Parameters
-        ----------
-        posterior_dt : xarray.DataTree
-            ArviZ DataTree with posterior group.
-        """
+        """Check posterior infection trajectory shape and positivity."""
         infections = posterior_dt.posterior["latent_infections"]
         assert infections.sizes["time"] == N_DAYS_FIT
         assert (infections.values > 0).all()
@@ -233,17 +162,7 @@ class TestModelFit:
         posterior_dt,
         true_params: dict,
     ) -> None:
-        """
-        Check that posterior median IHR and IEDR are within a factor
-        of 5 of the true values.
-
-        Parameters
-        ----------
-        posterior_dt : xarray.DataTree
-            ArviZ DataTree with posterior group.
-        true_params : dict
-            Ground-truth parameter dictionary.
-        """
+        """Check posterior median IHR and IEDR are within 5x of truth."""
         true_ihr = true_params["hospitalizations"]["ihr"]
         true_iedr = true_params["ed_visits"]["iedr"]
 
