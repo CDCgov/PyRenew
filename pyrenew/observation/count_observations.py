@@ -280,10 +280,14 @@ class CountObservation(BaseObservationProcess):
         """
         Apply day-of-week multiplicative adjustment to predicted counts.
 
-        Tiles a 7-element effect vector across the full time axis,
-        aligned to the calendar via ``first_day_dow``. NaN values
-        in the initialization period propagate unchanged (NaN * effect = NaN),
-        which is correct since masked days are excluded from the likelihood.
+        Multiplies the finite entries of ``predicted`` by the weekday
+        cycle anchored at ``first_day_dow``. ``NaN`` entries (the
+        delay-tail at the start of the shared time axis) are preserved
+        through the JAX "double-where" idiom: the inner product is
+        evaluated against a NaN-free surrogate so its backward
+        cotangent is finite at every position, then the outer
+        ``jnp.where`` restores ``NaN`` to its original positions in
+        the output.
 
         Parameters
         ----------
@@ -291,13 +295,18 @@ class CountObservation(BaseObservationProcess):
             Predicted counts. Shape: (n_timepoints,) or
             (n_timepoints, n_subpops).
         first_day_dow : int
-            Day of the week for element 0 of the time axis
+            Day-of-week of ``predicted[0]`` on the shared time axis
             (0=Monday, 6=Sunday, ISO convention).
 
         Returns
         -------
         ArrayLike
             Adjusted predicted counts, same shape as input.
+
+        Notes
+        -----
+        See https://docs.jax.dev/en/latest/faq.html#gradients-contain-nan-where-using-where
+        for the double-where pattern.
         """
         dow_effect = self.day_of_week_rv()
         self._deterministic("day_of_week_effect", dow_effect)
@@ -307,7 +316,9 @@ class CountObservation(BaseObservationProcess):
         ]
         if predicted.ndim == 2:
             daily_effect = daily_effect[:, None]
-        return predicted * daily_effect
+        finite_pred = ~jnp.isnan(predicted)
+        safe_predicted = jnp.where(finite_pred, predicted, 0.0)
+        return jnp.where(finite_pred, safe_predicted * daily_effect, predicted)
 
     def _aggregate(
         self,
@@ -462,7 +473,7 @@ class CountObservation(BaseObservationProcess):
         safe_predicted = jnp.where(jnp.isnan(predicted), 1.0, predicted)
         safe_obs = None
         if obs is not None:
-            safe_obs = jnp.where(jnp.isnan(obs), safe_predicted, obs)
+            safe_obs = jnp.where(jnp.isnan(obs), 0.0, obs)
         return self.noise.sample(
             name=self._sample_site_name("obs"),
             predicted=safe_predicted,
