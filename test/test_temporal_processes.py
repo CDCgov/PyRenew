@@ -151,6 +151,48 @@ class TestStateCenteredDistributionLogProb:
         assert jnp.allclose(distribution.log_prob(value), expected)
 
 
+class TestStateCenteredDistributionValidationAndSampling:
+    """Focused coverage for state-centered distribution validation branches."""
+
+    @pytest.mark.parametrize(
+        "distribution_cls,kwargs",
+        [
+            (StateRandomWalk, {"scale": 1.0}),
+            (StateAR1, {"autoreg": 0.5, "scale": 1.0}),
+            (StateDifferencedAR1, {"autoreg": 0.5, "scale": 1.0}),
+        ],
+    )
+    @pytest.mark.parametrize("invalid_num_steps", [0, 1.5])
+    def test_num_steps_must_be_positive_integer(
+        self, distribution_cls, kwargs, invalid_num_steps
+    ):
+        """Constructors reject non-positive and non-integer step counts."""
+        with pytest.raises(ValueError, match="num_steps must be a positive integer"):
+            distribution_cls(**kwargs, num_steps=invalid_num_steps)
+
+    def test_state_differenced_ar1_single_step_sample_matches_initial_transition(self):
+        """Single-step differenced AR(1) sampling returns only the first transition."""
+        key = jax.random.PRNGKey(43)
+        autoreg = jnp.array([0.2, -0.4])
+        scale = jnp.array([0.5, 0.25])
+        initial_loc = jnp.array([1.0, -2.0])
+
+        distribution = StateDifferencedAR1(
+            autoreg=autoreg,
+            scale=scale,
+            initial_loc=initial_loc,
+            num_steps=1,
+        )
+
+        sample = distribution.sample(key)
+        stationary_sd = scale / jnp.sqrt(1 - autoreg**2)
+        expected_noise = jax.random.normal(key, shape=(1, 2))[0]
+        expected = initial_loc + stationary_sd * expected_noise
+
+        assert sample.shape == (2, 1)
+        assert jnp.allclose(sample[:, 0], expected)
+
+
 class TestTemporalProcessVectorizedSampling:
     """Test vectorized sampling across all temporal process types."""
 
