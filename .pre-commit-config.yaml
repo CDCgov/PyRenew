@@ -27,7 +27,7 @@ repos:
   #####
   # Quarto
   - repo: https://github.com/jolars/panache-pre-commit
-    rev: v2.43.1
+    rev: v2.45.0
     hooks:
       - id: panache-format
       - id: panache-lint
