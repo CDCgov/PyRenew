@@ -175,9 +175,7 @@ def _build_pair_rows(
                 "autoreg": autoreg,
                 "wall_s_innov": innov["wall_time_s"],
                 "wall_s_state": state["wall_time_s"],
-                "wall_s_ratio": _safe_ratio(
-                    state["wall_time_s"], innov["wall_time_s"]
-                ),
+                "wall_s_ratio": _safe_ratio(state["wall_time_s"], innov["wall_time_s"]),
                 "ess_per_s_med_innov": innov["ess_per_sec_rt_median"],
                 "ess_per_s_med_state": state["ess_per_sec_rt_median"],
                 "ess_per_s_med_ratio": _safe_ratio(
@@ -231,9 +229,7 @@ def print_pairwise_tables(results: list[FitResult]) -> None:
         )
         print()
         print(f"--- {label} ---")
-        print(
-            f"{'metric':<22} {'innovation':>12} {'state':>12} {'state/innov':>12}"
-        )
+        print(f"{'metric':<22} {'innovation':>12} {'state':>12} {'state/innov':>12}")
         print("-" * 62)
         _print_metric_row(
             "Wall time (s)",
