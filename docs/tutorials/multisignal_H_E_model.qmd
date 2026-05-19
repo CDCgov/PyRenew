@@ -1056,7 +1056,8 @@ rt_comparison_df = pd.concat(rt_comparison_parts, ignore_index=True)
 
 ```{python}
 #| label: fig-all-model-rt
-#| fig-cap: Posterior Rt under the two PyRenew parameterizations and custom-H-E. The dashed black line is the synthetic data-generating Rt trajectory.
+#| fig-cap: Posterior Rt under the two PyRenew parameterizations and custom-H-E.
+#|   The dashed black line is the synthetic data-generating Rt trajectory.
 
 (
     p9.ggplot(rt_comparison_df, p9.aes(x="day"))
@@ -1249,7 +1250,8 @@ We compare the relative width of the posterior interval across all three models.
 
 ```{python}
 #| label: fig-latent-infection-interval-width
-#| fig-cap: Relative posterior interval width for latent infections over the synthetic H+E fit.
+#| fig-cap: Relative posterior interval width for latent infections over the
+#|   synthetic H+E fit.
 
 (
     p9.ggplot(ci_width_df, p9.aes(x="day", y="relative_width"))
@@ -1655,7 +1657,9 @@ latent_width_summary.style.hide(axis="index")
 
 ```{python}
 #| label: fig-linked-latent-infections
-#| fig-cap: Posterior latent infections under the two PyRenew parameterizations and custom-H-E. The dashed black line is the synthetic data-generating latent infection trajectory, not an observed signal used for fitting.
+#| fig-cap: Posterior latent infections under the two PyRenew parameterizations
+#|   and custom-H-E. The dashed black line is the synthetic data-generating
+#|   latent infection trajectory, not an observed signal used for fitting.
 
 (
     p9.ggplot(latent_comparison_df, p9.aes(x="day"))
@@ -1687,7 +1691,8 @@ latent_width_summary.style.hide(axis="index")
 
 ```{python}
 #| label: fig-linked-latent-infection-uncertainty
-#| fig-cap: Posterior uncertainty intervals over infections under the two PyRenew parameterizations and custom-H-E.
+#| fig-cap: Posterior uncertainty intervals over infections under the two
+#|   PyRenew parameterizations and custom-H-E.
 
 (
     p9.ggplot(
@@ -1912,7 +1917,8 @@ The marginal densities show how each model places posterior mass for the absolut
 
 ```{python}
 #| label: fig-identifiability-scale-densities
-#| fig-cap: Posterior densities for $I_0$, IHR, and IEDR under all three models. Red dashed lines mark data-generating values.
+#| fig-cap: Posterior densities for $I_0$, IHR, and IEDR under all three models.
+#|   Red dashed lines mark data-generating values.
 
 (
     p9.ggplot(scale_density_df, p9.aes(x="value", fill="model", color="model"))
@@ -1948,7 +1954,8 @@ The red point marks the data-generating values.
 
 ```{python}
 #| label: fig-identifiability-ihr-iedr
-#| fig-cap: Joint posterior of hospital and ED ascertainment rates under both PyRenew parameterizations and custom-H-E.
+#| fig-cap: Joint posterior of hospital and ED ascertainment rates under both
+#|   PyRenew parameterizations and custom-H-E.
 
 truth_asc_df = pd.DataFrame({"IHR": [true_ihr], "IEDR": [true_iedr]})
 
@@ -1974,7 +1981,8 @@ This plot checks whether each model captures the data-generating IHR / IEDR rela
 
 ```{python}
 #| label: fig-identifiability-ratio
-#| fig-cap: Posterior distribution of the IHR / IEDR ratio under all three models.
+#| fig-cap: Posterior distribution of the IHR / IEDR ratio under all three
+#|   models.
 
 (
     p9.ggplot(scale_draws_df, p9.aes(x="ratio", fill="model", color="model"))
