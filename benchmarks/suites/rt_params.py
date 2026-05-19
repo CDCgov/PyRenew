@@ -65,9 +65,7 @@ ALL_CANDIDATES = HE_CANDIDATES + SUBPOP_CANDIDATES
 DEFAULT_CANDIDATES = HE_CANDIDATES
 
 
-def _parse_he_candidate(
-    name: str, innovation_sd: float, autoreg: float
-) -> BuildConfig:
+def _parse_he_candidate(name: str, innovation_sd: float, autoreg: float) -> BuildConfig:
     """Parse an ``he_<cadence>_<param>`` candidate name.
 
     Returns

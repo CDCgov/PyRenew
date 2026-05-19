@@ -115,9 +115,7 @@ def compute_fit_metrics(model: MultiSignalModel, wall_time_s: float) -> FitMetri
         ess_min = float("nan")
         rhat_max = float("nan")
     else:
-        ess_values = np.asarray(
-            numpyro.diagnostics.effective_sample_size(rt)
-        ).flatten()
+        ess_values = np.asarray(numpyro.diagnostics.effective_sample_size(rt)).flatten()
         finite_ess = ess_values[np.isfinite(ess_values)]
         ess_median = float(np.median(finite_ess)) if finite_ess.size else float("nan")
         ess_min = float(np.min(finite_ess)) if finite_ess.size else float("nan")

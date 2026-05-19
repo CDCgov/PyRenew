@@ -18,7 +18,6 @@ from typing import Any, Literal
 
 import jax
 import jax.numpy as jnp
-import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 
@@ -28,7 +27,6 @@ from benchmarks.core.datasets import (
     SYNTHETIC_HE_WEEKLY_HOSPITAL,
     SyntheticProvider,
 )
-from benchmarks.core.signals import DatasetBundle
 from pyrenew.ascertainment import AscertainmentModel, JointAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
@@ -247,9 +245,7 @@ def _align_weekly_observations(
             f"Weekly observations for {signal_name!r} are longer than the "
             f"model period grid: {len(weekly_values)} > {n_periods}."
         )
-    return jnp.concatenate(
-        [jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values]
-    )
+    return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
 
 
 def build_he_model(config: BuildConfig) -> BuiltFit:
@@ -388,9 +384,7 @@ def build_subpop_hospital_wastewater_model(config: BuildConfig) -> BuiltFit:
         parameterization=config.parameterization,
     )
     subpop_deviation_process = RandomWalk(
-        innovation_sd_rv=DeterministicVariable(
-            "subpop_deviation_innovation_sd", 0.025
-        ),
+        innovation_sd_rv=DeterministicVariable("subpop_deviation_innovation_sd", 0.025),
         parameterization=config.parameterization,
     )
 

@@ -33,13 +33,11 @@ GEN_INT_PMF: jnp.ndarray = jnp.array(
     [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
 )
 
-SUBPOP_GEN_INT_PMF: jnp.ndarray = jnp.array(
-    [0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02]
-)
+SUBPOP_GEN_INT_PMF: jnp.ndarray = jnp.array([0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02])
 
-SHEDDING_PMF: jnp.ndarray = (
-    lambda raw: jnp.asarray(raw) / jnp.asarray(raw).sum()
-)([0.0, 0.02, 0.08, 0.15, 0.20, 0.18, 0.14, 0.10, 0.06, 0.04, 0.02, 0.01])
+SHEDDING_PMF: jnp.ndarray = (lambda raw: jnp.asarray(raw) / jnp.asarray(raw).sum())(
+    [0.0, 0.02, 0.08, 0.15, 0.20, 0.18, 0.14, 0.10, 0.06, 0.04, 0.02, 0.01]
+)
 
 SYNTHETIC_HE_DAILY_HOSPITAL = "synthetic_he_daily_hospital"
 SYNTHETIC_HE_WEEKLY_HOSPITAL = "synthetic_he_weekly_hospital"
@@ -97,7 +95,9 @@ def _build_synthetic_he_weekly_hospital() -> DatasetBundle:
     obs_start = date(2023, 11, 5)
     hospital = SignalSeries(
         name="hospital",
-        values=jnp.array(weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32),
+        values=jnp.array(
+            weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
+        ),
         cadence="weekly",
         start_date=obs_start,
         extras={"delay_pmf": hosp_delay_pmf, "aggregation": "weekly"},
@@ -201,9 +201,7 @@ class SyntheticProvider(DatasetProvider):
     def get(self, name: str) -> DatasetBundle:
         """Return the named dataset bundle, building and caching on first request."""
         if name not in _BUILDERS:
-            raise KeyError(
-                f"Unknown dataset {name!r}. Available: {sorted(_BUILDERS)}"
-            )
+            raise KeyError(f"Unknown dataset {name!r}. Available: {sorted(_BUILDERS)}")
         if name not in self._cache:
             self._cache[name] = _BUILDERS[name]()
         return self._cache[name]
