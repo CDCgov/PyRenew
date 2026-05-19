@@ -44,7 +44,7 @@ SYNTHETIC_HE_WEEKLY_HOSPITAL = "synthetic_he_weekly_hospital"
 SUBPOP_HOSPITAL_WASTEWATER_CA = "subpop_hospital_wastewater_ca"
 
 
-def _build_synthetic_he_daily_hospital() -> DatasetBundle:
+def _build_synthetic_he_daily_hospital() -> DatasetBundle:  # numpydoc ignore=RT01
     """Build the synthetic H+E bundle with daily hospital admissions."""
     daily_hosp = load_synthetic_daily_hospital_admissions()
     daily_ed = load_synthetic_daily_ed_visits()
@@ -81,7 +81,7 @@ def _build_synthetic_he_daily_hospital() -> DatasetBundle:
     )
 
 
-def _build_synthetic_he_weekly_hospital() -> DatasetBundle:
+def _build_synthetic_he_weekly_hospital() -> DatasetBundle:  # numpydoc ignore=RT01
     """Build the synthetic H+E bundle with weekly-aggregated hospital admissions."""
     weekly_hosp = load_synthetic_weekly_hospital_admissions()
     daily_ed = load_synthetic_daily_ed_visits()
@@ -120,7 +120,7 @@ def _build_synthetic_he_weekly_hospital() -> DatasetBundle:
     )
 
 
-def _build_subpop_hospital_wastewater_ca() -> DatasetBundle:
+def _build_subpop_hospital_wastewater_ca() -> DatasetBundle:  # numpydoc ignore=RT01
     """Build the hospital+wastewater subpopulation bundle for California."""
     hospital_data = load_hospital_data_for_state("CA", "2023-11-06.csv")
     wastewater_data = load_wastewater_data_for_state("CA", "fake_nwss.csv")
@@ -194,11 +194,11 @@ class SyntheticProvider(DatasetProvider):
         """Create an empty cache."""
         self._cache: dict[str, DatasetBundle] = {}
 
-    def list_datasets(self) -> list[str]:
+    def list_datasets(self) -> list[str]:  # numpydoc ignore=RT01
         """Return the dataset names this provider exposes."""
         return list(_BUILDERS)
 
-    def get(self, name: str) -> DatasetBundle:
+    def get(self, name: str) -> DatasetBundle:  # numpydoc ignore=RT01
         """Return the named dataset bundle, building and caching on first request."""
         if name not in _BUILDERS:
             raise KeyError(f"Unknown dataset {name!r}. Available: {sorted(_BUILDERS)}")

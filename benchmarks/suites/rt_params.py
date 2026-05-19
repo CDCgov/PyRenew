@@ -26,19 +26,23 @@ os.environ.setdefault(
     "XLA_FLAGS", f"--xla_force_host_platform_device_count={_DEFAULT_DEVICE_COUNT}"
 )
 
-import numpyro
+import numpyro  # noqa: E402
 
-from benchmarks.core.models import (
+from benchmarks.core.models import (  # noqa: E402
     BuildConfig,
     build_he_model,
     build_subpop_hospital_wastewater_model,
 )
-from benchmarks.core.reporting import (
+from benchmarks.core.reporting import (  # noqa: E402
     print_fit_progress,
     print_pairwise_tables,
     write_results,
 )
-from benchmarks.core.runner import FitResult, McmcSettings, fit_and_measure
+from benchmarks.core.runner import (  # noqa: E402
+    FitResult,
+    McmcSettings,
+    fit_and_measure,
+)
 
 SUITE_NAME = "rt_params"
 DEFAULT_OUTPUT_DIR = Path("benchmarks/results")
