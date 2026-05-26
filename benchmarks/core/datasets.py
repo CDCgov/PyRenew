@@ -23,7 +23,6 @@ from pyrenew.datasets import (
     load_example_infection_admission_interval,
     load_hospital_data_for_state,
     load_synthetic_daily_ed_visits,
-    load_synthetic_daily_hospital_admissions,
     load_synthetic_true_parameters,
     load_synthetic_weekly_hospital_admissions,
     load_wastewater_data_for_state,
@@ -39,46 +38,8 @@ SHEDDING_PMF: jnp.ndarray = (lambda raw: jnp.asarray(raw) / jnp.asarray(raw).sum
     [0.0, 0.02, 0.08, 0.15, 0.20, 0.18, 0.14, 0.10, 0.06, 0.04, 0.02, 0.01]
 )
 
-SYNTHETIC_HE_DAILY_HOSPITAL = "synthetic_he_daily_hospital"
 SYNTHETIC_HE_WEEKLY_HOSPITAL = "synthetic_he_weekly_hospital"
 SUBPOP_HOSPITAL_WASTEWATER_CA = "subpop_hospital_wastewater_ca"
-
-
-def _build_synthetic_he_daily_hospital() -> DatasetBundle:  # numpydoc ignore=RT01
-    """Build the synthetic H+E bundle with daily hospital admissions."""
-    daily_hosp = load_synthetic_daily_hospital_admissions()
-    daily_ed = load_synthetic_daily_ed_visits()
-    true_params = load_synthetic_true_parameters()
-    hosp_delay_pmf = jnp.array(
-        load_example_infection_admission_interval()["probability_mass"].to_numpy()
-    )
-    ed_delay_pmf = jnp.array(true_params["ed_visits"]["delay_pmf"])
-    ed_dow = jnp.array(true_params["ed_visits"]["day_of_week_effects"])
-
-    obs_start = date(2023, 11, 6)
-    hospital = SignalSeries(
-        name="hospital",
-        values=jnp.array(daily_hosp["daily_hosp_admits"].to_numpy(), dtype=jnp.float32),
-        cadence="daily",
-        start_date=obs_start,
-        extras={"delay_pmf": hosp_delay_pmf},
-    )
-    ed_visits = SignalSeries(
-        name="ed_visits",
-        values=jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32),
-        cadence="daily",
-        start_date=obs_start,
-        extras={"delay_pmf": ed_delay_pmf, "day_of_week_effects": ed_dow},
-    )
-    return DatasetBundle(
-        name=SYNTHETIC_HE_DAILY_HOSPITAL,
-        population_size=float(daily_hosp["pop"][0]),
-        obs_start_date=obs_start,
-        n_days_post_init=126,
-        signals={"hospital": hospital, "ed_visits": ed_visits},
-        gen_int_pmf=GEN_INT_PMF,
-        fixed_params={"i0_per_capita": true_params["i0_per_capita"]},
-    )
 
 
 def _build_synthetic_he_weekly_hospital() -> DatasetBundle:  # numpydoc ignore=RT01
@@ -177,7 +138,6 @@ def _build_subpop_hospital_wastewater_ca() -> DatasetBundle:  # numpydoc ignore=
 
 
 _BUILDERS = {
-    SYNTHETIC_HE_DAILY_HOSPITAL: _build_synthetic_he_daily_hospital,
     SYNTHETIC_HE_WEEKLY_HOSPITAL: _build_synthetic_he_weekly_hospital,
     SUBPOP_HOSPITAL_WASTEWATER_CA: _build_subpop_hospital_wastewater_ca,
 }

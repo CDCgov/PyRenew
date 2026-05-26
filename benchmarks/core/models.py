@@ -27,6 +27,8 @@ from benchmarks.core.datasets import (
     SYNTHETIC_HE_WEEKLY_HOSPITAL,
     SyntheticProvider,
 )
+from benchmarks.core.priors import real_he_ed_day_of_week_prior, real_he_i0_prior
+from benchmarks.core.signals import DatasetBundle
 from pyrenew.ascertainment import AscertainmentModel, JointAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
@@ -248,36 +250,48 @@ def _align_weekly_observations(
     return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
 
 
-def build_he_model(config: BuildConfig) -> BuiltFit:
+def build_he_model(
+    config: BuildConfig,
+    bundle: DatasetBundle | None = None,
+) -> BuiltFit:
     """Build the H+E PopulationInfections model and its run kwargs.
 
-    Always uses :data:`SYNTHETIC_HE_WEEKLY_HOSPITAL`: weekly-aggregated
+    By default, uses :data:`SYNTHETIC_HE_WEEKLY_HOSPITAL`: weekly-aggregated
     hospital reporting plus daily ED visits, matching the production-style
-    H+E setup. ``config.rt_cadence`` controls the Rt latent process cadence,
-    not the hospital observation cadence.
+    H+E setup. Callers may pass a bundle from another provider. In all cases,
+    ``config.rt_cadence`` controls the Rt latent process cadence, not the
+    hospital observation cadence.
 
     Returns
     -------
     BuiltFit
         Model and run kwargs ready for fitting.
     """
-    provider = SyntheticProvider()
-    bundle = provider.get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
+    if bundle is None:
+        bundle = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
     hospital_signal = bundle.signals["hospital"]
     ed_signal = bundle.signals["ed_visits"]
-    i0_per_capita = float(bundle.fixed_params["i0_per_capita"])
-
-    i0_rv = TransformedVariable(
-        name="I0",
-        base_rv=DistributionalVariable(
-            name="logit_I0",
-            distribution=dist.Normal(
-                transformation.SigmoidTransform().inv(i0_per_capita),
-                0.25,
+    if "i0_per_capita" in bundle.fixed_params:
+        i0_per_capita = float(bundle.fixed_params["i0_per_capita"])
+        i0_rv = TransformedVariable(
+            name="I0",
+            base_rv=DistributionalVariable(
+                name="logit_I0",
+                distribution=dist.Normal(
+                    transformation.SigmoidTransform().inv(i0_per_capita),
+                    0.25,
+                ),
             ),
-        ),
-        transforms=transformation.SigmoidTransform(),
-    )
+            transforms=transformation.SigmoidTransform(),
+        )
+    else:
+        i0_rv = real_he_i0_prior()
+    ed_right_truncation_rv = None
+    if "right_truncation_pmf" in bundle.fixed_params:
+        ed_right_truncation_rv = DeterministicPMF(
+            "ed_right_truncation",
+            bundle.fixed_params["right_truncation_pmf"],
+        )
     ascertainment = _build_he_ascertainment()
 
     builder = PyrenewBuilder()
@@ -327,12 +341,17 @@ def build_he_model(config: BuildConfig) -> BuiltFit:
             delay_distribution_rv=DeterministicPMF(
                 "ed_delay", ed_signal.extras["delay_pmf"]
             ),
+            right_truncation_rv=ed_right_truncation_rv,
             noise=NegativeBinomialNoise(
                 DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
             ),
-            day_of_week_rv=DeterministicVariable(
-                "ed_day_of_week_effect",
-                ed_signal.extras["day_of_week_effects"],
+            day_of_week_rv=(
+                DeterministicVariable(
+                    "ed_day_of_week_effect",
+                    ed_signal.extras["day_of_week_effects"],
+                )
+                if "day_of_week_effects" in ed_signal.extras
+                else real_he_ed_day_of_week_prior()
             ),
         )
     )
@@ -350,6 +369,11 @@ def build_he_model(config: BuildConfig) -> BuiltFit:
         hospital_obs = model.pad_observations(hospital_signal.values)
     ed_obs = model.pad_observations(ed_signal.values)
     hospital_kwargs["obs"] = hospital_obs
+    ed_kwargs: dict[str, Any] = {"obs": ed_obs}
+    if "right_truncation_offset" in bundle.fixed_params:
+        ed_kwargs["right_truncation_offset"] = bundle.fixed_params[
+            "right_truncation_offset"
+        ]
     return BuiltFit(
         model=model,
         run_kwargs={
@@ -357,13 +381,16 @@ def build_he_model(config: BuildConfig) -> BuiltFit:
             "population_size": bundle.population_size,
             "obs_start_date": bundle.obs_start_date,
             "hospital": hospital_kwargs,
-            "ed_visits": {"obs": ed_obs},
+            "ed_visits": ed_kwargs,
         },
         dataset_name=bundle.name,
     )
 
 
-def build_subpop_hospital_wastewater_model(config: BuildConfig) -> BuiltFit:
+def build_subpop_hospital_wastewater_model(
+    config: BuildConfig,
+    bundle: DatasetBundle | None = None,
+) -> BuiltFit:
     """Build the hospital + wastewater subpopulation model.
 
     Returns
@@ -371,8 +398,8 @@ def build_subpop_hospital_wastewater_model(config: BuildConfig) -> BuiltFit:
     BuiltFit
         Model and run kwargs ready for fitting.
     """
-    provider = SyntheticProvider()
-    bundle = provider.get(SUBPOP_HOSPITAL_WASTEWATER_CA)
+    if bundle is None:
+        bundle = SyntheticProvider().get(SUBPOP_HOSPITAL_WASTEWATER_CA)
     hospital_signal = bundle.signals["hospital"]
     wastewater_signal = bundle.signals["wastewater"]
 

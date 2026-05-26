@@ -16,8 +16,7 @@ benchmarks/
 │   ├── datasets.py     SyntheticProvider over pyrenew/datasets/
 │   ├── real_data.py    RealDataProvider over CDC NHSN + NSSP feeds
 │   ├── models.py       model builders (H+E, subpop hospital+wastewater)
-│   ├── metrics.py      ArviZ-free FitMetrics computation
-│   ├── runner.py       fit_and_measure
+│   ├── runner.py       fit_and_measure and ArviZ-free FitMetrics computation
 │   └── reporting.py    stdout tables and CSV / JSON / Markdown writers
 ├── suites/
 │   └── rt_params.py    innovation vs state Rt parameterization
@@ -48,7 +47,14 @@ python -m benchmarks.suites.rt_params \
 Useful options:
 
   | Option                                          | Effect                                                                                                                                                    |
-  | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `--data-source synthetic\                       | real`                                                                                                                                                     | Use built-in synthetic fixtures or CDC-internal real NHSN/NSSP feeds. Real data requires `cfa-stf-routine-forecasting` access and `--as-of`. |
+  | `--disease <name>`                              | Disease for `--data-source real`: `COVID-19`, `Influenza`, or `RSV`.                                                                                      |
+  | `--location <abbr>`                             | Location abbreviation for `--data-source real`, e.g. `US` or `CA`.                                                                                        |
+  | `--as-of YYYY-MM-DD`                            | Vintage date for `--data-source real`. Required for real data.                                                                                            |
+  | `--training-days N`                             | Training window length for `--data-source real`. Default: 150.                                                                                            |
+  | `--omit-last-days N`                            | Trailing days omitted from `--data-source real` to buffer right truncation. Default: 2.                                                                   |
+  | `--dry-run-data`                                | Load and summarize selected data, then exit before model fitting. Useful for checking real-data access and signal noise.                                  |
   | `--candidate <name>`                            | One candidate per use. Repeat for several. Special names: `all`, `he`, `subpop`.                                                                          |
   | `--prior <kind>`                                | `tight` (sd=0.01, autoreg=0.9), `loose` (sd=0.10, autoreg=0.5), `both`, or an explicit `sd,autoreg` pair (e.g. `0.05,0.7`). Repeatable. Default: `tight`. |
   | `--repeats N`                                   | Refit each cell `N` times with `seed + i` to estimate sampler noise.                                                                                      |
@@ -56,10 +62,48 @@ Useful options:
   | `--seed`                                        | Base seed (default 42).                                                                                                                                   |
   | `--output-dir`                                  | Where to write artifacts. Default `benchmarks/results/`.                                                                                                  |
   | `--no-write`                                    | Skip artifact files; print summary only.                                                                                                                  |
-  | `--no-x64`                                      | Disable JAX 64-bit precision (enabled by default).                                                                                                        |
 
 On import, the suite sets `XLA_FLAGS=--xla_force_host_platform_device_count=N` (where `N = min(8, os.cpu_count())`) so JAX exposes enough logical devices for parallel chains.
 If you set `XLA_FLAGS` yourself before invocation, it is honored.
+
+### Real data on CDC infrastructure
+
+Real-data mode is intended for CDC environments that can import `cfa-stf-routine-forecasting` and access the internal CDC data feeds used by `cfa.stf.data`.
+The PyRenew package does not depend on those internal packages for normal use; real-data imports happen only when `--data-source real` loads a bundle.
+
+Start with a data-only dry run:
+
+```bash
+python -m benchmarks.suites.rt_params \
+  --data-source real \
+  --disease RSV \
+  --location US \
+  --as-of 2025-01-15 \
+  --training-days 150 \
+  --omit-last-days 2 \
+  --candidate he \
+  --dry-run-data
+```
+
+This fetches NHSN weekly hospital admissions and NSSP daily ED visits, prints date ranges, missingness, and basic count summaries, then exits before model building or MCMC.
+
+Then run a smoke benchmark:
+
+```bash
+python -m benchmarks.suites.rt_params \
+  --data-source real \
+  --disease RSV \
+  --location US \
+  --as-of 2025-01-15 \
+  --training-days 150 \
+  --omit-last-days 2 \
+  --candidate he_weekly_innovation \
+  --quick
+```
+
+Real-data mode currently supports H+E candidates only.
+Subpopulation / wastewater candidates still use synthetic fixtures and are rejected with `--data-source real`.
+The H+E real-data builder uses benchmark-local priors mirroring the small production prior subset needed for initial infections and ED day-of-week effects; PMFs, right truncation, and population are pulled from the `cfa.stf` data helpers.
 
 ### Candidate names
 
