@@ -14,6 +14,7 @@ benchmarks/
 ├── core/
 │   ├── signals.py      SignalSeries, DatasetBundle, DatasetProvider
 │   ├── datasets.py     SyntheticProvider over pyrenew/datasets/
+│   ├── real_data.py    RealDataProvider over CDC NHSN + NSSP feeds
 │   ├── models.py       model builders (H+E, subpop hospital+wastewater)
 │   ├── metrics.py      ArviZ-free FitMetrics computation
 │   ├── runner.py       fit_and_measure
@@ -150,5 +151,12 @@ Production HEW pipelines treat both hyperparameters as inferred (`eta_sd ~ Trunc
 ## Wiring real data
 
 `benchmarks.core.signals.DatasetProvider` is a `Protocol`.
-Implement it for a CDC reporting source and pass the provider to a custom suite; the model builders and runner do not change.
+Implement it for a reporting source and pass the provider to a custom suite; the model builders and runner do not change.
 The expected payload is a `DatasetBundle` whose `signals` mapping carries one `SignalSeries` per observation source.
+
+`benchmarks/core/real_data.py` provides `RealDataProvider`, a concrete implementation over the CDC NHSN (weekly hospital admissions) and NSSP (daily ED visits) feeds.
+Construct it with a mapping of dataset name to `RealDataSpec` (disease, location, `as_of` vintage, training window) and request bundles by name, exactly as with `SyntheticProvider`.
+
+`RealDataProvider` reads its feeds through `cfa.stf.data` and `cfa.stf.forecasttools` (from `cfa-stf-routine-forecasting`), and requires valid Azure credentials at call time.
+PyRenew intentionally does **not** declare that package as a dependency: the `cfa.stf.*` imports live inside the provider's function bodies, so `real_data.py` imports cleanly without it and the synthetic path is unaffected.
+To use `RealDataProvider`, install `cfa-stf-routine-forecasting` into your own environment separately.
