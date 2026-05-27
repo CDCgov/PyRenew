@@ -15,6 +15,7 @@ benchmarks/
 │   ├── signals.py      SignalSeries, DatasetBundle, DatasetProvider
 │   ├── datasets.py     SyntheticProvider over pyrenew/datasets/
 │   ├── real_data.py    RealDataProvider over CDC NHSN + NSSP feeds
+│   ├── reference_data.py Static location names and populations
 │   ├── priors.py       benchmark-local priors for real-data builds
 │   ├── models.py       H+E model builder (weekly hospital + daily ED)
 │   ├── runner.py       fit_and_measure and ArviZ-free FitMetrics computation
@@ -101,7 +102,10 @@ python -m benchmarks.suites.rt_params \
   --quick
 ```
 
-The H+E real-data builder uses benchmark-local priors (`core/priors.py`) mirroring the production prior subset needed for initial infections and ED day-of-week effects; PMFs, right truncation, and population are pulled from the `cfa.stf` data helpers.
+The H+E real-data builder uses benchmark-local priors (`core/priors.py`) mirroring the production prior subset needed for initial infections and ED day-of-week effects.
+Location metadata and population totals are static benchmark inputs in `core/reference_data.py`.
+Generation interval and infection-to-observation delay PMFs are pulled from the CDC NNH parameter catalog through `cfa.stf.data`, so they remain disease-specific and vintage-aware.
+Real-data mode currently does not apply ED right truncation PMFs; use `--omit-last-days` to leave a reporting buffer.
 
 ### Output files
 
@@ -176,6 +180,7 @@ The expected payload is a `DatasetBundle` whose `signals` mapping carries one `S
 `benchmarks/core/real_data.py` provides `RealDataProvider`, a concrete implementation over the CDC NHSN (weekly hospital admissions) and NSSP (daily ED visits) feeds.
 Construct it with a mapping of dataset name to `RealDataSpec` (disease, location, `as_of` vintage, training window) and request bundles by name, exactly as with `SyntheticProvider`.
 
-`RealDataProvider` reads its feeds through `cfa.stf.data` and `cfa.stf.forecasttools` (from `cfa-stf-routine-forecasting`), and requires valid Azure credentials at call time.
-PyRenew intentionally does **not** declare that package as a dependency: the `cfa.stf.*` imports live inside the provider's function bodies, so `real_data.py` imports cleanly without it and the synthetic path is unaffected.
+`RealDataProvider` reads live H+E feeds through `cfa.stf.data` (from `cfa-stf-routine-forecasting`) and requires valid Azure credentials at call time.
+It does not call the R `forecasttools` package for benchmark setup; location names and populations come from `benchmarks/core/reference_data.py`.
+PyRenew intentionally does **not** declare `cfa-stf-routine-forecasting` as a dependency: the `cfa.stf.*` imports live inside the provider's function bodies, so `real_data.py` imports cleanly without it and the synthetic path is unaffected.
 To use `RealDataProvider`, install `cfa-stf-routine-forecasting` into your own environment separately.

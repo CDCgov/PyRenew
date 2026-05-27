@@ -14,7 +14,13 @@ import pytest
 from benchmarks.core.datasets import SYNTHETIC_HE_WEEKLY_HOSPITAL, SyntheticProvider
 from benchmarks.core.models import BuildConfig, build_he_model
 from benchmarks.core.priors import real_he_ed_day_of_week_prior, real_he_i0_prior
-from benchmarks.core.real_data import _build_ed_visits_signal, _build_hospital_signal
+from benchmarks.core.real_data import (
+    RealDataSpec,
+    _build_bundle,
+    _build_ed_visits_signal,
+    _build_hospital_signal,
+)
+from benchmarks.core.reference_data import name_for_location, population_for_location
 from benchmarks.core.reporting import aggregate_results, write_results
 from benchmarks.core.runner import FitMetrics, FitResult, McmcSettings
 from benchmarks.core.signals import DatasetBundle, SignalSeries
@@ -269,6 +275,19 @@ def test_build_he_model_wires_right_truncation_from_bundle():
     assert built.run_kwargs["ed_visits"]["right_truncation_offset"] == 1
 
 
+def test_static_reference_data_covers_real_data_locations():
+    """Static references provide benchmark-local location names and populations."""
+    assert population_for_location("US") == 341784857
+    assert population_for_location("CA") == 39355309
+    assert name_for_location("CA") == "California"
+
+
+def test_static_reference_data_rejects_unknown_values():
+    """Unknown static reference keys fail with useful errors."""
+    with pytest.raises(ValueError, match="No static population"):
+        population_for_location("XX")
+
+
 def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
     """Aggregate results average repeats and pair comparable candidates."""
     results = [
@@ -446,3 +465,88 @@ def test_real_data_hospital_signal_uses_current_nhsn_schema(monkeypatch):
     assert calls["lazy"] is False
     assert signal.start_date == date(2025, 1, 4)
     np.testing.assert_array_equal(np.asarray(signal.values), np.array([40.0, 45.0]))
+
+
+def test_real_data_bundle_uses_static_references_and_live_he_feeds(monkeypatch):
+    """Bundle setup uses local populations and live disease-specific PMFs."""
+    calls = {"nssp": 0, "nhsn": 0, "gen_int": 0, "delay": 0}
+
+    def get_nssp(**kwargs):  # numpydoc ignore=RT01
+        """Return a minimal NSSP frame for bundle construction."""
+        calls["nssp"] += 1
+        return pl.DataFrame(
+            {
+                "reference_date": [
+                    date(2025, 1, 1),
+                    date(2025, 1, 1),
+                    date(2025, 1, 2),
+                    date(2025, 1, 2),
+                ],
+                "disease": ["RSV", "Total", "RSV", "Total"],
+                "value": [10.0, 100.0, 12.0, 110.0],
+            }
+        )
+
+    def get_nhsn_hrd(**kwargs):  # numpydoc ignore=RT01
+        """Return a minimal NHSN frame for bundle construction."""
+        calls["nhsn"] += 1
+        return pl.DataFrame(
+            {
+                "weekendingdate": [date(2025, 1, 4)],
+                "hospital_admissions": [40.0],
+            }
+        )
+
+    def get_nnh_generation_interval_pmf(**kwargs):  # numpydoc ignore=RT01
+        """Return a disease-specific generation interval test PMF."""
+        calls["gen_int"] += 1
+        assert kwargs["disease"] == "RSV"
+        return [0.2, 0.8]
+
+    def get_nnh_delay_pmf(**kwargs):  # numpydoc ignore=RT01
+        """Return a disease-specific delay test PMF."""
+        calls["delay"] += 1
+        assert kwargs["disease"] == "RSV"
+        return [0.1, 0.9]
+
+    def fail_if_called(*args, **kwargs):
+        """Fail if the old R location helper call reappears."""
+        raise AssertionError("R forecasttools location helper should not be called")
+
+    monkeypatch.setitem(
+        sys.modules,
+        "cfa.stf.data",
+        types.SimpleNamespace(
+            get_nssp=get_nssp,
+            get_nhsn_hrd=get_nhsn_hrd,
+            get_nnh_delay_pmf=get_nnh_delay_pmf,
+            get_nnh_generation_interval_pmf=get_nnh_generation_interval_pmf,
+            get_nnh_right_truncation_pmf=fail_if_called,
+        ),
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "cfa.stf.forecasttools",
+        types.SimpleNamespace(get_us_loc_pop_tbl=fail_if_called),
+    )
+
+    bundle = _build_bundle(
+        "real_he",
+        RealDataSpec(
+            disease="RSV",
+            loc_abbr="CA",
+            as_of=date(2025, 1, 10),
+            n_training_days=2,
+            n_days_to_omit=0,
+        ),
+    )
+
+    assert calls == {"nssp": 1, "nhsn": 1, "gen_int": 1, "delay": 1}
+    assert bundle.population_size == 39355309
+    assert bundle.fixed_params == {}
+    assert sorted(bundle.signals) == ["ed_visits", "hospital"]
+    np.testing.assert_array_equal(np.asarray(bundle.gen_int_pmf), np.array([0.2, 0.8]))
+    np.testing.assert_array_equal(
+        np.asarray(bundle.signals["ed_visits"].extras["delay_pmf"]),
+        np.array([0.1, 0.9]),
+    )

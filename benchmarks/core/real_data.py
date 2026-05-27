@@ -4,8 +4,10 @@ Implements the :class:`DatasetProvider` protocol from
 :mod:`benchmarks.core.signals` so suites can swap a synthetic provider
 for live CDC data without changing the suite or the model builders.
 
-Requires ``cfa-stf-routine-forecasting`` and valid Azure credentials at
-call time.
+Live observations and disease-specific PMFs require
+``cfa-stf-routine-forecasting`` and valid Azure credentials at call time.
+Location populations come from :mod:`benchmarks.core.reference_data` so the
+benchmark does not call the R ``forecasttools`` package.
 """
 
 from __future__ import annotations
@@ -17,6 +19,7 @@ from typing import Literal
 import jax.numpy as jnp
 import polars as pl
 
+from benchmarks.core.reference_data import population_for_location
 from benchmarks.core.signals import (
     DatasetBundle,
     DatasetProvider,
@@ -93,33 +96,16 @@ def _build_bundle(
     name: str, spec: RealDataSpec
 ) -> DatasetBundle:  # numpydoc ignore=RT01
     """Pull raw feeds and assemble a :class:`DatasetBundle` for one spec."""
-    from cfa.stf.data import (
-        get_nnh_delay_pmf,
-        get_nnh_generation_interval_pmf,
-        get_nnh_right_truncation_pmf,
-    )
-    from cfa.stf.forecasttools import get_us_loc_pop_tbl
+    from cfa.stf.data import get_nnh_delay_pmf, get_nnh_generation_interval_pmf
 
     training_end = spec.as_of - dt.timedelta(days=1 + spec.n_days_to_omit)
     training_start = training_end - dt.timedelta(days=spec.n_training_days - 1)
 
-    population = (
-        get_us_loc_pop_tbl()
-        .filter(pl.col("abbr") == spec.loc_abbr)
-        .item(0, "population")
-    )
+    population = population_for_location(spec.loc_abbr)
     gen_int_pmf = jnp.asarray(
         get_nnh_generation_interval_pmf(disease=spec.disease, as_of=spec.as_of)
     )
     delay_pmf = jnp.asarray(get_nnh_delay_pmf(disease=spec.disease, as_of=spec.as_of))
-    right_truncation_pmf = jnp.asarray(
-        get_nnh_right_truncation_pmf(
-            disease=spec.disease,
-            loc_abb=spec.loc_abbr,
-            as_of=spec.as_of,
-        )
-    )
-    right_truncation_offset = (spec.as_of - training_end).days - 1
 
     signals: dict[str, SignalSeries] = {}
     if "ed_visits" in spec.signals:
@@ -148,10 +134,7 @@ def _build_bundle(
         n_days_post_init=spec.n_training_days,
         signals=signals,
         gen_int_pmf=gen_int_pmf,
-        fixed_params={
-            "right_truncation_pmf": right_truncation_pmf,
-            "right_truncation_offset": right_truncation_offset,
-        },
+        fixed_params={},
     )
 
 
