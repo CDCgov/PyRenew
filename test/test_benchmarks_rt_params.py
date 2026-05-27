@@ -341,7 +341,7 @@ def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
 
     assert len(pairs) == 1
     pair = pairs[0]
-    assert pair["wall_s_ratio"] == 0.5
+    assert pair["wall_s_ratio"] == 2.0
     assert pair["ess_per_s_med_ratio"] == 2.0
     assert pair["ess_per_s_min_ratio"] == 2.0
     assert pair["divergences_innov"] == 3

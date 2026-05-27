@@ -101,18 +101,24 @@ def aggregate_results(
                 "autoreg": autoreg,
                 "wall_s_innov": innovation["wall_time_s"],
                 "wall_s_state": state["wall_time_s"],
-                "wall_s_ratio": _ratio(state["wall_time_s"], innovation["wall_time_s"]),
+                "wall_s_ratio": _comparison_ratio(
+                    innovation["wall_time_s"],
+                    state["wall_time_s"],
+                    higher_is_better=False,
+                ),
                 "ess_per_s_med_innov": innovation["ess_per_sec_rt_median"],
                 "ess_per_s_med_state": state["ess_per_sec_rt_median"],
-                "ess_per_s_med_ratio": _ratio(
-                    state["ess_per_sec_rt_median"],
+                "ess_per_s_med_ratio": _comparison_ratio(
                     innovation["ess_per_sec_rt_median"],
+                    state["ess_per_sec_rt_median"],
+                    higher_is_better=True,
                 ),
                 "ess_per_s_min_innov": innovation["ess_per_sec_rt_min"],
                 "ess_per_s_min_state": state["ess_per_sec_rt_min"],
-                "ess_per_s_min_ratio": _ratio(
-                    state["ess_per_sec_rt_min"],
+                "ess_per_s_min_ratio": _comparison_ratio(
                     innovation["ess_per_sec_rt_min"],
+                    state["ess_per_sec_rt_min"],
+                    higher_is_better=True,
                 ),
                 "divergences_innov": innovation["divergences_total"],
                 "divergences_state": state["divergences_total"],
@@ -161,19 +167,22 @@ def print_pairwise_tables(results: list[FitResult]) -> None:
     for row in pairs:
         print()
         print(f"--- {row['dataset']} | innovation_sd={row['innovation_sd']:g} ---")
-        print(f"{'metric':<22} {'innovation':>12} {'state':>12} {'state/innov':>12}")
+        print(f"{'metric':<22} {'innovation':>12} {'state':>12} {'state benefit':>12}")
         print("-" * 62)
         for label, prefix, fmt, higher_is_better in metrics:
             innovation = row[f"{prefix}_innov"]
             state = row[f"{prefix}_state"]
-            ratio = row.get(f"{prefix}_ratio", _ratio(state, innovation))
+            ratio = row.get(
+                f"{prefix}_ratio",
+                _comparison_ratio(innovation, state, higher_is_better),
+            )
             print(
                 f"{label:<22} {fmt.format(innovation):>12} {fmt.format(state):>12} "
-                f"{_format_ratio(ratio, higher_is_better):>12}"
+                f"{_format_ratio(ratio):>12}"
             )
 
     print()
-    print("(* marks an improvement over innovation; ratios are state / innovation)")
+    print("(* marks state improvement over innovation; ratios > 1 favor state)")
 
 
 def write_results(
@@ -267,8 +276,8 @@ def _mean(values: Any) -> float:
     return sum(values) / len(values)
 
 
-def _ratio(state: float, innovation: float) -> float | None:
-    """Compute the state-to-innovation ratio when finite.
+def _ratio(numerator: float, denominator: float) -> float | None:
+    """Compute a ratio when finite.
 
     Returns
     -------
@@ -276,15 +285,30 @@ def _ratio(state: float, innovation: float) -> float | None:
         Ratio, or ``None`` when either input makes the ratio invalid.
     """
     if (
-        innovation == 0
-        or not math.isfinite(float(innovation))
-        or not math.isfinite(float(state))
+        denominator == 0
+        or not math.isfinite(float(denominator))
+        or not math.isfinite(float(numerator))
     ):
         return None
-    return state / innovation
+    return numerator / denominator
 
 
-def _format_ratio(ratio: float | None, higher_is_better: bool) -> str:
+def _comparison_ratio(
+    innovation: float, state: float, higher_is_better: bool
+) -> float | None:
+    """Compute a state-benefit ratio for one comparison metric.
+
+    Returns
+    -------
+    float | None
+        Ratio greater than 1 when state is better, or ``None`` when invalid.
+    """
+    if higher_is_better:
+        return _ratio(state, innovation)
+    return _ratio(innovation, state)
+
+
+def _format_ratio(ratio: float | None) -> str:
     """Format a comparison ratio for terminal tables.
 
     Returns
@@ -294,9 +318,7 @@ def _format_ratio(ratio: float | None, higher_is_better: bool) -> str:
     """
     if ratio is None:
         return "n/a"
-    improved = (higher_is_better and ratio > 1.05) or (
-        not higher_is_better and ratio < 0.95
-    )
+    improved = ratio > 1.05
     return f"{ratio:.2f}x{' *' if improved else ''}"
 
 

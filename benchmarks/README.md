@@ -120,9 +120,10 @@ Written to `--output-dir` with prefix `rt_params_`:
   | `rt_params_runs.json`      | All of the above plus a header (suite name, x64 flag, timestamp).                                                |
   | `rt_params_report.md`      | Compact Markdown report (per-parameterization table and pairwise table).                                         |
 
-Column convention: `_innov` and `_state` carry the per-side values, and `_ratio` is `state / innovation`.
-Wall-time `_ratio > 1` means state is slower.
-ESS-per-second `_ratio > 1` means state mixes faster per second.
+Column convention: `_innov` and `_state` carry the per-side values, and `_ratio` columns are state-benefit ratios.
+For higher-is-better metrics such as ESS-per-second, `_ratio` is `state / innovation`.
+For lower-is-better metrics such as wall time, `_ratio` is `innovation / state`.
+In all cases, `_ratio > 1` favors the state parameterization.
 
 ### Reading the metrics
 
