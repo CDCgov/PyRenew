@@ -21,25 +21,16 @@ from benchmarks.core.signals import (
 )
 from pyrenew.datasets import (
     load_example_infection_admission_interval,
-    load_hospital_data_for_state,
     load_synthetic_daily_ed_visits,
     load_synthetic_true_parameters,
     load_synthetic_weekly_hospital_admissions,
-    load_wastewater_data_for_state,
 )
 
 GEN_INT_PMF: jnp.ndarray = jnp.array(
     [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
 )
 
-SUBPOP_GEN_INT_PMF: jnp.ndarray = jnp.array([0.16, 0.32, 0.25, 0.14, 0.07, 0.04, 0.02])
-
-SHEDDING_PMF: jnp.ndarray = (lambda raw: jnp.asarray(raw) / jnp.asarray(raw).sum())(
-    [0.0, 0.02, 0.08, 0.15, 0.20, 0.18, 0.14, 0.10, 0.06, 0.04, 0.02, 0.01]
-)
-
 SYNTHETIC_HE_WEEKLY_HOSPITAL = "synthetic_he_weekly_hospital"
-SUBPOP_HOSPITAL_WASTEWATER_CA = "subpop_hospital_wastewater_ca"
 
 
 def _build_synthetic_he_weekly_hospital() -> DatasetBundle:  # numpydoc ignore=RT01
@@ -81,65 +72,8 @@ def _build_synthetic_he_weekly_hospital() -> DatasetBundle:  # numpydoc ignore=R
     )
 
 
-def _build_subpop_hospital_wastewater_ca() -> DatasetBundle:  # numpydoc ignore=RT01
-    """Build the hospital+wastewater subpopulation bundle for California."""
-    hospital_data = load_hospital_data_for_state("CA", "2023-11-06.csv")
-    wastewater_data = load_wastewater_data_for_state("CA", "fake_nwss.csv")
-    hosp_delay_pmf = jnp.array(
-        load_example_infection_admission_interval()["probability_mass"].to_numpy()
-    )
-
-    n_days_post_init = 90
-    subpop_fractions = jnp.array([0.10, 0.14, 0.21, 0.22, 0.07, 0.26])
-    ww_monitored_subpops = jnp.array([0, 1, 2, 3, 4])
-
-    ww_mask = wastewater_data["time_indices"] < n_days_post_init
-    ww_values = wastewater_data["observed_conc"][ww_mask]
-    ww_sites = wastewater_data["site_ids"][ww_mask]
-    ww_times = wastewater_data["time_indices"][ww_mask]
-    n_ww_sites = int(wastewater_data["n_sites"])
-    n_monitored = int(ww_monitored_subpops.shape[0])
-    sensor_to_subpop = {
-        i: int(ww_monitored_subpops[i % n_monitored]) for i in range(n_ww_sites)
-    }
-    ww_subpop_indices = jnp.array([sensor_to_subpop[int(s)] for s in ww_sites])
-
-    hospital = SignalSeries(
-        name="hospital",
-        values=jnp.asarray(
-            hospital_data["daily_admits"][:n_days_post_init], dtype=jnp.float32
-        ),
-        cadence="daily",
-        start_date=hospital_data["dates"][0],
-        extras={"delay_pmf": hosp_delay_pmf},
-    )
-    wastewater = SignalSeries(
-        name="wastewater",
-        values=ww_values,
-        cadence="daily",
-        start_date=hospital_data["dates"][0],
-        times=ww_times,
-        subpop_indices=ww_subpop_indices,
-        sensor_indices=ww_sites,
-        extras={
-            "shedding_pmf": SHEDDING_PMF,
-            "n_sensors": n_ww_sites,
-        },
-    )
-    return DatasetBundle(
-        name=SUBPOP_HOSPITAL_WASTEWATER_CA,
-        population_size=float(hospital_data["population"]),
-        obs_start_date=hospital_data["dates"][0],
-        n_days_post_init=n_days_post_init,
-        signals={"hospital": hospital, "wastewater": wastewater},
-        gen_int_pmf=SUBPOP_GEN_INT_PMF,
-        fixed_params={"subpop_fractions": subpop_fractions},
-    )
-
-
 _BUILDERS = {
     SYNTHETIC_HE_WEEKLY_HOSPITAL: _build_synthetic_he_weekly_hospital,
-    SUBPOP_HOSPITAL_WASTEWATER_CA: _build_subpop_hospital_wastewater_ca,
 }
 
 

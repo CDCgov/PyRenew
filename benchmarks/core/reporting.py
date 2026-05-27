@@ -55,7 +55,6 @@ def aggregate_results(
                 "n_runs": n_runs,
                 "dataset": first.dataset,
                 "parameterization": first.config.parameterization,
-                "rt_cadence": first.config.rt_cadence,
                 "innovation_sd": first.config.innovation_sd,
                 "autoreg": first.config.autoreg,
                 "wall_time_s": _mean(result.metrics.wall_time_s for result in group),
@@ -84,7 +83,6 @@ def aggregate_results(
     for row in candidates:
         key = (
             row["dataset"],
-            row["rt_cadence"],
             row["innovation_sd"],
             row["autoreg"],
         )
@@ -95,11 +93,10 @@ def aggregate_results(
         state = sides.get("state")
         if innovation is None or state is None:
             continue
-        dataset, rt_cadence, innovation_sd, autoreg = key
+        dataset, innovation_sd, autoreg = key
         pairs.append(
             {
                 "dataset": dataset,
-                "rt_cadence": rt_cadence,
                 "innovation_sd": innovation_sd,
                 "autoreg": autoreg,
                 "wall_s_innov": innovation["wall_time_s"],
@@ -136,7 +133,6 @@ def aggregate_results(
             pairs,
             key=lambda row: (
                 row["dataset"],
-                row["rt_cadence"],
                 row["innovation_sd"],
                 row["autoreg"],
             ),
@@ -164,10 +160,7 @@ def print_pairwise_tables(results: list[FitResult]) -> None:
 
     for row in pairs:
         print()
-        print(
-            f"--- {row['dataset']} | cadence={row['rt_cadence']} "
-            f"| innovation_sd={row['innovation_sd']:g} ---"
-        )
+        print(f"--- {row['dataset']} | innovation_sd={row['innovation_sd']:g} ---")
         print(f"{'metric':<22} {'innovation':>12} {'state':>12} {'state/innov':>12}")
         print("-" * 62)
         for label, prefix, fmt, higher_is_better in metrics:
@@ -227,7 +220,6 @@ def write_results(
                     "candidate",
                     "n_runs",
                     "dataset",
-                    "rt_cadence",
                     "parameterization",
                     "innovation_sd",
                     "autoreg",
@@ -244,7 +236,6 @@ def write_results(
                 pairs,
                 [
                     "dataset",
-                    "rt_cadence",
                     "innovation_sd",
                     "autoreg",
                     "wall_s_ratio",

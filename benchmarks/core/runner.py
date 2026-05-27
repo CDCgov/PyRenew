@@ -22,10 +22,7 @@ import numpyro
 from benchmarks.core.models import BuildConfig, BuiltFit
 from pyrenew.model import MultiSignalModel
 
-RT_SITE_NAMES: tuple[str, ...] = (
-    "PopulationInfections::rt_single",
-    "SubpopulationInfections::rt_baseline",
-)
+RT_SITE_NAMES: tuple[str, ...] = ("PopulationInfections::rt_single",)
 
 
 @dataclass(frozen=True)

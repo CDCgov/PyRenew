@@ -44,7 +44,6 @@ def _fit_result(
         dataset="synthetic",
         config=BuildConfig(
             parameterization=parameterization,
-            rt_cadence="daily",
             innovation_sd=0.01,
             autoreg=0.9,
         ),
@@ -68,44 +67,9 @@ def _fit_result(
     )
 
 
-def test_resolve_candidates_expands_groups_and_deduplicates():
-    """Group candidate names expand in declaration order without duplicates."""
-    assert rt_params._resolve_candidates([]) == list(rt_params.DEFAULT_CANDIDATES)
-    assert rt_params._resolve_candidates(["he"]) == list(rt_params.HE_CANDIDATES)
-    assert rt_params._resolve_candidates(["subpop"]) == list(
-        rt_params.SUBPOP_CANDIDATES
-    )
-    assert rt_params._resolve_candidates(["all"]) == list(rt_params.ALL_CANDIDATES)
-    assert rt_params._resolve_candidates(["he", "he_daily_state"]) == list(
-        rt_params.HE_CANDIDATES
-    )
-
-
-def test_resolve_candidates_rejects_unknown_name():
-    """Unknown candidate names raise a clear error."""
-    with pytest.raises(ValueError, match="Unknown candidates"):
-        rt_params._resolve_candidates(["not_a_candidate"])
-
-
-def test_candidate_registry_makes_metadata_explicit():
-    """Candidate registry entries expose expected modeling metadata."""
-    daily_he = rt_params.CANDIDATES["he_daily_innovation"]
-    weekly_he = rt_params.CANDIDATES["he_weekly_state"]
-    subpop = rt_params.CANDIDATES["subpop_hw_innovation"]
-
-    assert daily_he.family == "he"
-    assert daily_he.rt_cadence == "daily"
-    assert daily_he.parameterization == "innovation"
-    assert daily_he.dataset_key == rt_params.SYNTHETIC_HE_WEEKLY_HOSPITAL
-
-    assert weekly_he.family == "he"
-    assert weekly_he.rt_cadence == "weekly"
-    assert weekly_he.parameterization == "state"
-    assert weekly_he.dataset_key == rt_params.SYNTHETIC_HE_WEEKLY_HOSPITAL
-
-    assert subpop.family == "subpop"
-    assert subpop.rt_cadence == "daily"
-    assert subpop.dataset_key == rt_params.SUBPOP_HOSPITAL_WASTEWATER_CA
+def test_parameterizations_are_centered_and_noncentered():
+    """The suite compares exactly the innovation and state parameterizations."""
+    assert rt_params.PARAMETERIZATIONS == ("innovation", "state")
 
 
 def test_resolve_priors_handles_named_and_explicit_pairs():
@@ -207,7 +171,7 @@ def test_load_bundles_uses_real_data_provider_for_real_he(monkeypatch):
         omit_last_days=3,
     )
 
-    bundles = rt_params._load_bundles(args, ["he_daily_innovation"])
+    bundles = rt_params._load_bundles(args)
 
     assert bundles == {rt_params.SYNTHETIC_HE_WEEKLY_HOSPITAL: bundle}
     spec = captured_specs[rt_params.REAL_HE_DATASET]
@@ -217,13 +181,6 @@ def test_load_bundles_uses_real_data_provider_for_real_he(monkeypatch):
     assert spec.n_training_days == 120
     assert spec.n_days_to_omit == 3
     assert spec.signals == ("hospital", "ed_visits")
-
-
-def test_load_bundles_rejects_real_subpop_candidates():
-    """Real-data mode rejects subpopulation candidates."""
-    args = types.SimpleNamespace(data_source="real")
-    with pytest.raises(ValueError, match="supports H\\+E candidates only"):
-        rt_params._load_bundles(args, ["subpop_hw_innovation"])
 
 
 def test_print_data_summary(capsys):
@@ -266,15 +223,11 @@ def test_main_dry_run_data_exits_before_fitting(monkeypatch, capsys):
         gen_int_pmf=jnp.array([1.0]),
     )
 
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        ["rt_params.py", "--dry-run-data", "--candidate", "he_daily_innovation"],
-    )
+    monkeypatch.setattr(sys, "argv", ["rt_params.py", "--dry-run-data"])
     monkeypatch.setattr(
         rt_params,
         "_load_bundles",
-        lambda args, candidates: {rt_params.SYNTHETIC_HE_WEEKLY_HOSPITAL: bundle},
+        lambda args: {rt_params.SYNTHETIC_HE_WEEKLY_HOSPITAL: bundle},
     )
 
     def fail_if_called(*args, **kwargs):
@@ -320,7 +273,7 @@ def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
     """Aggregate results average repeats and pair comparable candidates."""
     results = [
         _fit_result(
-            "he_daily_innovation",
+            "he_weekly_innovation",
             "innovation",
             repeat=0,
             wall_time_s=10.0,
@@ -329,7 +282,7 @@ def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
             divergences=1,
         ),
         _fit_result(
-            "he_daily_innovation",
+            "he_weekly_innovation",
             "innovation",
             repeat=1,
             wall_time_s=14.0,
@@ -338,7 +291,7 @@ def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
             divergences=2,
         ),
         _fit_result(
-            "he_daily_state",
+            "he_weekly_state",
             "state",
             wall_time_s=6.0,
             ess_median=50.0,
@@ -350,7 +303,7 @@ def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
     candidates, pairs = aggregate_results(results)
 
     innovation = next(
-        row for row in candidates if row["candidate"] == "he_daily_innovation"
+        row for row in candidates if row["candidate"] == "he_weekly_innovation"
     )
     assert innovation["n_runs"] == 2
     assert innovation["wall_time_s"] == 12.0
@@ -369,15 +322,15 @@ def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
 
 def test_aggregate_results_skips_unmatched_pairs():
     """Aggregate results omit pair rows without both parameterizations."""
-    _, pairs = aggregate_results([_fit_result("he_daily_innovation", "innovation")])
+    _, pairs = aggregate_results([_fit_result("he_weekly_innovation", "innovation")])
     assert pairs == []
 
 
 def test_write_results_creates_expected_artifacts(tmp_path):
     """Writing results creates CSV, JSON, and Markdown artifacts."""
     results = [
-        _fit_result("he_daily_innovation", "innovation"),
-        _fit_result("he_daily_state", "state", wall_time_s=5.0, ess_median=40.0),
+        _fit_result("he_weekly_innovation", "innovation"),
+        _fit_result("he_weekly_state", "state", wall_time_s=5.0, ess_median=40.0),
     ]
 
     write_results(tmp_path, suite_name="rt_params", results=results)

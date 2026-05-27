@@ -1,8 +1,8 @@
 """rt_params benchmark suite.
 
-Compare ``innovation`` and ``state`` parameterizations of the Rt temporal
-process across a configurable design matrix. Each candidate name encodes the
-model family, Rt cadence, and parameterization.
+Compare ``innovation`` and ``state`` parameterizations of the weekly Rt
+temporal process. Each candidate name encodes the model family and
+parameterization.
 
 Run as a module from the repository root:
 
@@ -16,8 +16,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import os
-from collections.abc import Callable, Sequence
-from dataclasses import dataclass
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
@@ -33,15 +32,10 @@ os.environ.setdefault(
 import numpyro  # noqa: E402
 
 from benchmarks.core.datasets import (  # noqa: E402
-    SUBPOP_HOSPITAL_WASTEWATER_CA,
     SYNTHETIC_HE_WEEKLY_HOSPITAL,
     SyntheticProvider,
 )
-from benchmarks.core.models import (  # noqa: E402
-    BuildConfig,
-    build_he_model,
-    build_subpop_hospital_wastewater_model,
-)
+from benchmarks.core.models import BuildConfig, build_he_model  # noqa: E402
 from benchmarks.core.real_data import RealDataProvider, RealDataSpec  # noqa: E402
 from benchmarks.core.reporting import (  # noqa: E402
     print_fit_progress,
@@ -71,140 +65,23 @@ REAL_HE_DATASET = "real_he"
 Disease = str
 
 
-@dataclass(frozen=True)
-class Candidate:
-    """One benchmark candidate definition."""
-
-    name: str
-    family: str
-    rt_cadence: str
-    parameterization: str
-    dataset_key: str
-    builder: Callable
-
-    def build_config(self, innovation_sd: float, autoreg: float) -> BuildConfig:
-        """Build the model configuration for this candidate.
-
-        Returns
-        -------
-        BuildConfig
-            Configuration for the candidate under one prior regime.
-        """
-        return BuildConfig(
-            parameterization=self.parameterization,
-            rt_cadence=self.rt_cadence,
-            innovation_sd=innovation_sd,
-            autoreg=autoreg,
-        )
-
-    def build(self, config: BuildConfig, bundles: dict[str, DatasetBundle]):
-        """Build this candidate's model from loaded bundles.
-
-        Returns
-        -------
-        BuiltFit
-            Built model and run kwargs for this candidate.
-        """
-        return self.builder(config, bundles[self.dataset_key])
+PARAMETERIZATIONS: tuple[str, ...] = ("innovation", "state")
 
 
-CANDIDATES: dict[str, Candidate] = {
-    "he_daily_innovation": Candidate(
-        name="he_daily_innovation",
-        family="he",
-        rt_cadence="daily",
-        parameterization="innovation",
-        dataset_key=SYNTHETIC_HE_WEEKLY_HOSPITAL,
-        builder=build_he_model,
-    ),
-    "he_daily_state": Candidate(
-        name="he_daily_state",
-        family="he",
-        rt_cadence="daily",
-        parameterization="state",
-        dataset_key=SYNTHETIC_HE_WEEKLY_HOSPITAL,
-        builder=build_he_model,
-    ),
-    "he_weekly_innovation": Candidate(
-        name="he_weekly_innovation",
-        family="he",
-        rt_cadence="weekly",
-        parameterization="innovation",
-        dataset_key=SYNTHETIC_HE_WEEKLY_HOSPITAL,
-        builder=build_he_model,
-    ),
-    "he_weekly_state": Candidate(
-        name="he_weekly_state",
-        family="he",
-        rt_cadence="weekly",
-        parameterization="state",
-        dataset_key=SYNTHETIC_HE_WEEKLY_HOSPITAL,
-        builder=build_he_model,
-    ),
-    "subpop_hw_innovation": Candidate(
-        name="subpop_hw_innovation",
-        family="subpop",
-        rt_cadence="daily",
-        parameterization="innovation",
-        dataset_key=SUBPOP_HOSPITAL_WASTEWATER_CA,
-        builder=build_subpop_hospital_wastewater_model,
-    ),
-    "subpop_hw_state": Candidate(
-        name="subpop_hw_state",
-        family="subpop",
-        rt_cadence="daily",
-        parameterization="state",
-        dataset_key=SUBPOP_HOSPITAL_WASTEWATER_CA,
-        builder=build_subpop_hospital_wastewater_model,
-    ),
-}
-
-HE_CANDIDATES = tuple(
-    name for name, candidate in CANDIDATES.items() if candidate.family == "he"
-)
-SUBPOP_CANDIDATES = tuple(
-    name for name, candidate in CANDIDATES.items() if candidate.family == "subpop"
-)
-ALL_CANDIDATES = tuple(CANDIDATES)
-DEFAULT_CANDIDATES = HE_CANDIDATES
-
-
-def _load_bundles(args: argparse.Namespace, candidates: Sequence[str]):
-    """Load the dataset bundles needed by the selected candidates.
+def _load_bundles(args: argparse.Namespace) -> dict[str, DatasetBundle]:
+    """Load the H+E dataset bundle for the suite.
 
     Returns
     -------
     dict[str, DatasetBundle]
-        Loaded bundles keyed by dataset identifier.
+        Loaded bundle keyed by dataset identifier.
     """
     bundles: dict[str, DatasetBundle] = {}
-    selected = [CANDIDATES[name] for name in candidates]
     if args.data_source == "synthetic":
-        provider = SyntheticProvider()
-        if any(
-            candidate.dataset_key == SYNTHETIC_HE_WEEKLY_HOSPITAL
-            for candidate in selected
-        ):
-            bundles[SYNTHETIC_HE_WEEKLY_HOSPITAL] = provider.get(
-                SYNTHETIC_HE_WEEKLY_HOSPITAL
-            )
-        if any(
-            candidate.dataset_key == SUBPOP_HOSPITAL_WASTEWATER_CA
-            for candidate in selected
-        ):
-            bundles[SUBPOP_HOSPITAL_WASTEWATER_CA] = provider.get(
-                SUBPOP_HOSPITAL_WASTEWATER_CA
-            )
-        return bundles
-
-    subpop_candidates = [
-        candidate.name for candidate in selected if candidate.family == "subpop"
-    ]
-    if subpop_candidates:
-        raise ValueError(
-            "--data-source real currently supports H+E candidates only; "
-            f"got {subpop_candidates}"
+        bundles[SYNTHETIC_HE_WEEKLY_HOSPITAL] = SyntheticProvider().get(
+            SYNTHETIC_HE_WEEKLY_HOSPITAL
         )
+        return bundles
 
     provider = RealDataProvider(
         {
@@ -262,32 +139,6 @@ def _print_data_summary(bundles: dict[str, DatasetBundle]) -> None:
             print(f"    missing_or_nan: {missing}")
             print(f"    values: {value_summary}")
             print(f"    extras: {', '.join(sorted(signal.extras)) or 'none'}")
-
-
-def _resolve_candidates(args: Sequence[str]) -> list[str]:
-    """Resolve CLI ``--candidate`` arguments, expanding ``all``.
-
-    Returns
-    -------
-    list[str]
-        De-duplicated candidate names in declaration order.
-    """
-    if not args:
-        return list(DEFAULT_CANDIDATES)
-    names: list[str] = []
-    for a in args:
-        if a == "all":
-            names.extend(ALL_CANDIDATES)
-        elif a == "he":
-            names.extend(HE_CANDIDATES)
-        elif a == "subpop":
-            names.extend(SUBPOP_CANDIDATES)
-        else:
-            names.append(a)
-    unknown = sorted(set(names) - set(ALL_CANDIDATES))
-    if unknown:
-        raise ValueError(f"Unknown candidates: {unknown}")
-    return list(dict.fromkeys(names))
 
 
 def _parse_pair(arg: str) -> tuple[float, float]:
@@ -403,15 +254,6 @@ def _parse_args() -> argparse.Namespace:
         help="Load and summarize selected data, then exit before model fitting.",
     )
     parser.add_argument(
-        "--candidate",
-        action="append",
-        default=[],
-        help=(
-            "Candidate name, or one of {all, he, subpop}. May be repeated. "
-            f"Available: {', '.join(ALL_CANDIDATES)}."
-        ),
-    )
-    parser.add_argument(
         "--prior",
         action="append",
         default=[],
@@ -421,7 +263,7 @@ def _parse_args() -> argparse.Namespace:
             "'loose' "
             f"(sd={DEFAULT_LOOSE_SD:g}, autoreg={DEFAULT_LOOSE_AUTOREG:g}), "
             "'both', or an explicit 'sd,autoreg' pair (e.g. '0.05,0.7'). "
-            "Repeat to fit each candidate under multiple regimes."
+            "Repeat to fit under multiple regimes."
         ),
     )
     parser.add_argument("--num-warmup", type=int, default=500)
@@ -463,19 +305,20 @@ def _parse_args() -> argparse.Namespace:
     return args
 
 
-def _candidate_label(
-    name: str, innovation_sd: float, autoreg: float, n_priors: int
+def _fit_label(
+    parameterization: str, innovation_sd: float, autoreg: float, n_priors: int
 ) -> str:
     """Compose a per-fit display label.
 
     Returns
     -------
     str
-        Candidate name extended with the prior regime when more than one is fit.
+        Parameterization name, extended with the prior regime when more than
+        one is fit.
     """
     if n_priors > 1:
-        return f"{name}@sd={innovation_sd:g},ar={autoreg:g}"
-    return name
+        return f"{parameterization}@sd={innovation_sd:g},ar={autoreg:g}"
+    return parameterization
 
 
 def main() -> None:
@@ -489,9 +332,8 @@ def main() -> None:
     numpyro.set_host_device_count(args.num_chains)
     numpyro.enable_x64()
 
-    candidates = _resolve_candidates(args.candidate)
     priors = _resolve_priors(args.prior)
-    bundles = _load_bundles(args, candidates)
+    bundles = _load_bundles(args)
     if args.dry_run_data:
         _print_data_summary(bundles)
         return
@@ -502,26 +344,32 @@ def main() -> None:
         seed=args.seed,
         progress_bar=args.progress_bar,
     )
+    bundle = bundles[SYNTHETIC_HE_WEEKLY_HOSPITAL]
 
+    n_fits = len(PARAMETERIZATIONS) * len(priors) * args.repeats
     print(
-        f"rt_params suite: {len(candidates)} candidate(s) x "
-        f"{len(priors)} prior(s) x {args.repeats} repeat(s) "
-        f"= {len(candidates) * len(priors) * args.repeats} fits",
+        f"rt_params suite: {len(PARAMETERIZATIONS)} parameterization(s) x "
+        f"{len(priors)} prior(s) x {args.repeats} repeat(s) = {n_fits} fits",
         flush=True,
     )
 
     results: list[FitResult] = []
     for innovation_sd, autoreg in priors:
-        for name in candidates:
-            candidate = CANDIDATES[name]
-            config = candidate.build_config(innovation_sd, autoreg)
+        for parameterization in PARAMETERIZATIONS:
+            config = BuildConfig(
+                parameterization=parameterization,
+                innovation_sd=innovation_sd,
+                autoreg=autoreg,
+            )
             for repeat in range(args.repeats):
-                label = _candidate_label(name, innovation_sd, autoreg, len(priors))
+                label = _fit_label(
+                    parameterization, innovation_sd, autoreg, len(priors)
+                )
                 print(
                     f">> fitting {label} (repeat {repeat + 1}/{args.repeats}) ...",
                     flush=True,
                 )
-                built = candidate.build(config, bundles)
+                built = build_he_model(config, bundle)
                 result = fit_and_measure(
                     candidate=label,
                     built=built,
