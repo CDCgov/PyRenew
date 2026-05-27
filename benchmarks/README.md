@@ -116,6 +116,7 @@ Written to `--output-dir` with prefix `rt_params_`:
   | `rt_params_runs.csv`       | One row per fit, with full config and metrics.                                                                   |
   | `rt_params_candidates.csv` | One row per parameterization, averaged over repeats.                                                             |
   | `rt_params_pairs.csv`      | One row per matched state-vs-innovation pair, with `<metric>_innov`, `<metric>_state`, `<metric>_ratio` columns. |
+  | `rt_params_parameters.csv` | One row per scalar posterior site element per fit, with posterior mean, ESS, and R-hat.                          |
   | `rt_params_runs.json`      | All of the above plus a header (suite name, x64 flag, timestamp).                                                |
   | `rt_params_report.md`      | Compact Markdown report (per-parameterization table and pairwise table).                                         |
 

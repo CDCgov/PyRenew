@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import gc
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import jax
 import jax.random as random
@@ -50,6 +50,17 @@ class FitMetrics:
     rhat_rt_max: float
 
 
+@dataclass(frozen=True)
+class ParameterSummary:
+    """Posterior summary for one scalar parameter element."""
+
+    site: str
+    index: str
+    mean: float
+    ess: float
+    rhat: float
+
+
 @dataclass
 class FitResult:
     """One row of benchmark output."""
@@ -61,6 +72,7 @@ class FitResult:
     settings: McmcSettings
     metrics: FitMetrics
     n_initialization_points: int
+    parameter_summaries: list[ParameterSummary] = field(default_factory=list)
 
 
 def _extract_rt_array(model: MultiSignalModel) -> np.ndarray | None:
@@ -152,6 +164,54 @@ def compute_fit_metrics(model: MultiSignalModel, wall_time_s: float) -> FitMetri
     )
 
 
+def summarize_posterior_parameters(model: MultiSignalModel) -> list[ParameterSummary]:
+    """Summarize posterior mean, ESS, and R-hat for every sampled site.
+
+    Returns
+    -------
+    list[ParameterSummary]
+        One row per scalar element of each posterior sample site.
+    """
+    samples = model.mcmc.get_samples(group_by_chain=True)
+    summaries: list[ParameterSummary] = []
+    for site, values in sorted(samples.items()):
+        array = np.asarray(values)
+        if array.ndim < 2:
+            continue
+        mean = np.asarray(np.mean(array, axis=(0, 1)))
+        ess = np.asarray(numpyro.diagnostics.effective_sample_size(array))
+        if array.shape[0] < 2:
+            rhat = np.full(mean.shape, np.nan)
+        else:
+            rhat = np.asarray(numpyro.diagnostics.split_gelman_rubin(array))
+
+        for flat_index, mean_value in enumerate(mean.reshape(-1)):
+            index = _format_sample_index(mean.shape, flat_index)
+            summaries.append(
+                ParameterSummary(
+                    site=site,
+                    index=index,
+                    mean=float(mean_value),
+                    ess=float(ess.reshape(-1)[flat_index]),
+                    rhat=float(rhat.reshape(-1)[flat_index]),
+                )
+            )
+    return summaries
+
+
+def _format_sample_index(shape: tuple[int, ...], flat_index: int) -> str:
+    """Format one posterior sample element index.
+
+    Returns
+    -------
+    str
+        Empty string for scalar sites, otherwise a bracketed array index.
+    """
+    if shape == ():
+        return ""
+    return "[" + ",".join(str(i) for i in np.unravel_index(flat_index, shape)) + "]"
+
+
 def fit_and_measure(
     candidate: str,
     built: BuiltFit,
@@ -200,6 +260,7 @@ def fit_and_measure(
     wall_time_s = time.perf_counter() - start
 
     metrics = compute_fit_metrics(built.model, wall_time_s)
+    parameter_summaries = summarize_posterior_parameters(built.model)
     result = FitResult(
         candidate=candidate,
         repeat=repeat,
@@ -208,6 +269,7 @@ def fit_and_measure(
         settings=settings,
         metrics=metrics,
         n_initialization_points=built.n_initialization_points,
+        parameter_summaries=parameter_summaries,
     )
     gc.collect()
     return result

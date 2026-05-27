@@ -10,7 +10,6 @@ import jax.numpy as jnp
 import numpy as np
 import polars as pl
 import pytest
-from benchmarks.core.reference_data import name_for_location, population_for_location
 
 from benchmarks.core.datasets import SYNTHETIC_HE_WEEKLY_HOSPITAL, SyntheticProvider
 from benchmarks.core.models import BuildConfig, build_he_model
@@ -21,8 +20,9 @@ from benchmarks.core.real_data import (
     _build_ed_visits_signal,
     _build_hospital_signal,
 )
+from benchmarks.core.reference_data import name_for_location, population_for_location
 from benchmarks.core.reporting import aggregate_results, write_results
-from benchmarks.core.runner import FitMetrics, FitResult, McmcSettings
+from benchmarks.core.runner import FitMetrics, FitResult, McmcSettings, ParameterSummary
 from benchmarks.core.signals import DatasetBundle, SignalSeries
 from benchmarks.suites import rt_params
 
@@ -70,6 +70,15 @@ def _fit_result(
             rhat_rt_max=1.01,
         ),
         n_initialization_points=7,
+        parameter_summaries=[
+            ParameterSummary(
+                site="example_site",
+                index="",
+                mean=1.5,
+                ess=25.0,
+                rhat=1.01,
+            )
+        ],
     )
 
 
@@ -358,6 +367,7 @@ def test_write_results_creates_expected_artifacts(tmp_path):
         "rt_params_runs.csv",
         "rt_params_candidates.csv",
         "rt_params_pairs.csv",
+        "rt_params_parameters.csv",
         "rt_params_runs.json",
         "rt_params_report.md",
     }
@@ -368,6 +378,11 @@ def test_write_results_creates_expected_artifacts(tmp_path):
     assert len(payload["runs"]) == 2
     assert len(payload["candidates"]) == 2
     assert len(payload["pairs"]) == 1
+    assert len(payload["parameters"]) == 2
+    assert payload["parameters"][0]["site"] == "example_site"
+
+    parameter_rows = (tmp_path / "rt_params_parameters.csv").read_text()
+    assert "site,index,mean,ess,rhat" in parameter_rows
 
     report = (tmp_path / "rt_params_report.md").read_text()
     assert "# rt_params benchmark" in report

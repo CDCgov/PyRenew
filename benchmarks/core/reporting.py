@@ -186,11 +186,13 @@ def write_results(
     output_dir.mkdir(parents=True, exist_ok=True)
     candidates, pairs = aggregate_results(results)
     runs = [_result_to_row(result) for result in results]
+    parameters = _parameter_summary_rows(results)
     generated_at = datetime.now(UTC).isoformat()
 
     _write_csv(output_dir / f"{suite_name}_runs.csv", runs)
     _write_csv(output_dir / f"{suite_name}_candidates.csv", candidates)
     _write_csv(output_dir / f"{suite_name}_pairs.csv", pairs)
+    _write_csv(output_dir / f"{suite_name}_parameters.csv", parameters)
 
     payload = {
         "suite": suite_name,
@@ -199,6 +201,7 @@ def write_results(
         "runs": runs,
         "candidates": candidates,
         "pairs": pairs,
+        "parameters": parameters,
     }
     with open(output_dir / f"{suite_name}_runs.json", "w") as f:
         json.dump(payload, f, indent=2, default=_json_default)
@@ -210,6 +213,7 @@ def write_results(
             "",
             f"Generated: {generated_at}",
             f"Runs: {len(results)}",
+            f"Parameter rows: {len(parameters)}",
             f"x64 enabled: {bool(jax.config.jax_enable_x64)}",
             "",
             "## Candidates",
@@ -313,6 +317,35 @@ def _result_to_row(result: FitResult) -> dict[str, Any]:
         **asdict(result.metrics),
         "n_init_points": result.n_initialization_points,
     }
+
+
+def _parameter_summary_rows(results: list[FitResult]) -> list[dict[str, Any]]:
+    """Flatten per-parameter posterior summaries.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        One row per scalar posterior site element per fit.
+    """
+    rows: list[dict[str, Any]] = []
+    for result in results:
+        for summary in result.parameter_summaries:
+            rows.append(
+                {
+                    "candidate": result.candidate,
+                    "repeat": result.repeat,
+                    "dataset": result.dataset,
+                    "parameterization": result.config.parameterization,
+                    "innovation_sd": result.config.innovation_sd,
+                    "autoreg": result.config.autoreg,
+                    "site": summary.site,
+                    "index": summary.index,
+                    "mean": summary.mean,
+                    "ess": summary.ess,
+                    "rhat": summary.rhat,
+                }
+            )
+    return rows
 
 
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
