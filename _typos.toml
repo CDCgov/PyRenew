@@ -4,6 +4,7 @@
 arange = "arange"
 lod = "lod"
 dows = "dows"
+ND = "ND"
 
 [default.extend-identifiers]
 # NumPyro's Distribution base class spells this with a typo; we must
