@@ -10,7 +10,6 @@ import jax.numpy as jnp
 import numpy as np
 import polars as pl
 import pytest
-from benchmarks.core.reference_data import name_for_location, population_for_location
 
 from benchmarks.core.datasets import SYNTHETIC_HE_WEEKLY_HOSPITAL, SyntheticProvider
 from benchmarks.core.models import BuildConfig, build_he_model
@@ -21,6 +20,7 @@ from benchmarks.core.real_data import (
     _build_ed_visits_signal,
     _build_hospital_signal,
 )
+from benchmarks.core.reference_data import name_for_location, population_for_location
 from benchmarks.core.reporting import aggregate_results, write_results
 from benchmarks.core.runner import FitMetrics, FitResult, McmcSettings
 from benchmarks.core.signals import DatasetBundle, SignalSeries
