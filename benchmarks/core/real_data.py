@@ -96,10 +96,11 @@ def _build_bundle(
     name: str, spec: RealDataSpec
 ) -> DatasetBundle:  # numpydoc ignore=RT01
     """Pull raw feeds and assemble a :class:`DatasetBundle` for one spec."""
-    from cfa.stf.data import get_nnh_delay_pmf, get_nnh_generation_interval_pmf
-
     training_end = spec.as_of - dt.timedelta(days=1 + spec.n_days_to_omit)
     training_start = training_end - dt.timedelta(days=spec.n_training_days - 1)
+    _validate_real_data_window(name, spec, training_start, training_end)
+
+    from cfa.stf.data import get_nnh_delay_pmf, get_nnh_generation_interval_pmf
 
     population = population_for_location(spec.loc_abbr)
     gen_int_pmf = jnp.asarray(
@@ -136,6 +137,37 @@ def _build_bundle(
         gen_int_pmf=gen_int_pmf,
         fixed_params={},
     )
+
+
+def _validate_real_data_window(
+    name: str,
+    spec: RealDataSpec,
+    training_start: dt.date,
+    training_end: dt.date,
+) -> None:
+    """Validate the requested real-data window before any feed calls."""
+    unknown_signals = set(spec.signals) - {"hospital", "ed_visits"}
+    if unknown_signals:
+        raise ValueError(
+            f"Real-data dataset {name!r} requested unknown signal(s): "
+            f"{sorted(unknown_signals)}"
+        )
+    if training_start > training_end:
+        raise ValueError(
+            f"Real-data dataset {name!r} has an invalid training window: "
+            f"{training_start} is after {training_end}."
+        )
+    if "hospital" in spec.signals and training_end < NHSN_AVAILABILITY_START:
+        earliest_as_of = NHSN_AVAILABILITY_START + dt.timedelta(
+            days=1 + spec.n_days_to_omit
+        )
+        raise ValueError(
+            f"Real-data dataset {name!r} requested hospital admissions ending "
+            f"on {training_end}, before NHSN admissions availability starts on "
+            f"{NHSN_AVAILABILITY_START}. With n_days_to_omit="
+            f"{spec.n_days_to_omit}, use as_of >= {earliest_as_of}, reduce "
+            "n_days_to_omit, or omit the hospital signal."
+        )
 
 
 def _build_ed_visits_signal(

@@ -333,7 +333,10 @@ def main() -> None:
     numpyro.enable_x64()
 
     priors = _resolve_priors(args.prior)
-    bundles = _load_bundles(args)
+    try:
+        bundles = _load_bundles(args)
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from exc
     if args.dry_run_data:
         _print_data_summary(bundles)
         return

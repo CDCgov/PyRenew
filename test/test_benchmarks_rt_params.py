@@ -256,6 +256,22 @@ def test_main_dry_run_data_exits_before_fitting(monkeypatch, capsys):
     assert "Dataset: example" in capsys.readouterr().out
 
 
+def test_main_reports_real_data_loader_errors_without_traceback(monkeypatch):
+    """Loader validation errors are surfaced as concise CLI failures."""
+    monkeypatch.setattr(sys, "argv", ["rt_params.py", "--dry-run-data"])
+
+    def fail_load(args):
+        """Raise a loader-side validation error."""
+        raise ValueError("bad real-data window")
+
+    monkeypatch.setattr(rt_params, "_load_bundles", fail_load)
+
+    with pytest.raises(SystemExit) as exc_info:
+        rt_params.main()
+
+    assert str(exc_info.value) == "error: bad real-data window"
+
+
 def test_real_he_prior_helpers_are_benchmark_local():
     """Real H+E prior helpers return benchmark-local random variables."""
     i0_prior = real_he_i0_prior()
@@ -480,6 +496,21 @@ def test_real_data_hospital_signal_uses_current_nhsn_schema(monkeypatch):
     assert calls["lazy"] is False
     assert signal.start_date == date(2025, 1, 4)
     np.testing.assert_array_equal(np.asarray(signal.values), np.array([40.0, 45.0]))
+
+
+def test_real_data_bundle_rejects_pre_nhsn_hospital_window():
+    """Hospital bundles fail before feed calls when the window predates NHSN."""
+    with pytest.raises(ValueError, match="as_of >= 2024-11-12"):
+        _build_bundle(
+            "real_he",
+            RealDataSpec(
+                disease="COVID-19",
+                loc_abbr="US",
+                as_of=date(2024, 11, 1),
+                n_training_days=150,
+                n_days_to_omit=2,
+            ),
+        )
 
 
 def test_real_data_bundle_uses_static_references_and_live_he_feeds(monkeypatch):
