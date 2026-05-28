@@ -63,7 +63,7 @@ def test_invalid_constructor_args(not_a_dist):
 def test_factory_triage(valid_static_dist_arg, valid_dynamic_dist_arg):
     """
     Test that passing a numpyro.distributions.Distribution
-    instance to the DistributionalVariable factory instaniates
+    instance to the DistributionalVariable factory instantiates
     a StaticDistributionalVariable, while passing a callable
     instaniates a DynamicDistributionalVariable
     """
