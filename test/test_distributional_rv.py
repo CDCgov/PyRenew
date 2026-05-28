@@ -65,7 +65,7 @@ def test_factory_triage(valid_static_dist_arg, valid_dynamic_dist_arg):
     Test that passing a numpyro.distributions.Distribution
     instance to the DistributionalVariable factory instantiates
     a StaticDistributionalVariable, while passing a callable
-    instaniates a DynamicDistributionalVariable
+    instantiates a DynamicDistributionalVariable
     """
     static = DistributionalVariable(
         name="test static", distribution=valid_static_dist_arg
