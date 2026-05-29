@@ -154,7 +154,6 @@ The suite varies two axes:
 The latent $\mathcal{R}(t)$ runs at weekly cadence, matching the production HEW model and the weekly forecasting setting.
 Production treats both hyperparameters as inferred (`eta_sd ~ TruncatedNormal(0.15, 0.05)`, `autoreg_rt ~ Beta(2, 40)`); the benchmark fixes them to isolate the parameterization axis.
 
-
 ## Adding a benchmark
 
 1. Add a model builder to `benchmarks/core/models.py` that returns a `BuiltFit`.
