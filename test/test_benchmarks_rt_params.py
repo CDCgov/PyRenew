@@ -21,7 +21,12 @@ from benchmarks.core.real_data import (
     _build_hospital_signal,
 )
 from benchmarks.core.reference_data import name_for_location, population_for_location
-from benchmarks.core.reporting import aggregate_results, write_results
+from benchmarks.core.reporting import (
+    aggregate_parameter_summaries,
+    aggregate_results,
+    print_pairwise_tables,
+    write_results,
+)
 from benchmarks.core.runner import FitMetrics, FitResult, McmcSettings, ParameterSummary
 from benchmarks.core.signals import DatasetBundle, SignalSeries
 from benchmarks.suites import rt_params
@@ -410,6 +415,77 @@ def test_aggregate_results_skips_unmatched_pairs():
     assert pairs == []
 
 
+def test_aggregate_parameter_summaries_groups_sites_across_repeats():
+    """Parameter site summaries aggregate ESS and R-hat across scalar elements."""
+    first = _fit_result("he_weekly_innovation", "innovation", wall_time_s=10.0)
+    first.parameter_summaries = [
+        ParameterSummary("site_a", "[0]", mean=1.0, ess=20.0, rhat=1.01),
+        ParameterSummary("site_a", "[1]", mean=2.0, ess=40.0, rhat=1.03),
+        ParameterSummary("site_b", "", mean=3.0, ess=float("nan"), rhat=float("nan")),
+    ]
+    second = _fit_result(
+        "he_weekly_innovation",
+        "innovation",
+        repeat=1,
+        wall_time_s=5.0,
+    )
+    second.parameter_summaries = [
+        ParameterSummary("site_a", "[0]", mean=1.5, ess=10.0, rhat=1.02),
+    ]
+
+    rows = aggregate_parameter_summaries([first, second])
+
+    site_a = next(row for row in rows if row["site"] == "site_a")
+    assert site_a["candidate"] == "he_weekly_innovation"
+    assert site_a["parameterization"] == "innovation"
+    assert site_a["n_elements"] == 3
+    assert site_a["n_finite_ess"] == 3
+    assert site_a["ess_median"] == 20.0
+    assert site_a["ess_min"] == 10.0
+    assert site_a["ess_per_sec_median"] == 2.0
+    assert site_a["ess_per_sec_min"] == 2.0
+    assert site_a["rhat_max"] == 1.03
+
+    site_b = next(row for row in rows if row["site"] == "site_b")
+    assert site_b["n_elements"] == 1
+    assert site_b["n_finite_ess"] == 0
+    assert np.isnan(site_b["ess_median"])
+    assert np.isnan(site_b["rhat_max"])
+
+
+def test_print_pairwise_tables_includes_parameter_site_summary(capsys):
+    """Console benchmark summaries include per-site parameter ESS."""
+    results = [
+        _fit_result("he_weekly_innovation", "innovation"),
+        _fit_result("he_weekly_state", "state", wall_time_s=5.0, ess_median=40.0),
+    ]
+    results[0].parameter_summaries = [
+        ParameterSummary("example_site", "", mean=1.5, ess=12345.0, rhat=1.01),
+    ]
+
+    print_pairwise_tables(results)
+
+    output = capsys.readouterr().out
+    assert "state benefit" in output
+    assert "--- Parameter ESS by site ---" in output
+    assert "example_site" in output
+    assert "12345" in output
+    assert "e+" not in output
+    assert "ESS/s med" in output
+    assert "finite" not in output
+    assert output.count("-" * 116) == 2
+
+
+def test_print_pairwise_tables_includes_parameters_without_pairs(capsys):
+    """Unpaired benchmark suites still print parameter-site summaries."""
+    print_pairwise_tables([_fit_result("he_weekly_innovation", "innovation")])
+
+    output = capsys.readouterr().out
+    assert "No state-vs-innovation pairs to summarize." in output
+    assert "--- Parameter ESS by site ---" in output
+    assert "example_site" in output
+
+
 def test_write_results_creates_expected_artifacts(tmp_path):
     """Writing results creates CSV, JSON, and Markdown artifacts."""
     results = [
@@ -435,7 +511,9 @@ def test_write_results_creates_expected_artifacts(tmp_path):
     assert len(payload["candidates"]) == 2
     assert len(payload["pairs"]) == 1
     assert len(payload["parameters"]) == 2
+    assert len(payload["parameter_sites"]) == 2
     assert payload["parameters"][0]["site"] == "example_site"
+    assert payload["parameter_sites"][0]["site"] == "example_site"
 
     parameter_rows = (tmp_path / "rt_params_parameters.csv").read_text()
     assert "site,index,mean,ess,rhat" in parameter_rows
@@ -444,6 +522,8 @@ def test_write_results_creates_expected_artifacts(tmp_path):
     assert "# rt_params benchmark" in report
     assert "## Candidates" in report
     assert "## State vs Innovation" in report
+    assert "## Parameter ESS by Site" in report
+    assert "ess_per_sec_median" in report
 
 
 def test_real_data_ed_signal_uses_current_nssp_schema(monkeypatch):

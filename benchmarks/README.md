@@ -116,8 +116,8 @@ Written to `--output-dir` with prefix `rt_params_`:
   | `rt_params_candidates.csv` | One row per parameterization, aggregated over repeats.                                                           |
   | `rt_params_pairs.csv`      | One row per matched state-vs-innovation pair, with `<metric>_innov`, `<metric>_state`, `<metric>_ratio` columns. |
   | `rt_params_parameters.csv` | One row per scalar posterior site element per fit, with posterior mean, ESS, and R-hat.                          |
-  | `rt_params_runs.json`      | All of the above plus a header (suite name, x64 flag, timestamp).                                                |
-  | `rt_params_report.md`      | Compact Markdown report (per-parameterization table and pairwise table).                                         |
+  | `rt_params_runs.json`      | All of the above, site-level parameter ESS summaries, and a header (suite name, x64 flag, timestamp).            |
+  | `rt_params_report.md`      | Compact Markdown report with candidate, pairwise, and per-site parameter ESS tables.                             |
 
 Column convention: `_innov` and `_state` carry the per-side values, and `_ratio` columns are state-benefit ratios.
 For higher-is-better metrics such as ESS-per-second, `_ratio` is `state / innovation`.
@@ -153,7 +153,6 @@ The suite varies two axes:
 
 The latent $\mathcal{R}(t)$ runs at weekly cadence, matching the production HEW model and the weekly forecasting setting.
 Production treats both hyperparameters as inferred (`eta_sd ~ TruncatedNormal(0.15, 0.05)`, `autoreg_rt ~ Beta(2, 40)`); the benchmark fixes them to isolate the parameterization axis.
-
 
 ## Adding a benchmark
 

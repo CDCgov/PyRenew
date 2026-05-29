@@ -146,11 +146,84 @@ def aggregate_results(
     )
 
 
+def aggregate_parameter_summaries(results: list[FitResult]) -> list[dict[str, Any]]:
+    """Aggregate scalar posterior summaries by benchmark candidate and site.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        One row per candidate, dataset, parameterization, and posterior site.
+        ESS/s values are computed per scalar element using that fit's wall time
+        before aggregation.
+    """
+    groups: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for result in results:
+        parameterization = getattr(result.config, "parameterization", None)
+        for summary in result.parameter_summaries:
+            key = (
+                result.candidate,
+                result.dataset,
+                parameterization,
+                summary.site,
+            )
+            group = groups.setdefault(
+                key,
+                {
+                    "candidate": result.candidate,
+                    "dataset": result.dataset,
+                    "parameterization": parameterization,
+                    "site": summary.site,
+                    "n_elements": 0,
+                    "ess_values": [],
+                    "ess_per_sec_values": [],
+                    "rhat_values": [],
+                },
+            )
+            group["n_elements"] += 1
+            if math.isfinite(summary.ess):
+                group["ess_values"].append(summary.ess)
+                ess_per_sec = _ratio(summary.ess, result.metrics.wall_time_s)
+                if ess_per_sec is not None:
+                    group["ess_per_sec_values"].append(ess_per_sec)
+            if math.isfinite(summary.rhat):
+                group["rhat_values"].append(summary.rhat)
+
+    rows: list[dict[str, Any]] = []
+    for group in groups.values():
+        ess_values = group.pop("ess_values")
+        ess_per_sec_values = group.pop("ess_per_sec_values")
+        rhat_values = group.pop("rhat_values")
+        rows.append(
+            {
+                **group,
+                "n_finite_ess": len(ess_values),
+                "ess_median": _median(ess_values),
+                "ess_min": min(ess_values) if ess_values else float("nan"),
+                "ess_per_sec_median": _median(ess_per_sec_values),
+                "ess_per_sec_min": (
+                    min(ess_per_sec_values) if ess_per_sec_values else float("nan")
+                ),
+                "rhat_max": max(rhat_values) if rhat_values else float("nan"),
+            }
+        )
+
+    return sorted(
+        rows,
+        key=lambda row: (
+            row["candidate"],
+            row["dataset"],
+            "" if row["parameterization"] is None else row["parameterization"],
+            row["site"],
+        ),
+    )
+
+
 def print_pairwise_tables(results: list[FitResult]) -> None:
-    """Print one paired comparison table per matched pair."""
+    """Print paired comparison and per-site parameter ESS tables."""
     _, pairs = aggregate_results(results)
     if not pairs:
         print("No state-vs-innovation pairs to summarize.")
+        print_parameter_site_table(results)
         return
 
     metrics = [
@@ -183,6 +256,39 @@ def print_pairwise_tables(results: list[FitResult]) -> None:
 
     print()
     print("(* marks state improvement over innovation; ratios > 1 favor state)")
+    print_parameter_site_table(results)
+
+
+def print_parameter_site_table(results: list[FitResult]) -> None:
+    """Print per-site ESS summaries for posterior parameters."""
+    rows = aggregate_parameter_summaries(results)
+    if not rows:
+        print()
+        print("No parameter summaries to report.")
+        return
+
+    print()
+    print("--- Parameter ESS by site ---")
+    print(
+        f"{'candidate':<18} {'site':<42} "
+        f"{'ESS med':>10} {'ESS min':>10} {'ESS/s med':>10} "
+        f"{'ESS/s min':>10} {'R-hat max':>10}"
+    )
+    print("-" * 116)
+    previous_candidate = None
+    for row in rows:
+        if previous_candidate is not None and row["candidate"] != previous_candidate:
+            print("-" * 116)
+        previous_candidate = row["candidate"]
+        print(
+            f"{str(row['candidate']):<18} "
+            f"{_truncate(str(row['site']), 42):<42} "
+            f"{_format_console_number(row['ess_median']):>10} "
+            f"{_format_console_number(row['ess_min']):>10} "
+            f"{_format_console_number(row['ess_per_sec_median']):>10} "
+            f"{_format_console_number(row['ess_per_sec_min']):>10} "
+            f"{_format_console_number(row['rhat_max']):>10}"
+        )
 
 
 def write_results(
@@ -196,6 +302,7 @@ def write_results(
     candidates, pairs = aggregate_results(results)
     runs = [_result_to_row(result) for result in results]
     parameters = _parameter_summary_rows(results)
+    parameter_sites = aggregate_parameter_summaries(results)
     generated_at = datetime.now(UTC).isoformat()
 
     _write_csv(output_dir / f"{suite_name}_runs.csv", runs)
@@ -211,6 +318,7 @@ def write_results(
         "candidates": candidates,
         "pairs": pairs,
         "parameters": parameters,
+        "parameter_sites": parameter_sites,
     }
     with open(output_dir / f"{suite_name}_runs.json", "w") as f:
         json.dump(payload, f, indent=2, default=_json_default)
@@ -259,6 +367,25 @@ def write_results(
                 ],
             ),
             "",
+            "## Parameter ESS by Site",
+            "",
+            _markdown_table(
+                parameter_sites,
+                [
+                    "candidate",
+                    "dataset",
+                    "parameterization",
+                    "site",
+                    "n_elements",
+                    "n_finite_ess",
+                    "ess_median",
+                    "ess_min",
+                    "ess_per_sec_median",
+                    "ess_per_sec_min",
+                    "rhat_max",
+                ],
+            ),
+            "",
         ]
     )
     (output_dir / f"{suite_name}_report.md").write_text(report)
@@ -274,6 +401,23 @@ def _mean(values: Any) -> float:
     """
     values = list(values)
     return sum(values) / len(values)
+
+
+def _median(values: list[float]) -> float:
+    """Compute the median of a finite-valued list.
+
+    Returns
+    -------
+    float
+        Median value, or NaN when no values are provided.
+    """
+    if not values:
+        return float("nan")
+    ordered = sorted(values)
+    midpoint = len(ordered) // 2
+    if len(ordered) % 2:
+        return ordered[midpoint]
+    return (ordered[midpoint - 1] + ordered[midpoint]) / 2
 
 
 def _ratio(numerator: float, denominator: float) -> float | None:
@@ -320,6 +464,39 @@ def _format_ratio(ratio: float | None) -> str:
         return "n/a"
     improved = ratio > 1.05
     return f"{ratio:.2f}x{' *' if improved else ''}"
+
+
+def _format_console_number(value: Any) -> str:
+    """Format a compact numeric value for fixed-width console tables.
+
+    Returns
+    -------
+    str
+        Fixed-point number string, or ``"n/a"`` for missing values.
+    """
+    if value is None:
+        return "n/a"
+    if isinstance(value, float) and math.isnan(value):
+        return "n/a"
+    formatted = f"{float(value):.3f}".rstrip("0").rstrip(".")
+    if formatted == "-0":
+        return "0"
+    return formatted
+
+
+def _truncate(value: str, width: int) -> str:
+    """Truncate text for fixed-width console tables.
+
+    Returns
+    -------
+    str
+        Text truncated to the requested width.
+    """
+    if len(value) <= width:
+        return value
+    if width <= 1:
+        return value[:width]
+    return value[: width - 1] + "~"
 
 
 def _result_to_row(result: FitResult) -> dict[str, Any]:
