@@ -22,7 +22,6 @@ benchmarks/
 │   └── reporting.py    stdout tables and CSV / JSON / Markdown writers
 ├── suites/
 │   └── rt_params.py    centered vs non-centered weekly Rt parameterization
-├── diagnose.py         single-fit diagnostic harness
 └── results/            output (gitignored)
 ```
 
@@ -155,17 +154,6 @@ The suite varies two axes:
 The latent $\mathcal{R}(t)$ runs at weekly cadence, matching the production HEW model and the weekly forecasting setting.
 Production treats both hyperparameters as inferred (`eta_sd ~ TruncatedNormal(0.15, 0.05)`, `autoreg_rt ~ Beta(2, 40)`); the benchmark fixes them to isolate the parameterization axis.
 
-## Diagnostics
-
-`benchmarks/diagnose.py` builds one model on one dataset under one config and reports the data-side summary, the priors `build_he_model` selects and the initial scale they imply, prior-predictive ranges, whether the initial potential energy and gradient (under the sampler's `init_to_sample` strategy) are finite, and optionally a short NUTS run with its divergence count.
-
-Its `--real-i0`, `--real-dow`, `--real-trunc`, and `--all-real` flags force the real-data priors onto the synthetic bundle one at a time, so a real-data sampler failure can be bisected off the CDC VM.
-`--data-source real` runs the same diagnostics against a live bundle.
-
-```bash
-python -m benchmarks.diagnose --all-real --mcmc
-python -m benchmarks.diagnose --real-i0
-```
 
 ## Adding a benchmark
 
