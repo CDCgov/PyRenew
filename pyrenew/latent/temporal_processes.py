@@ -113,9 +113,11 @@ class TemporalProcess(Protocol):
         n_timepoints
             Number of time points to generate
         initial_value
-            Initial value(s) for the process(es).
-            Scalar (broadcast to all processes) or array of shape (n_processes,).
-            Defaults to 0.0.
+            Per-process starting value or initial-location parameter. Processes
+            with a deterministic initial state return this value at the first
+            timepoint. ``AR1`` uses it as the mean of the initial-state prior.
+            Scalar values are broadcast to all processes; arrays must have
+            shape ``(n_processes,)``. Defaults to 0.0.
         n_processes
             Number of parallel processes.
         name_prefix
@@ -173,8 +175,8 @@ def _prepare_initial_value(
     """
     Resolve a per-process initial value to a 1D array of length n_processes.
 
-    Substitutes zeros for None and broadcasts scalars; passes arrays through
-    unchanged so caller-supplied dtypes and devices are preserved.
+    Substitutes zeros for ``None`` and broadcasts all inputs to
+    ``(n_processes,)``.
 
     Returns
     -------
@@ -182,10 +184,8 @@ def _prepare_initial_value(
         Per-process initial values of shape ``(n_processes,)``.
     """
     if initial_value is None:
-        return jnp.zeros(n_processes)
-    if jnp.isscalar(initial_value):
-        return jnp.full(n_processes, initial_value)
-    return initial_value
+        initial_value = 0.0
+    return jnp.broadcast_to(jnp.asarray(initial_value), (n_processes,))
 
 
 class AR1(TemporalProcess):
@@ -285,7 +285,10 @@ class AR1(TemporalProcess):
         n_timepoints
             Number of time points to generate
         initial_value
-            Initial value(s). Defaults to 0.0.
+            Mean of the initial-state prior. The first returned value is sampled
+            as ``Normal(initial_value, innovation_sd / sqrt(1 - autoreg**2))``.
+            Scalar values are broadcast to all processes; arrays must have
+            shape ``(n_processes,)``. Defaults to 0.0.
         n_processes
             Number of parallel processes.
         name_prefix
@@ -443,7 +446,9 @@ class DifferencedAR1(TemporalProcess):
         n_timepoints
             Number of time points to generate
         initial_value
-            Initial value(s). Defaults to 0.0.
+            Deterministic first state of the trajectory. Scalar values are
+            broadcast to all processes; arrays must have shape
+            ``(n_processes,)``. Defaults to 0.0.
         n_processes
             Number of parallel processes.
         name_prefix
@@ -462,9 +467,8 @@ class DifferencedAR1(TemporalProcess):
         innovation_sd = self.innovation_sd_rv()
         autoreg_broadcast = jnp.broadcast_to(jnp.asarray(autoreg), (n_processes,))
 
-        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-
         if self.parameterization == "innovation":
+            stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
             with numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes):
                 init_rates = numpyro.sample(
                     f"{name_prefix}_init_rate",
@@ -586,7 +590,9 @@ class RandomWalk(TemporalProcess):
         n_timepoints
             Number of time points to generate
         initial_value
-            Initial value(s). Defaults to 0.0.
+            Deterministic first state of the trajectory. Scalar values are
+            broadcast to all processes; arrays must have shape
+            ``(n_processes,)``. Defaults to 0.0.
         n_processes
             Number of parallel processes.
         name_prefix

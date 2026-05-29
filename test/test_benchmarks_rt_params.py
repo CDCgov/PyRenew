@@ -105,6 +105,20 @@ def test_resolve_priors_rejects_malformed_pair():
         rt_params._resolve_priors(["0.05"])
 
 
+@pytest.mark.parametrize(
+    "prior,match",
+    [
+        ("0,0.7", "innovation sd must be positive"),
+        ("0.05,1", "autoreg must satisfy"),
+        ("0.05,-1", "autoreg must satisfy"),
+    ],
+)
+def test_resolve_priors_rejects_invalid_domains(prior, match):
+    """Explicit prior pairs must stay inside the supported parameter domain."""
+    with pytest.raises(ValueError, match=match):
+        rt_params._resolve_priors([prior])
+
+
 def test_no_x64_argument_is_not_supported(monkeypatch):
     """The removed ``--no-x64`` CLI option is not accepted."""
     monkeypatch.setattr(sys, "argv", ["rt_params.py", "--no-x64"])
@@ -188,7 +202,7 @@ def test_load_bundles_uses_real_data_provider_for_real_he(monkeypatch):
 
     bundles = rt_params._load_bundles(args)
 
-    assert bundles == {rt_params.SYNTHETIC_HE_WEEKLY_HOSPITAL: bundle}
+    assert bundles == {rt_params.HE_BUNDLE_KEY: bundle}
     spec = captured_specs[rt_params.REAL_HE_DATASET]
     assert spec.disease == "RSV"
     assert spec.loc_abbr == "CA"
@@ -270,6 +284,16 @@ def test_main_reports_real_data_loader_errors_without_traceback(monkeypatch):
         rt_params.main()
 
     assert str(exc_info.value) == "error: bad real-data window"
+
+
+def test_main_reports_invalid_prior_without_traceback(monkeypatch):
+    """Prior validation errors are surfaced as concise CLI failures."""
+    monkeypatch.setattr(sys, "argv", ["rt_params.py", "--prior", "0,0.7"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        rt_params.main()
+
+    assert str(exc_info.value) == "error: Prior innovation sd must be positive; got 0"
 
 
 def test_real_he_prior_helpers_are_benchmark_local():
@@ -362,6 +386,22 @@ def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
     assert pair["ess_per_s_min_ratio"] == 2.0
     assert pair["divergences_innov"] == 3
     assert pair["divergences_state"] == 0
+
+
+def test_aggregate_results_preserves_worst_case_diagnostics_across_repeats():
+    """Worst-case diagnostics use min/max aggregation instead of means."""
+    first = _fit_result("he_weekly_innovation", "innovation", repeat=0)
+    second = _fit_result("he_weekly_innovation", "innovation", repeat=1)
+    first.metrics.ebfmi_min = 0.8
+    second.metrics.ebfmi_min = 0.2
+    first.metrics.rhat_rt_max = 1.01
+    second.metrics.rhat_rt_max = 1.2
+
+    candidates, _ = aggregate_results([first, second])
+
+    row = candidates[0]
+    assert row["ebfmi_min"] == 0.2
+    assert row["rhat_rt_max"] == 1.2
 
 
 def test_aggregate_results_skips_unmatched_pairs():

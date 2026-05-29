@@ -62,6 +62,7 @@ DEFAULT_REAL_LOCATION = "US"
 DEFAULT_REAL_TRAINING_DAYS = 150
 DEFAULT_REAL_OMIT_DAYS = 2
 REAL_HE_DATASET = "real_he"
+HE_BUNDLE_KEY = "he"
 Disease = str
 
 
@@ -78,9 +79,7 @@ def _load_bundles(args: argparse.Namespace) -> dict[str, DatasetBundle]:
     """
     bundles: dict[str, DatasetBundle] = {}
     if args.data_source == "synthetic":
-        bundles[SYNTHETIC_HE_WEEKLY_HOSPITAL] = SyntheticProvider().get(
-            SYNTHETIC_HE_WEEKLY_HOSPITAL
-        )
+        bundles[HE_BUNDLE_KEY] = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
         return bundles
 
     provider = RealDataProvider(
@@ -95,7 +94,7 @@ def _load_bundles(args: argparse.Namespace) -> dict[str, DatasetBundle]:
             )
         }
     )
-    bundles[SYNTHETIC_HE_WEEKLY_HOSPITAL] = provider.get(REAL_HE_DATASET)
+    bundles[HE_BUNDLE_KEY] = provider.get(REAL_HE_DATASET)
     return bundles
 
 
@@ -159,6 +158,10 @@ def _parse_pair(arg: str) -> tuple[float, float]:
         ar = float(parts[1])
     except ValueError as exc:
         raise ValueError(f"Could not parse prior pair {arg!r}: {exc}") from exc
+    if sd <= 0:
+        raise ValueError(f"Prior innovation sd must be positive; got {sd:g}")
+    if not -1 < ar < 1:
+        raise ValueError(f"Prior autoreg must satisfy -1 < autoreg < 1; got {ar:g}")
     return sd, ar
 
 
@@ -332,7 +335,10 @@ def main() -> None:
     numpyro.set_host_device_count(args.num_chains)
     numpyro.enable_x64()
 
-    priors = _resolve_priors(args.prior)
+    try:
+        priors = _resolve_priors(args.prior)
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from exc
     try:
         bundles = _load_bundles(args)
     except ValueError as exc:
@@ -347,7 +353,7 @@ def main() -> None:
         seed=args.seed,
         progress_bar=args.progress_bar,
     )
-    bundle = bundles[SYNTHETIC_HE_WEEKLY_HOSPITAL]
+    bundle = bundles[HE_BUNDLE_KEY]
 
     n_fits = len(PARAMETERIZATIONS) * len(priors) * args.repeats
     print(

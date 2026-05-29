@@ -73,8 +73,8 @@ def aggregate_results(
                 "tree_depth_max": max(
                     result.metrics.tree_depth_max for result in group
                 ),
-                "ebfmi_min": _mean(result.metrics.ebfmi_min for result in group),
-                "rhat_rt_max": _mean(result.metrics.rhat_rt_max for result in group),
+                "ebfmi_min": min(result.metrics.ebfmi_min for result in group),
+                "rhat_rt_max": max(result.metrics.rhat_rt_max for result in group),
             }
         )
 

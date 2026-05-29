@@ -27,7 +27,7 @@ benchmarks/
 ```
 
 The suite asks the dataset provider for the H+E bundle, builds the model under each parameterization, and the runner fits the model and collects metrics.
-The `DatasetProvider` protocol in `core/signals.py` is the seam where real reporting inputs replace `SyntheticProvider` without touching the suite.
+The `DatasetProvider` protocol in `core/signals.py` lets reporting-input providers replace `SyntheticProvider` without touching the suite.
 
 ## rt_params suite
 
@@ -114,7 +114,7 @@ Written to `--output-dir` with prefix `rt_params_`:
   | File                       | Contents                                                                                                         |
   | -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
   | `rt_params_runs.csv`       | One row per fit, with full config and metrics.                                                                   |
-  | `rt_params_candidates.csv` | One row per parameterization, averaged over repeats.                                                             |
+  | `rt_params_candidates.csv` | One row per parameterization, aggregated over repeats.                                                           |
   | `rt_params_pairs.csv`      | One row per matched state-vs-innovation pair, with `<metric>_innov`, `<metric>_state`, `<metric>_ratio` columns. |
   | `rt_params_parameters.csv` | One row per scalar posterior site element per fit, with posterior mean, ESS, and R-hat.                          |
   | `rt_params_runs.json`      | All of the above plus a header (suite name, x64 flag, timestamp).                                                |
@@ -141,6 +141,8 @@ Per fit:
   Heuristic thresholds: >=0.3 acceptable, <0.3 warning, <0.1 strong pathology indicator.
 - **R-hat Rt (max)**: max split R-hat across timepoints of the Rt trajectory.
   Requires more than one chain.
+
+Candidate summaries average time and ESS metrics across repeats, sum divergences, and keep worst-case diagnostics: maximum tree depth, minimum E-BFMI, and maximum R-hat.
 
 ### Suite design
 
