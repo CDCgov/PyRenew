@@ -74,7 +74,6 @@ exclude = [  # don't report on objects that match any of these regex
 known_first_party = ["pyrenew", "test"]
 
 [tool.deptry.per_rule_ignores]
-DEP001 = ["cfa"]
 DEP004 = ["arviz", "pytest", "scipy", "bs4"]
 
 [tool.pytest.ini_options]
@@ -90,4 +89,3 @@ select = ["I", "E4", "E7", "E9", "F", "UP", "ANN"]
 
 [tool.ruff.lint.per-file-ignores]
 "test/**" = ["ANN"]
-"benchmarks/**" = ["ANN"]

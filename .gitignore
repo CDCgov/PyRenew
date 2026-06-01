@@ -38,9 +38,6 @@
 # !your_data_file.csv
 # !your_data_directory/
 
-# Benchmark outputs
-benchmarks/results/
-
 
 #####
 # Python
