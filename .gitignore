@@ -34,6 +34,7 @@
 *.rar
 *.zip
 
+
 # Allowlist
 # !your_data_file.csv
 # !your_data_directory/
@@ -331,3 +332,6 @@ replay_pid*
 
 /.quarto/
 *_files
+
+# Benchmark outputs
+benchmarks/results/
