@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 """rt_params benchmark suite.
 
 Compare ``innovation`` and ``state`` parameterizations of the weekly Rt
@@ -17,7 +19,9 @@ import argparse
 import datetime as dt
 import os
 from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 
@@ -29,25 +33,50 @@ os.environ.setdefault(
     "XLA_FLAGS", f"--xla_force_host_platform_device_count={_DEFAULT_DEVICE_COUNT}"
 )
 
-import numpyro  # noqa: E402
+import jax.numpy as jnp
+import numpyro
+import numpyro.distributions as dist
 
-from benchmarks.core.datasets import (  # noqa: E402
+import pyrenew.transformation as transformation
+from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
+from benchmarks.core.datasets import (
     SYNTHETIC_HE_WEEKLY_HOSPITAL,
     SyntheticProvider,
 )
-from benchmarks.core.models import BuildConfig, build_he_model  # noqa: E402
-from benchmarks.core.real_data import RealDataProvider, RealDataSpec  # noqa: E402
-from benchmarks.core.reporting import (  # noqa: E402
+from benchmarks.core.models import BuiltFit, align_weekly_observations
+from benchmarks.core.priors import (
+    real_he_ed_day_of_week_prior,
+    real_he_i0_prior,
+)
+from benchmarks.core.real_data import RealDataProvider, RealDataSpec
+from benchmarks.core.reporting import (
+    print_comparison_tables,
     print_fit_progress,
-    print_pairwise_tables,
     write_results,
 )
-from benchmarks.core.runner import (  # noqa: E402
+from benchmarks.core.runner import (
     FitResult,
     McmcSettings,
     fit_and_measure,
 )
-from benchmarks.core.signals import DatasetBundle  # noqa: E402
+from benchmarks.core.signals import DatasetBundle
+from pyrenew.ascertainment import AscertainmentModel, JointAscertainment
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.latent import (
+    DifferencedAR1,
+    PopulationInfections,
+    WeeklyTemporalProcess,
+)
+from pyrenew.model import PyrenewBuilder
+from pyrenew.observation import (
+    NegativeBinomialNoise,
+    PopulationCounts,
+)
+from pyrenew.randomvariable import (
+    DistributionalVariable,
+    TransformedVariable,
+)
+from pyrenew.time import MMWR_WEEK
 
 SUITE_NAME = "rt_params"
 DEFAULT_OUTPUT_DIR = Path("benchmarks/results")
@@ -67,6 +96,212 @@ Disease = str
 
 
 PARAMETERIZATIONS: tuple[str, ...] = ("innovation", "state")
+
+COMPARISON_SPEC: ComparisonSpec = ComparisonSpec(
+    name=SUITE_NAME,
+    arms=PARAMETERIZATIONS,
+    baseline="innovation",
+    match_keys=("dataset", "innovation_sd", "autoreg"),
+    metrics=DEFAULT_METRICS,
+)
+
+Parameterization = Literal["innovation", "state"]
+
+
+@dataclass(frozen=True)
+class BuildConfig:
+    """Configurable axes of an rt_params candidate.
+
+    Parameters
+    ----------
+    parameterization
+        ``"innovation"`` or ``"state"`` for the Rt temporal process.
+    innovation_sd
+        Per-step standard deviation of the weekly AR(1) on first differences
+        of $\\log \\mathcal{R}(t)$.
+    autoreg
+        Autoregressive coefficient for the same process.
+    """
+
+    parameterization: Parameterization
+    innovation_sd: float = 0.05
+    autoreg: float = 0.9
+
+
+def _build_rt_process(config: BuildConfig) -> WeeklyTemporalProcess:
+    """Build the weekly Rt temporal process for the H+E model.
+
+    ``config.innovation_sd`` is the per-step standard deviation of innovations
+    to the rate of change in $\\log \\mathcal{R}(t)$ at weekly cadence.
+
+    Returns
+    -------
+    WeeklyTemporalProcess
+        Weekly differenced AR(1) Rt process.
+    """
+    inner = DifferencedAR1(
+        autoreg_rv=DeterministicVariable("rt_diff_autoreg", config.autoreg),
+        innovation_sd_rv=DeterministicVariable(
+            "rt_diff_innovation_sd", config.innovation_sd
+        ),
+        parameterization=config.parameterization,
+    )
+    return WeeklyTemporalProcess(inner, start_dow=MMWR_WEEK)
+
+
+def _build_he_ascertainment() -> AscertainmentModel:
+    """Build the joint Gaussian H+E ascertainment model.
+
+    Returns
+    -------
+    AscertainmentModel
+        Joint Gaussian ascertainment over hospital and ED visit rates.
+    """
+    sd = 0.3
+    corr = 0.5
+    cov = jnp.array([[sd**2, corr * sd**2], [corr * sd**2, sd**2]])
+    return JointAscertainment(
+        name="he_ascertainment",
+        signals=("hospital", "ed_visits"),
+        baseline_rates=jnp.array([0.004, 0.004]),
+        covariance_matrix=cov,
+    )
+
+
+def build_he_model(
+    config: BuildConfig,
+    bundle: DatasetBundle | None = None,
+) -> BuiltFit:
+    """Build the H+E PopulationInfections model and its run kwargs.
+
+    By default, uses :data:`SYNTHETIC_HE_WEEKLY_HOSPITAL`: weekly-aggregated
+    hospital reporting plus daily ED visits, matching the production-style
+    H+E setup. Callers may pass a bundle from another provider. The latent
+    $\\mathcal{R}(t)$ process runs at weekly cadence.
+
+    Returns
+    -------
+    BuiltFit
+        Model and run kwargs ready for fitting.
+    """
+    if bundle is None:
+        bundle = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
+    hospital_signal = bundle.signals["hospital"]
+    ed_signal = bundle.signals["ed_visits"]
+    if "i0_per_capita" in bundle.fixed_params:
+        i0_per_capita = float(bundle.fixed_params["i0_per_capita"])
+        i0_rv = TransformedVariable(
+            name="I0",
+            base_rv=DistributionalVariable(
+                name="logit_I0",
+                distribution=dist.Normal(
+                    transformation.SigmoidTransform().inv(i0_per_capita),
+                    0.25,
+                ),
+            ),
+            transforms=transformation.SigmoidTransform(),
+        )
+    else:
+        i0_rv = real_he_i0_prior()
+    ed_right_truncation_rv = None
+    if "right_truncation_pmf" in bundle.fixed_params:
+        ed_right_truncation_rv = DeterministicPMF(
+            "ed_right_truncation",
+            bundle.fixed_params["right_truncation_pmf"],
+        )
+    ascertainment = _build_he_ascertainment()
+
+    builder = PyrenewBuilder()
+    builder.configure_latent(
+        PopulationInfections,
+        gen_int_rv=DeterministicPMF("gen_int", bundle.gen_int_pmf),
+        I0_rv=i0_rv,
+        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+        single_rt_process=_build_rt_process(config),
+    )
+    builder.add_ascertainment(ascertainment)
+
+    hospital_kwargs: dict[str, object] = {}
+    if hospital_signal.cadence == "weekly":
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital",
+                ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+                delay_distribution_rv=DeterministicPMF(
+                    "hosp_delay", hospital_signal.extras["delay_pmf"]
+                ),
+                noise=NegativeBinomialNoise(
+                    DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
+                ),
+                aggregation="weekly",
+                reporting_schedule="regular",
+                start_dow=MMWR_WEEK,
+            )
+        )
+    else:
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital",
+                ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+                delay_distribution_rv=DeterministicPMF(
+                    "hosp_delay", hospital_signal.extras["delay_pmf"]
+                ),
+                noise=NegativeBinomialNoise(
+                    DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
+                ),
+            )
+        )
+    builder.add_observation(
+        PopulationCounts(
+            name="ed_visits",
+            ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
+            delay_distribution_rv=DeterministicPMF(
+                "ed_delay", ed_signal.extras["delay_pmf"]
+            ),
+            right_truncation_rv=ed_right_truncation_rv,
+            noise=NegativeBinomialNoise(
+                DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
+            ),
+            day_of_week_rv=(
+                DeterministicVariable(
+                    "ed_day_of_week_effect",
+                    ed_signal.extras["day_of_week_effects"],
+                )
+                if "day_of_week_effects" in ed_signal.extras
+                else real_he_ed_day_of_week_prior()
+            ),
+        )
+    )
+    model = builder.build()
+
+    if hospital_signal.cadence == "weekly":
+        hospital_obs = align_weekly_observations(
+            model,
+            "hospital",
+            hospital_signal.values,
+            bundle.obs_start_date,
+            bundle.n_days_post_init,
+        )
+    else:
+        hospital_obs = model.pad_observations(hospital_signal.values)
+    ed_obs = model.pad_observations(ed_signal.values)
+    hospital_kwargs["obs"] = hospital_obs
+    ed_kwargs: dict[str, object] = {"obs": ed_obs}
+    if "right_truncation_offset" in bundle.fixed_params:
+        ed_kwargs["right_truncation_offset"] = bundle.fixed_params[
+            "right_truncation_offset"
+        ]
+    return BuiltFit(
+        model=model,
+        run_kwargs={
+            "n_days_post_init": bundle.n_days_post_init,
+            "population_size": bundle.population_size,
+            "obs_start_date": bundle.obs_start_date,
+            "hospital": hospital_kwargs,
+            "ed_visits": ed_kwargs,
+        },
+        dataset_name=bundle.name,
+    )
 
 
 def _load_bundles(args: argparse.Namespace) -> dict[str, DatasetBundle]:
@@ -382,16 +617,27 @@ def main() -> None:
                 result = fit_and_measure(
                     candidate=label,
                     built=built,
-                    config=config,
                     settings=settings,
                     repeat=repeat,
+                    arm=parameterization,
+                    config_fields={
+                        "parameterization": parameterization,
+                        "innovation_sd": innovation_sd,
+                        "autoreg": autoreg,
+                    },
+                    config=config,
                 )
                 results.append(result)
                 print_fit_progress(label, repeat, args.repeats, result)
 
-    print_pairwise_tables(results)
+    print_comparison_tables(results, COMPARISON_SPEC)
     if not args.no_write:
-        write_results(args.output_dir, suite_name=SUITE_NAME, results=results)
+        write_results(
+            args.output_dir,
+            suite_name=SUITE_NAME,
+            results=results,
+            spec=COMPARISON_SPEC,
+        )
         print(f"\nWrote results to {args.output_dir}", flush=True)
 
 

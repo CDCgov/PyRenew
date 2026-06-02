@@ -11,8 +11,8 @@ import numpy as np
 import polars as pl
 import pytest
 
+from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
 from benchmarks.core.datasets import SYNTHETIC_HE_WEEKLY_HOSPITAL, SyntheticProvider
-from benchmarks.core.models import BuildConfig, build_he_model
 from benchmarks.core.priors import real_he_ed_day_of_week_prior, real_he_i0_prior
 from benchmarks.core.real_data import (
     RealDataSpec,
@@ -22,14 +22,16 @@ from benchmarks.core.real_data import (
 )
 from benchmarks.core.reference_data import name_for_location, population_for_location
 from benchmarks.core.reporting import (
+    aggregate_candidates,
     aggregate_parameter_summaries,
-    aggregate_results,
-    print_pairwise_tables,
+    build_comparison,
+    print_comparison_tables,
     write_results,
 )
 from benchmarks.core.runner import FitMetrics, FitResult, McmcSettings, ParameterSummary
 from benchmarks.core.signals import DatasetBundle, SignalSeries
 from benchmarks.suites import rt_params
+from benchmarks.suites.rt_params import BuildConfig, build_he_model
 
 
 def _fit_result(
@@ -51,8 +53,14 @@ def _fit_result(
     """
     return FitResult(
         candidate=candidate,
+        arm=parameterization,
         repeat=repeat,
         dataset="synthetic",
+        config_fields={
+            "parameterization": parameterization,
+            "innovation_sd": 0.01,
+            "autoreg": 0.9,
+        },
         config=BuildConfig(
             parameterization=parameterization,
             innovation_sd=0.01,
@@ -342,8 +350,8 @@ def test_static_reference_data_rejects_unknown_values():
         population_for_location("XX")
 
 
-def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
-    """Aggregate results average repeats and pair comparable candidates."""
+def test_aggregate_candidates_averages_repeats_and_pairs_state_with_innovation():
+    """Candidate aggregation averages repeats and pairs comparable arms."""
     results = [
         _fit_result(
             "he_weekly_innovation",
@@ -373,7 +381,8 @@ def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
         ),
     ]
 
-    candidates, pairs = aggregate_results(results)
+    candidates = aggregate_candidates(results)
+    comparison = build_comparison(candidates, rt_params.COMPARISON_SPEC)
 
     innovation = next(
         row for row in candidates if row["candidate"] == "he_weekly_innovation"
@@ -382,18 +391,18 @@ def test_aggregate_results_averages_repeats_and_pairs_state_with_innovation():
     assert innovation["wall_time_s"] == 12.0
     assert innovation["ess_per_sec_rt_median"] == 25.0
     assert innovation["ess_per_sec_rt_min"] == 6.0
-    assert innovation["divergences_total"] == 3
+    assert innovation["divergences"] == 3
 
-    assert len(pairs) == 1
-    pair = pairs[0]
-    assert pair["wall_s_ratio"] == 2.0
-    assert pair["ess_per_s_med_ratio"] == 2.0
-    assert pair["ess_per_s_min_ratio"] == 2.0
-    assert pair["divergences_innov"] == 3
-    assert pair["divergences_state"] == 0
+    assert len(comparison) == 1
+    pair = comparison[0]
+    assert pair["wall_time_s__ratio__state"] == 2.0
+    assert pair["ess_per_sec_rt_median__ratio__state"] == 2.0
+    assert pair["ess_per_sec_rt_min__ratio__state"] == 2.0
+    assert pair["divergences__innovation"] == 3
+    assert pair["divergences__state"] == 0
 
 
-def test_aggregate_results_preserves_worst_case_diagnostics_across_repeats():
+def test_aggregate_candidates_preserves_worst_case_diagnostics_across_repeats():
     """Worst-case diagnostics use min/max aggregation instead of means."""
     first = _fit_result("he_weekly_innovation", "innovation", repeat=0)
     second = _fit_result("he_weekly_innovation", "innovation", repeat=1)
@@ -402,17 +411,34 @@ def test_aggregate_results_preserves_worst_case_diagnostics_across_repeats():
     first.metrics.rhat_rt_max = 1.01
     second.metrics.rhat_rt_max = 1.2
 
-    candidates, _ = aggregate_results([first, second])
+    candidates = aggregate_candidates([first, second])
 
     row = candidates[0]
     assert row["ebfmi_min"] == 0.2
     assert row["rhat_rt_max"] == 1.2
 
 
-def test_aggregate_results_skips_unmatched_pairs():
-    """Aggregate results omit pair rows without both parameterizations."""
-    _, pairs = aggregate_results([_fit_result("he_weekly_innovation", "innovation")])
-    assert pairs == []
+def test_build_comparison_skips_unmatched_groups():
+    """Comparison rows are omitted when only the baseline arm is present."""
+    candidates = aggregate_candidates(
+        [_fit_result("he_weekly_innovation", "innovation")]
+    )
+    assert build_comparison(candidates, rt_params.COMPARISON_SPEC) == []
+
+
+def test_build_comparison_supports_single_arm_spec():
+    """A single-arm spec produces no comparison rows but is accepted."""
+    spec = ComparisonSpec(
+        name="single",
+        arms=("innovation",),
+        baseline="innovation",
+        match_keys=("dataset", "innovation_sd", "autoreg"),
+        metrics=DEFAULT_METRICS,
+    )
+    candidates = aggregate_candidates(
+        [_fit_result("he_weekly_innovation", "innovation")]
+    )
+    assert build_comparison(candidates, spec) == []
 
 
 def test_aggregate_parameter_summaries_groups_sites_across_repeats():
@@ -437,7 +463,7 @@ def test_aggregate_parameter_summaries_groups_sites_across_repeats():
 
     site_a = next(row for row in rows if row["site"] == "site_a")
     assert site_a["candidate"] == "he_weekly_innovation"
-    assert site_a["parameterization"] == "innovation"
+    assert site_a["arm"] == "innovation"
     assert site_a["n_elements"] == 3
     assert site_a["n_finite_ess"] == 3
     assert site_a["ess_median"] == 20.0
@@ -453,7 +479,7 @@ def test_aggregate_parameter_summaries_groups_sites_across_repeats():
     assert np.isnan(site_b["rhat_max"])
 
 
-def test_print_pairwise_tables_includes_parameter_site_summary(capsys):
+def test_print_comparison_tables_includes_parameter_site_summary(capsys):
     """Console benchmark summaries include per-site parameter ESS."""
     results = [
         _fit_result("he_weekly_innovation", "innovation"),
@@ -463,7 +489,7 @@ def test_print_pairwise_tables_includes_parameter_site_summary(capsys):
         ParameterSummary("example_site", "", mean=1.5, ess=12345.0, rhat=1.01),
     ]
 
-    print_pairwise_tables(results)
+    print_comparison_tables(results, rt_params.COMPARISON_SPEC)
 
     output = capsys.readouterr().out
     assert "state benefit" in output
@@ -476,12 +502,15 @@ def test_print_pairwise_tables_includes_parameter_site_summary(capsys):
     assert output.count("-" * 116) == 2
 
 
-def test_print_pairwise_tables_includes_parameters_without_pairs(capsys):
-    """Unpaired benchmark suites still print parameter-site summaries."""
-    print_pairwise_tables([_fit_result("he_weekly_innovation", "innovation")])
+def test_print_comparison_tables_includes_parameters_without_comparison(capsys):
+    """Suites with no comparable group still print parameter-site summaries."""
+    print_comparison_tables(
+        [_fit_result("he_weekly_innovation", "innovation")],
+        rt_params.COMPARISON_SPEC,
+    )
 
     output = capsys.readouterr().out
-    assert "No state-vs-innovation pairs to summarize." in output
+    assert "No comparable arm groups to summarize." in output
     assert "--- Parameter ESS by site ---" in output
     assert "example_site" in output
 
@@ -493,12 +522,17 @@ def test_write_results_creates_expected_artifacts(tmp_path):
         _fit_result("he_weekly_state", "state", wall_time_s=5.0, ess_median=40.0),
     ]
 
-    write_results(tmp_path, suite_name="rt_params", results=results)
+    write_results(
+        tmp_path,
+        suite_name="rt_params",
+        results=results,
+        spec=rt_params.COMPARISON_SPEC,
+    )
 
     expected = {
         "rt_params_runs.csv",
         "rt_params_candidates.csv",
-        "rt_params_pairs.csv",
+        "rt_params_comparison.csv",
         "rt_params_parameters.csv",
         "rt_params_runs.json",
         "rt_params_report.md",
@@ -507,9 +541,11 @@ def test_write_results_creates_expected_artifacts(tmp_path):
 
     payload = json.loads((tmp_path / "rt_params_runs.json").read_text())
     assert payload["suite"] == "rt_params"
+    assert payload["arms"] == ["innovation", "state"]
+    assert payload["baseline"] == "innovation"
     assert len(payload["runs"]) == 2
     assert len(payload["candidates"]) == 2
-    assert len(payload["pairs"]) == 1
+    assert len(payload["comparison"]) == 1
     assert len(payload["parameters"]) == 2
     assert len(payload["parameter_sites"]) == 2
     assert payload["parameters"][0]["site"] == "example_site"
@@ -521,7 +557,7 @@ def test_write_results_creates_expected_artifacts(tmp_path):
     report = (tmp_path / "rt_params_report.md").read_text()
     assert "# rt_params benchmark" in report
     assert "## Candidates" in report
-    assert "## State vs Innovation" in report
+    assert "## Comparison" in report
     assert "## Parameter ESS by Site" in report
     assert "ess_per_sec_median" in report
 

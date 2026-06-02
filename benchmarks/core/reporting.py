@@ -1,4 +1,12 @@
-"""Reporting helpers for benchmark suites."""
+"""Reporting helpers for benchmark suites.
+
+Aggregation, console tables, and file artifacts are driven by a
+:class:`benchmarks.core.comparison.ComparisonSpec`. The spec names the arms,
+the baseline, the fields that make fits comparable, and the metrics to
+report. Nothing here hard-codes a particular comparison, so a suite that
+pits a PyRenew model against the production HEW model reuses the same
+reporting path as a parameterization A/B.
+"""
 
 from __future__ import annotations
 
@@ -12,7 +20,15 @@ from typing import Any
 
 import jax
 
+from benchmarks.core.comparison import ComparisonSpec
 from benchmarks.core.runner import FitResult
+
+_METRIC_REDUCERS: dict[str, str] = {
+    "divergences": "sum",
+    "tree_depth_max": "max",
+    "ebfmi_min": "min",
+    "rhat_rt_max": "max",
+}
 
 
 def print_fit_progress(
@@ -31,15 +47,18 @@ def print_fit_progress(
     )
 
 
-def aggregate_results(
-    results: list[FitResult],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    """Aggregate per-fit results into summary rows.
+def aggregate_candidates(results: list[FitResult]) -> list[dict[str, Any]]:
+    """Aggregate per-fit results into one row per candidate.
+
+    Metrics are averaged across repeats, except worst-case diagnostics:
+    divergences are summed, and tree depth, E-BFMI, and R-hat keep their
+    worst observed value. Each row carries the candidate's ``arm`` and its
+    flattened ``config_fields`` so downstream grouping can read them.
 
     Returns
     -------
-    tuple[list[dict[str, Any]], list[dict[str, Any]]]
-        Per-candidate rows and matched state-vs-innovation comparison rows.
+    list[dict[str, Any]]
+        One row per candidate, sorted by candidate name.
     """
     by_candidate: dict[str, list[FitResult]] = {}
     for result in results:
@@ -48,130 +67,117 @@ def aggregate_results(
     candidates: list[dict[str, Any]] = []
     for candidate, group in by_candidate.items():
         first = group[0]
-        n_runs = len(group)
-        candidates.append(
-            {
-                "candidate": candidate,
-                "n_runs": n_runs,
-                "dataset": first.dataset,
-                "parameterization": first.config.parameterization,
-                "innovation_sd": first.config.innovation_sd,
-                "autoreg": first.config.autoreg,
-                "wall_time_s": _mean(result.metrics.wall_time_s for result in group),
-                "ess_per_sec_rt_median": _mean(
-                    result.metrics.ess_per_sec_rt_median for result in group
-                ),
-                "ess_per_sec_rt_min": _mean(
-                    result.metrics.ess_per_sec_rt_min for result in group
-                ),
-                "divergences_total": sum(
-                    result.metrics.divergences for result in group
-                ),
-                "tree_depth_mean": _mean(
-                    result.metrics.tree_depth_mean for result in group
-                ),
-                "tree_depth_max": max(
-                    result.metrics.tree_depth_max for result in group
-                ),
-                "ebfmi_min": min(result.metrics.ebfmi_min for result in group),
-                "rhat_rt_max": max(result.metrics.rhat_rt_max for result in group),
-            }
-        )
+        row: dict[str, Any] = {
+            "candidate": candidate,
+            "arm": first.arm,
+            "n_runs": len(group),
+            "dataset": first.dataset,
+            **first.config_fields,
+        }
+        for field_name in asdict(first.metrics):
+            values = [getattr(r.metrics, field_name) for r in group]
+            row[field_name] = _reduce_metric(field_name, values)
+        candidates.append(row)
 
-    pairs: list[dict[str, Any]] = []
-    by_pair: dict[tuple[Any, ...], dict[str, dict[str, Any]]] = {}
-    for row in candidates:
-        key = (
-            row["dataset"],
-            row["innovation_sd"],
-            row["autoreg"],
-        )
-        by_pair.setdefault(key, {})[row["parameterization"]] = row
-
-    for key, sides in by_pair.items():
-        innovation = sides.get("innovation")
-        state = sides.get("state")
-        if innovation is None or state is None:
-            continue
-        dataset, innovation_sd, autoreg = key
-        pairs.append(
-            {
-                "dataset": dataset,
-                "innovation_sd": innovation_sd,
-                "autoreg": autoreg,
-                "wall_s_innov": innovation["wall_time_s"],
-                "wall_s_state": state["wall_time_s"],
-                "wall_s_ratio": _comparison_ratio(
-                    innovation["wall_time_s"],
-                    state["wall_time_s"],
-                    higher_is_better=False,
-                ),
-                "ess_per_s_med_innov": innovation["ess_per_sec_rt_median"],
-                "ess_per_s_med_state": state["ess_per_sec_rt_median"],
-                "ess_per_s_med_ratio": _comparison_ratio(
-                    innovation["ess_per_sec_rt_median"],
-                    state["ess_per_sec_rt_median"],
-                    higher_is_better=True,
-                ),
-                "ess_per_s_min_innov": innovation["ess_per_sec_rt_min"],
-                "ess_per_s_min_state": state["ess_per_sec_rt_min"],
-                "ess_per_s_min_ratio": _comparison_ratio(
-                    innovation["ess_per_sec_rt_min"],
-                    state["ess_per_sec_rt_min"],
-                    higher_is_better=True,
-                ),
-                "divergences_innov": innovation["divergences_total"],
-                "divergences_state": state["divergences_total"],
-                "tree_depth_mean_innov": innovation["tree_depth_mean"],
-                "tree_depth_mean_state": state["tree_depth_mean"],
-                "tree_depth_max_innov": innovation["tree_depth_max"],
-                "tree_depth_max_state": state["tree_depth_max"],
-                "ebfmi_min_innov": innovation["ebfmi_min"],
-                "ebfmi_min_state": state["ebfmi_min"],
-                "rhat_rt_max_innov": innovation["rhat_rt_max"],
-                "rhat_rt_max_state": state["rhat_rt_max"],
-            }
-        )
-
-    return (
-        sorted(candidates, key=lambda row: row["candidate"]),
-        sorted(
-            pairs,
-            key=lambda row: (
-                row["dataset"],
-                row["innovation_sd"],
-                row["autoreg"],
-            ),
-        ),
-    )
+    return sorted(candidates, key=lambda row: row["candidate"])
 
 
-def aggregate_parameter_summaries(results: list[FitResult]) -> list[dict[str, Any]]:
-    """Aggregate scalar posterior summaries by benchmark candidate and site.
+def _reduce_metric(field_name: str, values: list[Any]) -> Any:
+    """Reduce one metric across repeats using its configured reducer.
+
+    Returns
+    -------
+    Any
+        Summed, min, max, or mean value depending on the metric.
+    """
+    reducer = _METRIC_REDUCERS.get(field_name, "mean")
+    if reducer == "sum":
+        return sum(values)
+    if reducer == "min":
+        return min(values)
+    if reducer == "max":
+        return max(values)
+    return _mean(values)
+
+
+def build_comparison(
+    candidates: list[dict[str, Any]], spec: ComparisonSpec
+) -> list[dict[str, Any]]:
+    """Lay candidates side by side per comparable group.
+
+    Candidates are grouped by ``spec.match_keys``. A group is reported only
+    when the baseline arm and at least one other arm are present. Each metric
+    contributes one value column per arm and, for each non-baseline arm, a
+    baseline-relative benefit ratio.
 
     Returns
     -------
     list[dict[str, Any]]
-        One row per candidate, dataset, parameterization, and posterior site.
-        ESS/s values are computed per scalar element using that fit's wall time
-        before aggregation.
+        One row per comparable group, sorted by the match-key values.
+    """
+    groups: dict[tuple[Any, ...], dict[str, dict[str, Any]]] = {}
+    for row in candidates:
+        key = tuple(row.get(match_key) for match_key in spec.match_keys)
+        groups.setdefault(key, {})[row["arm"]] = row
+
+    comparison: list[dict[str, Any]] = []
+    for key, arms in groups.items():
+        if spec.baseline not in arms:
+            continue
+        present_others = [arm for arm in spec.other_arms if arm in arms]
+        if not present_others:
+            continue
+
+        baseline_row = arms[spec.baseline]
+        out: dict[str, Any] = dict(zip(spec.match_keys, key))
+        for metric in spec.metrics:
+            for arm in spec.arms:
+                if arm in arms:
+                    out[f"{metric.key}__{arm}"] = arms[arm][metric.key]
+            for arm in present_others:
+                out[f"{metric.key}__ratio__{arm}"] = _comparison_ratio(
+                    baseline_row[metric.key],
+                    arms[arm][metric.key],
+                    metric.higher_is_better,
+                )
+        comparison.append(out)
+
+    return sorted(
+        comparison, key=lambda row: tuple(_sort_key(row[k]) for k in spec.match_keys)
+    )
+
+
+def _sort_key(value: Any) -> tuple[int, Any]:
+    """Build a None-tolerant sort key.
+
+    Returns
+    -------
+    tuple[int, Any]
+        Pair ordering ``None`` ahead of present values of mixed type.
+    """
+    return (0, "") if value is None else (1, value)
+
+
+def aggregate_parameter_summaries(results: list[FitResult]) -> list[dict[str, Any]]:
+    """Aggregate scalar posterior summaries by candidate, arm, and site.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        One row per candidate, dataset, arm, and posterior site. ESS/s values
+        are computed per scalar element using that fit's wall time before
+        aggregation.
     """
     groups: dict[tuple[Any, ...], dict[str, Any]] = {}
     for result in results:
-        parameterization = getattr(result.config, "parameterization", None)
         for summary in result.parameter_summaries:
-            key = (
-                result.candidate,
-                result.dataset,
-                parameterization,
-                summary.site,
-            )
+            key = (result.candidate, result.dataset, result.arm, summary.site)
             group = groups.setdefault(
                 key,
                 {
                     "candidate": result.candidate,
                     "dataset": result.dataset,
-                    "parameterization": parameterization,
+                    "arm": result.arm,
                     "site": summary.site,
                     "n_elements": 0,
                     "ess_values": [],
@@ -209,53 +215,49 @@ def aggregate_parameter_summaries(results: list[FitResult]) -> list[dict[str, An
 
     return sorted(
         rows,
-        key=lambda row: (
-            row["candidate"],
-            row["dataset"],
-            "" if row["parameterization"] is None else row["parameterization"],
-            row["site"],
-        ),
+        key=lambda row: (row["candidate"], row["dataset"], row["arm"], row["site"]),
     )
 
 
-def print_pairwise_tables(results: list[FitResult]) -> None:
-    """Print paired comparison and per-site parameter ESS tables."""
-    _, pairs = aggregate_results(results)
-    if not pairs:
-        print("No state-vs-innovation pairs to summarize.")
+def print_comparison_tables(results: list[FitResult], spec: ComparisonSpec) -> None:
+    """Print baseline-relative comparison and per-site parameter ESS tables."""
+    candidates = aggregate_candidates(results)
+    comparison = build_comparison(candidates, spec)
+    if not comparison:
+        print("No comparable arm groups to summarize.")
         print_parameter_site_table(results)
         return
 
-    metrics = [
-        ("Wall time (s)", "wall_s", "{:.1f}", False),
-        ("ESS/s Rt (median)", "ess_per_s_med", "{:.3f}", True),
-        ("ESS/s Rt (min)", "ess_per_s_min", "{:.3f}", True),
-        ("Divergences", "divergences", "{:d}", False),
-        ("Tree depth (mean)", "tree_depth_mean", "{:.2f}", False),
-        ("Tree depth (max)", "tree_depth_max", "{:d}", False),
-        ("E-BFMI (min)", "ebfmi_min", "{:.3f}", True),
-        ("R-hat Rt (max)", "rhat_rt_max", "{:.3f}", False),
-    ]
-
-    for row in pairs:
+    label_width = 22
+    arm_width = 14
+    benefit_width = 16
+    for row in comparison:
         print()
-        print(f"--- {row['dataset']} | innovation_sd={row['innovation_sd']:g} ---")
-        print(f"{'metric':<22} {'innovation':>12} {'state':>12} {'state benefit':>12}")
-        print("-" * 62)
-        for label, prefix, fmt, higher_is_better in metrics:
-            innovation = row[f"{prefix}_innov"]
-            state = row[f"{prefix}_state"]
-            ratio = row.get(
-                f"{prefix}_ratio",
-                _comparison_ratio(innovation, state, higher_is_better),
-            )
-            print(
-                f"{label:<22} {fmt.format(innovation):>12} {fmt.format(state):>12} "
-                f"{_format_ratio(ratio):>12}"
-            )
+        group_label = ", ".join(f"{k}={row.get(k)}" for k in spec.match_keys)
+        print(f"--- {group_label} ---")
+        header = f"{'metric':<{label_width}}"
+        header += "".join(f"{arm:>{arm_width}}" for arm in spec.arms)
+        header += "".join(
+            f"{arm + ' benefit':>{benefit_width}}" for arm in spec.other_arms
+        )
+        print(header)
+        print("-" * len(header))
+        for metric in spec.metrics:
+            line = f"{metric.label:<{label_width}}"
+            for arm in spec.arms:
+                value = row.get(f"{metric.key}__{arm}")
+                cell = metric.fmt.format(value) if value is not None else "n/a"
+                line += f"{cell:>{arm_width}}"
+            for arm in spec.other_arms:
+                ratio = row.get(f"{metric.key}__ratio__{arm}")
+                line += f"{_format_ratio(ratio):>{benefit_width}}"
+            print(line)
 
     print()
-    print("(* marks state improvement over innovation; ratios > 1 favor state)")
+    print(
+        f"(* marks improvement over the {spec.baseline} baseline; "
+        "ratios > 1 favor the listed arm)"
+    )
     print_parameter_site_table(results)
 
 
@@ -296,10 +298,12 @@ def write_results(
     *,
     suite_name: str,
     results: list[FitResult],
+    spec: ComparisonSpec,
 ) -> None:
     """Write CSV, JSON, and Markdown artifacts to ``output_dir``."""
     output_dir.mkdir(parents=True, exist_ok=True)
-    candidates, pairs = aggregate_results(results)
+    candidates = aggregate_candidates(results)
+    comparison = build_comparison(candidates, spec)
     runs = [_result_to_row(result) for result in results]
     parameters = _parameter_summary_rows(results)
     parameter_sites = aggregate_parameter_summaries(results)
@@ -307,16 +311,18 @@ def write_results(
 
     _write_csv(output_dir / f"{suite_name}_runs.csv", runs)
     _write_csv(output_dir / f"{suite_name}_candidates.csv", candidates)
-    _write_csv(output_dir / f"{suite_name}_pairs.csv", pairs)
+    _write_csv(output_dir / f"{suite_name}_comparison.csv", comparison)
     _write_csv(output_dir / f"{suite_name}_parameters.csv", parameters)
 
     payload = {
         "suite": suite_name,
         "generated_at": generated_at,
         "x64_enabled": bool(jax.config.jax_enable_x64),
+        "arms": list(spec.arms),
+        "baseline": spec.baseline,
         "runs": runs,
         "candidates": candidates,
-        "pairs": pairs,
+        "comparison": comparison,
         "parameters": parameters,
         "parameter_sites": parameter_sites,
     }
@@ -324,6 +330,11 @@ def write_results(
         json.dump(payload, f, indent=2, default=_json_default)
         f.write("\n")
 
+    comparison_columns = list(spec.match_keys) + [
+        f"{metric.key}__ratio__{arm}"
+        for metric in spec.metrics
+        for arm in spec.other_arms
+    ]
     report = "\n".join(
         [
             f"# {suite_name} benchmark",
@@ -332,40 +343,15 @@ def write_results(
             f"Runs: {len(results)}",
             f"Parameter rows: {len(parameters)}",
             f"x64 enabled: {bool(jax.config.jax_enable_x64)}",
+            f"Arms: {', '.join(spec.arms)} (baseline: {spec.baseline})",
             "",
             "## Candidates",
             "",
-            _markdown_table(
-                candidates,
-                [
-                    "candidate",
-                    "n_runs",
-                    "dataset",
-                    "parameterization",
-                    "innovation_sd",
-                    "autoreg",
-                    "wall_time_s",
-                    "ess_per_sec_rt_median",
-                    "ess_per_sec_rt_min",
-                    "divergences_total",
-                ],
-            ),
+            _markdown_table(candidates, _ordered_union_keys(candidates)),
             "",
-            "## State vs Innovation",
+            "## Comparison",
             "",
-            _markdown_table(
-                pairs,
-                [
-                    "dataset",
-                    "innovation_sd",
-                    "autoreg",
-                    "wall_s_ratio",
-                    "ess_per_s_med_ratio",
-                    "ess_per_s_min_ratio",
-                    "divergences_innov",
-                    "divergences_state",
-                ],
-            ),
+            _markdown_table(comparison, comparison_columns),
             "",
             "## Parameter ESS by Site",
             "",
@@ -374,7 +360,7 @@ def write_results(
                 [
                     "candidate",
                     "dataset",
-                    "parameterization",
+                    "arm",
                     "site",
                     "n_elements",
                     "n_finite_ess",
@@ -438,18 +424,19 @@ def _ratio(numerator: float, denominator: float) -> float | None:
 
 
 def _comparison_ratio(
-    innovation: float, state: float, higher_is_better: bool
+    baseline: float, arm: float, higher_is_better: bool
 ) -> float | None:
-    """Compute a state-benefit ratio for one comparison metric.
+    """Compute an arm's benefit ratio relative to the baseline.
 
     Returns
     -------
     float | None
-        Ratio greater than 1 when state is better, or ``None`` when invalid.
+        Ratio greater than 1 when the arm beats the baseline, or ``None``
+        when invalid.
     """
     if higher_is_better:
-        return _ratio(state, innovation)
-    return _ratio(innovation, state)
+        return _ratio(arm, baseline)
+    return _ratio(baseline, arm)
 
 
 def _format_ratio(ratio: float | None) -> str:
@@ -505,13 +492,14 @@ def _result_to_row(result: FitResult) -> dict[str, Any]:
     Returns
     -------
     dict[str, Any]
-        Row containing metadata, settings, and metrics for one fit.
+        Row containing metadata, configuration axes, settings, and metrics.
     """
     return {
         "candidate": result.candidate,
+        "arm": result.arm,
         "repeat": result.repeat,
         "dataset": result.dataset,
-        **asdict(result.config),
+        **result.config_fields,
         **asdict(result.settings),
         **asdict(result.metrics),
         "n_init_points": result.n_initialization_points,
@@ -532,11 +520,10 @@ def _parameter_summary_rows(results: list[FitResult]) -> list[dict[str, Any]]:
             rows.append(
                 {
                     "candidate": result.candidate,
+                    "arm": result.arm,
                     "repeat": result.repeat,
                     "dataset": result.dataset,
-                    "parameterization": result.config.parameterization,
-                    "innovation_sd": result.config.innovation_sd,
-                    "autoreg": result.config.autoreg,
+                    **result.config_fields,
                     "site": summary.site,
                     "index": summary.index,
                     "mean": summary.mean,
@@ -547,12 +534,28 @@ def _parameter_summary_rows(results: list[FitResult]) -> list[dict[str, Any]]:
     return rows
 
 
+def _ordered_union_keys(rows: list[dict[str, Any]]) -> list[str]:
+    """Collect dict keys across rows, preserving first-seen order.
+
+    Returns
+    -------
+    list[str]
+        Union of keys in the order they first appear.
+    """
+    seen: dict[str, None] = {}
+    for row in rows:
+        for key in row:
+            seen.setdefault(key, None)
+    return list(seen)
+
+
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
-    """Write rows to a CSV file when rows are present."""
+    """Write rows to a CSV file using the union of keys across rows."""
     if not rows:
         return
+    fieldnames = _ordered_union_keys(rows)
     with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(f, fieldnames=fieldnames, restval="")
         writer.writeheader()
         writer.writerows(rows)
 

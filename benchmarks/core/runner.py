@@ -12,15 +12,16 @@ from __future__ import annotations
 
 import gc
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 import jax
 import jax.random as random
 import numpy as np
 import numpyro
 
-from benchmarks.core.models import BuildConfig, BuiltFit
-from pyrenew.model import MultiSignalModel
+from benchmarks.core.models import BuiltFit
 
 RT_SITE_NAMES: tuple[str, ...] = ("PopulationInfections::rt_single",)
 
@@ -63,19 +64,72 @@ class ParameterSummary:
 
 @dataclass
 class FitResult:
-    """One row of benchmark output."""
+    """One row of benchmark output.
+
+    Parameters
+    ----------
+    candidate
+        Display name of the benchmark candidate.
+    arm
+        Comparison arm this fit belongs to, as declared by the suite's
+        :class:`benchmarks.core.comparison.ComparisonSpec`.
+    config_fields
+        Flat, serializable mapping of the candidate's configuration axes.
+        Reporting reads only this view, so candidates with different model
+        families can coexist in one result set.
+    config
+        Optional builder-specific configuration object retained for callers
+        that need the original; reporting does not read it.
+    """
 
     candidate: str
+    arm: str
     repeat: int
     dataset: str
-    config: BuildConfig
     settings: McmcSettings
     metrics: FitMetrics
     n_initialization_points: int
+    config_fields: dict[str, Any] = field(default_factory=dict)
+    config: Any = None
     parameter_summaries: list[ParameterSummary] = field(default_factory=list)
 
 
-def _extract_rt_array(model: MultiSignalModel) -> np.ndarray | None:
+@dataclass(frozen=True)
+class Candidate:
+    """One benchmark candidate: how to build a model and how to report it.
+
+    A suite assembles a list of candidates and hands them to the runner. The
+    ``build`` callable returns a :class:`benchmarks.core.models.BuiltFit`, so a
+    candidate may wrap any model the suite can construct: a PyRenew
+    ``MultiSignalModel`` or the production HEW model. Model-construction code
+    lives in the suite; the runner stays model-agnostic.
+
+    Parameters
+    ----------
+    name
+        Display name, unique within the suite.
+    arm
+        Comparison arm this candidate belongs to, matching the suite's
+        :class:`benchmarks.core.comparison.ComparisonSpec`.
+    config_fields
+        Flat mapping of the candidate's configuration axes, used by reporting
+        to group and label candidates.
+    build
+        Zero-argument callable returning the assembled ``BuiltFit``. Called
+        once per repeat so each fit starts from a fresh model.
+    rt_site_names
+        Posterior site names to search for the Rt trajectory, in priority
+        order.
+    """
+
+    name: str
+    arm: str
+    config_fields: dict[str, Any]
+    build: Callable[[], BuiltFit]
+    rt_site_names: tuple[str, ...] = RT_SITE_NAMES
+
+
+def _extract_rt_array(mcmc: Any, rt_site_names: tuple[str, ...]) -> np.ndarray | None:
     """Locate and squeeze the Rt posterior trajectory.
 
     Returns
@@ -83,8 +137,8 @@ def _extract_rt_array(model: MultiSignalModel) -> np.ndarray | None:
     numpy.ndarray | None
         Rt samples grouped by chain, or ``None`` if no Rt site was sampled.
     """
-    samples = model.mcmc.get_samples(group_by_chain=True)
-    for name in RT_SITE_NAMES:
+    samples = mcmc.get_samples(group_by_chain=True)
+    for name in rt_site_names:
         if name not in samples:
             continue
         rt = np.asarray(samples[name])
@@ -123,7 +177,9 @@ def _rhat_max(rt: np.ndarray) -> float:
     return float(np.max(finite)) if finite.size else float("nan")
 
 
-def compute_fit_metrics(model: MultiSignalModel, wall_time_s: float) -> FitMetrics:
+def compute_fit_metrics(
+    mcmc: Any, wall_time_s: float, rt_site_names: tuple[str, ...]
+) -> FitMetrics:
     """Compute performance and convergence metrics from a completed MCMC fit.
 
     Returns
@@ -131,7 +187,7 @@ def compute_fit_metrics(model: MultiSignalModel, wall_time_s: float) -> FitMetri
     FitMetrics
         Performance and convergence metrics for the completed fit.
     """
-    rt = _extract_rt_array(model)
+    rt = _extract_rt_array(mcmc, rt_site_names)
     if rt is None:
         ess_median = float("nan")
         ess_min = float("nan")
@@ -143,7 +199,7 @@ def compute_fit_metrics(model: MultiSignalModel, wall_time_s: float) -> FitMetri
         ess_min = float(np.min(finite_ess)) if finite_ess.size else float("nan")
         rhat_max = _rhat_max(rt)
 
-    extras = model.mcmc.get_extra_fields(group_by_chain=True)
+    extras = mcmc.get_extra_fields(group_by_chain=True)
     jax.block_until_ready(extras)
     divergences = int(np.sum(np.asarray(extras["diverging"])))
     num_steps = np.asarray(extras["num_steps"]).flatten()
@@ -164,7 +220,7 @@ def compute_fit_metrics(model: MultiSignalModel, wall_time_s: float) -> FitMetri
     )
 
 
-def summarize_posterior_parameters(model: MultiSignalModel) -> list[ParameterSummary]:
+def summarize_posterior_parameters(mcmc: Any) -> list[ParameterSummary]:
     """Summarize posterior mean, ESS, and R-hat for every sampled site.
 
     Returns
@@ -172,7 +228,7 @@ def summarize_posterior_parameters(model: MultiSignalModel) -> list[ParameterSum
     list[ParameterSummary]
         One row per scalar element of each posterior sample site.
     """
-    samples = model.mcmc.get_samples(group_by_chain=True)
+    samples = mcmc.get_samples(group_by_chain=True)
     summaries: list[ParameterSummary] = []
     for site, values in sorted(samples.items()):
         array = np.asarray(values)
@@ -215,11 +271,19 @@ def _format_sample_index(shape: tuple[int, ...], flat_index: int) -> str:
 def fit_and_measure(
     candidate: str,
     built: BuiltFit,
-    config: BuildConfig,
     settings: McmcSettings,
     repeat: int,
+    *,
+    arm: str,
+    config_fields: dict[str, Any],
+    rt_site_names: tuple[str, ...] = RT_SITE_NAMES,
+    config: Any = None,
 ) -> FitResult:
     """Fit ``built.model`` and return a :class:`FitResult`.
+
+    The model is any :class:`pyrenew.metaclass.Model` exposing ``run`` and
+    ``mcmc``, so the same runner serves PyRenew ``MultiSignalModel`` builds
+    and the production HEW model.
 
     Parameters
     ----------
@@ -228,13 +292,21 @@ def fit_and_measure(
     built
         Assembled model and ``run_kwargs`` from a builder in
         :mod:`benchmarks.core.models`.
-    config
-        Configuration used to build the model. Stored on the result.
     settings
         MCMC controls shared across the suite.
     repeat
         Repeat index. Used to perturb the seed so repeats explore different
         chain trajectories.
+    arm
+        Comparison arm this candidate belongs to.
+    config_fields
+        Flat mapping of the candidate's configuration axes, stored for
+        reporting.
+    rt_site_names
+        Posterior site names to search for the Rt trajectory, in priority
+        order.
+    config
+        Optional builder-specific configuration object, stored verbatim.
 
     Returns
     -------
@@ -259,17 +331,40 @@ def fit_and_measure(
     jax.block_until_ready(samples)
     wall_time_s = time.perf_counter() - start
 
-    metrics = compute_fit_metrics(built.model, wall_time_s)
-    parameter_summaries = summarize_posterior_parameters(built.model)
+    metrics = compute_fit_metrics(built.model.mcmc, wall_time_s, rt_site_names)
+    parameter_summaries = summarize_posterior_parameters(built.model.mcmc)
     result = FitResult(
         candidate=candidate,
+        arm=arm,
         repeat=repeat,
         dataset=built.dataset_name,
-        config=config,
         settings=settings,
         metrics=metrics,
         n_initialization_points=built.n_initialization_points,
+        config_fields=dict(config_fields),
+        config=config,
         parameter_summaries=parameter_summaries,
     )
     gc.collect()
     return result
+
+
+def fit_candidate(
+    candidate: Candidate, settings: McmcSettings, repeat: int
+) -> FitResult:
+    """Build and fit one :class:`Candidate`.
+
+    Returns
+    -------
+    FitResult
+        Per-fit metrics and metadata for this candidate and repeat.
+    """
+    return fit_and_measure(
+        candidate=candidate.name,
+        built=candidate.build(),
+        settings=settings,
+        repeat=repeat,
+        arm=candidate.arm,
+        config_fields=candidate.config_fields,
+        rt_site_names=candidate.rt_site_names,
+    )
