@@ -299,8 +299,14 @@ def write_results(
     suite_name: str,
     results: list[FitResult],
     spec: ComparisonSpec,
+    extra_payload: dict[str, Any] | None = None,
 ) -> None:
-    """Write CSV, JSON, and Markdown artifacts to ``output_dir``."""
+    """Write CSV, JSON, and Markdown artifacts to ``output_dir``.
+
+    ``extra_payload`` is merged into the JSON payload, letting a suite attach
+    provenance such as the source of its prior-config functions. Its keys must
+    not collide with the standard payload keys.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
     candidates = aggregate_candidates(results)
     comparison = build_comparison(candidates, spec)
@@ -326,6 +332,8 @@ def write_results(
         "parameters": parameters,
         "parameter_sites": parameter_sites,
     }
+    if extra_payload is not None:
+        payload.update(extra_payload)
     with open(output_dir / f"{suite_name}_runs.json", "w") as f:
         json.dump(payload, f, indent=2, default=_json_default)
         f.write("\n")

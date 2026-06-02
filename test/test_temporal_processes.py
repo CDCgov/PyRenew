@@ -679,7 +679,7 @@ class TestTemporalProcessParameterizationFlag:
 
 
 class TestStateCenteredRandomWalk:
-    """State-centered RandomWalk samples the state path directly via GaussianRandomWalk."""
+    """``RandomWalk`` in state mode draws the post-initial path from a single ``rw_state`` site backed by ``StateRandomWalk``."""
 
     def test_return_shape(self):
         """Return value has shape ``(n_timepoints, n_processes)``."""
@@ -801,7 +801,7 @@ class TestStateCenteredRandomWalk:
 
 
 class TestStateCenteredAR1:
-    """State-centered AR1 samples the full state path via StateAR1 distribution."""
+    """``AR1`` in state mode draws the full path from a single ``ar1_state`` site backed by ``StateAR1``."""
 
     def test_return_shape(self):
         """Return value has shape ``(n_timepoints, n_processes)``."""
@@ -893,7 +893,7 @@ class TestStateCenteredAR1:
 
 
 class TestStateCenteredDifferencedAR1:
-    """State-centered DifferencedAR1 samples the post-initial path via StateDifferencedAR1."""
+    """``DifferencedAR1`` in state mode draws the post-initial path from a single ``diff_state`` site backed by ``StateDifferencedAR1``."""
 
     def test_return_shape(self):
         """Return value has shape ``(n_timepoints, n_processes)``."""

@@ -11,6 +11,7 @@ from pyrenew.datasets.synthetic_data import (
     load_synthetic_true_parameters,
     load_synthetic_weekly_hospital_admissions,
 )
+from pyrenew.datasets.synthetic_hew_export import write_synthetic_hew_model_dir
 from pyrenew.datasets.wastewater_nwss import load_wastewater_data_for_state
 
 __all__ = [
@@ -22,4 +23,5 @@ __all__ = [
     "load_synthetic_true_parameters",
     "load_synthetic_weekly_hospital_admissions",
     "load_wastewater_data_for_state",
+    "write_synthetic_hew_model_dir",
 ]

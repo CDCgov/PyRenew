@@ -335,3 +335,8 @@ replay_pid*
 
 # Benchmark outputs
 benchmarks/results/
+# Benchmark example drivers: ignore everything under examples/ (user copies you
+# run but do not commit), then allowlist the committed examples explicitly.
+benchmarks/examples/*
+!benchmarks/examples/__init__.py
+!benchmarks/examples/run_prior_regimes.py

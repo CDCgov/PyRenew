@@ -527,6 +527,7 @@ def test_write_results_creates_expected_artifacts(tmp_path):
         suite_name="rt_params",
         results=results,
         spec=rt_params.COMPARISON_SPEC,
+        extra_payload={"prior_configs": {"demo": {"source": "def demo(): ..."}}},
     )
 
     expected = {
@@ -550,6 +551,7 @@ def test_write_results_creates_expected_artifacts(tmp_path):
     assert len(payload["parameter_sites"]) == 2
     assert payload["parameters"][0]["site"] == "example_site"
     assert payload["parameter_sites"][0]["site"] == "example_site"
+    assert payload["prior_configs"]["demo"]["source"] == "def demo(): ..."
 
     parameter_rows = (tmp_path / "rt_params_parameters.csv").read_text()
     assert "site,index,mean,ess,rhat" in parameter_rows

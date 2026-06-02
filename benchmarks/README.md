@@ -1,7 +1,7 @@
 # PyRenew benchmarks
 
 Opt-in MCMC performance experiments.
-The suite is a CLI entry point under `benchmarks/suites/`.
+Each driver is a CLI entry point under `benchmarks/suites/` (maintained comparisons) or `benchmarks/examples/` (copy-me templates).
 Run from the repository root.
 
 Benchmarks are not part of CI.
@@ -17,16 +17,37 @@ benchmarks/
 │   ├── real_data.py    RealDataProvider over CDC NHSN + NSSP feeds
 │   ├── reference_data.py Static location names and populations
 │   ├── priors.py       benchmark-local priors for real-data builds
-│   ├── models.py       H+E model builder (weekly hospital + daily ED)
-│   ├── runner.py       fit_and_measure and ArviZ-free FitMetrics computation
-│   └── reporting.py    stdout tables and CSV / JSON / Markdown writers
+│   ├── comparison.py   ComparisonSpec / MetricSpec: declares arms, baseline, metrics
+│   ├── models.py       BuiltFit + align_weekly_observations (shared machinery)
+│   ├── hew_model.py    adapter wrapping the production HEW model as a BuiltFit
+│   ├── runner.py       Candidate, fit_and_measure/fit_candidate; ArviZ-free FitMetrics
+│   └── reporting.py    spec-driven stdout tables and CSV / JSON / Markdown writers
 ├── suites/
-│   └── rt_params.py    centered vs non-centered weekly Rt parameterization
+│   ├── rt_params.py    centered vs non-centered weekly Rt parameterization
+│   └── pyrenew_vs_hew.py  production HEW vs PyRenew (no ED day-of-week)
 └── results/            output (gitignored)
 ```
 
-The suite asks the dataset provider for the H+E bundle, builds the model under each parameterization, and the runner fits the model and collects metrics.
-The `DatasetProvider` protocol in `core/signals.py` lets reporting-input providers replace `SyntheticProvider` without touching the suite.
+A driver asks a dataset provider for a bundle, builds one or more candidate models, and the runner fits each candidate and collects metrics.
+The `DatasetProvider` protocol in `core/signals.py` lets reporting-input providers replace `SyntheticProvider` without touching the driver.
+
+## Two axes of comparison
+
+A benchmark compares candidates that differ along one of two axes.
+
+1. **Model.** Different model specifications on the same data: a parameterization, a structural choice, or a whole model family.
+   The arms are models.
+   `rt_params` compares the `innovation` and `state` parameterizations of the weekly $\mathcal{R}(t)$ process; `pyrenew_vs_hew` compares a PyRenew `MultiSignalModel` against the production HEW model.
+2. **Priors.** The same model structure under different prior choices ("regimes").
+   The arms are regimes.
+   The `prior_regimes` example (`benchmarks/examples/run_prior_regimes.py`) fits one fixed structure under several prior sets and compares how each samples; see `prior_regimes.md`.
+
+The two axes are orthogonal, and a `ComparisonSpec` expresses either.
+Its `arms` are the things compared side by side, `baseline` is the arm the others are rated against, and `match_keys` are the fields that must be equal for two fits to form a comparable group, so the axis you are not varying (and the dataset) is held fixed.
+To cross the axes, put one on `arms` and add the other to `match_keys`: `rt_params` does this, holding a fixed-hyperparameter prior regime equal while comparing parameterizations within it.
+
+The model axis lives in the build function (structure is code); the prior axis lives in the priors a build function consumes (priors are data).
+`prior_regimes.md` develops the prior axis in full.
 
 ## rt_params suite
 
@@ -110,19 +131,20 @@ Real-data mode currently does not apply ED right truncation PMFs; use `--omit-la
 
 Written to `--output-dir` with prefix `rt_params_`:
 
-  | File                       | Contents                                                                                                         |
-  | -------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-  | `rt_params_runs.csv`       | One row per fit, with full config and metrics.                                                                   |
-  | `rt_params_candidates.csv` | One row per parameterization, aggregated over repeats.                                                           |
-  | `rt_params_pairs.csv`      | One row per matched state-vs-innovation pair, with `<metric>_innov`, `<metric>_state`, `<metric>_ratio` columns. |
-  | `rt_params_parameters.csv` | One row per scalar posterior site element per fit, with posterior mean, ESS, and R-hat.                          |
-  | `rt_params_runs.json`      | All of the above, site-level parameter ESS summaries, and a header (suite name, x64 flag, timestamp).            |
-  | `rt_params_report.md`      | Compact Markdown report with candidate, pairwise, and per-site parameter ESS tables.                             |
+  | File                       | Contents                                                                                                                  |
+  | -------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+  | `rt_params_runs.csv`       | One row per fit, with full config and metrics.                                                                            |
+  | `rt_params_candidates.csv` | One row per candidate, aggregated over repeats, carrying `arm` and the candidate's config fields.                         |
+  | `rt_params_comparison.csv` | One row per comparable group, with `<metric>__<arm>` value columns and `<metric>__ratio__<arm>` baseline-relative ratios. |
+  | `rt_params_parameters.csv` | One row per scalar posterior site element per fit, with posterior mean, ESS, and R-hat.                                   |
+  | `rt_params_runs.json`      | All of the above, site-level parameter ESS summaries, and a header (suite name, arms, baseline, x64 flag, timestamp).     |
+  | `rt_params_report.md`      | Compact Markdown report with candidate, comparison, and per-site parameter ESS tables.                                    |
 
-Column convention: `_innov` and `_state` carry the per-side values, and `_ratio` columns are state-benefit ratios.
-For higher-is-better metrics such as ESS-per-second, `_ratio` is `state / innovation`.
-For lower-is-better metrics such as wall time, `_ratio` is `innovation / state`.
-In all cases, `_ratio > 1` favors the state parameterization.
+Column convention: `<metric>__<arm>` columns carry the per-arm values, and `<metric>__ratio__<arm>` columns are the arm's benefit relative to the spec baseline.
+For higher-is-better metrics such as ESS-per-second, the ratio is `arm / baseline`.
+For lower-is-better metrics such as wall time, the ratio is `baseline / arm`.
+In all cases, a ratio `> 1` favors the listed arm over the baseline.
+The baseline arm has no ratio column; ratios are omitted (blank) when undefined, such as dividing by zero divergences.
 
 ### Reading the metrics
 
@@ -145,22 +167,44 @@ Candidate summaries average time and ESS metrics across repeats, sum divergences
 
 ### Suite design
 
-The suite varies two axes:
-
-1. **Parameterization**: `innovation` (non-centered) and `state` (centered) modes of the inner `DifferencedAR1`.
-2. **Prior regime**: tight $(\sigma = 0.01, \phi = 0.9)$ or loose $(\sigma = 0.10, \phi = 0.5)$, where $\sigma$ is the weekly per-step innovation SD and $\phi$ the autoregressive coefficient.
-   The cumulative variance of $\log \mathcal{R}(T)$ is far more sensitive to $\phi$ than to $\sigma$.
+`rt_params` crosses both axes.
+Its arms are the **model** axis: the `innovation` (non-centered) and `state` (centered) modes of the inner `DifferencedAR1`.
+Its `--prior` option steps a **prior** regime that fixes the weekly per-step innovation SD $\sigma$ and the autoregressive coefficient $\phi$ to chosen values: `tight` $(\sigma = 0.01, \phi = 0.9)$, `loose` $(\sigma = 0.10, \phi = 0.5)$, or an explicit pair.
+The regime is a match key, held equal within each comparison, so the two parameterizations are compared within a regime rather than across regimes.
+The cumulative variance of $\log \mathcal{R}(T)$ is far more sensitive to $\phi$ than to $\sigma$.
 
 The latent $\mathcal{R}(t)$ runs at weekly cadence, matching the production HEW model and the weekly forecasting setting.
-Production treats both hyperparameters as inferred (`eta_sd ~ TruncatedNormal(0.15, 0.05)`, `autoreg_rt ~ Beta(2, 40)`); the benchmark fixes them to isolate the parameterization axis.
+Production treats both hyperparameters as inferred (`eta_sd ~ TruncatedNormal(0.15, 0.05)`, `autoreg_rt ~ Beta(2, 40)`); `rt_params` fixes them so the comparison isolates the parameterization.
+To make the priors themselves the object of study rather than holding them fixed, use the `prior_regimes` example.
+
+## prior_regimes example
+
+Fits one fixed H+E structure under a set of prior regimes (the prior axis) and compares how each samples.
+Run from the repository root:
+
+```bash
+python -m benchmarks.examples.run_prior_regimes --quick
+```
+
+`--quick` is a smoke run (50 warmup, 50 samples, 1 chain); drop it for a full run.
+It accepts the same sampler and output flags as `rt_params`: `--num-warmup`, `--num-samples`, `--num-chains`, `--repeats`, `--seed`, `--output-dir` (default `benchmarks/results/`, prefix `prior_regimes_`), `--no-write`, and `--progress-bar`.
+
+As shipped it has one regime (`example`), so it profiles that single model: per-candidate and per-site ESS tables plus the written artifacts, with an empty comparison table.
+A comparison appears once you add a second regime.
+The regimes and the model structure are yours to edit: copy `benchmarks/examples/run_prior_regimes.py` to another file under `benchmarks/examples/` (everything there but the committed examples is gitignored) and change `REGIMES`.
+See `prior_regimes.md` for the full workflow, including how each run records the exact priors it used.
 
 ## Adding a benchmark
 
-1. Add a model builder to `benchmarks/core/models.py` that returns a `BuiltFit`.
-   Reuse `BuildConfig` if the new model fits the existing axes.
+1. Write a build function in your suite that returns a `BuiltFit`.
+   Model construction lives in the suite, not in `core`.
+   The model may be any `pyrenew.metaclass.Model` exposing `run` and `mcmc`, so the build function can assemble a PyRenew `MultiSignalModel` or wrap the production HEW model via `core/hew_model.py`.
+   `core/models.py` provides the shared `BuiltFit` container and `align_weekly_observations` helper.
 2. If the model needs a new dataset, add a builder to `benchmarks/core/datasets.py` and expose it through `SyntheticProvider`.
-3. Add or extend a suite module in `benchmarks/suites/` with a `main()` CLI.
-   Use `fit_and_measure`, `print_pairwise_tables`, and `write_results` from `benchmarks.core`.
+3. Define a `ComparisonSpec` in the suite: its `arms`, `baseline`, `match_keys`, and `metrics` are the single source of truth for reporting.
+   A single-arm spec is allowed; it profiles one model and emits an empty comparison table.
+4. Add or extend a suite module in `benchmarks/suites/` with a `main()` CLI.
+   Wrap each build function in a `Candidate` (with its `arm` and `config_fields`), loop with `fit_candidate`, then call `print_comparison_tables` and `write_results` with the spec.
 
 ## Wiring real data
 

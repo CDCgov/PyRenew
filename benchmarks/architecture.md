@@ -103,7 +103,7 @@ Their imports live inside function bodies (`real_data.py` for `cfa.stf.data`; `h
 
 ## Extending
 
-- **New model spec** -  write a `build() -> BuiltFit` in a suite, wrap it in a `Candidate`.
+- **New model spec** - write a `build() -> BuiltFit` in a suite, wrap it in a `Candidate`.
   No `core` change.
 - **New data source** - implement `DatasetProvider`.
 - **New metric** - add a field to `FitMetrics`, a `MetricSpec` to the suite's spec, and a reducer to `_METRIC_REDUCERS` if it is not a mean.
