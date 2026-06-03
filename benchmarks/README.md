@@ -1,12 +1,12 @@
 # PyRenew benchmarks
 
-Opt-in MCMC performance benchmarks.
-Each benchmark is run by a "driver": a Python module with a `main()` you invoke with `python -m ...`.
-Committed comparisons live in `benchmarks/suites/` (each is a *suite*); templates to copy for a new comparison live in `benchmarks/examples/`.
-Run all drivers from the repository root.
+Opt-in MCMC performance benchmarks which allow for systematic comparison of modeling choices: model parameterization and/or prior choice.
 
-These benchmarks are not part of CI.
-Use `test/` for correctness checks and these benchmarks for sampler comparisons.
+Each comparison is run by a "driver": a Python module with a `main()` that is run from the repository root.
+Committed comparisons live in `benchmarks/suites/` (a comparison is necessarily a *suite* of sampler runs).
+Templates to copy for a new comparison live in `benchmarks/examples/`.
+
+These benchmarks are not part of CI; the unit and integration tests in `test/` provide correctness checks.
 
 ## Layout
 
