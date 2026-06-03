@@ -109,13 +109,12 @@ class TestStateCenteredDistributionLogProb:
             num_steps=value.shape[-1],
         )
 
-        stationary_sd = scale / jnp.sqrt(1 - autoreg**2)
-        init_prob = dist.Normal(initial_loc, stationary_sd).log_prob(value[:, 0])
-        transition_locs = autoreg[:, None] * value[:, :-1]
-        transition_probs = dist.Normal(transition_locs, scale[:, None]).log_prob(
-            value[:, 1:]
+        full_path = jnp.concatenate([initial_loc[:, None], value], axis=-1)
+        transition_locs = autoreg[:, None] * full_path[:, :-1]
+        expected = dist.Normal(transition_locs, scale[:, None]).log_prob(
+            full_path[:, 1:]
         )
-        expected = init_prob + transition_probs.sum(axis=-1)
+        expected = expected.sum(axis=-1)
 
         assert jnp.allclose(distribution.log_prob(value), expected)
 
@@ -801,7 +800,7 @@ class TestStateCenteredRandomWalk:
 
 
 class TestStateCenteredAR1:
-    """State-centered AR1 samples the full state path via StateAR1 distribution."""
+    """State-centered AR1 samples a stationary init site plus a post-initial path."""
 
     def test_return_shape(self):
         """Return value has shape ``(n_timepoints, n_processes)``."""
@@ -810,23 +809,23 @@ class TestStateCenteredAR1:
             path = ar1.sample(n_timepoints=15, n_processes=4, name_prefix="ar1")
         assert path.shape == (15, 4)
 
-    def test_trace_has_state_site_not_init_or_noise(self):
-        """State-mode AR1 trace contains a single ``_state`` site only."""
+    def test_trace_has_init_and_state_sites_not_noise(self):
+        """State-mode AR1 trace has an unbundled ``_init`` site and a ``_state`` site."""
         ar1 = AR1(**fixed_ar1_kwargs(), parameterization="state")
         traced = numpyro.handlers.trace(
             numpyro.handlers.seed(ar1.sample, rng_seed=0)
         ).get_trace(n_timepoints=8, n_processes=2, name_prefix="ar1")
+        assert "ar1_init" in traced
         assert "ar1_state" in traced
-        assert "ar1_init" not in traced
         assert "ar1_noise" not in traced
 
     def test_state_site_shape(self):
-        """The state site holds the full path of shape ``(n_processes, n_timepoints)``."""
+        """The state site holds the post-initial path of shape ``(n_processes, n_timepoints - 1)``."""
         ar1 = AR1(**fixed_ar1_kwargs(), parameterization="state")
         traced = numpyro.handlers.trace(
             numpyro.handlers.seed(ar1.sample, rng_seed=0)
         ).get_trace(n_timepoints=12, n_processes=3, name_prefix="ar1")
-        assert traced["ar1_state"]["value"].shape == (3, 12)
+        assert traced["ar1_state"]["value"].shape == (3, 11)
 
     def test_n_timepoints_one_returns_initial_distribution_draw(self):
         """``n_timepoints=1`` returns a single stationary-prior draw per process."""

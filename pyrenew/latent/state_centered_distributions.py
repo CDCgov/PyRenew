@@ -7,7 +7,7 @@ import jax.numpy as jnp
 from jax import lax, random
 from jax.typing import ArrayLike
 from numpyro.distributions import constraints
-from numpyro.distributions.continuous import Normal
+from numpyro.distributions.continuous import GaussianRandomWalk, Normal
 from numpyro.distributions.distribution import Distribution
 from numpyro.distributions.util import validate_sample
 from numpyro.util import is_prng_key
@@ -25,6 +25,10 @@ class StateRandomWalk(Distribution):
 
     The sampled value is the post-initial path
     $[x_1, x_2, \ldots, x_{\mathrm{num\_steps}}]$ of length ``num_steps``.
+
+    This is a location shift of [`numpyro.distributions.GaussianRandomWalk`][]:
+    a zero-mean Gaussian random walk supplies the path, and ``initial_loc``
+    offsets it so the walk is centered on the initial state rather than zero.
     """
 
     arg_constraints = {
@@ -49,6 +53,7 @@ class StateRandomWalk(Distribution):
         self.scale = scale
         self.initial_loc = initial_loc
         self.num_steps = num_steps
+        self.gaussian_random_walk_ = GaussianRandomWalk(scale, num_steps)
 
         batch_shape = lax.broadcast_shapes(
             jnp.shape(scale),
@@ -66,13 +71,8 @@ class StateRandomWalk(Distribution):
             Array of shape ``sample_shape + batch_shape + (num_steps,)``.
         """
         assert is_prng_key(key)
-
-        per_step_shape = sample_shape + self.batch_shape
-        scale = jnp.broadcast_to(jnp.asarray(self.scale), per_step_shape)
-        initial_loc = jnp.broadcast_to(jnp.asarray(self.initial_loc), per_step_shape)
-        noise = random.normal(key, shape=per_step_shape + (self.num_steps,))
-        increments = scale[..., jnp.newaxis] * noise
-        return initial_loc[..., jnp.newaxis] + jnp.cumsum(increments, axis=-1)
+        walk = self.gaussian_random_walk_.sample(key, sample_shape)
+        return jnp.expand_dims(jnp.asarray(self.initial_loc), -1) + walk
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
@@ -90,35 +90,29 @@ class StateRandomWalk(Distribution):
         ArrayLike
             Log-density of shape ``sample_shape + batch_shape``.
         """
-        scale = jnp.asarray(self.scale)
-        initial_loc = jnp.asarray(self.initial_loc)
-        init_with_event = jnp.expand_dims(initial_loc, -1)
-        init_bcast = jnp.broadcast_to(init_with_event, value.shape[:-1] + (1,))
-        v = jnp.concatenate([init_bcast, value], axis=-1)
-        step_probs = Normal(v[..., :-1], jnp.expand_dims(scale, -1)).log_prob(
-            v[..., 1:]
-        )
-        return jnp.sum(step_probs, axis=-1)
+        offset = jnp.expand_dims(jnp.asarray(self.initial_loc), -1)
+        return self.gaussian_random_walk_.log_prob(value - offset)
 
 
 class StateAR1(Distribution):
     r"""
-    State-centered AR(1) prior on a length-``num_steps`` state path.
+    State-centered AR(1) prior on a post-initial state path.
 
-    Generative form:
+    Generative form, given a deterministic initial state $x_0$ = ``initial_loc``:
 
     $$
-    x_0 \sim \mathrm{Normal}(\mu_0, \sigma_{\text{stat}})
-    $$
-    $$
-    x_t \sim \mathrm{Normal}(\phi \, x_{t-1}, \sigma), \quad t = 1, \dots, T-1
+    x_t \sim \mathrm{Normal}(\phi \, x_{t-1}, \sigma), \quad t = 1, \dots, T
     $$
 
-    where $\sigma_{\text{stat}} = \sigma / \sqrt{1 - \phi^2}$ is the
-    stationary standard deviation, $\mu_0$ is ``initial_loc``, $\phi$ is
-    ``autoreg``, and $\sigma$ is ``scale``.
+    where $\phi$ is ``autoreg`` and $\sigma$ is ``scale``.
 
-    The sampled value is the full path $[x_0, x_1, \ldots, x_{T-1}]$.
+    The sampled value is the post-initial path
+    $[x_1, x_2, \ldots, x_{\mathrm{num\_steps}}]$ of length ``num_steps``.
+    The initial state $x_0$ is not part of the sample; it is supplied as
+    ``initial_loc`` and used to score the first transition. A random initial
+    state drawn from the stationary distribution is handled by the calling
+    temporal process as a separate sample site, matching the innovation
+    parameterization.
 
     Parameters
     ----------
@@ -128,9 +122,10 @@ class StateAR1(Distribution):
     scale
         Innovation standard deviation $\sigma$. Must be positive.
     initial_loc
-        Prior mean $\mu_0$ of the initial state $x_0$. Defaults to ``0.0``.
+        Deterministic initial state $x_0$. Used to score the first
+        transition; not itself sampled. Defaults to ``0.0``.
     num_steps
-        Length of the state path. Must be a positive integer.
+        Length of the post-initial path. Must be a positive integer.
     validate_args
         Forwarded to the base [`numpyro.distributions.Distribution`][].
     """
@@ -178,7 +173,7 @@ class StateAR1(Distribution):
 
     def sample(self, key: jax.Array, sample_shape: tuple[int, ...] = ()) -> ArrayLike:
         """
-        Forward-sample a state path.
+        Forward-sample a post-initial state path.
 
         Returns
         -------
@@ -191,14 +186,8 @@ class StateAR1(Distribution):
         autoreg = jnp.broadcast_to(jnp.asarray(self.autoreg), per_step_shape)
         scale = jnp.broadcast_to(jnp.asarray(self.scale), per_step_shape)
         initial_loc = jnp.broadcast_to(jnp.asarray(self.initial_loc), per_step_shape)
-        stationary_sd = scale / jnp.sqrt(1 - autoreg**2)
 
         noise = random.normal(key, shape=(self.num_steps,) + per_step_shape)
-        z0 = noise[0]
-        x0 = initial_loc + stationary_sd * z0
-
-        if self.num_steps == 1:
-            return x0[..., jnp.newaxis]
 
         def step(
             prev: ArrayLike, z_t: ArrayLike
@@ -206,19 +195,19 @@ class StateAR1(Distribution):
             new = autoreg * prev + scale * z_t
             return new, new
 
-        _, xs = lax.scan(step, x0, noise[1:])
-        path_time_first = jnp.concatenate([x0[jnp.newaxis], xs], axis=0)
-        return jnp.moveaxis(path_time_first, 0, -1)
+        _, xs = lax.scan(step, initial_loc, noise)
+        return jnp.moveaxis(xs, 0, -1)
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
         """
-        Compute the log-density of an observed state path.
+        Compute the log-density of an observed post-initial state path.
 
         Parameters
         ----------
         value
-            State path of shape ``sample_shape + batch_shape + (num_steps,)``.
+            Post-initial path of shape
+            ``sample_shape + batch_shape + (num_steps,)``.
 
         Returns
         -------
@@ -227,15 +216,17 @@ class StateAR1(Distribution):
         """
         scale = jnp.asarray(self.scale)
         autoreg = jnp.asarray(self.autoreg)
-        stationary_sd = scale / jnp.sqrt(1 - autoreg**2)
+        initial_loc = jnp.asarray(self.initial_loc)
 
-        init_prob = Normal(self.initial_loc, stationary_sd).log_prob(value[..., 0])
+        init_with_event = jnp.expand_dims(initial_loc, -1)
+        init_bcast = jnp.broadcast_to(init_with_event, value.shape[:-1] + (1,))
+        v = jnp.concatenate([init_bcast, value], axis=-1)
 
         scale_t = jnp.expand_dims(scale, -1)
         autoreg_t = jnp.expand_dims(autoreg, -1)
-        step_locs = autoreg_t * value[..., :-1]
-        step_probs = Normal(step_locs, scale_t).log_prob(value[..., 1:])
-        return init_prob + jnp.sum(step_probs, axis=-1)
+        step_locs = autoreg_t * v[..., :-1]
+        step_probs = Normal(step_locs, scale_t).log_prob(v[..., 1:])
+        return jnp.sum(step_probs, axis=-1)
 
 
 class StateDifferencedAR1(Distribution):

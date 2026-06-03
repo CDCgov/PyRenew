@@ -323,17 +323,28 @@ class AR1(TemporalProcess):
                 noise_name=f"{name_prefix}_noise",
             )
 
+        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
+        with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
+            init_states = numpyro.sample(
+                f"{name_prefix}_init",
+                dist.Normal(initial_value, stationary_sd),
+            )
+
+        if n_timepoints == 1:
+            return init_states[jnp.newaxis, :]
+
         scale_broadcast = jnp.broadcast_to(jnp.asarray(innovation_sd), (n_processes,))
-        path = numpyro.sample(
+        post_init = numpyro.sample(
             f"{name_prefix}_state",
             StateAR1(
                 autoreg=autoreg_broadcast,
                 scale=scale_broadcast,
-                initial_loc=initial_value,
-                num_steps=n_timepoints,
+                initial_loc=init_states,
+                num_steps=n_timepoints - 1,
             ),
         )
-        return path.T
+        x = jnp.concatenate([init_states[:, jnp.newaxis], post_init], axis=-1)
+        return x.T
 
 
 class DifferencedAR1(TemporalProcess):
