@@ -23,6 +23,7 @@ from benchmarks.core.real_data import (
 from benchmarks.core.reference_data import name_for_location, population_for_location
 from benchmarks.core.reporting import (
     aggregate_candidates,
+    aggregate_parameter_estimates,
     aggregate_parameter_summaries,
     build_comparison,
     format_bundle_summary,
@@ -479,6 +480,30 @@ def test_aggregate_parameter_summaries_groups_sites_across_repeats():
     assert np.isnan(site_b["rhat_max"])
 
 
+def test_aggregate_parameter_estimates_averages_mean_and_std_across_repeats():
+    """Per-element posterior mean and std are averaged across repeats."""
+    first = _fit_result("he_weekly_innovation", "innovation")
+    first.parameter_summaries = [
+        ParameterSummary("site_a", "[0]", mean=1.0, ess=20.0, rhat=1.01, std=0.4),
+        ParameterSummary("site_a", "[1]", mean=2.0, ess=40.0, rhat=1.03, std=0.6),
+    ]
+    second = _fit_result("he_weekly_innovation", "innovation", repeat=1)
+    second.parameter_summaries = [
+        ParameterSummary("site_a", "[0]", mean=3.0, ess=10.0, rhat=1.02, std=0.8),
+        ParameterSummary("site_a", "[1]", mean=2.0, ess=15.0, rhat=1.02, std=0.6),
+    ]
+
+    rows = aggregate_parameter_estimates([first, second])
+
+    assert [row["index"] for row in rows] == ["[0]", "[1]"]
+    element_0 = next(row for row in rows if row["index"] == "[0]")
+    assert element_0["mean"] == pytest.approx(2.0)
+    assert element_0["std"] == pytest.approx(0.6)
+    element_1 = next(row for row in rows if row["index"] == "[1]")
+    assert element_1["mean"] == pytest.approx(2.0)
+    assert element_1["std"] == pytest.approx(0.6)
+
+
 def test_print_comparison_tables_includes_parameter_site_summary(capsys):
     """Console benchmark summaries include per-site parameter ESS."""
     results = [
@@ -554,11 +579,13 @@ def test_write_results_creates_expected_artifacts(tmp_path):
     assert payload["prior_configs"]["demo"]["source"] == "def demo(): ..."
 
     parameter_rows = (tmp_path / "rt_params_parameters.csv").read_text()
-    assert "site,index,mean,ess,rhat" in parameter_rows
+    assert "site,index,mean,std,q025,q25,q50,q75,q975,ess,rhat" in parameter_rows
 
     report = (tmp_path / "rt_params_report.md").read_text()
     assert "# rt_params benchmark" in report
     assert "## Candidates" in report
+    assert "## Parameter Estimates" in report
+    assert "| candidate | dataset | arm | site | index | mean | std |" in report
     assert "## Comparison" in report
     assert "## Parameter ESS by Site" in report
     assert "ess_per_sec_median" in report

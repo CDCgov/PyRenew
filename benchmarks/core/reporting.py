@@ -283,6 +283,55 @@ def aggregate_parameter_summaries(results: list[FitResult]) -> list[dict[str, An
     )
 
 
+def aggregate_parameter_estimates(results: list[FitResult]) -> list[dict[str, Any]]:
+    """Aggregate per-element posterior estimates across repeats.
+
+    Posterior mean and standard deviation are averaged across repeats for each
+    candidate, dataset, arm, site, and element. Element order within a site is
+    preserved; the stable sort orders only the leading group keys.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        One row per posterior element, carrying ``mean`` and ``std``.
+    """
+    groups: dict[tuple[Any, ...], dict[str, Any]] = {}
+    for result in results:
+        for summary in result.parameter_summaries:
+            key = (
+                result.candidate,
+                result.dataset,
+                result.arm,
+                summary.site,
+                summary.index,
+            )
+            group = groups.setdefault(
+                key,
+                {
+                    "candidate": result.candidate,
+                    "dataset": result.dataset,
+                    "arm": result.arm,
+                    "site": summary.site,
+                    "index": summary.index,
+                    "mean_values": [],
+                    "std_values": [],
+                },
+            )
+            group["mean_values"].append(summary.mean)
+            group["std_values"].append(summary.std)
+
+    rows: list[dict[str, Any]] = []
+    for group in groups.values():
+        mean_values = group.pop("mean_values")
+        std_values = group.pop("std_values")
+        rows.append({**group, "mean": _mean(mean_values), "std": _mean(std_values)})
+
+    return sorted(
+        rows,
+        key=lambda row: (row["candidate"], row["dataset"], row["arm"], row["site"]),
+    )
+
+
 def print_comparison_tables(results: list[FitResult], spec: ComparisonSpec) -> None:
     """Print baseline-relative comparison and per-site parameter ESS tables."""
     candidates = aggregate_candidates(results)
@@ -377,6 +426,7 @@ def write_results(
     runs = [_result_to_row(result) for result in results]
     parameters = _parameter_summary_rows(results)
     parameter_sites = aggregate_parameter_summaries(results)
+    parameter_estimates = aggregate_parameter_estimates(results)
     generated_at = datetime.now(UTC).isoformat()
 
     _write_csv(output_dir / f"{comparison_name}_runs.csv", runs)
@@ -394,6 +444,7 @@ def write_results(
         "candidates": candidates,
         "comparison": comparison,
         "parameters": parameters,
+        "parameter_estimates": parameter_estimates,
         "parameter_sites": parameter_sites,
     }
     if extra_payload is not None:
@@ -424,6 +475,13 @@ def write_results(
             "## Comparison",
             "",
             _markdown_table(comparison, comparison_columns),
+            "",
+            "## Parameter Estimates",
+            "",
+            _markdown_table(
+                parameter_estimates,
+                ["candidate", "dataset", "arm", "site", "index", "mean", "std"],
+            ),
             "",
             "## Parameter ESS by Site",
             "",
@@ -599,6 +657,12 @@ def _parameter_summary_rows(results: list[FitResult]) -> list[dict[str, Any]]:
                     "site": summary.site,
                     "index": summary.index,
                     "mean": summary.mean,
+                    "std": summary.std,
+                    "q025": summary.q025,
+                    "q25": summary.q25,
+                    "q50": summary.q50,
+                    "q75": summary.q75,
+                    "q975": summary.q975,
                     "ess": summary.ess,
                     "rhat": summary.rhat,
                 }

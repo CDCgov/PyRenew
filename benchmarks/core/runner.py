@@ -53,13 +53,24 @@ class FitMetrics:
 
 @dataclass(frozen=True)
 class ParameterSummary:
-    """Posterior summary for one scalar parameter element."""
+    """Posterior summary for one scalar parameter element.
+
+    Carries the posterior point estimate (``mean``), its spread (``std`` and
+    the ``q*`` credible-interval quantiles: 2.5 / 25 / 50 / 75 / 97.5 percent),
+    and the per-element convergence diagnostics (``ess``, ``rhat``).
+    """
 
     site: str
     index: str
     mean: float
     ess: float
     rhat: float
+    std: float = float("nan")
+    q025: float = float("nan")
+    q25: float = float("nan")
+    q50: float = float("nan")
+    q75: float = float("nan")
+    q975: float = float("nan")
 
 
 @dataclass
@@ -220,8 +231,17 @@ def compute_fit_metrics(
     )
 
 
+_QUANTILE_LEVELS: tuple[float, ...] = (0.025, 0.25, 0.5, 0.75, 0.975)
+"""Credible-interval quantile levels summarized per posterior element."""
+
+
 def summarize_posterior_parameters(mcmc: Any) -> list[ParameterSummary]:
-    """Summarize posterior mean, ESS, and R-hat for every sampled site.
+    """Summarize the posterior of every sampled site.
+
+    For each scalar element of each site, records the posterior mean, standard
+    deviation, the credible-interval quantiles in :data:`_QUANTILE_LEVELS`, and
+    the ESS and R-hat convergence diagnostics. Statistics reduce over the chain
+    and draw axes.
 
     Returns
     -------
@@ -235,21 +255,37 @@ def summarize_posterior_parameters(mcmc: Any) -> list[ParameterSummary]:
         if array.ndim < 2:
             continue
         mean = np.asarray(np.mean(array, axis=(0, 1)))
+        std = np.asarray(np.std(array, axis=(0, 1)))
+        quantiles = np.asarray(np.quantile(array, _QUANTILE_LEVELS, axis=(0, 1)))
         ess = np.asarray(numpyro.diagnostics.effective_sample_size(array))
         if array.shape[0] < 2:
             rhat = np.full(mean.shape, np.nan)
         else:
             rhat = np.asarray(numpyro.diagnostics.split_gelman_rubin(array))
 
+        flat_quantiles = quantiles.reshape(len(_QUANTILE_LEVELS), -1)
+        flat_std = std.reshape(-1)
+        flat_ess = ess.reshape(-1)
+        flat_rhat = rhat.reshape(-1)
         for flat_index, mean_value in enumerate(mean.reshape(-1)):
             index = _format_sample_index(mean.shape, flat_index)
+            q025, q25, q50, q75, q975 = (
+                float(flat_quantiles[level, flat_index])
+                for level in range(len(_QUANTILE_LEVELS))
+            )
             summaries.append(
                 ParameterSummary(
                     site=site,
                     index=index,
                     mean=float(mean_value),
-                    ess=float(ess.reshape(-1)[flat_index]),
-                    rhat=float(rhat.reshape(-1)[flat_index]),
+                    std=float(flat_std[flat_index]),
+                    q025=q025,
+                    q25=q25,
+                    q50=q50,
+                    q75=q75,
+                    q975=q975,
+                    ess=float(flat_ess[flat_index]),
+                    rhat=float(flat_rhat[flat_index]),
                 )
             )
     return summaries
