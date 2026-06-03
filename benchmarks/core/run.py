@@ -27,7 +27,7 @@ def run_comparison(
     spec: ComparisonSpec,
     settings: McmcSettings,
     *,
-    suite_name: str,
+    comparison_name: str,
     repeats: int = 1,
     output_dir: Path | None = None,
     extra_payload: dict[str, Any] | None = None,
@@ -42,7 +42,7 @@ def run_comparison(
         Comparison declaration used for reporting.
     settings
         MCMC controls shared across candidates.
-    suite_name
+    comparison_name
         Identifier used in progress output and artifact filenames.
     repeats
         Number of times to refit each candidate, perturbing the seed.
@@ -60,7 +60,7 @@ def run_comparison(
     """
     n_fits = len(candidates) * repeats
     print(
-        f"{suite_name}: {len(candidates)} candidate(s) x "
+        f"{comparison_name}: {len(candidates)} candidate(s) x "
         f"{repeats} repeat(s) = {n_fits} fits",
         flush=True,
     )
@@ -80,7 +80,7 @@ def run_comparison(
     if output_dir is not None:
         write_results(
             output_dir,
-            suite_name=suite_name,
+            comparison_name=comparison_name,
             results=results,
             spec=spec,
             extra_payload=extra_payload,

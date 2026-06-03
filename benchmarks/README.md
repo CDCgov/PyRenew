@@ -1,12 +1,12 @@
 # PyRenew benchmarks
 
-Opt-in MCMC performance experiments.
-Experiments are run via "drivers" - Python scripts under `benchmarks/suites/`.
-New experiments can be created by copying the templates in `benchmarks/examples/`.
-All experiments should be run from the repository root.
+Opt-in MCMC performance benchmarks.
+Each benchmark is run by a "driver": a Python module with a `main()` you invoke with `python -m ...`.
+Committed comparisons live in `benchmarks/suites/` (each is a *suite*); templates to copy for a new comparison live in `benchmarks/examples/`.
+Run all drivers from the repository root.
 
-Benchmarks are not part of CI.
-Use `test/` for correctness checks and this suite for sampler comparisons.
+These benchmarks are not part of CI.
+Use `test/` for correctness checks and these benchmarks for sampler comparisons.
 
 ## Layout
 
@@ -23,7 +23,7 @@ benchmarks/
 │   ├── comparison.py   ComparisonSpec / MetricSpec: declares arms, baseline, metrics
 │   ├── models.py       BuiltFit + align_weekly_observations (shared machinery)
 │   ├── hew_model.py    adapter wrapping the production HEW model as a BuiltFit
-│   ├── runner.py       Candidate, fit_and_measure/fit_candidate; ArviZ-free FitMetrics
+│   ├── runner.py       Candidate, fit_and_measure/fit_candidate
 │   ├── run.py          run_comparison: the shared fit / report / write loop
 │   └── reporting.py    spec-driven stdout tables and CSV / JSON / Markdown writers
 ├── suites/

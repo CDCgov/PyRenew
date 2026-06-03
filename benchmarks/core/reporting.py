@@ -296,7 +296,7 @@ def print_parameter_site_table(results: list[FitResult]) -> None:
 def write_results(
     output_dir: Path,
     *,
-    suite_name: str,
+    comparison_name: str,
     results: list[FitResult],
     spec: ComparisonSpec,
     extra_payload: dict[str, Any] | None = None,
@@ -315,13 +315,13 @@ def write_results(
     parameter_sites = aggregate_parameter_summaries(results)
     generated_at = datetime.now(UTC).isoformat()
 
-    _write_csv(output_dir / f"{suite_name}_runs.csv", runs)
-    _write_csv(output_dir / f"{suite_name}_candidates.csv", candidates)
-    _write_csv(output_dir / f"{suite_name}_comparison.csv", comparison)
-    _write_csv(output_dir / f"{suite_name}_parameters.csv", parameters)
+    _write_csv(output_dir / f"{comparison_name}_runs.csv", runs)
+    _write_csv(output_dir / f"{comparison_name}_candidates.csv", candidates)
+    _write_csv(output_dir / f"{comparison_name}_comparison.csv", comparison)
+    _write_csv(output_dir / f"{comparison_name}_parameters.csv", parameters)
 
     payload = {
-        "suite": suite_name,
+        "suite": comparison_name,
         "generated_at": generated_at,
         "x64_enabled": bool(jax.config.jax_enable_x64),
         "arms": list(spec.arms),
@@ -334,7 +334,7 @@ def write_results(
     }
     if extra_payload is not None:
         payload.update(extra_payload)
-    with open(output_dir / f"{suite_name}_runs.json", "w") as f:
+    with open(output_dir / f"{comparison_name}_runs.json", "w") as f:
         json.dump(payload, f, indent=2, default=_json_default)
         f.write("\n")
 
@@ -345,7 +345,7 @@ def write_results(
     ]
     report = "\n".join(
         [
-            f"# {suite_name} benchmark",
+            f"# {comparison_name} benchmark",
             "",
             f"Generated: {generated_at}",
             f"Runs: {len(results)}",
@@ -382,7 +382,7 @@ def write_results(
             "",
         ]
     )
-    (output_dir / f"{suite_name}_report.md").write_text(report)
+    (output_dir / f"{comparison_name}_report.md").write_text(report)
 
 
 def _mean(values: Any) -> float:

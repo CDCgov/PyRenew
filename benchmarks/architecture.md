@@ -2,15 +2,16 @@
 
 ## Purpose
 
-Opt-in MCMC model-comparison experiments.
+Opt-in MCMC model comparisons.
 Not part of CI.
-A suite fits two or more model candidates on the same data and reports per-candidate diagnostics plus a baseline-relative head-to-head.
+A *driver* (a module with a `main()`) fits two or more model candidates on the same data and reports per-candidate diagnostics plus a baseline-relative head-to-head.
+A committed driver in `suites/` is a *suite*; the `examples/` drivers are copy-me templates.
 Correctness lives in `test/`; this directory is for sampler and model comparisons.
 
 ## The one organizing rule
 
 `core/` is reusable machinery.
-A suite is one experiment that composes that machinery and **owns its model-construction code locally**.
+A suite is one comparison that composes that machinery and **owns its model-construction code locally**.
 Adapters to external systems count as machinery and stay in `core`; the suite decides how to use them.
 If suites proliferate, subdivide `suites/` into subpackages.
 
@@ -64,7 +65,7 @@ pyrenew/datasets/synthetic_hew_export.py   write_synthetic_hew_model_dir (the ex
 
 ```
 driver: build list[Candidate] + ComparisonSpec, settings_from_args(args)
-  run_comparison(candidates, spec, settings, suite_name, repeats, output_dir):
+  run_comparison(candidates, spec, settings, comparison_name, repeats, output_dir):
     for candidate, repeat:
       fit_candidate(candidate, settings, repeat)
         -> candidate.build() returns BuiltFit
@@ -73,7 +74,7 @@ driver: build list[Candidate] + ComparisonSpec, settings_from_args(args)
            -> summarize_posterior_parameters(model.mcmc)
            -> FitResult(arm, config_fields, metrics, parameter_summaries, ...)
     print_comparison_tables(results, spec)
-    write_results(output_dir, suite_name, results, spec)
+    write_results(output_dir, comparison_name, results, spec)
 ```
 
 `FitResult` carries `arm` and `config_fields`.
@@ -82,7 +83,8 @@ Reporting groups candidates by `match_keys` (resolved from `dataset` plus the fl
 
 ## Reporting outputs (`reporting.py`)
 
-Per suite, prefixed `<suite>_`: `runs.csv` (one row per fit, union of keys across rows so mixed configs are fine), `candidates.csv` (aggregated over repeats), `comparison.csv` (`<metric>__<arm>` value columns and `<metric>__ratio__<arm>` ratios), `parameters.csv`, `runs.json` (everything plus `arms`/`baseline`/x64 header), `report.md`.
+Per driver, prefixed `<comparison_name>_`: `runs.csv` (one row per fit, union of keys across rows so mixed configs are fine), `candidates.csv` (aggregated over repeats), `comparison.csv` (`<metric>__<arm>` value columns and `<metric>__ratio__<arm>` ratios), `parameters.csv`, `runs.json` (everything plus `arms`/`baseline`/x64 header, keyed `suite` for back-compat), `report.md`.
+`comparison_name` is just the comparison's output label, so an `examples/` driver carries one (e.g. `prior_regimes_*`) without being a suite.
 Metric aggregation across repeats is mean by default; `_METRIC_REDUCERS` special-cases divergences (sum) and the worst-case diagnostics (min/max).
 
 ## Data layer

@@ -54,7 +54,7 @@ from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 
-SUITE_NAME = "prior_regimes"
+COMPARISON_NAME = "prior_regimes"
 BASELINE_REGIME = "example"
 
 PriorBag = dict[str, Callable[[], object]]
@@ -118,7 +118,7 @@ REGIMES: dict[str, Callable[[], PriorBag]] = {
 }
 
 COMPARISON_SPEC: ComparisonSpec = ComparisonSpec(
-    name=SUITE_NAME,
+    name=COMPARISON_NAME,
     arms=tuple(REGIMES),
     baseline=BASELINE_REGIME,
     match_keys=("dataset",),
@@ -277,7 +277,7 @@ def main() -> None:
         build_candidates(bundle),
         COMPARISON_SPEC,
         settings,
-        suite_name=SUITE_NAME,
+        comparison_name=COMPARISON_NAME,
         repeats=args.repeats,
         output_dir=None if args.no_write else args.output_dir,
         extra_payload={"prior_configs": prior_provenance()},

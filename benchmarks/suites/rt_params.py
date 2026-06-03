@@ -65,7 +65,7 @@ from pyrenew.randomvariable import (
 )
 from pyrenew.time import MMWR_WEEK
 
-SUITE_NAME = "rt_params"
+COMPARISON_NAME = "rt_params"
 DEFAULT_TIGHT_SD = 0.01
 DEFAULT_LOOSE_SD = 0.10
 DEFAULT_TIGHT_AUTOREG = 0.9
@@ -84,7 +84,7 @@ Disease = str
 PARAMETERIZATIONS: tuple[str, ...] = ("innovation", "state")
 
 COMPARISON_SPEC: ComparisonSpec = ComparisonSpec(
-    name=SUITE_NAME,
+    name=COMPARISON_NAME,
     arms=PARAMETERIZATIONS,
     baseline="innovation",
     match_keys=("dataset", "innovation_sd", "autoreg"),
@@ -582,7 +582,7 @@ def main() -> None:
         build_candidates(bundle, priors),
         COMPARISON_SPEC,
         settings,
-        suite_name=SUITE_NAME,
+        comparison_name=COMPARISON_NAME,
         repeats=args.repeats,
         output_dir=None if args.no_write else args.output_dir,
     )

@@ -524,7 +524,7 @@ def test_write_results_creates_expected_artifacts(tmp_path):
 
     write_results(
         tmp_path,
-        suite_name="rt_params",
+        comparison_name="rt_params",
         results=results,
         spec=rt_params.COMPARISON_SPEC,
         extra_payload={"prior_configs": {"demo": {"source": "def demo(): ..."}}},

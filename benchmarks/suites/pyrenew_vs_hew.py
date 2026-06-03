@@ -69,13 +69,13 @@ from pyrenew.randomvariable import (
 )
 from pyrenew.time import MMWR_WEEK
 
-SUITE_NAME = "pyrenew_vs_hew"
+COMPARISON_NAME = "pyrenew_vs_hew"
 DATASET_NAME = SYNTHETIC_HE_WEEKLY_HOSPITAL
 PYRENEW_ARM = "pyrenew-state-nodow"
 HEW_ARM = "hew"
 
 COMPARISON_SPEC: ComparisonSpec = ComparisonSpec(
-    name=SUITE_NAME,
+    name=COMPARISON_NAME,
     arms=(HEW_ARM, PYRENEW_ARM),
     baseline=HEW_ARM,
     match_keys=("dataset",),
@@ -288,7 +288,7 @@ def main() -> None:
         _build_candidates(args, bundle),
         COMPARISON_SPEC,
         settings,
-        suite_name=SUITE_NAME,
+        comparison_name=COMPARISON_NAME,
         repeats=args.repeats,
         output_dir=None if args.no_write else args.output_dir,
     )
