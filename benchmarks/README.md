@@ -1,6 +1,6 @@
 # PyRenew benchmarks
 
-Opt-in MCMC performance benchmarks which allow for systematic comparison of modeling choices: model parameterization and/or prior choice.
+Opt-in MCMC performance benchmarks which allow for systematic comparison of modeling choices: model parameterization and/or prior choice which can be run on synthetic or vintaged data from CDC data feeds.
 
 Each comparison is run by a "driver": a Python module with a `main()` that is run from the repository root.
 Committed comparisons live in `benchmarks/suites/` (a comparison is necessarily a *suite* of sampler runs).
