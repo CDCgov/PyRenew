@@ -19,6 +19,8 @@ If suites proliferate, subdivide `suites/` into subpackages.
 ```
 benchmarks/
 ├── core/
+│   ├── env.py            configure_jax: float64 + XLA device count, set before jax import
+│   ├── cli.py            add_common_args, settings_from_args (shared sampler/output flags)
 │   ├── signals.py        SignalSeries, DatasetBundle, DatasetProvider (Protocol)
 │   ├── datasets.py       SyntheticProvider over pyrenew/datasets/ fixtures
 │   ├── real_data.py      RealDataProvider over CDC NHSN+NSSP (lazy cfa.stf imports)
@@ -28,10 +30,13 @@ benchmarks/
 │   ├── models.py         BuiltFit, align_weekly_observations (shared machinery)
 │   ├── hew_model.py      adapter to the production HEW model
 │   ├── runner.py         FitResult, Candidate, fit_and_measure, fit_candidate, metrics
+│   ├── run.py            run_comparison: the shared fit / report / write loop
 │   └── reporting.py      spec-driven aggregation + CSV/JSON/Markdown writers
 ├── suites/
 │   ├── rt_params.py      innovation vs state Rt parameterization (defines BuildConfig, build_he_model)
 │   └── pyrenew_vs_hew.py production HEW vs PyRenew no-day-of-week (local build fns)
+├── examples/
+│   └── run_prior_regimes.py one structure under several prior regimes (template)
 └── results/              output (gitignored)
 
 pyrenew/datasets/synthetic_hew_export.py   write_synthetic_hew_model_dir (the export bridge)
@@ -51,19 +56,24 @@ pyrenew/datasets/synthetic_hew_export.py   write_synthetic_hew_model_dir (the ex
    Nothing in `core` hardcodes an arm name.
    A single-arm spec is valid (profile one model, empty comparison table).
 
+4. **`run_comparison`(`run.py`)** is the shared orchestration: given a `list[Candidate]`, a `ComparisonSpec`, and `McmcSettings`, it runs the fit-and-repeat loop, prints the tables, and writes the artifacts.
+   A driver supplies the candidates and the spec; it does not write the loop.
+   `cli.add_common_args`/`settings_from_args` give every driver the same sampler/output flags, and `env.configure_jax` sets the JAX flags before import, so a suite module is just its build function, its spec, a `build_candidates`, and a thin `main`.
+
 ## Control flow
 
 ```
-suite: build list[Candidate] + ComparisonSpec
-  for candidate, repeat:
-    fit_candidate(candidate, settings, repeat)
-      -> candidate.build() returns BuiltFit
-      -> fit_and_measure: model.run(extra_fields=("diverging","num_steps","energy"), **run_kwargs)
-         -> compute_fit_metrics(model.mcmc, wall, rt_site_names)
-         -> summarize_posterior_parameters(model.mcmc)
-         -> FitResult(arm, config_fields, metrics, parameter_summaries, ...)
-  print_comparison_tables(results, spec)
-  write_results(output_dir, suite_name, results, spec)
+driver: build list[Candidate] + ComparisonSpec, settings_from_args(args)
+  run_comparison(candidates, spec, settings, suite_name, repeats, output_dir):
+    for candidate, repeat:
+      fit_candidate(candidate, settings, repeat)
+        -> candidate.build() returns BuiltFit
+        -> fit_and_measure: model.run(extra_fields=("diverging","num_steps","energy"), **run_kwargs)
+           -> compute_fit_metrics(model.mcmc, wall, rt_site_names)
+           -> summarize_posterior_parameters(model.mcmc)
+           -> FitResult(arm, config_fields, metrics, parameter_summaries, ...)
+    print_comparison_tables(results, spec)
+    write_results(output_dir, suite_name, results, spec)
 ```
 
 `FitResult` carries `arm` and `config_fields`.
@@ -90,7 +100,7 @@ Their imports live inside function bodies (`real_data.py` for `cfa.stf.data`; `h
 ## Invariants and gotchas
 
 - **x64 is mandatory.** In float32 the renewal recursion loses precision and NUTS diverges.
-  Suites set `JAX_ENABLE_X64=true` and the XLA device count at import time, before `jax`.
+  Each driver calls `env.configure_jax()` before importing `jax`, setting `JAX_ENABLE_X64=true` and the XLA device count (via `setdefault`, so a value you export yourself is honored).
 - **The HEW model is run directly, not via the pipeline's `fit_and_save_model`.** That entry point pickles to disk and requests `extra_fields` that omit `diverging` and `energy`, which the benchmark needs for divergence and E-BFMI.
   `build_hew_model` builds the model so the runner can request the diagnostic fields itself.
 - **`rt_site_names`differ by model family** `("PopulationInfections::rt_single",)` for PyRenew (the `RT_SITE_NAMES` default), `("rt","rtu_subpop")` for HEW (`HEW_RT_SITE_NAMES`).
@@ -103,7 +113,7 @@ Their imports live inside function bodies (`real_data.py` for `cfa.stf.data`; `h
 
 ## Extending
 
-- **New model spec** - write a `build() -> BuiltFit` in a suite, wrap it in a `Candidate`.
+- **New model spec** - write a `build() -> BuiltFit` in a suite, wrap it in a `Candidate` via `build_candidates`, and call `run_comparison` from `main`.
   No `core` change.
 - **New data source** - implement `DatasetProvider`.
 - **New metric** - add a field to `FitMetrics`, a `MetricSpec` to the suite's spec, and a reducer to `_METRIC_REDUCERS` if it is not a mean.

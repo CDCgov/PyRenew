@@ -274,9 +274,9 @@ def test_main_dry_run_data_exits_before_fitting(monkeypatch, capsys):
 
     def fail_if_called(*args, **kwargs):
         """Fail the test if fitting is attempted."""
-        raise AssertionError("fit_and_measure should not run for --dry-run-data")
+        raise AssertionError("run_comparison should not run for --dry-run-data")
 
-    monkeypatch.setattr(rt_params, "fit_and_measure", fail_if_called)
+    monkeypatch.setattr(rt_params, "run_comparison", fail_if_called)
 
     rt_params.main()
 

@@ -17,27 +17,22 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
-import os
 from collections.abc import Sequence
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Literal
 
 import numpy as np
 
-_AVAILABLE_CPUS: int = os.cpu_count() or 1
-_DEFAULT_DEVICE_COUNT: int = min(8, _AVAILABLE_CPUS)
-_DEFAULT_NUM_CHAINS: int = min(4, _AVAILABLE_CPUS)
-os.environ.setdefault("JAX_ENABLE_X64", "true")
-os.environ.setdefault(
-    "XLA_FLAGS", f"--xla_force_host_platform_device_count={_DEFAULT_DEVICE_COUNT}"
-)
+from benchmarks.core.env import configure_jax
+
+configure_jax()
 
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 
 import pyrenew.transformation as transformation
+from benchmarks.core.cli import add_common_args, settings_from_args
 from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
 from benchmarks.core.datasets import (
     SYNTHETIC_HE_WEEKLY_HOSPITAL,
@@ -49,16 +44,8 @@ from benchmarks.core.priors import (
     real_he_i0_prior,
 )
 from benchmarks.core.real_data import RealDataProvider, RealDataSpec
-from benchmarks.core.reporting import (
-    print_comparison_tables,
-    print_fit_progress,
-    write_results,
-)
-from benchmarks.core.runner import (
-    FitResult,
-    McmcSettings,
-    fit_and_measure,
-)
+from benchmarks.core.run import run_comparison
+from benchmarks.core.runner import Candidate
 from benchmarks.core.signals import DatasetBundle
 from pyrenew.ascertainment import AscertainmentModel, JointAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
@@ -79,7 +66,6 @@ from pyrenew.randomvariable import (
 from pyrenew.time import MMWR_WEEK
 
 SUITE_NAME = "rt_params"
-DEFAULT_OUTPUT_DIR = Path("benchmarks/results")
 DEFAULT_TIGHT_SD = 0.01
 DEFAULT_LOOSE_SD = 0.10
 DEFAULT_TIGHT_AUTOREG = 0.9
@@ -504,35 +490,7 @@ def _parse_args() -> argparse.Namespace:
             "Repeat to fit under multiple regimes."
         ),
     )
-    parser.add_argument("--num-warmup", type=int, default=500)
-    parser.add_argument("--num-samples", type=int, default=500)
-    parser.add_argument("--num-chains", type=int, default=_DEFAULT_NUM_CHAINS)
-    parser.add_argument("--repeats", type=int, default=1)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Directory to write CSV / JSON / Markdown results.",
-    )
-    parser.add_argument(
-        "--no-write",
-        action="store_true",
-        help="Skip writing result files; print summary tables only.",
-    )
-    parser.add_argument(
-        "--progress-bar",
-        action="store_true",
-        help="Show per-chain progress bars during MCMC.",
-    )
-    parser.add_argument(
-        "--quick",
-        action="store_true",
-        help=(
-            "Smoke run: 50 warmup, 50 samples, 1 chain. Overrides "
-            "--num-warmup / --num-samples / --num-chains."
-        ),
-    )
+    add_common_args(parser)
     args = parser.parse_args()
     if args.data_source == "real" and args.as_of is None:
         parser.error("--as-of is required when --data-source real")
@@ -559,15 +517,52 @@ def _fit_label(
     return parameterization
 
 
+def build_candidates(
+    bundle: DatasetBundle, priors: Sequence[tuple[float, float]]
+) -> list[Candidate]:
+    """Build one candidate per parameterization and prior pair.
+
+    The two parameterizations are the comparison arms. Each prior pair is held
+    equal across arms via the spec's match keys, so the parameterizations are
+    compared within a prior rather than across priors. Each candidate's
+    ``build`` closes over its :class:`BuildConfig`, so the runner assembles a
+    fresh model for every repeat.
+
+    Returns
+    -------
+    list[Candidate]
+        One candidate per (prior, parameterization) combination.
+    """
+    candidates: list[Candidate] = []
+    for innovation_sd, autoreg in priors:
+        for parameterization in PARAMETERIZATIONS:
+            config = BuildConfig(
+                parameterization=parameterization,
+                innovation_sd=innovation_sd,
+                autoreg=autoreg,
+            )
+            candidates.append(
+                Candidate(
+                    name=_fit_label(
+                        parameterization, innovation_sd, autoreg, len(priors)
+                    ),
+                    arm=parameterization,
+                    config_fields={
+                        "parameterization": parameterization,
+                        "innovation_sd": innovation_sd,
+                        "autoreg": autoreg,
+                    },
+                    build=lambda config=config: build_he_model(config, bundle),
+                )
+            )
+    return candidates
+
+
 def main() -> None:
     """Run the rt_params suite from the command line."""
     args = _parse_args()
-    if args.quick:
-        args.num_warmup = 50
-        args.num_samples = 50
-        args.num_chains = 1
-
-    numpyro.set_host_device_count(args.num_chains)
+    settings = settings_from_args(args)
+    numpyro.set_host_device_count(settings.num_chains)
     numpyro.enable_x64()
 
     try:
@@ -581,64 +576,16 @@ def main() -> None:
     if args.dry_run_data:
         _print_data_summary(bundles)
         return
-    settings = McmcSettings(
-        num_warmup=args.num_warmup,
-        num_samples=args.num_samples,
-        num_chains=args.num_chains,
-        seed=args.seed,
-        progress_bar=args.progress_bar,
-    )
+
     bundle = bundles[HE_BUNDLE_KEY]
-
-    n_fits = len(PARAMETERIZATIONS) * len(priors) * args.repeats
-    print(
-        f"rt_params suite: {len(PARAMETERIZATIONS)} parameterization(s) x "
-        f"{len(priors)} prior(s) x {args.repeats} repeat(s) = {n_fits} fits",
-        flush=True,
+    run_comparison(
+        build_candidates(bundle, priors),
+        COMPARISON_SPEC,
+        settings,
+        suite_name=SUITE_NAME,
+        repeats=args.repeats,
+        output_dir=None if args.no_write else args.output_dir,
     )
-
-    results: list[FitResult] = []
-    for innovation_sd, autoreg in priors:
-        for parameterization in PARAMETERIZATIONS:
-            config = BuildConfig(
-                parameterization=parameterization,
-                innovation_sd=innovation_sd,
-                autoreg=autoreg,
-            )
-            for repeat in range(args.repeats):
-                label = _fit_label(
-                    parameterization, innovation_sd, autoreg, len(priors)
-                )
-                print(
-                    f">> fitting {label} (repeat {repeat + 1}/{args.repeats}) ...",
-                    flush=True,
-                )
-                built = build_he_model(config, bundle)
-                result = fit_and_measure(
-                    candidate=label,
-                    built=built,
-                    settings=settings,
-                    repeat=repeat,
-                    arm=parameterization,
-                    config_fields={
-                        "parameterization": parameterization,
-                        "innovation_sd": innovation_sd,
-                        "autoreg": autoreg,
-                    },
-                    config=config,
-                )
-                results.append(result)
-                print_fit_progress(label, repeat, args.repeats, result)
-
-    print_comparison_tables(results, COMPARISON_SPEC)
-    if not args.no_write:
-        write_results(
-            args.output_dir,
-            suite_name=SUITE_NAME,
-            results=results,
-            spec=COMPARISON_SPEC,
-        )
-        print(f"\nWrote results to {args.output_dir}", flush=True)
 
 
 if __name__ == "__main__":

@@ -1,8 +1,9 @@
 # PyRenew benchmarks
 
 Opt-in MCMC performance experiments.
-Each driver is a CLI entry point under `benchmarks/suites/` (maintained comparisons) or `benchmarks/examples/` (copy-me templates).
-Run from the repository root.
+Experiments are run via "drivers" - Python scripts under `benchmarks/suites/`.
+New experiments can be created by copying the templates in `benchmarks/examples/`.
+All experiments should be run from the repository root.
 
 Benchmarks are not part of CI.
 Use `test/` for correctness checks and this suite for sampler comparisons.
@@ -12,6 +13,8 @@ Use `test/` for correctness checks and this suite for sampler comparisons.
 ```
 benchmarks/
 ├── core/
+│   ├── env.py          configure_jax: float64 + XLA device count, before jax import
+│   ├── cli.py          add_common_args / settings_from_args: shared sampler + output flags
 │   ├── signals.py      SignalSeries, DatasetBundle, DatasetProvider
 │   ├── datasets.py     SyntheticProvider over pyrenew/datasets/
 │   ├── real_data.py    RealDataProvider over CDC NHSN + NSSP feeds
@@ -21,33 +24,35 @@ benchmarks/
 │   ├── models.py       BuiltFit + align_weekly_observations (shared machinery)
 │   ├── hew_model.py    adapter wrapping the production HEW model as a BuiltFit
 │   ├── runner.py       Candidate, fit_and_measure/fit_candidate; ArviZ-free FitMetrics
+│   ├── run.py          run_comparison: the shared fit / report / write loop
 │   └── reporting.py    spec-driven stdout tables and CSV / JSON / Markdown writers
 ├── suites/
 │   ├── rt_params.py    centered vs non-centered weekly Rt parameterization
-│   └── pyrenew_vs_hew.py  production HEW vs PyRenew (no ED day-of-week)
+│   └── pyrenew_vs_hew.py  production HEW vs PyRenew
+├── examples/
+│   └── run_prior_regimes.py  template: one structure under several prior regimes
 └── results/            output (gitignored)
 ```
 
-A driver asks a dataset provider for a bundle, builds one or more candidate models, and the runner fits each candidate and collects metrics.
+A driver asks a dataset provider for a bundle, builds one or more candidate models, and hands them to `run_comparison`, which fits each candidate and collects metrics.
 The `DatasetProvider` protocol in `core/signals.py` lets reporting-input providers replace `SyntheticProvider` without touching the driver.
 
-## Two axes of comparison
+## Kinds of comparisons
 
-A benchmark compares candidates that differ along one of two axes.
+A benchmark compares candidates that differ in one of two ways:
 
-1. **Model.** Different model specifications on the same data: a parameterization, a structural choice, or a whole model family.
-   The arms are models.
-   `rt_params` compares the `innovation` and `state` parameterizations of the weekly $\mathcal{R}(t)$ process; `pyrenew_vs_hew` compares a PyRenew `MultiSignalModel` against the production HEW model.
-2. **Priors.** The same model structure under different prior choices ("regimes").
-   The arms are regimes.
-   The `prior_regimes` example (`benchmarks/examples/run_prior_regimes.py`) fits one fixed structure under several prior sets and compares how each samples; see `prior_regimes.md`.
+- **Model structure.** Different model specifications on the same data: a parameterization, a structural choice, or a whole model family.
+  Benchmark suite `rt_params` compares the `innovation` and `state` parameterizations of the weekly $\mathcal{R}(t)$ process; `pyrenew_vs_hew` compares a PyRenew `MultiSignalModel` against the production HEW model.
 
-The two axes are orthogonal, and a `ComparisonSpec` expresses either.
-Its `arms` are the things compared side by side, `baseline` is the arm the others are rated against, and `match_keys` are the fields that must be equal for two fits to form a comparable group, so the axis you are not varying (and the dataset) is held fixed.
-To cross the axes, put one on `arms` and add the other to `match_keys`: `rt_params` does this, holding a fixed-hyperparameter prior regime equal while comparing parameterizations within it.
+- **Priors.** The same model structure under different prior sets (each set is a `regime`).
+  The `prior_regimes` example (`benchmarks/examples/run_prior_regimes.py`) fits one fixed structure under several regimes and compares how each samples; see `prior_regimes.md`.
 
-The model axis lives in the build function (structure is code); the prior axis lives in the priors a build function consumes (priors are data).
-`prior_regimes.md` develops the prior axis in full.
+A `ComparisonSpec` expresses a comparison of either kind.
+Its `arms` are the candidates compared side by side (as in a trial's treatment arms), `baseline` is the arm the others are rated against (the control), and `match_keys` are the fields that must be equal for two fits to form a comparable group, so whatever you are not varying (and the dataset) is held fixed.
+To vary both at once, put one kind of difference in `arms` and pin the other through `match_keys`: `rt_params` does this, holding a fixed-hyperparameter prior regime equal while comparing parameterizations within it.
+
+Model structure lives in the build function (structure is code); priors live in what a build function consumes (priors are data).
+`prior_regimes.md` develops the prior comparison in full.
 
 ## rt_params suite
 
@@ -85,7 +90,8 @@ Useful options:
   | `--output-dir`                                  | Where to write artifacts. Default `benchmarks/results/`.                                                                                                  |
   | `--no-write`                                    | Skip artifact files; print summary only.                                                                                                                  |
 
-On import, the suite sets `XLA_FLAGS=--xla_force_host_platform_device_count=N` (where `N = min(8, os.cpu_count())`) so JAX exposes enough logical devices for parallel chains, and `JAX_ENABLE_X64=true`.
+At startup the driver calls `core/env.py:configure_jax()`, which sets `XLA_FLAGS=--xla_force_host_platform_device_count=N` (where `N = min(8, os.cpu_count())`) so JAX exposes enough logical devices for parallel chains, and `JAX_ENABLE_X64=true`.
+Both are set before `jax` is imported.
 If you set either variable yourself before invocation, it is honored.
 x64 is required: in float32 the renewal recursion loses precision and NUTS diverges (a full chain diverged at 500/500/4 in float32, none under x64).
 
@@ -167,8 +173,8 @@ Candidate summaries average time and ESS metrics across repeats, sum divergences
 
 ### Suite design
 
-`rt_params` crosses both axes.
-Its arms are the **model** axis: the `innovation` (non-centered) and `state` (centered) modes of the inner `DifferencedAR1`.
+`rt_params` varies both model structure and priors at once.
+Its arms are the **model structure**: the `innovation` (non-centered) and `state` (centered) modes of the inner `DifferencedAR1`.
 Its `--prior` option steps a **prior** regime that fixes the weekly per-step innovation SD $\sigma$ and the autoregressive coefficient $\phi$ to chosen values: `tight` $(\sigma = 0.01, \phi = 0.9)$, `loose` $(\sigma = 0.10, \phi = 0.5)$, or an explicit pair.
 The regime is a match key, held equal within each comparison, so the two parameterizations are compared within a regime rather than across regimes.
 The cumulative variance of $\log \mathcal{R}(T)$ is far more sensitive to $\phi$ than to $\sigma$.
@@ -179,7 +185,7 @@ To make the priors themselves the object of study rather than holding them fixed
 
 ## prior_regimes example
 
-Fits one fixed H+E structure under a set of prior regimes (the prior axis) and compares how each samples.
+Fits one fixed H+E structure under a set of prior regimes and compares how each samples.
 Run from the repository root:
 
 ```bash
@@ -200,11 +206,17 @@ See `prior_regimes.md` for the full workflow, including how each run records the
    Model construction lives in the suite, not in `core`.
    The model may be any `pyrenew.metaclass.Model` exposing `run` and `mcmc`, so the build function can assemble a PyRenew `MultiSignalModel` or wrap the production HEW model via `core/hew_model.py`.
    `core/models.py` provides the shared `BuiltFit` container and `align_weekly_observations` helper.
+
 2. If the model needs a new dataset, add a builder to `benchmarks/core/datasets.py` and expose it through `SyntheticProvider`.
+
 3. Define a `ComparisonSpec` in the suite: its `arms`, `baseline`, `match_keys`, and `metrics` are the single source of truth for reporting.
    A single-arm spec is allowed; it profiles one model and emits an empty comparison table.
-4. Add or extend a suite module in `benchmarks/suites/` with a `main()` CLI.
-   Wrap each build function in a `Candidate` (with its `arm` and `config_fields`), loop with `fit_candidate`, then call `print_comparison_tables` and `write_results` with the spec.
+
+4. Add or extend a suite module in `benchmarks/suites/` following the shared driver shape:
+   - call `core/env.py:configure_jax()` before importing `jax`;
+   - write a `build_candidates(...)` that wraps each build function in a `Candidate` (with its `arm` and `config_fields`);
+   - in `main()`, register flags with `core/cli.py:add_common_args`, build sampler settings with `settings_from_args`, then call `core/run.py:run_comparison` with the candidates and the spec.
+     `run_comparison` runs the fit loop and the reporting; the suite supplies only the model construction and the spec.
 
 ## Wiring real data
 

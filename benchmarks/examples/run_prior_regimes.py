@@ -25,27 +25,22 @@ from __future__ import annotations
 
 import argparse
 import inspect
-import os
 from collections.abc import Callable
-from pathlib import Path
 
-_AVAILABLE_CPUS: int = os.cpu_count() or 1
-_DEFAULT_DEVICE_COUNT: int = min(8, _AVAILABLE_CPUS)
-_DEFAULT_NUM_CHAINS: int = min(4, _AVAILABLE_CPUS)
-os.environ.setdefault("JAX_ENABLE_X64", "true")
-os.environ.setdefault(
-    "XLA_FLAGS", f"--xla_force_host_platform_device_count={_DEFAULT_DEVICE_COUNT}"
-)
+from benchmarks.core.env import configure_jax
+
+configure_jax()
 
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 
+from benchmarks.core.cli import add_common_args, settings_from_args
 from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
 from benchmarks.core.datasets import SYNTHETIC_HE_WEEKLY_HOSPITAL, SyntheticProvider
 from benchmarks.core.models import BuiltFit, align_weekly_observations
 from benchmarks.core.run import run_comparison
-from benchmarks.core.runner import Candidate, McmcSettings
+from benchmarks.core.runner import Candidate
 from benchmarks.core.signals import DatasetBundle
 from pyrenew.ascertainment import JointAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
@@ -60,7 +55,6 @@ from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 
 SUITE_NAME = "prior_regimes"
-DEFAULT_OUTPUT_DIR = Path("benchmarks/results")
 BASELINE_REGIME = "example"
 
 PriorBag = dict[str, Callable[[], object]]
@@ -266,53 +260,19 @@ def _parse_args() -> argparse.Namespace:
         Parsed options.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--num-warmup", type=int, default=500)
-    parser.add_argument("--num-samples", type=int, default=500)
-    parser.add_argument("--num-chains", type=int, default=_DEFAULT_NUM_CHAINS)
-    parser.add_argument("--repeats", type=int, default=1)
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument(
-        "--no-write",
-        action="store_true",
-        help="Skip writing result files; print summary tables only.",
-    )
-    parser.add_argument(
-        "--progress-bar",
-        action="store_true",
-        help="Show per-chain progress bars during MCMC.",
-    )
-    parser.add_argument(
-        "--quick",
-        action="store_true",
-        help=(
-            "Smoke run: 50 warmup, 50 samples, 1 chain. Overrides "
-            "--num-warmup / --num-samples / --num-chains."
-        ),
-    )
+    add_common_args(parser)
     return parser.parse_args()
 
 
 def main() -> None:
     """Run the prior_regimes comparison from the command line."""
     args = _parse_args()
-    if args.quick:
-        args.num_warmup = 50
-        args.num_samples = 50
-        args.num_chains = 1
-
-    numpyro.set_host_device_count(args.num_chains)
+    settings = settings_from_args(args)
+    numpyro.set_host_device_count(settings.num_chains)
     numpyro.enable_x64()
 
     _validate_regimes()
     bundle = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
-    settings = McmcSettings(
-        num_warmup=args.num_warmup,
-        num_samples=args.num_samples,
-        num_chains=args.num_chains,
-        seed=args.seed,
-        progress_bar=args.progress_bar,
-    )
     run_comparison(
         build_candidates(bundle),
         COMPARISON_SPEC,

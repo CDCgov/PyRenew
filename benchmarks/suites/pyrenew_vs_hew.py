@@ -25,22 +25,18 @@ See ``--help`` for all options.
 from __future__ import annotations
 
 import argparse
-import os
 from pathlib import Path
 
-_AVAILABLE_CPUS: int = os.cpu_count() or 1
-_DEFAULT_DEVICE_COUNT: int = min(8, _AVAILABLE_CPUS)
-_DEFAULT_NUM_CHAINS: int = min(4, _AVAILABLE_CPUS)
-os.environ.setdefault("JAX_ENABLE_X64", "true")
-os.environ.setdefault(
-    "XLA_FLAGS", f"--xla_force_host_platform_device_count={_DEFAULT_DEVICE_COUNT}"
-)
+from benchmarks.core.env import configure_jax
+
+configure_jax()
 
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 
 import pyrenew.transformation as transformation
+from benchmarks.core.cli import add_common_args, settings_from_args
 from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
 from benchmarks.core.datasets import (
     SYNTHETIC_HE_WEEKLY_HOSPITAL,
@@ -54,17 +50,8 @@ from benchmarks.core.hew_model import (
 )
 from benchmarks.core.models import BuiltFit, align_weekly_observations
 from benchmarks.core.priors import real_he_i0_prior
-from benchmarks.core.reporting import (
-    print_comparison_tables,
-    print_fit_progress,
-    write_results,
-)
-from benchmarks.core.runner import (
-    Candidate,
-    FitResult,
-    McmcSettings,
-    fit_candidate,
-)
+from benchmarks.core.run import run_comparison
+from benchmarks.core.runner import Candidate
 from benchmarks.core.signals import DatasetBundle
 from pyrenew.ascertainment import JointAscertainment
 from pyrenew.datasets import write_synthetic_hew_model_dir
@@ -83,7 +70,6 @@ from pyrenew.randomvariable import (
 from pyrenew.time import MMWR_WEEK
 
 SUITE_NAME = "pyrenew_vs_hew"
-DEFAULT_OUTPUT_DIR = Path("benchmarks/results")
 DATASET_NAME = SYNTHETIC_HE_WEEKLY_HOSPITAL
 PYRENEW_ARM = "pyrenew-state-nodow"
 HEW_ARM = "hew"
@@ -268,11 +254,6 @@ def _parse_args() -> argparse.Namespace:
         Parsed options.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--num-warmup", type=int, default=500)
-    parser.add_argument("--num-samples", type=int, default=500)
-    parser.add_argument("--num-chains", type=int, default=_DEFAULT_NUM_CHAINS)
-    parser.add_argument("--repeats", type=int, default=1)
-    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--pyrenew-multisignal-dir",
         type=Path,
@@ -291,76 +272,26 @@ def _parse_args() -> argparse.Namespace:
         default=Path("benchmarks/results/synthetic_hew_model"),
         help="Directory to write the synthetic HEW model inputs into.",
     )
-    parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-    parser.add_argument(
-        "--no-write",
-        action="store_true",
-        help="Skip writing result files; print summary tables only.",
-    )
-    parser.add_argument(
-        "--progress-bar",
-        action="store_true",
-        help="Show per-chain progress bars during MCMC.",
-    )
-    parser.add_argument(
-        "--quick",
-        action="store_true",
-        help=(
-            "Smoke run: 50 warmup, 50 samples, 1 chain. Overrides "
-            "--num-warmup / --num-samples / --num-chains."
-        ),
-    )
+    add_common_args(parser)
     return parser.parse_args()
 
 
 def main() -> None:
     """Run the pyrenew_vs_hew suite from the command line."""
     args = _parse_args()
-    if args.quick:
-        args.num_warmup = 50
-        args.num_samples = 50
-        args.num_chains = 1
-
-    numpyro.set_host_device_count(args.num_chains)
+    settings = settings_from_args(args)
+    numpyro.set_host_device_count(settings.num_chains)
     numpyro.enable_x64()
 
     bundle = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
-    settings = McmcSettings(
-        num_warmup=args.num_warmup,
-        num_samples=args.num_samples,
-        num_chains=args.num_chains,
-        seed=args.seed,
-        progress_bar=args.progress_bar,
+    run_comparison(
+        _build_candidates(args, bundle),
+        COMPARISON_SPEC,
+        settings,
+        suite_name=SUITE_NAME,
+        repeats=args.repeats,
+        output_dir=None if args.no_write else args.output_dir,
     )
-    candidates = _build_candidates(args, bundle)
-
-    n_fits = len(candidates) * args.repeats
-    print(
-        f"{SUITE_NAME} suite: {len(candidates)} candidate(s) x "
-        f"{args.repeats} repeat(s) = {n_fits} fits",
-        flush=True,
-    )
-
-    results: list[FitResult] = []
-    for candidate in candidates:
-        for repeat in range(args.repeats):
-            print(
-                f">> fitting {candidate.name} (repeat {repeat + 1}/{args.repeats}) ...",
-                flush=True,
-            )
-            result = fit_candidate(candidate, settings, repeat)
-            results.append(result)
-            print_fit_progress(candidate.name, repeat, args.repeats, result)
-
-    print_comparison_tables(results, COMPARISON_SPEC)
-    if not args.no_write:
-        write_results(
-            args.output_dir,
-            suite_name=SUITE_NAME,
-            results=results,
-            spec=COMPARISON_SPEC,
-        )
-        print(f"\nWrote results to {args.output_dir}", flush=True)
 
 
 if __name__ == "__main__":
