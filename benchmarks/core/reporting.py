@@ -13,15 +13,18 @@ from __future__ import annotations
 import csv
 import json
 import math
+from collections.abc import Iterable
 from dataclasses import asdict
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 import jax
+import numpy as np
 
 from benchmarks.core.comparison import ComparisonSpec
 from benchmarks.core.runner import FitResult
+from benchmarks.core.signals import DatasetBundle, SignalSeries
 
 _METRIC_REDUCERS: dict[str, str] = {
     "divergences": "sum",
@@ -45,6 +48,67 @@ def print_fit_progress(
         f"min ESS/s={result.metrics.ess_per_sec_rt_min:.2f}",
         flush=True,
     )
+
+
+def print_data_summary(bundles: Iterable[DatasetBundle]) -> None:
+    """Print a compact summary of each dataset bundle before fitting."""
+    for bundle in bundles:
+        print()
+        print(format_bundle_summary(bundle))
+
+
+def format_bundle_summary(bundle: DatasetBundle) -> str:
+    """Format a compact text summary of one dataset bundle.
+
+    Returns
+    -------
+    str
+        Multi-line description of the bundle and each of its signals.
+    """
+    fixed_keys = ", ".join(sorted(bundle.fixed_params)) or "none"
+    lines = [
+        f"Dataset: {bundle.name}",
+        f"  population_size: {bundle.population_size:g}",
+        f"  obs_start_date: {bundle.obs_start_date}",
+        f"  n_days_post_init: {bundle.n_days_post_init}",
+        f"  gen_int_pmf_len: {len(bundle.gen_int_pmf)}",
+        f"  fixed_params: {fixed_keys}",
+    ]
+    for signal in bundle.signals.values():
+        lines.extend(_format_signal_summary(signal))
+    return "\n".join(lines)
+
+
+def _format_signal_summary(signal: SignalSeries) -> list[str]:
+    """Format the indented summary lines for one signal series.
+
+    Returns
+    -------
+    list[str]
+        Description lines covering shape, date range, missingness, and value
+        statistics.
+    """
+    values = np.asarray(signal.values, dtype=float)
+    finite = values[np.isfinite(values)]
+    missing = int(values.size - finite.size)
+    if finite.size:
+        value_summary = (
+            f"min={np.min(finite):.4g}, "
+            f"mean={np.mean(finite):.4g}, "
+            f"max={np.max(finite):.4g}"
+        )
+    else:
+        value_summary = "no finite values"
+    extras = ", ".join(sorted(signal.extras)) or "none"
+    return [
+        f"  signal: {signal.name}",
+        f"    cadence: {signal.cadence}",
+        f"    n_obs: {len(values)}",
+        f"    date_range: {signal.start_date} to {signal.end_date}",
+        f"    missing_or_nan: {missing}",
+        f"    values: {value_summary}",
+        f"    extras: {extras}",
+    ]
 
 
 def aggregate_candidates(results: list[FitResult]) -> list[dict[str, Any]]:

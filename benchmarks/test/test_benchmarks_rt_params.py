@@ -25,7 +25,9 @@ from benchmarks.core.reporting import (
     aggregate_candidates,
     aggregate_parameter_summaries,
     build_comparison,
+    format_bundle_summary,
     print_comparison_tables,
+    print_data_summary,
     write_results,
 )
 from benchmarks.core.runner import FitMetrics, FitResult, McmcSettings, ParameterSummary
@@ -225,9 +227,15 @@ def test_load_bundles_uses_real_data_provider_for_real_he(monkeypatch):
     assert spec.signals == ("hospital", "ed_visits")
 
 
-def test_print_data_summary(capsys):
-    """Data summaries include signal shape, dates, and missing counts."""
-    bundle = DatasetBundle(
+def _example_bundle():
+    """Build a small single-signal bundle for summary tests.
+
+    Returns
+    -------
+    DatasetBundle
+        Bundle with one daily ED-visit signal containing a missing value.
+    """
+    return DatasetBundle(
         name="example",
         population_size=1234.0,
         obs_start_date=date(2025, 1, 1),
@@ -245,13 +253,54 @@ def test_print_data_summary(capsys):
         fixed_params={"right_truncation_offset": 2},
     )
 
-    rt_params._print_data_summary({"example": bundle})
+
+def test_signal_series_end_date_steps_by_cadence():
+    """Regular signals derive end_date by stepping start_date by the cadence."""
+    daily = SignalSeries(
+        name="ed_visits",
+        values=jnp.array([1.0, 2.0, 3.0]),
+        cadence="daily",
+        start_date=date(2025, 1, 1),
+    )
+    weekly = SignalSeries(
+        name="hospital",
+        values=jnp.array([1.0, 2.0, 3.0]),
+        cadence="weekly",
+        start_date=date(2025, 1, 1),
+    )
+    assert daily.end_date == date(2025, 1, 3)
+    assert weekly.end_date == date(2025, 1, 15)
+
+
+def test_signal_series_end_date_uses_times_for_irregular_signals():
+    """Irregular signals offset start_date by the maximum times index."""
+    signal = SignalSeries(
+        name="wastewater",
+        values=jnp.array([1.0, 2.0]),
+        cadence="daily",
+        start_date=date(2025, 1, 1),
+        times=jnp.array([0, 9]),
+    )
+    assert signal.end_date == date(2025, 1, 10)
+
+
+def test_format_bundle_summary_reports_shape_dates_and_missing():
+    """Bundle summaries include signal shape, dates, and missing counts."""
+    summary = format_bundle_summary(_example_bundle())
+
+    assert "Dataset: example" in summary
+    assert "signal: ed_visits" in summary
+    assert "missing_or_nan: 1" in summary
+    assert "date_range: 2025-01-01 to 2025-01-03" in summary
+
+
+def test_print_data_summary(capsys):
+    """Printed data summaries cover each bundle in the iterable."""
+    print_data_summary([_example_bundle()])
 
     output = capsys.readouterr().out
     assert "Dataset: example" in output
     assert "signal: ed_visits" in output
-    assert "missing_or_nan: 1" in output
-    assert "date_range: 2025-01-01 to 2025-01-03" in output
 
 
 def test_main_dry_run_data_exits_before_fitting(monkeypatch, capsys):

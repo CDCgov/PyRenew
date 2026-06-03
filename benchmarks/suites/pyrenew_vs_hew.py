@@ -71,7 +71,7 @@ from pyrenew.time import MMWR_WEEK
 
 COMPARISON_NAME = "pyrenew_vs_hew"
 DATASET_NAME = SYNTHETIC_HE_WEEKLY_HOSPITAL
-PYRENEW_ARM = "pyrenew-state-nodow"
+PYRENEW_ARM = "pyrenew-state"
 HEW_ARM = "hew"
 
 COMPARISON_SPEC: ComparisonSpec = ComparisonSpec(
@@ -83,12 +83,12 @@ COMPARISON_SPEC: ComparisonSpec = ComparisonSpec(
 )
 
 
-def _build_pyrenew_state_nodow(bundle: DatasetBundle) -> BuiltFit:
-    """Build the PyRenew H+E candidate without an ED day-of-week effect.
+def _build_pyrenew_state(bundle: DatasetBundle) -> BuiltFit:
+    """Build the PyRenew H+E candidate.
 
     Joint Gaussian ascertainment over hospital and ED visit rates, weekly
     state-centered $\\mathcal{R}(t)$, weekly-aggregated hospital admissions,
-    and daily ED visits with no day-of-week multiplier.
+    and daily ED visits (note: no day-of-week multiplier).
 
     Returns
     -------
@@ -240,7 +240,7 @@ def _build_candidates(
                 "rt": "weekly-state",
                 "ed_day_of_week": False,
             },
-            build=lambda: _build_pyrenew_state_nodow(bundle),
+            build=lambda: _build_pyrenew_state(bundle),
         ),
     ]
 

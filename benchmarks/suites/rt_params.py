@@ -21,8 +21,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-import numpy as np
-
 from benchmarks.core.env import configure_jax
 
 configure_jax()
@@ -44,6 +42,7 @@ from benchmarks.core.priors import (
     real_he_i0_prior,
 )
 from benchmarks.core.real_data import RealDataProvider, RealDataSpec
+from benchmarks.core.reporting import print_data_summary
 from benchmarks.core.run import run_comparison
 from benchmarks.core.runner import Candidate
 from benchmarks.core.signals import DatasetBundle
@@ -319,48 +318,6 @@ def _load_bundles(args: argparse.Namespace) -> dict[str, DatasetBundle]:
     return bundles
 
 
-def _print_data_summary(bundles: dict[str, DatasetBundle]) -> None:
-    """Print a compact summary of loaded benchmark data bundles."""
-    for bundle in bundles.values():
-        print()
-        print(f"Dataset: {bundle.name}")
-        print(f"  population_size: {bundle.population_size:g}")
-        print(f"  obs_start_date: {bundle.obs_start_date}")
-        print(f"  n_days_post_init: {bundle.n_days_post_init}")
-        print(f"  gen_int_pmf_len: {len(bundle.gen_int_pmf)}")
-        fixed_keys = ", ".join(sorted(bundle.fixed_params)) or "none"
-        print(f"  fixed_params: {fixed_keys}")
-
-        for signal in bundle.signals.values():
-            values = np.asarray(signal.values, dtype=float)
-            finite = values[np.isfinite(values)]
-            missing = int(values.size - finite.size)
-            start_date = signal.start_date
-            if signal.times is None:
-                step_days = 7 if signal.cadence == "weekly" else 1
-                end_date = start_date + dt.timedelta(days=(len(values) - 1) * step_days)
-            else:
-                times = np.asarray(signal.times)
-                end_date = start_date + dt.timedelta(days=int(np.max(times)))
-
-            if finite.size:
-                value_summary = (
-                    f"min={np.min(finite):.4g}, "
-                    f"mean={np.mean(finite):.4g}, "
-                    f"max={np.max(finite):.4g}"
-                )
-            else:
-                value_summary = "no finite values"
-
-            print(f"  signal: {signal.name}")
-            print(f"    cadence: {signal.cadence}")
-            print(f"    n_obs: {len(values)}")
-            print(f"    date_range: {start_date} to {end_date}")
-            print(f"    missing_or_nan: {missing}")
-            print(f"    values: {value_summary}")
-            print(f"    extras: {', '.join(sorted(signal.extras)) or 'none'}")
-
-
 def _parse_pair(arg: str) -> tuple[float, float]:
     """Parse an explicit ``sd,autoreg`` prior pair.
 
@@ -574,7 +531,7 @@ def main() -> None:
     except ValueError as exc:
         raise SystemExit(f"error: {exc}") from exc
     if args.dry_run_data:
-        _print_data_summary(bundles)
+        print_data_summary(bundles.values())
         return
 
     bundle = bundles[HE_BUNDLE_KEY]

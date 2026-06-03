@@ -10,7 +10,7 @@ without any change to the suites or the model builders.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, timedelta
 from typing import Any, Literal, Protocol
 
 import jax.numpy as jnp
@@ -56,6 +56,19 @@ class SignalSeries:
     subpop_indices: jnp.ndarray | None = None
     sensor_indices: jnp.ndarray | None = None
     extras: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def end_date(self) -> date:  # numpydoc ignore=RT01
+        """Calendar date of the last observation.
+
+        For regular signals the date is stepped from ``start_date`` by the
+        cadence; for irregular signals it is offset by the maximum ``times``
+        index.
+        """
+        if self.times is None:
+            step_days = 7 if self.cadence == "weekly" else 1
+            return self.start_date + timedelta(days=(len(self.values) - 1) * step_days)
+        return self.start_date + timedelta(days=int(jnp.max(self.times)))
 
 
 @dataclass(frozen=True)
