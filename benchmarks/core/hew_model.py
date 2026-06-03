@@ -19,11 +19,13 @@ either package. Install them separately to use this builder.
 
 from __future__ import annotations
 
+import datetime as dt
 import sys
 from pathlib import Path
 
 from benchmarks.core.models import BuiltFit
-from pyrenew.datasets import write_synthetic_hew_model_dir
+from benchmarks.core.signals import DatasetBundle
+from pyrenew.datasets import write_hew_model_dir, write_synthetic_hew_model_dir
 
 HEW_RT_SITE_NAMES: tuple[str, ...] = ("rt", "rtu_subpop")
 """Posterior site names carrying the HEW Rt trajectory, in priority order."""
@@ -145,4 +147,84 @@ def build_synthetic_hew_model(
         dataset_name=dataset_name,
         pyrenew_multisignal_dir=pyrenew_multisignal_dir,
         cfa_stf_dir=cfa_stf_dir,
+    )
+
+
+def write_hew_model_dir_from_bundle(
+    bundle: DatasetBundle,
+    model_dir: str | Path,
+    *,
+    location: str,
+    disease: str,
+    overwrite: bool = True,
+    right_truncation_offset: int | None = None,
+    right_truncation_pmf: list[float] | None = None,
+) -> Path:
+    """Serialize a :class:`DatasetBundle` into the production HEW model directory.
+
+    Lets the HEW arm fit the same H+E feeds as a PyRenew candidate built from
+    the same bundle. The bundle must carry a daily ``ed_visits`` signal and a
+    weekly ``hospital`` signal; the ED signal must supply ``other_ed_visits``
+    in its ``extras`` and the hospital signal a ``delay_pmf`` for the
+    infection-to-admission delay.
+
+    Parameters
+    ----------
+    bundle
+        H+E dataset bundle, as returned by
+        :func:`benchmarks.core.data_source.load_he_bundle`.
+    model_dir
+        Directory to write the production HEW layout into.
+    location
+        Jurisdiction code written into the production-shaped data.
+    disease
+        Disease label recorded in ``metadata.json``.
+    overwrite
+        Whether to replace an existing ``model_dir``.
+    right_truncation_offset
+        Offset for the production ED right-truncation adjustment.
+    right_truncation_pmf
+        Reporting-delay PMF. Defaults to ``[1.0]`` for complete reports.
+
+    Returns
+    -------
+    pathlib.Path
+        Path to the created model directory.
+    """
+    ed = bundle.signals["ed_visits"]
+    hosp = bundle.signals["hospital"]
+    if "other_ed_visits" not in ed.extras:
+        raise KeyError(
+            "ed_visits signal must carry 'other_ed_visits' in extras to write a "
+            "HEW model directory."
+        )
+    if "delay_pmf" not in hosp.extras:
+        raise KeyError(
+            "hospital signal must carry 'delay_pmf' in extras to write a HEW "
+            "model directory."
+        )
+    ed_dates = [
+        (ed.start_date + dt.timedelta(days=i)).isoformat()
+        for i in range(len(ed.values))
+    ]
+    hosp_dates = [
+        (hosp.start_date + dt.timedelta(weeks=i)).isoformat()
+        for i in range(len(hosp.values))
+    ]
+    return write_hew_model_dir(
+        model_dir,
+        ed_dates=ed_dates,
+        observed_ed_visits=[float(x) for x in ed.values],
+        other_ed_visits=[float(x) for x in ed.extras["other_ed_visits"]],
+        hosp_dates=hosp_dates,
+        hospital_admissions=[float(x) for x in hosp.values],
+        population=int(bundle.population_size),
+        generation_interval_pmf=[float(x) for x in bundle.gen_int_pmf],
+        inf_to_hosp_admit_pmf=[float(x) for x in hosp.extras["delay_pmf"]],
+        location=location,
+        disease=disease,
+        overwrite=overwrite,
+        right_truncation_offset=right_truncation_offset,
+        right_truncation_pmf=right_truncation_pmf,
+        source="benchmarks.core.hew_model.write_hew_model_dir_from_bundle",
     )

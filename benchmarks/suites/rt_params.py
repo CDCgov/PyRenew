@@ -16,7 +16,6 @@ See ``--help`` for all options.
 from __future__ import annotations
 
 import argparse
-import datetime as dt
 from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal
@@ -32,6 +31,11 @@ import numpyro.distributions as dist
 import pyrenew.transformation as transformation
 from benchmarks.core.cli import add_common_args, settings_from_args
 from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
+from benchmarks.core.data_source import (
+    add_data_source_args,
+    load_he_bundle,
+    validate_data_source_args,
+)
 from benchmarks.core.datasets import (
     SYNTHETIC_HE_WEEKLY_HOSPITAL,
     SyntheticProvider,
@@ -41,7 +45,6 @@ from benchmarks.core.priors import (
     real_he_ed_day_of_week_prior,
     real_he_i0_prior,
 )
-from benchmarks.core.real_data import RealDataProvider, RealDataSpec
 from benchmarks.core.reporting import print_data_summary
 from benchmarks.core.run import run_comparison
 from benchmarks.core.runner import Candidate
@@ -71,13 +74,6 @@ DEFAULT_TIGHT_AUTOREG = 0.9
 DEFAULT_LOOSE_AUTOREG = 0.5
 TIGHT_PRIOR: tuple[float, float] = (DEFAULT_TIGHT_SD, DEFAULT_TIGHT_AUTOREG)
 LOOSE_PRIOR: tuple[float, float] = (DEFAULT_LOOSE_SD, DEFAULT_LOOSE_AUTOREG)
-DEFAULT_REAL_DISEASE = "COVID-19"
-DEFAULT_REAL_LOCATION = "US"
-DEFAULT_REAL_TRAINING_DAYS = 150
-DEFAULT_REAL_OMIT_DAYS = 2
-REAL_HE_DATASET = "real_he"
-HE_BUNDLE_KEY = "he"
-Disease = str
 
 
 PARAMETERIZATIONS: tuple[str, ...] = ("innovation", "state")
@@ -289,35 +285,6 @@ def build_he_model(
     )
 
 
-def _load_bundles(args: argparse.Namespace) -> dict[str, DatasetBundle]:
-    """Load the H+E dataset bundle for the suite.
-
-    Returns
-    -------
-    dict[str, DatasetBundle]
-        Loaded bundle keyed by dataset identifier.
-    """
-    bundles: dict[str, DatasetBundle] = {}
-    if args.data_source == "synthetic":
-        bundles[HE_BUNDLE_KEY] = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
-        return bundles
-
-    provider = RealDataProvider(
-        {
-            REAL_HE_DATASET: RealDataSpec(
-                disease=args.disease,
-                loc_abbr=args.location,
-                as_of=args.as_of,
-                n_training_days=args.training_days,
-                n_days_to_omit=args.omit_last_days,
-                signals=("hospital", "ed_visits"),
-            )
-        }
-    )
-    bundles[HE_BUNDLE_KEY] = provider.get(REAL_HE_DATASET)
-    return bundles
-
-
 def _parse_pair(arg: str) -> tuple[float, float]:
     """Parse an explicit ``sd,autoreg`` prior pair.
 
@@ -341,22 +308,6 @@ def _parse_pair(arg: str) -> tuple[float, float]:
     if not -1 < ar < 1:
         raise ValueError(f"Prior autoreg must satisfy -1 < autoreg < 1; got {ar:g}")
     return sd, ar
-
-
-def _parse_date(arg: str) -> dt.date:
-    """Parse a CLI date in YYYY-MM-DD format.
-
-    Returns
-    -------
-    datetime.date
-        Parsed calendar date.
-    """
-    try:
-        return dt.date.fromisoformat(arg)
-    except ValueError as exc:
-        raise argparse.ArgumentTypeError(
-            f"Expected date in YYYY-MM-DD format; got {arg!r}"
-        ) from exc
 
 
 def _resolve_priors(args: Sequence[str]) -> list[tuple[float, float]]:
@@ -391,49 +342,7 @@ def _parse_args() -> argparse.Namespace:
         Parsed options.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--data-source",
-        choices=("synthetic", "real"),
-        default="synthetic",
-        help=(
-            "Data source for H+E candidates. 'real' requires CDC-internal "
-            "cfa-stf-routine-forecasting data access."
-        ),
-    )
-    parser.add_argument(
-        "--disease",
-        choices=("COVID-19", "Influenza", "RSV"),
-        default=DEFAULT_REAL_DISEASE,
-        help="Disease for --data-source real.",
-    )
-    parser.add_argument(
-        "--location",
-        default=DEFAULT_REAL_LOCATION,
-        help="Location abbreviation for --data-source real, e.g. US or CA.",
-    )
-    parser.add_argument(
-        "--as-of",
-        type=_parse_date,
-        default=None,
-        help="Vintage date for --data-source real, in YYYY-MM-DD format.",
-    )
-    parser.add_argument(
-        "--training-days",
-        type=int,
-        default=DEFAULT_REAL_TRAINING_DAYS,
-        help="Training window length for --data-source real.",
-    )
-    parser.add_argument(
-        "--omit-last-days",
-        type=int,
-        default=DEFAULT_REAL_OMIT_DAYS,
-        help="Trailing days to omit from --data-source real.",
-    )
-    parser.add_argument(
-        "--dry-run-data",
-        action="store_true",
-        help="Load and summarize selected data, then exit before model fitting.",
-    )
+    add_data_source_args(parser)
     parser.add_argument(
         "--prior",
         action="append",
@@ -449,12 +358,7 @@ def _parse_args() -> argparse.Namespace:
     )
     add_common_args(parser)
     args = parser.parse_args()
-    if args.data_source == "real" and args.as_of is None:
-        parser.error("--as-of is required when --data-source real")
-    if args.training_days <= 0:
-        parser.error("--training-days must be positive")
-    if args.omit_last_days < 0:
-        parser.error("--omit-last-days must be non-negative")
+    validate_data_source_args(parser, args)
     return args
 
 
@@ -527,14 +431,13 @@ def main() -> None:
     except ValueError as exc:
         raise SystemExit(f"error: {exc}") from exc
     try:
-        bundles = _load_bundles(args)
+        bundle = load_he_bundle(args)
     except ValueError as exc:
         raise SystemExit(f"error: {exc}") from exc
     if args.dry_run_data:
-        print_data_summary(bundles.values())
+        print_data_summary([bundle])
         return
 
-    bundle = bundles[HE_BUNDLE_KEY]
     run_comparison(
         build_candidates(bundle, priors),
         COMPARISON_SPEC,

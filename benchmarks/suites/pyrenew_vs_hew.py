@@ -3,12 +3,18 @@
 """pyrenew_vs_hew benchmark suite.
 
 Compare the production ``pyrenew-multisignal`` HEW model against a PyRenew
-``MultiSignalModel`` on the same synthetic H+E data. The PyRenew candidate
-uses weekly-aggregated hospital admissions plus daily ED visits, a joint
-Gaussian ascertainment, and a weekly state-centered $\\mathcal{R}(t)$ process,
-and deliberately omits the daily ED day-of-week effect (which prior fits found
+``MultiSignalModel`` on the same H+E data. The PyRenew candidate uses
+weekly-aggregated hospital admissions plus daily ED visits, a joint Gaussian
+ascertainment, and a weekly state-centered $\\mathcal{R}(t)$ process, and
+deliberately omits the daily ED day-of-week effect (which prior fits found
 poorly identified). The production HEW model retains its ED weekday effect, so
 the comparison is intentionally asymmetric on that axis.
+
+Both arms fit either the built-in synthetic H+E fixture or live CDC NHSN/NSSP
+feeds, selected with the shared ``--data-source`` flags (see
+``benchmarks.core.data_source``). On real data the HEW arm is materialized into
+a production model directory from the same dataset bundle the PyRenew arm
+consumes, so both fit identical feeds.
 
 The HEW candidate requires ``pyrenew-multisignal`` and
 ``cfa-stf-routine-forecasting`` to be importable; pass their checkout paths
@@ -18,6 +24,8 @@ Per benchmark convention, the model-construction code lives in this suite;
 ``benchmarks.core`` provides only the machinery. Run from the repository root:
 
     python -m benchmarks.suites.pyrenew_vs_hew --quick
+    python -m benchmarks.suites.pyrenew_vs_hew --data-source real \\
+        --disease COVID-19 --location US --as-of 2025-01-15 --dry-run-data
 
 See ``--help`` for all options.
 """
@@ -38,18 +46,21 @@ import numpyro.distributions as dist
 import pyrenew.transformation as transformation
 from benchmarks.core.cli import add_common_args, settings_from_args
 from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
-from benchmarks.core.datasets import (
-    SYNTHETIC_HE_WEEKLY_HOSPITAL,
-    SyntheticProvider,
+from benchmarks.core.data_source import (
+    add_data_source_args,
+    load_he_bundle,
+    validate_data_source_args,
 )
 from benchmarks.core.hew_model import (
     DEFAULT_CFA_STF_DIR,
     DEFAULT_PYRENEW_MULTISIGNAL_DIR,
     HEW_RT_SITE_NAMES,
     build_hew_model,
+    write_hew_model_dir_from_bundle,
 )
 from benchmarks.core.models import BuiltFit, align_weekly_observations
 from benchmarks.core.priors import real_he_i0_prior
+from benchmarks.core.reporting import print_data_summary
 from benchmarks.core.run import run_comparison
 from benchmarks.core.runner import Candidate
 from benchmarks.core.signals import DatasetBundle
@@ -70,7 +81,6 @@ from pyrenew.randomvariable import (
 from pyrenew.time import MMWR_WEEK
 
 COMPARISON_NAME = "pyrenew_vs_hew"
-DATASET_NAME = SYNTHETIC_HE_WEEKLY_HOSPITAL
 PYRENEW_ARM = "pyrenew-state"
 HEW_ARM = "hew"
 
@@ -201,10 +211,19 @@ def _build_candidates(
     list[Candidate]
         The two comparison candidates, HEW first.
     """
-    write_synthetic_hew_model_dir(args.model_dir, overwrite=True)
+    if args.data_source == "real":
+        write_hew_model_dir_from_bundle(
+            bundle,
+            args.model_dir,
+            location=args.location,
+            disease=args.disease,
+            overwrite=True,
+        )
+    else:
+        write_synthetic_hew_model_dir(args.model_dir, overwrite=True)
 
     def build_hew() -> BuiltFit:
-        """Build the production HEW model from the synthetic model directory.
+        """Build the production HEW model from the written model directory.
 
         Returns
         -------
@@ -213,7 +232,7 @@ def _build_candidates(
         """
         return build_hew_model(
             args.model_dir,
-            dataset_name=DATASET_NAME,
+            dataset_name=bundle.name,
             pyrenew_multisignal_dir=args.pyrenew_multisignal_dir,
             cfa_stf_dir=args.cfa_stf_dir,
         )
@@ -270,10 +289,13 @@ def _parse_args() -> argparse.Namespace:
         "--model-dir",
         type=Path,
         default=Path("benchmarks/results/synthetic_hew_model"),
-        help="Directory to write the synthetic HEW model inputs into.",
+        help="Directory to write the HEW model inputs into.",
     )
+    add_data_source_args(parser)
     add_common_args(parser)
-    return parser.parse_args()
+    args = parser.parse_args()
+    validate_data_source_args(parser, args)
+    return args
 
 
 def main() -> None:
@@ -283,7 +305,11 @@ def main() -> None:
     numpyro.set_host_device_count(settings.num_chains)
     numpyro.enable_x64()
 
-    bundle = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
+    bundle = load_he_bundle(args)
+    if args.dry_run_data:
+        print_data_summary([bundle])
+        return
+
     run_comparison(
         _build_candidates(args, bundle),
         COMPARISON_SPEC,

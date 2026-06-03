@@ -17,18 +17,18 @@ from benchmarks.suites import pyrenew_vs_hew
 
 
 def test_comparison_spec_pairs_hew_baseline_with_pyrenew():
-    """The spec compares the HEW baseline against the no-dow PyRenew arm."""
+    """The spec compares the HEW baseline against the PyRenew arm."""
     spec = pyrenew_vs_hew.COMPARISON_SPEC
-    assert spec.arms == ("hew", "pyrenew-state-nodow")
+    assert spec.arms == ("hew", "pyrenew-state")
     assert spec.baseline == "hew"
     assert spec.match_keys == ("dataset",)
 
 
-def test_build_pyrenew_state_nodow_omits_day_of_week():
+def test_build_pyrenew_state_omits_day_of_week():
     """The PyRenew candidate builds an ED observation with no day-of-week effect."""
     bundle = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
 
-    built = pyrenew_vs_hew._build_pyrenew_state_nodow(bundle)
+    built = pyrenew_vs_hew._build_pyrenew_state(bundle)
 
     assert isinstance(built, BuiltFit)
     assert built.model.observations["ed_visits"].day_of_week_rv is None
@@ -46,6 +46,7 @@ def test_build_candidates_pairs_hew_and_pyrenew(tmp_path):
     """Candidate assembly yields the HEW and PyRenew arms and writes the HEW dir."""
     bundle = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
     args = types.SimpleNamespace(
+        data_source="synthetic",
         model_dir=tmp_path / "hew",
         pyrenew_multisignal_dir=tmp_path / "pms",
         cfa_stf_dir=tmp_path / "cfa",
@@ -53,7 +54,7 @@ def test_build_candidates_pairs_hew_and_pyrenew(tmp_path):
 
     candidates = pyrenew_vs_hew._build_candidates(args, bundle)
 
-    assert [c.arm for c in candidates] == ["hew", "pyrenew-state-nodow"]
+    assert [c.arm for c in candidates] == ["hew", "pyrenew-state"]
     hew, pyr = candidates
     assert hew.rt_site_names == HEW_RT_SITE_NAMES
     assert hew.config_fields["ed_day_of_week"] is True

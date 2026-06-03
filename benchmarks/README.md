@@ -15,6 +15,7 @@ benchmarks/
 ├── core/
 │   ├── env.py          configure_jax: float64 + XLA device count, before jax import
 │   ├── cli.py          add_common_args / settings_from_args: shared sampler + output flags
+│   ├── data_source.py  add_data_source_args / load_he_bundle: shared synthetic-vs-real selection
 │   ├── signals.py      SignalSeries, DatasetBundle, DatasetProvider
 │   ├── datasets.py     SyntheticProvider over pyrenew/datasets/
 │   ├── real_data.py    RealDataProvider over CDC NHSN + NSSP feeds
@@ -96,6 +97,9 @@ If you set either variable yourself before invocation, it is honored.
 x64 is required: in float32 the renewal recursion loses precision and NUTS diverges (a full chain diverged at 500/500/4 in float32, none under x64).
 
 ### Real data on CDC infrastructure
+
+The `--data-source` flags are shared core machinery (`core/data_source.py`), not specific to `rt_params`: every H+E suite registers them through `add_data_source_args` and loads its bundle through `load_he_bundle`, so the same `--data-source real ...` invocation shown below works for `pyrenew_vs_hew` as well.
+For `pyrenew_vs_hew`, the HEW arm is written into a production model directory from the same bundle the PyRenew arm consumes (`core/hew_model.py:write_hew_model_dir_from_bundle`), so both arms fit identical real feeds.
 
 Real-data mode is intended for CDC environments that can import `cfa-stf-routine-forecasting` and access the internal feeds used by `cfa.stf.data`.
 PyRenew does not depend on those internal packages for normal use; the `cfa.stf.*` imports happen only when `--data-source real` loads a bundle.

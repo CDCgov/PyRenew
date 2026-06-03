@@ -10,9 +10,10 @@ from __future__ import annotations
 
 import json
 import shutil
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from pathlib import Path
 from textwrap import dedent
+from typing import Any
 
 import numpy as np
 
@@ -193,6 +194,155 @@ def _default_priors_text() -> str:
     ).lstrip()
 
 
+def write_hew_model_dir(
+    model_dir: str | Path,
+    *,
+    ed_dates: Sequence[str],
+    observed_ed_visits: Sequence[float],
+    other_ed_visits: Sequence[float],
+    hosp_dates: Sequence[str],
+    hospital_admissions: Sequence[float],
+    population: int,
+    generation_interval_pmf: Sequence[float],
+    inf_to_hosp_admit_pmf: Sequence[float],
+    location: str = "US",
+    disease: str = "COVID-19",
+    priors_path: str | Path | None = None,
+    overwrite: bool = False,
+    right_truncation_offset: int | None = None,
+    right_truncation_pmf: list[float] | None = None,
+    source: str = "pyrenew.datasets.write_hew_model_dir",
+    extra_metadata: dict[str, Any] | None = None,
+) -> Path:
+    """
+    Write H+E observations in the production HEW ``model_dir`` layout.
+
+    This is the format-only writer shared by the synthetic and real-data
+    paths. It assembles ``data/data_for_model_fit.json`` and
+    ``data/model_params.json`` from already-extracted daily ED visits and
+    weekly hospital admissions, independent of where those series came from.
+
+    Parameters
+    ----------
+    model_dir
+        Directory to create. The function writes ``priors.py``,
+        ``data/data_for_model_fit.json``, and ``data/model_params.json``.
+    ed_dates
+        ISO ``YYYY-MM-DD`` dates for the daily ED-visits series.
+    observed_ed_visits
+        Disease-specific daily ED-visit counts aligned to ``ed_dates``.
+    other_ed_visits
+        Non-disease ED-visit counts aligned to ``ed_dates``. Required by the
+        production schema; not used by the HEW model fit.
+    hosp_dates
+        ISO ``YYYY-MM-DD`` week-ending dates for the weekly hospital series.
+    hospital_admissions
+        Weekly hospital admission counts aligned to ``hosp_dates``.
+    population
+        Total jurisdiction population.
+    generation_interval_pmf
+        Generation interval PMF.
+    inf_to_hosp_admit_pmf
+        Infection-to-hospital-admission delay PMF. Its lognormal location and
+        scale are moment-matched for the production prior reference.
+    location
+        Jurisdiction code written into the production-shaped data.
+    disease
+        Disease label recorded in ``metadata.json``.
+    priors_path
+        Optional path to an external priors file. If omitted, a minimal
+        synthetic-data priors file is written.
+    overwrite
+        Whether to replace an existing ``model_dir``.
+    right_truncation_offset
+        Offset used by the production ED right-truncation adjustment. Use
+        ``None`` for complete data.
+    right_truncation_pmf
+        Reporting-delay PMF. Defaults to ``[1.0]`` for complete reports.
+    source
+        Provenance string recorded in ``metadata.json``.
+    extra_metadata
+        Optional additional key-value pairs merged into ``metadata.json``.
+
+    Returns
+    -------
+    pathlib.Path
+        Path to the created model directory.
+    """
+    model_dir = Path(model_dir)
+    if model_dir.exists():
+        if not overwrite:
+            raise FileExistsError(
+                f"{model_dir} already exists. Pass overwrite=True to replace it."
+            )
+        shutil.rmtree(model_dir)
+
+    data_dir = model_dir / "data"
+    data_dir.mkdir(parents=True)
+
+    delay_loc, delay_scale = _lognormal_moment_match(list(inf_to_hosp_admit_pmf))
+    right_truncation_pmf = (
+        DEFAULT_RIGHT_TRUNCATION_PMF
+        if right_truncation_pmf is None
+        else _as_float_list(right_truncation_pmf)
+    )
+
+    ed_dates = list(ed_dates)
+    hosp_dates = list(hosp_dates)
+    data_for_model_fit = {
+        "loc_pop": [int(population)],
+        "right_truncation_offset": right_truncation_offset,
+        "nssp_step_size": 1,
+        "nhsn_step_size": 7,
+        "nssp_training_data": {
+            "date": ed_dates,
+            "geo_value": [location] * len(ed_dates),
+            "observed_ed_visits": _as_float_list(observed_ed_visits),
+            "other_ed_visits": _as_float_list(other_ed_visits),
+            "data_type": ["train"] * len(ed_dates),
+        },
+        "nssp_training_dates": ed_dates,
+        "nhsn_training_data": {
+            "weekendingdate": hosp_dates,
+            "jurisdiction": [location] * len(hosp_dates),
+            "hospital_admissions": _as_float_list(hospital_admissions),
+            "data_type": ["train"] * len(hosp_dates),
+        },
+        "nhsn_training_dates": hosp_dates,
+    }
+
+    model_params = {
+        "population_size": int(population),
+        "pop_fraction": [1.0],
+        "generation_interval_pmf": _as_float_list(generation_interval_pmf),
+        "right_truncation_pmf": right_truncation_pmf,
+        "inf_to_hosp_admit_lognormal_loc": delay_loc,
+        "inf_to_hosp_admit_lognormal_scale": delay_scale,
+        "inf_to_hosp_admit_pmf": _as_float_list(inf_to_hosp_admit_pmf),
+    }
+
+    with open(data_dir / "data_for_model_fit.json", "w") as f:
+        json.dump(data_for_model_fit, f, indent=2)
+    with open(data_dir / "model_params.json", "w") as f:
+        json.dump(model_params, f, indent=2)
+
+    if priors_path is None:
+        (model_dir / "priors.py").write_text(_default_priors_text())
+    else:
+        shutil.copyfile(priors_path, model_dir / "priors.py")
+
+    metadata = {
+        "source": source,
+        "location": location,
+        "disease": disease,
+        **(extra_metadata or {}),
+    }
+    with open(model_dir / "metadata.json", "w") as f:
+        json.dump(metadata, f, indent=2)
+
+    return model_dir
+
+
 def write_synthetic_hew_model_dir(
     model_dir: str | Path,
     priors_path: str | Path | None = None,
@@ -240,17 +390,6 @@ def write_synthetic_hew_model_dir(
     pathlib.Path
         Path to the created model directory.
     """
-    model_dir = Path(model_dir)
-    if model_dir.exists():
-        if not overwrite:
-            raise FileExistsError(
-                f"{model_dir} already exists. Pass overwrite=True to replace it."
-            )
-        shutil.rmtree(model_dir)
-
-    data_dir = model_dir / "data"
-    data_dir.mkdir(parents=True)
-
     true_params = load_synthetic_true_parameters()
     daily_ed = load_synthetic_daily_ed_visits()
     weekly_hosp = load_synthetic_weekly_hospital_admissions()
@@ -266,71 +405,31 @@ def write_synthetic_hew_model_dir(
     else:
         raise ValueError("delay_pmf_source must be one of {'ed', 'hospital'}.")
 
-    delay_loc, delay_scale = _lognormal_moment_match(delay_pmf)
-    right_truncation_pmf = (
-        DEFAULT_RIGHT_TRUNCATION_PMF
-        if right_truncation_pmf is None
-        else _as_float_list(right_truncation_pmf)
-    )
-
     ed_visits = daily_ed["ed_visits"].to_list()
-    data_for_model_fit = {
-        "loc_pop": [int(true_params["population"])],
-        "right_truncation_offset": right_truncation_offset,
-        "nssp_step_size": 1,
-        "nhsn_step_size": 7,
-        "nssp_training_data": {
-            "date": daily_ed["date"].to_list(),
-            "geo_value": [location] * len(daily_ed),
-            "observed_ed_visits": [float(x) for x in ed_visits],
-            "other_ed_visits": [
-                float(max(1.0, round(x * other_ed_visits_multiplier)))
-                for x in ed_visits
-            ],
-            "data_type": ["train"] * len(daily_ed),
+    other_ed_visits = [
+        float(max(1.0, round(x * other_ed_visits_multiplier))) for x in ed_visits
+    ]
+    return write_hew_model_dir(
+        model_dir,
+        ed_dates=daily_ed["date"].to_list(),
+        observed_ed_visits=[float(x) for x in ed_visits],
+        other_ed_visits=other_ed_visits,
+        hosp_dates=weekly_hosp["week_end"].to_list(),
+        hospital_admissions=[
+            float(x) for x in weekly_hosp["weekly_hosp_admits"].to_list()
+        ],
+        population=int(true_params["population"]),
+        generation_interval_pmf=_as_float_list(true_params["generation_interval_pmf"]),
+        inf_to_hosp_admit_pmf=delay_pmf,
+        location=location,
+        disease=disease,
+        priors_path=priors_path,
+        overwrite=overwrite,
+        right_truncation_offset=right_truncation_offset,
+        right_truncation_pmf=right_truncation_pmf,
+        source="pyrenew.datasets.write_synthetic_hew_model_dir",
+        extra_metadata={
+            "delay_pmf_source": delay_pmf_source,
+            "other_ed_visits_multiplier": other_ed_visits_multiplier,
         },
-        "nssp_training_dates": daily_ed["date"].to_list(),
-        "nhsn_training_data": {
-            "weekendingdate": weekly_hosp["week_end"].to_list(),
-            "jurisdiction": [location] * len(weekly_hosp),
-            "hospital_admissions": [
-                float(x) for x in weekly_hosp["weekly_hosp_admits"].to_list()
-            ],
-            "data_type": ["train"] * len(weekly_hosp),
-        },
-        "nhsn_training_dates": weekly_hosp["week_end"].to_list(),
-    }
-
-    model_params = {
-        "population_size": int(true_params["population"]),
-        "pop_fraction": [1.0],
-        "generation_interval_pmf": _as_float_list(
-            true_params["generation_interval_pmf"]
-        ),
-        "right_truncation_pmf": right_truncation_pmf,
-        "inf_to_hosp_admit_lognormal_loc": delay_loc,
-        "inf_to_hosp_admit_lognormal_scale": delay_scale,
-        "inf_to_hosp_admit_pmf": delay_pmf,
-    }
-
-    with open(data_dir / "data_for_model_fit.json", "w") as f:
-        json.dump(data_for_model_fit, f, indent=2)
-    with open(data_dir / "model_params.json", "w") as f:
-        json.dump(model_params, f, indent=2)
-
-    if priors_path is None:
-        (model_dir / "priors.py").write_text(_default_priors_text())
-    else:
-        shutil.copyfile(priors_path, model_dir / "priors.py")
-
-    metadata = {
-        "source": "pyrenew.datasets.write_synthetic_hew_model_dir",
-        "location": location,
-        "disease": disease,
-        "delay_pmf_source": delay_pmf_source,
-        "other_ed_visits_multiplier": other_ed_visits_multiplier,
-    }
-    with open(model_dir / "metadata.json", "w") as f:
-        json.dump(metadata, f, indent=2)
-
-    return model_dir
+    )

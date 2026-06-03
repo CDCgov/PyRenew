@@ -182,51 +182,6 @@ def test_real_data_cli_parses_options(monkeypatch):
     assert args.omit_last_days == 3
 
 
-def test_load_bundles_uses_real_data_provider_for_real_he(monkeypatch):
-    """Real H+E candidates load through the real-data provider."""
-    bundle = object()
-    captured_specs = {}
-
-    class FakeRealDataProvider:
-        """Minimal provider that captures requested real-data specs."""
-
-        def __init__(self, specs):
-            """Store the provided specs in the outer capture mapping."""
-            captured_specs.update(specs)
-
-        def get(self, name):
-            """Return the fake bundle for the expected real-data name.
-
-            Returns
-            -------
-            object
-                Fake bundle supplied by the test.
-            """
-            assert name == rt_params.REAL_HE_DATASET
-            return bundle
-
-    monkeypatch.setattr(rt_params, "RealDataProvider", FakeRealDataProvider)
-    args = types.SimpleNamespace(
-        data_source="real",
-        disease="RSV",
-        location="CA",
-        as_of=date(2025, 1, 15),
-        training_days=120,
-        omit_last_days=3,
-    )
-
-    bundles = rt_params._load_bundles(args)
-
-    assert bundles == {rt_params.HE_BUNDLE_KEY: bundle}
-    spec = captured_specs[rt_params.REAL_HE_DATASET]
-    assert spec.disease == "RSV"
-    assert spec.loc_abbr == "CA"
-    assert spec.as_of == date(2025, 1, 15)
-    assert spec.n_training_days == 120
-    assert spec.n_days_to_omit == 3
-    assert spec.signals == ("hospital", "ed_visits")
-
-
 def _example_bundle():
     """Build a small single-signal bundle for summary tests.
 
@@ -315,11 +270,7 @@ def test_main_dry_run_data_exits_before_fitting(monkeypatch, capsys):
     )
 
     monkeypatch.setattr(sys, "argv", ["rt_params.py", "--dry-run-data"])
-    monkeypatch.setattr(
-        rt_params,
-        "_load_bundles",
-        lambda args: {rt_params.SYNTHETIC_HE_WEEKLY_HOSPITAL: bundle},
-    )
+    monkeypatch.setattr(rt_params, "load_he_bundle", lambda args: bundle)
 
     def fail_if_called(*args, **kwargs):
         """Fail the test if fitting is attempted."""
@@ -340,7 +291,7 @@ def test_main_reports_real_data_loader_errors_without_traceback(monkeypatch):
         """Raise a loader-side validation error."""
         raise ValueError("bad real-data window")
 
-    monkeypatch.setattr(rt_params, "_load_bundles", fail_load)
+    monkeypatch.setattr(rt_params, "load_he_bundle", fail_load)
 
     with pytest.raises(SystemExit) as exc_info:
         rt_params.main()
