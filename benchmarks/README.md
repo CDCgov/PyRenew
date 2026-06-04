@@ -74,15 +74,15 @@ SPEC: ComparisonSpec = ComparisonSpec(
 
 #### Data selection
 
-  | Option               | Effect                                                                                                                                 |
-  | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-  | `--data-source`      | `synthetic` (built-in fixtures) or `real` (CDC-internal NHSN/NSSP feeds; requires `cfa-stf-routine-forecasting` access and `--as-of`). |
-  | `--disease <name>`   | `real` only: : `COVID-19`, `Influenza`, or `RSV`.                                                                                      |
-  | `--location <abbr>`  | `real` only: Location abbreviation, e.g. `US` or `CA`.                                                                                 |
-  | `--as-of YYYY-MM-DD` | `real` only: Vintage date                                                                                                              |
-  | `--training-days N`  | `real` only: Training window length.  Default: 150.                                                                                    |
-  | `--omit-last-days N` | `real` only: Trailing days omitted to buffer right truncation. Default: 2.                                                             |
-  | `--dry-run-data`     | Load and summarize selected data, then exit before model fitting. Useful for checking real-data access and signal noise.               |
+  | Option               | Effect                                                                     |
+  | -------------------- | -------------------------------------------------------------------------- |
+  | `--data-source`      | `synthetic` (built-in fixtures) or `real` (CDC-internal NHSN/NSSP feeds)   |
+  | `--disease <name>`   | `real` only: : `COVID-19`, `Influenza`, or `RSV`.                          |
+  | `--location <abbr>`  | `real` only: Location abbreviation, e.g. `US` or `CA`.                     |
+  | `--as-of YYYY-MM-DD` | `real` only: Vintage date                                                  |
+  | `--training-days N`  | `real` only: Training window length.  Default: 150.                        |
+  | `--omit-last-days N` | `real` only: Trailing days omitted to buffer right truncation. Default: 2. |
+  | `--dry-run-data`     | Load and summarize selected data, then exit before model fitting.          |
 
 #### Run controls
 
