@@ -54,53 +54,62 @@ A benchmark compares candidates that differ in one of two ways:
 - **Priors.** The same model structure under different prior sets (each set is a `regime`).
   The `prior_regimes` example (`benchmarks/examples/run_prior_regimes.py`) fits one fixed structure under several regimes and compares how each samples; see `prior_regimes.md`.
 
+Model structure lives in the build function (structure is code); priors live in what a build function consumes (priors are data).
+
 A `ComparisonSpec` expresses a comparison of either kind.
 Its `arms` are the candidates compared side by side (as in a trial's treatment arms), `baseline` is the arm the others are rated against (the control), and `match_keys` are the fields that must be equal for two fits to form a comparable group, so whatever you are not varying (and the dataset) is held fixed.
-To vary both at once, put one kind of difference in `arms` and pin the other through `match_keys`: `rt_params` does this, holding a fixed-hyperparameter prior regime equal while comparing parameterizations within it.
 
-Model structure lives in the build function (structure is code); priors live in what a build function consumes (priors are data).
-`prior_regimes.md` develops the prior comparison in full.
+To vary both at once, put one kind of difference in `arms` and pin the other through `match_keys`.
+For example, the comparison in file `suite/rt_params.py` does this by holding a fixed-hyperparameter prior regime equal while comparing parameterizations within it.
 
-## rt_params suite
-
-Compares the `innovation` (non-centered, NCP) and `state` (centered, CP) parameterizations of the inner `DifferencedAR1` weekly $\mathcal{R}(t)$ process, on the H+E model: weekly-aggregated hospital admissions plus daily ED visits.
-Each fit uses one parameterization; the suite always runs both so the matched pair can be compared.
-
-### Run
-
-```bash
-python -m benchmarks.suites.rt_params --quick
+```python
+SPEC: ComparisonSpec = ComparisonSpec(
+    name="rt_params",
+    arms=("innovation", "state")
+    baseline="innovation",
+    match_keys=("dataset", "innovation_sd", "autoreg"),
 ```
 
-`--quick` overrides the sampler to 50 warmup, 50 samples, 1 chain.
-Drop it for a full run.
+## Running a comparison
 
-```bash
-python -m benchmarks.suites.rt_params --prior both --repeats 3
-```
+#### Data selection
 
-Useful options:
+  | Option               | Effect                                                                                                                                 |
+  | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+  | `--data-source`      | `synthetic` (built-in fixtures) or `real` (CDC-internal NHSN/NSSP feeds; requires `cfa-stf-routine-forecasting` access and `--as-of`). |
+  | `--disease <name>`   | `real` only: : `COVID-19`, `Influenza`, or `RSV`.                                                                                      |
+  | `--location <abbr>`  | `real` only: Location abbreviation, e.g. `US` or `CA`.                                                                                 |
+  | `--as-of YYYY-MM-DD` | `real` only: Vintage date                                                                                                              |
+  | `--training-days N`  | `real` only: Training window length.  Default: 150.                                                                                    |
+  | `--omit-last-days N` | `real` only: Trailing days omitted to buffer right truncation. Default: 2.                                                             |
+  | `--dry-run-data`     | Load and summarize selected data, then exit before model fitting. Useful for checking real-data access and signal noise.               |
 
-  | Option                                          | Effect                                                                                                                                                    |
-  | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `--data-source`                                 | `synthetic` (built-in fixtures) or `real` (CDC-internal NHSN/NSSP feeds; requires `cfa-stf-routine-forecasting` access and `--as-of`).                    |
-  | `--disease <name>`                              | Disease for `--data-source real`: `COVID-19`, `Influenza`, or `RSV`.                                                                                      |
-  | `--location <abbr>`                             | Location abbreviation for `--data-source real`, e.g. `US` or `CA`.                                                                                        |
-  | `--as-of YYYY-MM-DD`                            | Vintage date for `--data-source real`. Required for real data.                                                                                            |
-  | `--training-days N`                             | Training window length for `--data-source real`. Default: 150.                                                                                            |
-  | `--omit-last-days N`                            | Trailing days omitted from `--data-source real` to buffer right truncation. Default: 2.                                                                   |
-  | `--dry-run-data`                                | Load and summarize selected data, then exit before model fitting. Useful for checking real-data access and signal noise.                                  |
-  | `--prior <kind>`                                | `tight` (sd=0.01, autoreg=0.9), `loose` (sd=0.10, autoreg=0.5), `both`, or an explicit `sd,autoreg` pair (e.g. `0.05,0.7`). Repeatable. Default: `tight`. |
-  | `--repeats N`                                   | Refit each cell `N` times with `seed + i` to estimate sampler noise.                                                                                      |
-  | `--num-warmup`, `--num-samples`, `--num-chains` | NUTS controls. `--num-chains` defaults to `min(4, os.cpu_count())`.                                                                                       |
-  | `--seed`                                        | Base seed (default 42).                                                                                                                                   |
-  | `--output-dir`                                  | Where to write artifacts. Default `benchmarks/results/`.                                                                                                  |
-  | `--no-write`                                    | Skip artifact files; print summary only.                                                                                                                  |
+#### Run controls
+
+  | Option                                          | Effect                                                               |
+  | ----------------------------------------------- | -------------------------------------------------------------------- |
+  | `--repeats N`                                   | Refit each cell `N` times with `seed + i` to estimate sampler noise. |
+  | `--num-warmup`, `--num-samples`, `--num-chains` | NUTS controls. `--num-chains` defaults to `min(4, os.cpu_count())`.  |
+  | `--seed`                                        | Base seed (default 42).                                              |
+  | `--quick`                                       | Shorthand for `--num-warmup 50 --num-samples 50                      |
+
+#### Output controls
+
+  | Option         | Effect                                                   |
+  | -------------- | -------------------------------------------------------- |
+  | `--output-dir` | Where to write artifacts. Default `benchmarks/results/`. |
+  | `--no-write`   | Skip artifact files; print summary only.                 |
 
 At startup the driver calls `core/env.py:configure_jax()`, which sets `XLA_FLAGS=--xla_force_host_platform_device_count=N` (where `N = min(8, os.cpu_count())`) so JAX exposes enough logical devices for parallel chains, and `JAX_ENABLE_X64=true`.
 Both are set before `jax` is imported.
 If you set either variable yourself before invocation, it is honored.
 x64 is required: in float32 the renewal recursion loses precision and NUTS diverges (a full chain diverged at 500/500/4 in float32, none under x64).
+
+Individual comparisons can add further command-line controls.
+For example, the `rt_params` comparison suite varies both model structure and priors at once.
+Its arms are the **model structure**: the `innovation` (non-centered) and `state` (centered) modes of the inner `DifferencedAR1` temporal process for the latent infection renewal equation.
+Its `--prior` option steps a **prior** regime that fixes the weekly per-step innovation SD $\sigma$ and the autoregressive coefficient $\phi$ to chosen values: `tight` $(\sigma = 0.01, \phi = 0.9)$, `loose` $(\sigma = 0.10, \phi = 0.5)$, or an explicit pair.
+The regime is a match key, held equal within each comparison, so the two parameterizations are compared within a regime rather than across regimes.
 
 ### Real data on CDC infrastructure
 
@@ -183,27 +192,9 @@ Candidate summaries average time and ESS metrics across repeats, sum divergences
 
 ### Suite design
 
-`rt_params` varies both model structure and priors at once.
-Its arms are the **model structure**: the `innovation` (non-centered) and `state` (centered) modes of the inner `DifferencedAR1`.
-Its `--prior` option steps a **prior** regime that fixes the weekly per-step innovation SD $\sigma$ and the autoregressive coefficient $\phi$ to chosen values: `tight` $(\sigma = 0.01, \phi = 0.9)$, `loose` $(\sigma = 0.10, \phi = 0.5)$, or an explicit pair.
-The regime is a match key, held equal within each comparison, so the two parameterizations are compared within a regime rather than across regimes.
-The cumulative variance of $\log \mathcal{R}(T)$ is far more sensitive to $\phi$ than to $\sigma$.
-
-The latent $\mathcal{R}(t)$ runs at weekly cadence, matching the production HEW model and the weekly forecasting setting.
-Production treats both hyperparameters as inferred (`eta_sd ~ TruncatedNormal(0.15, 0.05)`, `autoreg_rt ~ Beta(2, 40)`); `rt_params` fixes them so the comparison isolates the parameterization.
-To make the priors themselves the object of study rather than holding them fixed, use the `prior_regimes` example.
-
 ## prior_regimes example
 
 Fits one fixed H+E structure under a set of prior regimes and compares how each samples.
-Run from the repository root:
-
-```bash
-python -m benchmarks.examples.run_prior_regimes --quick
-```
-
-`--quick` is a smoke run (50 warmup, 50 samples, 1 chain); drop it for a full run.
-It accepts the same sampler and output flags as `rt_params`: `--num-warmup`, `--num-samples`, `--num-chains`, `--repeats`, `--seed`, `--output-dir` (default `benchmarks/results/`, prefix `prior_regimes_`), `--no-write`, and `--progress-bar`.
 
 As shipped it has one regime (`example`), so it profiles that single model: per-candidate and per-site ESS tables plus the written artifacts, with an empty comparison table.
 A comparison appears once you add a second regime.

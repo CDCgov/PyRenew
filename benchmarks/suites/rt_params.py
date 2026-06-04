@@ -52,6 +52,23 @@ SPEC: ComparisonSpec = ComparisonSpec(
 )
 
 
+def _add_args(parser: argparse.ArgumentParser) -> None:
+    """Register the ``--prior`` regime sweep argument."""
+    parser.add_argument(
+        "--prior",
+        action="append",
+        default=[],
+        help=(
+            "Prior regime: 'tight' "
+            f"(sd={DEFAULT_TIGHT_SD:g}, autoreg={DEFAULT_TIGHT_AUTOREG:g}), "
+            "'loose' "
+            f"(sd={DEFAULT_LOOSE_SD:g}, autoreg={DEFAULT_LOOSE_AUTOREG:g}), "
+            "'both', or an explicit 'sd,autoreg' pair (e.g. '0.05,0.7'). "
+            "Repeat to fit under multiple regimes."
+        ),
+    )
+
+
 def _parse_pair(arg: str) -> tuple[float, float]:
     """Parse an explicit ``sd,autoreg`` prior pair.
 
@@ -116,23 +133,6 @@ def _fit_label(
     return parameterization
 
 
-def _add_prior_arg(parser: argparse.ArgumentParser) -> None:
-    """Register the ``--prior`` regime sweep argument."""
-    parser.add_argument(
-        "--prior",
-        action="append",
-        default=[],
-        help=(
-            "Prior regime: 'tight' "
-            f"(sd={DEFAULT_TIGHT_SD:g}, autoreg={DEFAULT_TIGHT_AUTOREG:g}), "
-            "'loose' "
-            f"(sd={DEFAULT_LOOSE_SD:g}, autoreg={DEFAULT_LOOSE_AUTOREG:g}), "
-            "'both', or an explicit 'sd,autoreg' pair (e.g. '0.05,0.7'). "
-            "Repeat to fit under multiple regimes."
-        ),
-    )
-
-
 def _arms(args: argparse.Namespace, bundle: DatasetBundle) -> list[Arm]:
     """Build one arm per parameterization and prior regime.
 
@@ -174,7 +174,7 @@ def _arms(args: argparse.Namespace, bundle: DatasetBundle) -> list[Arm]:
 
 
 main = comparison_suite(
-    SPEC, _arms, build_he_model, description=__doc__, add_args=_add_prior_arg
+    SPEC, _arms, build_he_model, description=__doc__, add_args=_add_args
 )
 
 if __name__ == "__main__":
