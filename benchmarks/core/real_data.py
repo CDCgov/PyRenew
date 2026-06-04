@@ -1,13 +1,11 @@
 """Real-data provider for CDC NHSN + NSSP feeds.
 
 Implements the :class:`DatasetProvider` protocol from
-:mod:`benchmarks.core.signals` so suites can swap a synthetic provider
-for live CDC data without changing the suite or the model builders.
+:mod:`benchmarks.core.signals` over the live CDC feeds.
 
 Live observations and disease-specific PMFs require
 ``cfa-stf-routine-forecasting`` and valid Azure credentials at call time.
-Location populations come from :mod:`benchmarks.core.reference_data` so the
-benchmark does not call the R ``forecasttools`` package.
+Location populations come from :mod:`benchmarks.core.reference_data`.
 """
 
 from __future__ import annotations

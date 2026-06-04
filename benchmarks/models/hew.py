@@ -5,16 +5,9 @@ shared runner in :mod:`benchmarks.core.runner` fits it exactly like a PyRenew
 :class:`MultiSignalModel`: ``model.run`` with the benchmark's diagnostic
 ``extra_fields``, then metrics read from ``model.mcmc``.
 
-The HEW model is fit in process rather than through the pipeline's
-``fit_and_save_model``. That entry point pickles to disk and requests
-``extra_fields`` that omit ``diverging`` and ``energy``, which the benchmark
-needs for divergence and E-BFMI metrics. Building and running the model
-directly lets the runner request the diagnostic fields it reports.
-
 Imports of ``pyrenew_multisignal`` and the ``cfa-stf-routine-forecasting``
-pipeline utilities are deferred to call time, mirroring
-:mod:`benchmarks.core.real_data`, so importing this module does not require
-either package. Install them separately to use this builder.
+pipeline utilities are deferred to call time, so importing this module does not
+require either package. Install them separately to use this builder.
 """
 
 from __future__ import annotations
@@ -226,5 +219,5 @@ def write_hew_model_dir_from_bundle(
         overwrite=overwrite,
         right_truncation_offset=right_truncation_offset,
         right_truncation_pmf=right_truncation_pmf,
-        source="benchmarks.core.hew_model.write_hew_model_dir_from_bundle",
+        source="benchmarks.models.hew.write_hew_model_dir_from_bundle",
     )

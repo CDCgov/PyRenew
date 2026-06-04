@@ -12,7 +12,7 @@ These benchmarks are not part of CI; the unit and integration tests in `test/` p
 
 ```
 benchmarks/
-├── core/
+├── core/                 model-agnostic machinery
 │   ├── env.py          configure_jax: float64 + XLA device count, before jax import
 │   ├── cli.py          add_common_args / settings_from_args: shared sampler + output flags
 │   ├── data_source.py  add_data_source_args / load_he_bundle: shared synthetic-vs-real selection
@@ -23,20 +23,26 @@ benchmarks/
 │   ├── priors.py       benchmark-local priors for real-data builds
 │   ├── comparison.py   ComparisonSpec / MetricSpec: declares arms, baseline, metrics
 │   ├── models.py       BuiltFit + align_weekly_observations (shared machinery)
-│   ├── hew_model.py    adapter wrapping the production HEW model as a BuiltFit
 │   ├── runner.py       Candidate, fit_and_measure/fit_candidate
 │   ├── run.py          run_comparison: the shared fit / report / write loop
+│   ├── suite.py        Arm + comparison_suite: declarative driver (CLI, load, fit, report)
 │   └── reporting.py    spec-driven stdout tables and CSV / JSON / Markdown writers
-├── suites/
+├── models/               reusable model builders
+│   ├── he.py           HEModelConfig + build_he_model (hospital + ED visits)
+│   └── hew.py          build_hew_model: adapter wrapping the production HEW model
+├── suites/               thin comparison declarations
 │   ├── rt_params.py    centered vs non-centered weekly Rt parameterization
+│   ├── ed_day_of_week.py  ED day-of-week effect on vs off
 │   └── pyrenew_vs_hew.py  production HEW vs PyRenew
 ├── examples/
 │   └── run_prior_regimes.py  template: one structure under several prior regimes
 └── results/            output (gitignored)
 ```
 
-A driver asks a dataset provider for a bundle, builds one or more candidate models, and hands them to `run_comparison`, which fits each candidate and collects metrics.
-The `DatasetProvider` protocol in `core/signals.py` lets reporting-input providers replace `SyntheticProvider` without touching the driver.
+The three layers separate concerns: `core/` is model-agnostic machinery, `models/` holds reusable model builders, and `suites/` are thin declarations.
+A suite declares its arms (each an `Arm` carrying a model config) and its `ComparisonSpec`, then hands them to `core/suite.py:comparison_suite`, which supplies the CLI, sampler setup, data loading, and the fit / report loop.
+A model builder is signal-scoped: `models/he.py:build_he_model` reads a bundle's hospital and ED-visits signals; a model over other signals (e.g. wastewater) is a new builder, not a new field on `HEModelConfig`.
+The `DatasetProvider` protocol in `core/signals.py` lets reporting-input providers replace `SyntheticProvider` without touching any suite.
 
 ## Kinds of comparisons
 
@@ -99,7 +105,7 @@ x64 is required: in float32 the renewal recursion loses precision and NUTS diver
 ### Real data on CDC infrastructure
 
 The `--data-source` flags are shared core machinery (`core/data_source.py`), not specific to `rt_params`: every H+E suite registers them through `add_data_source_args` and loads its bundle through `load_he_bundle`, so the same `--data-source real ...` invocation shown below works for `pyrenew_vs_hew` as well.
-For `pyrenew_vs_hew`, the HEW arm is written into a production model directory from the same bundle the PyRenew arm consumes (`core/hew_model.py:write_hew_model_dir_from_bundle`), so both arms fit identical real feeds.
+For `pyrenew_vs_hew`, the HEW arm is written into a production model directory from the same bundle the PyRenew arm consumes (`models/hew.py:write_hew_model_dir_from_bundle`), so both arms fit identical real feeds.
 
 Real-data mode is intended for CDC environments that can import `cfa-stf-routine-forecasting` and access the internal feeds used by `cfa.stf.data`.
 PyRenew does not depend on those internal packages for normal use; the `cfa.stf.*` imports happen only when `--data-source real` loads a bundle.
@@ -206,21 +212,49 @@ See `prior_regimes.md` for the full workflow, including how each run records the
 
 ## Adding a benchmark
 
-1. Write a build function in your suite that returns a `BuiltFit`.
-   Model construction lives in the suite, not in `core`.
-   The model may be any `pyrenew.metaclass.Model` exposing `run` and `mcmc`, so the build function can assemble a PyRenew `MultiSignalModel` or wrap the production HEW model via `core/hew_model.py`.
-   `core/models.py` provides the shared `BuiltFit` container and `align_weekly_observations` helper.
+Most new comparisons reuse an existing model builder and differ on one axis, so the suite is a thin declaration.
+The whole of `suites/ed_day_of_week.py`:
 
-2. If the model needs a new dataset, add a builder to `benchmarks/core/datasets.py` and expose it through `SyntheticProvider`.
+```python
+from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
+from benchmarks.core.suite import comparison_suite
+from benchmarks.models.he import HEModelConfig, build_he_model, he_arm
 
-3. Define a `ComparisonSpec` in the suite: its `arms`, `baseline`, `match_keys`, and `metrics` are the single source of truth for reporting.
-   A single-arm spec is allowed; it profiles one model and emits an empty comparison table.
+SPEC = ComparisonSpec(
+    name="ed_day_of_week",
+    arms=("no_dow", "dow"),
+    baseline="no_dow",
+    match_keys=("dataset",),
+    metrics=DEFAULT_METRICS,
+)
 
-4. Add or extend a suite module in `benchmarks/suites/` following the shared driver shape:
-   - call `core/env.py:configure_jax()` before importing `jax`;
-   - write a `build_candidates(...)` that wraps each build function in a `Candidate` (with its `arm` and `config_fields`);
-   - in `main()`, register flags with `core/cli.py:add_common_args`, build sampler settings with `settings_from_args`, then call `core/run.py:run_comparison` with the candidates and the spec.
-     `run_comparison` runs the fit loop and the reporting; the suite supplies only the model construction and the spec.
+ARMS = [
+    he_arm("no_dow", HEModelConfig(rt="state", day_of_week="none")),
+    he_arm("dow", HEModelConfig(rt="state", day_of_week="infer")),
+]
+
+main = comparison_suite(SPEC, ARMS, build_he_model, description=__doc__)
+```
+
+(The suite also calls `core/env.py:configure_jax()` before importing `jax`; see an existing suite.)
+
+To add a comparison:
+
+1. **Pick or write a model builder.** If an existing builder in `benchmarks/models/` (e.g. `he.py`) covers your signals, reuse it and vary its config.
+   If you need a different signal set (e.g. wastewater), add a new builder module there; a builder takes a config and a `DatasetBundle` and returns a `BuiltFit`.
+   Model construction lives in `models/`, never in `core/`.
+
+2. **Declare the arms.** Each `Arm` carries a config consumed by the shared builder, or its own `build` callable for an arm of a different model family (as `pyrenew_vs_hew`'s HEW arm does).
+   `Arm.config_fields` label and group the candidate in reports; `he_arm` fills curated fields for H+E configs.
+
+3. **Define the `ComparisonSpec`:** `arms`, `baseline`, `match_keys`, and `metrics` are the single source of truth for reporting.
+   A single-arm spec is allowed; it profiles one model.
+
+4. **Wire `main`:** `main = comparison_suite(spec, arms, build_fn)`.
+   Pass `arms` as a `(args, bundle) -> list[Arm]` factory when the arms depend on CLI options (a prior sweep), and `add_args=` to register suite-specific flags (`rt_params` does both).
+   `comparison_suite` supplies the CLI (including the shared `--data-source` flags), sampler setup, data loading, and the fit / report loop.
+
+5. If the model needs a new synthetic dataset, add a builder to `benchmarks/core/datasets.py` and expose it through `SyntheticProvider`.
 
 ## Wiring real data
 

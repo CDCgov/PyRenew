@@ -3,8 +3,7 @@
 :class:`BuiltFit` packages an assembled model with the keyword arguments
 ``model.run`` needs; :func:`align_weekly_observations` pads a weekly
 observation series onto a model's period grid. Both are model-agnostic and
-reused across suites. Suite-specific model construction lives in the suites
-themselves, not here.
+reused across suites.
 """
 
 from __future__ import annotations

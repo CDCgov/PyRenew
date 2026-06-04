@@ -3,8 +3,7 @@
 The interface decouples benchmark suites from where the data comes from.
 A suite asks a :class:`DatasetProvider` for a named bundle. The synthetic
 provider in :mod:`benchmarks.core.datasets` wraps the fixtures in
-``pyrenew/datasets/``. A future provider can wrap CDC reporting inputs
-without any change to the suites or the model builders.
+``pyrenew/datasets/``.
 """
 
 from __future__ import annotations

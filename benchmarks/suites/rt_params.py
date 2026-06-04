@@ -2,13 +2,20 @@
 
 """rt_params benchmark suite.
 
-Compare ``innovation`` and ``state`` parameterizations of the weekly Rt
-temporal process. Each candidate name encodes the model family and
-parameterization.
+Compare the ``innovation`` (non-centered) and ``state`` (centered)
+parameterizations of the weekly $\\mathcal{R}(t)$ temporal process on the H+E
+model. The two parameterizations are the comparison arms; ``--prior`` steps a
+prior regime that fixes the weekly innovation SD and autoregressive coefficient,
+held equal across arms via the spec match keys so the parameterizations are
+compared within a regime.
+
+The model is the shared :func:`benchmarks.models.he.build_he_model`; this suite
+only declares the arms (parameterization x prior regime) and the spec.
 
 Run as a module from the repository root:
 
     python -m benchmarks.suites.rt_params --quick
+    python -m benchmarks.suites.rt_params --prior both --repeats 3
 
 See ``--help`` for all options.
 """
@@ -17,272 +24,31 @@ from __future__ import annotations
 
 import argparse
 from collections.abc import Sequence
-from dataclasses import dataclass
-from typing import Literal
 
 from benchmarks.core.env import configure_jax
 
 configure_jax()
 
-import jax.numpy as jnp
-import numpyro
-import numpyro.distributions as dist
-
-import pyrenew.transformation as transformation
-from benchmarks.core.cli import add_common_args, settings_from_args
 from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
-from benchmarks.core.data_source import (
-    add_data_source_args,
-    load_he_bundle,
-    validate_data_source_args,
-)
-from benchmarks.core.datasets import (
-    SYNTHETIC_HE_WEEKLY_HOSPITAL,
-    SyntheticProvider,
-)
-from benchmarks.core.models import BuiltFit, align_weekly_observations
-from benchmarks.core.priors import (
-    real_he_ed_day_of_week_prior,
-    real_he_i0_prior,
-)
-from benchmarks.core.reporting import print_data_summary
-from benchmarks.core.run import run_comparison
-from benchmarks.core.runner import Candidate
 from benchmarks.core.signals import DatasetBundle
-from pyrenew.ascertainment import AscertainmentModel, JointAscertainment
-from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import (
-    DifferencedAR1,
-    PopulationInfections,
-    WeeklyTemporalProcess,
-)
-from pyrenew.model import PyrenewBuilder
-from pyrenew.observation import (
-    NegativeBinomialNoise,
-    PopulationCounts,
-)
-from pyrenew.randomvariable import (
-    DistributionalVariable,
-    TransformedVariable,
-)
-from pyrenew.time import MMWR_WEEK
+from benchmarks.core.suite import Arm, comparison_suite
+from benchmarks.models.he import HEModelConfig, build_he_model
 
-COMPARISON_NAME = "rt_params"
 DEFAULT_TIGHT_SD = 0.01
 DEFAULT_LOOSE_SD = 0.10
 DEFAULT_TIGHT_AUTOREG = 0.9
 DEFAULT_LOOSE_AUTOREG = 0.5
 TIGHT_PRIOR: tuple[float, float] = (DEFAULT_TIGHT_SD, DEFAULT_TIGHT_AUTOREG)
 LOOSE_PRIOR: tuple[float, float] = (DEFAULT_LOOSE_SD, DEFAULT_LOOSE_AUTOREG)
-
-
 PARAMETERIZATIONS: tuple[str, ...] = ("innovation", "state")
 
-COMPARISON_SPEC: ComparisonSpec = ComparisonSpec(
-    name=COMPARISON_NAME,
+SPEC: ComparisonSpec = ComparisonSpec(
+    name="rt_params",
     arms=PARAMETERIZATIONS,
     baseline="innovation",
     match_keys=("dataset", "innovation_sd", "autoreg"),
     metrics=DEFAULT_METRICS,
 )
-
-Parameterization = Literal["innovation", "state"]
-
-
-@dataclass(frozen=True)
-class BuildConfig:
-    """Configurable axes of an rt_params candidate.
-
-    Parameters
-    ----------
-    parameterization
-        ``"innovation"`` or ``"state"`` for the Rt temporal process.
-    innovation_sd
-        Per-step standard deviation of the weekly AR(1) on first differences
-        of $\\log \\mathcal{R}(t)$.
-    autoreg
-        Autoregressive coefficient for the same process.
-    """
-
-    parameterization: Parameterization
-    innovation_sd: float = 0.05
-    autoreg: float = 0.9
-
-
-def _build_rt_process(config: BuildConfig) -> WeeklyTemporalProcess:
-    """Build the weekly Rt temporal process for the H+E model.
-
-    ``config.innovation_sd`` is the per-step standard deviation of innovations
-    to the rate of change in $\\log \\mathcal{R}(t)$ at weekly cadence.
-
-    Returns
-    -------
-    WeeklyTemporalProcess
-        Weekly differenced AR(1) Rt process.
-    """
-    inner = DifferencedAR1(
-        autoreg_rv=DeterministicVariable("rt_diff_autoreg", config.autoreg),
-        innovation_sd_rv=DeterministicVariable(
-            "rt_diff_innovation_sd", config.innovation_sd
-        ),
-        parameterization=config.parameterization,
-    )
-    return WeeklyTemporalProcess(inner, start_dow=MMWR_WEEK)
-
-
-def _build_he_ascertainment() -> AscertainmentModel:
-    """Build the joint Gaussian H+E ascertainment model.
-
-    Returns
-    -------
-    AscertainmentModel
-        Joint Gaussian ascertainment over hospital and ED visit rates.
-    """
-    sd = 0.3
-    corr = 0.5
-    cov = jnp.array([[sd**2, corr * sd**2], [corr * sd**2, sd**2]])
-    return JointAscertainment(
-        name="he_ascertainment",
-        signals=("hospital", "ed_visits"),
-        baseline_rates=jnp.array([0.004, 0.004]),
-        covariance_matrix=cov,
-    )
-
-
-def build_he_model(
-    config: BuildConfig,
-    bundle: DatasetBundle | None = None,
-) -> BuiltFit:
-    """Build the H+E PopulationInfections model and its run kwargs.
-
-    By default, uses :data:`SYNTHETIC_HE_WEEKLY_HOSPITAL`: weekly-aggregated
-    hospital reporting plus daily ED visits, matching the production-style
-    H+E setup. Callers may pass a bundle from another provider. The latent
-    $\\mathcal{R}(t)$ process runs at weekly cadence.
-
-    Returns
-    -------
-    BuiltFit
-        Model and run kwargs ready for fitting.
-    """
-    if bundle is None:
-        bundle = SyntheticProvider().get(SYNTHETIC_HE_WEEKLY_HOSPITAL)
-    hospital_signal = bundle.signals["hospital"]
-    ed_signal = bundle.signals["ed_visits"]
-    if "i0_per_capita" in bundle.fixed_params:
-        i0_per_capita = float(bundle.fixed_params["i0_per_capita"])
-        i0_rv = TransformedVariable(
-            name="I0",
-            base_rv=DistributionalVariable(
-                name="logit_I0",
-                distribution=dist.Normal(
-                    transformation.SigmoidTransform().inv(i0_per_capita),
-                    0.25,
-                ),
-            ),
-            transforms=transformation.SigmoidTransform(),
-        )
-    else:
-        i0_rv = real_he_i0_prior()
-    ed_right_truncation_rv = None
-    if "right_truncation_pmf" in bundle.fixed_params:
-        ed_right_truncation_rv = DeterministicPMF(
-            "ed_right_truncation",
-            bundle.fixed_params["right_truncation_pmf"],
-        )
-    ascertainment = _build_he_ascertainment()
-
-    builder = PyrenewBuilder()
-    builder.configure_latent(
-        PopulationInfections,
-        gen_int_rv=DeterministicPMF("gen_int", bundle.gen_int_pmf),
-        I0_rv=i0_rv,
-        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
-        single_rt_process=_build_rt_process(config),
-    )
-    builder.add_ascertainment(ascertainment)
-
-    hospital_kwargs: dict[str, object] = {}
-    if hospital_signal.cadence == "weekly":
-        builder.add_observation(
-            PopulationCounts(
-                name="hospital",
-                ascertainment_rate_rv=ascertainment.for_signal("hospital"),
-                delay_distribution_rv=DeterministicPMF(
-                    "hosp_delay", hospital_signal.extras["delay_pmf"]
-                ),
-                noise=NegativeBinomialNoise(
-                    DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
-                ),
-                aggregation="weekly",
-                reporting_schedule="regular",
-                start_dow=MMWR_WEEK,
-            )
-        )
-    else:
-        builder.add_observation(
-            PopulationCounts(
-                name="hospital",
-                ascertainment_rate_rv=ascertainment.for_signal("hospital"),
-                delay_distribution_rv=DeterministicPMF(
-                    "hosp_delay", hospital_signal.extras["delay_pmf"]
-                ),
-                noise=NegativeBinomialNoise(
-                    DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
-                ),
-            )
-        )
-    builder.add_observation(
-        PopulationCounts(
-            name="ed_visits",
-            ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
-            delay_distribution_rv=DeterministicPMF(
-                "ed_delay", ed_signal.extras["delay_pmf"]
-            ),
-            right_truncation_rv=ed_right_truncation_rv,
-            noise=NegativeBinomialNoise(
-                DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
-            ),
-            day_of_week_rv=(
-                DeterministicVariable(
-                    "ed_day_of_week_effect",
-                    ed_signal.extras["day_of_week_effects"],
-                )
-                if "day_of_week_effects" in ed_signal.extras
-                else real_he_ed_day_of_week_prior()
-            ),
-        )
-    )
-    model = builder.build()
-
-    if hospital_signal.cadence == "weekly":
-        hospital_obs = align_weekly_observations(
-            model,
-            "hospital",
-            hospital_signal.values,
-            bundle.obs_start_date,
-            bundle.n_days_post_init,
-        )
-    else:
-        hospital_obs = model.pad_observations(hospital_signal.values)
-    ed_obs = model.pad_observations(ed_signal.values)
-    hospital_kwargs["obs"] = hospital_obs
-    ed_kwargs: dict[str, object] = {"obs": ed_obs}
-    if "right_truncation_offset" in bundle.fixed_params:
-        ed_kwargs["right_truncation_offset"] = bundle.fixed_params[
-            "right_truncation_offset"
-        ]
-    return BuiltFit(
-        model=model,
-        run_kwargs={
-            "n_days_post_init": bundle.n_days_post_init,
-            "population_size": bundle.population_size,
-            "obs_start_date": bundle.obs_start_date,
-            "hospital": hospital_kwargs,
-            "ed_visits": ed_kwargs,
-        },
-        dataset_name=bundle.name,
-    )
 
 
 def _parse_pair(arg: str) -> tuple[float, float]:
@@ -333,35 +99,6 @@ def _resolve_priors(args: Sequence[str]) -> list[tuple[float, float]]:
     return list(dict.fromkeys(out))
 
 
-def _parse_args() -> argparse.Namespace:
-    """Parse the rt_params CLI.
-
-    Returns
-    -------
-    argparse.Namespace
-        Parsed options.
-    """
-    parser = argparse.ArgumentParser(description=__doc__)
-    add_data_source_args(parser)
-    parser.add_argument(
-        "--prior",
-        action="append",
-        default=[],
-        help=(
-            "Prior regime: 'tight' "
-            f"(sd={DEFAULT_TIGHT_SD:g}, autoreg={DEFAULT_TIGHT_AUTOREG:g}), "
-            "'loose' "
-            f"(sd={DEFAULT_LOOSE_SD:g}, autoreg={DEFAULT_LOOSE_AUTOREG:g}), "
-            "'both', or an explicit 'sd,autoreg' pair (e.g. '0.05,0.7'). "
-            "Repeat to fit under multiple regimes."
-        ),
-    )
-    add_common_args(parser)
-    args = parser.parse_args()
-    validate_data_source_args(parser, args)
-    return args
-
-
 def _fit_label(
     parameterization: str, innovation_sd: float, autoreg: float, n_priors: int
 ) -> str:
@@ -378,75 +115,64 @@ def _fit_label(
     return parameterization
 
 
-def build_candidates(
-    bundle: DatasetBundle, priors: Sequence[tuple[float, float]]
-) -> list[Candidate]:
-    """Build one candidate per parameterization and prior pair.
+def _add_prior_arg(parser: argparse.ArgumentParser) -> None:
+    """Register the ``--prior`` regime sweep argument."""
+    parser.add_argument(
+        "--prior",
+        action="append",
+        default=[],
+        help=(
+            "Prior regime: 'tight' "
+            f"(sd={DEFAULT_TIGHT_SD:g}, autoreg={DEFAULT_TIGHT_AUTOREG:g}), "
+            "'loose' "
+            f"(sd={DEFAULT_LOOSE_SD:g}, autoreg={DEFAULT_LOOSE_AUTOREG:g}), "
+            "'both', or an explicit 'sd,autoreg' pair (e.g. '0.05,0.7'). "
+            "Repeat to fit under multiple regimes."
+        ),
+    )
 
-    The two parameterizations are the comparison arms. Each prior pair is held
-    equal across arms via the spec's match keys, so the parameterizations are
-    compared within a prior rather than across priors. Each candidate's
-    ``build`` closes over its :class:`BuildConfig`, so the runner assembles a
-    fresh model for every repeat.
+
+def _arms(args: argparse.Namespace, bundle: DatasetBundle) -> list[Arm]:
+    """Build one arm per parameterization and prior regime.
+
+    The two parameterizations are the arms; each prior pair is held equal across
+    arms via the spec match keys. The day-of-week effect is fixed to the
+    bundle's known weekday signal so it does not confound the comparison.
 
     Returns
     -------
-    list[Candidate]
-        One candidate per (prior, parameterization) combination.
+    list[Arm]
+        One arm per (prior, parameterization) combination.
     """
-    candidates: list[Candidate] = []
+    priors = _resolve_priors(args.prior)
+    arms: list[Arm] = []
     for innovation_sd, autoreg in priors:
         for parameterization in PARAMETERIZATIONS:
-            config = BuildConfig(
-                parameterization=parameterization,
-                innovation_sd=innovation_sd,
-                autoreg=autoreg,
-            )
-            candidates.append(
-                Candidate(
-                    name=_fit_label(
+            arms.append(
+                Arm(
+                    name=parameterization,
+                    label=_fit_label(
                         parameterization, innovation_sd, autoreg, len(priors)
                     ),
-                    arm=parameterization,
+                    config=HEModelConfig(
+                        rt=parameterization,
+                        rt_innovation_sd=innovation_sd,
+                        rt_autoreg=autoreg,
+                        day_of_week="data",
+                    ),
                     config_fields={
                         "parameterization": parameterization,
                         "innovation_sd": innovation_sd,
                         "autoreg": autoreg,
                     },
-                    build=lambda config=config: build_he_model(config, bundle),
                 )
             )
-    return candidates
+    return arms
 
 
-def main() -> None:
-    """Run the rt_params suite from the command line."""
-    args = _parse_args()
-    settings = settings_from_args(args)
-    numpyro.set_host_device_count(settings.num_chains)
-    numpyro.enable_x64()
-
-    try:
-        priors = _resolve_priors(args.prior)
-    except ValueError as exc:
-        raise SystemExit(f"error: {exc}") from exc
-    try:
-        bundle = load_he_bundle(args)
-    except ValueError as exc:
-        raise SystemExit(f"error: {exc}") from exc
-    if args.dry_run_data:
-        print_data_summary([bundle])
-        return
-
-    run_comparison(
-        build_candidates(bundle, priors),
-        COMPARISON_SPEC,
-        settings,
-        comparison_name=COMPARISON_NAME,
-        repeats=args.repeats,
-        output_dir=None if args.no_write else args.output_dir,
-    )
-
+main = comparison_suite(
+    SPEC, _arms, build_he_model, description=__doc__, add_args=_add_prior_arg
+)
 
 if __name__ == "__main__":
     main()

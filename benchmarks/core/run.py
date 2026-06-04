@@ -4,8 +4,7 @@
 :class:`benchmarks.core.runner.Candidate` and a
 :class:`benchmarks.core.comparison.ComparisonSpec`. It fits every candidate
 over the requested repeats, prints the comparison and per-site tables, and
-optionally writes the artifacts. Drivers supply the model construction; this
-supplies the orchestration.
+optionally writes the artifacts.
 """
 
 from __future__ import annotations

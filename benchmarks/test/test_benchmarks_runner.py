@@ -1,9 +1,15 @@
-"""Tests for posterior summarization in ``benchmarks.core.runner``."""
+"""Tests for ``benchmarks.core.runner``."""
 
 import numpy as np
 import pytest
 
-from benchmarks.core.runner import summarize_posterior_parameters
+from benchmarks.core import runner
+from benchmarks.core.runner import (
+    Candidate,
+    McmcSettings,
+    fit_candidate,
+    summarize_posterior_parameters,
+)
 
 
 class _FakeMcmc:
@@ -52,3 +58,54 @@ def test_summarize_vector_site_reduces_per_element():
         assert s.mean == pytest.approx(float(np.mean(per_element)))
         assert s.std == pytest.approx(float(np.std(per_element)))
         assert s.q975 == pytest.approx(float(np.quantile(per_element, 0.975)))
+
+
+def test_fit_candidate_builds_model_and_forwards_metadata(monkeypatch):
+    """fit_candidate calls build() once and forwards the candidate metadata."""
+    captured: dict = {}
+    sentinel_built = object()
+
+    def fake_fit_and_measure(**kwargs):
+        """Capture forwarded arguments instead of fitting.
+
+        Returns
+        -------
+        str
+            Sentinel result.
+        """
+        captured.update(kwargs)
+        return "fit-result"
+
+    monkeypatch.setattr(runner, "fit_and_measure", fake_fit_and_measure)
+
+    build_calls = {"n": 0}
+
+    def build():
+        """Count build invocations and return a sentinel.
+
+        Returns
+        -------
+        object
+            Sentinel built model.
+        """
+        build_calls["n"] += 1
+        return sentinel_built
+
+    candidate = Candidate(
+        name="cand",
+        arm="hew",
+        config_fields={"model_family": "hew"},
+        build=build,
+        rt_site_names=("rt",),
+    )
+    settings = McmcSettings(num_warmup=1, num_samples=1, num_chains=1, seed=0)
+
+    result = fit_candidate(candidate, settings, repeat=2)
+
+    assert result == "fit-result"
+    assert build_calls["n"] == 1
+    assert captured["built"] is sentinel_built
+    assert captured["arm"] == "hew"
+    assert captured["config_fields"] == {"model_family": "hew"}
+    assert captured["rt_site_names"] == ("rt",)
+    assert captured["repeat"] == 2

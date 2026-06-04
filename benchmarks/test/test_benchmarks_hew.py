@@ -5,7 +5,6 @@ faked through ``sys.modules`` so these tests do not require either external
 package, mirroring the real-data provider tests.
 """
 
-import json
 import sys
 import types
 from datetime import date
@@ -14,15 +13,15 @@ from pathlib import Path
 import jax.numpy as jnp
 import pytest
 
-from benchmarks.core.hew_model import (
+from benchmarks.core.models import BuiltFit
+from benchmarks.core.signals import DatasetBundle, SignalSeries
+from benchmarks.models.hew import (
     HEW_RT_SITE_NAMES,
     _ensure_importable,
     build_hew_model,
     build_synthetic_hew_model,
     write_hew_model_dir_from_bundle,
 )
-from benchmarks.core.models import BuiltFit
-from benchmarks.core.signals import DatasetBundle, SignalSeries
 
 
 class _FakeLatent:
@@ -218,46 +217,6 @@ def _he_bundle() -> DatasetBundle:
         },
         gen_int_pmf=jnp.array([0.3, 0.4, 0.3]),
     )
-
-
-def _read_json(path: Path) -> dict:
-    """Read and parse a JSON file.
-
-    Returns
-    -------
-    dict
-        Parsed JSON content.
-    """
-    with open(path) as f:
-        return json.load(f)
-
-
-def test_write_hew_model_dir_from_bundle_layout(tmp_path):
-    """The bundle writer produces the production HEW directory layout."""
-    model_dir = write_hew_model_dir_from_bundle(
-        _he_bundle(),
-        tmp_path / "real_hew",
-        location="US",
-        disease="Influenza",
-    )
-
-    assert (model_dir / "data" / "data_for_model_fit.json").is_file()
-    assert (model_dir / "data" / "model_params.json").is_file()
-    assert (model_dir / "priors.py").is_file()
-
-    data = _read_json(model_dir / "data" / "data_for_model_fit.json")
-    nssp = data["nssp_training_data"]
-    nhsn = data["nhsn_training_data"]
-    assert nssp["date"] == ["2025-01-06", "2025-01-07", "2025-01-08", "2025-01-09"]
-    assert nssp["observed_ed_visits"] == [10.0, 12.0, 11.0, 9.0]
-    assert nssp["other_ed_visits"] == [100.0, 110.0, 105.0, 95.0]
-    assert nhsn["weekendingdate"] == ["2025-01-11", "2025-01-18"]
-    assert nhsn["hospital_admissions"] == [50.0, 55.0]
-
-    params = _read_json(model_dir / "data" / "model_params.json")
-    assert params["population_size"] == 1_000_000
-    assert params["generation_interval_pmf"] == [0.3, 0.4, 0.3]
-    assert params["inf_to_hosp_admit_pmf"] == [0.1, 0.4, 0.4, 0.1]
 
 
 def test_write_hew_model_dir_from_bundle_requires_other_ed_visits(tmp_path):

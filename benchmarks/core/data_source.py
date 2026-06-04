@@ -1,12 +1,10 @@
 """Shared data-source selection for benchmark drivers.
 
-Every H+E suite chooses between built-in synthetic fixtures and live CDC
-NHSN/NSSP feeds with the same flags and the same loader. :func:`add_data_source_args`
-registers the flags, :func:`validate_data_source_args` enforces their
-constraints, and :func:`load_he_bundle` returns the selected
-:class:`~benchmarks.core.signals.DatasetBundle`. Suites add these to their own
-parser alongside :func:`benchmarks.core.cli.add_common_args` so real-data mode
-is a property of the core machinery, not of any one suite.
+:func:`add_data_source_args` registers the synthetic/real flags,
+:func:`validate_data_source_args` enforces their constraints, and
+:func:`load_he_bundle` returns the selected
+:class:`~benchmarks.core.signals.DatasetBundle`. Suites add these to their
+parser alongside :func:`benchmarks.core.cli.add_common_args`.
 
 The ``cfa.stf.*`` imports needed for real data live inside
 :mod:`benchmarks.core.real_data`; importing this module does not require

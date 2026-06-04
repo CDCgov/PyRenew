@@ -4,8 +4,7 @@ A suite owns a :class:`ComparisonSpec`. It names the arms being compared,
 which arm is the baseline that ratios are taken against, which fields make
 two fits comparable, and which metrics to report and in which direction.
 Reporting in :mod:`benchmarks.core.reporting` reads the spec and derives the
-candidate, comparison, and per-site tables from it; nothing in ``core``
-hard-codes a particular comparison.
+candidate, comparison, and per-site tables from it.
 """
 
 from __future__ import annotations

@@ -1,11 +1,7 @@
 """Synthetic dataset provider wrapping ``pyrenew/datasets/``.
 
-Each :class:`DatasetBundle` exposed here is paired with one model builder in
-:mod:`benchmarks.core.models`. The pairing is implicit: a suite chooses a
-model, and the model's builder calls a specific dataset by name.
-
-A real-data provider would implement the same :class:`DatasetProvider`
-protocol; suites would not change.
+Exposes built-in :class:`DatasetBundle` fixtures through the
+:class:`DatasetProvider` protocol.
 """
 
 from __future__ import annotations

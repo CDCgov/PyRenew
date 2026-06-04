@@ -3,9 +3,7 @@
 Aggregation, console tables, and file artifacts are driven by a
 :class:`benchmarks.core.comparison.ComparisonSpec`. The spec names the arms,
 the baseline, the fields that make fits comparable, and the metrics to
-report. Nothing here hard-codes a particular comparison, so a suite that
-pits a PyRenew model against the production HEW model reuses the same
-reporting path as a parameterization A/B.
+report.
 """
 
 from __future__ import annotations
