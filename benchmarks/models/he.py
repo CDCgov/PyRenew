@@ -12,7 +12,7 @@ signal cadence come from the bundle.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Literal
 
 import jax.numpy as jnp
@@ -41,36 +41,86 @@ DayOfWeek = Literal["none", "infer", "data"]
 Parameterization = Literal["innovation", "state"]
 
 
+def _default_ascertainment() -> AscertainmentModel:
+    """Build the default joint Gaussian H+E ascertainment model.
+
+    Returns
+    -------
+    AscertainmentModel
+        Joint Gaussian ascertainment over hospital and ED visit rates.
+    """
+    sd = 0.3
+    corr = 0.5
+    cov = jnp.array([[sd**2, corr * sd**2], [corr * sd**2, sd**2]])
+    return JointAscertainment(
+        name="he_ascertainment",
+        signals=("hospital", "ed_visits"),
+        baseline_rates=jnp.array([0.004, 0.004]),
+        covariance_matrix=cov,
+    )
+
+
 @dataclass(frozen=True)
 class HEModelConfig:
-    """Structural axes of an H+E candidate.
+    """Model specification for an H+E candidate.
+
+    The structural axes plus the prior random variables passed to
+    ``configure_latent`` and the observation components. Defaults reproduce the
+    benchmark's standard priors; override a field to change one. Data inputs
+    (generation interval, delays, signal values, cadence, right truncation) come
+    from the bundle, not from the config.
 
     Parameters
     ----------
     rt
         Parameterization of the inner weekly ``DifferencedAR1``: ``innovation``
         (non-centered) or ``state`` (centered).
-    rt_autoreg
-        Fixed autoregressive coefficient of the weekly Rt process.
-    rt_innovation_sd
-        Fixed per-step innovation standard deviation of the weekly Rt process.
     day_of_week
         ED day-of-week treatment: ``none`` omits the weekday multiplier,
-        ``infer`` samples it from the day-of-week prior, and ``data`` fixes it
-        to the bundle's ``day_of_week_effects`` extra when present (falling back
-        to the prior otherwise).
-    ascertainment_sd
-        Standard deviation of each marginal in the joint Gaussian ascertainment.
-    ascertainment_corr
-        Correlation between the hospital and ED ascertainment rates.
+        ``infer`` samples it from the day-of-week prior, and ``data`` fixes it to
+        the bundle's ``day_of_week_effects`` extra when present.
+    autoreg_rv
+        Autoregressive coefficient of the weekly Rt process.
+    innovation_sd_rv
+        Per-step innovation standard deviation of the weekly Rt process.
+    log_rt_time_0_rv
+        Prior on log Rt at the first timepoint.
+    i0_rv
+        Prior on initial infections. ``None`` derives it from the bundle's
+        ``i0_per_capita`` when present, otherwise the real-data I0 prior.
+    hosp_conc_rv
+        Negative-binomial concentration for hospital admissions.
+    ed_conc_rv
+        Negative-binomial concentration for ED visits.
+    ascertainment
+        Joint ascertainment model over the hospital and ED visit rates.
     """
 
     rt: Parameterization = "state"
-    rt_autoreg: float = 0.9
-    rt_innovation_sd: float = 0.05
     day_of_week: DayOfWeek = "infer"
-    ascertainment_sd: float = 0.3
-    ascertainment_corr: float = 0.5
+    autoreg_rv: RandomVariable = field(
+        default_factory=lambda: DeterministicVariable("rt_diff_autoreg", 0.9)
+    )
+    innovation_sd_rv: RandomVariable = field(
+        default_factory=lambda: DeterministicVariable("rt_diff_innovation_sd", 0.05)
+    )
+    log_rt_time_0_rv: RandomVariable = field(
+        default_factory=lambda: DistributionalVariable(
+            "log_rt_time_0", dist.Normal(0.0, 0.5)
+        )
+    )
+    i0_rv: RandomVariable | None = None
+    hosp_conc_rv: RandomVariable = field(
+        default_factory=lambda: DistributionalVariable(
+            "hosp_conc", dist.LogNormal(5.0, 1.0)
+        )
+    )
+    ed_conc_rv: RandomVariable = field(
+        default_factory=lambda: DistributionalVariable(
+            "ed_conc", dist.LogNormal(4.0, 1.0)
+        )
+    )
+    ascertainment: AscertainmentModel = field(default_factory=_default_ascertainment)
 
 
 def _report_fields(config: HEModelConfig) -> dict[str, Any]:
@@ -111,32 +161,11 @@ def _build_rt_process(config: HEModelConfig) -> WeeklyTemporalProcess:
         Weekly differenced AR(1) Rt process in the configured parameterization.
     """
     inner = DifferencedAR1(
-        autoreg_rv=DeterministicVariable("rt_diff_autoreg", config.rt_autoreg),
-        innovation_sd_rv=DeterministicVariable(
-            "rt_diff_innovation_sd", config.rt_innovation_sd
-        ),
+        autoreg_rv=config.autoreg_rv,
+        innovation_sd_rv=config.innovation_sd_rv,
         parameterization=config.rt,
     )
     return WeeklyTemporalProcess(inner, start_dow=MMWR_WEEK)
-
-
-def _build_ascertainment(config: HEModelConfig) -> AscertainmentModel:
-    """Build the joint Gaussian H+E ascertainment model.
-
-    Returns
-    -------
-    AscertainmentModel
-        Joint Gaussian ascertainment over hospital and ED visit rates.
-    """
-    sd = config.ascertainment_sd
-    corr = config.ascertainment_corr
-    cov = jnp.array([[sd**2, corr * sd**2], [corr * sd**2, sd**2]])
-    return JointAscertainment(
-        name="he_ascertainment",
-        signals=("hospital", "ed_visits"),
-        baseline_rates=jnp.array([0.004, 0.004]),
-        covariance_matrix=cov,
-    )
 
 
 def _ed_day_of_week_rv(
@@ -208,14 +237,14 @@ def build_he_model(
         ed_right_truncation_rv = DeterministicPMF(
             "ed_right_truncation", bundle.fixed_params["right_truncation_pmf"]
         )
-    ascertainment = _build_ascertainment(config)
+    ascertainment = config.ascertainment
 
     builder = PyrenewBuilder()
     builder.configure_latent(
         PopulationInfections,
         gen_int_rv=DeterministicPMF("gen_int", bundle.gen_int_pmf),
-        I0_rv=_i0_rv(bundle),
-        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+        I0_rv=config.i0_rv if config.i0_rv is not None else _i0_rv(bundle),
+        log_rt_time_0_rv=config.log_rt_time_0_rv,
         single_rt_process=_build_rt_process(config),
     )
     builder.add_ascertainment(ascertainment)
@@ -228,9 +257,7 @@ def build_he_model(
                 delay_distribution_rv=DeterministicPMF(
                     "hosp_delay", hospital_signal.extras["delay_pmf"]
                 ),
-                noise=NegativeBinomialNoise(
-                    DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
-                ),
+                noise=NegativeBinomialNoise(config.hosp_conc_rv),
                 aggregation="weekly",
                 reporting_schedule="regular",
                 start_dow=MMWR_WEEK,
@@ -244,9 +271,7 @@ def build_he_model(
                 delay_distribution_rv=DeterministicPMF(
                     "hosp_delay", hospital_signal.extras["delay_pmf"]
                 ),
-                noise=NegativeBinomialNoise(
-                    DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
-                ),
+                noise=NegativeBinomialNoise(config.hosp_conc_rv),
             )
         )
     builder.add_observation(
@@ -257,9 +282,7 @@ def build_he_model(
                 "ed_delay", ed_signal.extras["delay_pmf"]
             ),
             right_truncation_rv=ed_right_truncation_rv,
-            noise=NegativeBinomialNoise(
-                DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
-            ),
+            noise=NegativeBinomialNoise(config.ed_conc_rv),
             day_of_week_rv=_ed_day_of_week_rv(config.day_of_week, ed_signal),
         )
     )

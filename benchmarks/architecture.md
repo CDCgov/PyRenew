@@ -10,18 +10,21 @@ Correctness lives in `test/`; this directory is for sampler and model comparison
 
 ## The one organizing rule
 
-`core/` is reusable machinery.
-A suite is one comparison that composes that machinery and **owns its model-construction code locally**.
-Adapters to external systems count as machinery and stay in `core`; the suite decides how to use them.
+Three layers.
+`core/` is model-agnostic machinery.
+`models/` holds reusable model builders (a builder takes a config and a `DatasetBundle` and returns a `BuiltFit`).
+`suites/` are thin comparison declarations: arms, a `ComparisonSpec`, and a `main`.
+A model builder never lives in `core` (it is not model-agnostic) and is not re-specified per suite (suites reuse `models/`).
 If suites proliferate, subdivide `suites/` into subpackages.
 
 ## Layout
 
 ```
 benchmarks/
-├── core/
+├── core/                  model-agnostic machinery
 │   ├── env.py            configure_jax: float64 + XLA device count, set before jax import
 │   ├── cli.py            add_common_args, settings_from_args (shared sampler/output flags)
+│   ├── data_source.py    add_data_source_args, load_he_bundle (synthetic-vs-real selection)
 │   ├── signals.py        SignalSeries, DatasetBundle, DatasetProvider (Protocol)
 │   ├── datasets.py       SyntheticProvider over pyrenew/datasets/ fixtures
 │   ├── real_data.py      RealDataProvider over CDC NHSN+NSSP (lazy cfa.stf imports)
@@ -29,42 +32,51 @@ benchmarks/
 │   ├── priors.py         benchmark-local priors for real-data builds
 │   ├── comparison.py     MetricSpec, ComparisonSpec, DEFAULT_METRICS
 │   ├── models.py         BuiltFit, align_weekly_observations (shared machinery)
-│   ├── hew_model.py      adapter to the production HEW model
 │   ├── runner.py         FitResult, Candidate, fit_and_measure, fit_candidate, metrics
 │   ├── run.py            run_comparison: the shared fit / report / write loop
+│   ├── suite.py          Arm, comparison_suite: declarative driver (CLI, load, fit, report)
 │   └── reporting.py      spec-driven aggregation + CSV/JSON/Markdown writers
-├── suites/
-│   ├── rt_params.py      innovation vs state Rt parameterization (defines BuildConfig, build_he_model)
-│   └── pyrenew_vs_hew.py production HEW vs PyRenew no-day-of-week (local build fns)
+├── models/                reusable model builders
+│   ├── he.py             HEModelConfig, build_he_model (hospital + ED visits)
+│   └── hew.py            build_hew_model: adapter to the production HEW model
+├── suites/                thin comparison declarations
+│   ├── rt_params.py       innovation vs state Rt parameterization
+│   ├── ed_day_of_week.py  ED day-of-week effect on vs off
+│   └── pyrenew_vs_hew.py  production HEW vs PyRenew
 ├── examples/
 │   └── run_prior_regimes.py one structure under several prior regimes (template)
 └── results/              output (gitignored)
 
-pyrenew/datasets/synthetic_hew_export.py   write_synthetic_hew_model_dir (the export bridge)
+pyrenew/datasets/synthetic_hew_export.py   write_hew_model_dir / write_synthetic_hew_model_dir (export bridge)
 ```
 
-## Three abstractions that make it work
+## The abstractions that make it work
 
-1. **`BuiltFit`(`models.py`)** wraps any `pyrenew.metaclass.Model` (PyRenew `MultiSignalModel` or production `PyrenewHEWModel`) plus the `run_kwargs` for `model.run`.
+1. **`BuiltFit`(`models.py`)** wraps any `pyrenew.metaclass.Model` (PyRenew `MultiSignalModel` or the production HEW model) plus the `run_kwargs` for `model.run`.
    Because both model families expose `run` and `mcmc`, the runner is model-agnostic.
    `n_initialization_points` defaults from `model.latent.n_initialization_points`; builders whose model lacks that attribute (HEW) pass it explicitly.
 
-2. **`Candidate`(`runner.py`)** packages a `build: () -> BuiltFit` callable with its `arm`, `config_fields`, and `rt_site_names`.
-   The build callable is where a suite's model spec lives.
+2. **Model builders (`models/`)** turn a config and a `DatasetBundle` into a `BuiltFit`.
+   `models/he.py:build_he_model` builds the H+E PyRenew model from an `HEModelConfig` (structural axes plus every prior as a field); `models/hew.py:build_hew_model` adapts the production HEW model from a model directory.
+
+3. **`Candidate`(`runner.py`)** packages a `build: () -> BuiltFit` callable with its `arm`, `config_fields`, and `rt_site_names`.
    The runner only sees `Candidate`s.
 
-3. **`ComparisonSpec`(`comparison.py`)** is the single source of truth for reporting: `arms`, `baseline`, `match_keys`, `metrics`.
+4. **`Arm`+ `comparison_suite`(`suite.py`)** are the suite-facing layer.
+   An `Arm` names a variant and carries either a config (assembled by a shared `build_fn`) or its own per-arm `build` for a different model family.
+   `comparison_suite(spec, arms, build_fn)` returns a `main` that supplies the CLI (including the shared `--data-source` flags), sampler setup, data loading via `load_he_bundle`, the `--dry-run-data` short-circuit, and `run_comparison`; it resolves each `Arm` to a `Candidate`.
+   A suite module is then its arms, its spec, and `main = comparison_suite(...)`.
+
+5. **`ComparisonSpec`(`comparison.py`)** is the single source of truth for reporting: `arms`, `baseline`, `match_keys`, `metrics`.
    Nothing in `core` hardcodes an arm name.
    A single-arm spec is valid (profile one model, empty comparison table).
-
-4. **`run_comparison`(`run.py`)** is the shared orchestration: given a `list[Candidate]`, a `ComparisonSpec`, and `McmcSettings`, it runs the fit-and-repeat loop, prints the tables, and writes the artifacts.
-   A driver supplies the candidates and the spec; it does not write the loop.
-   `cli.add_common_args`/`settings_from_args` give every driver the same sampler/output flags, and `env.configure_jax` sets the JAX flags before import, so a suite module is just its build function, its spec, a `build_candidates`, and a thin `main`.
 
 ## Control flow
 
 ```
-driver: build list[Candidate] + ComparisonSpec, settings_from_args(args)
+main = comparison_suite(spec, arms, build_fn):
+  parse args; numpyro x64 + device count; bundle = load_he_bundle(args)
+  candidates = [arm.to_candidate(bundle, build_fn) for arm in arms]
   run_comparison(candidates, spec, settings, comparison_name, repeats, output_dir):
     for candidate, repeat:
       fit_candidate(candidate, settings, repeat)
@@ -91,13 +103,14 @@ Metric aggregation across repeats is mean by default; `_METRIC_REDUCERS` special
 
 `DatasetProvider` (`signals.py`) is a `Protocol` returning `DatasetBundle`s.
 `SyntheticProvider` wraps the built-in fixtures; `RealDataProvider` wraps CDC feeds.
+Suites select between them with the shared `--data-source` flags (`data_source.py`); `load_he_bundle` returns the chosen bundle.
 Suites and builders depend only on the protocol, so swapping synthetic for real data touches no model code.
 
 ## External dependencies
 
 `pyrenew-multisignal` and `cfa-stf-routine-forecasting` are not project dependencies.
-Their imports live inside function bodies (`real_data.py` for `cfa.stf.data`; `hew_model.py` for the HEW model and pipeline utils), so `core` imports cleanly without them and only the relevant code path requires them.
-`hew_model._ensure_importable` prepends the two checkout paths to `sys.path`; defaults point at `~/github/CDC/...` and are overridable per call or via the suite CLI.
+Their imports live inside function bodies (`real_data.py` for `cfa.stf.data`; `models/hew.py` for the HEW model and pipeline utils), so importing those modules works without them and only the relevant code path requires them.
+`models.hew._ensure_importable` prepends the two checkout paths to `sys.path`; defaults point at `~/github/CDC/...` and are overridable per call or via the suite CLI.
 
 ## Invariants and gotchas
 
@@ -115,8 +128,8 @@ Their imports live inside function bodies (`real_data.py` for `cfa.stf.data`; `h
 
 ## Extending
 
-- **New model spec** - write a `build() -> BuiltFit` in a suite, wrap it in a `Candidate` via `build_candidates`, and call `run_comparison` from `main`.
-  No `core` change.
+- **New comparison (common case)** - declare arms (configs differing on one axis) and a `ComparisonSpec`, then `main = comparison_suite(spec, arms, build_fn)`.
+  No `core` or `models/` change.
+- **New model family** - add a builder to `models/` taking a config and a `DatasetBundle` and returning a `BuiltFit`; an arm of that family carries its own `build` (as `pyrenew_vs_hew`'s HEW arm does).
 - **New data source** - implement `DatasetProvider`.
-- **New metric** - add a field to `FitMetrics`, a `MetricSpec` to the suite's spec, and a reducer to `_METRIC_REDUCERS` if it is not a mean.
-- **New comparison** - declare a `ComparisonSpec`.
+- **New metric** - add a field to `FitMetrics`, a `MetricSpec` to the spec, and a reducer to `_METRIC_REDUCERS` if it is not a mean.

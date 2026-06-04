@@ -11,123 +11,113 @@ This document describes the pattern the benchmark harness uses to make that comp
 
 ## The core separation: structure is code, priors are data
 
-A suite holds one build function that fixes the model structure: which components exist (latent infection process, ascertainment, observation processes), their cadence, and how they are wired.
-The build function takes the priors as an argument and does not hard-code any prior values.
+The model structure — which components exist (latent infection process, ascertainment, observation processes), their cadence, and how they are wired — lives in one shared builder, `benchmarks/models/he.py:build_he_model`.
+It takes an `HEModelConfig` and a dataset bundle and returns a `BuiltFit`.
 
-A prior choice is a separate, self-contained function (a "regime") that returns the priors the build function consumes.
-Swapping regimes changes priors without touching structure, so the comparison is genuinely "same model, different priors."
+The priors are the fields of `HEModelConfig`.
+Every random variable the builder passes to `configure_latent` or to an observation component is a config field with a default; a regime sets the ones it wants to change.
+Swapping configs changes priors without touching structure, so the comparison is genuinely "same model, different priors."
 
 ```python
-def _build_he_model(bundle, priors):
-    """Assemble the H+E model structure, drawing every prior from `priors`."""
-    builder = PyrenewBuilder()
-    builder.configure_latent(
-        PopulationInfections,
-        gen_int_rv=DeterministicPMF("gen_int", bundle.gen_int_pmf),
-        I0_rv=priors["I0"](),
-        log_rt_time_0_rv=priors["log_rt_time_0"](),
-        single_rt_process=WeeklyTemporalProcess(
-            DifferencedAR1(
-                autoreg_rv=priors["rt_diff_autoreg"](),
-                innovation_sd_rv=priors["rt_diff_innovation_sd"](),
-                parameterization="state",
-            ),
-            start_dow=MMWR_WEEK,
-        ),
-    )
-    # ... ascertainment and observation processes, also drawn from `priors` ...
-    return BuiltFit(model=builder.build(), run_kwargs=..., dataset_name=bundle.name)
+@dataclass(frozen=True)
+class HEModelConfig:
+    rt: Parameterization = "state"  # structural axis, not a prior
+    day_of_week: DayOfWeek = "infer"
+    autoreg_rv: RandomVariable = ...  # default Deterministic(0.9)
+    innovation_sd_rv: RandomVariable = ...  # default Deterministic(0.05)
+    log_rt_time_0_rv: RandomVariable = ...  # default Normal(0, 0.5)
+    i0_rv: RandomVariable | None = None  # None: derive from the bundle
+    hosp_conc_rv: RandomVariable = ...  # default LogNormal(5, 1)
+    ed_conc_rv: RandomVariable = ...  # default LogNormal(4, 1)
+    ascertainment: AscertainmentModel = ...  # default joint Gaussian
 ```
+
+Data inputs (generation interval, delays, signal values, cadence, right truncation) come from the bundle, not the config.
 
 ## Defining a prior regime
 
-A regime is a function returning a dict of zero-arg factories, one per prior slot.
-Each factory builds a fresh random variable, so each model build gets its own instances.
+A regime is a function returning an `HEModelConfig` with the prior fields it wants set.
+Fields it leaves out take the standard defaults.
 
 Write the distributions directly.
 Do not call named helper functions that hide the values.
 The results capture each regime by its source text, so an inline `Beta(1.0, 10.0)` documents itself, whereas a call like `real_he_i0_prior` would record only the name and leave the actual prior outside the results.
 
 ```python
-def example_priors():
+def example() -> HEModelConfig:
     """Starting-point priors. Not authoritative; copy this and override it."""
-    return {
-        "rt_diff_innovation_sd": lambda: DeterministicVariable(
-            "rt_diff_innovation_sd", 0.01
-        ),
-        "rt_diff_autoreg": lambda: DeterministicVariable("rt_diff_autoreg", 0.9),
-        "log_rt_time_0": lambda: DistributionalVariable(
-            "log_rt_time_0", dist.Normal(0.0, 0.5)
-        ),
-        "hosp_conc": lambda: DistributionalVariable(
-            "hosp_conc", dist.LogNormal(5.0, 1.0)
-        ),
-        "ed_conc": lambda: DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0)),
-        "I0": lambda: DistributionalVariable("I0", dist.Beta(1.0, 10.0)),
-    }
+    return HEModelConfig(
+        rt="state",
+        day_of_week="none",
+        autoreg_rv=DeterministicVariable("rt_diff_autoreg", 0.9),
+        innovation_sd_rv=DeterministicVariable("rt_diff_innovation_sd", 0.01),
+        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+        i0_rv=DistributionalVariable("I0", dist.Beta(1.0, 10.0)),
+        hosp_conc_rv=DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0)),
+        ed_conc_rv=DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0)),
+        ascertainment=JointAscertainment(...),
+    )
 ```
 
-Fixing a hyperparameter versus inferring it is a one-line change inside a regime, with no change to structure.
-To stop pinning the autoregressive coefficient $\phi$ and instead infer it toward the production setting, change one entry:
+Fixing a hyperparameter versus inferring it is a one-field change inside a regime, with no change to structure.
+To stop pinning the autoregressive coefficient $\phi$ and instead infer it toward the production setting, change one field:
 
 ```python
-"rt_diff_autoreg": lambda: DistributionalVariable("rt_diff_autoreg", dist.Beta(2, 40)),
+autoreg_rv = DistributionalVariable("rt_diff_autoreg", dist.Beta(2, 40))
 ```
 
-A "looser" regime is another function that widens the same slots.
+A "looser" regime is another function that widens the same fields.
 The weekly per-step innovation standard deviation $\sigma$ and the autoregressive coefficient $\phi$ are the usual knobs, with the cumulative variance of $\log \mathcal{R}(T)$ far more sensitive to $\phi$ than to $\sigma$.
 
 ## Varying only what differs
 
-Every regime must return a complete bag (all slots are required; there are no defaults, matching PyRenew's components, which require explicit priors).
-A comparison is usually a set of controlled single changes off a common baseline, so retyping every slot in each regime buries the one line that differs and invites copy-paste drift in the slots you meant to hold fixed.
-Instead, spread an existing regime and override only what changes:
+`HEModelConfig` has a default for every field, so a regime sets only what it changes.
+A comparison is usually a set of controlled single changes off a common baseline, so build each variant by `replace`-ing one field of a baseline regime rather than retyping the rest:
 
 ```python
-def weak_phi_priors():
+from dataclasses import replace
+
+
+def weak_phi() -> HEModelConfig:
     """Example, but with a weaker autoregressive coefficient."""
-    return {
-        **example_priors(),
-        "rt_diff_autoreg": lambda: DeterministicVariable("rt_diff_autoreg", 0.5),
-    }
+    return replace(example(), autoreg_rv=DeterministicVariable("rt_diff_autoreg", 0.5))
 ```
 
-This returns a full bag, so validation passes, and the regime's recorded source shows exactly the diff.
 The comparison then reads as the baseline versus each one-change variant, which is the controlled-experiment structure you want for prior sensitivity.
 
-One rule keeps this safe: spread only from a regime that is itself in `REGIMES`.
+One rule keeps this safe: build off a regime that is itself in `REGIMES`.
 Its source is then recorded in the `prior_configs` block too, so a reader composes the base and the diff to recover the full effective priors.
-Spreading from a helper that is not recorded reintroduces the hidden-value gap that writing distributions inline was meant to avoid.
+Building off a helper that is not recorded reintroduces the hidden-value gap that writing distributions inline was meant to avoid.
 
 ## Assembling the comparison
 
-The example driver `benchmarks/examples/run_prior_regimes.py` enumerates the regimes and turns each into a candidate over the fixed structure, then hands them to `run_comparison`.
+The example driver `benchmarks/examples/run_prior_regimes.py` enumerates the regimes, turns each into an `Arm`, and hands them to `comparison_suite`, which supplies the CLI, data loading, and the fit / report loop.
 Run it with `python -m benchmarks.examples.run_prior_regimes`; copy it to another file under `benchmarks/examples/` (everything there but the committed examples is gitignored) to run your own regimes.
 
 ```python
-REGIMES = {
-    "example": example_priors,  # ships with the template; a starting point to override
-    # add your own regimes here, e.g.:
-    # "weak_rt": weak_rt_priors,
-    # "weak_i0": weak_i0_priors,
+REGIMES: dict[str, Callable[[], HEModelConfig]] = {
+    "example": example,
+    # add your own regimes here, e.g. "weak_phi": weak_phi,
 }
 
-candidates = [
-    Candidate(
-        name=name,
-        arm=name,
-        config_fields={"prior_config": name},
-        build=lambda fn=regime_fn: _build_he_model(bundle, fn()),
-    )
-    for name, regime_fn in REGIMES.items()
+ARMS = [
+    Arm(name=name, config=regime(), config_fields={"prior_config": name})
+    for name, regime in REGIMES.items()
 ]
+
+main = comparison_suite(
+    SPEC,
+    ARMS,
+    build_he_model,
+    extra_payload={"prior_configs": _prior_provenance()},
+)
 ```
 
 The comparison is declared once.
 The regimes are the arms; one is the baseline that the others are rated against.
 
 ```python
-COMPARISON_SPEC = ComparisonSpec(
+SPEC = ComparisonSpec(
     name="prior_regimes",
     arms=tuple(REGIMES),
     baseline="example",

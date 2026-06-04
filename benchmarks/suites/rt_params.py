@@ -33,6 +33,7 @@ from benchmarks.core.comparison import DEFAULT_METRICS, ComparisonSpec
 from benchmarks.core.signals import DatasetBundle
 from benchmarks.core.suite import Arm, comparison_suite
 from benchmarks.models.he import HEModelConfig, build_he_model
+from pyrenew.deterministic import DeterministicVariable
 
 DEFAULT_TIGHT_SD = 0.01
 DEFAULT_LOOSE_SD = 0.10
@@ -156,8 +157,10 @@ def _arms(args: argparse.Namespace, bundle: DatasetBundle) -> list[Arm]:
                     ),
                     config=HEModelConfig(
                         rt=parameterization,
-                        rt_innovation_sd=innovation_sd,
-                        rt_autoreg=autoreg,
+                        innovation_sd_rv=DeterministicVariable(
+                            "rt_diff_innovation_sd", innovation_sd
+                        ),
+                        autoreg_rv=DeterministicVariable("rt_diff_autoreg", autoreg),
                         day_of_week="data",
                     ),
                     config_fields={
