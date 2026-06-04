@@ -190,18 +190,14 @@ Per fit:
 
 Candidate summaries average time and ESS metrics across repeats, sum divergences, and keep worst-case diagnostics: maximum tree depth, minimum E-BFMI, and maximum R-hat.
 
-### Suite design
+## Adding a benchmark
 
-## prior_regimes example
-
-Fits one fixed H+E structure under a set of prior regimes and compares how each samples.
+The directory `examples` contains file `run_prior_regimes.py` which fits one fixed H+E structure under a set of prior regimes and compares how each samples.
 
 As shipped it has one regime (`example`), so it profiles that single model: per-candidate and per-site ESS tables plus the written artifacts, with an empty comparison table.
 A comparison appears once you add a second regime.
 The regimes and the model structure are yours to edit: copy `benchmarks/examples/run_prior_regimes.py` to another file under `benchmarks/examples/` (everything there but the committed examples is gitignored) and change `REGIMES`.
 See `prior_regimes.md` for the full workflow, including how each run records the exact priors it used.
-
-## Adding a benchmark
 
 Most new comparisons reuse an existing model builder and differ on one axis, so the suite is a thin declaration.
 The whole of `suites/ed_day_of_week.py`:
