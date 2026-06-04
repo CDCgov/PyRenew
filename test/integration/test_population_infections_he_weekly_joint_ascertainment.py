@@ -26,37 +26,6 @@ N_DAYS_FIT = 126
 OBS_START_DATE = date(2023, 11, 5)
 
 
-def _build_hospital_obs_on_period_grid(
-    model: MultiSignalModel,
-    weekly_values: jnp.ndarray,
-    first_day_dow: int,
-) -> jnp.ndarray:
-    """
-    Build a dense weekly-observation array on the model's period grid.
-
-    Parameters
-    ----------
-    model : MultiSignalModel
-        Built model exposing ``latent.n_initialization_points``.
-    weekly_values : jnp.ndarray
-        Observed weekly hospital admissions, one per MMWR epiweek.
-    first_day_dow : int
-        Day-of-week index of element 0 of the shared daily axis.
-
-    Returns
-    -------
-    jnp.ndarray
-        Dense array with NaN for unobserved pre-data periods.
-    """
-    hosp = model.observations["hospital"]
-    n_init = model.latent.n_initialization_points
-    n_total = n_init + N_DAYS_FIT
-    offset = hosp._compute_period_offset(first_day_dow, hosp.start_dow)
-    n_periods = (n_total - offset) // hosp.aggregation_period
-    n_pre = n_periods - len(weekly_values)
-    return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
-
-
 class TestJointStructure:
     """Check that the fixture has the intended H+E joint structure."""
 
@@ -126,12 +95,14 @@ class TestJointStructure:
             Weekly hospital admissions.
         """
         model = he_weekly_joint_ascertainment_model
-        first_day_dow = model._resolve_first_day_dow(OBS_START_DATE)
         weekly_values = jnp.array(
             weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
         )
-        hosp_obs = _build_hospital_obs_on_period_grid(
-            model, weekly_values, first_day_dow
+        hosp_obs = model.pad_aggregated_observations(
+            weekly_values,
+            observation_name="hospital",
+            n_days_post_init=N_DAYS_FIT,
+            obs_start_date=OBS_START_DATE,
         )
 
         assert int((~jnp.isnan(hosp_obs)).sum()) == len(weekly_hosp)
@@ -161,12 +132,14 @@ class TestPriorPredictiveStructure:
             Daily ED visits.
         """
         model = he_weekly_joint_ascertainment_model
-        first_day_dow = model._resolve_first_day_dow(OBS_START_DATE)
         weekly_values = jnp.array(
             weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
         )
-        hosp_obs = _build_hospital_obs_on_period_grid(
-            model, weekly_values, first_day_dow
+        hosp_obs = model.pad_aggregated_observations(
+            weekly_values,
+            observation_name="hospital",
+            n_days_post_init=N_DAYS_FIT,
+            obs_start_date=OBS_START_DATE,
         )
         ed_obs = model.pad_observations(
             jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
@@ -185,6 +158,7 @@ class TestPriorPredictiveStructure:
 
         n_total = model.latent.n_initialization_points + N_DAYS_FIT
         hospital = model.observations["hospital"]
+        first_day_dow = model._resolve_first_day_dow(OBS_START_DATE)
         offset = hospital._compute_period_offset(first_day_dow, hospital.start_dow)
         n_periods = (n_total - offset) // hospital.aggregation_period
 
@@ -192,6 +166,9 @@ class TestPriorPredictiveStructure:
         assert trace["he_ascertainment_eta"]["value"].shape == (2,)
         assert trace["he_ascertainment_hospital"]["type"] == "deterministic"
         assert trace["he_ascertainment_ed_visits"]["type"] == "deterministic"
+        assert trace["log_rt_single_weekly"]["type"] == "deterministic"
+        assert trace["log_rt_single_weekly"]["value"].shape[-1] == 1
+        assert trace["log_rt_single_weekly"]["value"].shape[0] < n_total
         assert trace["hospital_predicted"]["value"].shape == (n_periods,)
         assert trace["hospital_predicted_daily"]["value"].shape == (n_total,)
         assert trace["ed_visits_predicted"]["value"].shape == (n_total,)

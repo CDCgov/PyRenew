@@ -1,0 +1,2024 @@
+---
+title: Multi-signal Model for Weekly Hospital and Daily ED Data
+format:
+  gfm:
+    code-fold: true
+engine: jupyter
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .qmd
+      format_name: quarto
+      format_version: "1.0"
+      jupytext_version: 1.19.1
+  kernelspec:
+    display_name: Python 3 (ipykernel)
+    language: python
+    name: python3
+---
+
+```{python}
+#| label: setup
+#| output: false
+
+from datetime import date
+import json
+from pathlib import Path
+import warnings
+from collections.abc import Mapping
+
+import arviz as az
+import numpyro
+
+numpyro.set_host_device_count(4)
+numpyro.enable_x64()
+
+import jax
+import jax.numpy as jnp
+import numpy as np
+import numpyro.distributions as dist
+import pandas as pd
+import plotnine as p9
+
+warnings.filterwarnings("ignore")
+
+ARTIFACT_DIR = Path("data/multisignal_he")
+
+from _tutorial_theme import theme_tutorial
+from pyrenew.ascertainment import AscertainmentModel, JointAscertainment
+from pyrenew.datasets import (
+    load_synthetic_daily_infections,
+    load_example_infection_admission_interval,
+    load_synthetic_daily_ed_visits,
+    load_synthetic_true_parameters,
+    load_synthetic_weekly_hospital_admissions,
+)
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.latent import DifferencedAR1, PopulationInfections, WeeklyTemporalProcess
+from pyrenew.metaclass import RandomVariable
+from pyrenew.model import PyrenewBuilder
+from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
+from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
+from pyrenew.time import MMWR_WEEK
+import pyrenew.transformation as transformation
+```
+
+This tutorial builds a small hospital (H) + emergency department (E) model using PyRenew's high-level components and `PyrenewBuilder` class to specify a `MultiSignalModel` object, then fits it to a synthetic dataset.
+
+We then compare this PyRenew model with a custom H+E model coded directly in NumPyro.
+The custom model uses a more specialized H+E ascertainment structure, so the comparison below is a structural comparison rather than a direct benchmark.
+
+The PyRenew model has the following components:
+
+- one latent population-level infection process
+- a weekly-parameterized $\mathcal{R}(t)$ process
+- weekly hospital admissions
+- daily ED visits with a day-of-week effect
+- joint scalar ascertainment for the two clinical signals
+
+The renewal equation and delay convolutions run on a daily model axis, while the hospital likelihood is evaluated on weekly totals and the ED likelihood is evaluated on daily counts.
+
+## Model Structure
+
+The model has one latent infection process.
+Both observations receive the same aggregate infection trajectory, but they map it to data on different reporting grids.
+
+```mermaid
+flowchart TB
+
+    subgraph Latent["Latent Infection Process"]
+        R["Weekly DifferencedAR1<br/>for log Rt"]
+        I["Daily renewal equation<br/>(PopulationInfections)"]
+    end
+
+    subgraph Shared["Shared Daily Axis"]
+        D["Daily latent infections"]
+    end
+
+    subgraph Asc["Ascertainment"]
+        A["JointAscertainment<br/>scalar IHR and IEDR"]
+    end
+
+    subgraph Obs["Observation Processes"]
+        H["Hospital admissions<br/>PopulationCounts<br/>weekly MMWR totals"]
+        E["ED visits<br/>PopulationCounts<br/>daily counts + day-of-week"]
+    end
+
+    subgraph Data["Observed Data"]
+        HD["Weekly hospital data"]
+        ED["Daily ED data"]
+    end
+
+    R -->|"broadcast to days"| I
+    I --> D
+    D --> H
+    D --> E
+    A --> H
+    A --> E
+    H -->|"delay + IHR + weekly aggregation + noise"| HD
+    E -->|"delay + IEDR + day-of-week + noise"| ED
+```
+
+The components are:
+
+- **Latent infections**: `PopulationInfections` produces a single aggregate infection trajectory.
+- **$\mathcal{R}(t)$process**: `WeeklyTemporalProcess` samples weekly values and broadcasts them to the daily renewal equation.
+- **Ascertainment**: `JointAscertainment` samples scalar hospital and ED ascertainment rates from one joint prior.
+- **Hospital observation**: `PopulationCounts` scores weekly hospital totals.
+- **ED observation**: `PopulationCounts` scores daily ED counts and includes a day-of-week effect.
+
+### Temporal Cadence and Aggregation
+
+This model has two different temporal questions:
+
+1. How often should latent transmission parameters vary?
+2. On what time grid is each observation likelihood evaluated?
+
+PyRenew treats these as separate modeling choices.
+
+The renewal equation always runs on the shared daily model axis.
+The latent process therefore produces daily infections, even when the temporal process for $\mathcal{R}(t)$ is parameterized more coarsely.
+If `single_rt_process` is a daily process, PyRenew estimates a daily $\mathcal{R}(t)$ trajectory.
+If it is wrapped in `WeeklyTemporalProcess`, PyRenew estimates weekly $\mathcal{R}(t)$ values and broadcasts them to the daily axis before computing infections.
+
+Observation aggregation happens later, inside each count observation process.
+For weekly hospital admissions, `PopulationCounts(..., aggregation="weekly", start_dow=MMWR_WEEK)` first computes daily predicted admissions from daily infections using ascertainment and the delay distribution.
+It then sums those daily predictions to the weekly grid, so the negative-binomial observation model is evaluated against weekly observed admissions rather than daily counts.
+For daily ED visits, no aggregation is applied.
+Each observed daily count is modeled with a negative-binomial distribution whose mean is the corresponding daily prediction.
+
+The end-to-end flow for the weekly hospital signal is:
+
+1. Sample or construct daily $\mathcal{R}(t)$, possibly by broadcasting weekly values.
+2. Run the daily renewal equation to produce daily infections.
+3. Convert daily infections to daily predicted hospital admissions using hospital delay and joint ascertainment component's `for_signal("hospital")`.
+4. Sum daily predicted admissions to MMWR weeks.
+5. Evaluate the negative-binomial observation model on the weekly hospital observations.
+
+The daily ED signal shares steps 1--3, but remains on the daily grid for the likelihood.
+
+1. Sample or construct daily $\mathcal{R}(t)$, possibly by broadcasting weekly values.
+2. Run the daily renewal equation to produce daily infections.
+3. Convert daily infections to daily predicted ED visits using delay and joint ascertainment component's `for_signal("ed_visits")`.
+4. Evaluate the negative-binomial observation model on the daily ED visits.
+
+This separation means that mixed-cadence models are natural: weekly hospital admissions and daily ED visits can share the same latent daily infection trajectory, regardless of whether $\mathcal{R}(t)$ is parameterized daily, weekly, or with another stepwise cadence.
+
+The cadence of the temporal process affects both model flexibility and computational cost.
+A daily $\mathcal{R}(t)$ process estimates one latent $\mathcal{R}(t)$ state per day, while a `WeeklyTemporalProcess` estimates one latent $\mathcal{R}(t)$ state per week and broadcasts the weekly trajectory to the daily renewal equation.
+The daily infections and expected observations are still computed on the daily axis, but they are deterministic functions of the sampled parameters.
+
+A coarser $\mathcal{R}(t)$ cadence reduces the number of latent dimensions sampled by HMC/NUTS.
+It also regularizes the latent process: the model cannot use day-to-day changes in $\mathcal{R}(t)$ to explain short-term noise or reporting artifacts.
+This can improve sampling and forecast stability when the data do not support daily transmission changes, but it is a modeling assumption rather than a universal improvement.
+
+### Custom NumPyro Extensions
+
+The model implemented here uses the same high-level H+E structure as the custom NumPyro model, but omits several model-specific components.
+We keep these components out of the tutorial model so the example can focus on the mixed daily/weekly observation cadence.
+
+- **Infection feedback**: the latent infection process includes a state-dependent damping term, so higher infection levels can reduce future transmission.
+  This can help regularize epidemic trajectories, but it is a substantive modeling assumption.
+
+- **Inferred delay distributions**: some delay distributions are estimated rather than fixed, allowing the model to learn timing relationships between latent infections and observed signals.
+  PyRenew's observation API accepts delay distributions as `RandomVariable` objects, so fixed delays can be replaced by inferred PMFs or custom parametric delay models, provided the sampled value is a valid fixed-length PMF.
+  In this tutorial we keep the delays fixed.
+
+- **Time-varying ED ascertainment with a hospital-to-ED link**: the custom H+E model uses a time-varying ED ascertainment rate and defines scalar hospital ascertainment as a multiplier of the first ED ascertainment value.
+  In this tutorial model, `JointAscertainment` instead samples two scalar rates from one joint prior.
+
+These alternatives are good candidates for model comparison and sensitivity analysis.
+One advantage of specifying the model with `PyrenewBuilder` is that closely related models can be built from the same components while changing only the feature under study: fixed versus inferred delays, scalar versus time-varying ascertainment, or renewal dynamics with versus without feedback.
+In practice, each candidate model can be defined as a named Python object, factory function, or separate model specification file.
+This makes it easier to compare posterior predictive checks, held-out forecast performance, and the stability of inferred latent infections across model variants.
+
+## Specifying Model Components for `PyrenewBuilder`
+
+The `PyrenewBuilder` class assembles the model components.
+It checks component compatibility and coherence, computes initialization requirements, and produces a model ready for inference.
+
+### Latent Infection Process
+
+The `PyrenewBuilder` object's `configure_latent` method handles configuration of the latent process.
+It requires the following:
+
+- **Generation interval**: PMF for secondary infection timing.
+- **Initial conditions ($I(0)$ and $\log(\mathcal{R}(0))$)**: Infection incidence at time $0$ as a proportion of the population, and the starting point of the $\log(\mathcal{R}(t))$ trajectory.
+- **Temporal dynamics**: How $\mathcal{R}(t)$ evolves over time.
+
+We use the same seven-day generation interval PMF used to generate the synthetic data; this PMF also matches the default/test-data parameterization used in the H+E pipeline.
+For the initial infection level and initial $\mathcal{R}(t)$ value, we specify priors rather than fixing them to the true synthetic-data values.
+
+Following the custom NumPyro model, we use a weekly differenced AR(1) process for log $\mathcal{R}(t)$ temporal dynamics.
+The differenced process allows persistent upward or downward movement.
+The weekly wrapper estimates one latent $\mathcal{R}(t)$ state per week and broadcasts the weekly trajectory to the daily renewal equation.
+
+```python
+weekly_rt_process = WeeklyTemporalProcess(
+    DifferencedAR1(
+        autoreg_rv=DeterministicVariable("rt_diff_autoreg", 0.5),
+        innovation_sd_rv=DeterministicVariable("rt_diff_innovation_sd", 0.05),
+    ),
+    start_dow=MMWR_WEEK,
+)
+```
+
+`WeeklyTemporalProcess` uses calendar weeks, not arbitrary 7-day blocks starting at index 0.
+The `start_dow=MMWR_WEEK` argument says that each $\mathcal{R}(t)$ value applies to an MMWR week, which runs Sunday through Saturday.
+
+At model runtime, `obs_start_date` is used to align the weekly $\mathcal{R}(t)$ blocks with the daily model axis.
+The same calendar anchor is used when daily predicted hospital admissions are aggregated to MMWR weeks.
+
+### Ascertainment
+
+`JointAscertainment` defines one shared ascertainment component for the hospital and ED signals.
+The component has a `name`, used to identify it in the multisignal model, and a tuple of signal names supplied through `signals`.
+
+For each signal, the model samples a scalar ascertainment rate.
+The rates are modeled jointly: `baseline_rates` gives their prior centers on the probability scale, while `covariance_matrix` describes uncertainty and dependence on the logit scale.
+The logit-scale representation keeps sampled rates between 0 and 1 after transformation back to the probability scale.
+
+We use a common generic baseline rate and a logit-scale standard deviation of $0.3$, matching the prior scale used by custom-H-E.
+The prior correlation of $0.5$ says that the two rates may differ, but prior draws that are high for hospital ascertainment also tend to be high for ED ascertainment.
+
+```python
+ascertainment_center = 0.004
+ascertainment_sd = 0.3
+ascertainment_corr = 0.5
+ascertainment_cov = jnp.array(
+    [
+        [ascertainment_sd**2, ascertainment_corr * ascertainment_sd**2],
+        [ascertainment_corr * ascertainment_sd**2, ascertainment_sd**2],
+    ]
+)
+
+ascertainment = JointAscertainment(
+    name="he_ascertainment",
+    signals=("hospital", "ed_visits"),
+    baseline_rates=jnp.array([ascertainment_center, ascertainment_center]),
+    covariance_matrix=ascertainment_cov,
+)
+```
+The order of `signals` determines how `baseline_rates` and the rows and columns of `covariance_matrix` are interpreted.
+Observation processes do not access those values by row or column index.
+Instead, the ascertainment object provides signal-specific accessors: `ascertainment.for_signal("hospital")` returns the hospital ascertainment rate, and `ascertainment.for_signal("ed_visits")` returns the ED ascertainment rate.
+
+### Observation Processes
+
+Both hospital admissions and ED visits are count observations, so both components are specified as `PopulationCounts` objects.
+They share the same daily latent infection trajectory, but the observation model is evaluated at different reporting cadences: weekly totals for hospital admissions and daily counts for ED visits.
+
+To define a `PopulationCounts` object, you must specify its
+
+- **Ascertainment rate**: the probability that an infection results in an observed event
+- **Delay distribution**: the distribution of times from infection to the corresponding event
+- **Noise model**: the count distribution used to model variation around the expected number of events.
+
+In addition, count data observation processes have optional parameters for:
+
+- **Day-of-week effects**: recurring multiplicative adjustments for systematic differences among days of the week.
+- **Right truncation**: adjustment for recent observations that may be incomplete because not all reports have arrived.
+
+#### ED Visits
+
+For ED visits, the observation model can include a day-of-week effect.
+ED visits often have systematic day-of-week patterns.
+Day-to-day volumes may differ because of care-seeking behavior, clinic availability, staffing, coding, or reporting workflows.
+Those patterns are part of the observation process, not necessarily evidence that infections changed from one day to the next.
+
+The custom H+E model estimates a seven-element day-of-week multiplier using a symmetric Dirichlet prior with concentration parameter $5$ on each day, then rescales the draw by $7$ so the multipliers have mean $1$, encoding a mild prior belief that day-of-week effects are modest deviations from a flat week.
+
+In this tutorial, we fix the ED day-of-week multipliers to the synthetic data-generating values.
+This keeps the PyRenew example focused on the mixed daily/weekly H+E structure and avoids adding another weakly identified observation-process component.
+
+```python
+ed_day_of_week_rv = DeterministicVariable(
+    "ed_day_of_week_effect",
+    jnp.array(true_params["ed_visits"]["day_of_week_effects"]),
+)
+```
+
+A closer structural match to custom-H+E would estimate these multipliers with a scaled Dirichlet prior:
+
+```python
+ed_day_of_week_rv = TransformedVariable(
+    name="ed_day_of_week_effect",
+    base_rv=DistributionalVariable(
+        name="ed_day_of_week_effect_raw",
+        distribution=dist.Dirichlet(jnp.ones(7) * 5),
+    ),
+    transforms=transformation.AffineTransform(loc=0.0, scale=7.0),
+)
+```
+
+The ED visit observation process is defined as follows:
+
+```python
+ed_obs = PopulationCounts(
+    name="ed_visits",
+    ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
+    delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
+    noise=NegativeBinomialNoise(
+        DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
+    ),
+    day_of_week_rv=ed_day_of_week_rv,
+)
+```
+
+The `ascertainment.for_signal("ed_visits")` connects the ED observation process to the ED component of the joint ascertainment model.
+The delay PMF matches the synthetic data-generating process, and the observation model uses negative-binomial noise.
+
+Count observation processes also support an optional `right_truncation_rv` for incomplete recent reports.
+The synthetic ED data used here are complete, so the tutorial model omits right truncation.
+The custom H+E model applies a right-truncation adjustment to recent ED observations when reports are incomplete; the reporting-delay PMF is supplied as an external input rather than inferred by the model.
+
+#### Hospital Admissions
+
+Hospital admissions are also modeled with `PopulationCounts`.
+The hospital signal uses the hospital component of the joint ascertainment model, a fixed infection-to-hospital-admission delay PMF, and negative-binomial observation noise.
+
+The hospital data are reported as weekly MMWR totals.
+PyRenew still computes daily predicted hospital admissions from the shared daily infection trajectory, delay distribution, and ascertainment rate.
+The argument `aggregation="weekly"` then sums those daily predictions before comparing them with the observed weekly totals.
+The argument `start_dow=MMWR_WEEK` aligns the aggregation to MMWR weeks, and `reporting_schedule="regular"` indicates that the data are supplied as one value per week.
+
+```python
+hospital_obs = PopulationCounts(
+    name="hospital",
+    ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+    delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
+    noise=NegativeBinomialNoise(
+        DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
+    ),
+    aggregation="weekly",
+    reporting_schedule="regular",
+    start_dow=MMWR_WEEK,
+)
+```
+
+The hospital and ED observation processes therefore share the same latent infections, but differ in reporting cadence and signal-specific observation details.
+
+### Full model specification via `PyrenewBuilder`
+
+The full specification of the model requires defining all model `RandomVariable` objects passed in to all components.
+In this example we use the synthetic H+E data bundled with PyRenew, which includes the parameters used to generate the data, including the generation interval pmf and hospitalization and ED visits delay pmfs and ascertainment rates.
+
+```{python}
+#| label: load-data
+
+N_DAYS_FIT = 126
+OBS_START_DATE = date(2023, 11, 5)
+
+true_params = load_synthetic_true_parameters()
+daily_infections = load_synthetic_daily_infections()
+weekly_hosp = load_synthetic_weekly_hospital_admissions()
+daily_ed = load_synthetic_daily_ed_visits()
+
+hosp_delay_pmf = jnp.array(
+    load_example_infection_admission_interval()["probability_mass"].to_numpy()
+)
+ed_delay_pmf = jnp.array(true_params["ed_visits"]["delay_pmf"])
+
+population_size = float(weekly_hosp["pop"][0])
+
+true_i0 = float(true_params["i0_per_capita"])
+true_ihr = float(true_params["hospitalizations"]["ihr"])
+true_iedr = float(true_params["ed_visits"]["iedr"])
+true_dow_effects = jnp.array(true_params["ed_visits"]["day_of_week_effects"])
+
+
+print(f"Weekly hospital rows: {len(weekly_hosp)}")
+print(f"Daily ED rows: {len(daily_ed)}")
+print(f"Population size: {population_size:,.0f}")
+print()
+print("Data-generating values (used as reference points):")
+print(f"  Initial infections per capita (I0): {true_i0:.5f}")
+print(f"  Hospital ascertainment (IHR):       {true_ihr:.5f}")
+print(f"  ED ascertainment (IEDR):            {true_iedr:.5f}")
+print(f"  Ratio IHR / IEDR:                   {true_ihr / true_iedr:.3f}")
+print(f"  ED visits day-of-week effects:      {true_dow_effects}")
+```
+
+First we specify the latent components
+
+```{python}
+#| code-fold: false
+#| label: latent-components
+
+gen_int_pmf = jnp.array(
+    [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
+)
+gen_int_rv = DeterministicPMF("gen_int", gen_int_pmf)
+I0_rv = TransformedVariable(
+    name="I0",
+    base_rv=DistributionalVariable(
+        name="logit_I0",
+        distribution=dist.Normal(
+            transformation.SigmoidTransform().inv(true_params["i0_per_capita"]),
+            0.25,
+        ),
+    ),
+    transforms=transformation.SigmoidTransform(),
+)
+log_rt_time_0_rv = DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5))
+
+weekly_rt_process = WeeklyTemporalProcess(
+    DifferencedAR1(
+        autoreg_rv=DeterministicVariable("rt_diff_autoreg", 0.5),
+        innovation_sd_rv=DeterministicVariable("rt_diff_innovation_sd", 0.03),
+    ),
+    start_dow=MMWR_WEEK,
+)
+```
+
+Next we specify the joint ascertainment
+
+```{python}
+#| code-fold: false
+#| label: joint-ascertainment
+
+ascertainment_center = 0.004
+ascertainment_sd = 0.3
+ascertainment_corr = 0.5
+ascertainment_cov = jnp.array(
+    [
+        [ascertainment_sd**2, ascertainment_corr * ascertainment_sd**2],
+        [ascertainment_corr * ascertainment_sd**2, ascertainment_sd**2],
+    ]
+)
+
+ascertainment = JointAscertainment(
+    name="he_ascertainment",
+    signals=("hospital", "ed_visits"),
+    baseline_rates=jnp.array([ascertainment_center, ascertainment_center]),
+    covariance_matrix=ascertainment_cov,
+)
+```
+
+Next we specify the hospital and ED visit observation processes
+
+Here we don't try to estimate the day-of-week effect on ED visits, we supply the true day-of-week effects.
+
+```{python}
+#| code-fold: false
+#| label: observation-processes
+
+hospital_obs = PopulationCounts(
+    name="hospital",
+    ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+    delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
+    noise=NegativeBinomialNoise(
+        DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
+    ),
+    aggregation="weekly",
+    reporting_schedule="regular",
+    start_dow=MMWR_WEEK,
+)
+
+
+ed_day_of_week_rv = DeterministicVariable(
+    "ed_day_of_week_effect",
+    jnp.array(true_params["ed_visits"]["day_of_week_effects"]),
+)
+
+ed_obs = PopulationCounts(
+    name="ed_visits",
+    ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
+    delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
+    noise=NegativeBinomialNoise(
+        DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
+    ),
+    day_of_week_rv=ed_day_of_week_rv,
+)
+```
+
+Finally, we instantiate a `PyrenewBuilder` object.
+
+```{python}
+#| code-fold: false
+#| label: build-model
+
+builder = PyrenewBuilder()
+builder.configure_latent(
+    PopulationInfections,
+    gen_int_rv=gen_int_rv,
+    I0_rv=I0_rv,
+    log_rt_time_0_rv=log_rt_time_0_rv,
+    single_rt_process=weekly_rt_process,
+)
+builder.add_ascertainment(ascertainment)
+builder.add_observation(hospital_obs)
+builder.add_observation(ed_obs)
+
+model = builder.build()
+```
+
+The `PyrenewBuilder` computes the initialization period from the generation interval and both observation delay distributions.
+
+```{python}
+#| code-fold: false
+#| label: inspect-model
+
+print(f"Initialization points: {model.latent.n_initialization_points}")
+print(f"Observations: {list(model.observations)}")
+print(f"Ascertainment models: {list(model.ascertainment_models)}")
+```
+
+## Fit the Model
+
+After the model is built, we prepare the observed data for `model.run()`.
+Each observation process receives a data dictionary whose keyword matches the name registered with the builder: `hospital={...}` and `ed_visits={...}`.
+
+The model includes an initialization period before the first observed day.
+During that period, PyRenew computes latent infections and predicted observations, but there are no data to condition on.
+We mark those unobserved positions with `NaN`.
+
+We prepare one observed array for each signal.
+Daily ED observations are padded with `model.pad_observations()`.
+Weekly hospital observations are padded with `model.pad_aggregated_observations()`, which pads on the hospital observation process's weekly reporting cadence.
+
+```{python}
+#| code-fold: false
+#| label: align-observed-data
+
+ed_observed = model.pad_observations(
+    jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
+)
+
+hospital_observed = model.pad_aggregated_observations(
+    jnp.array(weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32),
+    observation_name="hospital",
+    n_days_post_init=N_DAYS_FIT,
+    obs_start_date=OBS_START_DATE,
+)
+
+print(f"ED observation array shape: {ed_observed.shape}")
+print(f"Hospital observation array shape: {hospital_observed.shape}")
+```
+
+```{python}
+#| label: plot-observed-data
+
+# Raw observations on a shared calendar axis
+ed_dates = pd.date_range(
+    start=pd.Timestamp(OBS_START_DATE),
+    periods=len(daily_ed),
+    freq="D",
+)
+
+ed_plot_df = pd.DataFrame(
+    {
+        "date": ed_dates,
+        "count": daily_ed["ed_visits"].to_numpy(),
+        "signal": "Daily ED visits",
+    }
+)
+
+hosp_plot_df = pd.DataFrame(
+    {
+        "week_end": pd.to_datetime(weekly_hosp["week_end"]),
+        "count": weekly_hosp["weekly_hosp_admits"].to_numpy(),
+        "signal": "Weekly hospital admissions",
+    }
+)
+hosp_plot_df["week_start"] = hosp_plot_df["week_end"] - pd.Timedelta(days=6)
+
+raw_obs_plot = (
+    p9.ggplot()
+    + p9.geom_rect(
+        hosp_plot_df,
+        p9.aes(
+            xmin="week_start",
+            xmax="week_end",
+            ymin=0,
+            ymax="count",
+        ),
+        fill="steelblue",
+        alpha=0.7,
+        color="black",
+    )
+    + p9.geom_col(
+        ed_plot_df,
+        p9.aes(x="date", y="count"),
+        fill="darkorange",
+        alpha=0.65,
+        width=0.9,
+    )
+    + p9.facet_wrap("~signal", ncol=1, scales="free_y")
+    + p9.labs(
+        x="Date",
+        y="Observed count",
+        title="Observed Hospital Admissions and ED Visits",
+    )
+    + theme_tutorial
+    + p9.theme(
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+
+raw_obs_plot
+```
+
+### Check the Mixed-Cadence Structure
+
+Before fitting, it can be useful to run one seeded model execution and inspect selected site shapes.
+This is a quick check that the weekly and daily pieces are aligned as intended.
+
+```{python}
+#| code-fold: false
+#| label: trace-model
+
+with numpyro.handlers.seed(rng_seed=0):
+    with numpyro.handlers.trace() as trace:
+        model.sample(
+            n_days_post_init=N_DAYS_FIT,
+            population_size=population_size,
+            obs_start_date=OBS_START_DATE,
+            hospital={"obs": hospital_observed},
+            ed_visits={"obs": ed_observed},
+        )
+
+for site in [
+    "log_rt_single_weekly",
+    "PopulationInfections::log_rt_single",
+    "hospital_predicted_daily",
+    "hospital_predicted",
+    "ed_visits_predicted",
+]:
+    print(f"{site}: {trace[site]['value'].shape}")
+```
+
+The expected pattern is:
+
+- `log_rt_single_weekly` has one value for each calendar week touched by the padded daily model axis, including a leading partial week.
+- `PopulationInfections::log_rt_single` is daily, because the renewal equation runs daily.
+- `hospital_predicted_daily` is daily before aggregation.
+- `hospital_predicted` contains complete weekly hospital reporting periods only, so it can be one shorter than `log_rt_single_weekly`.
+- `ed_visits_predicted` is daily, matching the ED data.
+
+### Load Precomputed Fits
+
+The PyRenew and custom NumPyro fits are run offline and saved as small, portable artifacts.
+This keeps the documentation build independent of the local pipeline software needed by the custom NumPyro model.
+To regenerate the artifacts, run `uv run python docs_scripts/generate_multisignal_he_artifacts.py` from the repository root on a machine that has access to both model implementations.
+
+```{python}
+#| label: load-fit-artifacts
+
+required_artifacts = [
+    ARTIFACT_DIR / "pyrenew_fit_artifacts.npz",
+    ARTIFACT_DIR / "linked_pyrenew_fit_artifacts.npz",
+    ARTIFACT_DIR / "custom_he_scalar_draws.csv",
+    ARTIFACT_DIR / "custom_he_fit_artifacts.npz",
+    ARTIFACT_DIR / "timings.json",
+]
+missing_artifacts = [path for path in required_artifacts if not path.exists()]
+if missing_artifacts:
+    missing_text = "\n".join(f"  - {path}" for path in missing_artifacts)
+    raise FileNotFoundError(
+        "The multisignal H+E tutorial uses precomputed fit artifacts.\n"
+        "Run `uv run python docs_scripts/generate_multisignal_he_artifacts.py` "
+        "locally and commit the generated files.\n"
+        f"Missing artifacts:\n{missing_text}"
+    )
+
+pyrenew_artifacts = np.load(ARTIFACT_DIR / "pyrenew_fit_artifacts.npz")
+linked_pyrenew_artifacts = np.load(ARTIFACT_DIR / "linked_pyrenew_fit_artifacts.npz")
+custom_scalar_draws = pd.read_csv(ARTIFACT_DIR / "custom_he_scalar_draws.csv")
+custom_artifacts = np.load(ARTIFACT_DIR / "custom_he_fit_artifacts.npz")
+custom_latent_infections = custom_artifacts["latent_infections_trimmed"]
+if np.nanmax(custom_latent_infections) < 1.0:
+    custom_latent_infections = population_size * custom_latent_infections
+if "rt_trimmed" in custom_artifacts:
+    custom_rt = custom_artifacts["rt_trimmed"]
+else:
+    custom_rt = None
+
+with open(ARTIFACT_DIR / "timings.json") as file:
+    timings = json.load(file)
+
+pyrenew_elapsed = timings["pyrenew-H-E"]["elapsed_seconds"]
+linked_pyrenew_elapsed = timings["linked-pyrenew-H-E"]["elapsed_seconds"]
+custom_elapsed = timings["custom-H-E"]["elapsed_seconds"]
+
+print(f"pyrenew-H-E elapsed time: {pyrenew_elapsed:.1f} seconds")
+print(f"linked-pyrenew-H-E elapsed time: {linked_pyrenew_elapsed:.1f} seconds")
+print(f"custom-H-E elapsed time: {custom_elapsed:.1f} seconds")
+```
+
+The saved artifacts include posterior draws for the PyRenew model and reduced scalar posterior draws for the custom NumPyro model.
+We keep the custom artifact intentionally narrow: the tutorial only needs scalar summaries for the comparison plots, and avoiding pickled model objects keeps the docs build independent of the custom model's Python package layout.
+
+```{python}
+#| label: build-artifact-idata
+
+n_init = int(pyrenew_artifacts["n_init"])
+
+if {"chain", "draw"}.issubset(custom_scalar_draws.columns):
+    custom_scalar_draws = custom_scalar_draws.sort_values(["chain", "draw"])
+    n_custom_chains = custom_scalar_draws["chain"].nunique()
+    n_custom_draws = custom_scalar_draws["draw"].nunique()
+
+    def custom_draw_array(column):
+        return (
+            custom_scalar_draws[column]
+            .to_numpy()
+            .reshape(
+                n_custom_chains,
+                n_custom_draws,
+            )
+        )
+
+else:
+
+    def custom_draw_array(column):
+        return custom_scalar_draws[column].to_numpy()[None, :]
+
+
+idata = az.from_dict(
+    {
+        "posterior": {
+            "PopulationInfections::rt_single": pyrenew_artifacts["rt_single_full"],
+        }
+    },
+    dims={"PopulationInfections::rt_single": ["time", "dummy"]},
+)
+
+idata_trimmed = az.from_dict(
+    {
+        "posterior": {
+            "I0": pyrenew_artifacts["I0"],
+            "log_rt_time_0": pyrenew_artifacts["log_rt_time_0"],
+            "he_ascertainment_hospital": pyrenew_artifacts["he_ascertainment_hospital"],
+            "he_ascertainment_ed_visits": pyrenew_artifacts[
+                "he_ascertainment_ed_visits"
+            ],
+            "PopulationInfections::rt_single": pyrenew_artifacts["rt_single_trimmed"],
+            "latent_infections": pyrenew_artifacts["latent_infections_trimmed"],
+        }
+    },
+    dims={
+        "PopulationInfections::rt_single": ["time", "dummy"],
+        "latent_infections": ["time"],
+    },
+)
+
+linked_idata_trimmed = az.from_dict(
+    {
+        "posterior": {
+            "I0": linked_pyrenew_artifacts["I0"],
+            "log_rt_time_0": linked_pyrenew_artifacts["log_rt_time_0"],
+            "he_ascertainment_hospital": linked_pyrenew_artifacts[
+                "he_ascertainment_hospital"
+            ],
+            "he_ascertainment_ed_visits": linked_pyrenew_artifacts[
+                "he_ascertainment_ed_visits"
+            ],
+            "ihr_rel_iedr": linked_pyrenew_artifacts["ihr_rel_iedr"],
+            "PopulationInfections::rt_single": linked_pyrenew_artifacts[
+                "rt_single_trimmed"
+            ],
+            "latent_infections": linked_pyrenew_artifacts["latent_infections_trimmed"],
+        }
+    },
+    dims={
+        "PopulationInfections::rt_single": ["time", "dummy"],
+        "latent_infections": ["time"],
+    },
+)
+
+custom_scalar_idata = az.from_dict(
+    {
+        "posterior": {
+            "I0": custom_draw_array("I0"),
+            "IHR": custom_draw_array("IHR"),
+            "IEDR_first_day": custom_draw_array("IEDR_first_day"),
+            "IEDR_mean": custom_draw_array("IEDR_mean"),
+            "latent_infections": custom_latent_infections,
+            **({"rt": custom_rt} if custom_rt is not None else {}),
+        }
+    },
+    dims={
+        "latent_infections": ["time"],
+        **({"rt": ["time"]} if custom_rt is not None else {}),
+    },
+    sample_dims=["chain", "draw"],
+)
+```
+
+We use ArviZ for convergence checks and posterior summaries.
+The first `n_init` daily time points are initialization points, so the saved daily posterior quantities are trimmed before summarizing or plotting.
+For this synthetic example, the sampler should mix well for the core scalar parameters.
+
+```{python}
+#| label: arviz-checks-recovered-params
+
+pyrenew_parameter_summary = az.summary(
+    idata_trimmed,
+    var_names=[
+        "I0",
+        "log_rt_time_0",
+        "he_ascertainment_hospital",
+        "he_ascertainment_ed_visits",
+    ],
+)
+pyrenew_parameter_summary
+```
+
+```{python}
+#| label: arviz-checks-ratio
+
+pyrenew_ratio = (
+    idata_trimmed.posterior["he_ascertainment_hospital"]
+    / idata_trimmed.posterior["he_ascertainment_ed_visits"]
+)
+
+pyrenew_ratio_summary = az.summary(
+    az.from_dict(
+        {"posterior": {"IHR_over_IEDR": pyrenew_ratio.values}},
+        sample_dims=["chain", "draw"],
+    )
+)
+pyrenew_ratio_summary
+```
+
+The table below compares posterior medians to the data-generating values.
+The final column is a scale comparison: values near $1$ indicate close recovery of that scalar quantity.
+
+```{python}
+#| label: posterior-truth-comparison
+
+def posterior_median(draws):
+    return float(draws.median(dim=["chain", "draw"]))
+
+
+posterior_comparison = pd.DataFrame(
+    [
+        {
+            "quantity": "I0",
+            "data-generating value": true_i0,
+            "posterior median": posterior_median(idata_trimmed.posterior["I0"]),
+        },
+        {
+            "quantity": "IHR",
+            "data-generating value": true_ihr,
+            "posterior median": posterior_median(
+                idata_trimmed.posterior["he_ascertainment_hospital"]
+            ),
+        },
+        {
+            "quantity": "IEDR",
+            "data-generating value": true_iedr,
+            "posterior median": posterior_median(
+                idata_trimmed.posterior["he_ascertainment_ed_visits"]
+            ),
+        },
+        {
+            "quantity": "IHR / IEDR",
+            "data-generating value": true_ihr / true_iedr,
+            "posterior median": posterior_median(pyrenew_ratio),
+        },
+    ]
+)
+
+posterior_comparison["posterior median / truth"] = (
+    posterior_comparison["posterior median"]
+    / posterior_comparison["data-generating value"]
+)
+
+posterior_comparison.round(4).style.hide(axis="index")
+```
+
+The pyrenew-H-E model learns the structure of the synthetic data rather than recovering every data-generating parameter.
+With a diffuse ascertainment prior, the absolute IHR and IEDR can shift away from their data-generating values because H+E observations weakly identify the absolute infection scale.
+
+Next we inspect the estimates for $\mathcal{R}(t)$.
+
+```{python}
+#| label: arviz-checks-recovered-rt
+
+rt_days = list(range(0, 126, 7))
+pyrenew_rt_summary = az.summary(
+    idata_trimmed,
+    var_names=[
+        "PopulationInfections::rt_single",
+    ],
+    coords={
+        "time": rt_days,
+        "dummy": [0],
+    },
+)
+pyrenew_rt_summary.index = [f"Rt day {day}" for day in rt_days]
+pyrenew_rt_summary
+```
+
+The synthetic data-generating program creates a true $\mathcal{R}(t)$ trajectory which has a falling, rising, falling cadence:
+
+```python
+def build_true_rt() -> np.ndarray:
+    """
+    Build a piecewise-linear true R(t) trajectory.
+
+    Phases: decline from 1.2 to 0.8 (63 d), rise from 0.8 to 1.1 (42 d),
+    decline from 1.1 to 0.85 (21 d). Total 126 days = 18 weeks.
+```
+
+```{python}
+#| label: plot-recovered-rt
+
+rt = idata.posterior["PopulationInfections::rt_single"].squeeze()
+rt_q = rt.quantile([0.05, 0.5, 0.95], dim=["chain", "draw"])
+rt_q05 = rt_q.sel(quantile=0.05).values
+rt_q50 = rt_q.sel(quantile=0.5).values
+rt_q95 = rt_q.sel(quantile=0.95).values
+
+n_init = model.latent.n_initialization_points
+days = np.arange(len(rt_q50)) - n_init
+
+rt_df = pd.DataFrame(
+    {
+        "day": days,
+        "q05": rt_q05,
+        "median": rt_q50,
+        "q95": rt_q95,
+        "period": np.where(days < 0, "Initialization", "Observed period"),
+    }
+)
+
+rt_plot = (
+    p9.ggplot(rt_df, p9.aes(x="day"))
+    + p9.geom_ribbon(
+        p9.aes(ymin="q05", ymax="q95"),
+        fill="steelblue",
+        alpha=0.25,
+    )
+    + p9.geom_line(
+        p9.aes(y="median"),
+        color="steelblue",
+        size=1,
+    )
+    + p9.geom_hline(yintercept=1.0, linetype="dashed", alpha=0.6)
+    + p9.geom_vline(xintercept=0, linetype="dotted", alpha=0.8)
+    + p9.annotate(
+        "text",
+        x=-n_init / 2,
+        y=max(rt_q95) * 0.95,
+        label="Initialization period",
+        size=9,
+        color="gray",
+    )
+    + p9.annotate(
+        "text",
+        x=20,
+        y=max(rt_q95) * 0.95,
+        label="Observed period",
+        size=9,
+        color="gray",
+    )
+    + p9.labs(
+        x="Day relative to first observation",
+        y="Rt",
+        title="Posterior Rt Over Initialization and Observation Periods",
+    )
+    + theme_tutorial
+    + p9.theme(
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+
+rt_plot
+```
+
+$\mathcal{R}(t)$ is useful as a companion to latent infections because it focuses on epidemic shape rather than absolute infection scale.
+The plot below compares Rt across all three models against the synthetic data-generating Rt trajectory.
+The dashed black line is the synthetic truth, and the gray horizontal line marks Rt = 1.
+
+```{python}
+#| label: all-model-rt-data
+
+true_rt = daily_infections["true_rt"].to_numpy()
+
+pyrenew_rt = idata_trimmed.posterior["PopulationInfections::rt_single"].squeeze()
+pyrenew_rt_q = pyrenew_rt.quantile([0.05, 0.5, 0.95], dim=["chain", "draw"])
+
+linked_rt = linked_idata_trimmed.posterior["PopulationInfections::rt_single"].squeeze()
+linked_rt_q = linked_rt.quantile([0.05, 0.5, 0.95], dim=["chain", "draw"])
+
+rt_comparison_parts = [
+    pd.DataFrame(
+        {
+            "model": "pyrenew-H-E",
+            "day": np.arange(N_DAYS_FIT),
+            "q05": pyrenew_rt_q.sel(quantile=0.05).values[:N_DAYS_FIT],
+            "median": pyrenew_rt_q.sel(quantile=0.5).values[:N_DAYS_FIT],
+            "q95": pyrenew_rt_q.sel(quantile=0.95).values[:N_DAYS_FIT],
+            "truth": true_rt[:N_DAYS_FIT],
+        }
+    ),
+    pd.DataFrame(
+        {
+            "model": "linked-pyrenew-H-E",
+            "day": np.arange(N_DAYS_FIT),
+            "q05": linked_rt_q.sel(quantile=0.05).values[:N_DAYS_FIT],
+            "median": linked_rt_q.sel(quantile=0.5).values[:N_DAYS_FIT],
+            "q95": linked_rt_q.sel(quantile=0.95).values[:N_DAYS_FIT],
+            "truth": true_rt[:N_DAYS_FIT],
+        }
+    ),
+]
+
+if "rt" in custom_scalar_idata.posterior:
+    custom_rt = custom_scalar_idata.posterior["rt"].squeeze()
+    custom_rt_q = custom_rt.quantile([0.05, 0.5, 0.95], dim=["chain", "draw"])
+    rt_comparison_parts.append(
+        pd.DataFrame(
+            {
+                "model": "custom-H-E",
+                "day": np.arange(N_DAYS_FIT),
+                "q05": custom_rt_q.sel(quantile=0.05).values[:N_DAYS_FIT],
+                "median": custom_rt_q.sel(quantile=0.5).values[:N_DAYS_FIT],
+                "q95": custom_rt_q.sel(quantile=0.95).values[:N_DAYS_FIT],
+                "truth": true_rt[:N_DAYS_FIT],
+            }
+        )
+    )
+
+rt_comparison_df = pd.concat(rt_comparison_parts, ignore_index=True)
+```
+
+```{python}
+#| label: fig-all-model-rt
+#| fig-cap: Posterior Rt under the two PyRenew parameterizations and custom-H-E.
+#|   The dashed black line is the synthetic data-generating Rt trajectory.
+
+(
+    p9.ggplot(rt_comparison_df, p9.aes(x="day"))
+    + p9.geom_ribbon(
+        p9.aes(ymin="q05", ymax="q95"),
+        fill="steelblue",
+        alpha=0.25,
+    )
+    + p9.geom_line(p9.aes(y="median"), color="darkblue", size=1)
+    + p9.geom_line(p9.aes(y="truth"), color="black", linetype="dashed", size=0.7)
+    + p9.geom_hline(yintercept=1.0, color="gray", linetype="dotted", alpha=0.8)
+    + p9.facet_wrap("~model", ncol=1)
+    + p9.labs(
+        x="Day",
+        y="Rt",
+        title="Posterior Rt vs Synthetic Truth",
+    )
+    + theme_tutorial
+    + p9.theme(
+        figure_size=(8, 10),
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+```
+
+The latent infection interval should be interpreted as a scale diagnostic, not just a coverage check: uncertainty in the absolute infection-to-observation rates propagates directly into uncertainty in latent infections.
+The direction of the scale trade-off is simple.
+For hospital and ED count observations, the expected count is approximately latent infections times an ascertainment rate, after delay convolution and calendar aggregation.
+If the posterior puts IHR or IEDR below the data-generating value, the model can still match the observed counts by putting latent infections above the data-generating trajectory.
+
+```{python}
+#| label: synthetic-recovery-check
+
+rhat = pyrenew_parameter_summary["r_hat"].astype(float)
+ess = pyrenew_parameter_summary["ess_bulk"].astype(float)
+print(f"Max R-hat: {rhat.max():.3f}")
+print(f"Min bulk ESS: {ess.min():.0f}")
+
+latent_inf = idata_trimmed.posterior["latent_infections"]
+inf_q05 = latent_inf.quantile(0.05, dim=["chain", "draw"]).values
+inf_q50 = latent_inf.quantile(0.50, dim=["chain", "draw"]).values
+inf_q95 = latent_inf.quantile(0.95, dim=["chain", "draw"]).values
+
+true_infections = daily_infections["true_infections"].to_numpy()
+n_compare = min(len(true_infections), len(inf_q05))
+inf_covered = (true_infections[:n_compare] >= inf_q05[:n_compare]) & (
+    true_infections[:n_compare] <= inf_q95[:n_compare]
+)
+print(f"90% interval coverage for true infections: {np.mean(inf_covered):.1%}")
+```
+
+We visualize posterior latent infections alongside the observed hospital and ED signals.
+The panels use separate y-axes because latent infections, weekly hospital admissions, and daily ED visits are on different scales.
+
+```{python}
+#| label: fit-synthetic-data
+
+infections_df = pd.DataFrame(
+    {
+        "day": np.arange(n_compare),
+        "median": inf_q50[:n_compare],
+        "q05": inf_q05[:n_compare],
+        "q95": inf_q95[:n_compare],
+        "raw": np.nan,
+        "signal": "Latent Infections",
+    }
+)
+
+week_end_dates = pd.to_datetime(weekly_hosp["week_end"].to_numpy())
+hosp_df = pd.DataFrame(
+    {
+        "day": (week_end_dates - pd.Timestamp(OBS_START_DATE)).days,
+        "median": weekly_hosp["weekly_hosp_admits"].to_numpy(),
+        "raw": weekly_hosp["weekly_hosp_admits"].to_numpy(),
+        "q05": np.nan,
+        "q95": np.nan,
+        "signal": "Weekly Hospital Admissions",
+    }
+)
+
+ed_raw = np.array(daily_ed["ed_visits"].to_numpy(), dtype=float)
+ed_ma = pd.Series(ed_raw).rolling(window=7, center=True).mean().values
+ed_df = pd.DataFrame(
+    {
+        "day": np.arange(len(ed_raw)),
+        "median": ed_ma,
+        "raw": ed_raw,
+        "q05": np.nan,
+        "q95": np.nan,
+        "signal": "Daily ED Visits (7-day MA)",
+    }
+)
+
+plot_df = pd.concat([infections_df, hosp_df, ed_df], ignore_index=True)
+plot_df["signal"] = pd.Categorical(
+    plot_df["signal"],
+    categories=[
+        "Weekly Hospital Admissions",
+        "Daily ED Visits (7-day MA)",
+        "Latent Infections",
+    ],
+    ordered=True,
+)
+
+(
+    p9.ggplot(plot_df, p9.aes(x="day"))
+    + p9.geom_ribbon(
+        p9.aes(ymin="q05", ymax="q95"),
+        fill="steelblue",
+        alpha=0.3,
+    )
+    + p9.geom_point(
+        p9.aes(y="raw"),
+        color="gray",
+        alpha=0.35,
+        size=1,
+    )
+    + p9.geom_line(
+        p9.aes(y="median"),
+        color="darkblue",
+        size=1,
+    )
+    + p9.facet_wrap("~signal", ncol=1, scales="free_y")
+    + p9.scale_y_log10()
+    + p9.labs(
+        x="Day",
+        y="Count",
+        title="Posterior Latent Infections vs Observed H+E Data",
+    )
+    + theme_tutorial
+    + p9.theme(
+        figure_size=(8, 10),
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+```
+
+The relative width of the posterior interval is another simple way to inspect uncertainty in the inferred latent infections.
+This scales the 90% interval width by the posterior median, so the diagnostic is not dominated by periods with larger infection counts.
+The interval width check shows how the ascertainment uncertainty propagates into latent infections.
+
+```{python}
+#| label: latent-infection-interval-width
+
+inf_relative_width = (inf_q95[:n_compare] - inf_q05[:n_compare]) / np.maximum(
+    inf_q50[:n_compare], 1.0
+)
+period_edges = list(range(-1, n_compare, 14))
+if period_edges[-1] != n_compare - 1:
+    period_edges.append(n_compare - 1)
+period_labels = [
+    f"Days {start + 1}-{end}"
+    for start, end in zip(period_edges[:-1], period_edges[1:], strict=True)
+]
+ci_width_df = pd.DataFrame(
+    {
+        "day": np.arange(n_compare),
+        "relative_width": inf_relative_width,
+        "period": pd.cut(
+            np.arange(n_compare),
+            bins=period_edges,
+            labels=period_labels,
+        ),
+    }
+)
+period_summary_df = (
+    ci_width_df.groupby("period", observed=True)
+    .agg(
+        start=("day", "min"),
+        end=("day", "max"),
+        mean_relative_width=("relative_width", "mean"),
+    )
+    .reset_index()
+)
+
+print("\nMean relative 90% interval width by time period:")
+for row in period_summary_df.itertuples(index=False):
+    print(f"  {row.period}: {row.mean_relative_width:.2f}")
+```
+
+We compare the relative width of the posterior interval across all three models.
+
+```{python}
+#| label: fig-latent-infection-interval-width
+#| fig-cap: Relative posterior interval width for latent infections over the
+#|   synthetic H+E fit.
+
+(
+    p9.ggplot(ci_width_df, p9.aes(x="day", y="relative_width"))
+    + p9.geom_line(color="gray", alpha=0.6, size=0.7)
+    + p9.geom_segment(
+        data=period_summary_df,
+        mapping=p9.aes(
+            x="start",
+            xend="end",
+            y="mean_relative_width",
+            yend="mean_relative_width",
+            color="period",
+        ),
+        size=1.6,
+    )
+    + p9.labs(
+        x="Day",
+        y="Relative 90% interval width",
+        color="Period",
+        title="Posterior Uncertainty in Latent Infections",
+    )
+    + theme_tutorial
+    + p9.theme(
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+```
+
+### Linked PyRenew Ascertainment
+
+The joint ascertainment fit above leaves substantial uncertainty in the absolute IHR and IEDR levels.
+That is expected for H+E-only data: counts constrain the relative scale of the two clinical signals more strongly than they constrain the absolute infection-to-observation rates.
+
+A linked ascertainment component makes that relative scale explicit.
+Instead of sampling hospital and ED ascertainment as two rates from one joint prior, it samples ED ascertainment as a base rate and samples the multiplier `IHR / IEDR` directly.
+Hospital ascertainment is then computed as `IEDR * (IHR / IEDR)`.
+
+```{python}
+#| label: linked-ascertainment-class
+#| code-fold: false
+
+class RatioLinkedAscertainment(AscertainmentModel):
+    """Two ascertainment rates expressed as a base rate and a ratio."""
+
+    def __init__(
+        self,
+        name: str,
+        base_signal: str,
+        linked_signal: str,
+        base_rate_rv: RandomVariable,
+        ratio_rv: RandomVariable,
+    ) -> None:
+        super().__init__(name=name, signals=(base_signal, linked_signal))
+        self.base_signal = base_signal
+        self.linked_signal = linked_signal
+        self.base_rate_rv = base_rate_rv
+        self.ratio_rv = ratio_rv
+
+    def sample(self, **kwargs: object) -> Mapping[str, object]:
+        base_rate = self.base_rate_rv()
+        ratio = self.ratio_rv()
+        linked_rate = base_rate * ratio
+        numpyro.deterministic(f"{self.name}_{self.base_signal}", base_rate)
+        numpyro.deterministic(f"{self.name}_{self.linked_signal}", linked_rate)
+        return {self.base_signal: base_rate, self.linked_signal: linked_rate}
+```
+
+This component follows the same registration pattern as `JointAscertainment`.
+The observation processes still call `ascertainment.for_signal(...)`, and `PyrenewBuilder` still receives the component through `builder.add_ascertainment(...)`.
+
+To isolate the effect of the ascertainment parameterization, the linked model keeps the same latent process, observation processes, and initial-infection prior as `pyrenew-H-E`.
+The ED base-rate prior has the same logit-scale center and $0.3$ standard deviation used by the marginal rates in `JointAscertainment` and custom-H-E.
+The ratio prior places its mode at equal hospital and ED ascertainment rates while still allowing roughly two-fold variation in either direction.
+
+```{python}
+#| label: linked-ascertainment-model
+#| code-fold: false
+
+linked_iedr_rv = TransformedVariable(
+    name="iedr",
+    base_rv=DistributionalVariable(
+        name="logit_iedr",
+        distribution=dist.Normal(
+            transformation.SigmoidTransform().inv(ascertainment_center),
+            ascertainment_sd,
+        ),
+    ),
+    transforms=transformation.SigmoidTransform(),
+)
+
+linked_ratio_rv = DistributionalVariable(
+    "ihr_rel_iedr",
+    dist.LogNormal(0.0, jnp.log(jnp.sqrt(2.0))),
+)
+
+linked_ascertainment = RatioLinkedAscertainment(
+    name="he_ascertainment",
+    base_signal="ed_visits",
+    linked_signal="hospital",
+    base_rate_rv=linked_iedr_rv,
+    ratio_rv=linked_ratio_rv,
+)
+
+linked_hospital_obs = PopulationCounts(
+    name="hospital",
+    ascertainment_rate_rv=linked_ascertainment.for_signal("hospital"),
+    delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
+    noise=NegativeBinomialNoise(
+        DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
+    ),
+    aggregation="weekly",
+    reporting_schedule="regular",
+    start_dow=MMWR_WEEK,
+)
+
+linked_ed_obs = PopulationCounts(
+    name="ed_visits",
+    ascertainment_rate_rv=linked_ascertainment.for_signal("ed_visits"),
+    delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
+    noise=NegativeBinomialNoise(
+        DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
+    ),
+    day_of_week_rv=ed_day_of_week_rv,
+)
+
+linked_builder = PyrenewBuilder()
+linked_builder.configure_latent(
+    PopulationInfections,
+    gen_int_rv=gen_int_rv,
+    I0_rv=I0_rv,
+    log_rt_time_0_rv=log_rt_time_0_rv,
+    single_rt_process=weekly_rt_process,
+)
+linked_builder.add_ascertainment(linked_ascertainment)
+linked_builder.add_observation(linked_hospital_obs)
+linked_builder.add_observation(linked_ed_obs)
+
+linked_model = linked_builder.build()
+print(f"Initialization points: {linked_model.latent.n_initialization_points}")
+```
+
+Before fitting, a seeded trace confirms that the linked ascertainment sites and mixed-cadence observation sites are present.
+
+```{python}
+#| label: trace-linked-model
+#| code-fold: false
+
+with numpyro.handlers.seed(rng_seed=0):
+    with numpyro.handlers.trace() as linked_trace:
+        linked_model.sample(
+            n_days_post_init=N_DAYS_FIT,
+            population_size=population_size,
+            obs_start_date=OBS_START_DATE,
+            hospital={"obs": hospital_observed},
+            ed_visits={"obs": ed_observed},
+        )
+
+for site in [
+    "logit_iedr",
+    "ihr_rel_iedr",
+    "he_ascertainment_ed_visits",
+    "he_ascertainment_hospital",
+    "latent_infections",
+    "hospital_predicted",
+    "ed_visits_predicted",
+]:
+    print(f"{site}: {linked_trace[site]['value'].shape}")
+```
+
+The linked model is fit by the artifact-generation script with the same MCMC settings as the other fits.
+The rendered tutorial loads those draws from disk.
+
+```{python}
+#| label: linked-summary
+
+linked_parameter_summary = az.summary(
+    linked_idata_trimmed,
+    var_names=[
+        "I0",
+        "he_ascertainment_ed_visits",
+        "he_ascertainment_hospital",
+        "ihr_rel_iedr",
+        "log_rt_time_0",
+    ],
+)
+linked_parameter_summary
+```
+
+The linked parameterization samples the hospital-to-ED ratio directly.
+In this synthetic fit, that gives slightly cleaner sampler diagnostics for the main ascertainment quantities than the more diffuse joint parameterization.
+
+```{python}
+#| label: linked-sampler-diagnostics
+
+sampler_diagnostics = pd.DataFrame(
+    [
+        {
+            "model": "pyrenew-H-E",
+            "max_r_hat": float(
+                az.summary(
+                    idata_trimmed,
+                    var_names=[
+                        "he_ascertainment_hospital",
+                        "he_ascertainment_ed_visits",
+                    ],
+                )["r_hat"]
+                .astype(float)
+                .max()
+            ),
+            "min_bulk_ess": float(
+                az.summary(
+                    idata_trimmed,
+                    var_names=[
+                        "he_ascertainment_hospital",
+                        "he_ascertainment_ed_visits",
+                    ],
+                )["ess_bulk"]
+                .astype(float)
+                .min()
+            ),
+        },
+        {
+            "model": "linked-pyrenew-H-E",
+            "max_r_hat": float(
+                az.summary(
+                    linked_idata_trimmed,
+                    var_names=[
+                        "he_ascertainment_ed_visits",
+                        "he_ascertainment_hospital",
+                        "ihr_rel_iedr",
+                    ],
+                )["r_hat"]
+                .astype(float)
+                .max()
+            ),
+            "min_bulk_ess": float(
+                az.summary(
+                    linked_idata_trimmed,
+                    var_names=[
+                        "he_ascertainment_ed_visits",
+                        "he_ascertainment_hospital",
+                        "ihr_rel_iedr",
+                    ],
+                )["ess_bulk"]
+                .astype(float)
+                .min()
+            ),
+        },
+    ]
+)
+sampler_diagnostics.style.hide(axis="index")
+```
+
+```{python}
+#| label: fig-linked-ratio-prior-posterior
+#| fig-cap: Prior and posterior for the linked PyRenew IHR / IEDR multiplier.
+
+linked_ratio_post = linked_idata_trimmed.posterior["ihr_rel_iedr"].values.ravel()
+linked_prior_ratio = np.random.default_rng(42).lognormal(
+    mean=0.0,
+    sigma=float(jnp.log(jnp.sqrt(2.0))),
+    size=4000,
+)
+
+linked_ratio_density_df = pd.concat(
+    [
+        pd.DataFrame({"ratio": linked_prior_ratio, "source": "Prior"}),
+        pd.DataFrame({"ratio": linked_ratio_post, "source": "Posterior"}),
+    ],
+    ignore_index=True,
+)
+
+(
+    p9.ggplot(linked_ratio_density_df, p9.aes(x="ratio", fill="source"))
+    + p9.geom_density(alpha=0.45)
+    + p9.geom_vline(xintercept=true_ihr / true_iedr, color="red", linetype="dashed")
+    + p9.scale_x_log10()
+    + p9.labs(
+        x="IHR / IEDR",
+        y="Density",
+        fill="",
+        title="Linked PyRenew Prior and Posterior Ratio",
+    )
+    + theme_tutorial
+    + p9.theme(
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+```
+
+The three models infer similar ratio values, but they do not imply the same uncertainty in the absolute latent infection scale.
+The linked parameterization improves sampler geometry for the ascertainment block in this fit, but its latent infection intervals are wider than the joint PyRenew intervals.
+That is not a contradiction: R-hat and ESS describe how well the sampler explores the posterior, while interval width describes how much uncertainty the posterior itself contains.
+
+The plots below compare posterior latent infections and the relative width of the 90% latent-infection interval.
+Because these data are synthetic, the data-generating latent infection trajectory is known.
+In the posterior infection plots, the dashed black line is that synthetic truth; it is not an observed data stream used to fit the models.
+When the posterior infection trajectories sit above that dashed line, the most direct explanation is the same ascertainment-scale trade-off: fitted absolute IHR and IEDR values are below the synthetic data-generating values, so more infections are needed to produce the observed hospital and ED counts.
+
+This is also why $\mathcal{R}(t)$ and latent infections answer different diagnostic questions.
+Plotting $\mathcal{R}(t)$ is useful because it focuses on epidemic shape and growth or decline, which H+E data can often constrain better than the absolute infection level.
+It should be shown alongside latent infections rather than instead of them: $\mathcal{R}(t)$ can look reasonable while the infection scale is still shifted by ascertainment assumptions.
+
+```{python}
+#| label: linked-latent-infection-data
+
+linked_latent_inf = linked_idata_trimmed.posterior["latent_infections"]
+linked_inf_q05 = linked_latent_inf.quantile(0.05, dim=["chain", "draw"]).values
+linked_inf_q50 = linked_latent_inf.quantile(0.50, dim=["chain", "draw"]).values
+linked_inf_q95 = linked_latent_inf.quantile(0.95, dim=["chain", "draw"]).values
+custom_latent_inf = custom_scalar_idata.posterior["latent_infections"]
+custom_inf_q05 = custom_latent_inf.quantile(0.05, dim=["chain", "draw"]).values
+custom_inf_q50 = custom_latent_inf.quantile(0.50, dim=["chain", "draw"]).values
+custom_inf_q95 = custom_latent_inf.quantile(0.95, dim=["chain", "draw"]).values
+
+latent_comparison_df = pd.concat(
+    [
+        pd.DataFrame(
+            {
+                "model": "pyrenew-H-E",
+                "day": np.arange(n_compare),
+                "median": inf_q50[:n_compare],
+                "q05": inf_q05[:n_compare],
+                "q95": inf_q95[:n_compare],
+                "truth": true_infections[:n_compare],
+            }
+        ),
+        pd.DataFrame(
+            {
+                "model": "linked-pyrenew-H-E",
+                "day": np.arange(n_compare),
+                "median": linked_inf_q50[:n_compare],
+                "q05": linked_inf_q05[:n_compare],
+                "q95": linked_inf_q95[:n_compare],
+                "truth": true_infections[:n_compare],
+            }
+        ),
+        pd.DataFrame(
+            {
+                "model": "custom-H-E",
+                "day": np.arange(n_compare),
+                "median": custom_inf_q50[:n_compare],
+                "q05": custom_inf_q05[:n_compare],
+                "q95": custom_inf_q95[:n_compare],
+                "truth": true_infections[:n_compare],
+            }
+        ),
+    ],
+    ignore_index=True,
+)
+
+latent_width_df = pd.concat(
+    [
+        pd.DataFrame(
+            {
+                "model": "pyrenew-H-E",
+                "day": np.arange(n_compare),
+                "relative_width": inf_relative_width[:n_compare],
+            }
+        ),
+        pd.DataFrame(
+            {
+                "model": "linked-pyrenew-H-E",
+                "day": np.arange(n_compare),
+                "relative_width": (
+                    linked_inf_q95[:n_compare] - linked_inf_q05[:n_compare]
+                )
+                / np.maximum(linked_inf_q50[:n_compare], 1.0),
+            }
+        ),
+        pd.DataFrame(
+            {
+                "model": "custom-H-E",
+                "day": np.arange(n_compare),
+                "relative_width": (
+                    custom_inf_q95[:n_compare] - custom_inf_q05[:n_compare]
+                )
+                / np.maximum(custom_inf_q50[:n_compare], 1.0),
+            }
+        ),
+    ],
+    ignore_index=True,
+)
+
+latent_width_summary = (
+    latent_width_df.groupby("model", observed=True)
+    .agg(
+        mean_relative_width=("relative_width", "mean"),
+        median_relative_width=("relative_width", "median"),
+    )
+    .reset_index()
+)
+latent_width_summary.style.hide(axis="index")
+```
+
+```{python}
+#| label: fig-linked-latent-infections
+#| fig-cap: Posterior latent infections under the two PyRenew parameterizations
+#|   and custom-H-E. The dashed black line is the synthetic data-generating
+#|   latent infection trajectory, not an observed signal used for fitting.
+
+(
+    p9.ggplot(latent_comparison_df, p9.aes(x="day"))
+    + p9.geom_ribbon(
+        p9.aes(ymin="q05", ymax="q95"),
+        fill="steelblue",
+        alpha=0.25,
+    )
+    + p9.geom_line(p9.aes(y="median"), color="darkblue", size=1)
+    + p9.geom_line(p9.aes(y="truth"), color="black", linetype="dashed", size=0.7)
+    + p9.facet_wrap("~model", ncol=1)
+    + p9.scale_y_log10()
+    + p9.labs(
+        x="Day",
+        y="Latent infections",
+        title="Posterior Latent Infections vs Synthetic Truth",
+    )
+    + theme_tutorial
+    + p9.theme(
+        figure_size=(8, 10),
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+```
+
+```{python}
+#| label: fig-linked-latent-infection-uncertainty
+#| fig-cap: Posterior uncertainty intervals over infections under the two
+#|   PyRenew parameterizations and custom-H-E.
+
+(
+    p9.ggplot(
+        latent_width_df,
+        p9.aes(x="day", y="relative_width", color="model"),
+    )
+    + p9.geom_line(size=0.9, alpha=0.85)
+    + p9.labs(
+        x="Day",
+        y="Relative 90% interval width",
+        color="Model",
+        title="Posterior Uncertainty in Latent Infections",
+    )
+    + theme_tutorial
+    + p9.theme(
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+```
+
+The linked parameterization is a useful sensitivity analysis because it asks whether the model can learn the relative hospital-to-ED scale directly.
+It should not be interpreted as an absolute-scale fix.
+The posterior can still move along the weakly identified direction where lower ascertainment rates imply higher latent infections, and the prior still determines where the fit sits along that direction.
+
+### Summarize custom-H-E
+
+The custom H+E fit is represented here by reduced scalar posterior draws.
+Because its ED ascertainment is time-varying, we summarize both the first-day IEDR and the posterior mean over the time-varying IEDR trajectory.
+
+```{python}
+#| label: custom-summary
+
+custom_parameter_summary = az.summary(custom_scalar_idata)
+custom_parameter_summary
+```
+
+The three models parameterize some quantities differently, so this table compares only the closest scalar summaries.
+For custom-H-E, ED ascertainment is time-varying; `IEDR_mean` is the posterior mean across that time-varying trajectory for each posterior draw.
+Differences from the data-generating values should not be read as a win/loss ranking.
+The PyRenew models and custom-H-E use different ascertainment structures, so this table is a compact way to compare their implied absolute scales and relative hospital-to-ED scale rather than a direct test of which implementation is correct.
+
+```{python}
+#| label: inference-comparison
+
+inference_comparison = pd.DataFrame(
+    [
+        {
+            "quantity": "I0",
+            "truth": true_i0,
+            "pyrenew-H-E median": float(
+                idata_trimmed.posterior["I0"].median(dim=["chain", "draw"])
+            ),
+            "linked-pyrenew-H-E median": float(
+                linked_idata_trimmed.posterior["I0"].median(dim=["chain", "draw"])
+            ),
+            "custom-H-E median": float(
+                custom_scalar_idata.posterior["I0"].median(dim=["chain", "draw"])
+            ),
+        },
+        {
+            "quantity": "IHR",
+            "truth": true_ihr,
+            "pyrenew-H-E median": float(
+                idata_trimmed.posterior["he_ascertainment_hospital"].median(
+                    dim=["chain", "draw"]
+                )
+            ),
+            "linked-pyrenew-H-E median": float(
+                linked_idata_trimmed.posterior["he_ascertainment_hospital"].median(
+                    dim=["chain", "draw"]
+                )
+            ),
+            "custom-H-E median": float(
+                custom_scalar_idata.posterior["IHR"].median(dim=["chain", "draw"])
+            ),
+        },
+        {
+            "quantity": "IEDR",
+            "truth": true_iedr,
+            "pyrenew-H-E median": float(
+                idata_trimmed.posterior["he_ascertainment_ed_visits"].median(
+                    dim=["chain", "draw"]
+                )
+            ),
+            "linked-pyrenew-H-E median": float(
+                linked_idata_trimmed.posterior["he_ascertainment_ed_visits"].median(
+                    dim=["chain", "draw"]
+                )
+            ),
+            "custom-H-E median": float(
+                custom_scalar_idata.posterior["IEDR_mean"].median(dim=["chain", "draw"])
+            ),
+        },
+        {
+            "quantity": "IHR / IEDR",
+            "truth": true_ihr / true_iedr,
+            "pyrenew-H-E median": float(
+                (
+                    idata_trimmed.posterior["he_ascertainment_hospital"]
+                    / idata_trimmed.posterior["he_ascertainment_ed_visits"]
+                ).median(dim=["chain", "draw"])
+            ),
+            "linked-pyrenew-H-E median": float(
+                linked_idata_trimmed.posterior["ihr_rel_iedr"].median(
+                    dim=["chain", "draw"]
+                )
+            ),
+            "custom-H-E median": float(
+                (
+                    custom_scalar_idata.posterior["IHR"]
+                    / custom_scalar_idata.posterior["IEDR_mean"]
+                ).median(dim=["chain", "draw"])
+            ),
+        },
+    ]
+)
+
+inference_comparison.style.hide(axis="index")
+```
+
+### Runtime Comparison
+
+The two runtimes are comparable in this synthetic example.
+They should not be interpreted as a formal benchmark because pyrenew-H-E and custom-H-E use different implementations, priors, time aggregation choices, and model-specific components.
+
+```{python}
+#| label: runtime-comparison
+
+pd.DataFrame(
+    [
+        {"model": "pyrenew-H-E", "elapsed_seconds": pyrenew_elapsed},
+        {
+            "model": "linked-pyrenew-H-E",
+            "elapsed_seconds": linked_pyrenew_elapsed,
+        },
+        {"model": "custom-H-E", "elapsed_seconds": custom_elapsed},
+    ]
+).style.hide(axis="index")
+```
+
+### Identifiability Check
+
+The comparison above points back to the main identifiability issue in H+E-only models.
+All three fits are useful diagnostics for scale and structure, not a contest between implementations.
+H+E observations identify the epidemic shape and the relative magnitude of the two clinical signals better than they identify the absolute infection scale.
+
+Here we compare the posterior distributions of the three absolute-scale quantities that matter most for H+E alone: $I_0$, IHR, and IEDR.
+For linked-pyrenew-H-E, IHR is the sampled IEDR base rate times the sampled ratio.
+For custom-H-E, IEDR is time-varying, so we use `IEDR_mean` as a scalar summary for each posterior draw.
+
+```{python}
+#| label: identifiability-scale-data
+
+pyrenew_i0 = idata_trimmed.posterior["I0"].values.ravel()
+pyrenew_ihr = idata_trimmed.posterior["he_ascertainment_hospital"].values.ravel()
+pyrenew_iedr = idata_trimmed.posterior["he_ascertainment_ed_visits"].values.ravel()
+
+linked_i0 = linked_idata_trimmed.posterior["I0"].values.ravel()
+linked_ihr = linked_idata_trimmed.posterior["he_ascertainment_hospital"].values.ravel()
+linked_iedr = linked_idata_trimmed.posterior[
+    "he_ascertainment_ed_visits"
+].values.ravel()
+linked_ratio = linked_idata_trimmed.posterior["ihr_rel_iedr"].values.ravel()
+
+custom_i0 = custom_scalar_idata.posterior["I0"].values.ravel()
+custom_ihr = custom_scalar_idata.posterior["IHR"].values.ravel()
+custom_iedr = custom_scalar_idata.posterior["IEDR_mean"].values.ravel()
+
+scale_draws_df = pd.concat(
+    [
+        pd.DataFrame(
+            {
+                "model": "pyrenew-H-E",
+                "I0": pyrenew_i0,
+                "IHR": pyrenew_ihr,
+                "IEDR": pyrenew_iedr,
+                "ratio": pyrenew_ihr / pyrenew_iedr,
+            }
+        ),
+        pd.DataFrame(
+            {
+                "model": "linked-pyrenew-H-E",
+                "I0": linked_i0,
+                "IHR": linked_ihr,
+                "IEDR": linked_iedr,
+                "ratio": linked_ratio,
+            }
+        ),
+        pd.DataFrame(
+            {
+                "model": "custom-H-E",
+                "I0": custom_i0,
+                "IHR": custom_ihr,
+                "IEDR": custom_iedr,
+                "ratio": custom_ihr / custom_iedr,
+            }
+        ),
+    ],
+    ignore_index=True,
+)
+
+scale_density_df = scale_draws_df.melt(
+    id_vars="model",
+    value_vars=["I0", "IHR", "IEDR"],
+    var_name="quantity",
+    value_name="value",
+)
+
+truth_scale_df = pd.DataFrame(
+    {
+        "quantity": ["I0", "IHR", "IEDR"],
+        "truth": [true_i0, true_ihr, true_iedr],
+    }
+)
+```
+
+The marginal densities show how each model places posterior mass for the absolute-scale quantities.
+
+```{python}
+#| label: fig-identifiability-scale-densities
+#| fig-cap: Posterior densities for $I_0$, IHR, and IEDR under all three models.
+#|   Red dashed lines mark data-generating values.
+
+(
+    p9.ggplot(scale_density_df, p9.aes(x="value", fill="model", color="model"))
+    + p9.geom_density(alpha=0.35)
+    + p9.geom_vline(
+        truth_scale_df,
+        p9.aes(xintercept="truth"),
+        color="red",
+        linetype="dashed",
+    )
+    + p9.facet_wrap("~quantity", scales="free")
+    + p9.scale_x_log10()
+    + p9.labs(
+        x="Value",
+        y="Density",
+        fill="Model",
+        color="Model",
+        title="Posterior Scale Parameters",
+    )
+    + theme_tutorial
+    + p9.theme(
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+```
+
+The joint posterior for IHR and IEDR shows how each model constrains the two clinical ascertainment rates together.
+The red point marks the data-generating values.
+
+```{python}
+#| label: fig-identifiability-ihr-iedr
+#| fig-cap: Joint posterior of hospital and ED ascertainment rates under both
+#|   PyRenew parameterizations and custom-H-E.
+
+truth_asc_df = pd.DataFrame({"IHR": [true_ihr], "IEDR": [true_iedr]})
+
+(
+    p9.ggplot(scale_draws_df, p9.aes(x="IHR", y="IEDR", color="model"))
+    + p9.geom_point(alpha=0.16, size=0.7)
+    + p9.geom_point(data=truth_asc_df, color="red", size=3)
+    + p9.facet_wrap("~model")
+    + p9.scale_x_log10()
+    + p9.scale_y_log10()
+    + p9.labs(
+        x="Hospital ascertainment (IHR)",
+        y="ED ascertainment (IEDR)",
+        color="Model",
+        title="Hospital and ED Ascertainment Are Jointly Constrained",
+    )
+    + theme_tutorial
+)
+```
+
+The ratio is the most directly interpretable relative-scale quantity for the two clinical signals.
+This plot checks whether each model captures the data-generating IHR / IEDR relationship, even when the absolute IHR and IEDR scales are weakly identified.
+
+```{python}
+#| label: fig-identifiability-ratio
+#| fig-cap: Posterior distribution of the IHR / IEDR ratio under all three
+#|   models.
+
+(
+    p9.ggplot(scale_draws_df, p9.aes(x="ratio", fill="model", color="model"))
+    + p9.geom_density(alpha=0.35)
+    + p9.geom_vline(xintercept=true_ihr / true_iedr, color="red", linetype="dashed")
+    + p9.scale_x_log10()
+    + p9.labs(
+        x="IHR / IEDR",
+        y="Density",
+        fill="Model",
+        color="Model",
+        title="Relative Ascertainment Is Better Identified Than Absolute Scale",
+    )
+    + theme_tutorial
+    + p9.theme(
+        text=p9.element_text(size=16),
+        plot_title=p9.element_text(size=18, weight="bold"),
+        axis_title=p9.element_text(size=15),
+        axis_text=p9.element_text(size=13),
+        strip_text=p9.element_text(size=14),
+    )
+)
+```
+
+All three models put the hospital-to-ED ascertainment ratio in roughly the same part of parameter space.
+That is the main quantity the H+E data can learn directly.
+The linked PyRenew model is still useful because it samples that ratio directly, which can improve R-hat and effective sample size for the ascertainment block even when the posterior ratio is similar to the other fits.
+In this example, however, the linked prior and parameterization place more posterior uncertainty on the common absolute ascertainment scale, so the latent infection interval is wider than under `JointAscertainment`.
+
+These plots are diagnostic rather than corrective.
+They show why external information matters: H+E data alone generally need either informative priors or another signal, such as wastewater or prevalence data, to anchor the absolute infection scale.
+The ratio plot and the infection plot should therefore be read together.
+The models can agree on the relative hospital-to-ED ascertainment ratio while all choosing an absolute ascertainment level that is too low, which pushes latent infections upward.
+
+If the original PyRenew fit lies closer to the synthetic truth for some quantities, that should be interpreted in light of the data-generating process.
+The synthetic data were generated with scalar hospital and ED ascertainment rates, which is closer to the `JointAscertainment` model used here than to the custom H+E model.
+The linked PyRenew model and custom model define hospital ascertainment through a multiplier on ED ascertainment, which makes the relative scale explicit but does not anchor the absolute scale.
+The custom model also allows ED ascertainment to vary over time.
+Those features can be useful in applied forecasting, but they are additional structure relative to this simplified synthetic generator.

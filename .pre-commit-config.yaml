@@ -38,7 +38,7 @@ repos:
     hooks:
       - id: detect-secrets
         args: [ "--baseline", ".secrets.baseline" ]
-        exclude: package.lock.json
+        exclude: ^(package\.lock\.json|docs/tutorials/data/multisignal_he/)
   ####
   # Typos
   - repo: https://github.com/crate-ci/typos

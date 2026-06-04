@@ -756,6 +756,128 @@ class TestMultiSignalModelHelpers:
         # Integer input should be converted to float
         assert jnp.issubdtype(padded.dtype, jnp.floating)
 
+    def test_pad_aggregated_observations_rejects_daily_observations(
+        self, simple_builder
+    ):
+        """Daily observations should use pad_observations instead."""
+        model = simple_builder.build()
+
+        with pytest.raises(ValueError, match="Use pad_observations"):
+            model.pad_aggregated_observations(
+                jnp.array([1, 2, 3]),
+                observation_name="hospital",
+                n_days_post_init=3,
+                obs_start_date=None,
+            )
+
+    def test_pad_aggregated_observations_weekly_prepends_period_nans(self):
+        """Weekly regular observations are padded on the reporting-period axis."""
+        builder = _coherence_builder(
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+            observations=[_weekly_hosp_counts()],
+        )
+        model = builder.build()
+        n_days_post_init = 28
+        obs_start_date = _obs_date_for_dow(
+            target_first_day_dow=6,
+            n_init=model.latent.n_initialization_points,
+        )
+
+        padded = model.pad_aggregated_observations(
+            jnp.array([10, 20, 30]),
+            observation_name="hospital",
+            n_days_post_init=n_days_post_init,
+            obs_start_date=obs_start_date,
+        )
+
+        n_total = model.latent.n_initialization_points + n_days_post_init
+        hospital = model.observations["hospital"]
+        first_day_dow = model._resolve_first_day_dow(obs_start_date)
+        n_periods = hospital._n_periods(n_total, first_day_dow)
+        n_pre = n_periods - 3
+
+        assert padded.shape == (n_periods,)
+        assert jnp.all(jnp.isnan(padded[:n_pre]))
+        assert jnp.array_equal(padded[n_pre:], jnp.array([10.0, 20.0, 30.0]))
+
+    def test_pad_aggregated_observations_unknown_observation_raises(
+        self, simple_builder
+    ):
+        """Unknown observation names raise an informative error."""
+        model = simple_builder.build()
+
+        with pytest.raises(ValueError, match="Unknown observation"):
+            model.pad_aggregated_observations(
+                jnp.array([1, 2, 3]),
+                observation_name="missing",
+                n_days_post_init=3,
+                obs_start_date=None,
+            )
+
+    def test_pad_aggregated_observations_rejects_irregular_reporting_schedule(self):
+        """Aggregated padding only supports regular reporting schedules."""
+        builder = _coherence_builder(
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+            observations=[
+                PopulationCounts(
+                    name="hospital",
+                    ascertainment_rate_rv=DeterministicVariable("hospital_ihr", 0.01),
+                    delay_distribution_rv=DeterministicPMF(
+                        "hospital_delay", jnp.array([1.0])
+                    ),
+                    noise=PoissonNoise(),
+                    aggregation="weekly",
+                    reporting_schedule="irregular",
+                    start_dow=MMWR_WEEK,
+                )
+            ],
+        )
+        model = builder.build()
+
+        with pytest.raises(ValueError, match="requires a regular reporting schedule"):
+            model.pad_aggregated_observations(
+                jnp.array([1, 2, 3]),
+                observation_name="hospital",
+                n_days_post_init=28,
+                obs_start_date=date(2024, 1, 7),
+            )
+
+    def test_pad_aggregated_observations_weekly_requires_obs_start_date(self):
+        """Calendar-aligned aggregated padding requires obs_start_date."""
+        builder = _coherence_builder(
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+            observations=[_weekly_hosp_counts()],
+        )
+        model = builder.build()
+
+        with pytest.raises(ValueError, match="obs_start_date is required"):
+            model.pad_aggregated_observations(
+                jnp.array([1, 2, 3]),
+                observation_name="hospital",
+                n_days_post_init=28,
+                obs_start_date=None,
+            )
+
+    def test_pad_aggregated_observations_rejects_too_many_periods(self):
+        """Observed period arrays cannot exceed the model period count."""
+        builder = _coherence_builder(
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+            observations=[_weekly_hosp_counts()],
+        )
+        model = builder.build()
+        obs_start_date = _obs_date_for_dow(
+            target_first_day_dow=6,
+            n_init=model.latent.n_initialization_points,
+        )
+
+        with pytest.raises(ValueError, match="exceeds the model reporting-period"):
+            model.pad_aggregated_observations(
+                jnp.arange(10),
+                observation_name="hospital",
+                n_days_post_init=14,
+                obs_start_date=obs_start_date,
+            )
+
     @pytest.mark.parametrize(
         "obs_start_dow, expected",
         [

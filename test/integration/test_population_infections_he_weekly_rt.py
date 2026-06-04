@@ -34,39 +34,6 @@ OBS_START_DATE = date(2023, 11, 5)
 WEEK_START_DOW = 6
 
 
-def _build_hospital_obs_on_period_grid(
-    model: MultiSignalModel,
-    weekly_values: jnp.ndarray,
-    first_day_dow: int,
-) -> jnp.ndarray:
-    """
-    Build a dense weekly-observation array on the model's period grid.
-
-    Parameters
-    ----------
-    model : MultiSignalModel
-        Built model exposing ``latent.n_initialization_points``.
-    weekly_values : jnp.ndarray
-        Observed weekly hospital admissions, one per MMWR epiweek.
-    first_day_dow : int
-        Day-of-week index of element 0 of the shared daily axis.
-
-    Returns
-    -------
-    jnp.ndarray
-        Dense array of shape ``(n_periods,)`` with NaN for unobserved
-        periods and observed counts for periods covered by
-        ``weekly_values``.
-    """
-    hosp = model.observations["hospital"]
-    n_init = model.latent.n_initialization_points
-    n_total = n_init + N_DAYS_FIT
-    offset = hosp._compute_period_offset(first_day_dow, hosp.start_dow)
-    n_periods = (n_total - offset) // hosp.aggregation_period
-    n_pre = n_periods - len(weekly_values)
-    return jnp.concatenate([jnp.full(n_pre, jnp.nan, dtype=jnp.float32), weekly_values])
-
-
 def _expected_n_weekly(model: MultiSignalModel, first_day_dow: int) -> int:
     """
     Expected number of weekly R(t) samples for calendar-week alignment.
@@ -114,8 +81,11 @@ class TestPriorPredictiveStructure:
         weekly_values = jnp.array(
             weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
         )
-        hosp_obs = _build_hospital_obs_on_period_grid(
-            he_weekly_rt_model, weekly_values, first_day_dow
+        hosp_obs = he_weekly_rt_model.pad_aggregated_observations(
+            weekly_values,
+            observation_name="hospital",
+            n_days_post_init=N_DAYS_FIT,
+            obs_start_date=OBS_START_DATE,
         )
         ed_obs = he_weekly_rt_model.pad_observations(
             jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
@@ -178,13 +148,14 @@ class TestModelFit:
         MultiSignalModel
             Model with MCMC results attached.
         """
-        first_day_dow = he_weekly_rt_model._resolve_first_day_dow(OBS_START_DATE)
-
         weekly_values = jnp.array(
             weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
         )
-        hosp_obs = _build_hospital_obs_on_period_grid(
-            he_weekly_rt_model, weekly_values, first_day_dow
+        hosp_obs = he_weekly_rt_model.pad_aggregated_observations(
+            weekly_values,
+            observation_name="hospital",
+            n_days_post_init=N_DAYS_FIT,
+            obs_start_date=OBS_START_DATE,
         )
 
         ed_obs = he_weekly_rt_model.pad_observations(
