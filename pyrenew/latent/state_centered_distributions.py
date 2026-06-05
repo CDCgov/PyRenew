@@ -15,7 +15,7 @@ from numpyro.util import is_prng_key
 
 class StateRandomWalk(Distribution):
     r"""
-    State-centered random-walk prior on a post-initial state path.
+    State-centered random walk on a post-initial state path.
 
     Given a deterministic initial state $x_0$ = ``initial_loc``:
 
@@ -124,7 +124,7 @@ class StateRandomWalk(Distribution):
 
 class StateAR1(Distribution):
     r"""
-    State-centered AR(1) prior on a post-initial state path.
+    State-centered AR(1) process for a post-initial state path.
 
     Generative form, given a deterministic initial state $x_0$ = ``initial_loc``:
 
@@ -138,7 +138,7 @@ class StateAR1(Distribution):
     $[x_1, x_2, \ldots, x_{\mathrm{num\_steps}}]$ of length ``num_steps``.
     The initial state $x_0$ is not part of the sample; it is supplied as
     ``initial_loc`` and used to score the first transition. A random initial
-    state drawn from the stationary distribution is handled by the calling
+    state drawn from the stationary distribution can be handled by the calling
     temporal process as a separate sample site, matching the innovation
     parameterization.
 
