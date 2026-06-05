@@ -124,7 +124,7 @@ class StateRandomWalk(Distribution):
 
 class StateAR1(Distribution):
     r"""
-    State-centered AR(1) prior on a post-initial state path.
+    State-centered AR(1) process for a post-initial state path.
 
     Generative form, given a deterministic initial state $x_0$ = ``initial_loc``:
 
