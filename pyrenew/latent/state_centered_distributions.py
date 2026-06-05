@@ -37,7 +37,7 @@ class StateRandomWalk(Distribution):
     }
     support = constraints.real_vector
     reparametrized_params = ["scale", "initial_loc"]
-    pytree_aux_fields = ("num_steps",)
+    pytree_data_fields = ("gaussian_random_walk_", "initial_loc")
 
     def __init__(
         self,
@@ -50,9 +50,7 @@ class StateRandomWalk(Distribution):
         """Construct a state-centered random-walk distribution."""
         if not isinstance(num_steps, int) or num_steps <= 0:
             raise ValueError(f"num_steps must be a positive integer; got {num_steps!r}")
-        self.scale = scale
         self.initial_loc = initial_loc
-        self.num_steps = num_steps
         self.gaussian_random_walk_ = GaussianRandomWalk(scale, num_steps)
 
         batch_shape = lax.broadcast_shapes(
@@ -60,6 +58,30 @@ class StateRandomWalk(Distribution):
             jnp.shape(initial_loc),
         )
         super().__init__(batch_shape, (num_steps,), validate_args=validate_args)
+
+    @property
+    def scale(self) -> ArrayLike:
+        """
+        Innovation standard deviation of the underlying random walk.
+
+        Returns
+        -------
+        ArrayLike
+            The innovation standard deviation $\\sigma$.
+        """
+        return self.gaussian_random_walk_.scale
+
+    @property
+    def num_steps(self) -> int:
+        """
+        Length of the post-initial state path.
+
+        Returns
+        -------
+        int
+            The number of post-initial steps.
+        """
+        return self.gaussian_random_walk_.num_steps
 
     def sample(self, key: jax.Array, sample_shape: tuple[int, ...] = ()) -> ArrayLike:
         """
@@ -72,6 +94,9 @@ class StateRandomWalk(Distribution):
         """
         assert is_prng_key(key)
         walk = self.gaussian_random_walk_.sample(key, sample_shape)
+        # initial_loc carries batch_shape and walk's last axis is time
+        # (num_steps); add a trailing length-1 time axis so initial_loc aligns
+        # on batch rather than right-aligning against the time axis.
         return jnp.expand_dims(jnp.asarray(self.initial_loc), -1) + walk
 
     @validate_sample
@@ -90,6 +115,9 @@ class StateRandomWalk(Distribution):
         ArrayLike
             Log-density of shape ``sample_shape + batch_shape``.
         """
+        # initial_loc carries batch_shape and value's last axis is time
+        # (num_steps); add a trailing length-1 time axis so the offset aligns
+        # on batch rather than right-aligning against the time axis.
         offset = jnp.expand_dims(jnp.asarray(self.initial_loc), -1)
         return self.gaussian_random_walk_.log_prob(value - offset)
 
