@@ -15,7 +15,7 @@ from numpyro.util import is_prng_key
 
 class StateRandomWalk(Distribution):
     r"""
-    State-centered random-walk prior on a post-initial state path.
+    State-centered random walk on a post-initial state path.
 
     Given a deterministic initial state $x_0$ = ``initial_loc``:
 
