@@ -50,7 +50,7 @@ Ignoring this weekly periodicity forces the noise model to absorb systematic var
 PyRenew models day-of-week effects as a **multiplicative adjustment** applied to predicted counts after the delay convolution and ascertainment scaling:
 
 $$
-\lambda(t) = d_{w(t)} \cdot \alpha \sum_{s} I(t-s)\,\pi(s)
+  \lambda(t) = d_{w(t)} \cdot \alpha \sum_{s} I(t-s)\,\pi(s)
 $$
 
 where $d_{w(t)}$ is the day-of-week multiplier for the weekday of timepoint $t$, $\alpha$ is the ascertainment rate, and $\pi(s)$ is the delay PMF.
@@ -335,7 +335,7 @@ Day-of-week effects and right-truncation are independent adjustments that compos
 Day-of-week is applied first (adjusting the expected counts for reporting patterns), then right-truncation scales down recent counts for incomplete reporting:
 
 $$
-\lambda(t) = F(k_t) \cdot d_{w(t)} \cdot \alpha \sum_s I(t-s)\,\pi(s)
+  \lambda(t) = F(k_t) \cdot d_{w(t)} \cdot \alpha \sum_s I(t-s)\,\pi(s)
 $$
 
 ```{python}

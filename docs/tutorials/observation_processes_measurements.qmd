@@ -65,7 +65,7 @@ Let $\mu(t)$ denote the expected measurement at time $t$.
 Observations are modeled as
 
 $$
-Y(t) \sim \text{Noise}(f(\mu(t))),
+  Y(t) \sim \text{Noise}(f(\mu(t))),
 $$
 
 where $f(\cdot)$ is a transformation (often the identity or log function), and the noise model adds stochastic variation around this transformed prediction.
@@ -198,7 +198,7 @@ The concentration is determined by:
 The predicted concentration at time $t$ is given by
 
 $$
-\mu(t) = \frac{G}{V} \sum_{d=0}^{D} I(t-d)\, \pi_d,
+  \mu(t) = \frac{G}{V} \sum_{d=0}^{D} I(t-d)\, \pi_d,
 $$
 
 where:
@@ -213,7 +213,7 @@ This has the same convolution structure as the observation equation for count da
 We model the observed **log-concentration** as
 
 $$
-Y(t) \sim \text{Normal}\big(\log(\mu(t)) + \text{sensor\_mode}, \ \text{sensor\_sd}\big),
+  Y(t) \sim \text{Normal}\big(\log(\mu(t)) + \text{sensor\_mode}, \ \text{sensor\_sd}\big),
 $$
 
 where:

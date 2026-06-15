@@ -208,7 +208,7 @@ We can model this as a multiplicative adjustment to a baseline ascertainment rat
 The predicted hospital admissions on day $t$ are:
 
 $$
-\lambda_t = \alpha \cdot w_{t \bmod 7} \cdot \sum_{d=0}^{D} I_{t-d} \cdot p_d
+  \lambda_t = \alpha \cdot w_{t \bmod 7} \cdot \sum_{d=0}^{D} I_{t-d} \cdot p_d
 $$
 
 where $\alpha$ is the baseline ascertainment rate, $w_j$ for $j = 0, \ldots, 6$ are day-of-week multipliers (positive, summing to 7 so that the weekly total is preserved), and the summation is the delay convolution.
