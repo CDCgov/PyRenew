@@ -9,7 +9,7 @@ requires-python = ">= 3.13"
 dependencies = [
     "jax>=0.7.0",
     "numpy>=2.4.6",
-    "polars>=1.2.1",
+    "polars>=1.41.2",
     "numpyro>=0.21.0",
 ]
 
