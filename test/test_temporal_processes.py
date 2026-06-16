@@ -2,10 +2,13 @@
 Unit tests for temporal processes.
 """
 
+import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pytest
+from jax.typing import ArrayLike
+from numpyro.infer import Predictive
 
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import (
@@ -14,6 +17,11 @@ from pyrenew.latent import (
     RandomWalk,
     StepwiseTemporalProcess,
     WeeklyTemporalProcess,
+)
+from pyrenew.latent.state_centered_distributions import (
+    StateAR1,
+    StateDifferencedAR1,
+    StateRandomWalk,
 )
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
@@ -48,31 +56,350 @@ def fixed_rw_kwargs(innovation_sd=0.05):
     }
 
 
+def _ar1_expected_path(
+    noise: ArrayLike,
+    autoreg: ArrayLike,
+    scale: ArrayLike,
+    initial_loc: ArrayLike,
+) -> ArrayLike:
+    """
+    Replay the StateAR1 state recursion from explicit standard-normal noise.
+
+    Parameters
+    ----------
+    noise
+        Standard-normal innovations with leading axis ``num_steps`` and trailing
+        per-step (sample + batch) shape.
+    autoreg
+        AR(1) coefficient.
+    scale
+        Innovation standard deviation.
+    initial_loc
+        Deterministic initial state.
+
+    Returns
+    -------
+    ArrayLike
+        Post-initial path with time on the trailing axis.
+    """
+    autoreg = jnp.asarray(autoreg)
+    scale = jnp.asarray(scale)
+    state = jnp.broadcast_to(jnp.asarray(initial_loc), noise.shape[1:])
+    states = []
+    for innovation in noise:
+        state = autoreg * state + scale * innovation
+        states.append(state)
+    return jnp.moveaxis(jnp.stack(states, axis=0), 0, -1)
+
+
+def _differenced_ar1_expected_path(
+    noise: ArrayLike,
+    autoreg: ArrayLike,
+    scale: ArrayLike,
+    initial_loc: ArrayLike,
+    initial_diff: ArrayLike,
+) -> ArrayLike:
+    """
+    Replay the StateDifferencedAR1 recursion from explicit standard-normal noise.
+
+    Parameters
+    ----------
+    noise
+        Standard-normal innovations with leading axis ``num_steps`` and trailing
+        per-step (sample + batch) shape.
+    autoreg
+        AR(1) coefficient on first differences.
+    scale
+        Innovation standard deviation.
+    initial_loc
+        Deterministic initial state.
+    initial_diff
+        Deterministic initial first difference.
+
+    Returns
+    -------
+    ArrayLike
+        Post-initial path with time on the trailing axis.
+    """
+    autoreg = jnp.asarray(autoreg)
+    scale = jnp.asarray(scale)
+    per_step_shape = noise.shape[1:]
+    prev_2 = jnp.broadcast_to(jnp.asarray(initial_loc), per_step_shape)
+    prev_1 = prev_2 + jnp.broadcast_to(jnp.asarray(initial_diff), per_step_shape)
+    states = []
+    for innovation in noise:
+        state = prev_1 + autoreg * (prev_1 - prev_2) + scale * innovation
+        states.append(state)
+        prev_2, prev_1 = prev_1, state
+    return jnp.moveaxis(jnp.stack(states, axis=0), 0, -1)
+
+
+AR1_FORWARD_SAMPLING_CASES = [
+    (0.5, 0.2, 1.0, 5, ()),
+    (0.9, 0.05, -0.5, 8, ()),
+    (jnp.array([0.3, 0.8]), jnp.array([0.1, 0.5]), jnp.array([0.0, 1.0]), 6, ()),
+    (0.5, jnp.array([0.1, 0.2, 0.3]), 0.0, 4, ()),
+    (0.7, 0.2, 1.0, 3, (4,)),
+]
+
+DIFFERENCED_AR1_FORWARD_SAMPLING_CASES = [
+    (0.2, 0.5, 1.0, 0.3, 1, ()),
+    (0.6, 0.1, 0.0, 0.05, 7, ()),
+    (
+        jnp.array([0.6, -0.3]),
+        jnp.array([0.2, 0.5]),
+        jnp.array([1.0, -0.5]),
+        jnp.array([0.1, 0.2]),
+        5,
+        (),
+    ),
+    (0.5, 0.2, 0.0, 0.0, 4, (3,)),
+]
+
+
 INNER_PROCESS_PARAMS = [
     (AR1, fixed_ar1_kwargs()),
     (DifferencedAR1, fixed_ar1_kwargs()),
     (RandomWalk, fixed_rw_kwargs()),
 ]
 
+PARAMETERIZATIONS = ["innovation", "state"]
+
+DETERMINISTIC_INIT_PROCESS_PARAMS = [
+    (DifferencedAR1, fixed_ar1_kwargs()),
+    (RandomWalk, fixed_rw_kwargs()),
+]
+
+
+class TestStateCenteredDistributionLogProb:
+    """Exact density checks for state-centered temporal-process distributions."""
+
+    def test_state_random_walk_log_prob_matches_manual_transition_sum(self):
+        """Batched StateRandomWalk log_prob equals the explicit RW transition density."""
+        scale = jnp.array([0.3, 0.7])
+        initial_loc = jnp.array([1.0, -0.5])
+        value = jnp.array(
+            [
+                [1.2, 0.6, 0.1, -0.2],
+                [-0.3, 0.4, 0.0, 0.2],
+            ]
+        )
+
+        distribution = StateRandomWalk(
+            scale=scale,
+            initial_loc=initial_loc,
+            num_steps=value.shape[-1],
+        )
+
+        full_path = jnp.concatenate([initial_loc[:, None], value], axis=-1)
+        expected = dist.Normal(full_path[:, :-1], scale[:, None]).log_prob(value)
+        expected = expected.sum(axis=-1)
+
+        assert jnp.allclose(distribution.log_prob(value), expected)
+
+    def test_state_ar1_log_prob_matches_manual_transition_sum(self):
+        """Batched StateAR1 log_prob equals the explicit AR1 transition density."""
+        autoreg = jnp.array([0.4, -0.2])
+        scale = jnp.array([0.3, 0.7])
+        initial_loc = jnp.array([1.0, -0.5])
+        value = jnp.array(
+            [
+                [1.2, 0.6, 0.1, -0.2],
+                [-0.3, 0.4, 0.0, 0.2],
+            ]
+        )
+
+        distribution = StateAR1(
+            autoreg=autoreg,
+            scale=scale,
+            initial_loc=initial_loc,
+            num_steps=value.shape[-1],
+        )
+
+        full_path = jnp.concatenate([initial_loc[:, None], value], axis=-1)
+        transition_locs = autoreg[:, None] * full_path[:, :-1]
+        expected = dist.Normal(transition_locs, scale[:, None]).log_prob(value)
+        expected = expected.sum(axis=-1)
+
+        assert jnp.allclose(distribution.log_prob(value), expected)
+
+    def test_state_differenced_ar1_log_prob_matches_manual_transition_sum(self):
+        """Batched StateDifferencedAR1 log_prob equals the explicit transition density."""
+        autoreg = jnp.array([0.6, -0.3])
+        scale = jnp.array([0.2, 0.5])
+        initial_loc = jnp.array([1.0, -0.5])
+        initial_diff = jnp.array([0.1, 0.2])
+        value = jnp.array(
+            [
+                [1.45, 1.7, 1.6],
+                [-0.1, -0.2, 0.0],
+            ]
+        )
+
+        distribution = StateDifferencedAR1(
+            autoreg=autoreg,
+            scale=scale,
+            initial_loc=initial_loc,
+            initial_diff=initial_diff,
+            num_steps=value.shape[-1],
+        )
+
+        x1 = initial_loc + initial_diff
+        full_path = jnp.concatenate([initial_loc[:, None], x1[:, None], value], axis=-1)
+        previous_delta = full_path[:, 1:-1] - full_path[:, :-2]
+        transition_locs = full_path[:, 1:-1] + autoreg[:, None] * previous_delta
+        transition_probs = dist.Normal(transition_locs, scale[:, None]).log_prob(
+            full_path[:, 2:]
+        )
+        expected = transition_probs.sum(axis=-1)
+
+        assert jnp.allclose(distribution.log_prob(value), expected)
+
+
+class TestStateCenteredDistributionValidation:
+    """Focused coverage for state-centered distribution validation branches."""
+
+    @pytest.mark.parametrize(
+        "distribution_cls,kwargs",
+        [
+            (StateRandomWalk, {"scale": 1.0}),
+            (StateAR1, {"autoreg": 0.5, "scale": 1.0}),
+            (StateDifferencedAR1, {"autoreg": 0.5, "scale": 1.0}),
+        ],
+    )
+    @pytest.mark.parametrize("invalid_num_steps", [0, 1.5])
+    def test_num_steps_must_be_positive_integer(
+        self, distribution_cls, kwargs, invalid_num_steps
+    ):
+        """Constructors reject non-positive and non-integer step counts."""
+        with pytest.raises(ValueError, match="num_steps must be a positive integer"):
+            distribution_cls(**kwargs, num_steps=invalid_num_steps)
+
+
+class TestStateCenteredDistributionForwardSampling:
+    """Forward ``sample`` returns the full post-initial state trajectory."""
+
+    @pytest.mark.parametrize(
+        "autoreg,scale,initial_loc,num_steps,sample_shape",
+        AR1_FORWARD_SAMPLING_CASES,
+    )
+    def test_state_ar1_sample_matches_recursion(
+        self, autoreg, scale, initial_loc, num_steps, sample_shape
+    ):
+        """StateAR1 sampling reproduces the AR(1) state recursion exactly."""
+        key = jax.random.PRNGKey(7)
+        distribution = StateAR1(
+            autoreg=autoreg,
+            scale=scale,
+            initial_loc=initial_loc,
+            num_steps=num_steps,
+        )
+
+        sample = distribution.sample(key, sample_shape=sample_shape)
+        per_step_shape = sample_shape + distribution.batch_shape
+        noise = jax.random.normal(key, shape=(num_steps,) + per_step_shape)
+        expected = _ar1_expected_path(noise, autoreg, scale, initial_loc)
+
+        assert sample.shape == per_step_shape + (num_steps,)
+        assert jnp.allclose(sample, expected)
+
+    @pytest.mark.parametrize(
+        "autoreg,scale,initial_loc,initial_diff,num_steps,sample_shape",
+        DIFFERENCED_AR1_FORWARD_SAMPLING_CASES,
+    )
+    def test_state_differenced_ar1_sample_matches_recursion(
+        self, autoreg, scale, initial_loc, initial_diff, num_steps, sample_shape
+    ):
+        """StateDifferencedAR1 sampling reproduces the differenced recursion exactly."""
+        key = jax.random.PRNGKey(19)
+        distribution = StateDifferencedAR1(
+            autoreg=autoreg,
+            scale=scale,
+            initial_loc=initial_loc,
+            initial_diff=initial_diff,
+            num_steps=num_steps,
+        )
+
+        sample = distribution.sample(key, sample_shape=sample_shape)
+        per_step_shape = sample_shape + distribution.batch_shape
+        noise = jax.random.normal(key, shape=(num_steps,) + per_step_shape)
+        expected = _differenced_ar1_expected_path(
+            noise, autoreg, scale, initial_loc, initial_diff
+        )
+
+        assert sample.shape == per_step_shape + (num_steps,)
+        assert jnp.allclose(sample, expected)
+
+    @pytest.mark.parametrize(
+        "scale,initial_loc",
+        [
+            (0.3, 1.0),
+            (jnp.array([0.2, 0.5]), jnp.array([1.0, -0.5])),
+        ],
+    )
+    def test_state_random_walk_sample_is_location_shift(self, scale, initial_loc):
+        """Shifting initial_loc shifts the whole sampled path by that constant."""
+        key = jax.random.PRNGKey(11)
+        num_steps = 6
+        shift = 4.0
+        base = StateRandomWalk(
+            scale=scale, initial_loc=initial_loc, num_steps=num_steps
+        )
+        shifted = StateRandomWalk(
+            scale=scale,
+            initial_loc=jnp.asarray(initial_loc) + shift,
+            num_steps=num_steps,
+        )
+
+        base_path = base.sample(key)
+        shifted_path = shifted.sample(key)
+
+        assert base_path.shape == base.batch_shape + (num_steps,)
+        assert jnp.allclose(shifted_path - base_path, shift)
+
+    def test_state_random_walk_sample_scales_with_scale(self):
+        """The centered sampled path scales linearly with the innovation scale."""
+        key = jax.random.PRNGKey(13)
+        num_steps = 6
+        initial_loc = 2.0
+        small = StateRandomWalk(scale=0.5, initial_loc=initial_loc, num_steps=num_steps)
+        large = StateRandomWalk(scale=1.5, initial_loc=initial_loc, num_steps=num_steps)
+
+        small_centered = small.sample(key) - initial_loc
+        large_centered = large.sample(key) - initial_loc
+
+        assert jnp.allclose(large_centered, 3.0 * small_centered)
+
+    def test_state_random_walk_sample_variance_grows_linearly(self):
+        """Forward samples accumulate variance linearly in time, as a random walk does."""
+        key = jax.random.PRNGKey(17)
+        num_steps = 10
+        scale = 0.4
+        distribution = StateRandomWalk(
+            scale=scale, initial_loc=0.0, num_steps=num_steps
+        )
+
+        samples = distribution.sample(key, sample_shape=(20000,))
+        empirical_var = samples.var(axis=0)
+        expected_var = scale**2 * jnp.arange(1, num_steps + 1)
+
+        assert jnp.allclose(empirical_var, expected_var, rtol=0.1)
+
 
 class TestTemporalProcessVectorizedSampling:
-    """Test vectorized sampling across all temporal process types."""
+    """Parameterization-agnostic shape behavior across all temporal process types."""
 
-    @pytest.mark.parametrize(
-        "process_cls,kwargs",
-        [
-            (AR1, fixed_ar1_kwargs()),
-            (DifferencedAR1, fixed_ar1_kwargs()),
-            (RandomWalk, fixed_rw_kwargs()),
-        ],
-    )
-    def test_vectorized_shape_and_initial_values_array(self, process_cls, kwargs):
-        """Test shape and initial value handling with array initial values."""
+    @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
+    @pytest.mark.parametrize("process_cls,kwargs", INNER_PROCESS_PARAMS)
+    def test_vectorized_shape_and_initial_values_array(
+        self, process_cls, kwargs, parameterization
+    ):
+        """Array initial values yield shape ``(n_timepoints, n_processes)``."""
         n_timepoints = 30
         n_processes = 4
         initial_values = jnp.array([0.0, 1.0, -1.0, 2.0])
 
-        process = process_cls(**kwargs)
+        process = process_cls(**kwargs, parameterization=parameterization)
 
         with numpyro.handlers.seed(rng_seed=42):
             trajectories = process.sample(
@@ -83,20 +410,16 @@ class TestTemporalProcessVectorizedSampling:
 
         assert trajectories.shape == (n_timepoints, n_processes)
 
-    @pytest.mark.parametrize(
-        "process_cls,kwargs",
-        [
-            (AR1, fixed_ar1_kwargs()),
-            (DifferencedAR1, fixed_ar1_kwargs()),
-            (RandomWalk, fixed_rw_kwargs()),
-        ],
-    )
-    def test_vectorized_shape_with_scalar_initial_value(self, process_cls, kwargs):
-        """Test shape with scalar initial value broadcast."""
+    @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
+    @pytest.mark.parametrize("process_cls,kwargs", INNER_PROCESS_PARAMS)
+    def test_vectorized_shape_with_scalar_initial_value(
+        self, process_cls, kwargs, parameterization
+    ):
+        """Scalar initial value broadcasts to shape ``(n_timepoints, n_processes)``."""
         n_timepoints = 30
         n_processes = 3
 
-        process = process_cls(**kwargs)
+        process = process_cls(**kwargs, parameterization=parameterization)
 
         with numpyro.handlers.seed(rng_seed=42):
             trajectories = process.sample(
@@ -108,42 +431,44 @@ class TestTemporalProcessVectorizedSampling:
         assert trajectories.shape == (n_timepoints, n_processes)
 
 
-class TestRandomWalkInitialValues:
-    """Test that RandomWalk preserves initial values."""
+class TestDeterministicInitialStateProcesses:
+    """Processes with a deterministic initial state preserve ``initial_value``."""
 
-    def test_random_walk_vectorized_with_initial_values_array(self):
-        """Test RandomWalk first row equals initial values."""
-        n_timepoints = 30
-        n_processes = 4
-        initial_values = jnp.array([0.0, 1.0, -1.0, 2.0])
-
-        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.05))
+    @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
+    @pytest.mark.parametrize("process_cls,kwargs", DETERMINISTIC_INIT_PROCESS_PARAMS)
+    def test_initial_row_equals_initial_value_array(
+        self, process_cls, kwargs, parameterization
+    ):
+        """``x[0]`` equals the array ``initial_value`` for every draw."""
+        process = process_cls(**kwargs, parameterization=parameterization)
+        init = jnp.array([0.0, 1.0, -1.0, 2.0])
 
         with numpyro.handlers.seed(rng_seed=42):
-            trajectories = rw.sample(
-                n_timepoints=n_timepoints,
-                n_processes=n_processes,
-                initial_value=initial_values,
+            trajectories = process.sample(
+                n_timepoints=30,
+                n_processes=4,
+                initial_value=init,
             )
 
-        assert trajectories.shape == (n_timepoints, n_processes)
-        assert jnp.allclose(trajectories[0, :], initial_values)
+        assert trajectories.shape == (30, 4)
+        assert jnp.allclose(trajectories[0, :], init)
 
-    def test_random_walk_vectorized_with_scalar_initial_value(self):
-        """Test RandomWalk first row equals broadcast scalar."""
-        n_timepoints = 30
-        n_processes = 3
-
-        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.05))
+    @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
+    @pytest.mark.parametrize("process_cls,kwargs", DETERMINISTIC_INIT_PROCESS_PARAMS)
+    def test_initial_row_equals_scalar_initial_value(
+        self, process_cls, kwargs, parameterization
+    ):
+        """``x[0]`` equals the broadcast scalar ``initial_value`` for every draw."""
+        process = process_cls(**kwargs, parameterization=parameterization)
 
         with numpyro.handlers.seed(rng_seed=42):
-            trajectories = rw.sample(
-                n_timepoints=n_timepoints,
-                n_processes=n_processes,
+            trajectories = process.sample(
+                n_timepoints=30,
+                n_processes=3,
                 initial_value=1.0,
             )
 
-        assert trajectories.shape == (n_timepoints, n_processes)
+        assert trajectories.shape == (30, 3)
         assert jnp.allclose(trajectories[0, :], 1.0)
 
 
@@ -503,6 +828,362 @@ class TestTemporalProcessRepr:
         rendered = repr(process)
         for text in expected:
             assert text in rendered
+
+
+PARAMETERIZATION_FLAG_CASES = [
+    (AR1, fixed_ar1_kwargs()),
+    (DifferencedAR1, fixed_ar1_kwargs()),
+    (RandomWalk, fixed_rw_kwargs()),
+]
+
+
+class TestTemporalProcessParameterizationFlag:
+    """Constructor validates and exposes the ``parameterization`` flag."""
+
+    @pytest.mark.parametrize("process_cls,kwargs", PARAMETERIZATION_FLAG_CASES)
+    def test_invalid_parameterization_raises(self, process_cls, kwargs):
+        """Unknown parameterization strings are rejected at construction."""
+        with pytest.raises(ValueError, match="parameterization"):
+            process_cls(**kwargs, parameterization="bogus")
+
+    @pytest.mark.parametrize("process_cls,kwargs", PARAMETERIZATION_FLAG_CASES)
+    def test_default_parameterization_is_innovation(self, process_cls, kwargs):
+        """Constructor default preserves historical innovation behavior."""
+        process = process_cls(**kwargs)
+        assert process.parameterization == "innovation"
+
+    @pytest.mark.parametrize("process_cls,kwargs", PARAMETERIZATION_FLAG_CASES)
+    def test_state_parameterization_stored(self, process_cls, kwargs):
+        """``parameterization='state'`` is accepted and stored as attribute."""
+        process = process_cls(**kwargs, parameterization="state")
+        assert process.parameterization == "state"
+
+    @pytest.mark.parametrize("process_cls,kwargs", PARAMETERIZATION_FLAG_CASES)
+    def test_repr_shows_parameterization(self, process_cls, kwargs):
+        """``__repr__`` exposes the current parameterization for diagnostics."""
+        process = process_cls(**kwargs, parameterization="state")
+        assert "parameterization='state'" in repr(process)
+
+
+class TestStateCenteredRandomWalk:
+    """Behavior unique to RandomWalk ``parameterization="state"``."""
+
+    def test_n_timepoints_one_returns_initial_value(self):
+        """``n_timepoints=1`` returns just the initial value as shape ``(1, n_processes)``."""
+        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.1), parameterization="state")
+        init = jnp.array([0.3, 0.7])
+        with numpyro.handlers.seed(rng_seed=0):
+            path = rw.sample(
+                n_timepoints=1,
+                n_processes=2,
+                initial_value=init,
+                name_prefix="rw",
+            )
+        assert path.shape == (1, 2)
+        assert jnp.allclose(path[0], init)
+
+    def test_trace_has_state_site_not_step_site(self):
+        """State-mode trace records ``_state``; innovation-mode ``_step`` is absent."""
+        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.1), parameterization="state")
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(rw.sample, rng_seed=0)
+        ).get_trace(n_timepoints=8, n_processes=2, name_prefix="rw")
+        assert "rw_state" in traced
+        assert "rw_step" not in traced
+
+    def test_state_site_contains_actual_post_initial_states(self):
+        """The ``_state`` site stores shifted states, not zero-origin offsets."""
+        rw = RandomWalk(**fixed_rw_kwargs(innovation_sd=0.1), parameterization="state")
+        init = jnp.array([10.0, -10.0])
+
+        def model():
+            """Record the sampled path for comparison with the latent state site."""
+            path = rw.sample(
+                n_timepoints=6,
+                n_processes=2,
+                initial_value=init,
+                name_prefix="rw",
+            )
+            numpyro.deterministic("path", path)
+
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(model, rng_seed=0)
+        ).get_trace()
+        state_site = traced["rw_state"]["value"]
+        path = traced["path"]["value"]
+        assert state_site.shape == (2, 5)
+        assert jnp.allclose(state_site, path[1:].T)
+
+    @pytest.mark.parametrize(
+        "innovation_sd",
+        [0.05, jnp.array([0.05, 0.1, 0.07])],
+    )
+    def test_prior_moments_match_innovation_parameterization(self, innovation_sd):
+        """State and innovation parameterizations produce the same per-timepoint moments."""
+        n_timepoints = 25
+        n_processes = 3
+        init = jnp.array([0.0, 0.5, -0.3])
+
+        sd_rv = DeterministicVariable("sigma", innovation_sd)
+        rw_state = RandomWalk(sd_rv, parameterization="state")
+        rw_innov = RandomWalk(sd_rv, parameterization="innovation")
+
+        def model_state():
+            """Record state-centered path as deterministic for Predictive readout."""
+            path = rw_state.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=init,
+                name_prefix="rw",
+            )
+            numpyro.deterministic("path", path)
+
+        def model_innov():
+            """Record innovation-form path as deterministic for Predictive readout."""
+            path = rw_innov.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=init,
+                name_prefix="rw",
+            )
+            numpyro.deterministic("path", path)
+
+        n_samples = 10000
+        s_state = Predictive(model_state, num_samples=n_samples)(jax.random.PRNGKey(0))[
+            "path"
+        ]
+        s_innov = Predictive(model_innov, num_samples=n_samples)(jax.random.PRNGKey(1))[
+            "path"
+        ]
+
+        sigma_max = float(jnp.max(jnp.atleast_1d(jnp.asarray(innovation_sd))))
+        terminal_sd = sigma_max * jnp.sqrt(n_timepoints - 1)
+        mean_atol = 5.0 * terminal_sd / jnp.sqrt(n_samples)
+        assert jnp.allclose(s_state.mean(axis=0), init[jnp.newaxis, :], atol=mean_atol)
+        assert jnp.allclose(s_innov.mean(axis=0), init[jnp.newaxis, :], atol=mean_atol)
+
+        assert jnp.allclose(
+            s_state.var(axis=0), s_innov.var(axis=0), rtol=0.10, atol=1e-4
+        )
+
+
+class TestStateCenteredAR1:
+    """Behavior unique to AR1 ``parameterization="state"``."""
+
+    def test_n_timepoints_one_returns_initial_distribution_draw(self):
+        """``n_timepoints=1`` returns a single stationary-prior draw per process."""
+        ar1 = AR1(**fixed_ar1_kwargs(), parameterization="state")
+        with numpyro.handlers.seed(rng_seed=0):
+            path = ar1.sample(
+                n_timepoints=1,
+                n_processes=2,
+                initial_value=jnp.array([0.0, 1.0]),
+                name_prefix="ar1",
+            )
+        assert path.shape == (1, 2)
+
+    def test_trace_has_init_and_state_sites_not_noise(self):
+        """State-mode AR1 trace has an unbundled ``_init`` site and a ``_state`` site."""
+        ar1 = AR1(**fixed_ar1_kwargs(), parameterization="state")
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(ar1.sample, rng_seed=0)
+        ).get_trace(n_timepoints=8, n_processes=2, name_prefix="ar1")
+        assert "ar1_init" in traced
+        assert "ar1_state" in traced
+        assert "ar1_noise" not in traced
+
+    def test_state_site_shape(self):
+        """The state site holds the post-initial path of shape ``(n_processes, n_timepoints - 1)``."""
+        ar1 = AR1(**fixed_ar1_kwargs(), parameterization="state")
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(ar1.sample, rng_seed=0)
+        ).get_trace(n_timepoints=12, n_processes=3, name_prefix="ar1")
+        assert traced["ar1_state"]["value"].shape == (3, 11)
+
+    @pytest.mark.parametrize("autoreg,innovation_sd", [(0.5, 0.05), (0.9, 0.1)])
+    def test_prior_moments_match_innovation_parameterization(
+        self, autoreg, innovation_sd
+    ):
+        """State and innovation AR1 produce the same per-timepoint moments."""
+        n_timepoints = 30
+        n_processes = 3
+        init = jnp.array([0.0, 0.4, -0.2])
+
+        kwargs = fixed_ar1_kwargs(autoreg=autoreg, innovation_sd=innovation_sd)
+        ar1_state = AR1(**kwargs, parameterization="state")
+        ar1_innov = AR1(**kwargs, parameterization="innovation")
+
+        def model_state():
+            """Record state-centered AR1 path as a deterministic for Predictive readout."""
+            path = ar1_state.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=init,
+                name_prefix="ar1",
+            )
+            numpyro.deterministic("path", path)
+
+        def model_innov():
+            """Record innovation-form AR1 path as a deterministic for Predictive readout."""
+            path = ar1_innov.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=init,
+                name_prefix="ar1",
+            )
+            numpyro.deterministic("path", path)
+
+        n_samples = 10000
+        s_state = Predictive(model_state, num_samples=n_samples)(jax.random.PRNGKey(0))[
+            "path"
+        ]
+        s_innov = Predictive(model_innov, num_samples=n_samples)(jax.random.PRNGKey(1))[
+            "path"
+        ]
+
+        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
+        mean_atol = 5.0 * float(stationary_sd) / jnp.sqrt(n_samples)
+        expected_mean = autoreg ** jnp.arange(n_timepoints)[:, None] * init[None, :]
+        assert jnp.allclose(s_state.mean(axis=0), expected_mean, atol=mean_atol)
+        assert jnp.allclose(s_innov.mean(axis=0), expected_mean, atol=mean_atol)
+
+        assert jnp.allclose(
+            s_state.var(axis=0), s_innov.var(axis=0), rtol=0.10, atol=1e-4
+        )
+
+
+class TestStateCenteredDifferencedAR1:
+    """Behavior unique to DifferencedAR1 ``parameterization="state"``."""
+
+    def test_n_timepoints_one_returns_initial_value(self):
+        """``n_timepoints=1`` returns just the initial value as shape ``(1, n_processes)``."""
+        d = DifferencedAR1(**fixed_ar1_kwargs(), parameterization="state")
+        init = jnp.array([0.3, 0.7])
+        with numpyro.handlers.seed(rng_seed=0):
+            path = d.sample(
+                n_timepoints=1,
+                n_processes=2,
+                initial_value=init,
+                name_prefix="diff",
+            )
+        assert path.shape == (1, 2)
+        assert jnp.allclose(path[0], init)
+
+    def test_n_timepoints_two_skips_state_site(self):
+        """``n_timepoints=2`` returns ``[x0, x0 + d1]`` with an init-rate site but no ``_state`` site."""
+        d = DifferencedAR1(**fixed_ar1_kwargs(), parameterization="state")
+        init = jnp.array([0.5, -1.0])
+
+        def model():
+            """Record the two-timepoint path for comparison with the init-rate site."""
+            path = d.sample(
+                n_timepoints=2,
+                n_processes=2,
+                initial_value=init,
+                name_prefix="diff",
+            )
+            numpyro.deterministic("path", path)
+
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(model, rng_seed=0)
+        ).get_trace()
+        path = traced["path"]["value"]
+        init_rate = traced["diff_init_rate"]["value"]
+        assert path.shape == (2, 2)
+        assert "diff_state" not in traced
+        assert jnp.allclose(path[0], init)
+        assert jnp.allclose(path[1], init + init_rate)
+
+    def test_trace_has_init_rate_and_state_sites_not_noise(self):
+        """State-mode trace has an unbundled ``_init_rate`` site and a ``_state`` site."""
+        d = DifferencedAR1(**fixed_ar1_kwargs(), parameterization="state")
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(d.sample, rng_seed=0)
+        ).get_trace(n_timepoints=8, n_processes=2, name_prefix="diff")
+        assert "diff_init_rate" in traced
+        assert "diff_state" in traced
+        assert "diff_noise" not in traced
+
+    def test_state_site_shape(self):
+        """The state site holds the post-initial path of shape ``(n_processes, n_timepoints - 2)``."""
+        d = DifferencedAR1(**fixed_ar1_kwargs(), parameterization="state")
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(d.sample, rng_seed=0)
+        ).get_trace(n_timepoints=12, n_processes=3, name_prefix="diff")
+        assert traced["diff_state"]["value"].shape == (3, 10)
+
+    def test_second_row_equals_initial_value_plus_init_rate(self):
+        """``x[1]`` equals ``initial_value`` plus the unbundled initial difference."""
+        d = DifferencedAR1(**fixed_ar1_kwargs(), parameterization="state")
+        init = jnp.array([0.5, -1.0])
+
+        def model():
+            """Record the sampled path alongside the latent init-rate site."""
+            path = d.sample(
+                n_timepoints=6,
+                n_processes=2,
+                initial_value=init,
+                name_prefix="diff",
+            )
+            numpyro.deterministic("path", path)
+
+        traced = numpyro.handlers.trace(
+            numpyro.handlers.seed(model, rng_seed=0)
+        ).get_trace()
+        init_rate = traced["diff_init_rate"]["value"]
+        path = traced["path"]["value"]
+        assert jnp.allclose(path[0], init)
+        assert jnp.allclose(path[1], init + init_rate)
+
+    @pytest.mark.parametrize("autoreg,innovation_sd", [(0.5, 0.05), (0.9, 0.1)])
+    def test_prior_moments_match_innovation_parameterization(
+        self, autoreg, innovation_sd
+    ):
+        """State and innovation DifferencedAR1 produce the same per-timepoint moments."""
+        n_timepoints = 30
+        n_processes = 3
+        init = jnp.array([0.0, 0.4, -0.2])
+
+        kwargs = fixed_ar1_kwargs(autoreg=autoreg, innovation_sd=innovation_sd)
+        d_state = DifferencedAR1(**kwargs, parameterization="state")
+        d_innov = DifferencedAR1(**kwargs, parameterization="innovation")
+
+        def model_state():
+            """Record state-centered DifferencedAR1 path for Predictive readout."""
+            path = d_state.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=init,
+                name_prefix="diff",
+            )
+            numpyro.deterministic("path", path)
+
+        def model_innov():
+            """Record innovation-form DifferencedAR1 path for Predictive readout."""
+            path = d_innov.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=init,
+                name_prefix="diff",
+            )
+            numpyro.deterministic("path", path)
+
+        n_samples = 10000
+        s_state = Predictive(model_state, num_samples=n_samples)(jax.random.PRNGKey(0))[
+            "path"
+        ]
+        s_innov = Predictive(model_innov, num_samples=n_samples)(jax.random.PRNGKey(1))[
+            "path"
+        ]
+
+        terminal_var_state = float(s_state[:, -1, :].var())
+        mean_atol = 5.0 * jnp.sqrt(terminal_var_state / n_samples)
+        assert jnp.allclose(s_state.mean(axis=0), init[jnp.newaxis, :], atol=mean_atol)
+        assert jnp.allclose(s_innov.mean(axis=0), init[jnp.newaxis, :], atol=mean_atol)
+
+        assert jnp.allclose(
+            s_state.var(axis=0), s_innov.var(axis=0), rtol=0.10, atol=1e-4
+        )
 
 
 class TestStepwiseTemporalProcessConstruction:

@@ -28,7 +28,11 @@ from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
-from test.test_helpers import fixed_ar1
+from test.test_helpers import fixed_ar1, fixed_ar1_state, fixed_differenced_ar1_state
+
+_GEN_INT_PMF = jnp.array(
+    [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
+)
 
 
 @pytest.fixture(scope="module")
@@ -147,6 +151,58 @@ def ed_day_of_week_effects(true_params: dict) -> jnp.ndarray:
     return jnp.array(true_params["ed_visits"]["day_of_week_effects"])
 
 
+def _build_he_population_model(  # numpydoc ignore=RT01
+    *,
+    single_rt_process: object,
+    hosp_delay_pmf: jnp.ndarray,
+    ed_delay_pmf: jnp.ndarray,
+    ed_day_of_week_effects: jnp.ndarray,
+    hospital_weekly: bool = False,
+) -> MultiSignalModel:
+    """Build the shared hospital + ED PopulationInfections test model."""
+    builder = PyrenewBuilder()
+    builder.configure_latent(
+        PopulationInfections,
+        gen_int_rv=DeterministicPMF("gen_int", _GEN_INT_PMF),
+        I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
+        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+        single_rt_process=single_rt_process,
+    )
+
+    hospital_kwargs = {}
+    if hospital_weekly:
+        hospital_kwargs = {
+            "aggregation": "weekly",
+            "reporting_schedule": "regular",
+            "start_dow": MMWR_WEEK,
+        }
+
+    builder.add_observation(
+        PopulationCounts(
+            name="hospital",
+            ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(1, 100)),
+            delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
+            noise=NegativeBinomialNoise(
+                DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
+            ),
+            **hospital_kwargs,
+        )
+    )
+    builder.add_observation(
+        PopulationCounts(
+            name="ed",
+            ascertainment_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
+            delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
+            noise=NegativeBinomialNoise(
+                DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
+            ),
+            day_of_week_rv=DeterministicVariable("ed_dow", ed_day_of_week_effects),
+        )
+    )
+
+    return builder.build()
+
+
 @pytest.fixture(scope="module")
 def he_model(
     hosp_delay_pmf: jnp.ndarray,
@@ -170,41 +226,12 @@ def he_model(
     MultiSignalModel
         Built model ready for fitting.
     """
-    gen_int_pmf = jnp.array(
-        [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
-    )
-
-    builder = PyrenewBuilder()
-    builder.configure_latent(
-        PopulationInfections,
-        gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
-        I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
-        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+    return _build_he_population_model(
         single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        hosp_delay_pmf=hosp_delay_pmf,
+        ed_delay_pmf=ed_delay_pmf,
+        ed_day_of_week_effects=ed_day_of_week_effects,
     )
-
-    hospital_obs = PopulationCounts(
-        name="hospital",
-        ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(1, 100)),
-        delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
-        noise=NegativeBinomialNoise(
-            DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
-        ),
-    )
-    builder.add_observation(hospital_obs)
-
-    ed_obs = PopulationCounts(
-        name="ed",
-        ascertainment_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
-        delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
-        noise=NegativeBinomialNoise(
-            DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
-        ),
-        day_of_week_rv=DeterministicVariable("ed_dow", ed_day_of_week_effects),
-    )
-    builder.add_observation(ed_obs)
-
-    return builder.build()
 
 
 @pytest.fixture(scope="module")
@@ -236,47 +263,16 @@ def he_weekly_rt_model(
     MultiSignalModel
         Built model ready for fitting.
     """
-    gen_int_pmf = jnp.array(
-        [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
-    )
-
-    builder = PyrenewBuilder()
-    builder.configure_latent(
-        PopulationInfections,
-        gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
-        I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
-        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+    return _build_he_population_model(
         single_rt_process=WeeklyTemporalProcess(
             fixed_ar1(autoreg=0.9, innovation_sd=0.05),
             start_dow=MMWR_WEEK,
         ),
+        hosp_delay_pmf=hosp_delay_pmf,
+        ed_delay_pmf=ed_delay_pmf,
+        ed_day_of_week_effects=ed_day_of_week_effects,
+        hospital_weekly=True,
     )
-
-    hospital_obs = PopulationCounts(
-        name="hospital",
-        ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(1, 100)),
-        delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
-        noise=NegativeBinomialNoise(
-            DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
-        ),
-        aggregation="weekly",
-        reporting_schedule="regular",
-        start_dow=MMWR_WEEK,
-    )
-    builder.add_observation(hospital_obs)
-
-    ed_obs = PopulationCounts(
-        name="ed",
-        ascertainment_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
-        delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
-        noise=NegativeBinomialNoise(
-            DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
-        ),
-        day_of_week_rv=DeterministicVariable("ed_dow", ed_day_of_week_effects),
-    )
-    builder.add_observation(ed_obs)
-
-    return builder.build()
 
 
 @pytest.fixture(scope="module")
@@ -308,44 +304,13 @@ def he_weekly_model(
     MultiSignalModel
         Built model ready for fitting.
     """
-    gen_int_pmf = jnp.array(
-        [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
-    )
-
-    builder = PyrenewBuilder()
-    builder.configure_latent(
-        PopulationInfections,
-        gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
-        I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
-        log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
+    return _build_he_population_model(
         single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        hosp_delay_pmf=hosp_delay_pmf,
+        ed_delay_pmf=ed_delay_pmf,
+        ed_day_of_week_effects=ed_day_of_week_effects,
+        hospital_weekly=True,
     )
-
-    hospital_obs = PopulationCounts(
-        name="hospital",
-        ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(1, 100)),
-        delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
-        noise=NegativeBinomialNoise(
-            DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
-        ),
-        aggregation="weekly",
-        reporting_schedule="regular",
-        start_dow=MMWR_WEEK,
-    )
-    builder.add_observation(hospital_obs)
-
-    ed_obs = PopulationCounts(
-        name="ed",
-        ascertainment_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
-        delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
-        noise=NegativeBinomialNoise(
-            DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))
-        ),
-        day_of_week_rv=DeterministicVariable("ed_dow", ed_day_of_week_effects),
-    )
-    builder.add_observation(ed_obs)
-
-    return builder.build()
 
 
 @pytest.fixture(scope="module")
@@ -380,10 +345,6 @@ def he_weekly_joint_ascertainment_model(
     MultiSignalModel
         Built model ready for fitting.
     """
-    gen_int_pmf = jnp.array(
-        [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
-    )
-
     true_ihr = true_params["hospitalizations"]["ihr"]
     true_iedr = true_params["ed_visits"]["iedr"]
     ascertainment = JointAscertainment(
@@ -401,7 +362,7 @@ def he_weekly_joint_ascertainment_model(
     builder = PyrenewBuilder()
     builder.configure_latent(
         PopulationInfections,
-        gen_int_rv=DeterministicPMF("gen_int", gen_int_pmf),
+        gen_int_rv=DeterministicPMF("gen_int", _GEN_INT_PMF),
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
         single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
@@ -433,3 +394,53 @@ def he_weekly_joint_ascertainment_model(
     builder.add_observation(ed_obs)
 
     return builder.build()
+
+
+@pytest.fixture(scope="module")
+def he_model_state_centered(  # numpydoc ignore=RT01
+    hosp_delay_pmf: jnp.ndarray,
+    ed_delay_pmf: jnp.ndarray,
+    ed_day_of_week_effects: jnp.ndarray,
+) -> MultiSignalModel:
+    """Build the H+E model with state-centered daily AR1 Rt."""
+    return _build_he_population_model(
+        single_rt_process=fixed_ar1_state(autoreg=0.9, innovation_sd=0.05),
+        hosp_delay_pmf=hosp_delay_pmf,
+        ed_delay_pmf=ed_delay_pmf,
+        ed_day_of_week_effects=ed_day_of_week_effects,
+    )
+
+
+@pytest.fixture(scope="module")
+def he_weekly_rt_model_state_centered(  # numpydoc ignore=RT01
+    hosp_delay_pmf: jnp.ndarray,
+    ed_delay_pmf: jnp.ndarray,
+    ed_day_of_week_effects: jnp.ndarray,
+) -> MultiSignalModel:
+    """Build the H+E model with state-centered weekly differenced AR1 Rt."""
+    return _build_he_population_model(
+        single_rt_process=WeeklyTemporalProcess(
+            fixed_differenced_ar1_state(autoreg=0.9, innovation_sd=0.05),
+            start_dow=MMWR_WEEK,
+        ),
+        hosp_delay_pmf=hosp_delay_pmf,
+        ed_delay_pmf=ed_delay_pmf,
+        ed_day_of_week_effects=ed_day_of_week_effects,
+        hospital_weekly=True,
+    )
+
+
+@pytest.fixture(scope="module")
+def he_weekly_model_state_centered(  # numpydoc ignore=RT01
+    hosp_delay_pmf: jnp.ndarray,
+    ed_delay_pmf: jnp.ndarray,
+    ed_day_of_week_effects: jnp.ndarray,
+) -> MultiSignalModel:
+    """Build the weekly-hospital H+E model with state-centered daily AR1 Rt."""
+    return _build_he_population_model(
+        single_rt_process=fixed_ar1_state(autoreg=0.9, innovation_sd=0.05),
+        hosp_delay_pmf=hosp_delay_pmf,
+        ed_delay_pmf=ed_delay_pmf,
+        ed_day_of_week_effects=ed_day_of_week_effects,
+        hospital_weekly=True,
+    )
