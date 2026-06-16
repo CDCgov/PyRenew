@@ -90,9 +90,7 @@ class TestStateCenteredDistributionLogProb:
         )
 
         full_path = jnp.concatenate([initial_loc[:, None], value], axis=-1)
-        expected = dist.Normal(full_path[:, :-1], scale[:, None]).log_prob(
-            value
-        )
+        expected = dist.Normal(full_path[:, :-1], scale[:, None]).log_prob(value)
         expected = expected.sum(axis=-1)
 
         assert jnp.allclose(distribution.log_prob(value), expected)
