@@ -119,7 +119,7 @@ class TestStateCenteredDistributionLogProb:
         full_path = jnp.concatenate([initial_loc[:, None], value], axis=-1)
         transition_locs = autoreg[:, None] * full_path[:, :-1]
         expected = dist.Normal(transition_locs, scale[:, None]).log_prob(
-            full_path[:, 1:]
+            value
         )
         expected = expected.sum(axis=-1)
 
