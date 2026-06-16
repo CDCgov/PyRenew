@@ -4,3 +4,8 @@
 arange = "arange"
 lod = "lod"
 dows = "dows"
+
+[default.extend-identifiers]
+# NumPyro's Distribution base class spells this with a typo; we must
+# match the upstream attribute name for `has_rsample` to work correctly.
+reparametrized_params = "reparametrized_params"

@@ -35,6 +35,29 @@ def fixed_ar1(autoreg, innovation_sd):
     )
 
 
+def fixed_ar1_state(autoreg, innovation_sd):
+    """
+    Construct a state-centered AR1 process with fixed parameters.
+
+    Parameters
+    ----------
+    autoreg
+        Deterministic autoregressive coefficient.
+    innovation_sd
+        Deterministic innovation standard deviation.
+
+    Returns
+    -------
+    AR1
+        State-centered AR1 process with deterministic hyperparameters.
+    """
+    return AR1(
+        autoreg_rv=DeterministicVariable("autoreg", autoreg),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+        parameterization="state",
+    )
+
+
 def fixed_random_walk(innovation_sd):
     """
     Construct a RandomWalk with a fixed innovation scale.
@@ -73,6 +96,29 @@ def fixed_differenced_ar1(autoreg, innovation_sd):
     return DifferencedAR1(
         autoreg_rv=DeterministicVariable("autoreg", autoreg),
         innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+    )
+
+
+def fixed_differenced_ar1_state(autoreg, innovation_sd):
+    """
+    Construct a state-centered DifferencedAR1 process with fixed parameters.
+
+    Parameters
+    ----------
+    autoreg
+        Deterministic autoregressive coefficient.
+    innovation_sd
+        Deterministic innovation standard deviation.
+
+    Returns
+    -------
+    DifferencedAR1
+        State-centered DifferencedAR1 process with deterministic hyperparameters.
+    """
+    return DifferencedAR1(
+        autoreg_rv=DeterministicVariable("autoreg", autoreg),
+        innovation_sd_rv=DeterministicVariable("innovation_sd", innovation_sd),
+        parameterization="state",
     )
 
 
