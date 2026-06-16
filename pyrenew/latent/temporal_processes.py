@@ -307,27 +307,20 @@ class AR1(TemporalProcess):
         innovation_sd = self.innovation_sd_rv()
         autoreg_broadcast = jnp.broadcast_to(jnp.asarray(autoreg), (n_processes,))
 
-        if self.parameterization == "innovation":
-            stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-            with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
-                init_states = numpyro.sample(
-                    f"{name_prefix}_init",
-                    dist.Normal(initial_value, stationary_sd),
-                )
+        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
+        with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
+            init_states = numpyro.sample(
+                f"{name_prefix}_init",
+                dist.Normal(initial_value, stationary_sd),
+            )
 
+        if self.parameterization == "innovation":
             return self.ar_process(
                 n=n_timepoints,
                 init_vals=init_states[jnp.newaxis, :],
                 autoreg=autoreg_broadcast[jnp.newaxis, :],
                 noise_sd=innovation_sd,
                 noise_name=f"{name_prefix}_noise",
-            )
-
-        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-        with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
-            init_states = numpyro.sample(
-                f"{name_prefix}_init",
-                dist.Normal(initial_value, stationary_sd),
             )
 
         if n_timepoints == 1:
@@ -344,11 +337,12 @@ class AR1(TemporalProcess):
             ),
         )
         x = jnp.concatenate([init_states[:, jnp.newaxis], post_init], axis=-1)
-        return x.T
+        # ensure time is the leading axis (length n_timepoints)
+        return jnp.moveaxis(x, -1, 0)
 
 
 class DifferencedAR1(TemporalProcess):
-    """
+    r"""
     AR(1) process on first differences.
 
     Each *change* in value depends on the previous change plus noise, with
@@ -361,16 +355,20 @@ class DifferencedAR1(TemporalProcess):
 
     The ``parameterization`` argument selects between sampling standardized
     innovations on the differences (``"innovation"``) and sampling the state
-    path ``x[1:T]`` directly under the priors
+    path $[x_1, \ldots, x_{T-1}]$ directly (``"state"``) under the priors
 
-    ```
-    x[1] ~ Normal(x[0], innovation_sd / sqrt(1 - autoreg^2))
-    x[t] ~ Normal(x[t-1] + autoreg * (x[t-1] - x[t-2]), innovation_sd)   t >= 2
-    ```
+    $$
+    x_1 \sim \mathrm{Normal}(x_0, \sigma / \sqrt{1 - \phi^2})
+    $$
 
-    (``"state"``). ``x[0]`` is supplied deterministically as
-    ``initial_value``. Both produce the same prior over the state path;
-    they differ in sampler geometry.
+    $$
+    x_t \sim \mathrm{Normal}(x_{t-1} + \phi \, (x_{t-1} - x_{t-2}), \sigma),
+    \quad t \geq 2
+    $$
+
+    where $\phi$ is ``autoreg`` and $\sigma$ is ``innovation_sd``. The initial
+    state $x_0$ is supplied deterministically as ``initial_value``. Both produce
+    the same prior over the state path; they differ in sampler geometry.
 
     Parameters
     ----------
@@ -478,14 +476,14 @@ class DifferencedAR1(TemporalProcess):
         innovation_sd = self.innovation_sd_rv()
         autoreg_broadcast = jnp.broadcast_to(jnp.asarray(autoreg), (n_processes,))
 
-        if self.parameterization == "innovation":
-            stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-            with numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes):
-                init_rates = numpyro.sample(
-                    f"{name_prefix}_init_rate",
-                    dist.Normal(0, stationary_sd),
-                )
+        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
+        with numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes):
+            init_rates = numpyro.sample(
+                f"{name_prefix}_init_rate",
+                dist.Normal(0, stationary_sd),
+            )
 
+        if self.parameterization == "innovation":
             return self.process(
                 n=n_timepoints,
                 init_vals=initial_value[jnp.newaxis, :],
@@ -498,6 +496,12 @@ class DifferencedAR1(TemporalProcess):
         if n_timepoints == 1:
             return initial_value[jnp.newaxis, :]
 
+        x1 = initial_value + init_rates
+
+        if n_timepoints == 2:
+            # ensure time is the leading axis (length n_timepoints)
+            return jnp.moveaxis(jnp.stack([initial_value, x1], axis=-1), -1, 0)
+
         scale_broadcast = jnp.broadcast_to(jnp.asarray(innovation_sd), (n_processes,))
         post_init = numpyro.sample(
             f"{name_prefix}_state",
@@ -505,11 +509,15 @@ class DifferencedAR1(TemporalProcess):
                 autoreg=autoreg_broadcast,
                 scale=scale_broadcast,
                 initial_loc=initial_value,
-                num_steps=n_timepoints - 1,
+                initial_diff=init_rates,
+                num_steps=n_timepoints - 2,
             ),
         )
-        full_path = jnp.concatenate([initial_value[:, jnp.newaxis], post_init], axis=-1)
-        return full_path.T
+        full_path = jnp.concatenate(
+            [initial_value[:, jnp.newaxis], x1[:, jnp.newaxis], post_init], axis=-1
+        )
+        # ensure time is the leading axis (length n_timepoints)
+        return jnp.moveaxis(full_path, -1, 0)
 
 
 class RandomWalk(TemporalProcess):
@@ -650,7 +658,8 @@ class RandomWalk(TemporalProcess):
             ),
         )
         x = jnp.concatenate([initial_value[:, jnp.newaxis], post_init], axis=-1)
-        return x.T
+        # ensure time is the leading axis (length n_timepoints)
+        return jnp.moveaxis(x, -1, 0)
 
 
 class StepwiseTemporalProcess(TemporalProcess):

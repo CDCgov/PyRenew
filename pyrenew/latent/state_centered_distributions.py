@@ -26,8 +26,8 @@ class StateRandomWalk(Distribution):
     The sampled value is the post-initial path
     $[x_1, x_2, \ldots, x_{\mathrm{num\_steps}}]$ of length ``num_steps``.
 
-    This is a location shift of [`numpyro.distributions.GaussianRandomWalk`][]:
-    a zero-mean Gaussian random walk supplies the path, and ``initial_loc``
+    This is a location shift of [numpyro.distributions.continuous.GaussianRandomWalk][].
+    A zero-mean Gaussian random walk supplies the path, and ``initial_loc``
     offsets it so the walk is centered on the initial state rather than zero.
     """
 
@@ -155,7 +155,7 @@ class StateAR1(Distribution):
     num_steps
         Length of the post-initial path. Must be a positive integer.
     validate_args
-        Forwarded to the base [`numpyro.distributions.Distribution`][].
+        Forwarded to the base [numpyro.distributions.distribution.Distribution][].
     """
 
     arg_constraints = {
@@ -196,8 +196,7 @@ class StateAR1(Distribution):
             jnp.shape(scale),
             jnp.shape(initial_loc),
         )
-        event_shape = (num_steps,)
-        super().__init__(batch_shape, event_shape, validate_args=validate_args)
+        super().__init__(batch_shape, (num_steps,), validate_args=validate_args)
 
     def sample(self, key: jax.Array, sample_shape: tuple[int, ...] = ()) -> ArrayLike:
         """
@@ -211,8 +210,10 @@ class StateAR1(Distribution):
         assert is_prng_key(key)
 
         per_step_shape = sample_shape + self.batch_shape
-        autoreg = jnp.broadcast_to(jnp.asarray(self.autoreg), per_step_shape)
-        scale = jnp.broadcast_to(jnp.asarray(self.scale), per_step_shape)
+        autoreg = jnp.asarray(self.autoreg)
+        scale = jnp.asarray(self.scale)
+        # lax.scan requires a shape-invariant carry; broadcast the initial
+        # state to per_step_shape so it matches the per-step output shape.
         initial_loc = jnp.broadcast_to(jnp.asarray(self.initial_loc), per_step_shape)
 
         noise = random.normal(key, shape=(self.num_steps,) + per_step_shape)
@@ -224,7 +225,9 @@ class StateAR1(Distribution):
             return new, new
 
         _, xs = lax.scan(step, initial_loc, noise)
-        return jnp.moveaxis(xs, 0, -1)
+        return jnp.moveaxis(
+            xs, 0, -1
+        )  # ensure time is the trailing axis, length num_steps
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
@@ -246,12 +249,15 @@ class StateAR1(Distribution):
         autoreg = jnp.asarray(self.autoreg)
         initial_loc = jnp.asarray(self.initial_loc)
 
-        init_with_event = jnp.expand_dims(initial_loc, -1)
-        init_bcast = jnp.broadcast_to(init_with_event, value.shape[:-1] + (1,))
-        v = jnp.concatenate([init_bcast, value], axis=-1)
+        per_step_shape = jnp.shape(value)[:-1]
+        initial_loc = jnp.broadcast_to(initial_loc, per_step_shape)
 
+        # add length-1 trailing time dimension to fixed-in-time parameters
+        initial_loc_t = jnp.expand_dims(initial_loc, -1)
         scale_t = jnp.expand_dims(scale, -1)
         autoreg_t = jnp.expand_dims(autoreg, -1)
+
+        v = jnp.concatenate([initial_loc_t, value], axis=-1)
         step_locs = autoreg_t * v[..., :-1]
         step_probs = Normal(step_locs, scale_t).log_prob(v[..., 1:])
         return jnp.sum(step_probs, axis=-1)
@@ -261,23 +267,24 @@ class StateDifferencedAR1(Distribution):
     r"""
     State-centered differenced AR(1) prior on a length-``num_steps`` post-initial path.
 
-    Generative form, given a deterministic initial state $x_0$ = ``initial_loc``:
+    Generative form, given a deterministic initial state $x_0$ = ``initial_loc``
+    and initial first difference $d_1$ = ``initial_diff``, so that
+    $x_1 = x_0 + d_1$:
 
-    $$
-    x_1 \sim \mathrm{Normal}(x_0, \sigma_{\text{stat}})
-    $$
     $$
     x_t \sim \mathrm{Normal}(x_{t-1} + \phi \, (x_{t-1} - x_{t-2}), \sigma),
     \quad t \geq 2
     $$
 
-    where $\sigma_{\text{stat}} = \sigma / \sqrt{1 - \phi^2}$, $\phi$ is
-    ``autoreg``, and $\sigma$ is ``scale``.
+    where $\phi$ is ``autoreg`` and $\sigma$ is ``scale``.
 
     The sampled value is the post-initial path
-    $[x_1, x_2, \ldots, x_{\mathrm{num\_steps}}]$ of length ``num_steps``.
-    The initial state $x_0$ is not part of the sample; it is supplied as
-    ``initial_loc`` and used to score the first transition.
+    $[x_2, x_3, \ldots, x_{\mathrm{num\_steps} + 1}]$ of length ``num_steps``.
+    The initial state $x_0$ and first difference $d_1$ are not part of the
+    sample; they are supplied at construction and used to score the first
+    post-initial transition. A random initial difference drawn from the
+    stationary distribution can be handled by the calling temporal process as a
+    separate sample site, matching the innovation parameterization.
 
     Parameters
     ----------
@@ -287,21 +294,26 @@ class StateDifferencedAR1(Distribution):
     scale
         Innovation standard deviation $\sigma$. Must be positive.
     initial_loc
-        Deterministic initial state $x_0$. Used to score the first
-        transition; not itself sampled.
+        Deterministic initial state $x_0$. Not itself sampled. Defaults to
+        ``0.0``.
+    initial_diff
+        Deterministic initial first difference $d_1 = x_1 - x_0$. Together with
+        ``initial_loc`` it fixes $x_1 = x_0 + d_1$, used to score the first
+        post-initial transition. Not itself sampled. Defaults to ``0.0``.
     num_steps
         Length of the post-initial path. Must be a positive integer.
     validate_args
-        Forwarded to the base [`numpyro.distributions.Distribution`][].
+        Forwarded to the base [numpyro.distributions.distribution.Distribution][].
     """
 
     arg_constraints = {
         "autoreg": constraints.real,
         "scale": constraints.positive,
         "initial_loc": constraints.real,
+        "initial_diff": constraints.real,
     }
     support = constraints.real_vector
-    reparametrized_params = ["autoreg", "scale", "initial_loc"]
+    reparametrized_params = ["autoreg", "scale", "initial_loc", "initial_diff"]
     pytree_aux_fields = ("num_steps",)
 
     def __init__(
@@ -309,6 +321,7 @@ class StateDifferencedAR1(Distribution):
         autoreg: ArrayLike,
         scale: ArrayLike,
         initial_loc: ArrayLike = 0.0,
+        initial_diff: ArrayLike = 0.0,
         num_steps: int = 1,
         *,
         validate_args: bool | None = None,
@@ -326,12 +339,14 @@ class StateDifferencedAR1(Distribution):
         self.autoreg = autoreg
         self.scale = scale
         self.initial_loc = initial_loc
+        self.initial_diff = initial_diff
         self.num_steps = num_steps
 
         batch_shape = lax.broadcast_shapes(
             jnp.shape(autoreg),
             jnp.shape(scale),
             jnp.shape(initial_loc),
+            jnp.shape(initial_diff),
         )
         event_shape = (num_steps,)
         super().__init__(batch_shape, event_shape, validate_args=validate_args)
@@ -348,17 +363,14 @@ class StateDifferencedAR1(Distribution):
         assert is_prng_key(key)
 
         per_step_shape = sample_shape + self.batch_shape
-        autoreg = jnp.broadcast_to(jnp.asarray(self.autoreg), per_step_shape)
-        scale = jnp.broadcast_to(jnp.asarray(self.scale), per_step_shape)
-        initial_loc = jnp.broadcast_to(jnp.asarray(self.initial_loc), per_step_shape)
-        stationary_sd = scale / jnp.sqrt(1 - autoreg**2)
+        autoreg = jnp.asarray(self.autoreg)
+        scale = jnp.asarray(self.scale)
+        # lax.scan requires a shape-invariant carry; broadcast the two initial
+        # states to per_step_shape so they match the per-step output shape.
+        x0 = jnp.broadcast_to(jnp.asarray(self.initial_loc), per_step_shape)
+        x1 = x0 + jnp.broadcast_to(jnp.asarray(self.initial_diff), per_step_shape)
 
         noise = random.normal(key, shape=(self.num_steps,) + per_step_shape)
-        z1 = noise[0]
-        x1 = initial_loc + stationary_sd * z1
-
-        if self.num_steps == 1:
-            return x1[..., jnp.newaxis]
 
         def step(
             carry: tuple[ArrayLike, ArrayLike], z_t: ArrayLike
@@ -367,9 +379,8 @@ class StateDifferencedAR1(Distribution):
             new = prev_1 + autoreg * (prev_1 - prev_2) + scale * z_t
             return (prev_1, new), new
 
-        _, xs = lax.scan(step, (initial_loc, x1), noise[1:])
-        path_time_first = jnp.concatenate([x1[jnp.newaxis], xs], axis=0)
-        return jnp.moveaxis(path_time_first, 0, -1)
+        _, xs = lax.scan(step, (x0, x1), noise)
+        return jnp.moveaxis(xs, 0, -1)
 
     @validate_sample
     def log_prob(self, value: ArrayLike) -> ArrayLike:
@@ -389,18 +400,21 @@ class StateDifferencedAR1(Distribution):
         """
         scale = jnp.asarray(self.scale)
         autoreg = jnp.asarray(self.autoreg)
-        initial_loc = jnp.asarray(self.initial_loc)
-        stationary_sd = scale / jnp.sqrt(1 - autoreg**2)
+        x0 = jnp.asarray(self.initial_loc)
+        x1 = x0 + jnp.asarray(self.initial_diff)
 
-        init_prob = Normal(initial_loc, stationary_sd).log_prob(value[..., 0])
+        per_step_shape = jnp.shape(value)[:-1]
+        x0 = jnp.broadcast_to(x0, per_step_shape)
+        x1 = jnp.broadcast_to(x1, per_step_shape)
 
-        init_with_event = jnp.expand_dims(initial_loc, -1)
-        init_bcast = jnp.broadcast_to(init_with_event, value.shape[:-1] + (1,))
-        v = jnp.concatenate([init_bcast, value], axis=-1)
-
-        prev_delta = v[..., 1:-1] - v[..., :-2]
+        # add length-1 trailing time dimension to fixed-in-time parameters
+        x0_t = jnp.expand_dims(x0, -1)
+        x1_t = jnp.expand_dims(x1, -1)
         scale_t = jnp.expand_dims(scale, -1)
         autoreg_t = jnp.expand_dims(autoreg, -1)
+
+        v = jnp.concatenate([x0_t, x1_t, value], axis=-1)
+        prev_delta = v[..., 1:-1] - v[..., :-2]
         means = v[..., 1:-1] + autoreg_t * prev_delta
         step_probs = Normal(means, scale_t).log_prob(v[..., 2:])
-        return init_prob + jnp.sum(step_probs, axis=-1)
+        return jnp.sum(step_probs, axis=-1)
