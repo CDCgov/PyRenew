@@ -22,13 +22,13 @@ Assume the generation interval distribution has finite support over lags $\tau =
 Let $w_\tau$ denote the probability that a secondary infection occurs $\tau$ days after infection in the primary case, with
 
 $$
-\sum_{\tau=1}^{G} w_\tau = 1, \qquad w_\tau \ge 0.
+  \sum_{\tau=1}^{G} w_\tau = 1, \qquad w_\tau \ge 0.
 $$
 
 Then the renewal equation is
 
 $$
-I(t) = \mathcal{R}(t) \sum_{\tau=1}^{G} I(t - \tau)\, w_\tau.
+  I(t) = \mathcal{R}(t) \sum_{\tau=1}^{G} I(t - \tau)\, w_\tau.
 $$
 
 Here, $\tau$ indexes the generation interval.
@@ -44,13 +44,13 @@ Assume the delay from infection to observation has finite support over lags $d =
 Let $\pi_d$ denote the probability that an infection is observed $d$ days later, with
 
 $$
-\sum_{d=0}^{D} \pi_d = 1, \qquad \pi_d \ge 0.
+  \sum_{d=0}^{D} \pi_d = 1, \qquad \pi_d \ge 0.
 $$
 
 Then the observation equation is
 
 $$
-\mu(t) = \alpha \sum_{d=0}^{D} I(t - d)\, \pi_d.
+  \mu(t) = \alpha \sum_{d=0}^{D} I(t - d)\, \pi_d.
 $$
 
 Here, $d$ indexes lags in the infection-to-observation delay distribution.
@@ -63,7 +63,7 @@ Let $Y(t)$ denote the observed number of events at time $t$.
 We model observations as draws from a count distribution with central value (typically mean) $\mu(t)$:
 
 $$
-Y(t) \sim \text{Distribution}(\mu(t), \theta).
+  Y(t) \sim \text{Distribution}(\mu(t), \theta).
 $$
 
 One possible choice is the Poisson distribution, which assumes the variance equals the mean.

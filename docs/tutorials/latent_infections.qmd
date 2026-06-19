@@ -64,13 +64,13 @@ PyRenew models latent infections using the **renewal equation**, which describes
 Assume the generation interval has finite support over lags $\tau = 1, \dots, G$, with
 
 $$
-\sum_{\tau=1}^{G} w_\tau = 1, \qquad w_\tau \ge 0.
+  \sum_{\tau=1}^{G} w_\tau = 1, \qquad w_\tau \ge 0.
 $$
 
 Then the renewal equation is
 
 $$
-I(t) = \mathcal{R}(t) \sum_{\tau=1}^{G} I(t - \tau)\, w_\tau.
+  I(t) = \mathcal{R}(t) \sum_{\tau=1}^{G} I(t - \tau)\, w_\tau.
 $$
 
 Here, $\tau$ indexes lags in the generation interval.
@@ -126,8 +126,8 @@ print(f"Generation interval: {len(gen_int_pmf)} days, mean = {mean_gi:.1f}")
 
 ```{python}
 #| label: fig-generation-interval
-#| fig-cap: COVID-like generation interval distribution. The support is shown in
-#|   whole days since infection of the primary case.
+#| fig-cap: COVID-like generation interval distribution.
+#|   The support is shown in whole days since infection of the primary case.
 
 gi_df = pd.DataFrame({"day": days, "probability": np.array(gen_int_pmf)})
 
@@ -156,8 +156,8 @@ Let $\tau = 0, 1, \ldots, n_{\text{init}} - 1$ index positions in the initializa
 Then:
 
 $$
-I_{\text{init}}(\tau) = I_0 \cdot e^{r \cdot \tau}, \quad \tau = 0, 1,
-\ldots, n_{\text{init}} - 1
+  I_{\text{init}}(\tau) = I_0 \cdot e^{r \cdot \tau}, \quad \tau = 0, 1,
+  \ldots, n_{\text{init}} - 1
 $$
 
 where $r$ is the asymptotic growth rate implied by the reproduction number at the start of the observation period, $\mathcal{R}(t=0) = e^{\text{log\_rt\_time\_0}}$, and the generation interval.
@@ -210,11 +210,10 @@ init_df = pd.DataFrame(init_data)
 
 ```{python}
 #| label: fig-backprojection
-#| fig-cap: Initialization vectors for three values of log_rt_time_0. Days are
-#|   numbered relative to day 0, which is when the temporal process and renewal
-#|   equation take over. When log_rt_time_0 = 0 (stable), the vector is flat.
-#|   Nonzero values produce exponential growth or decay in the pre-observation
-#|   period.
+#| fig-cap: Initialization vectors for three values of log_rt_time_0.
+#|   Days are numbered relative to day 0, which is when the temporal process and renewal equation take over.
+#|   When log_rt_time_0 = 0 (stable), the vector is flat.
+#|   Nonzero values produce exponential growth or decay in the pre-observation period.
 
 (
     p9.ggplot(init_df, p9.aes(x="day", y="infections", color="config"))
@@ -354,7 +353,7 @@ def rt_summary(rt_array, label):
 The simplest temporal process.
 
 $$
-x_t = x_{t-1} + \varepsilon_t, \quad \varepsilon_t \sim N(0, \sigma)
+  x_t = x_{t-1} + \varepsilon_t, \quad \varepsilon_t \sim N(0, \sigma)
 $$
 
 There is no tendency to return to any particular value.
@@ -395,7 +394,7 @@ An autoregressive process of order 1.
 Each day, $\log \mathcal{R}(t)$ is pulled toward zero (i.e., $\mathcal{R} = 1$) by the autoregressive coefficient $\phi$:
 
 $$
-x_t = \phi \, x_{t-1} + \varepsilon_t, \quad \varepsilon_t \sim N(0, \sigma)
+  x_t = \phi \, x_{t-1} + \varepsilon_t, \quad \varepsilon_t \sim N(0, \sigma)
 $$
 
 When $|\phi| < 1$, the process is **stationary**: its variance does not grow with time but is bounded at $\sigma^2 / (1 - \phi^2)$.
@@ -442,7 +441,7 @@ DifferencedAR1 models *changes* in $\mathcal{R}(t)$ as an autoregressive process
 In terms of increments,
 
 $$
-\Delta x_t = \texttt{autoreg} \cdot \Delta x_{t-1} + \varepsilon_t, \quad x_t = x_{t-1} + \Delta x_t,
+  \Delta x_t = \texttt{autoreg} \cdot \Delta x_{t-1} + \varepsilon_t, \quad x_t = x_{t-1} + \Delta x_t,
 $$
 
 so the autoregressive structure applies to the *rate of change* rather than the level.
@@ -532,8 +531,7 @@ comparison_df["process"] = pd.Categorical(
 
 ```{python}
 #| label: fig-comparison
-#| fig-cap: Side-by-side comparison of all three temporal processes using median
-#|   trajectories and 90% prior intervals.
+#| fig-cap: Side-by-side comparison of all three temporal processes using median trajectories and 90% prior intervals.
 
 (
     p9.ggplot(
@@ -606,7 +604,7 @@ The `innovation_sd` parameter sets the scale of shocks to the *rate of change* i
 In terms of increments, where $\phi =$ `autoreg`
 
 $$
-\Delta x_t = \phi \cdot \Delta x_{t-1} + \varepsilon_t
+  \Delta x_t = \phi \cdot \Delta x_{t-1} + \varepsilon_t
 $$
 
 `autoreg` ($\phi$) determines how strongly each change carries forward into the next.
