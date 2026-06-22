@@ -32,7 +32,7 @@ dev = [
     "pytest>=9.0.3",
     "pytest-cov>=6.3.0",
     "ruff>=0.15.16",
-    "scipy>=1.16.1",
+    "scipy>=1.18.0",
 ]
 
 [build-system]
