@@ -8,7 +8,7 @@ From this, it infers $\mathcal{R}(t)$, the time-varying reproduction number, whi
 The core renewal equation is:
 
 $$
-I(t) = \mathcal{R}(t) \sum_{s} I(t-s) \, w(s)
+  I(t) = \mathcal{R}(t) \sum_{s} I(t-s) \, w(s)
 $$
 
 where $w(s)$ is the generation interval distribution: the probability that $s$ time units separate infection in an index case and a secondary case.
@@ -17,7 +17,7 @@ However inference is complicated by the fact that observational data require the
 The observation equation links infections to expected observations:
 
 $$
-\mu(t) = \alpha \sum_{s} I(t-s) \, \pi(s)
+  \mu(t) = \alpha \sum_{s} I(t-s) \, \pi(s)
 $$
 
 where $\alpha$ is the ascertainment rate and $\pi(s)$ is the delay distribution from infection to observation.

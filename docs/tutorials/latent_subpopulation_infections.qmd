@@ -59,7 +59,7 @@ As in the single-population case, infections evolve according to the renewal equ
 For each subpopulation $k = 1, \dots, K$, we define
 
 $$
-I_k(t) = \mathcal{R}_k(t) \sum_{\tau=1}^{G} I_k(t - \tau)\, w_\tau,
+  I_k(t) = \mathcal{R}_k(t) \sum_{\tau=1}^{G} I_k(t - \tau)\, w_\tau,
 $$
 
 where:
@@ -75,7 +75,7 @@ The generation interval is shared across all subpopulations.
 The reproduction numbers are modeled through a hierarchical decomposition:
 
 $$
-\log \mathcal{R}_k(t) = \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t),
+  \log \mathcal{R}_k(t) = \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t),
 $$
 
 where:
@@ -98,13 +98,13 @@ Each subpopulation produces its own infection trajectory $I_k(t)$.
 These are combined into an aggregate infection process using population fractions $p_k$, where $p_k$ is the fraction of the total population in subpopulation $k$, with
 
 $$
-\sum_{k=1}^{K} p_k = 1, \qquad p_k \ge 0.
+  \sum_{k=1}^{K} p_k = 1, \qquad p_k \ge 0.
 $$
 
 The aggregate infection trajectory is then
 
 $$
-I_{\text{aggregate}}(t) = \sum_{k=1}^{K} p_k \, I_k(t).
+  I_{\text{aggregate}}(t) = \sum_{k=1}^{K} p_k \, I_k(t).
 $$
 
 The aggregate trajectory $I_{\text{aggregate}}(t)$ is then passed to observation processes, which transform it into expected observations as described in the observation model tutorials.
@@ -146,10 +146,10 @@ Two temporal processes define the evolution of $\log \mathcal{R}_k(t)$:
 Together, these define the full set of reproduction numbers:
 
 $$
-\log \mathcal{R}_k(t)
-= \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t),
-\qquad
-\mathcal{R}_k(t) = \exp\big(\log \mathcal{R}_k(t)\big).
+  \log \mathcal{R}_k(t)
+  = \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t),
+  \qquad
+  \mathcal{R}_k(t) = \exp\big(\log \mathcal{R}_k(t)\big).
 $$
 
 ### Population structure
