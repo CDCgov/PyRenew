@@ -44,9 +44,7 @@ class RandomWalk(DifferencedProcess):
         """
         super().__init__(
             name=name,
-            fundamental_process=IIDRandomSequence(
-                name=f"{name}_iid_seq", element_rv=step_rv
-            ),
+            fundamental_process=IIDRandomSequence(name="iid_seq", element_rv=step_rv),
             differencing_order=1,
             **kwargs,
         )
@@ -85,7 +83,7 @@ class StandardNormalRandomWalk(RandomWalk):
         super().__init__(
             name=name,
             step_rv=DistributionalVariable(
-                name=f"{name}_step", distribution=dist.Normal(0.0, 1.0)
+                name="step", distribution=dist.Normal(0.0, 1.0)
             ),
             **kwargs,
         )
