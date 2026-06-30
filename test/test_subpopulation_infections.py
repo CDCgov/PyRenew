@@ -1,3 +1,4 @@
+# numpydoc ignore=GL08
 """
 Unit tests for SubpopulationInfections.
 """
@@ -8,7 +9,29 @@ import pytest
 
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import Infections, InfectionsWithFeedback, SubpopulationInfections
+from pyrenew.latent.infection_process import InfectionProcessSample
 from test.test_helpers import fixed_random_walk
+
+
+class KwargRequiredInfectionProcess:
+    """Test infection process that requires forwarded kwargs."""
+
+    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
+        scale = kwargs["infection_scale"]
+        return InfectionProcessSample(
+            post_initialization_infections=Rt * scale,
+            rt=Rt,
+        )
+
+
+class MissingFieldInfectionProcess:
+    """Test infection process that returns an invalid sample."""
+
+    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
+        return InfectionProcessSample(
+            post_initialization_infections=None,
+            rt=Rt,
+        )
 
 
 class TestSubpopulationInfectionsSample:
@@ -213,6 +236,40 @@ class TestSubpopulationInfectionsSample:
         assert sample.all_subpops.shape == (n_total, len(fractions))
         assert jnp.all(sample.aggregate > 0)
         assert jnp.all(sample.all_subpops > 0)
+
+    def test_forwards_kwargs_to_infection_process(self, subpopulation_infections):
+        """Additional sample kwargs are forwarded to infection_process."""
+        fractions = jnp.array([0.3, 0.25, 0.45])
+        subpopulation_infections.infection_process = KwargRequiredInfectionProcess()
+
+        with numpyro.handlers.seed(rng_seed=42):
+            sample = subpopulation_infections.sample(
+                n_days_post_init=30,
+                subpop_fractions=fractions,
+                infection_scale=0.5,
+            )
+
+        assert sample.all_subpops.shape == (
+            subpopulation_infections.n_initialization_points + 30,
+            len(fractions),
+        )
+
+    def test_rejects_infection_process_sample_with_missing_fields(
+        self,
+        subpopulation_infections,
+    ):
+        """Custom infection processes must return all required sample fields."""
+        subpopulation_infections.infection_process = MissingFieldInfectionProcess()
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(
+                ValueError,
+                match="must return both post_initialization_infections and rt",
+            ):
+                subpopulation_infections.sample(
+                    n_days_post_init=30,
+                    subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
+                )
 
 
 class TestSubpopulationInfectionsValidation:

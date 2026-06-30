@@ -191,7 +191,7 @@ class PopulationInfections(BaseLatentInfectionProcess):
             day of week by subtracting n_initialization_points. Forwarded to
             ``single_rt_process``. See [pyrenew.latent.TemporalProcess][].
         **kwargs
-            Additional arguments (unused, for compatibility)
+            Additional keyword arguments forwarded to ``infection_process``.
 
         Returns
         -------
@@ -247,7 +247,16 @@ class PopulationInfections(BaseLatentInfectionProcess):
             Rt=rt_single[self.n_initialization_points :, 0],
             I0=I0_init,
             gen_int=gen_int,
+            **kwargs,
         )
+        if (
+            infection_sample.post_initialization_infections is None
+            or infection_sample.rt is None
+        ):
+            raise ValueError(
+                "infection_process.sample(...) must return both "
+                "post_initialization_infections and rt."
+            )
         post_init_infections = infection_sample.post_initialization_infections
         rt_single_effective = jnp.concatenate(
             [

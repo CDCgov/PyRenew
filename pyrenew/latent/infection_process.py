@@ -21,8 +21,8 @@ class InfectionProcessSample(NamedTuple):
         feedback or depletion may return an adjusted Rt.
     """
 
-    post_initialization_infections: ArrayLike | None = None
-    rt: ArrayLike | None = None
+    post_initialization_infections: ArrayLike
+    rt: ArrayLike
 
 
 @runtime_checkable
