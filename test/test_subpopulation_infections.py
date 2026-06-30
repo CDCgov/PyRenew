@@ -13,27 +13,6 @@ from pyrenew.latent.infection_process import InfectionProcessSample
 from test.test_helpers import fixed_random_walk
 
 
-class KwargRequiredInfectionProcess:
-    """Test infection process that requires forwarded kwargs."""
-
-    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
-        scale = kwargs["infection_scale"]
-        return InfectionProcessSample(
-            post_initialization_infections=Rt * scale,
-            rt=Rt,
-        )
-
-
-class MissingFieldInfectionProcess:
-    """Test infection process that returns an invalid sample."""
-
-    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
-        return InfectionProcessSample(
-            post_initialization_infections=None,
-            rt=Rt,
-        )
-
-
 class TestSubpopulationInfectionsSample:
     """Test sample method with population structure at sample time."""
 
@@ -239,19 +218,51 @@ class TestSubpopulationInfectionsSample:
 
     def test_forwards_kwargs_to_infection_process(self, subpopulation_infections):
         """Additional sample kwargs are forwarded to infection_process."""
+
+        class KwargRequiredInfectionProcess:
+            """Infection process that requires forwarded kwargs, for testing"""
+
+            def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
+                scale = kwargs["infection_scale"]
+                return InfectionProcessSample(
+                    post_initialization_infections=Rt * scale,
+                    rt=Rt,
+                )
+
         fractions = jnp.array([0.3, 0.25, 0.45])
+        infection_scale = 0.5
         subpopulation_infections.infection_process = KwargRequiredInfectionProcess()
 
         with numpyro.handlers.seed(rng_seed=42):
-            sample = subpopulation_infections.sample(
-                n_days_post_init=30,
-                subpop_fractions=fractions,
-                infection_scale=0.5,
-            )
+            with numpyro.handlers.trace() as trace:
+                sample = subpopulation_infections.sample(
+                    n_days_post_init=30,
+                    subpop_fractions=fractions,
+                    infection_scale=infection_scale,
+                )
 
         assert sample.all_subpops.shape == (
             subpopulation_infections.n_initialization_points + 30,
             len(fractions),
+        )
+        assert jnp.allclose(
+            sample.all_subpops[subpopulation_infections.n_initialization_points :],
+            (
+                trace["subpopulation::rt_subpop_effective"]["value"][
+                    subpopulation_infections.n_initialization_points :
+                ]
+                * infection_scale
+            ),
+        )
+
+
+class MissingFieldInfectionProcess:
+    """Infection process that returns an invalid sample, for testing"""
+
+    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
+        return InfectionProcessSample(
+            post_initialization_infections=None,
+            rt=Rt,
         )
 
     def test_rejects_infection_process_sample_with_missing_fields(

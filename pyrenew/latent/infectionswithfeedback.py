@@ -7,8 +7,6 @@ import pyrenew.latent.infection_functions as inf
 from pyrenew.latent.infection_process import InfectionProcessSample
 from pyrenew.metaclass import RandomVariable
 
-InfectionsRtFeedbackSample = InfectionProcessSample
-
 
 class InfectionsWithFeedback(RandomVariable):
     r"""
@@ -104,7 +102,7 @@ class InfectionsWithFeedback(RandomVariable):
         I0: ArrayLike,
         gen_int: ArrayLike,
         **kwargs: object,
-    ) -> InfectionsRtFeedbackSample:
+    ) -> InfectionProcessSample:
         """
         Samples infections given Rt, initial infections, and generation
         interval.
@@ -125,8 +123,8 @@ class InfectionsWithFeedback(RandomVariable):
 
         Returns
         -------
-        InfectionsWithFeedback
-            Named tuple with "infections".
+        InfectionProcessSample
+            Named tuple with post-initialization infections and Rt.
         """
         if I0.shape[0] < gen_int.size:
             raise ValueError(
@@ -179,7 +177,7 @@ class InfectionsWithFeedback(RandomVariable):
             reversed_infection_feedback_pmf=inf_fb_pmf_rev,
         )
 
-        return InfectionsRtFeedbackSample(
+        return InfectionProcessSample(
             post_initialization_infections=post_initialization_infections,
             rt=Rt_adj,
         )

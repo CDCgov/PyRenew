@@ -9,8 +9,6 @@ import pyrenew.latent.infection_functions as inf
 from pyrenew.latent.infection_process import InfectionProcessSample
 from pyrenew.metaclass import RandomVariable
 
-InfectionsSample = InfectionProcessSample
-
 
 class Infections(RandomVariable):
     r"""Latent infections
@@ -53,7 +51,7 @@ class Infections(RandomVariable):
         I0: ArrayLike,
         gen_int: ArrayLike,
         **kwargs: object,
-    ) -> InfectionsSample:
+    ) -> InfectionProcessSample:
         r"""
         Sample infections given
         $\mathcal{R}(t)$, initial infections,
@@ -75,7 +73,7 @@ class Infections(RandomVariable):
 
         Returns
         -------
-        InfectionsSample
+        InfectionProcessSample
             A named tuple with a
             `post_initialization_infections` field.
         """
@@ -104,7 +102,7 @@ class Infections(RandomVariable):
             reversed_generation_interval_pmf=gen_int_rev,
         )
 
-        return InfectionsSample(
+        return InfectionProcessSample(
             post_initialization_infections=post_initialization_infections,
             rt=Rt,
         )

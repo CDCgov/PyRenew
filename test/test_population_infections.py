@@ -16,7 +16,7 @@ from test.test_helpers import fixed_ar1, fixed_random_walk
 
 
 class KwargRequiredInfectionProcess:
-    """Test infection process that requires forwarded kwargs."""
+    """Infection process that requires forwarded kwargs, for testing."""
 
     def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
         scale = kwargs["infection_scale"]
@@ -27,7 +27,7 @@ class KwargRequiredInfectionProcess:
 
 
 class MissingFieldInfectionProcess:
-    """Test infection process that returns an invalid sample."""
+    """Infection process that returns an invalid sample, for testing."""
 
     def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
         return InfectionProcessSample(
@@ -204,9 +204,9 @@ class TestPopulationInfectionsSample:
         with pytest.raises(ValueError, match="single_rt_process must return shape"):
             process.sample(n_days_post_init=10)
 
-    def test_explicit_infections_process_matches_default(self, gen_int_rv):
-        """Default infection process is equivalent to explicit Infections."""
-        default_process = PopulationInfections(
+    def test_default_infection_process_is_infections(self, gen_int_rv):
+        """Default infection process is ordinary renewal."""
+        process = PopulationInfections(
             name="population",
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", 0.001),
@@ -214,23 +214,8 @@ class TestPopulationInfectionsSample:
             single_rt_process=fixed_random_walk(innovation_sd=1.0),
             n_initialization_points=7,
         )
-        explicit_process = PopulationInfections(
-            name="population",
-            gen_int_rv=gen_int_rv,
-            I0_rv=DeterministicVariable("I0", 0.001),
-            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-            single_rt_process=fixed_random_walk(innovation_sd=1.0),
-            n_initialization_points=7,
-            infection_process=Infections(name="infections"),
-        )
 
-        with numpyro.handlers.seed(rng_seed=42):
-            default_sample = default_process.sample(n_days_post_init=30)
-        with numpyro.handlers.seed(rng_seed=42):
-            explicit_sample = explicit_process.sample(n_days_post_init=30)
-
-        assert jnp.allclose(default_sample.aggregate, explicit_sample.aggregate)
-        assert jnp.allclose(default_sample.all_subpops, explicit_sample.all_subpops)
+        assert isinstance(process.infection_process, Infections)
 
     def test_supports_infections_with_feedback_process(self, gen_int_rv):
         """PopulationInfections can delegate to InfectionsWithFeedback."""
@@ -252,13 +237,18 @@ class TestPopulationInfectionsSample:
         )
 
         with numpyro.handlers.seed(rng_seed=42):
-            sample = process.sample(n_days_post_init=30)
+            with numpyro.handlers.trace() as trace:
+                sample = process.sample(n_days_post_init=30)
 
         n_total = process.n_initialization_points + 30
         assert sample.aggregate.shape == (n_total,)
         assert sample.all_subpops.shape == (n_total, 1)
         assert jnp.all(sample.aggregate > 0)
         assert jnp.all(sample.all_subpops > 0)
+        assert not jnp.allclose(
+            trace["population::rt_single"]["value"],
+            trace["population::rt_single_effective"]["value"],
+        )
 
     def test_forwards_kwargs_to_infection_process(self, population_infections):
         """Additional sample kwargs are forwarded to infection_process."""
