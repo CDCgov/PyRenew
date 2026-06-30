@@ -1,31 +1,13 @@
 # numpydoc ignore=GL08
 
-from typing import NamedTuple
-
 import jax.numpy as jnp
-from numpy.typing import ArrayLike
+from jax.typing import ArrayLike
 
 import pyrenew.latent.infection_functions as inf
+from pyrenew.latent.infection_process import InfectionProcessSample
 from pyrenew.metaclass import RandomVariable
 
-
-class InfectionsRtFeedbackSample(NamedTuple):
-    """
-    A container for holding the output from the InfectionsWithFeedback.
-
-    Attributes
-    ----------
-    post_initialization_infections
-        The estimated latent infections. Defaults to None.
-    rt
-        The adjusted reproduction number. Defaults to None.
-    """
-
-    post_initialization_infections: ArrayLike | None = None
-    rt: ArrayLike | None = None
-
-    def __repr__(self) -> str:
-        return f"InfectionsSample(post_initialization_infections={self.post_initialization_infections}, rt={self.rt})"
+InfectionsRtFeedbackSample = InfectionProcessSample
 
 
 class InfectionsWithFeedback(RandomVariable):

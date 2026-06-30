@@ -7,7 +7,7 @@ import numpyro
 import pytest
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent import WeeklyTemporalProcess
+from pyrenew.latent import Infections, InfectionsWithFeedback, WeeklyTemporalProcess
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.time import MMWR_WEEK
 from test.test_helpers import fixed_ar1, fixed_random_walk
@@ -58,6 +58,7 @@ class TestPopulationInfectionsSample:
             "population::I0_init",
             "population::log_rt_single",
             "population::rt_single",
+            "population::rt_single_effective",
             "population::infections_aggregate",
         ]
         for site in expected_sites:
@@ -73,6 +74,18 @@ class TestPopulationInfectionsSample:
         rt = trace["population::rt_single"]["value"]
 
         assert jnp.allclose(rt, jnp.exp(log_rt), atol=1e-6)
+
+    def test_default_effective_rt_matches_rt_single(self, population_infections):
+        """Plain renewal records effective Rt equal to raw Rt."""
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                population_infections.sample(n_days_post_init=30)
+
+        rt = trace["population::rt_single"]["value"]
+        rt_effective = trace["population::rt_single_effective"]["value"]
+
+        assert rt_effective.shape == rt.shape
+        assert jnp.allclose(rt_effective, rt, atol=1e-6)
 
     def test_default_fractions_used_when_none(self, population_infections):
         """Test that default fractions [1.0] are used when not provided."""
@@ -167,6 +180,62 @@ class TestPopulationInfectionsSample:
 
         with pytest.raises(ValueError, match="single_rt_process must return shape"):
             process.sample(n_days_post_init=10)
+
+    def test_explicit_infections_process_matches_default(self, gen_int_rv):
+        """Default infection process is equivalent to explicit Infections."""
+        default_process = PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            single_rt_process=fixed_random_walk(innovation_sd=1.0),
+            n_initialization_points=7,
+        )
+        explicit_process = PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            single_rt_process=fixed_random_walk(innovation_sd=1.0),
+            n_initialization_points=7,
+            infection_process=Infections(name="infections"),
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            default_sample = default_process.sample(n_days_post_init=30)
+        with numpyro.handlers.seed(rng_seed=42):
+            explicit_sample = explicit_process.sample(n_days_post_init=30)
+
+        assert jnp.allclose(default_sample.aggregate, explicit_sample.aggregate)
+        assert jnp.allclose(default_sample.all_subpops, explicit_sample.all_subpops)
+
+    def test_supports_infections_with_feedback_process(self, gen_int_rv):
+        """PopulationInfections can delegate to InfectionsWithFeedback."""
+        process = PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            single_rt_process=fixed_random_walk(innovation_sd=1.0),
+            n_initialization_points=7,
+            infection_process=InfectionsWithFeedback(
+                name="infections",
+                infection_feedback_strength=DeterministicVariable(
+                    "infection_feedback_strength",
+                    0.1,
+                ),
+                infection_feedback_pmf=gen_int_rv,
+            ),
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            sample = process.sample(n_days_post_init=30)
+
+        n_total = process.n_initialization_points + 30
+        assert sample.aggregate.shape == (n_total,)
+        assert sample.all_subpops.shape == (n_total, 1)
+        assert jnp.all(sample.aggregate > 0)
+        assert jnp.all(sample.all_subpops > 0)
 
 
 class TestPopulationInfectionsValidation:

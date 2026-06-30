@@ -11,6 +11,7 @@ import pytest
 from pyrenew.ascertainment import JointAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
+    InfectionsWithFeedback,
     PopulationInfections,
     StepwiseTemporalProcess,
     SubpopulationInfections,
@@ -282,6 +283,32 @@ class TestPyrenewBuilderConfiguration:
         # delay has 4 elements -> lookback_days = 3
         # max(3, 3) = 3
         assert n_init == 3
+
+    def test_configure_latent_passes_infection_process_to_latent(self):
+        """Builder passes infection_process through as a latent constructor option."""
+        builder = PyrenewBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+        infection_process = InfectionsWithFeedback(
+            name="infections",
+            infection_feedback_strength=DeterministicVariable(
+                "infection_feedback_strength",
+                0.1,
+            ),
+            infection_feedback_pmf=gen_int,
+        )
+
+        builder.configure_latent(
+            PopulationInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            single_rt_process=fixed_random_walk(innovation_sd=1.0),
+            infection_process=infection_process,
+        )
+
+        model = builder.build()
+
+        assert model.latent.infection_process is infection_process
 
 
 class TestMultiSignalModelSampling:
