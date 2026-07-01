@@ -1,3 +1,4 @@
+# numpydoc ignore=GL08
 """
 Unit tests for PopulationInfections.
 """
@@ -7,10 +8,32 @@ import numpyro
 import pytest
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent import WeeklyTemporalProcess
+from pyrenew.latent import Infections, InfectionsWithFeedback, WeeklyTemporalProcess
+from pyrenew.latent.infection_process import InfectionProcessSample
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.time import MMWR_WEEK
 from test.test_helpers import fixed_ar1, fixed_random_walk
+
+
+class KwargRequiredInfectionProcess:
+    """Infection process that requires forwarded kwargs, for testing."""
+
+    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
+        scale = kwargs["infection_scale"]
+        return InfectionProcessSample(
+            post_initialization_infections=Rt * scale,
+            rt=Rt,
+        )
+
+
+class MissingFieldInfectionProcess:
+    """Infection process that returns an invalid sample, for testing."""
+
+    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
+        return InfectionProcessSample(
+            post_initialization_infections=None,
+            rt=Rt,
+        )
 
 
 class TestPopulationInfectionsSample:
@@ -58,6 +81,7 @@ class TestPopulationInfectionsSample:
             "population::I0_init",
             "population::log_rt_single",
             "population::rt_single",
+            "population::rt_single_effective",
             "population::infections_aggregate",
         ]
         for site in expected_sites:
@@ -73,6 +97,18 @@ class TestPopulationInfectionsSample:
         rt = trace["population::rt_single"]["value"]
 
         assert jnp.allclose(rt, jnp.exp(log_rt), atol=1e-6)
+
+    def test_default_effective_rt_matches_rt_single(self, population_infections):
+        """Plain renewal records effective Rt equal to raw Rt."""
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                population_infections.sample(n_days_post_init=30)
+
+        rt = trace["population::rt_single"]["value"]
+        rt_effective = trace["population::rt_single_effective"]["value"]
+
+        assert rt_effective.shape == rt.shape
+        assert jnp.allclose(rt_effective, rt, atol=1e-6)
 
     def test_default_fractions_used_when_none(self, population_infections):
         """Test that default fractions [1.0] are used when not provided."""
@@ -167,6 +203,80 @@ class TestPopulationInfectionsSample:
 
         with pytest.raises(ValueError, match="single_rt_process must return shape"):
             process.sample(n_days_post_init=10)
+
+    def test_default_infection_process_is_infections(self, gen_int_rv):
+        """Default infection process is ordinary renewal."""
+        process = PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            single_rt_process=fixed_random_walk(innovation_sd=1.0),
+            n_initialization_points=7,
+        )
+
+        assert isinstance(process.infection_process, Infections)
+
+    def test_supports_infections_with_feedback_process(self, gen_int_rv):
+        """PopulationInfections can delegate to InfectionsWithFeedback."""
+        process = PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            single_rt_process=fixed_random_walk(innovation_sd=1.0),
+            n_initialization_points=7,
+            infection_process=InfectionsWithFeedback(
+                name="infections",
+                infection_feedback_strength=DeterministicVariable(
+                    "infection_feedback_strength",
+                    0.1,
+                ),
+                infection_feedback_pmf=gen_int_rv,
+            ),
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                sample = process.sample(n_days_post_init=30)
+
+        n_total = process.n_initialization_points + 30
+        assert sample.aggregate.shape == (n_total,)
+        assert sample.all_subpops.shape == (n_total, 1)
+        assert jnp.all(sample.aggregate > 0)
+        assert jnp.all(sample.all_subpops > 0)
+        assert not jnp.allclose(
+            trace["population::rt_single"]["value"],
+            trace["population::rt_single_effective"]["value"],
+        )
+
+    def test_forwards_kwargs_to_infection_process(self, population_infections):
+        """Additional sample kwargs are forwarded to infection_process."""
+        population_infections.infection_process = KwargRequiredInfectionProcess()
+
+        with numpyro.handlers.seed(rng_seed=42):
+            sample = population_infections.sample(
+                n_days_post_init=30,
+                infection_scale=0.5,
+            )
+
+        assert sample.aggregate.shape == (
+            population_infections.n_initialization_points + 30,
+        )
+
+    def test_rejects_infection_process_sample_with_missing_fields(
+        self,
+        population_infections,
+    ):
+        """Custom infection processes must return all required sample fields."""
+        population_infections.infection_process = MissingFieldInfectionProcess()
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(
+                ValueError,
+                match="must return both post_initialization_infections and rt",
+            ):
+                population_infections.sample(n_days_post_init=30)
 
 
 class TestPopulationInfectionsValidation:
