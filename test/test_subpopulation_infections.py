@@ -256,8 +256,8 @@ class TestSubpopulationInfectionsSample:
         )
 
 
-class MissingFieldInfectionProcess:
-    """Infection process that returns an invalid sample, for testing"""
+class MissingPostInitInfectionProcess:
+    """Infection process that omits post_initialization_infections, for testing"""
 
     def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
         return InfectionProcessSample(
@@ -265,12 +265,43 @@ class MissingFieldInfectionProcess:
             rt=Rt,
         )
 
-    def test_rejects_infection_process_sample_with_missing_fields(
+
+class MissingRtInfectionProcess:
+    """Infection process that omits rt, for testing"""
+
+    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
+        return InfectionProcessSample(
+            post_initialization_infections=Rt,
+            rt=None,
+        )
+
+
+class TestSubpopulationInfectionsMissingFields:
+    """Test rejection of infection process samples missing required fields."""
+
+    def test_rejects_missing_post_initialization_infections(
         self,
         subpopulation_infections,
     ):
-        """Custom infection processes must return all required sample fields."""
-        subpopulation_infections.infection_process = MissingFieldInfectionProcess()
+        """Custom infection processes must return post_initialization_infections."""
+        subpopulation_infections.infection_process = MissingPostInitInfectionProcess()
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with pytest.raises(
+                ValueError,
+                match="must return both post_initialization_infections and rt",
+            ):
+                subpopulation_infections.sample(
+                    n_days_post_init=30,
+                    subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
+                )
+
+    def test_rejects_missing_rt(
+        self,
+        subpopulation_infections,
+    ):
+        """Custom infection processes must return rt."""
+        subpopulation_infections.infection_process = MissingRtInfectionProcess()
 
         with numpyro.handlers.seed(rng_seed=42):
             with pytest.raises(
