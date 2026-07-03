@@ -27,7 +27,7 @@ def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
     jnp.ndarray
         The resulting array ``[1, ..., n]``.
     """
-    return jnp.arange(1, jnp.size(vec) + 1)
+    return jnp.arange(1, jnp.size(jnp.asarray(vec)) + 1)
 
 
 def neg_MGF(r: float, w: ArrayLike) -> float:
