@@ -14,7 +14,7 @@ repos:
   #####
   # Python
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.17
+    rev: v0.15.20
     hooks:
       # Run the linter
       - id: ruff-check
@@ -27,7 +27,7 @@ repos:
   #####
   # Quarto
   - repo: https://github.com/jolars/panache-pre-commit
-    rev: v2.55.0
+    rev: v2.61.0
     hooks:
       - id: panache-format
       - id: panache-lint
