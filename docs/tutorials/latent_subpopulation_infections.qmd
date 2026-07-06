@@ -384,7 +384,10 @@ ar1_dev_summary = deviation_summary_df(ar1_dev_samples)
 
 ```{python}
 #| label: fig-ar1-deviations
-#| fig-cap: "AR(1) deviation trajectories (50 samples, all 6 subpopulations). Because `AR1` draws its initial value from the stationary distribution, the envelope is already at its stationary width at day 0 and stays bounded there. Compare the y-axis scale to fig-rw-deviations below."
+#| fig-cap: >-
+#|   AR(1) deviation trajectories (50 samples, all 6 subpopulations).
+#|   Because `AR1` draws its initial value from the stationary distribution, the envelope is already at its stationary width at day 0 and stays bounded there.
+#|   Compare the y-axis scale to fig-rw-deviations below.
 
 (
     p9.ggplot()
@@ -447,7 +450,10 @@ rw_dev_summary = deviation_summary_df(rw_dev_samples)
 
 ```{python}
 #| label: fig-rw-deviations
-#| fig-cap: "RandomWalk deviation trajectories (50 samples, 6 subpopulations). The envelope fans out continuously over the 28-day horizon and reaches roughly three times the AR(1) stationary width. The y-axis matches fig-ar1-deviations above for direct comparison."
+#| fig-cap: >-
+#|   RandomWalk deviation trajectories (50 samples, 6 subpopulations).
+#|   The envelope fans out continuously over the 28-day horizon and reaches roughly three times the AR(1) stationary width.
+#|   The y-axis matches fig-ar1-deviations above for direct comparison.
 
 (
     p9.ggplot()
