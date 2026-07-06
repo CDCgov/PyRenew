@@ -22,7 +22,8 @@ from pyrenew.datasets import (
     load_synthetic_weekly_hospital_admissions,
 )
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import WeeklyTemporalProcess
+from pyrenew.latent import InfectionsWithFeedback, WeeklyTemporalProcess
+from pyrenew.latent.infection_process import InfectionProcess
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
@@ -158,6 +159,7 @@ def _build_he_population_model(  # numpydoc ignore=RT01
     ed_delay_pmf: jnp.ndarray,
     ed_day_of_week_effects: jnp.ndarray,
     hospital_weekly: bool = False,
+    infection_process: InfectionProcess | None = None,
 ) -> MultiSignalModel:
     """Build the shared hospital + ED PopulationInfections test model."""
     builder = PyrenewBuilder()
@@ -167,6 +169,7 @@ def _build_he_population_model(  # numpydoc ignore=RT01
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
         single_rt_process=single_rt_process,
+        infection_process=infection_process,
     )
 
     hospital_kwargs = {}
@@ -201,6 +204,52 @@ def _build_he_population_model(  # numpydoc ignore=RT01
     )
 
     return builder.build()
+
+
+@pytest.fixture(scope="module")
+def he_model_with_infection_feedback(
+    hosp_delay_pmf: jnp.ndarray,
+    ed_delay_pmf: jnp.ndarray,
+    ed_day_of_week_effects: jnp.ndarray,
+) -> MultiSignalModel:
+    """
+    Build a PopulationInfections H+E model with infection feedback enabled.
+
+    This fixture exercises the ``infection_process`` option passed through
+    ``PyrenewBuilder.configure_latent``.
+
+    Parameters
+    ----------
+    hosp_delay_pmf : jnp.ndarray
+        Infection-to-hospitalization delay PMF.
+    ed_delay_pmf : jnp.ndarray
+        Infection-to-ED-visit delay PMF.
+    ed_day_of_week_effects : jnp.ndarray
+        Day-of-week multipliers used in synthetic ED generation.
+
+    Returns
+    -------
+    MultiSignalModel
+        Built model ready for prior predictive checks.
+    """
+    infection_process = InfectionsWithFeedback(
+        name="infections",
+        infection_feedback_strength=DeterministicVariable(
+            "infection_feedback_strength",
+            -1000.0,
+        ),
+        infection_feedback_pmf=DeterministicPMF(
+            "infection_feedback_pmf",
+            _GEN_INT_PMF,
+        ),
+    )
+    return _build_he_population_model(
+        single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+        hosp_delay_pmf=hosp_delay_pmf,
+        ed_delay_pmf=ed_delay_pmf,
+        ed_day_of_week_effects=ed_day_of_week_effects,
+        infection_process=infection_process,
+    )
 
 
 @pytest.fixture(scope="module")
