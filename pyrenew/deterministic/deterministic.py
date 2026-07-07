@@ -43,13 +43,10 @@ class DeterministicVariable(RandomVariable):
         **kwargs: object,
     ) -> ArrayLike:
         """
-        Retrieve the value of the deterministic Rv
+        Retrieve the value of the deterministic RV
 
         Parameters
         ----------
-        record
-            Whether to record the value of the deterministic
-            RandomVariable. Defaults to False.
         **kwargs
             Additional keyword arguments passed through to internal
             sample calls, should there be any.
@@ -58,6 +55,5 @@ class DeterministicVariable(RandomVariable):
         -------
         ArrayLike
         """
-        if record:
-            numpyro.deterministic(self.name, self)
+        numpyro.deterministic(self.name, self.value)
         return self.value
