@@ -6,9 +6,10 @@ from datetime import date, timedelta
 
 import jax.numpy as jnp
 import numpyro
+import numpyro.distributions as dist
 import pytest
 
-from pyrenew.ascertainment import JointAscertainment
+from pyrenew.ascertainment import JointAscertainment, RatioLinkedAscertainment
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
     InfectionsWithFeedback,
@@ -24,6 +25,7 @@ from pyrenew.observation import (
     PopulationCounts,
     SubpopulationCounts,
 )
+from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import ISO_WEEK, MMWR_WEEK
 from test.test_helpers import fixed_ar1, fixed_random_walk
 
@@ -426,6 +428,79 @@ class TestMultiSignalModelSampling:
         assert prior_samples["he_ascertainment_eta"].shape == (3, 2)
         assert prior_samples["he_ascertainment_hospital"].shape == (3,)
         assert prior_samples["he_ascertainment_ed"].shape == (3,)
+        assert "hospital_predicted" in prior_samples
+        assert "ed_predicted" in prior_samples
+
+    def test_prior_predictive_with_ratio_linked_ascertainment(self):
+        """Test builder sampling with ratio-linked ascertainment."""
+        import jax.random
+        from numpyro.infer import Predictive
+
+        builder = PyrenewBuilder()
+        gen_int = DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3]))
+        builder.configure_latent(
+            SubpopulationInfections,
+            gen_int_rv=gen_int,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
+            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
+        )
+
+        ascertainment = RatioLinkedAscertainment(
+            name="he_ascertainment",
+            base_signal="ed",
+            linked_signal="hospital",
+            base_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
+            ratio_rv=DistributionalVariable(
+                "ihr_rel_iedr",
+                dist.LogNormal(0.0, 0.35),
+            ),
+        )
+        builder.add_ascertainment(ascertainment)
+
+        delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
+        builder.add_observation(
+            PopulationCounts(
+                name="hospital",
+                ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("hosp_conc", 10.0)),
+            )
+        )
+        builder.add_observation(
+            PopulationCounts(
+                name="ed",
+                ascertainment_rate_rv=ascertainment.for_signal("ed"),
+                delay_distribution_rv=delay,
+                noise=NegativeBinomialNoise(DeterministicVariable("ed_conc", 10.0)),
+            )
+        )
+
+        model = builder.build()
+        predictive = Predictive(model.sample, num_samples=3)
+        prior_samples = predictive(
+            jax.random.PRNGKey(42),
+            n_days_post_init=10,
+            population_size=1_000_000,
+            subpop_fractions=SUBPOP_FRACTIONS,
+            hospital={"obs": None},
+            ed={"obs": None},
+        )
+
+        assert model.ascertainment_models["he_ascertainment"] is ascertainment
+        assert prior_samples["iedr"].shape == (3,)
+        assert prior_samples["ihr_rel_iedr"].shape == (3,)
+        assert prior_samples["he_ascertainment_ed"].shape == (3,)
+        assert prior_samples["he_ascertainment_hospital"].shape == (3,)
+        assert jnp.allclose(
+            prior_samples["he_ascertainment_ed"],
+            prior_samples["iedr"],
+        )
+        assert jnp.allclose(
+            prior_samples["he_ascertainment_hospital"],
+            prior_samples["iedr"] * prior_samples["ihr_rel_iedr"],
+        )
         assert "hospital_predicted" in prior_samples
         assert "ed_predicted" in prior_samples
 

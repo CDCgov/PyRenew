@@ -1,5 +1,5 @@
 ---
-title: Joint ascertainment
+title: Ascertainment Models for Related Observation Processes
 format:
   gfm:
     code-fold: true
@@ -21,218 +21,138 @@ jupyter:
 #| label: setup
 #| output: false
 
-import jax.nn as jnn
 import jax.numpy as jnp
-import jax.random as random
-import numpy as np
-import numpyro
 import numpyro.distributions as dist
-import pandas as pd
-import plotnine as p9
-import warnings
-from plotnine.exceptions import PlotnineWarning
-from _tutorial_theme import theme_tutorial
 
-from pyrenew.ascertainment import JointAscertainment
-from pyrenew.deterministic import DeterministicPMF
+from pyrenew.ascertainment import JointAscertainment, RatioLinkedAscertainment
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.model import PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
-
-warnings.filterwarnings("ignore", category=PlotnineWarning)
 ```
 
-Ascertainment is the probability that a latent infection appears in an observed signal, e.g., a hospitalization or visit to the emergency department.
-For hospital admissions this probability is often called an infection-hospitalization rate (IHR).
-For emergency department visits it might be called an infection-ED-visit rate (IEDR).
+## Overview
 
-PyRenew count observations accept an `ascertainment_rate_rv`.
-For simple models this can be any ordinary `RandomVariable`.
+An ascertainment rate is the probability that an infection results in an observed event.
+For hospital admissions, this probability is often called the infection-hospitalization rate (IHR).
+For emergency department visits, it can be called the infection-to-ED-visit rate (IEDR).
 
-For multi-signal models, PyRenew also provides model-level ascertainment components that let multiple observation processes share related ascertainment structure.
-These components are intended for count signals whose observation probabilities are logically related because they are different event streams generated from the same latent infections.
-Hospital admissions and ED visits are a natural example: they have different observation probabilities, but both depend on clinical care-seeking and reporting.
+For a count observation process, the ascertainment rate scales delayed latent infections to obtain the expected number of observed events:
 
-## Independent scalar ascertainment
+$$
+  \mu_s(t)
+  =
+  \alpha_s \sum_{d=0}^{D_s} I(t-d)\,\pi_{s,d},
+$$
 
-Before considering multi-signal models with related ascertainment structure, we show how to specify a multi-signal model where the signals are modeled independently.
-In this model, each observation process has its own scalar ascertainment prior.
+where $s$ identifies the signal, $\alpha_s$ is its ascertainment rate, and $\pi_{s,d}$ is its delay distribution.
 
-```{python}
-#| label: independent-observation-processes
+If a model treats the ascertainment rates for different signals as unrelated, each observation process can receive its own `RandomVariable` directly.
+An ascertainment component is needed when the model represents a relationship between the ascertainment rates of multiple observation processes.
 
-hosp_delay_pmf = jnp.array([0.05, 0.10, 0.15, 0.15, 0.20, 0.15, 0.15, 0.05])
-hosp_delay_rv = DeterministicPMF("inf_to_hosp_delay", hosp_delay_pmf)
+PyRenew provides two such components:
 
-ed_delay_pmf = jnp.array([0.05, 0.15, 0.30, 0.30, 0.15, 0.05])
-ed_delay_rv = DeterministicPMF("inf_to_ed_delay", ed_delay_pmf)
+- `JointAscertainment` specifies a joint prior for two or more rates.
+- `RatioLinkedAscertainment` specifies one rate as a multiple of another rate.
 
-hospital_obs_independent = PopulationCounts(
+The choice between them is part of the statistical model, not only an API choice.
+Each component expresses a different assumption about how information is shared across signals.
+
+## Independent ascertainment rates
+
+An ascertainment component is not required when the signal rates are modeled independently.
+Pass each rate directly to its observation process:
+
+```python
+hospital_obs = PopulationCounts(
     name="hospital",
     ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
     delay_distribution_rv=hosp_delay_rv,
-    noise=NegativeBinomialNoise(
-        DistributionalVariable("hospital_concentration", dist.LogNormal(4.0, 0.5))
-    ),
+    noise=hosp_noise,
 )
 
-ed_obs_independent = PopulationCounts(
+ed_obs = PopulationCounts(
     name="ed_visits",
     ascertainment_rate_rv=DistributionalVariable("iedr", dist.Beta(2, 98)),
     delay_distribution_rv=ed_delay_rv,
-    noise=NegativeBinomialNoise(
-        DistributionalVariable("ed_concentration", dist.LogNormal(4.0, 0.5))
-    ),
+    noise=ed_noise,
 )
 ```
 
-```{python}
-#| label: independent-prior-draws
+This specification does not encode prior dependence between IHR and IEDR; each observation process has its own ascertainment-rate prior.
 
-n_draws = 1500
-key_ihr, key_iedr = random.split(random.PRNGKey(1))
+## Ascertainment components and the builder
 
-independent_ihr = dist.Beta(2, 198).sample(key_ihr, (n_draws,))
-independent_iedr = dist.Beta(2, 98).sample(key_iedr, (n_draws,))
-```
-
-## Model-level ascertainment
-
-To share ascertainment structure across count signals, define an ascertainment model once and register it with the builder.
-Each observation process receives the appropriate signal-specific accessor from `for_signal()`.
-
-```python
-builder = PyrenewBuilder()
-
-joint_ascertainment = JointAscertainment(
-    name="he_ascertainment",
-    signals=("hospital", "ed_visits"),
-    baseline_rates=jnp.array([0.01, 0.02]),
-    scale_tril=jnp.array(
-        [[0.7, 0.0],
-         [0.35, 0.606],]),
-)
-
-builder.add_ascertainment(joint_ascertainment)
-
-PopulationCounts(
-    name="hospital",
-    ascertainment_rate_rv=joint_ascertainment.for_signal("hospital"),
-    ...
-)
-
-PopulationCounts(
-    name="ed_visits",
-    ascertainment_rate_rv=joint_ascertainment.for_signal("ed_visits"),
-    ...
-)
-```
-
-The model samples the ascertainment component once per model execution.
-The accessors passed to the observation processes read the sampled values.
-
-## Joint scalar ascertainment
-
-Use `JointAscertainment` when each signal has a scalar ascertainment rate, but the rates should be correlated across signals.
-The model samples the rates jointly on the logit scale and returns one probability for each signal.
-These rates are constant over the model time axis.
-
-```{python}
-#| label: joint-ascertainment-object
-
-joint_ascertainment = JointAscertainment(
-    name="he_ascertainment",
-    signals=("hospital", "ed_visits"),
-    baseline_rates=jnp.array([0.01, 0.02]),
-    scale_tril=jnp.array(
-        [
-            [0.7, 0.0],
-            [0.35, 0.606],
-        ]
-    ),
-)
-```
-
-The order of the specified `signals` determines how arguments `baseline_rates` and `scale_tril` are interpreted.
-In the above example, the first entry is hospitalizations and the second is ED visits.
-In a NumPyro trace, this object creates one sample site, `he_ascertainment_eta`, and deterministic signal-specific rates such as `he_ascertainment_hospital` and `he_ascertainment_ed_visits`.
-
-The next block samples directly from the same logit-normal prior used by JointAscertainment.
-This is only for visualization; in a fitted PyRenew model, JointAscertainment handles this sampling internally.
-
-```{python}
-#| label: joint-prior-draws
-
-joint_eta = joint_ascertainment.distribution.sample(random.PRNGKey(2), (n_draws,))
-joint_rates = jnn.sigmoid(joint_eta)
-
-independent_df = pd.DataFrame(
-    {
-        "hospital_ihr": np.array(independent_ihr),
-        "ed_iedr": np.array(independent_iedr),
-    }
-)
-
-joint_df = pd.DataFrame(
-    {
-        "hospital_ihr": np.array(joint_rates[:, 0]),
-        "ed_iedr": np.array(joint_rates[:, 1]),
-    }
-)
-
-compare_df = pd.concat(
-    [
-        independent_df.assign(prior="Independent scalar priors"),
-        joint_df.assign(prior="Joint scalar prior"),
-    ],
-    ignore_index=True,
-)
-compare_df["prior"] = pd.Categorical(
-    compare_df["prior"],
-    categories=["Independent scalar priors", "Joint scalar prior"],
-    ordered=True,
-)
-```
-
-The following plot compares the samples drawn from independent scalar priors and draws from the correlated logit-normal prior used by `JointAscertainment`.
-The dashed line marks the prior-center ratio, IEDR = 2 × IHR.
-
-The prior draws from independent priors show that high IHR draws do not imply high IEDR draws.
-The joint prior keeps the same approximate scale while inducing positive dependence between the two rates.
-
-```{python}
-#| label: plot-joint-priors
-#| fig-cap: |
-#|   Joint ascertainment induces correlation between scalar signal rates.
-#|   The dashed line marks the prior-center ratio, IEDR = 2 × IHR.
-#|   The joint prior keeps the same approximate scale while inducing
-#|   positive dependence between the two rates.
-
-(
-    p9.ggplot(compare_df, p9.aes(x="hospital_ihr", y="ed_iedr"))
-    + p9.geom_point(alpha=0.2, size=1.0, color="steelblue")
-    + p9.facet_wrap("~prior", nrow=1)
-    + p9.labs(
-        x="Hospital ascertainment rate (IHR)",
-        y="ED ascertainment rate (IEDR)",
-        title="Independent vs. joint scalar ascertainment",
-    )
-    + p9.geom_abline(slope=1, intercept=jnp.log10(2), linetype="dashed", color="gray")
-    + p9.scale_y_log10()
-    + p9.scale_x_log10()
-    + theme_tutorial
-)
-```
-
-## Using ascertainment with a builder
-
-The main API pattern is:
+An ascertainment component is a model-level component shared by multiple observation processes.
+Define it and register it with PyrenewBuilder's `add_ascertainment()` method before constructing those observation processes.
+Each observation process then sets its ascertainment_rate_rv using the component's `for_signal()` method.
 
 ```python
 builder = PyrenewBuilder()
 builder.configure_latent(...)
 
+ascertainment = JointAscertainment(...)
+builder.add_ascertainment(ascertainment)
+
+hospital_obs = PopulationCounts(
+    name="hospital",
+    ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+    ...
+)
+builder.add_observation(hospital_obs)
+
+ed_obs = PopulationCounts(
+    name="ed_visits",
+    ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
+    ...
+)
+builder.add_observation(ed_obs)
+```
+
+During model execution, the registered component supplies the signal-specific rates to the observation processes that reference it.
+The signal name passed to `for_signal()` must match a name declared by the ascertainment component.
+It does not have to match the observation-process name, but matching names usually makes the model specification and output easier to interpret.
+
+## Choosing an ascertainment model
+
+`JointAscertainment` and `RatioLinkedAscertainment` both relate signal rates, but they represent the relationship differently.
+
+  | Model                      | Parameters with priors                | Relationship represented                                 | Probability bounds                                                   |
+  | -------------------------- | ------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
+  | `JointAscertainment`       | A vector of logit-scale rates         | Prior covariance controls how the rates vary together    | Every rate is transformed to `(0, 1)`                                |
+  | `RatioLinkedAscertainment` | A base rate and a relative multiplier | The linked rate is the base rate multiplied by the ratio | The derived linked rate is not automatically constrained to `(0, 1)` |
+
+Use `JointAscertainment` when prior dependence between the rates is most naturally described through a covariance structure.
+Use `RatioLinkedAscertainment` when the relative quantity, such as IHR / IEDR, is itself meaningful and can be assigned an interpretable prior.
+
+## Joint ascertainment
+
+`JointAscertainment` places a multivariate normal prior on the logit-transformed ascertainment rates:
+
+$$
+  \boldsymbol{\eta}
+  \sim
+  \operatorname{MultivariateNormal}
+  \left(
+    \operatorname{logit}(\boldsymbol{\alpha}_0),
+    \boldsymbol{\Sigma}
+  \right),
+  \qquad
+  \boldsymbol{\alpha} = \operatorname{logit}^{-1}(\boldsymbol{\eta}).
+$$
+
+The baseline rates $\boldsymbol{\alpha}_0$ set the prior location.
+The covariance matrix $\boldsymbol{\Sigma}$ controls the scale of variation in each logit-transformed rate and how strongly the rates vary together under the prior.
+
+For two signals, positive prior covariance means that prior draws with a higher-than-expected rate for one signal tend to have a higher-than-expected rate for the other.
+Negative covariance means that they tend to move in opposite directions.
+Zero covariance means that the multivariate normal prior does not couple their deviations from the baseline rates.
+
+The covariance structure is supplied to `JointAscertainment`; the component does not estimate an unknown covariance matrix from the observation data.
+It describes prior dependence, not a causal relationship between the signals.
+
+```python
 joint_ascertainment = JointAscertainment(
     name="he_ascertainment",
     signals=("hospital", "ed_visits"),
@@ -244,13 +164,85 @@ joint_ascertainment = JointAscertainment(
         ]
     ),
 )
-builder.add_ascertainment(joint_ascertainment)
+```
+
+The order of `signals` determines how entries in `baseline_rates` and the covariance parameter are interpreted.
+The inverse-logit transformation guarantees that every sampled rate lies between zero and one.
+
+During model execution, this component creates one vector sample site, `he_ascertainment_eta`, and signal-specific deterministic sites such as `he_ascertainment_hospital` and `he_ascertainment_ed_visits`.
+
+## Ratio-linked ascertainment
+
+`RatioLinkedAscertainment` samples a base rate and a ratio of the linked rate to the base rate:
+
+$$
+  \alpha_{\mathrm{linked}}
+  =
+  \alpha_{\mathrm{base}}\rho,
+  \qquad
+  \rho
+  =
+  \frac{\alpha_{\mathrm{linked}}}{\alpha_{\mathrm{base}}}.
+$$
+
+For a hospital and ED model, the IEDR can be the base rate and the ratio can represent IHR / IEDR.
+A ratio below one means that hospitalization is less likely than an ED visit for a given infection; a ratio above one means that it is more likely.
+
+```python
+ratio_linked_ascertainment = RatioLinkedAscertainment(
+    name="he_ascertainment",
+    base_signal="ed_visits",
+    linked_signal="hospital",
+    base_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
+    ratio_rv=DistributionalVariable(
+        "ihr_rel_iedr",
+        dist.LogNormal(jnp.log(0.5), 0.35),
+    ),
+)
+```
+
+*Note*: These prior parameters are illustrative; they should be chosen using domain knowledge appropriate to the pathogen, population, observation definitions, and study period.
+
+This model does not specify a covariance between the two signal rates directly.
+However, the signal rates are not independent: the linked rate contains the sampled base rate.
+The priors are assigned to the base rate and the ratio, and together they induce a distribution for the linked rate.
+
+The ratio may be any positive value.
+Unlike `JointAscertainment`, this component does not automatically constrain the derived linked rate to the unit interval.
+Users must choose priors that make $\alpha_{\mathrm{base}}\rho > 1$ negligibly likely.
+The component does not clip an invalid linked rate, because clipping would change the specified statistical model.
+
+## Building a model an ascertainment component
+
+The complete builder pattern is the same for either ascertainment component - here we use a `RatioLinkedAscertainment` but the sequence of definitions is the same for `JointAscertainment`.
+
+```python
+builder = PyrenewBuilder()
+builder.configure_latent(
+    PopulationInfections,
+    gen_int_rv=gen_int_rv,
+    I0_rv=I0_rv,
+    log_rt_time_0_rv=log_rt_time_0_rv,
+    single_rt_process=rt_process,
+)
+
+ascertainment = RatioLinkedAscertainment(
+    name="he_ascertainment",
+    base_signal="ed_visits",
+    linked_signal="hospital",
+    base_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
+    ratio_rv=DistributionalVariable(
+        "ihr_rel_iedr",
+        dist.LogNormal(jnp.log(0.5), 0.35),
+    ),
+)
+builder.add_ascertainment(ascertainment)
 
 hospital_obs = PopulationCounts(
     name="hospital",
-    ascertainment_rate_rv=joint_ascertainment.for_signal("hospital"),
+    ascertainment_rate_rv=ascertainment.for_signal("hospital"),
     delay_distribution_rv=hosp_delay_rv,
-    noise=hosp_noise_rv,
+    noise=NegativeBinomialNoise(hosp_concentration_rv),
     aggregation="weekly",
     reporting_schedule="regular",
     start_dow=MMWR_WEEK,
@@ -259,15 +251,30 @@ builder.add_observation(hospital_obs)
 
 ed_obs = PopulationCounts(
     name="ed_visits",
-    ascertainment_rate_rv=joint_ascertainment.for_signal("ed_visits"),
+    ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
     delay_distribution_rv=ed_delay_rv,
-    noise=ed_noise_rv,
-    day_of_week_rv=DeterministicVariable("ed_dow", ed_day_of_week_effects),
+    noise=NegativeBinomialNoise(ed_concentration_rv),
+    day_of_week_rv=ed_day_of_week_rv,
 )
 builder.add_observation(ed_obs)
 
 model = builder.build()
 ```
 
-Signal names in `for_signal()` must match the names used when the ascertainment model was created.
-They do not have to match observation names, but matching them usually makes model code and posterior outputs easier to read.
+## Shared assumptions and limitations
+
+Both ascertainment components produce one scalar ascertainment rate for each signal over the entire model period.
+Consequently, neither component allows the rates or their implied relationship to change over time.
+Whether this assumption is reasonable should be evaluated in the context of the observation processes and study period.
+
+The choice of ascertainment model should consider:
+
+- whether the rates should be related at all
+- whether a covariance structure or a relative multiplier is easier to justify
+- whether the priors keep all rates, including derived linked rates, within scientifically plausible ranges
+- whether treating ascertainment rates as constant over the model period is scientifically reasonable
+
+Ascertainment rates are generally difficult to distinguish from the scale of latent infections using surveillance counts alone.
+Allowing the rates to vary over time introduces additional confounding unless external information or strong structural assumptions identify that variation.
+The built-in ascertainment components therefore use scalar rates over the model period.
+When this assumption is questionable, shorter modeling windows and sensitivity analyses may be more appropriate than introducing a weakly identified time-varying process.
