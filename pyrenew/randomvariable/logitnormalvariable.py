@@ -18,12 +18,12 @@ def LogitNormalVariable(
     base_name: str | None = None,
     reparam: Reparam = None,
 ) -> TransformedVariable:
-    """Create a random variable with a logit-normal prior.
+    """Create a logit-normal distributed random variable.
 
     Parameters
     ----------
     name
-        Name of the transformed random variable.
+        Name of the random variable.
     median
         Median of the random variable on the probability scale. All values
         must be finite and strictly between 0 and 1.

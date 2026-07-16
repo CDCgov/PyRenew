@@ -41,7 +41,7 @@ def test_logit_normal_variable_samples_are_probabilities():
     rv = LogitNormalVariable(name="iedr", median=0.004, scale=0.3)
 
     def model():  # numpydoc ignore=GL08
-        return rv.sample(record=True)
+        return rv.sample()
 
     samples = Predictive(model, num_samples=100)(jax.random.key(0))
     values = samples["iedr"][0]
