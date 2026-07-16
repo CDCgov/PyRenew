@@ -8,5 +8,3 @@ _compiled
 *.ipynb
 *.py
 *.md
-
-**/*.quarto_ipynb
