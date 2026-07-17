@@ -46,6 +46,7 @@ from pyrenew.randomvariable import (
     DistributionalVariable,
     StaticDistributionalVariable,
     DynamicDistributionalVariable,
+    LogitNormalVariable,
     TransformedVariable,
 )
 from pyrenew.observation import PopulationCounts, NegativeBinomialNoise
@@ -149,6 +150,29 @@ with numpyro.handlers.seed(rng_seed=0):
     print(f"Day-of-week multipliers: {np.round(np.array(effect), 3)}")
     print(f"Sum: {effect.sum():.1f}")
 ```
+
+`LogitNormalVariable` is a convenience factory for a common transformed prior: a Normal distribution on the log-odds scale, transformed to a probability in `(0, 1)`.
+The `median` is specified on the probability scale, while `scale` is the standard deviation on the log-odds scale.
+It returns a `TransformedVariable`, rather than introducing another `RandomVariable` implementation.
+
+```{python}
+#| label: logit-normal-example
+
+iedr = LogitNormalVariable(
+    name="iedr",
+    base_name="logit_iedr",
+    median=0.004,
+    scale=0.3,
+)
+
+with numpyro.handlers.seed(rng_seed=0):
+    value = iedr()
+    print(f"IEDR: {value:.4%}")
+    print(f"Latent sample name: {iedr.base_rv.name}")
+```
+
+The underlying Normal sample is named `logit_iedr`; the transformed variable is named `iedr`.
+An optional NumPyro reparameterizer can be supplied with `reparam` when a hierarchical model would benefit from different sampling coordinates.
 
 ### Interchangeability
 
@@ -478,6 +502,7 @@ The right panel shows the additional weekly oscillation introduced by day-of-wee
   | Fixed known PMF                                                       | `DeterministicPMF`                                  |
   | Sample from a fixed distribution                                      | `DistributionalVariable` (static)                   |
   | Sample from a distribution parameterized at sample time               | `DistributionalVariable` (dynamic, pass a callable) |
+  | Probability with a Normal prior on its log-odds                       | `LogitNormalVariable`                               |
   | Deterministic transformation of another RV                            | `TransformedVariable`                               |
   | Multiple sample statements, custom validation, or derived computation | Custom `RandomVariable` subclass                    |
 
