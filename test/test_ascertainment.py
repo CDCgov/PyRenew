@@ -351,6 +351,10 @@ class TestRatioLinkedAscertainmentValidation:
 
         base_accessor = ascertainment.for_signal("ed_visits")
         linked_accessor = ascertainment.for_signal("hospital")
+        assert isinstance(base_accessor, AscertainmentSignal)
+        assert isinstance(linked_accessor, AscertainmentSignal)
+        assert base_accessor.ascertainment_name == "he_ascertainment"
+        assert linked_accessor.ascertainment_name == "he_ascertainment"
         assert base_accessor.signal_name == "ed_visits"
         assert linked_accessor.signal_name == "hospital"
 
@@ -372,7 +376,7 @@ class TestRatioLinkedAscertainmentSampling:
         )
 
         with numpyro.handlers.trace() as trace:
-            values = ascertainment.sample(unused_context_value=True)
+            values = ascertainment.sample()
 
         assert set(values) == {"ed_visits", "hospital"}
         assert jnp.array_equal(values["ed_visits"], jnp.array(0.2))
@@ -389,7 +393,7 @@ class TestRatioLinkedAscertainmentSampling:
         )
 
     def test_sample_calls_each_random_variable_once(self):
-        """Test that one base-rate site and one ratio site are sampled."""
+        """Test that the base-rate site and the ratio site are sampled and converted into user-exposed, signal specific deterministic sites"""
         ascertainment = RatioLinkedAscertainment(
             name="he_ascertainment",
             base_signal="ed_visits",
