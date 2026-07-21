@@ -34,8 +34,8 @@ from pyrenew.time import MMWR_WEEK
 
 ## Overview
 
-An ascertainment rate is the probability that an infection results in an observed event.
-For hospital admissions, this probability is often called the infection-hospitalization rate (IHR).
+An ascertainment rate is the rate at which an infection results in an observed event.
+For hospital admissions, this is often called the infection-hospitalization rate (IHR).
 For emergency department visits, it can be called the infection-to-ED-visit rate (IEDR).
 
 For a count observation process, the ascertainment rate scales delayed latent infections to obtain the expected number of observed events:
@@ -144,12 +144,6 @@ $$
 
 The baseline rates $\boldsymbol{\alpha}_0$ set the prior location.
 The covariance matrix $\boldsymbol{\Sigma}$ controls the scale of variation in each logit-transformed rate and how strongly the rates vary together under the prior.
-
-For two signals, positive prior covariance means that prior draws with a higher-than-expected rate for one signal tend to have a higher-than-expected rate for the other.
-Negative covariance means that they tend to move in opposite directions.
-Zero covariance means that the multivariate normal prior does not couple their deviations from the baseline rates.
-
-The covariance structure is supplied to `JointAscertainment`; the component does not estimate an unknown covariance matrix from the observation data.
 It describes prior dependence, not a causal relationship between the signals.
 
 ```python
@@ -209,7 +203,7 @@ The priors are assigned to the base rate and the ratio, and together they induce
 
 The ratio may be any positive value.
 Unlike `JointAscertainment`, this component does not automatically constrain the derived linked rate to the unit interval.
-Users must choose priors that make $\alpha_{\mathrm{base}}\rho > 1$ negligibly likely.
+If both rates should be $<1$ (for instance because both are probabilities), make sure to choose priors that make $\alpha_{\mathrm{base}}\rho > 1$ negligibly likely.
 The component does not clip an invalid linked rate, because clipping would change the specified statistical model.
 
 ## Building a model an ascertainment component
