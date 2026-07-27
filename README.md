@@ -75,7 +75,7 @@ This source code in this repository is distributed in the hope that it will be u
 See the Apache Software License for more details.
 
 You should have received a copy of the Apache Software License along with this program.
-If not, see [http://www.apache.org/licenses/LICENSE-2.0.html](http://www.apache.org/licenses/LICENSE-2.0.html).
+If not, see <http://www.apache.org/licenses/LICENSE-2.0.html>.
 
 The source code forked from other open source projects will inherit its license.
 
@@ -92,7 +92,7 @@ Anyone is encouraged to contribute to the repository by [forking](https://help.g
 By contributing to this project, you grant a world-wide, royalty-free, perpetual, irrevocable, non-exclusive, transferable license to all users under the terms of the [Apache Software License v2](http://www.apache.org/licenses/LICENSE-2.0.html) or later.
 
 All comments, messages, pull requests, and other submissions received through CDC including this GitHub page may be subject to applicable federal law, including but not limited to the Federal Records Act, and may be archived.
-Learn more at [http://www.cdc.gov/other/privacy.html](http://www.cdc.gov/other/privacy.html).
+Learn more at <http://www.cdc.gov/other/privacy.html>.
 
 ## Records Management Standard Notice
 

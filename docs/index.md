@@ -13,7 +13,7 @@ It combines two distinct discrete convolutions which describe different processe
 - The **renewal equation** maps past infections to new infections using the generation interval distribution $w_\tau$.
 - The **observation equation** maps latent infections to expected observed events using the delay distribution $\pi_d$.
 
-#### Renewal equation
+### Renewal equation
 
 New infections arise from past infections through a generation interval distribution.
 

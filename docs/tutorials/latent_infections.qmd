@@ -279,7 +279,7 @@ def sample_process(rt_process, label):
 
     samples = Predictive(sampler, num_samples=n_samples)(random.PRNGKey(42))
     return {
-        "rt": np.array(samples["PopulationInfections::rt_single"])[:, n_init:, 0],
+        "rt": np.array(samples[ -> None"PopulationInfections::rt_single"])[:, n_init:, 0],
         "infections": np.array(samples["PopulationInfections::infections_aggregate"])[
             :, n_init:
         ],
