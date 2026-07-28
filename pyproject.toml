@@ -39,12 +39,11 @@ dev = [
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.hatch.metadata]
-include = ["datasets/*.tsv", "datasets/synthetic_CA_120/*.csv"]
-exclude = ["datasets/*.rds"]
-
 [tool.hatch.build.targets.wheel]
 packages = ["pyrenew"]
+include = [
+    "pyrenew/datasets/synthetic_CA_126/**"
+]
 
 [tool.numpydoc_validation]
 checks = [
