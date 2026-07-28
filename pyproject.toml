@@ -40,7 +40,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
-include = ["datasets/*.tsv"]
+include = ["datasets/*.tsv", "datasets/synthetic_CA_120/*.csv"]
 exclude = ["datasets/*.rds"]
 
 [tool.hatch.build.targets.wheel]
