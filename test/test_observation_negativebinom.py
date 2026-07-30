@@ -2,6 +2,7 @@
 
 import numpy as np
 import numpy.testing as testing
+import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
 
@@ -60,3 +61,19 @@ def test_negativebinom_random_obs():
     # Sample mean should be close to the expected rate (5.0)
     testing.assert_almost_equal(np.mean(sim_nb1), 5.0, decimal=0)
     testing.assert_almost_equal(np.mean(sim_nb2), 5.0, decimal=0)
+
+
+def test_negativebinom_zero_mean_has_finite_log_prob():
+    """Check that zero means do not produce NaN log-probability."""
+    negb = NegativeBinomialObservation(
+        "negbinom_rv",
+        concentration_rv=DeterministicVariable(name="concentration", value=10),
+    )
+
+    with numpyro.handlers.seed(rng_seed=223):
+        tr = numpyro.handlers.trace(
+            lambda: negb(mu=jnp.array([0.0, 0.0]), obs=jnp.array([0, 0]))
+        ).get_trace()
+
+    log_prob = tr["negbinom_rv"]["fn"].log_prob(tr["negbinom_rv"]["value"])
+    assert jnp.all(jnp.isfinite(log_prob))
