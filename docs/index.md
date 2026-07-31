@@ -13,7 +13,7 @@ It combines two distinct discrete convolutions which describe different processe
 - The **renewal equation** maps past infections to new infections using the generation interval distribution $w_\tau$.
 - The **observation equation** maps latent infections to expected observed events using the delay distribution $\pi_d$.
 
-#### Renewal equation
+### Renewal equation
 
 New infections arise from past infections through a generation interval distribution.
 
@@ -35,7 +35,7 @@ Here, $\tau$ indexes the generation interval.
 
 In PyRenew, the latent process is represented on a **per-capita scale** (infection proportion) and is multiplied by a population size downstream when connecting to count observations.
 
-#### Observation equation
+### Observation equation
 
 Infections are latent and are not directly observed; instead, the data consist of events that occur some time after infection, such as hospitalizations or emergency department visits.
 
@@ -55,7 +55,7 @@ $$
 
 Here, $d$ indexes lags in the infection-to-observation delay distribution.
 
-#### Stochastic observation model
+### Stochastic observation model
 
 The observation equation defines the expected number of observed events at time $t$, but the actual observed data are stochastic.
 

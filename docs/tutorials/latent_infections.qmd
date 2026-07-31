@@ -259,7 +259,7 @@ n_init = len(gen_int_pmf)
 n_samples = 200
 log_rt_time_0 = 0.5
 I0_val = 0.001
-rt_cap = 3.0
+rt_cap = 3.
 
 
 def sample_process(rt_process, label):
