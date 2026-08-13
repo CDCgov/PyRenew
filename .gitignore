@@ -37,6 +37,7 @@
 # Allowlist
 # !your_data_file.csv
 # !your_data_directory/
+!pyrenew/datasets/synthetic_CA_126/*.csv
 
 
 #####
