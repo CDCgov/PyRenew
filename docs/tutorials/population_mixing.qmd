@@ -1,0 +1,286 @@
+---
+title: Cross-population transmission with mixing matrices
+format:
+  gfm:
+    code-fold: true
+engine: jupyter
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .qmd
+      format_name: quarto
+      format_version: "1.0"
+      jupytext_version: 1.18.1
+  kernelspec:
+    display_name: Python 3 (ipykernel)
+    language: python
+    name: python3
+---
+
+```{python}
+#| label: setup
+#| output: false
+
+import warnings
+
+import jax.numpy as jnp
+import numpy as np
+import pandas as pd
+import plotnine as p9
+from plotnine.exceptions import PlotnineWarning
+
+from pyrenew.latent.infection_functions import compute_infections_from_rt
+from _tutorial_theme import theme_tutorial
+
+warnings.filterwarnings("ignore", category=PlotnineWarning)
+```
+
+## Overview
+
+A collection of population-specific renewal processes is independent when infections in each population can generate new infections only in that same population.
+This is appropriate when populations are isolated, but not when people travel, commute, or otherwise have contact across population boundaries.
+
+PyRenew supports coupled renewal processes by allowing the multiplier passed to `compute_infections_from_rt` to be a matrix $M(t)$ at every timepoint.
+An off-diagonal entry lets infectiousness in one population generate infections in another.
+
+This tutorial uses two populations to show:
+
+- how matrix-valued multipliers extend the renewal equation
+- how rows and columns of the matrix map to target and source populations
+- how off-diagonal transmission changes infection trajectories
+- how to supply a time-varying sequence of mixing matrices
+
+## From independent to coupled renewal processes
+
+For population $j$, define its total infectiousness at time $t$ as
+
+$$
+  \Lambda_j(t) = \sum_{\tau=1}^{G} w_\tau I_j(t - \tau),
+$$
+
+where $I_j(t - \tau)$ is past incidence and $w_\tau$ is the generation interval probability mass at lag $\tau$.
+Collecting the population-specific values into the vector $\boldsymbol{\Lambda}(t)$, the coupled renewal equation is
+
+$$
+  \mathbf{I}(t) = M(t)\boldsymbol{\Lambda}(t).
+$$
+
+The matrix follows the convention
+
+$$
+  M_{ij}(t) = \text{contribution from source population }j
+  \text{ to target population }i.
+$$
+
+In other words, **rows are targets and columns are sources**.
+Diagonal entries describe within-population transmission, while off-diagonal entries describe cross-population transmission.
+The entries are effective transmission multipliers, not necessarily probabilities.
+
+The scanner remains backward compatible with simpler multipliers:
+
+  | Multiplier at time $t$ | Effect                                                    |
+  | ---------------------- | --------------------------------------------------------- |
+  | Scalar $m(t)$          | Applies the same multiplier to every population           |
+  | Vector $\mathbf{r}(t)$ | Applies one elementwise multiplier per population         |
+  | Matrix $M(t)$          | Mixes infectiousness across source and target populations |
+
+## Set up two populations
+
+We use a five-day generation interval.
+`compute_infections_from_rt` expects this probability mass in reverse order: the final entry represents lag 1, the second-to-last entry represents lag 2, and so on.
+
+Only Population A is infected during the initialization period.
+Population B therefore remains infection-free unless it receives infections through an off-diagonal matrix entry.
+
+```{python}
+#| label: renewal-setup
+
+n_days = 60
+populations = ["Population A", "Population B"]
+
+generation_interval_pmf = jnp.array([0.20, 0.30, 0.30, 0.15, 0.05])
+reversed_generation_interval_pmf = jnp.flip(generation_interval_pmf)
+
+initial_infections = jnp.zeros((generation_interval_pmf.size, 2))
+initial_infections = initial_infections.at[:, 0].set(10.0)
+```
+
+We compare two constant matrices.
+The disconnected matrix contains only diagonal entries.
+The connected matrix adds $M_{B,A}=0.12$, allowing infectiousness in Population A to generate infections in Population B.
+
+```{python}
+#| label: define-matrices
+
+disconnected_matrix = jnp.array(
+    [
+        [1.08, 0.00],
+        [0.00, 0.82],
+    ]
+)
+
+connected_matrix = jnp.array(
+    [
+        [1.08, 0.00],
+        [0.12, 0.82],
+    ]
+)
+```
+
+The heatmap makes the target-by-source orientation explicit.
+The cell in the Population B target row and Population A source column represents transmission from Population A to Population B.
+
+```{python}
+#| label: plot-mixing-matrix
+#| fig-cap: >-
+#|   The connected mixing matrix.
+#|   Rows identify target populations and columns identify source populations.
+
+matrix_data = pd.DataFrame(
+    [
+        {
+            "source": populations[source],
+            "target": populations[target],
+            "strength": float(connected_matrix[target, source]),
+        }
+        for target in range(2)
+        for source in range(2)
+    ]
+)
+
+(
+    p9.ggplot(matrix_data, p9.aes(x="source", y="target", fill="strength"))
+    + p9.geom_tile(color="white", size=1)
+    + p9.geom_text(p9.aes(label="strength"), format_string="{:.2f}", size=12)
+    + p9.scale_fill_cmap(name="Transmission", cmap_name="Blues")
+    + p9.coord_equal()
+    + p9.labs(
+        x="Source population",
+        y="Target population",
+        title="Mixing matrix M (target × source)",
+    )
+    + theme_tutorial
+    + p9.theme(figure_size=(7, 5))
+)
+```
+
+## Simulate coupled infections
+
+The array scanned over time must have shape `(time, target, source)`.
+For a constant matrix, we repeat it along the time axis.
+
+```{python}
+#| label: simulate
+
+def simulate(mixing_matrix: jnp.ndarray) -> jnp.ndarray:
+    """Simulate infections under a constant population mixing matrix."""
+    matrices_over_time = jnp.repeat(
+        mixing_matrix[jnp.newaxis, :, :], repeats=n_days, axis=0
+    )
+    return compute_infections_from_rt(
+        I0=initial_infections,
+        Rt=matrices_over_time,
+        reversed_generation_interval_pmf=reversed_generation_interval_pmf,
+    )
+
+
+scenario_matrices = {
+    "No cross-population transmission": disconnected_matrix,
+    "A infects B": connected_matrix,
+}
+scenario_infections = {
+    scenario: simulate(matrix) for scenario, matrix in scenario_matrices.items()
+}
+```
+
+We reshape the results for plotting and preserve the scenario order so the disconnected baseline appears first.
+
+```{python}
+#| label: prepare-trajectories
+
+trajectory_data = pd.concat(
+    [
+        pd.DataFrame(
+            {
+                "day": np.arange(n_days),
+                "infections": np.asarray(infections[:, population_index]),
+                "population": population,
+                "scenario": scenario,
+            }
+        )
+        for scenario, infections in scenario_infections.items()
+        for population_index, population in enumerate(populations)
+    ],
+    ignore_index=True,
+)
+trajectory_data["scenario"] = pd.Categorical(
+    trajectory_data["scenario"],
+    categories=list(scenario_matrices),
+    ordered=True,
+)
+```
+
+```{python}
+#| label: plot-infection-trajectories
+#| fig-cap: >-
+#|   Population B remains infection-free without mixing.
+#|   Setting M[B, A] = 0.12 allows infections in Population A to seed and sustain infections in Population B.
+
+(
+    p9.ggplot(
+        trajectory_data,
+        p9.aes(x="day", y="infections", color="population"),
+    )
+    + p9.geom_line(size=1)
+    + p9.facet_wrap("scenario", ncol=1)
+    + p9.labs(
+        x="Day",
+        y="New infections",
+        color="Population",
+        title="Off-diagonal mixing lets Population A seed Population B",
+    )
+    + theme_tutorial
+    + p9.theme(figure_size=(9, 7), legend_position="top")
+)
+```
+
+With the disconnected matrix, Population B stays at zero because it has neither initial infections nor imported infectiousness.
+With the connected matrix, Population B immediately receives infectiousness from Population A through $M_{B,A}$.
+Its subsequent trajectory reflects both continued importation from Population A and within-population transmission through $M_{B,B}$.
+
+## Time-varying mixing
+
+The matrix does not need to be constant.
+For example, the following sequence reduces transmission from Population A to Population B after day 30 while leaving the other entries unchanged:
+
+```{python}
+#| label: time-varying-matrices
+
+mixing_matrices = jnp.repeat(
+    connected_matrix[jnp.newaxis, :, :], repeats=n_days, axis=0
+)
+mixing_matrices = mixing_matrices.at[30:, 1, 0].set(0.03)
+
+time_varying_infections = compute_infections_from_rt(
+    I0=initial_infections,
+    Rt=mixing_matrices,
+    reversed_generation_interval_pmf=reversed_generation_interval_pmf,
+)
+
+print(f"Mixing matrix array shape: {mixing_matrices.shape}")
+print(f"Infection array shape: {time_varying_infections.shape}")
+```
+
+Any element of $M(t)$ can vary through time, so the matrix can represent changing mobility, contact patterns, interventions, or other mechanisms that couple population-specific infection processes.
+
+## Summary
+
+To simulate cross-population transmission:
+
+1. Store initial infections with shape `(generation_interval, population)`.
+2. Construct mixing matrices with shape `(time, target, source)`.
+3. Put within-population effects on the diagonal and cross-population effects off the diagonal.
+4. Pass the matrices as `Rt` to `compute_infections_from_rt`.
+
+Scalar and vector `Rt` inputs continue to work for shared or independent population multipliers.
+Use a matrix when infections in one population should contribute to infections in another.
