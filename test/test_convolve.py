@@ -177,6 +177,39 @@ def test_convolve_scanner(arr, history, multiplier, transform):
     assert jnp.array_equal(new_val, transform(multiplier * jnp.dot(arr, history)))
 
 
+def test_convolve_scanner_with_population_mixing_matrix():
+    """
+    Test matrix multipliers mix source populations into target populations.
+    """
+    arr = jnp.array([0.25, 0.75])
+    history = jnp.array([[8.0, 4.0], [12.0, 0.0]])
+    mixing_matrix = jnp.array([[1.0, 0.2], [0.5, 0.8]])
+    scanner = pc.new_convolve_scanner(arr, t.IdentityTransform())
+
+    latest, new_val = scanner(history, mixing_matrix)
+    infectiousness = jnp.dot(arr, history)
+    expected = mixing_matrix @ infectiousness
+
+    assert_array_equal(new_val, expected)
+    assert_array_equal(latest[-1], expected)
+
+
+def test_convolve_scanner_off_diagonal_transmission_between_populations():
+    """
+    Test an off-diagonal entry seeds infections in another population.
+    """
+    history = jnp.array([[10.0, 0.0]])
+    no_mixing = jnp.repeat(jnp.eye(2)[jnp.newaxis], repeats=3, axis=0)
+    with_mixing = no_mixing.at[:, 1, 0].set(0.25)
+    scanner = pc.new_convolve_scanner(jnp.array([1.0]), t.IdentityTransform())
+
+    _, infections_without_mixing = jax.lax.scan(scanner, init=history, xs=no_mixing)
+    _, infections_with_mixing = jax.lax.scan(scanner, init=history, xs=with_mixing)
+
+    assert_array_equal(infections_without_mixing[:, 1], jnp.zeros(3))
+    assert jnp.all(infections_with_mixing[:, 1] > 0)
+
+
 @pytest.mark.parametrize(
     ["arr1", "arr2", "history", "m1", "m2", "transforms"],
     [

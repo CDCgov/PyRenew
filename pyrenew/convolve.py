@@ -47,10 +47,10 @@ def new_convolve_scanner(
         [`jax.lax.scan`][] or
         [`numpyro.contrib.control_flow.scan`][]
         for convolution.
-        This function takes a history subset array and
-        a scalar, computes the dot product of
-        the supplied convolution array with the history
-        subset array, multiplies by the scalar, and
+        This function takes a history subset array and a scalar,
+        vector, or matrix, computes the dot product of the supplied
+        convolution array with the history subset array, applies the
+        multiplier, and
         returns the resulting value and a new history subset
         array formed by the 2nd-through-last entries
         of the old history subset array followed by that same
@@ -62,27 +62,41 @@ def new_convolve_scanner(
     in renewal processes:
 
     ```math
-    X(t) = f\left(m(t) \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
-    \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d} \right)
+    \mathbf{X}(t) = f\left(M(t)
+    \begin{bmatrix}
+    \mathbf{X}(t - n) \\ \mathbf{X}(t - n + 1) \\
+    \vdots{} \\ \mathbf{X}(t - 1)
+    \end{bmatrix}^{T} \mathbf{d} \right)
     ```
 
-    Where $\mathbf{d}$ is a vector of length $n$,
-    $m(t)$ is a scalar for each value of time $t$,
-    and $f$ is a scalar-valued function.
+    Where $\mathbf{d}$ is a vector of length $n$, $\mathbf{X}(t)$
+    contains values for each of $K$ populations, $M(t)$ is a
+    $K \times K$ matrix for each value of time $t$, and $f$ acts on
+    the resulting vector. The entry $M_{ij}(t)$ controls how much
+    infectiousness from source population $j$ contributes to target
+    population $i$.
 
-    Given $\mathbf{d}$, and optionally $f$,
-    this factory function returns a new function that
-    performs one step of this process while scanning along
-    an array of  multipliers (i.e. an array
-    giving the values of $m(t)$) using [`jax.lax.scan`][].
+    Given $\mathbf{d}$, and optionally $f$, this factory function
+    returns a new function that performs one step of this process while
+    scanning along an array of matrices giving the values of $M(t)$
+    using [`jax.lax.scan`][]. Scalar multipliers and vectors of
+    population-specific multipliers remain supported; these act
+    elementwise on the convolved history.
     """
 
     def _new_scanner(
-        history_subset: ArrayLike, multiplier: float
-    ) -> tuple[ArrayLike, float]:  # numpydoc ignore=GL08
-        new_val = transform(
-            multiplier * jnp.einsum("i...,i...->...", array_to_convolve, history_subset)
+        history_subset: ArrayLike, multiplier: ArrayLike
+    ) -> tuple[ArrayLike, ArrayLike]:  # numpydoc ignore=GL08
+        convolved_history = jnp.einsum(
+            "i...,i...->...", array_to_convolve, history_subset
         )
+        if jnp.ndim(multiplier) < 2:
+            multiplied_history = multiplier * convolved_history
+        else:
+            multiplied_history = jnp.einsum(
+                "...ij,...j->...i", multiplier, convolved_history
+            )
+        new_val = transform(multiplied_history)
         latest = jnp.concatenate([history_subset[1:], new_val[jnp.newaxis]], axis=0)
         return latest, new_val
 
