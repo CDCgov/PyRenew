@@ -38,7 +38,7 @@ def new_convolve_scanner(
 
     transform
         A transformation to apply to the result
-        of the dot product and multiplication.
+        of the dot product and multiplier application.
 
     Returns
     -------
@@ -58,8 +58,8 @@ def new_convolve_scanner(
 
     Notes
     -----
-    The following iterative operation is found often
-    in renewal processes:
+    The following vector-valued iterative operation generalizes the
+    scalar operation previously supported by this function:
 
     ```math
     \mathbf{X}(t) = f\left(M(t)
@@ -69,19 +69,18 @@ def new_convolve_scanner(
     \end{bmatrix}^{T} \mathbf{d} \right)
     ```
 
-    Where $\mathbf{d}$ is a vector of length $n$, $\mathbf{X}(t)$
-    contains values for each of $K$ populations, $M(t)$ is a
-    $K \times K$ matrix for each value of time $t$, and $f$ acts on
-    the resulting vector. The entry $M_{ij}(t)$ controls how much
-    infectiousness from source population $j$ contributes to target
-    population $i$.
+    Here $\mathbf{d}$ is a vector of length $n$, $\mathbf{X}(t)$
+    contains $K$ components, $M(t)$ is a $K \times K$ matrix, and $f$
+    acts on the resulting vector. The entry $M_{ij}(t)$ determines the
+    contribution of component $j$ to the update of component $i$.
+    This function assigns no particular interpretation to the components
+    or multipliers; those depend on the calling model.
 
     Given $\mathbf{d}$, and optionally $f$, this factory function
     returns a new function that performs one step of this process while
     scanning along an array of matrices giving the values of $M(t)$
-    using [`jax.lax.scan`][]. Scalar multipliers and vectors of
-    population-specific multipliers remain supported; these act
-    elementwise on the convolved history.
+    using [`jax.lax.scan`][]. Scalar and vector multipliers remain
+    supported; these act elementwise on the convolved history.
     """
 
     def _new_scanner(

@@ -37,6 +37,10 @@ warnings.filterwarnings("ignore", category=PlotnineWarning)
 
 ## Overview
 
+`new_convolve_scanner` is a generic convolution utility: it assigns no intrinsic meaning to its state components or multipliers.
+A matrix multiplier can couple any vector-valued iterative process, with the exact interpretation determined by the calling model.
+This tutorial demonstrates one epidemiological application by using matrix multipliers in `compute_infections_from_rt` to couple populations.
+
 A collection of population-specific renewal processes is independent when infections in each population can generate new infections only in that same population.
 This is appropriate when populations are isolated, but not when people travel, commute, or otherwise have contact across population boundaries.
 
@@ -76,7 +80,7 @@ In other words, **rows are targets and columns are sources**.
 Diagonal entries describe within-population transmission, while off-diagonal entries describe cross-population transmission.
 The entries are effective transmission multipliers, not necessarily probabilities.
 
-The scanner remains backward compatible with simpler multipliers:
+Within this population-transmission application, the generic multiplier forms have the following interpretations:
 
   | Multiplier at time $t$ | Effect                                                    |
   | ---------------------- | --------------------------------------------------------- |
