@@ -76,7 +76,7 @@ def new_convolve_scanner(
     \end{bmatrix}^{T} \mathbf{d} \right)
     ```
 
-    Here each of the $n$ $\mathbf{X}(t)$ is a vector of length $k$,
+    Here each $\mathbf{X}(t)$ is a vector of length $k$,
     $M(t)$ is a $k \times k$ matrix, and $f$ receives and returns a
     length-$k$ vector.
 
