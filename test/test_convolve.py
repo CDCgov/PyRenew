@@ -195,9 +195,12 @@ def test_convolve_scanner_with_scalars_vectors(arr, history, multiplier, transfo
         ],
     ],
 )
-def test_repeated_vector_equivalent_to_scalar(arr, history, multiplier, transform):
+def test_convolve_scanner_rep_vector_equivalent_to_scalar(
+    arr, history, multiplier, transform
+):
     """
-    A vector of repeated values and a scalar should behave identically.
+    A vector of repeated values and a scalar should behave identically
+    as multipliers in functions built by `new_convolve_scanner`.
     """
     assert jnp.size(multiplier) == 1
     scanner = pc.new_convolve_scanner(arr, transform)
@@ -227,9 +230,12 @@ def test_repeated_vector_equivalent_to_scalar(arr, history, multiplier, transfor
         ],
     ],
 )
-def test_diagonal_matrix_equivalent_to_vector(arr, history, multiplier, transform):
+def test_convolve_scanner_diag_mat_equivalent_to_vector(
+    arr, history, multiplier, transform
+):
     """
-    A vector multiplier and a diagonal matrix multiplier should behave identically.
+    A vector and a diagonal matrix should behave identically
+    as multipliers in functions built by `new_convolve_scanner`.
     """
     assert jnp.size(multiplier) == history.shape[1]
     scanner = pc.new_convolve_scanner(arr, transform)
