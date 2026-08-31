@@ -29,8 +29,9 @@ def compute_infections_from_rt(
     Rt
         Timeseries of $\\mathcal{R}(t)$ values. Each timepoint can be a
         scalar shared by all populations, a vector of population-specific
-        values, or a matrix whose entry ``[i, j]`` represents transmission
-        from source population ``j`` to target population ``i``.
+        values, or a matrix whose entry ``[i, j]`` represents $\\mathcal{R}_{j \to i}(t)$:
+        the expected number of new infections in population $i$ caused by an infectious 
+        individual in population $j$ at time $t$.
     reversed_generation_interval_pmf
         discrete probability mass vector
         representing the generation interval

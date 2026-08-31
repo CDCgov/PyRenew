@@ -58,8 +58,7 @@ def new_convolve_scanner(
 
     Notes
     -----
-    The following vector-valued iterative operation generalizes the
-    scalar operation previously supported by this function:
+    The following iterative operation is common in renewal processes:
 
     ```math
     \mathbf{X}(t) = f\left(M(t)
@@ -69,18 +68,21 @@ def new_convolve_scanner(
     \end{bmatrix}^{T} \mathbf{d} \right)
     ```
 
-    Here $\mathbf{d}$ is a vector of length $n$, $\mathbf{X}(t)$
-    contains $K$ components, $M(t)$ is a $K \times K$ matrix, and $f$
-    acts on the resulting vector. The entry $M_{ij}(t)$ determines the
-    contribution of component $j$ to the update of component $i$.
-    This function assigns no particular interpretation to the components
-    or multipliers; those depend on the calling model.
+    Here $\mathbf{d}$ is a vector of length $n$, each $\mathbf{X}(t)$
+    is a vector of length $k$, $M(t)$ is a $k \times k$ matrix, and $f$
+    acts on the resulting vector.
 
     Given $\mathbf{d}$, and optionally $f$, this factory function
     returns a new function that performs one step of this process while
     scanning along an array of matrices giving the values of $M(t)$
-    using [`jax.lax.scan`][]. Scalar and vector multipliers remain
-    supported; these act elementwise on the convolved history.
+    using [`jax.lax.scan`][]. 
+    
+    When scanning along an array of scalar multipliers $m(t)$ or vector
+    multipliers $\mathbf{m}(t)$, the function performs performs elementwise 
+    multiplication by $m$. This is equivalent to treating a scalar $m(t)$ or vector 
+    $\mathbf{m}(t)$ as implying a diagonal matrix multiplier $M(t)$ whose 
+    diagonal values  are all equal to $m(t)$ or are given by $\mathbf{m}(t)$, 
+    respectively.
     """
 
     def _new_scanner(
