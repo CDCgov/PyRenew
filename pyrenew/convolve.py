@@ -75,13 +75,13 @@ def new_convolve_scanner(
     Given $\mathbf{d}$, and optionally $f$, this factory function
     returns a new function that performs one step of this process while
     scanning along an array of matrices giving the values of $M(t)$
-    using [`jax.lax.scan`][]. 
-    
+    using [`jax.lax.scan`][].
+
     When scanning along an array of scalar multipliers $m(t)$ or vector
-    multipliers $\mathbf{m}(t)$, the function performs performs elementwise 
-    multiplication by $m$. This is equivalent to treating a scalar $m(t)$ or vector 
-    $\mathbf{m}(t)$ as implying a diagonal matrix multiplier $M(t)$ whose 
-    diagonal values  are all equal to $m(t)$ or are given by $\mathbf{m}(t)$, 
+    multipliers $\mathbf{m}(t)$, the function performs performs elementwise
+    multiplication by $m$. This is equivalent to treating a scalar $m(t)$ or vector
+    $\mathbf{m}(t)$ as implying a diagonal matrix multiplier $M(t)$ whose
+    diagonal values  are all equal to $m(t)$ or are given by $\mathbf{m}(t)$,
     respectively.
     """
 
