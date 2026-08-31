@@ -47,8 +47,8 @@ def new_convolve_scanner(
         [`jax.lax.scan`][] or
         [`numpyro.contrib.control_flow.scan`][]
         for convolution.
-        This function takes a history subset array and a scalar,
-        vector, or matrix, computes the dot product of the supplied
+        This function takes a history subset array and a multiplier (which can be a scalar,
+        a vector, or a matrix). It computes the dot product of the supplied
         convolution array with the history subset array, applies the
         multiplier, and
         returns the resulting value and a new history subset
