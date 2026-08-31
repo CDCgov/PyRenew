@@ -80,17 +80,18 @@ def new_convolve_scanner(
     $M(t)$ is a $k \times k$ matrix, and $f$ receives and returns a
     length-$k$ vector.
 
-    Given $\mathbf{d}$, and optionally $f$, this factory function
-    returns a new function that performs one step of this process while
-    scanning along an array of matrices giving the values of $M(t)$
-    using [`jax.lax.scan`][].
+    Given $\mathbf{d}$, and optionally $f$, this factory
+    returns a new function that performs one step of the process
+    described above. To produce a full $\mathbf{X}(t)$ timeseries,
+    scan the function over an array of $M(t)$ values using
+    [`jax.lax.scan`][] or [`numpyro.contrib.control_flow.scan`][] .
 
-    When scanning along an array of scalar multipliers $m(t)$ or vector
+    When scanning over an array of scalar multipliers $m(t)$ or vector
     multipliers $\mathbf{m}(t)$, the function performs performs elementwise
-    multiplication by $m$. This is equivalent to treating a scalar $m(t)$ or vector
-    $\mathbf{m}(t)$ as implying a diagonal matrix multiplier $M(t)$ whose
-    diagonal values  are all equal to $m(t)$ or are given by $\mathbf{m}(t)$,
-    respectively.
+    multiplication. That is, providing a scalar $m(t)$ is equivalent to
+    providing a diagonal matrix $M(t) = m I_k$, and providing a vector
+    vector $\mathbf{m}(t)$ is equivalent to providing a diagonal matrix
+    $M(t) = \mathbf{m}^{T}(t) I_k$.
     """
 
     def _new_scanner(
