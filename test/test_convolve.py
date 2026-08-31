@@ -157,24 +157,88 @@ def test_double_convolve_scanner_using_scan(arr1, arr2, history, m1, m2, transfo
         [
             jnp.array([1.0, 2.0]),
             jnp.array([3.0, 4.0]),
-            jnp.array(2),
+            jnp.array(2.5),
             t.IdentityTransform(),
         ],
         [
             jnp.ones(3),
             jnp.array(np.array([0.5, 0.3, 0.2] * 3)).reshape(3, 3),
-            jnp.ones(3),
+            jnp.array([5.5, 6.7, 0.2]),
             t.ExpTransform(),
         ],
     ],
 )
-def test_convolve_scanner(arr, history, multiplier, transform):
+def test_convolve_scanner_with_scalars_vectors(arr, history, multiplier, transform):
     """
-    Tests new convolve scanner function
+    Tests new convolve scanner function with scalar and vectors
+    multipliers, which should be applied elementwise.
     """
     scanner = pc.new_convolve_scanner(arr, transform)
     latest, new_val = scanner(history, multiplier)
     assert jnp.array_equal(new_val, transform(multiplier * jnp.dot(arr, history)))
+
+
+@pytest.mark.parametrize(
+    ["arr", "history", "multiplier", "transform"],
+    [
+        [
+            jnp.array([1.0, 2.0]),
+            jnp.array([[3.0, 4.0], [1.0, 2.0]]),
+            jnp.array(2.5),
+            t.IdentityTransform(),
+        ],
+        [
+            jnp.ones(3),
+            jnp.array(np.array([0.5, 0.3, 0.2] * 3)).reshape(3, 3),
+            jnp.array(-0.25),
+            t.ExpTransform(),
+        ],
+    ],
+)
+def test_repeated_vector_equivalent_to_scalar(arr, history, multiplier, transform):
+    """
+    A vector of repeated values and a scalar should behave identically.
+    """
+    assert jnp.size(multiplier) == 1
+    scanner = pc.new_convolve_scanner(arr, transform)
+    mult_vec = multiplier * jnp.ones(history.shape[1])
+    assert jnp.ndim(mult_vec) == 1
+    assert jnp.size(mult_vec) > 1
+    latest_vec, new_val_vec = scanner(history, mult_vec)
+    latest_scalar, new_val_scalar = scanner(history, multiplier)
+    assert_array_equal(latest_vec, latest_scalar)
+    assert_array_equal(new_val_vec, new_val_scalar)
+
+
+@pytest.mark.parametrize(
+    ["arr", "history", "multiplier", "transform"],
+    [
+        [
+            jnp.array([1.0, 2.0]),
+            jnp.array([[3.0, 4.0], [1.0, 2.0]]),
+            jnp.array([2.5, 3.5]),
+            t.IdentityTransform(),
+        ],
+        [
+            jnp.ones(3),
+            jnp.array(np.array([0.5, 0.3, 0.2] * 3)).reshape(3, 3),
+            jnp.array([-0.25, 1.5, 3]),
+            t.ExpTransform(),
+        ],
+    ],
+)
+def test_diagonal_matrix_equivalent_to_vector(arr, history, multiplier, transform):
+    """
+    A vector multiplier and a diagonal matrix multiplier should behave identically.
+    """
+    assert jnp.size(multiplier) == history.shape[1]
+    scanner = pc.new_convolve_scanner(arr, transform)
+    mult_mat = multiplier * jnp.eye(history.shape[1])
+    assert jnp.ndim(mult_mat) > 1
+    latest_mat, new_val_mat = scanner(history, mult_mat)
+    latest_vec, new_val_vec = scanner(history, multiplier)
+    assert_array_equal(latest_mat, latest_vec)
+    assert_array_equal(new_val_mat, new_val_vec)
 
 
 def test_convolve_scanner_with_population_mixing_matrix():
