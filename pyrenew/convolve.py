@@ -43,14 +43,12 @@ def new_convolve_scanner(
     Returns
     -------
     Callable
-        A scanner function that can be used with
-        [`jax.lax.scan`][] or
-        [`numpyro.contrib.control_flow.scan`][]
-        for convolution.
-        This function takes a history subset array and a multiplier (which can be a scalar,
-        a vector, or a matrix). It computes the dot product of the supplied
-        convolution array with the history subset array, applies the
-        multiplier, and
+        A scanner function that can be used with [`jax.lax.scan`][] or
+        [`numpyro.contrib.control_flow.scan`][] for convolution. This
+        function's arguments are a history subset array and a multiplier
+        (which can be a scalar, a vector, or a matrix).
+        It computes the dot product of the supplied convolution array
+        with the history subset array, applies the multiplier, and
         returns the resulting value and a new history subset
         array formed by the 2nd-through-last entries
         of the old history subset array followed by that same
@@ -59,7 +57,17 @@ def new_convolve_scanner(
     Notes
     -----
     The following iterative operation is common in renewal processes:
-
+    ```math
+    X(t) = f\left(m(t) \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
+    \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d} \right)
+    ```
+    where $X(t)$ and $m(t)$ are scalars and $\mathbf{d}$ is a length-$n$
+    vector.
+    
+    We can generalize this operation to take in length-$k$ vectors
+    $\mathbf{X}(t)$ (which might represent $k$ different subpopulations)
+    and apply a matrix multiplier $M(t)$:
+    
     ```math
     \mathbf{X}(t) = f\left(M(t)
     \begin{bmatrix}
@@ -68,9 +76,9 @@ def new_convolve_scanner(
     \end{bmatrix}^{T} \mathbf{d} \right)
     ```
 
-    Here $\mathbf{d}$ is a vector of length $n$, each $\mathbf{X}(t)$
-    is a vector of length $k$, $M(t)$ is a $k \times k$ matrix, and $f$
-    acts on the resulting vector.
+    Here each of the $n$ $\mathbf{X}(t)$ is a vector of length $k$,
+    $M(t)$ is a $k \times k$ matrix, and $f$ receives and returns a
+    length-$k$ vector.
 
     Given $\mathbf{d}$, and optionally $f$, this factory function
     returns a new function that performs one step of this process while
