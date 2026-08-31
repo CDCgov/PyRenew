@@ -39,7 +39,7 @@ def new_convolve_scanner(
     transform
         A transformation to apply to the result
         of the dot product and multiplier application.
- 
+
     Returns
     -------
     Callable
@@ -65,11 +65,11 @@ def new_convolve_scanner(
     ```
     where $X(t)$ and $m(t)$ are scalars and $\mathbf{d}$ is a length-$n$
     vector.
-    
+
     We can generalize this operation to take in length-$k$ vectors
     $\mathbf{X}(t)$ (which might represent $k$ different subpopulations)
     and apply a matrix multiplier $M(t)$:
-    
+
     ```math
     \mathbf{X}(t) = f\left(M(t)
     \begin{bmatrix}
