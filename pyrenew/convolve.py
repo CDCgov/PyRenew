@@ -39,16 +39,18 @@ def new_convolve_scanner(
     transform
         A transformation to apply to the result
         of the dot product and multiplier application.
-
+ 
     Returns
     -------
     Callable
         A scanner function that can be used with [`jax.lax.scan`][] or
         [`numpyro.contrib.control_flow.scan`][] for convolution. This
-        function's arguments are a history subset array and a multiplier
-        (which can be a scalar, a vector, or a matrix).
-        It computes the dot product of the supplied convolution array
-        with the history subset array, applies the multiplier, and
+        scanner function's arguments are a history subset array and
+        a multiplier (which can be a scalar, a vector, or a matrix).
+
+        The scanner function computes the dot product of the
+        history subset array with the fixed convolution array,
+        applies first the multiplier and then the transformation,
         returns the resulting value and a new history subset
         array formed by the 2nd-through-last entries
         of the old history subset array followed by that same
@@ -63,11 +65,11 @@ def new_convolve_scanner(
     ```
     where $X(t)$ and $m(t)$ are scalars and $\mathbf{d}$ is a length-$n$
     vector.
-
+    
     We can generalize this operation to take in length-$k$ vectors
     $\mathbf{X}(t)$ (which might represent $k$ different subpopulations)
     and apply a matrix multiplier $M(t)$:
-
+    
     ```math
     \mathbf{X}(t) = f\left(M(t)
     \begin{bmatrix}
@@ -84,14 +86,15 @@ def new_convolve_scanner(
     returns a new function that performs one step of the process
     described above. To produce a full $\mathbf{X}(t)$ timeseries,
     scan the function over an array of $M(t)$ values using
-    [`jax.lax.scan`][] or [`numpyro.contrib.control_flow.scan`][] .
+    [`jax.lax.scan`][] or [`numpyro.contrib.control_flow.scan`][].
 
     When scanning over an array of scalar multipliers $m(t)$ or vector
     multipliers $\mathbf{m}(t)$, the function performs performs elementwise
     multiplication. That is, providing a scalar $m(t)$ is equivalent to
     providing a diagonal matrix $M(t) = m I_k$, and providing a vector
     vector $\mathbf{m}(t)$ is equivalent to providing a diagonal matrix
-    $M(t) = \mathbf{m}^{T}(t) I_k$.
+    $M(t) = \mathbf{m}^{T}(t) I_k$, where $I_k$ is the $k \by k$ identity
+    matrix.
     """
 
     def _new_scanner(
