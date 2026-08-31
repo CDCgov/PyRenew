@@ -93,7 +93,7 @@ def new_convolve_scanner(
     multiplication. That is, providing a scalar $m(t)$ is equivalent to
     providing a diagonal matrix $M(t) = m I_k$, and providing a vector
     vector $\mathbf{m}(t)$ is equivalent to providing a diagonal matrix
-    $M(t) = \mathbf{m}^{T}(t) I_k$, where $I_k$ is the $k \by k$ identity
+    $M(t) = [\mathbf{m}(t)]^T I_k$, where $I_k$ is the $k \times k$ identity
     matrix.
     """
 
