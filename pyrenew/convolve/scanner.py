@@ -1,8 +1,8 @@
 """
 Scanner classes for infection generation processes.
 Class instances are callables that can be passed as the
-`fn` argument to [`jax.lax.scan()`][] or
-[`numpyro.contrib.control_flow.scan()`][].
+`fn` argument to [`jax.lax.scan`][] or
+[`numpyro.contrib.control_flow.scan`][].
 """
 
 from abc import ABCMeta, abstractmethod
@@ -83,7 +83,7 @@ class Scanner(metaclass=ABCMeta):
     def __call__(self, carry: PyTree, x: PyTree) -> tuple[PyTree, PyTree]:
         """
         Template call method with signature compatible with
-        [`jax.lax.scan()`][], [`numpyro.contrib.control_flow.scan()`][]
+        [`jax.lax.scan`][], [`numpyro.contrib.control_flow.scan`][]
         and similar.
         """
         raise NotImplementedError()
@@ -101,8 +101,7 @@ class BaseBackwardLookingConvolutionScanner(Scanner):
     signature `f(x, convolved)`.
 
     3. The result of `f(x, convolved)` is the `latest` value of the scan,
-    and a new carry of equal length to the old carry by calling
-    `_next_carry_array_sliding_window(latest, carry)`
+    and a new carry of equal length to the old carry.
 
     This generic class should not generally be instantiated as-is,
     but rather to produce more specific subclasses with meaningful
