@@ -174,7 +174,7 @@ name = "cffi"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "pycparser", marker = "implementation_name != 'PyPy'" },
+    { name = "pycparser" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/eb/56/b1ba7935a17738ae8453301356628e8147c79dbb825bcbc73dc7401f9846/cffi-2.0.0.tar.gz", hash = "sha256:44d1b5909021139fe36001ae048dbdde8214afa20200eda0f64c068cac5d5529", size = 523588, upload-time = "2025-09-08T23:24:04.541Z" }
 wheels = [
@@ -1029,11 +1029,11 @@ wheels = [
 
 [[package]]
 name = "mistune"
-version = "3.3.0"
+version = "3.3.3"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/84/9c/1939635275ec7258e2b43b00dafabc36d89ad11aa7838d375dc1b0e561cb/mistune-3.3.0.tar.gz", hash = "sha256:3074ec4c61b384abe725128e4dcbb483f5a09cc4632012505cdee655d3a113b9", size = 110936, upload-time = "2026-06-21T13:11:39.458Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/7b/a5/2dab368d6950e6808904dec98f54c7e726ee7be4a0c6afe00e6e011bd52d/mistune-3.3.3.tar.gz", hash = "sha256:c4c6c0c840b8637a2e9b8b6d607eb7c8f00888bf14c754409bcd339e848c2477", size = 115363, upload-time = "2026-07-09T06:18:05.268Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b7/76/b90f9d48d43fbd80a79a20d3eab2e5109859c7a56dc663b23187385898f3/mistune-3.3.0-py3-none-any.whl", hash = "sha256:a758e578acda49d8195f9a860b132dae2cf7bf409381393b1c4e6e489a65397b", size = 61250, upload-time = "2026-06-21T13:11:37.938Z" },
+    { url = "https://files.pythonhosted.org/packages/89/70/b1e4737b84163db5bb1dfde6f216dbfbf32783330a9989c965e121172830/mistune-3.3.3-py3-none-any.whl", hash = "sha256:99de1585e42dcbd826faa9e11a202727a5e202e4e4722a4c69ac1ff615793dd7", size = 63569, upload-time = "2026-07-09T06:18:03.839Z" },
 ]
 
 [[package]]
@@ -1482,7 +1482,7 @@ name = "pexpect"
 version = "4.9.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "ptyprocess", marker = "sys_platform != 'emscripten' and sys_platform != 'win32'" },
+    { name = "ptyprocess" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/42/92/cc564bf6381ff43ce1f4d06852fc19a2f11d180f23dc32d9588bee2f149d/pexpect-4.9.0.tar.gz", hash = "sha256:ee7d41123f3c9911050ea2c2dac107568dc43b2d3b0c7557a33212c398ead30f", size = 166450, upload-time = "2023-11-25T09:07:26.339Z" }
 wheels = [
@@ -2157,11 +2157,11 @@ resolution-markers = [
     "python_full_version < '3.14' and sys_platform == 'emscripten'",
 ]
 dependencies = [
-    { name = "numpy", marker = "sys_platform == 'emscripten'" },
-    { name = "packaging", marker = "sys_platform == 'emscripten'" },
-    { name = "pandas", marker = "sys_platform == 'emscripten'" },
-    { name = "patsy", marker = "sys_platform == 'emscripten'" },
-    { name = "scipy", marker = "sys_platform == 'emscripten'" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "pandas" },
+    { name = "patsy" },
+    { name = "scipy" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1f/3b/963a015dd8ea17e10c7b0e2f14d7c4daec903baf60a017e756b57953a4bf/statsmodels-0.14.4.tar.gz", hash = "sha256:5d69e0f39060dc72c067f9bb6e8033b6dccdb0bae101d76a7ef0bcc94e898b67", size = 20354802, upload-time = "2024-10-03T16:15:36.273Z" }
 
@@ -2176,11 +2176,11 @@ resolution-markers = [
     "python_full_version < '3.14' and sys_platform != 'emscripten' and sys_platform != 'win32'",
 ]
 dependencies = [
-    { name = "numpy", marker = "sys_platform != 'emscripten'" },
-    { name = "packaging", marker = "sys_platform != 'emscripten'" },
-    { name = "pandas", marker = "sys_platform != 'emscripten'" },
-    { name = "patsy", marker = "sys_platform != 'emscripten'" },
-    { name = "scipy", marker = "sys_platform != 'emscripten'" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "pandas" },
+    { name = "patsy" },
+    { name = "scipy" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/0d/81/e8d74b34f85285f7335d30c5e3c2d7c0346997af9f3debf9a0a9a63de184/statsmodels-0.14.6.tar.gz", hash = "sha256:4d17873d3e607d398b85126cd4ed7aad89e4e9d89fc744cdab1af3189a996c2a", size = 20689085, upload-time = "2025-12-05T23:08:39.522Z" }
 wheels = [
