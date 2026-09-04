@@ -120,6 +120,10 @@ class Model(metaclass=ABCMeta):
         """
         return self.sample(**kwargs)
 
+    def _validate_run_args(self, **kwargs: object) -> None:
+        """Validate model-specific arguments before MCMC initialization."""
+        return None
+
     def _init_model(
         self,
         num_warmup: int,
@@ -182,7 +186,11 @@ class Model(metaclass=ABCMeta):
         **kwargs: object,
     ) -> None:
         """
-        Runs the model
+        Run the model after validating model-specific arguments.
+
+        Validation occurs before the NumPyro kernel and MCMC objects are
+        initialized. Models without model-specific run validation proceed
+        unchanged.
 
         Parameters
         ----------
@@ -194,11 +202,17 @@ class Model(metaclass=ABCMeta):
             Dictionary of arguments passed to the MCMC runner
             [`numpyro.infer.mcmc.MCMC`][] constructor.
             Defaults to None.
+        **kwargs
+            Model-specific arguments. These are validated before MCMC
+            initialization and then forwarded to the model's ``sample()``
+            method by the MCMC runner.
 
         Returns
         -------
         None
         """
+
+        self._validate_run_args(**kwargs)
 
         self._init_model(
             num_warmup=num_warmup,
