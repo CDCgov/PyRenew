@@ -714,6 +714,31 @@ Therefore, the wastewater signal's data dictionary includes:
 The observation data dictionary is structured to match the keyword arguments of `model.run()`: `obs_start_date` at the top level, plus one sub-dictionary per observation process.
 The entries in the sub-dictionaries are forwarded as arguments to each observation process's `sample` method.
 
+::: {.callout-warning}
+## Nest observation-specific arguments under the signal name
+
+Arguments such as `subpop_indices` must be placed inside the dictionary for the corresponding registered observation process.
+Passing them at the top level does not associate them with that signal and raises a validation error before MCMC begins.
+
+```python
+# Correct: observation-specific metadata is nested under the signal name.
+model.run(
+    ...,
+    regional_counts={
+        "obs": counts,
+        "subpop_indices": subpop_indices,
+    },
+)
+
+# Incorrect: this top-level argument is not associated with regional_counts.
+model.run(
+    ...,
+    regional_counts={"obs": counts},
+    subpop_indices=subpop_indices,
+)
+```
+:::
+
 The two observation streams are aligned differently because they are represented differently.
 Hospital admissions are a dense daily series: every day in the fitting window has a position in the vector, so `model.pad_observations()` prepends `n_init` missing values for the initialization period.
 Wastewater measurements are sparse rows: only sampled days appear in the table, so the observations themselves are not padded.

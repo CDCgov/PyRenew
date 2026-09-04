@@ -120,6 +120,10 @@ class Model(metaclass=ABCMeta):
         """
         return self.sample(**kwargs)
 
+    def _validate_run_args(self, **kwargs: object) -> None:
+        """Validate model-specific arguments before MCMC initialization."""
+        return None
+
     def _init_model(
         self,
         num_warmup: int,
@@ -182,7 +186,12 @@ class Model(metaclass=ABCMeta):
         **kwargs: object,
     ) -> None:
         """
-        Runs the model
+        Run the model after validating model-specific arguments.
+
+        Validation occurs before the NumPyro kernel and MCMC objects are
+        initialized. Models without model-specific run validation proceed
+        unchanged. If validation, initialization, or sampling fails, ``kernel``
+        and ``mcmc`` are reset to ``None``.
 
         Parameters
         ----------
@@ -194,23 +203,41 @@ class Model(metaclass=ABCMeta):
             Dictionary of arguments passed to the MCMC runner
             [`numpyro.infer.mcmc.MCMC`][] constructor.
             Defaults to None.
+        **kwargs
+            Model-specific arguments. These are validated before MCMC
+            initialization and then forwarded to the model's ``sample()``
+            method by the MCMC runner.
 
         Returns
         -------
         None
         """
 
-        self._init_model(
-            num_warmup=num_warmup,
-            num_samples=num_samples,
-            nuts_args=nuts_args,
-            mcmc_args=mcmc_args,
-        )
-        if rng_key is None:
-            rand_int = np.random.randint(np.iinfo(np.int64).min, np.iinfo(np.int64).max)
-            rng_key = jr.key(rand_int)
+        # A failed run must not leave samples from a previous run, or a
+        # partially initialized runner, attached to the model.
+        self.kernel = None
+        self.mcmc = None
 
-        self.mcmc.run(rng_key=rng_key, **kwargs)
+        try:
+            self._validate_run_args(**kwargs)
+
+            self._init_model(
+                num_warmup=num_warmup,
+                num_samples=num_samples,
+                nuts_args=nuts_args,
+                mcmc_args=mcmc_args,
+            )
+            if rng_key is None:
+                rand_int = np.random.randint(
+                    np.iinfo(np.int64).min, np.iinfo(np.int64).max
+                )
+                rng_key = jr.key(rand_int)
+
+            self.mcmc.run(rng_key=rng_key, **kwargs)
+        except BaseException:
+            self.kernel = None
+            self.mcmc = None
+            raise
 
         return None
 
