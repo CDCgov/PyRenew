@@ -190,7 +190,8 @@ class Model(metaclass=ABCMeta):
 
         Validation occurs before the NumPyro kernel and MCMC objects are
         initialized. Models without model-specific run validation proceed
-        unchanged.
+        unchanged. If validation, initialization, or sampling fails, ``kernel``
+        and ``mcmc`` are reset to ``None``.
 
         Parameters
         ----------
@@ -212,19 +213,31 @@ class Model(metaclass=ABCMeta):
         None
         """
 
-        self._validate_run_args(**kwargs)
+        # A failed run must not leave samples from a previous run, or a
+        # partially initialized runner, attached to the model.
+        self.kernel = None
+        self.mcmc = None
 
-        self._init_model(
-            num_warmup=num_warmup,
-            num_samples=num_samples,
-            nuts_args=nuts_args,
-            mcmc_args=mcmc_args,
-        )
-        if rng_key is None:
-            rand_int = np.random.randint(np.iinfo(np.int64).min, np.iinfo(np.int64).max)
-            rng_key = jr.key(rand_int)
+        try:
+            self._validate_run_args(**kwargs)
 
-        self.mcmc.run(rng_key=rng_key, **kwargs)
+            self._init_model(
+                num_warmup=num_warmup,
+                num_samples=num_samples,
+                nuts_args=nuts_args,
+                mcmc_args=mcmc_args,
+            )
+            if rng_key is None:
+                rand_int = np.random.randint(
+                    np.iinfo(np.int64).min, np.iinfo(np.int64).max
+                )
+                rng_key = jr.key(rand_int)
+
+            self.mcmc.run(rng_key=rng_key, **kwargs)
+        except BaseException:
+            self.kernel = None
+            self.mcmc = None
+            raise
 
         return None
 
