@@ -2,26 +2,8 @@
 Utility functions for processing arrays.
 """
 
-from typing import NamedTuple
-
 import jax.numpy as jnp
 from jax.typing import ArrayLike
-
-
-class PeriodicProcessSample(NamedTuple):
-    """
-    A container for holding the output from `process.PeriodicProcess()`.
-
-    Attributes
-    ----------
-    value
-        The sampled quantity.
-    """
-
-    value: ArrayLike | None = None
-
-    def __repr__(self) -> str:
-        return f"PeriodicProcessSample(value={self})"
 
 
 def require_shape(arr: ArrayLike, expected: tuple[int, ...], label: str) -> None:
