@@ -124,6 +124,23 @@ class MultiSignalModel(Model):
                     f"the model name {ascertainment_model.name!r}."
                 )
 
+    def _validate_run_args(
+        self,
+        n_days_post_init: int,
+        population_size: float,
+        *,
+        subpop_fractions: ArrayLike | None = None,
+        obs_start_date: dt.date | dt.datetime | np.datetime64 | None = None,
+        **observation_data: dict[str, object],
+    ) -> None:
+        """Validate concrete model inputs before MCMC initialization."""
+        self.validate_data(
+            n_days_post_init=n_days_post_init,
+            subpop_fractions=subpop_fractions,
+            obs_start_date=obs_start_date,
+            **observation_data,
+        )
+
     def pad_observations(
         self,
         obs: jnp.ndarray,
@@ -267,9 +284,10 @@ class MultiSignalModel(Model):
         length n_total with NaN padding for the initialization period.
         Sparse observations provide times indices on this shared axis.
 
-        This method must be called with concrete (non-traced) values
-        before running inference. Validation using Python control flow
-        (if/raise) cannot be done during JAX tracing.
+        ``run()`` invokes this method automatically with concrete
+        (non-traced) values before MCMC initialization. It can also be
+        called directly to validate data without fitting. Validation using
+        Python control flow (if/raise) cannot be done during JAX tracing.
 
         Parameters
         ----------
@@ -291,10 +309,22 @@ class MultiSignalModel(Model):
         Raises
         ------
         ValueError
-            If times indices are out of bounds or negative, if dense obs
-            length doesn't match n_total, if data shapes are inconsistent,
-            or if ``obs_start_date`` is missing when an observation requires it.
+            If an unknown top-level argument is provided, if times indices
+            are out of bounds or negative, if dense obs length doesn't match
+            n_total, if data shapes are inconsistent, or if
+            ``obs_start_date`` is missing when an observation requires it.
         """
+        unknown_names = [
+            name for name in observation_data if name not in self.observations
+        ]
+        if unknown_names:
+            raise ValueError(
+                f"Unknown top-level model argument(s) {unknown_names}. "
+                "Observation-specific arguments must be nested under a "
+                "registered observation name. Registered observations: "
+                f"{list(self.observations)}."
+            )
+
         self._check_obs_start_date(obs_start_date)
 
         pop = self.latent._parse_and_validate_fractions(
@@ -306,12 +336,6 @@ class MultiSignalModel(Model):
         first_day_dow = self._resolve_first_day_dow(obs_start_date)
 
         for name, obs_data in observation_data.items():
-            if name not in self.observations:
-                raise ValueError(
-                    f"Unknown observation '{name}'. "
-                    f"Available: {list(self.observations.keys())}"
-                )
-
             obs = self.observations[name]
             obs.validate_data(
                 n_total=n_total,

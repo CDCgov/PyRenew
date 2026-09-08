@@ -708,7 +708,7 @@ class TestMultiSignalModelValidation:
     """Test data validation."""
 
     def test_validate_data_accepts_valid_data(self, validation_builder):
-        """Test that validate_data accepts valid dense and sparse data."""
+        """Accept valid data with subpopulation indices nested by signal."""
         model = validation_builder.build()
         n_total = model.latent.n_initialization_points + 30
 
@@ -724,6 +724,33 @@ class TestMultiSignalModelValidation:
                 "subpop_indices": jnp.array([0, 1]),
             },
         )
+
+    def test_run_rejects_misplaced_subpop_indices_before_initialization(
+        self, validation_builder
+    ):
+        """Reject top-level subpopulation indices before initializing MCMC."""
+        model = validation_builder.build()
+
+        with pytest.raises(ValueError) as exc_info:
+            model.run(
+                num_warmup=1,
+                num_samples=1,
+                n_days_post_init=30,
+                population_size=1_000_000,
+                subpop_fractions=SUBPOP_FRACTIONS,
+                hospital_subpop={
+                    "obs": jnp.array([10, 20]),
+                    "period_end_times": jnp.array([5, 10]),
+                },
+                subpop_indices=jnp.array([0, 1]),
+            )
+
+        message = str(exc_info.value)
+        assert "subpop_indices" in message
+        assert "must be nested under a registered observation name" in message
+        assert "hospital_subpop" in message
+        assert model.kernel is None
+        assert model.mcmc is None
 
     def test_validate_data_rejects_out_of_bounds_times(self, validation_builder):
         """Test that times exceeding n_total_days raises error."""
@@ -760,7 +787,9 @@ class TestMultiSignalModelValidation:
         """Test that unknown observation name raises error."""
         model = validation_builder.build()
 
-        with pytest.raises(ValueError, match="Unknown"):
+        with pytest.raises(
+            ValueError, match="Unknown top-level model argument"
+        ) as exc_info:
             model.validate_data(
                 n_days_post_init=30,
                 subpop_fractions=SUBPOP_FRACTIONS,
@@ -769,6 +798,11 @@ class TestMultiSignalModelValidation:
                     "period_end_times": jnp.array([5]),
                 },
             )
+
+        message = str(exc_info.value)
+        assert "unknown_obs" in message
+        assert "registered observation name" in message
+        assert "hospital_subpop" in message
 
     def test_validate_data_rejects_mismatched_obs_times_length(
         self, validation_builder
