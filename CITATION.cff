@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+title: "PyRenew: A Package for Bayesian Renewal Modeling with JAX and NumPyro"
+version: "0.1.7"
+authors:
+  - family-names: "Bayer"
+    given-names: "Damon"
+  - family-names: "Morris"
+    given-names: "Dylan H."
+  - family-names: "Vega Yon"
+    given-names: "George G."
+    orcid: "https://orcid.org/0000-0002-3171-0844"
+  - family-names: "Martin"
+    given-names: "Trevor"
+  - family-names: "Bidari"
+    given-names: "Subekshya"
+abstract: "A Python package for multi-signal Bayesian renewal modeling with JAX and NumPyro."
+license: "Apache-2.0"
+repository-code: "https://github.com/CDCgov/PyRenew"
+url: "https://cdcgov.github.io/PyRenew/"
+keywords:
+  - "epidemiology"
+  - "Bayesian modeling"
+  - "Python"
