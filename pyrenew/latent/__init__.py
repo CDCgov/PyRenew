@@ -28,14 +28,16 @@ from pyrenew.latent.infection_process import InfectionProcess, InfectionProcessS
 from pyrenew.latent.infections import Infections
 from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
 from pyrenew.latent.population_infections import PopulationInfections
+from pyrenew.latent.state_centered_distributions import (
+    StateAR1,
+    StateDifferencedAR1,
+    StateRandomWalk,
+)
 from pyrenew.latent.subpopulation_infections import SubpopulationInfections
 from pyrenew.latent.temporal_processes import (
     AR1,
     DifferencedAR1,
     RandomWalk,
-    StateAR1,
-    StateDifferencedAR1,
-    StateRandomWalk,
     StepwiseTemporalProcess,
     TemporalProcess,
     WeeklyTemporalProcess,
