@@ -6,6 +6,7 @@ from abc import ABCMeta, abstractmethod
 
 import jax.random as jr
 import numpy as np
+import numpyro
 from jax.typing import ArrayLike
 from numpyro.infer import MCMC, NUTS, Predictive, init_to_sample
 
@@ -64,6 +65,34 @@ class RandomVariable(metaclass=ABCMeta):
         """
         pass
 
+<<<<<<< dhm-scope
+    @staticmethod
+    @abstractmethod
+    def validate(**kwargs: object) -> None:
+        """
+        Validation of kwargs to be implemented in subclasses.
+        """
+        pass
+
+    def scope(self) -> numpyro.handlers.scope:
+        """
+        Standardized [`numpyro.handlers.scope`][] context for
+        PyRenew [`RandomVariable`][]s. This can be used to
+        naming of any internal sampling sites within the
+        [`RandomVariable`][]'s [`self.sample()`][] method.
+
+        The scope prefix is always the [`name`][self.name] of the `RandomVariable`
+        and the divider is always `::`.
+
+        Returns
+        -------
+        numpyro.handlers.scope
+           A properly configured scope handler.
+        """
+        return numpyro.handlers.scope(prefix=self.name, divider="::")
+
+=======
+>>>>>>> main
     def __call__(self, **kwargs: object) -> tuple:
         """
         Alias for `sample`.

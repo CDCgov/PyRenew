@@ -38,8 +38,8 @@ class IIDRandomSequence(RandomVariable):
         -------
         None
         """
-        super().__init__(name=name, **kwargs)
         self.element_rv = element_rv
+        super().__init__(name=name, **kwargs)
 
     def sample(
         self, n: int, *args: object, vectorize: bool = False, **kwargs: object
@@ -76,22 +76,22 @@ class IIDRandomSequence(RandomVariable):
             `n` samples from self.distribution`.
         """
 
-        if vectorize and hasattr(self.element_rv, "expand_by"):
-            result = self.element_rv.expand_by((n,)).sample(*args, **kwargs)
-        else:
+        with self.scope():
+            if vectorize and hasattr(self.element_rv, "expand_by"):
+                result = self.element_rv.expand_by((n,)).sample(*args, **kwargs)
+            else:
 
-            def transition(_carry: None, _x: None) -> tuple[None, ArrayLike]:
-                # numpydoc ignore=GL08
-                el = self.element_rv.sample(*args, **kwargs)
-                return None, el
+                def transition(_carry: None, _x: None) -> tuple[None, ArrayLike]:
+                    # numpydoc ignore=GL08
+                    el = self.element_rv.sample(*args, **kwargs)
+                    return None, el
 
-            _, result = scan(
-                transition,
-                xs=None,
-                init=None,
-                length=n,
-            )
-
+                _, result = scan(
+                    transition,
+                    xs=None,
+                    init=None,
+                    length=n,
+                )
         return result
 
 
@@ -130,6 +130,6 @@ class StandardNormalSequence(IIDRandomSequence):
         super().__init__(
             name=name,
             element_rv=DistributionalVariable(
-                name=f"{name}_element", distribution=dist.Normal(0, 1)
+                name="element", distribution=dist.Normal(0, 1)
             ).expand_by(element_shape),
         )

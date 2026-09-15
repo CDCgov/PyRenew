@@ -159,12 +159,13 @@ class ARProcess(RandomVariable):
             recent_vals: ArrayLike, _: ArrayLike
         ) -> tuple[ArrayLike, ArrayLike]:  # numpydoc ignore=GL08
             with numpyro.handlers.reparam(config={noise_name: LocScaleReparam(0)}):
-                next_noise = numpyro.sample(
-                    noise_name,
-                    numpyro.distributions.Normal(
-                        loc=jnp.zeros(noise_shape), scale=noise_sd
-                    ),
-                )
+                with self.scope():
+                    next_noise = numpyro.sample(
+                        noise_name,
+                        numpyro.distributions.Normal(
+                            loc=jnp.zeros(noise_shape), scale=noise_sd
+                        ),
+                    )
 
             dot_prod = jnp.einsum("i...,i...->...", autoreg, recent_vals)
             new_term = dot_prod + next_noise
