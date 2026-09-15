@@ -20,6 +20,21 @@ low-level building blocks in [pyrenew.process][]. The key differences:
 | Vectorization | Caller manages array shapes | Automatic via ``n_processes`` parameter |
 | Validation | Minimal constraints | Validates positive innovation_sd |
 
+``AR1``, ``DifferencedAR1``, and ``RandomWalk`` expose a common public
+interface for two equivalent parameterizations. The ``"innovation"``
+parameterization is non-centered: it samples independent standardized
+innovations and constructs the state trajectory deterministically using the
+lower-level [pyrenew.process][] implementations. The ``"state"``
+parameterization is centered: it samples each state conditionally on the
+preceding state using a local NumPyro scan.
+
+This implementation asymmetry is intentional. The existing
+[pyrenew.process][] abstractions naturally represent innovation-driven
+processes. State-centered transitions remain local to the public temporal
+processes so that the state itself is the scanned NumPyro sample site, which
+supports replaying a fitted trajectory and extending it during posterior
+prediction.
+
 **When to use which:**
 
 - Use ``pyrenew.process`` classes (``ARProcess``, ``DifferencedProcess``,
@@ -193,13 +208,16 @@ class AR1(TemporalProcess):
     toward a mean level. Keeps Rt bounded near a baseline — values that
     drift away are "pulled back" over time.
 
-    This class wraps [pyrenew.process.ARProcess][] with a simplified,
-    protocol-compliant interface that handles vectorization automatically.
+    The ``parameterization`` argument selects between a non-centered
+    ``"innovation"`` parameterization, which samples independent standardized
+    innovations, and a centered ``"state"`` parameterization, which samples
+    each state conditionally on the preceding state. Both produce the same
+    prior distribution over the state path but can have different posterior
+    sampling geometry.
 
-    The ``parameterization`` argument selects between sampling standardized
-    innovations (``"innovation"``) and sampling the state path directly
-    (``"state"``). Both produce the same prior distribution over the state
-    path; they differ in sampler geometry.
+    The innovation branch uses [pyrenew.process.ARProcess][] to construct the
+    trajectory from sampled innovations. The state branch uses local scanned
+    conditional transitions.
 
     Parameters
     ----------
@@ -358,13 +376,11 @@ class DifferencedAR1(TemporalProcess):
     the rate of change reverting toward a mean. Unlike AR(1), this allows
     Rt to trend persistently upward or downward while the growth rate stabilizes.
 
-    This class wraps [pyrenew.process.DifferencedProcess][] with
-    [pyrenew.process.ARProcess][] as the fundamental process, providing
-    a simplified, protocol-compliant interface.
-
-    The ``parameterization`` argument selects between sampling standardized
-    innovations on the differences (``"innovation"``) and sampling the state
-    path $[x_1, \ldots, x_{T-1}]$ directly (``"state"``) under the priors
+    The ``parameterization`` argument selects between a non-centered
+    ``"innovation"`` parameterization, which samples independent standardized
+    innovations on the differences, and a centered ``"state"``
+    parameterization, which samples the state path
+    $[x_1, \ldots, x_{T-1}]$ conditionally under the priors
 
     $$
     x_1 \sim \mathrm{Normal}(x_0, \sigma / \sqrt{1 - \phi^2})
@@ -377,7 +393,12 @@ class DifferencedAR1(TemporalProcess):
 
     where $\phi$ is ``autoreg`` and $\sigma$ is ``innovation_sd``. The initial
     state $x_0$ is supplied deterministically as ``initial_value``. Both produce
-    the same prior over the state path; they differ in sampler geometry.
+    the same prior over the state path but can have different posterior
+    sampling geometry.
+
+    The innovation branch uses [pyrenew.process.DifferencedProcess][] with
+    [pyrenew.process.ARProcess][] as its fundamental process. The state branch
+    uses local scanned conditional transitions.
 
     Parameters
     ----------
@@ -550,13 +571,17 @@ class RandomWalk(TemporalProcess):
     toward a mean. Allows Rt to drift without bound — suitable when you
     have no prior expectation that Rt will return to a baseline.
 
-    This class wraps [pyrenew.process.RandomWalk][] with a simplified,
-    protocol-compliant interface that handles vectorization automatically.
+    The ``parameterization`` argument selects between a non-centered
+    ``"innovation"`` parameterization, which samples independent standardized
+    innovations, and a centered ``"state"`` parameterization, which samples
+    each state conditionally on the preceding state. The initial state
+    ``x[0] = initial_value`` is deterministic. Both parameterizations produce
+    the same prior over the state path but can have different posterior
+    sampling geometry.
 
-    The ``parameterization`` argument selects between sampling standardized
-    innovations (``"innovation"``) and sampling the state path directly
-    (``"state"``), with ``x[0] = initial_value`` deterministic. Both produce
-    the same prior over the state path; they differ in sampler geometry.
+    The innovation branch uses [pyrenew.process.RandomWalk][] to construct the
+    trajectory from sampled innovations. The state branch uses local scanned
+    conditional transitions.
 
     Parameters
     ----------
