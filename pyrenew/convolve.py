@@ -38,19 +38,19 @@ def new_convolve_scanner(
 
     transform
         A transformation to apply to the result
-        of the dot product and multiplication.
+        of the dot product and multiplier application.
 
     Returns
     -------
     Callable
-        A scanner function that can be used with
-        [`jax.lax.scan`][] or
-        [`numpyro.contrib.control_flow.scan`][]
-        for convolution.
-        This function takes a history subset array and
-        a scalar, computes the dot product of
-        the supplied convolution array with the history
-        subset array, multiplies by the scalar, and
+        A scanner function that can be used with [`jax.lax.scan`][] or
+        [`numpyro.contrib.control_flow.scan`][] for convolution. This
+        scanner function's arguments are a history subset array and
+        a multiplier (which can be a scalar, a vector, or a matrix).
+
+        The scanner function computes the dot product of the
+        history subset array with the fixed convolution array,
+        applies first the multiplier and then the transformation,
         returns the resulting value and a new history subset
         array formed by the 2nd-through-last entries
         of the old history subset array followed by that same
@@ -58,31 +58,58 @@ def new_convolve_scanner(
 
     Notes
     -----
-    The following iterative operation is found often
-    in renewal processes:
-
+    The following iterative operation is common in renewal processes:
     ```math
     X(t) = f\left(m(t) \begin{bmatrix} X(t - n) \\ X(t - n + 1) \\
     \vdots{} \\ X(t - 1)\end{bmatrix} \cdot{} \mathbf{d} \right)
     ```
+    where $X(t)$ and $m(t)$ are scalars and $\mathbf{d}$ is a length-$n$
+    vector.
 
-    Where $\mathbf{d}$ is a vector of length $n$,
-    $m(t)$ is a scalar for each value of time $t$,
-    and $f$ is a scalar-valued function.
+    We can generalize this operation to take in length-$k$ vectors
+    $\mathbf{X}(t)$ (which might represent $k$ different subpopulations)
+    and apply a matrix multiplier $M(t)$:
 
-    Given $\mathbf{d}$, and optionally $f$,
-    this factory function returns a new function that
-    performs one step of this process while scanning along
-    an array of  multipliers (i.e. an array
-    giving the values of $m(t)$) using [`jax.lax.scan`][].
+    ```math
+    \mathbf{X}(t) = f\left(M(t)
+    \begin{bmatrix}
+    \mathbf{X}(t - n) \\ \mathbf{X}(t - n + 1) \\
+    \vdots{} \\ \mathbf{X}(t - 1)
+    \end{bmatrix}^{T} \mathbf{d} \right)
+    ```
+
+    Here each $\mathbf{X}(t)$ is a vector of length $k$,
+    $M(t)$ is a $k \times k$ matrix, and $f$ receives and returns a
+    length-$k$ vector.
+
+    Given $\mathbf{d}$, and optionally $f$, this factory
+    returns a new function that performs one step of the process
+    described above. To produce a full $\mathbf{X}(t)$ timeseries,
+    scan the function over an array of $M(t)$ values using
+    [`jax.lax.scan`][] or [`numpyro.contrib.control_flow.scan`][].
+
+    When scanning over an array of scalar multipliers $m(t)$ or vector
+    multipliers $\mathbf{m}(t)$, the function performs performs elementwise
+    multiplication. That is, providing a scalar $m(t)$ is equivalent to
+    providing a diagonal matrix $M(t) = m I_k$, and providing a vector
+    vector $\mathbf{m}(t)$ is equivalent to providing a diagonal matrix
+    $M(t) = [\mathbf{m}(t)]^T I_k$, where $I_k$ is the $k \times k$ identity
+    matrix.
     """
 
     def _new_scanner(
-        history_subset: ArrayLike, multiplier: float
-    ) -> tuple[ArrayLike, float]:  # numpydoc ignore=GL08
-        new_val = transform(
-            multiplier * jnp.einsum("i...,i...->...", array_to_convolve, history_subset)
+        history_subset: ArrayLike, multiplier: ArrayLike
+    ) -> tuple[ArrayLike, ArrayLike]:  # numpydoc ignore=GL08
+        convolved_history = jnp.einsum(
+            "i...,i...->...", array_to_convolve, history_subset
         )
+        if jnp.ndim(multiplier) < 2:
+            multiplied_history = multiplier * convolved_history
+        else:
+            multiplied_history = jnp.einsum(
+                "...ij,...j->...i", multiplier, convolved_history
+            )
+        new_val = transform(multiplied_history)
         latest = jnp.concatenate([history_subset[1:], new_val[jnp.newaxis]], axis=0)
         return latest, new_val
 

@@ -157,24 +157,127 @@ def test_double_convolve_scanner_using_scan(arr1, arr2, history, m1, m2, transfo
         [
             jnp.array([1.0, 2.0]),
             jnp.array([3.0, 4.0]),
-            jnp.array(2),
+            jnp.array(2.5),
             t.IdentityTransform(),
         ],
         [
             jnp.ones(3),
             jnp.array(np.array([0.5, 0.3, 0.2] * 3)).reshape(3, 3),
-            jnp.ones(3),
+            jnp.array([5.5, 6.7, 0.2]),
             t.ExpTransform(),
         ],
     ],
 )
-def test_convolve_scanner(arr, history, multiplier, transform):
+def test_convolve_scanner_with_scalars_vectors(arr, history, multiplier, transform):
     """
-    Tests new convolve scanner function
+    Tests new convolve scanner function with scalar and vectors
+    multipliers, which should be applied elementwise.
     """
     scanner = pc.new_convolve_scanner(arr, transform)
     latest, new_val = scanner(history, multiplier)
     assert jnp.array_equal(new_val, transform(multiplier * jnp.dot(arr, history)))
+
+
+@pytest.mark.parametrize(
+    ["arr", "history", "multiplier", "transform"],
+    [
+        [
+            jnp.array([1.0, 2.0]),
+            jnp.array([[3.0, 4.0], [1.0, 2.0]]),
+            jnp.array(2.5),
+            t.IdentityTransform(),
+        ],
+        [
+            jnp.ones(3),
+            jnp.array(np.array([0.5, 0.3, 0.2] * 3)).reshape(3, 3),
+            jnp.array(-0.25),
+            t.ExpTransform(),
+        ],
+    ],
+)
+def test_convolve_scanner_rep_vector_equivalent_to_scalar(
+    arr, history, multiplier, transform
+):
+    """
+    A vector of repeated values and a scalar should behave identically
+    as multipliers in functions built by `new_convolve_scanner`.
+    """
+    assert jnp.size(multiplier) == 1
+    scanner = pc.new_convolve_scanner(arr, transform)
+    mult_vec = multiplier * jnp.ones(history.shape[1])
+    assert jnp.ndim(mult_vec) == 1
+    assert jnp.size(mult_vec) > 1
+    latest_vec, new_val_vec = scanner(history, mult_vec)
+    latest_scalar, new_val_scalar = scanner(history, multiplier)
+    assert_array_equal(latest_vec, latest_scalar)
+    assert_array_equal(new_val_vec, new_val_scalar)
+
+
+@pytest.mark.parametrize(
+    ["arr", "history", "multiplier", "transform"],
+    [
+        [
+            jnp.array([1.0, 2.0]),
+            jnp.array([[3.0, 4.0], [1.0, 2.0]]),
+            jnp.array([2.5, 3.5]),
+            t.IdentityTransform(),
+        ],
+        [
+            jnp.ones(3),
+            jnp.array(np.array([0.5, 0.3, 0.2] * 3)).reshape(3, 3),
+            jnp.array([-0.25, 1.5, 3]),
+            t.ExpTransform(),
+        ],
+    ],
+)
+def test_convolve_scanner_diag_mat_equivalent_to_vector(
+    arr, history, multiplier, transform
+):
+    """
+    A vector and a diagonal matrix should behave identically
+    as multipliers in functions built by `new_convolve_scanner`.
+    """
+    assert jnp.size(multiplier) == history.shape[1]
+    scanner = pc.new_convolve_scanner(arr, transform)
+    mult_mat = multiplier * jnp.eye(history.shape[1])
+    assert jnp.ndim(mult_mat) > 1
+    latest_mat, new_val_mat = scanner(history, mult_mat)
+    latest_vec, new_val_vec = scanner(history, multiplier)
+    assert_array_equal(latest_mat, latest_vec)
+    assert_array_equal(new_val_mat, new_val_vec)
+
+
+def test_convolve_scanner_with_population_mixing_matrix():
+    """
+    Test matrix multipliers mix source populations into target populations.
+    """
+    arr = jnp.array([0.25, 0.75])
+    history = jnp.array([[8.0, 4.0], [12.0, 0.0]])
+    mixing_matrix = jnp.array([[1.0, 0.2], [0.5, 0.8]])
+    scanner = pc.new_convolve_scanner(arr, t.IdentityTransform())
+
+    latest, new_val = scanner(history, mixing_matrix)
+    infectiousness = jnp.dot(arr, history)
+    expected = mixing_matrix @ infectiousness
+
+    assert_array_equal(new_val, expected)
+    assert_array_equal(latest[-1], expected)
+
+
+def test_convolve_scanner_off_diagonal_transmission_between_populations():
+    """
+    Test an off-diagonal entry seeds infections in another population.
+    """
+    history = jnp.array([[10.0, 0.0]])
+    no_mixing = jnp.repeat(jnp.eye(2)[jnp.newaxis], repeats=3, axis=0)
+    with_mixing = no_mixing.at[:, 1, 0].set(0.25)
+    scanner = pc.new_convolve_scanner(jnp.array([1.0]), t.IdentityTransform())
+
+    _, infections_without_mixing = jax.lax.scan(scanner, init=history, xs=no_mixing)
+    _, infections_with_mixing = jax.lax.scan(scanner, init=history, xs=with_mixing)
+
+    assert_array_equal(infections_without_mixing[:, 1], jnp.zeros(3))
+    assert jnp.all(infections_with_mixing[:, 1] > 0)
 
 
 @pytest.mark.parametrize(

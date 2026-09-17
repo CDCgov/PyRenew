@@ -34,6 +34,9 @@ dev = [
     "ruff>=0.15.16",
     "scipy>=1.16.1",
 ]
+docs = [
+    "polars[pyarrow]>=1.40.1",
+]
 
 [build-system]
 requires = ["hatchling"]
