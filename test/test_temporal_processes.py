@@ -996,7 +996,6 @@ class TestStatePosteriorExtension:
             n_draws * fitted_scanned_timepoints * n_processes,
             dtype=jnp.asarray(0.2).dtype,
         ).reshape(n_draws, fitted_scanned_timepoints, n_processes)
-        fitted_states /= 10.0
         posterior_samples, initial_value, posterior_state_offset = (
             _state_forecast_posterior(process_name, fitted_states)
         )
@@ -1061,7 +1060,6 @@ class TestStatePosteriorExtension:
             n_draws * fitted_scanned_timepoints * n_processes,
             dtype=jnp.asarray(0.2).dtype,
         ).reshape(n_draws, fitted_scanned_timepoints, n_processes)
-        fitted_states_a /= 10.0
         terminal_shift = jnp.array([[0.5, -0.25], [-0.4, 0.75]])
         fitted_states_b = fitted_states_a.at[:, -1, :].add(terminal_shift)
         posterior_a, initial_value, _ = _state_forecast_posterior(
@@ -1098,9 +1096,11 @@ class TestStatePosteriorExtension:
             forecast_b["forecast_state"][:, fitted_scanned_timepoints, :]
             - forecast_a["forecast_state"][:, fitted_scanned_timepoints, :]
         )
-        expected_difference = _transition_mean(
-            process_name, fitted_states_b
-        ) - _transition_mean(process_name, fitted_states_a)
+        transition_mean_a = _transition_mean(process_name, fitted_states_a)
+        transition_mean_b = _transition_mean(process_name, fitted_states_b)
+        assert not jnp.allclose(transition_mean_a, transition_mean_b)
+
+        expected_difference = transition_mean_b - transition_mean_a
         assert jnp.allclose(observed_difference, expected_difference)
 
 
