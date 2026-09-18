@@ -7,8 +7,7 @@ In most cases, backwards compatibility is not a concern.
 
 coding style: always use MyPy type hints.
 all functions should have a docstring; public-facing API functions should be user-focussed.
-users want to know what the function does, ditto maintainers.
-omit design discussion details.
+users and developers want to know what the function does, not design details.
 inline comments only for critical, non-obvious details.
 
 Design and implementation plans should be written in plain style.
