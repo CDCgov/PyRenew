@@ -2,12 +2,13 @@
 Unit tests for temporal processes.
 """
 
+from typing import Literal
+
 import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pytest
-from jax.typing import ArrayLike
 from numpyro.infer import Predictive
 
 from pyrenew.deterministic import DeterministicVariable
@@ -16,12 +17,8 @@ from pyrenew.latent import (
     DifferencedAR1,
     RandomWalk,
     StepwiseTemporalProcess,
+    TemporalProcess,
     WeeklyTemporalProcess,
-)
-from pyrenew.latent.state_centered_distributions import (
-    StateAR1,
-    StateDifferencedAR1,
-    StateRandomWalk,
 )
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
@@ -56,107 +53,6 @@ def fixed_rw_kwargs(innovation_sd=0.05):
     }
 
 
-def _ar1_expected_path(
-    noise: ArrayLike,
-    autoreg: ArrayLike,
-    scale: ArrayLike,
-    initial_loc: ArrayLike,
-) -> ArrayLike:
-    """
-    Replay the StateAR1 state recursion from explicit standard-normal noise.
-
-    Parameters
-    ----------
-    noise
-        Standard-normal innovations with leading axis ``num_steps`` and trailing
-        per-step (sample + batch) shape.
-    autoreg
-        AR(1) coefficient.
-    scale
-        Innovation standard deviation.
-    initial_loc
-        Deterministic initial state.
-
-    Returns
-    -------
-    ArrayLike
-        Post-initial path with time on the trailing axis.
-    """
-    autoreg = jnp.asarray(autoreg)
-    scale = jnp.asarray(scale)
-    state = jnp.broadcast_to(jnp.asarray(initial_loc), noise.shape[1:])
-    states = []
-    for innovation in noise:
-        state = autoreg * state + scale * innovation
-        states.append(state)
-    return jnp.moveaxis(jnp.stack(states, axis=0), 0, -1)
-
-
-def _differenced_ar1_expected_path(
-    noise: ArrayLike,
-    autoreg: ArrayLike,
-    scale: ArrayLike,
-    initial_loc: ArrayLike,
-    initial_diff: ArrayLike,
-) -> ArrayLike:
-    """
-    Replay the StateDifferencedAR1 recursion from explicit standard-normal noise.
-
-    Parameters
-    ----------
-    noise
-        Standard-normal innovations with leading axis ``num_steps`` and trailing
-        per-step (sample + batch) shape.
-    autoreg
-        AR(1) coefficient on first differences.
-    scale
-        Innovation standard deviation.
-    initial_loc
-        Deterministic initial state.
-    initial_diff
-        Deterministic initial first difference.
-
-    Returns
-    -------
-    ArrayLike
-        Post-initial path with time on the trailing axis.
-    """
-    autoreg = jnp.asarray(autoreg)
-    scale = jnp.asarray(scale)
-    per_step_shape = noise.shape[1:]
-    prev_2 = jnp.broadcast_to(jnp.asarray(initial_loc), per_step_shape)
-    prev_1 = prev_2 + jnp.broadcast_to(jnp.asarray(initial_diff), per_step_shape)
-    states = []
-    for innovation in noise:
-        state = prev_1 + autoreg * (prev_1 - prev_2) + scale * innovation
-        states.append(state)
-        prev_2, prev_1 = prev_1, state
-    return jnp.moveaxis(jnp.stack(states, axis=0), 0, -1)
-
-
-AR1_FORWARD_SAMPLING_CASES = [
-    (0.5, 0.2, 1.0, 5, ()),
-    (0.9, 0.05, -0.5, 8, ()),
-    (jnp.array([0.3, 0.8]), jnp.array([0.1, 0.5]), jnp.array([0.0, 1.0]), 6, ()),
-    (0.5, jnp.array([0.1, 0.2, 0.3]), 0.0, 4, ()),
-    (0.7, 0.2, 1.0, 3, (4,)),
-]
-
-DIFFERENCED_AR1_FORWARD_SAMPLING_CASES = [
-    (0.2, 0.5, 1.0, 0.3, 1, ()),
-    (0.6, 0.1, 0.0, 0.05, 7, ()),
-    (
-        jnp.array([0.6, -0.3]),
-        jnp.array([0.2, 0.5]),
-        jnp.array([1.0, -0.5]),
-        jnp.array([0.1, 0.2]),
-        5,
-        (),
-    ),
-    (0.5, 0.2, 0.0, 0.0, 4, (3,)),
-]
-
-
 INNER_PROCESS_PARAMS = [
     (AR1, fixed_ar1_kwargs()),
     (DifferencedAR1, fixed_ar1_kwargs()),
@@ -165,225 +61,116 @@ INNER_PROCESS_PARAMS = [
 
 PARAMETERIZATIONS = ["innovation", "state"]
 
+ProcessName = Literal["random_walk", "ar1", "differenced_ar1"]
+Parameterization = Literal["innovation", "state"]
+
+
+def _make_forecast_process(
+    process_name: ProcessName,
+    parameterization: Parameterization,
+) -> TemporalProcess:
+    """
+    Build a temporal process with deterministic forecast parameters.
+
+    Returns
+    -------
+    TemporalProcess
+        The configured process.
+    """
+    if process_name == "random_walk":
+        return RandomWalk(
+            **fixed_rw_kwargs(innovation_sd=0.2),
+            parameterization=parameterization,
+        )
+    return (AR1 if process_name == "ar1" else DifferencedAR1)(
+        **fixed_ar1_kwargs(autoreg=0.6, innovation_sd=0.2),
+        parameterization=parameterization,
+    )
+
+
+def _state_forecast_posterior(
+    process_name: ProcessName,
+    fitted_states: jax.Array,
+) -> tuple[dict[str, jax.Array], jax.Array, int]:
+    """
+    Build posterior samples and trajectory metadata for a state process.
+
+    Returns
+    -------
+    tuple[dict[str, jax.Array], jax.Array, int]
+        Posterior samples, initial value, and state trajectory offset.
+    """
+    initial_value = jnp.array([0.25, -0.5])
+    if process_name == "random_walk":
+        return {"forecast_state": fitted_states}, initial_value, 1
+    if process_name == "ar1":
+        init_states = jnp.array([[0.1, -0.2], [0.4, 0.3]])
+        return (
+            {
+                "forecast_init": init_states,
+                "forecast_state": fitted_states,
+            },
+            initial_value,
+            1,
+        )
+
+    init_rates = jnp.array([[0.15, -0.1], [-0.2, 0.05]])
+    return (
+        {
+            "forecast_init_rate": init_rates,
+            "forecast_state": fitted_states,
+        },
+        initial_value,
+        2,
+    )
+
+
+def _transition_mean(
+    process_name: ProcessName,
+    fitted_states: jax.Array,
+) -> jax.Array:
+    """
+    Compute the next state-transition mean from fitted terminal states.
+
+    Returns
+    -------
+    jax.Array
+        The next transition mean for every posterior draw and process.
+    """
+    if process_name == "random_walk":
+        return fitted_states[:, -1, :]
+    if process_name == "ar1":
+        return 0.6 * fitted_states[:, -1, :]
+    return fitted_states[:, -1, :] + 0.6 * (
+        fitted_states[:, -1, :] - fitted_states[:, -2, :]
+    )
+
+
+def _forecast_sample_sites(
+    process_name: ProcessName,
+    parameterization: Parameterization,
+) -> tuple[str, ...]:
+    """
+    Return the fitted latent sites required to replay a trajectory.
+
+    Returns
+    -------
+    tuple[str, ...]
+        Names of the posterior sample sites required for prediction.
+    """
+    transition_site = "state" if parameterization == "state" else "noise_decentered"
+    if process_name == "random_walk":
+        transition_site = "state" if parameterization == "state" else "step"
+        return (f"forecast_{transition_site}",)
+    if process_name == "ar1":
+        return ("forecast_init", f"forecast_{transition_site}")
+    return ("forecast_init_rate", f"forecast_{transition_site}")
+
+
 DETERMINISTIC_INIT_PROCESS_PARAMS = [
     (DifferencedAR1, fixed_ar1_kwargs()),
     (RandomWalk, fixed_rw_kwargs()),
 ]
-
-
-class TestStateCenteredDistributionLogProb:
-    """Exact density checks for state-centered temporal-process distributions."""
-
-    def test_state_random_walk_log_prob_matches_manual_transition_sum(self):
-        """Batched StateRandomWalk log_prob equals the explicit RW transition density."""
-        scale = jnp.array([0.3, 0.7])
-        initial_loc = jnp.array([1.0, -0.5])
-        value = jnp.array(
-            [
-                [1.2, 0.6, 0.1, -0.2],
-                [-0.3, 0.4, 0.0, 0.2],
-            ]
-        )
-
-        distribution = StateRandomWalk(
-            scale=scale,
-            initial_loc=initial_loc,
-            num_steps=value.shape[-1],
-        )
-
-        full_path = jnp.concatenate([initial_loc[:, None], value], axis=-1)
-        expected = dist.Normal(full_path[:, :-1], scale[:, None]).log_prob(value)
-        expected = expected.sum(axis=-1)
-
-        assert jnp.allclose(distribution.log_prob(value), expected)
-
-    def test_state_ar1_log_prob_matches_manual_transition_sum(self):
-        """Batched StateAR1 log_prob equals the explicit AR1 transition density."""
-        autoreg = jnp.array([0.4, -0.2])
-        scale = jnp.array([0.3, 0.7])
-        initial_loc = jnp.array([1.0, -0.5])
-        value = jnp.array(
-            [
-                [1.2, 0.6, 0.1, -0.2],
-                [-0.3, 0.4, 0.0, 0.2],
-            ]
-        )
-
-        distribution = StateAR1(
-            autoreg=autoreg,
-            scale=scale,
-            initial_loc=initial_loc,
-            num_steps=value.shape[-1],
-        )
-
-        full_path = jnp.concatenate([initial_loc[:, None], value], axis=-1)
-        transition_locs = autoreg[:, None] * full_path[:, :-1]
-        expected = dist.Normal(transition_locs, scale[:, None]).log_prob(value)
-        expected = expected.sum(axis=-1)
-
-        assert jnp.allclose(distribution.log_prob(value), expected)
-
-    def test_state_differenced_ar1_log_prob_matches_manual_transition_sum(self):
-        """Batched StateDifferencedAR1 log_prob equals the explicit transition density."""
-        autoreg = jnp.array([0.6, -0.3])
-        scale = jnp.array([0.2, 0.5])
-        initial_loc = jnp.array([1.0, -0.5])
-        initial_diff = jnp.array([0.1, 0.2])
-        value = jnp.array(
-            [
-                [1.45, 1.7, 1.6],
-                [-0.1, -0.2, 0.0],
-            ]
-        )
-
-        distribution = StateDifferencedAR1(
-            autoreg=autoreg,
-            scale=scale,
-            initial_loc=initial_loc,
-            initial_diff=initial_diff,
-            num_steps=value.shape[-1],
-        )
-
-        x1 = initial_loc + initial_diff
-        full_path = jnp.concatenate([initial_loc[:, None], x1[:, None], value], axis=-1)
-        previous_delta = full_path[:, 1:-1] - full_path[:, :-2]
-        transition_locs = full_path[:, 1:-1] + autoreg[:, None] * previous_delta
-        transition_probs = dist.Normal(transition_locs, scale[:, None]).log_prob(
-            full_path[:, 2:]
-        )
-        expected = transition_probs.sum(axis=-1)
-
-        assert jnp.allclose(distribution.log_prob(value), expected)
-
-
-class TestStateCenteredDistributionValidation:
-    """Focused coverage for state-centered distribution validation branches."""
-
-    @pytest.mark.parametrize(
-        "distribution_cls,kwargs",
-        [
-            (StateRandomWalk, {"scale": 1.0}),
-            (StateAR1, {"autoreg": 0.5, "scale": 1.0}),
-            (StateDifferencedAR1, {"autoreg": 0.5, "scale": 1.0}),
-        ],
-    )
-    @pytest.mark.parametrize("invalid_num_steps", [0, 1.5])
-    def test_num_steps_must_be_positive_integer(
-        self, distribution_cls, kwargs, invalid_num_steps
-    ):
-        """Constructors reject non-positive and non-integer step counts."""
-        with pytest.raises(ValueError, match="num_steps must be a positive integer"):
-            distribution_cls(**kwargs, num_steps=invalid_num_steps)
-
-
-class TestStateCenteredDistributionForwardSampling:
-    """Forward ``sample`` returns the full post-initial state trajectory."""
-
-    @pytest.mark.parametrize(
-        "autoreg,scale,initial_loc,num_steps,sample_shape",
-        AR1_FORWARD_SAMPLING_CASES,
-    )
-    def test_state_ar1_sample_matches_recursion(
-        self, autoreg, scale, initial_loc, num_steps, sample_shape
-    ):
-        """StateAR1 sampling reproduces the AR(1) state recursion exactly."""
-        key = jax.random.PRNGKey(7)
-        distribution = StateAR1(
-            autoreg=autoreg,
-            scale=scale,
-            initial_loc=initial_loc,
-            num_steps=num_steps,
-        )
-
-        sample = distribution.sample(key, sample_shape=sample_shape)
-        per_step_shape = sample_shape + distribution.batch_shape
-        noise = jax.random.normal(key, shape=(num_steps,) + per_step_shape)
-        expected = _ar1_expected_path(noise, autoreg, scale, initial_loc)
-
-        assert sample.shape == per_step_shape + (num_steps,)
-        assert jnp.allclose(sample, expected)
-
-    @pytest.mark.parametrize(
-        "autoreg,scale,initial_loc,initial_diff,num_steps,sample_shape",
-        DIFFERENCED_AR1_FORWARD_SAMPLING_CASES,
-    )
-    def test_state_differenced_ar1_sample_matches_recursion(
-        self, autoreg, scale, initial_loc, initial_diff, num_steps, sample_shape
-    ):
-        """StateDifferencedAR1 sampling reproduces the differenced recursion exactly."""
-        key = jax.random.PRNGKey(19)
-        distribution = StateDifferencedAR1(
-            autoreg=autoreg,
-            scale=scale,
-            initial_loc=initial_loc,
-            initial_diff=initial_diff,
-            num_steps=num_steps,
-        )
-
-        sample = distribution.sample(key, sample_shape=sample_shape)
-        per_step_shape = sample_shape + distribution.batch_shape
-        noise = jax.random.normal(key, shape=(num_steps,) + per_step_shape)
-        expected = _differenced_ar1_expected_path(
-            noise, autoreg, scale, initial_loc, initial_diff
-        )
-
-        assert sample.shape == per_step_shape + (num_steps,)
-        assert jnp.allclose(sample, expected)
-
-    @pytest.mark.parametrize(
-        "scale,initial_loc",
-        [
-            (0.3, 1.0),
-            (jnp.array([0.2, 0.5]), jnp.array([1.0, -0.5])),
-        ],
-    )
-    def test_state_random_walk_sample_is_location_shift(self, scale, initial_loc):
-        """Shifting initial_loc shifts the whole sampled path by that constant."""
-        key = jax.random.PRNGKey(11)
-        num_steps = 6
-        shift = 4.0
-        base = StateRandomWalk(
-            scale=scale, initial_loc=initial_loc, num_steps=num_steps
-        )
-        shifted = StateRandomWalk(
-            scale=scale,
-            initial_loc=jnp.asarray(initial_loc) + shift,
-            num_steps=num_steps,
-        )
-
-        base_path = base.sample(key)
-        shifted_path = shifted.sample(key)
-
-        assert base_path.shape == base.batch_shape + (num_steps,)
-        assert jnp.allclose(shifted_path - base_path, shift)
-
-    def test_state_random_walk_sample_scales_with_scale(self):
-        """The centered sampled path scales linearly with the innovation scale."""
-        key = jax.random.PRNGKey(13)
-        num_steps = 6
-        initial_loc = 2.0
-        small = StateRandomWalk(scale=0.5, initial_loc=initial_loc, num_steps=num_steps)
-        large = StateRandomWalk(scale=1.5, initial_loc=initial_loc, num_steps=num_steps)
-
-        small_centered = small.sample(key) - initial_loc
-        large_centered = large.sample(key) - initial_loc
-
-        assert jnp.allclose(large_centered, 3.0 * small_centered)
-
-    def test_state_random_walk_sample_variance_grows_linearly(self):
-        """Forward samples accumulate variance linearly in time, as a random walk does."""
-        key = jax.random.PRNGKey(17)
-        num_steps = 10
-        scale = 0.4
-        distribution = StateRandomWalk(
-            scale=scale, initial_loc=0.0, num_steps=num_steps
-        )
-
-        samples = distribution.sample(key, sample_shape=(20000,))
-        empirical_var = samples.var(axis=0)
-        expected_var = scale**2 * jnp.arange(1, num_steps + 1)
-
-        assert jnp.allclose(empirical_var, expected_var, rtol=0.1)
 
 
 class TestTemporalProcessVectorizedSampling:
@@ -911,8 +698,8 @@ class TestStateCenteredRandomWalk:
         ).get_trace()
         state_site = traced["rw_state"]["value"]
         path = traced["path"]["value"]
-        assert state_site.shape == (2, 5)
-        assert jnp.allclose(state_site, path[1:].T)
+        assert state_site.shape == (5, 2)
+        assert jnp.allclose(state_site, path[1:])
 
     @pytest.mark.parametrize(
         "innovation_sd",
@@ -993,12 +780,12 @@ class TestStateCenteredAR1:
         assert "ar1_noise" not in traced
 
     def test_state_site_shape(self):
-        """The state site holds the post-initial path of shape ``(n_processes, n_timepoints - 1)``."""
+        """The state site has time leading over the process dimension."""
         ar1 = AR1(**fixed_ar1_kwargs(), parameterization="state")
         traced = numpyro.handlers.trace(
             numpyro.handlers.seed(ar1.sample, rng_seed=0)
         ).get_trace(n_timepoints=12, n_processes=3, name_prefix="ar1")
-        assert traced["ar1_state"]["value"].shape == (3, 11)
+        assert traced["ar1_state"]["value"].shape == (11, 3)
 
     @pytest.mark.parametrize("autoreg,innovation_sd", [(0.5, 0.05), (0.9, 0.1)])
     def test_prior_moments_match_innovation_parameterization(
@@ -1105,12 +892,12 @@ class TestStateCenteredDifferencedAR1:
         assert "diff_noise" not in traced
 
     def test_state_site_shape(self):
-        """The state site holds the post-initial path of shape ``(n_processes, n_timepoints - 2)``."""
+        """The state site has time leading over the process dimension."""
         d = DifferencedAR1(**fixed_ar1_kwargs(), parameterization="state")
         traced = numpyro.handlers.trace(
             numpyro.handlers.seed(d.sample, rng_seed=0)
         ).get_trace(n_timepoints=12, n_processes=3, name_prefix="diff")
-        assert traced["diff_state"]["value"].shape == (3, 10)
+        assert traced["diff_state"]["value"].shape == (10, 3)
 
     def test_second_row_equals_initial_value_plus_init_rate(self):
         """``x[1]`` equals ``initial_value`` plus the unbundled initial difference."""
@@ -1184,6 +971,208 @@ class TestStateCenteredDifferencedAR1:
         assert jnp.allclose(
             s_state.var(axis=0), s_innov.var(axis=0), rtol=0.10, atol=1e-4
         )
+
+
+class TestStatePosteriorExtension:
+    """Posterior prediction extends time-leading state-centered sites."""
+
+    @pytest.mark.parametrize(
+        "process_name",
+        ["random_walk", "ar1", "differenced_ar1"],
+    )
+    def test_fitted_states_are_preserved_as_forecast_prefix(
+        self,
+        process_name: ProcessName,
+    ) -> None:
+        """A longer forecast replays fitted states and samples only its suffix."""
+        n_draws = 2
+        n_processes = 2
+        fitted_n_timepoints = 5
+        forecast_n_timepoints = 8
+        state_offset = 2 if process_name == "differenced_ar1" else 1
+        fitted_scanned_timepoints = fitted_n_timepoints - state_offset
+        forecast_scanned_timepoints = forecast_n_timepoints - state_offset
+        fitted_states = jnp.arange(
+            n_draws * fitted_scanned_timepoints * n_processes,
+            dtype=jnp.asarray(0.2).dtype,
+        ).reshape(n_draws, fitted_scanned_timepoints, n_processes)
+        posterior_samples, initial_value, posterior_state_offset = (
+            _state_forecast_posterior(process_name, fitted_states)
+        )
+        assert posterior_state_offset == state_offset
+        process = _make_forecast_process(process_name, "state")
+
+        def model(n_timepoints: int) -> None:
+            """Record the public state-process trajectory."""
+            trajectory = process.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=initial_value,
+                name_prefix="forecast",
+            )
+            numpyro.deterministic("trajectory", trajectory)
+
+        forecast = Predictive(
+            model,
+            posterior_samples=posterior_samples,
+            return_sites=("trajectory", "forecast_state"),
+        )(jax.random.PRNGKey(10), forecast_n_timepoints)
+
+        assert forecast["trajectory"].shape == (
+            n_draws,
+            forecast_n_timepoints,
+            n_processes,
+        )
+        assert forecast["forecast_state"].shape == (
+            n_draws,
+            forecast_scanned_timepoints,
+            n_processes,
+        )
+        assert jnp.array_equal(
+            forecast["forecast_state"][:, :fitted_scanned_timepoints, :],
+            fitted_states,
+        )
+        assert jnp.array_equal(
+            forecast["trajectory"][:, state_offset:fitted_n_timepoints, :],
+            fitted_states,
+        )
+        assert (
+            forecast["forecast_state"][:, fitted_scanned_timepoints:, :].shape[1]
+            == forecast_n_timepoints - fitted_n_timepoints
+        )
+
+    @pytest.mark.parametrize(
+        "process_name",
+        ["random_walk", "ar1", "differenced_ar1"],
+    )
+    def test_first_new_state_uses_fitted_terminal_carry(
+        self,
+        process_name: ProcessName,
+    ) -> None:
+        """The first extension transition starts from the fitted terminal state."""
+        n_draws = 2
+        n_processes = 2
+        fitted_n_timepoints = 5
+        forecast_n_timepoints = 6
+        state_offset = 2 if process_name == "differenced_ar1" else 1
+        fitted_scanned_timepoints = fitted_n_timepoints - state_offset
+        fitted_states_a = jnp.arange(
+            n_draws * fitted_scanned_timepoints * n_processes,
+            dtype=jnp.asarray(0.2).dtype,
+        ).reshape(n_draws, fitted_scanned_timepoints, n_processes)
+        terminal_shift = jnp.array([[0.5, -0.25], [-0.4, 0.75]])
+        fitted_states_b = fitted_states_a.at[:, -1, :].add(terminal_shift)
+        posterior_a, initial_value, _ = _state_forecast_posterior(
+            process_name, fitted_states_a
+        )
+        posterior_b, _, _ = _state_forecast_posterior(process_name, fitted_states_b)
+        process = _make_forecast_process(process_name, "state")
+
+        def model(n_timepoints: int) -> None:
+            """Record the public state-process trajectory."""
+            trajectory = process.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=initial_value,
+                name_prefix="forecast",
+            )
+            numpyro.deterministic("trajectory", trajectory)
+
+        predictive_a = Predictive(
+            model,
+            posterior_samples=posterior_a,
+            return_sites=("trajectory", "forecast_state"),
+        )
+        predictive_b = Predictive(
+            model,
+            posterior_samples=posterior_b,
+            return_sites=("trajectory", "forecast_state"),
+        )
+        key = jax.random.PRNGKey(20)
+        forecast_a = predictive_a(key, forecast_n_timepoints)
+        forecast_b = predictive_b(key, forecast_n_timepoints)
+
+        observed_difference = (
+            forecast_b["forecast_state"][:, fitted_scanned_timepoints, :]
+            - forecast_a["forecast_state"][:, fitted_scanned_timepoints, :]
+        )
+        transition_mean_a = _transition_mean(process_name, fitted_states_a)
+        transition_mean_b = _transition_mean(process_name, fitted_states_b)
+        assert not jnp.allclose(transition_mean_a, transition_mean_b)
+
+        expected_difference = transition_mean_b - transition_mean_a
+        assert jnp.allclose(observed_difference, expected_difference)
+
+
+class TestForecastHorizonParity:
+    """State and innovation forms share the public forecasting contract."""
+
+    @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
+    @pytest.mark.parametrize(
+        "process_name",
+        ["random_walk", "ar1", "differenced_ar1"],
+    )
+    def test_equal_longer_and_shorter_forecast_horizons(
+        self,
+        process_name: ProcessName,
+        parameterization: Parameterization,
+    ) -> None:
+        """Fitted paths replay or extend, while unsliced shorter paths fail."""
+        n_draws = 2
+        n_processes = 2
+        fitted_n_timepoints = 5
+        forecast_n_timepoints = 8
+        initial_value = jnp.array([0.25, -0.5])
+        process = _make_forecast_process(process_name, parameterization)
+
+        def model(n_timepoints: int) -> None:
+            """Record a temporal-process trajectory for posterior prediction."""
+            trajectory = process.sample(
+                n_timepoints=n_timepoints,
+                n_processes=n_processes,
+                initial_value=initial_value,
+                name_prefix="forecast",
+            )
+            numpyro.deterministic("trajectory", trajectory)
+
+        fitted = Predictive(model, num_samples=n_draws)(
+            jax.random.PRNGKey(30), fitted_n_timepoints
+        )
+        posterior_samples = {
+            site_name: fitted[site_name]
+            for site_name in _forecast_sample_sites(process_name, parameterization)
+        }
+        posterior_predictive = Predictive(
+            model,
+            posterior_samples=posterior_samples,
+            return_sites=("trajectory",),
+        )
+
+        replayed = posterior_predictive(jax.random.PRNGKey(31), fitted_n_timepoints)[
+            "trajectory"
+        ]
+        extended = posterior_predictive(jax.random.PRNGKey(32), forecast_n_timepoints)[
+            "trajectory"
+        ]
+
+        assert replayed.shape == (
+            n_draws,
+            fitted_n_timepoints,
+            n_processes,
+        )
+        assert jnp.allclose(replayed, fitted["trajectory"])
+        assert extended.shape == (
+            n_draws,
+            forecast_n_timepoints,
+            n_processes,
+        )
+        assert jnp.allclose(
+            extended[:, :fitted_n_timepoints, :],
+            fitted["trajectory"],
+        )
+
+        with pytest.raises(RuntimeError, match="requires length"):
+            posterior_predictive(jax.random.PRNGKey(33), fitted_n_timepoints - 1)
 
 
 class TestStepwiseTemporalProcessConstruction:

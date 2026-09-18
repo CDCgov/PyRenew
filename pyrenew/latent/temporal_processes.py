@@ -20,6 +20,21 @@ low-level building blocks in [pyrenew.process][]. The key differences:
 | Vectorization | Caller manages array shapes | Automatic via ``n_processes`` parameter |
 | Validation | Minimal constraints | Validates positive innovation_sd |
 
+``AR1``, ``DifferencedAR1``, and ``RandomWalk`` expose a common public
+interface for two equivalent parameterizations. The ``"innovation"``
+parameterization is non-centered: it samples independent standardized
+innovations and constructs the state trajectory deterministically using the
+lower-level [pyrenew.process][] implementations. The ``"state"``
+parameterization is centered: it samples each state conditionally on the
+preceding state using a local NumPyro scan.
+
+This implementation asymmetry is intentional. The existing
+[pyrenew.process][] abstractions naturally represent innovation-driven
+processes. State-centered transitions remain local to the public temporal
+processes so that the state itself is the scanned NumPyro sample site, which
+supports replaying a fitted trajectory and extending it during posterior
+prediction.
+
 **When to use which:**
 
 - Use ``pyrenew.process`` classes (``ARProcess``, ``DifferencedProcess``,
@@ -54,17 +69,14 @@ from __future__ import annotations
 
 from typing import Literal, Protocol, runtime_checkable
 
+import jax
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
+from numpyro.contrib.control_flow import scan
 
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent.state_centered_distributions import (
-    StateAR1,
-    StateDifferencedAR1,
-    StateRandomWalk,
-)
 from pyrenew.metaclass import RandomVariable
 from pyrenew.process import ARProcess, DifferencedProcess
 from pyrenew.process.randomwalk import RandomWalk as ProcessRandomWalk
@@ -171,7 +183,7 @@ def _validate_parameterization(parameterization: str) -> None:
 def _prepare_initial_value(
     initial_value: float | ArrayLike | None,
     n_processes: int,
-) -> ArrayLike:
+) -> jax.Array:
     """
     Resolve a per-process initial value to a 1D array of length n_processes.
 
@@ -196,13 +208,16 @@ class AR1(TemporalProcess):
     toward a mean level. Keeps Rt bounded near a baseline — values that
     drift away are "pulled back" over time.
 
-    This class wraps [pyrenew.process.ARProcess][] with a simplified,
-    protocol-compliant interface that handles vectorization automatically.
+    The ``parameterization`` argument selects between a non-centered
+    ``"innovation"`` parameterization, which samples independent standardized
+    innovations, and a centered ``"state"`` parameterization, which samples
+    each state conditionally on the preceding state. Both produce the same
+    prior distribution over the state path but can have different posterior
+    sampling geometry.
 
-    The ``parameterization`` argument selects between sampling standardized
-    innovations (``"innovation"``) and sampling the state path directly
-    (``"state"``). Both produce the same prior distribution over the state
-    path; they differ in sampler geometry.
+    The innovation branch uses [pyrenew.process.ARProcess][] to construct the
+    trajectory from sampled innovations. The state branch uses local scanned
+    conditional transitions.
 
     Parameters
     ----------
@@ -303,9 +318,9 @@ class AR1(TemporalProcess):
         """
         initial_value = _prepare_initial_value(initial_value, n_processes)
 
-        autoreg = self.autoreg_rv()
-        innovation_sd = self.innovation_sd_rv()
-        autoreg_broadcast = jnp.broadcast_to(jnp.asarray(autoreg), (n_processes,))
+        autoreg = jnp.asarray(self.autoreg_rv())
+        innovation_sd = jnp.asarray(self.innovation_sd_rv())
+        autoreg_broadcast = jnp.broadcast_to(autoreg, (n_processes,))
 
         stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
         with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
@@ -326,19 +341,31 @@ class AR1(TemporalProcess):
         if n_timepoints == 1:
             return init_states[jnp.newaxis, :]
 
-        scale_broadcast = jnp.broadcast_to(jnp.asarray(innovation_sd), (n_processes,))
-        post_init = numpyro.sample(
-            f"{name_prefix}_state",
-            StateAR1(
-                autoreg=autoreg_broadcast,
-                scale=scale_broadcast,
-                initial_loc=init_states,
-                num_steps=n_timepoints - 1,
-            ),
+        def transition(
+            previous_state: jax.Array, unused: None
+        ) -> tuple[jax.Array, jax.Array]:
+            """
+            Sample the next AR(1) state.
+
+            Returns
+            -------
+            tuple[jax.Array, jax.Array]
+                The next carry and recorded state.
+            """
+            transition_mean = autoreg_broadcast * previous_state
+            next_state = numpyro.sample(
+                f"{name_prefix}_state",
+                dist.Normal(transition_mean, innovation_sd),
+            )
+            return next_state, next_state
+
+        _, post_init = scan(
+            transition,
+            init_states,
+            xs=None,
+            length=n_timepoints - 1,
         )
-        x = jnp.concatenate([init_states[:, jnp.newaxis], post_init], axis=-1)
-        # ensure time is the leading axis (length n_timepoints)
-        return jnp.moveaxis(x, -1, 0)
+        return jnp.concatenate([init_states[jnp.newaxis, :], post_init], axis=0)
 
 
 class DifferencedAR1(TemporalProcess):
@@ -349,13 +376,11 @@ class DifferencedAR1(TemporalProcess):
     the rate of change reverting toward a mean. Unlike AR(1), this allows
     Rt to trend persistently upward or downward while the growth rate stabilizes.
 
-    This class wraps [pyrenew.process.DifferencedProcess][] with
-    [pyrenew.process.ARProcess][] as the fundamental process, providing
-    a simplified, protocol-compliant interface.
-
-    The ``parameterization`` argument selects between sampling standardized
-    innovations on the differences (``"innovation"``) and sampling the state
-    path $[x_1, \ldots, x_{T-1}]$ directly (``"state"``) under the priors
+    The ``parameterization`` argument selects between a non-centered
+    ``"innovation"`` parameterization, which samples independent standardized
+    innovations on the differences, and a centered ``"state"``
+    parameterization, which samples the state path
+    $[x_1, \ldots, x_{T-1}]$ conditionally under the priors
 
     $$
     x_1 \sim \mathrm{Normal}(x_0, \sigma / \sqrt{1 - \phi^2})
@@ -368,7 +393,12 @@ class DifferencedAR1(TemporalProcess):
 
     where $\phi$ is ``autoreg`` and $\sigma$ is ``innovation_sd``. The initial
     state $x_0$ is supplied deterministically as ``initial_value``. Both produce
-    the same prior over the state path; they differ in sampler geometry.
+    the same prior over the state path but can have different posterior
+    sampling geometry.
+
+    The innovation branch uses [pyrenew.process.DifferencedProcess][] with
+    [pyrenew.process.ARProcess][] as its fundamental process. The state branch
+    uses local scanned conditional transitions.
 
     Parameters
     ----------
@@ -472,9 +502,9 @@ class DifferencedAR1(TemporalProcess):
         """
         initial_value = _prepare_initial_value(initial_value, n_processes)
 
-        autoreg = self.autoreg_rv()
-        innovation_sd = self.innovation_sd_rv()
-        autoreg_broadcast = jnp.broadcast_to(jnp.asarray(autoreg), (n_processes,))
+        autoreg = jnp.asarray(self.autoreg_rv())
+        innovation_sd = jnp.asarray(self.innovation_sd_rv())
+        autoreg_broadcast = jnp.broadcast_to(autoreg, (n_processes,))
 
         stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
         with numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes):
@@ -499,25 +529,38 @@ class DifferencedAR1(TemporalProcess):
         x1 = initial_value + init_rates
 
         if n_timepoints == 2:
-            # ensure time is the leading axis (length n_timepoints)
-            return jnp.moveaxis(jnp.stack([initial_value, x1], axis=-1), -1, 0)
+            return jnp.stack([initial_value, x1], axis=0)
 
-        scale_broadcast = jnp.broadcast_to(jnp.asarray(innovation_sd), (n_processes,))
-        post_init = numpyro.sample(
-            f"{name_prefix}_state",
-            StateDifferencedAR1(
-                autoreg=autoreg_broadcast,
-                scale=scale_broadcast,
-                initial_loc=initial_value,
-                initial_diff=init_rates,
-                num_steps=n_timepoints - 2,
-            ),
+        def transition(
+            carry: tuple[jax.Array, jax.Array], unused: None
+        ) -> tuple[tuple[jax.Array, jax.Array], jax.Array]:
+            """
+            Sample the next differenced AR(1) state.
+
+            Returns
+            -------
+            tuple[tuple[jax.Array, jax.Array], jax.Array]
+                The updated two-state carry and recorded state.
+            """
+            state_before_previous, previous_state = carry
+            previous_difference = previous_state - state_before_previous
+            transition_mean = previous_state + autoreg_broadcast * previous_difference
+            next_state = numpyro.sample(
+                f"{name_prefix}_state",
+                dist.Normal(transition_mean, innovation_sd),
+            )
+            return (previous_state, next_state), next_state
+
+        _, post_init = scan(
+            transition,
+            (initial_value, x1),
+            xs=None,
+            length=n_timepoints - 2,
         )
-        full_path = jnp.concatenate(
-            [initial_value[:, jnp.newaxis], x1[:, jnp.newaxis], post_init], axis=-1
+        return jnp.concatenate(
+            [initial_value[jnp.newaxis, :], x1[jnp.newaxis, :], post_init],
+            axis=0,
         )
-        # ensure time is the leading axis (length n_timepoints)
-        return jnp.moveaxis(full_path, -1, 0)
 
 
 class RandomWalk(TemporalProcess):
@@ -528,13 +571,17 @@ class RandomWalk(TemporalProcess):
     toward a mean. Allows Rt to drift without bound — suitable when you
     have no prior expectation that Rt will return to a baseline.
 
-    This class wraps [pyrenew.process.RandomWalk][] with a simplified,
-    protocol-compliant interface that handles vectorization automatically.
+    The ``parameterization`` argument selects between a non-centered
+    ``"innovation"`` parameterization, which samples independent standardized
+    innovations, and a centered ``"state"`` parameterization, which samples
+    each state conditionally on the preceding state. The initial state
+    ``x[0] = initial_value`` is deterministic. Both parameterizations produce
+    the same prior over the state path but can have different posterior
+    sampling geometry.
 
-    The ``parameterization`` argument selects between sampling standardized
-    innovations (``"innovation"``) and sampling the state path directly
-    (``"state"``), with ``x[0] = initial_value`` deterministic. Both produce
-    the same prior over the state path; they differ in sampler geometry.
+    The innovation branch uses [pyrenew.process.RandomWalk][] to construct the
+    trajectory from sampled innovations. The state branch uses local scanned
+    conditional transitions.
 
     Parameters
     ----------
@@ -626,7 +673,7 @@ class RandomWalk(TemporalProcess):
         """
         initial_value = _prepare_initial_value(initial_value, n_processes)
 
-        innovation_sd = self.innovation_sd_rv()
+        innovation_sd = jnp.asarray(self.innovation_sd_rv())
 
         if self.parameterization == "innovation":
             rw = ProcessRandomWalk(
@@ -648,18 +695,30 @@ class RandomWalk(TemporalProcess):
         if n_timepoints == 1:
             return initial_value[jnp.newaxis, :]
 
-        scale_broadcast = jnp.broadcast_to(jnp.asarray(innovation_sd), (n_processes,))
-        post_init = numpyro.sample(
-            f"{name_prefix}_state",
-            StateRandomWalk(
-                scale=scale_broadcast,
-                initial_loc=initial_value,
-                num_steps=n_timepoints - 1,
-            ),
+        def transition(
+            previous_state: jax.Array, unused: None
+        ) -> tuple[jax.Array, jax.Array]:
+            """
+            Sample the next random-walk state.
+
+            Returns
+            -------
+            tuple[jax.Array, jax.Array]
+                The next carry and recorded state.
+            """
+            next_state = numpyro.sample(
+                f"{name_prefix}_state",
+                dist.Normal(previous_state, innovation_sd),
+            )
+            return next_state, next_state
+
+        _, post_init = scan(
+            transition,
+            initial_value,
+            xs=None,
+            length=n_timepoints - 1,
         )
-        x = jnp.concatenate([initial_value[:, jnp.newaxis], post_init], axis=-1)
-        # ensure time is the leading axis (length n_timepoints)
-        return jnp.moveaxis(x, -1, 0)
+        return jnp.concatenate([initial_value[jnp.newaxis, :], post_init], axis=0)
 
 
 class StepwiseTemporalProcess(TemporalProcess):
