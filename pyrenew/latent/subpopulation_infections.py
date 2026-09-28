@@ -4,9 +4,6 @@ Hierarchical latent infection process with subpopulation-specific renewal models
 
 from __future__ import annotations
 
-from functools import partial
-
-import jax
 import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
@@ -252,9 +249,9 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
 
         I0_subpop = self._validate_and_prepare_I0(jnp.asarray(self.I0_rv()), pop)
 
-        initial_r_subpop = jax.vmap(
-            partial(r_approx_from_R, g=gen_int, n_newton_steps=4)
-        )(rt_subpop[0, :])
+        initial_r_subpop = r_approx_from_R(
+            R=rt_subpop[0, :], g=gen_int, n_newton_steps=4
+        )
 
         time_indices = jnp.arange(self.n_initialization_points)
         I0_all = I0_subpop[jnp.newaxis, :] * jnp.exp(

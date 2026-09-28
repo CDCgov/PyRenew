@@ -30,7 +30,7 @@ def _positive_ints_like(vec: ArrayLike) -> jnp.ndarray:
     return jnp.arange(1, jnp.size(jnp.asarray(vec)) + 1)
 
 
-def neg_MGF(r: float, w: ArrayLike) -> float:
+def neg_MGF(r: ArrayLike, w: ArrayLike) -> ArrayLike:
     """
     Compute the negative moment generating function (MGF)
     for a given rate `r` and weights `w`.
@@ -38,16 +38,18 @@ def neg_MGF(r: float, w: ArrayLike) -> float:
     Parameters
     ----------
     r
-        The rate parameter.
+        The rate parameter. May be a scalar or an array, in which
+        case the MGF is evaluated independently for each entry.
 
     w
-        An array of weights.
+        A 1D array of weights.
 
     Returns
     -------
-    float
+    ArrayLike
         The value of the negative MGF evaluated at `r`
-        and `w`.
+        and `w`. Has the same shape as `r`
+        (a scalar when `r` is a scalar).
 
     Notes
     -----
@@ -63,12 +65,17 @@ def neg_MGF(r: float, w: ArrayLike) -> float:
     ```math
     M_-(r) = \\sum_{t = 1}^{n} w_i \\exp(-rt)
     ```
+
+    The sum is always over the weights (last) axis, so each
+    entry of an array-valued `r` gets its own weighted sum.
     """
+    w_arr = jnp.asarray(w)
+    t_vec = _positive_ints_like(w_arr)
+    r_col = jnp.asarray(r)[..., jnp.newaxis]
+    return jnp.sum(w_arr * jnp.exp(-r_col * t_vec), axis=-1)
 
-    return jnp.sum(w * jnp.exp(-r * _positive_ints_like(w)))
 
-
-def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
+def neg_MGF_del_r(r: ArrayLike, w: ArrayLike) -> ArrayLike:
     """
     Compute the value of the partial deriative of
     [`pyrenew.math.neg_MGF`][] with respect to `r`
@@ -77,22 +84,26 @@ def neg_MGF_del_r(r: float, w: ArrayLike) -> float:
     Parameters
     ----------
     r
-        The rate parameter.
+        The rate parameter. May be a scalar or an array, in which
+        case the derivative is evaluated independently for each entry.
 
     w
-        An array of weights.
+        A 1D array of weights.
 
     Returns
     -------
-    float
+    ArrayLike
         The value of the partial derivative evaluated at `r`
-        and `w`.
+        and `w`. Has the same shape as `r`
+        (a scalar when `r` is a scalar).
     """
-    t_vec = _positive_ints_like(w)
-    return -jnp.sum(w * t_vec * jnp.exp(-r * t_vec))
+    w_arr = jnp.asarray(w)
+    t_vec = _positive_ints_like(w_arr)
+    r_col = jnp.asarray(r)[..., jnp.newaxis]
+    return -jnp.sum(w_arr * t_vec * jnp.exp(-r_col * t_vec), axis=-1)
 
 
-def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
+def r_approx_from_R(R: ArrayLike, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     """
     Get the approximate asymptotic geometric growth rate `r`
     for a renewal process with a fixed reproduction number `R`
@@ -103,19 +114,22 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     Parameters
     ----------
     R
-        The reproduction number
+        The reproduction number. May be a scalar or an array of
+        any shape, in which case the growth rate is computed
+        independently for each entry.
 
     g
         The probability mass function of the generation
-        interval.
+        interval, as a 1D array.
 
     n_newton_steps
         Number of steps to take when performing Newton's method.
 
     Returns
     -------
-    float
-        The approximate value of `r`.
+    ArrayLike
+        The approximate value(s) of `r`, with the same shape
+        as `R` (a scalar when `R` is a scalar).
 
     Notes
     -----
@@ -143,14 +157,15 @@ def r_approx_from_R(R: float, g: ArrayLike, n_newton_steps: int) -> ArrayLike:
     We then refine this approximation by applying Newton's method for
     a fixed number of steps.
     """
+    R_arr = jnp.asarray(R)
     mean_gi = jnp.dot(g, _positive_ints_like(g))
-    init_r = (R - 1) / (R * mean_gi)
+    init_r = (R_arr - 1) / (R_arr * mean_gi)
 
     def _r_next(
         r: ArrayLike, _: None
     ) -> tuple[ArrayLike, None]:  # numpydoc ignore=GL08
         return (
-            r - ((R * neg_MGF(r, g) - 1) / (R * neg_MGF_del_r(r, g))),
+            r - ((R_arr * neg_MGF(r, g) - 1) / (R_arr * neg_MGF_del_r(r, g))),
             None,
         )
 
