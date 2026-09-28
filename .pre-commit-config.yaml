@@ -14,20 +14,20 @@ repos:
   #####
   # Python
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.16.1
+    rev: v0.16.9
     hooks:
       # Run the linter
       - id: ruff-check
       # Run the formatter
       - id: ruff-format
   - repo: https://github.com/numpy/numpydoc
-    rev: v1.11.0rc0
+    rev: v1.11.0
     hooks:
       - id: numpydoc-validation
   #####
   # Quarto
   - repo: https://github.com/jolars/panache-pre-commit
-    rev: v3.0.2
+    rev: v3.12.0
     hooks:
       - id: panache-format
       - id: panache-lint
@@ -42,7 +42,7 @@ repos:
   ####
   # Typos
   - repo: https://github.com/crate-ci/typos
-    rev: v1
+    rev: v1.50.3
     hooks:
       - id: typos
         args: [ "--force-exclude" ]
