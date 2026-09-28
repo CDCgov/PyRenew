@@ -105,6 +105,7 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 - [Building multi-signal models](tutorials/building_multisignal_models.md) -- composing a renewal model from PyRenew components using `PyrenewBuilder`.
 - [Latent infections](tutorials/latent_infections.md) -- modeling latent infection trajectories over time.
 - [Latent subpopulation infections](tutorials/latent_subpopulation_infections.md) -- modeling latent infections with subpopulation structure.
+- [Cross-population transmission](tutorials/population_mixing.md) -- coupling population-specific renewal processes with mixing matrices.
 - [Observation processes: count data](tutorials/observation_processes_counts.md) -- connecting latent infections to observed counts.
 - [Observation processes: measurements](tutorials/observation_processes_measurements.md) -- connecting latent infections to continuous measurements.
 - [Joint ascertainment](tutorials/ascertainment.md) -- sharing ascertainment structure across count signals.

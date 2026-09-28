@@ -1,0 +1,303 @@
+---
+title: Cross-population transmission with mixing matrices
+format:
+  gfm:
+    code-fold: true
+engine: jupyter
+jupyter:
+  jupytext:
+    text_representation:
+      extension: .qmd
+      format_name: quarto
+      format_version: "1.0"
+      jupytext_version: 1.18.1
+  kernelspec:
+    display_name: Python 3 (ipykernel)
+    language: python
+    name: python3
+---
+
+```{python}
+#| label: setup
+#| output: false
+
+import warnings
+
+import jax.numpy as jnp
+import numpy as np
+import polars as pl
+import plotnine as p9
+from plotnine.exceptions import PlotnineWarning
+
+from pyrenew.latent.infection_functions import compute_infections_from_rt
+from _tutorial_theme import theme_tutorial
+
+warnings.filterwarnings("ignore", category=PlotnineWarning)
+```
+
+## Overview
+
+Diseases can spread through partially-connected "subpopulations" of susceptible hosts.
+Epidemiologically-relevant subpopulations include distinct age groups (e.g. children, younger adults, and the elderly), adjacent geographic locations (e.g. a set of contiguous U.S. states), or even the particular catchment populations for individual healthcare facilities.
+PyRenew supports subpopulation-level renewal modeling.
+
+Subpopulation-level infection processes can be *distinct* or *coupled*.
+We say that infection processes are *distinct* when each subpopulation is isolated from the others and individuals can only infect or be infected by others from the same subpopulation.
+We say infection processes are *coupled* when individuals in one subpopulation can infect or be infected by individuals in others.[^bio-realism]
+
+[^bio-realism]: While distinct dynamics may be biologically unrealistic---children can infect adults and vice versa---they can sometimes be a reasonable and useful simplifying assumption.
+    For example, it might be reasonable to approximate disease dynamics in Alaska and Maine as distinct from each other, even though there probably is some degree of mixing.
+
+To define a coupled infection process in PyRenew, we use a *transmission matrix* $K$ to specify how readily existing infections in subpopulation $j$ produce new infections in subpopulation $i$.
+
+This tutorial uses two subpopulations to show:
+
+- How to use transmission matrices $K(t)$ to make renewal models with cross-population transmission
+- How the rows and columns of $K(t)$ map to target and source populations
+- How cross-population transmission changes infection trajectories
+- How to supply a time-varying sequence of matrices $K(1), K(2), ... K(t), ...$ to a PyRenew infection process
+
+## From distinct to coupled renewal processes
+
+Given a subpopulation $j$, define its time-weighted infectiousness at time $t$ as
+
+$$
+  \Lambda_j(t) = \sum_{\tau=1}^{G} w_\tau I_j(t - \tau),
+$$
+
+where $I_j(t - \tau)$ is past incidence and $w_\tau$ is the generation interval probability mass at lag $\tau$.
+Collecting the subpopulation-specific values into the vector $\boldsymbol{\Lambda}(t)$, the coupled renewal equation is
+
+$$
+  \mathbf{I}(t) = K(t)\boldsymbol{\Lambda}(t).
+$$
+
+The matrix follows the convention
+
+$$
+  K_{ij} = \text{contribution from source subpopulation }j
+  \text{ to target subpopulation }i.
+$$
+
+These $K_{ij}$ values have a direct interpretation as *inter-subpopulation reproduction numbers* $\mathcal{R}_{ij}$: the expected number of new infections in subpopulation $j$ produced by an infectious individual in subpopulation $i$.
+
+The overall reproduction number $\mathcal{R}$ across the whole population is the largest eigenvalue of $K$[^spec-radius].
+
+[^spec-radius]: More formally, $\mathcal{R}$ is the spectral radius of the $K$, i.e. the eigenvalue with the largest *absolute value*.
+    The biologically motivated matrices we consider here will typically have non-negative real entries, so it's easier and clearer just to say "largest".
+
+Remember: **rows are targets and columns are sources**.
+
+Diagonal entries describe transmission within subpopulations.
+Off-diagonal entries describe transmission between different subpopulations.
+
+## Coupled infection dynamics in PyRenew
+
+PyRenew's `compute_infections_from_rt()` function takes an `Rt` argument: the value of $\mathcal{R}(t)$ at each model timestep $t = 1, ..., T$.
+When we have $n$ subpopulations, the `Rt` argument can be any of the following: a timeseries of $T$ scalars, a timeseries of $T$ length-$n$ vectors, or a timeseries of $T$ $n \times n$ matrices.
+We can define distinct or coupled infection dynamics depending on our choice of `Rt` timeseries:
+
+  | `Rt` timeseries                                     | Effect                                                                       |
+  | --------------------------------------------------- | ---------------------------------------------------------------------------- |
+  | Series of scalar $\mathcal{R}(t)$ values            | Applies the same reproduction number $\mathcal{R}(t)$ to every subpopulation |
+  | Series of length-$n$ vectors $\vec{\mathcal{R}}(t)$ | Each subpopulation has its own reproduction number $\mathcal{R}_{j}(t)$      |
+  | Series of $n \times n$ matrices $K(t)$              | Coupled infection dynamics among subpopulations                              |
+
+!!!
+note
+
+In PyRenew, any multi-dimensional array that represents a timeseries [must make time its first (leading) dimension](https://cdcgov.github.io/PyRenew/developer_documentation.html#pyrenew-principles).
+So your `Rt` `jax` array should of shape `(T,)` or `(T, 1)` for scalars $\mathcal{R}(t)$, of shape `(T, n)` for vectors $\vec{\mathcal{R}}(t)$, and of shape `(T, n, n)` for matrices $K(t)$.
+
+## Set up two populations
+
+We use a five-day generation interval.
+`compute_infections_from_rt()` expects this probability mass in reverse order: the final entry represents lag 1, the second-to-last entry represents lag 2, and so on.
+
+Only Population A is seeded with infections: 10 seed infections on each of 5 seed days.
+Population B has no seed infections, and so it remains infection-free unless it receives infections through an off-diagonal matrix entry.
+
+```{python}
+#| label: renewal-setup
+
+n_days = 60
+populations = ["Population A", "Population B"]
+
+generation_interval_pmf = jnp.array([0.20, 0.30, 0.30, 0.15, 0.05])
+
+initial_infections_a = jnp.array([10.0, 10.0, 10.0, 10.0, 10.0])
+initial_infections_b = jnp.array([0, 0, 0, 0, 0])
+initial_infections = jnp.stack([initial_infections_a, initial_infections_b], axis=1)
+```
+
+We compare two constant matrices $K$.
+The disconnected matrix contains only diagonal entries: two subpopulations are not connected.
+The connected matrix adds $M_{B,A}=0.12$, allowing infectiousness in Population A to generate infections in Population B.
+
+```{python}
+#| label: define-matrices
+
+disconnected_matrix = jnp.array(
+    [
+        [1.08, 0.00],
+        [0.00, 0.82],
+    ]
+)
+
+connected_matrix = jnp.array(
+    [
+        [1.08, 0.00],
+        [0.12, 0.82],
+    ]
+)
+```
+
+Both of these matrices have a dominant eigenvalue of 1.08, so in both cases we expect total infections (across the two subpopulations) to grow.
+
+The heatmap makes the target-by-source orientation explicit.
+The cell in the Population B target row and Population A source column represents transmission from Population A to Population B.
+
+```{python}
+#| label: plot-mixing-matrix
+#| fig-cap: >-
+#|   The connected mixing matrix.
+#|   Rows identify target populations and columns identify source populations.
+
+matrix_data = pl.DataFrame(
+    [
+        {
+            "source": populations[source],
+            "target": populations[target],
+            "strength": float(connected_matrix[target, source]),
+        }
+        for target in range(2)
+        for source in range(2)
+    ]
+)
+
+(
+    p9.ggplot(matrix_data, p9.aes(x="source", y="target", fill="strength"))
+    + p9.geom_tile(color="white", size=1)
+    + p9.geom_text(p9.aes(label="strength"), format_string="{:.2f}", size=12)
+    + p9.scale_fill_cmap(name="Transmission strength", cmap_name="Reds")
+    + p9.scale_y_discrete(
+        limits=["Population B", "Population A"]
+    )  # flip y for matrix view
+    + p9.coord_equal()
+    + p9.labs(
+        x="Source population",
+        y="Target population",
+        title="Mixing matrix M (target × source)",
+    )
+    + theme_tutorial
+    + p9.theme(figure_size=(7, 5))
+)
+```
+
+## Simulate distinct and coupled infections
+
+The `Rt` array in `compute_infections_from_rt()` must have first dimension of length equal to the number of timepoints.
+We want to use the same matrix for every timepoint, so we construct an array of shape `(n_days, n_subpopulations, n_subpopulations)` (here, `(60, 2, 2)`) using `jnp.repeat()`.
+
+```{python}
+#| label: simulate
+
+Kt_distinct = jnp.repeat(disconnected_matrix[jnp.newaxis, ...], n_days, axis=0)
+
+print(Kt_distinct.shape)  # (60, 2, 2)
+
+infections_distinct = compute_infections_from_rt(
+    I0=initial_infections,
+    Rt=Kt_distinct,
+    reversed_generation_interval_pmf=jnp.flip(generation_interval_pmf),
+)
+
+Kt_coupled = jnp.repeat(connected_matrix[jnp.newaxis, ...], n_days, axis=0)
+infections_coupled = compute_infections_from_rt(
+    I0=initial_infections,
+    Rt=Kt_coupled,
+    reversed_generation_interval_pmf=jnp.flip(generation_interval_pmf),
+)
+```
+
+We tidy the output and plot the results.
+
+```{python}
+#| label: prepare-trajectories
+
+trajectory_data = pl.concat(
+    [
+        pl.from_numpy(np.array(infections), schema=["A", "B"])
+        .with_row_index("day")
+        .with_columns(scenario=pl.lit(scenario))
+        for scenario, infections in {
+            "Coupled": infections_coupled,
+            "Distinct": infections_distinct,
+        }.items()
+    ]
+).unpivot(
+    index=["day", "scenario"], variable_name="subpopulation", value_name="infections"
+)
+```
+
+```{python}
+#| label: plot-infection-trajectories
+#| fig-cap: >-
+#|   Subpopulation B remains infection-free when $M$ is diagonal.
+#|   Setting $M_{B,A}$ = 0.12 allows infections in Subpopulation A to produce infections in Subpopulation B.
+
+(
+    p9.ggplot(
+        trajectory_data,
+        p9.aes(x="day", y="infections", color="subpopulation"),
+    )
+    + p9.geom_line(size=3)
+    + p9.facet_wrap("scenario", ncol=1)
+    + p9.labs(
+        x="Day",
+        y="New infections",
+        color="Subpopulation",
+        title="Coupling between subpopulations lets Subpopulation A seed Subpopulation B",
+    )
+    + theme_tutorial
+    + p9.theme(figure_size=(9, 7), legend_position="top")
+)
+```
+
+Using the disconnected matrix (distinct dynamics), Population B remains at the initial value of 0 infections.
+Infections occur in Population A, but these cannot cause infections in Population B.
+
+With the connected matrix (coupled dynamics), the infections present in Population A immediately begin causing infections in Population B via the $M_{B,A}$ transmission term.
+Subsequent new infections in Population B reflect both the continued influence of Population A via $M_{B,A}$ and transmission within Population B via $M_{B,B}$.
+
+## Time-varying mixing
+
+The matrix $K$ does not need to be constant.
+It can be a function of time $K(t)$.
+For example, the following sequence reduces transmission from Population A to Population B after day 30 while leaving the other entries unchanged:
+
+```{python}
+#| label: time-varying-matrices
+
+mixing_matrices = jnp.repeat(
+    connected_matrix[jnp.newaxis, :, :], repeats=n_days, axis=0
+)
+mixing_matrices = mixing_matrices.at[30:, 1, 0].set(0.03)
+
+time_varying_infections = compute_infections_from_rt(
+    I0=initial_infections,
+    Rt=mixing_matrices,
+    reversed_generation_interval_pmf=jnp.flip(generation_interval_pmf),
+)
+```
+
+## Summary
+
+To model inter-subpopulation transmission with $n$ subpopulations:
+
+1. Use a timeseries of $n \times n$ matrices $K(t)$ in place of a typical timeseries of scalar $\mathcal{R}(t)$.
+2. Put within-subpopulation transmission on the diagonal and between-subpopulation effects off the diagonal of $K(t)$.
+3. Pass $K(t)$ as `Rt` to `compute_infections_from_rt()`.
+
+Scalar and vector `Rt` inputs continue to work for shared or independent population multipliers.
+Use a matrix when infections in one population should produce infections in another.
