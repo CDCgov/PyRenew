@@ -134,9 +134,10 @@ def test_r_approx_scalar_still_scalar():
     a scalar r.
     """
     G = np.array([0.2, 0.1, 0.2, 0.15, 0.05, 0.025, 0.025, 0.25])
-    r_val = pmath.r_approx_from_R(1.2, G, n_newton_steps=5)
+    R = 1.2
+    r_val = pmath.r_approx_from_R(R, G, n_newton_steps=5)
     assert jnp.asarray(r_val).shape == ()
-    assert_almost_equal(float(1.2 * pmath.neg_MGF(r_val, G) - 1), 0.0, decimal=5)
+    assert_almost_equal(float(R * pmath.neg_MGF(r_val, G) - 1), 0.0, decimal=5)
 
 
 def test_asymptotic_properties():
