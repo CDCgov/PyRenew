@@ -2,14 +2,21 @@
 Tests for PyrenewBuilder and MultiSignalModel.
 """
 
+from collections.abc import Mapping
 from datetime import date, timedelta
 
 import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pytest
+from jax.typing import ArrayLike
 
-from pyrenew.ascertainment import JointAscertainment, RatioLinkedAscertainment
+from pyrenew.ascertainment import (
+    AscertainmentModel,
+    JointAscertainment,
+    RatioLinkedAscertainment,
+    TimeVaryingAscertainment,
+)
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
     InfectionsWithFeedback,
@@ -31,6 +38,48 @@ from test.test_helpers import fixed_ar1, fixed_random_walk
 
 # Standard population structure for tests (3 subpopulations)
 SUBPOP_FRACTIONS = jnp.array([0.3, 0.25, 0.45])
+
+
+class RecordingAscertainmentModel(AscertainmentModel):
+    """Return configured values while recording axis context for tests."""
+
+    def __init__(
+        self,
+        name: str,
+        values: Mapping[str, ArrayLike],
+        requires_calendar_anchor: bool = False,
+    ) -> None:
+        """Initialize a recording ascertainment model."""
+        super().__init__(name=name, signals=tuple(values))
+        self.values = dict(values)
+        self._requires_calendar_anchor = requires_calendar_anchor
+        self.sample_calls: list[tuple[int, int | None]] = []
+
+    def requires_calendar_anchor(self) -> bool:
+        """Return the configured calendar requirement.
+
+        Returns
+        -------
+        bool
+            Configured calendar requirement.
+        """
+        return self._requires_calendar_anchor
+
+    def sample(
+        self,
+        n_timepoints: int,
+        first_day_dow: int | None = None,
+        **kwargs: object,
+    ) -> Mapping[str, ArrayLike]:
+        """Return configured values and record shared-axis arguments.
+
+        Returns
+        -------
+        Mapping[str, ArrayLike]
+            Configured signal values.
+        """
+        self.sample_calls.append((n_timepoints, first_day_dow))
+        return self.values
 
 
 def _obs_date_for_dow(target_first_day_dow: int, n_init: int) -> date:
@@ -56,6 +105,42 @@ def _obs_date_for_dow(target_first_day_dow: int, n_init: int) -> date:
     """
     obs_dow = (target_first_day_dow + n_init) % 7
     return date(2024, 1, 1) + timedelta(days=obs_dow)
+
+
+def _builder_with_time_varying_ascertainment(
+    ascertainment: TimeVaryingAscertainment,
+) -> PyrenewBuilder:
+    """Build a two-count-signal model using one outer ascertainment model.
+
+    Returns
+    -------
+    PyrenewBuilder
+        Configured builder with hospital and ED count observations.
+    """
+    builder = PyrenewBuilder()
+    builder.configure_latent(
+        SubpopulationInfections,
+        gen_int_rv=DeterministicPMF(
+            "gen_int",
+            jnp.array([0.2, 0.5, 0.3]),
+        ),
+        I0_rv=DeterministicVariable("I0", 0.001),
+        log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
+        baseline_rt_process=fixed_random_walk(innovation_sd=0.1),
+        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.1),
+    )
+    builder.add_ascertainment(ascertainment)
+    delay = DeterministicPMF("delay", jnp.array([0.1, 0.3, 0.4, 0.2]))
+    for signal in ("hospital", "ed"):
+        builder.add_observation(
+            PopulationCounts(
+                name=signal,
+                ascertainment_rate_rv=ascertainment.for_signal(signal),
+                delay_distribution_rv=delay,
+                noise=PoissonNoise(),
+            )
+        )
+    return builder
 
 
 @pytest.fixture
@@ -504,6 +589,99 @@ class TestMultiSignalModelSampling:
         assert "hospital_predicted" in prior_samples
         assert "ed_predicted" in prior_samples
 
+    def test_prior_predictive_with_time_varying_joint_baseline(self) -> None:
+        """Test joint baseline sites and full-axis outer count trajectories."""
+        import jax.random
+        from numpyro.infer import Predictive
+
+        baseline = JointAscertainment(
+            name="he_baseline",
+            signals=("hospital", "ed"),
+            baseline_rates=jnp.array([0.01, 0.02]),
+            scale_tril=jnp.eye(2) * 0.1,
+        )
+        ascertainment = TimeVaryingAscertainment(
+            "he_ascertainment",
+            baseline,
+            {
+                "hospital": fixed_random_walk(innovation_sd=0.05),
+                "ed": fixed_random_walk(innovation_sd=0.05),
+            },
+        )
+        model = _builder_with_time_varying_ascertainment(ascertainment).build()
+        n_days_post_init = 10
+        n_total = model.latent.n_initialization_points + n_days_post_init
+
+        samples = Predictive(model.sample, num_samples=2)(
+            jax.random.PRNGKey(42),
+            n_days_post_init=n_days_post_init,
+            population_size=1_000_000,
+            subpop_fractions=SUBPOP_FRACTIONS,
+            hospital={"obs": None},
+            ed={"obs": None},
+        )
+
+        assert set(model.ascertainment_models) == {"he_ascertainment"}
+        assert samples["he_baseline_eta"].shape == (2, 2)
+        assert samples["he_baseline_hospital"].shape == (2,)
+        assert samples["he_baseline_ed"].shape == (2,)
+        assert samples["he_ascertainment_hospital"].shape == (2, n_total)
+        assert samples["he_ascertainment_ed"].shape == (2, n_total)
+        assert samples["hospital_predicted"].shape == (2, n_total)
+        assert samples["ed_predicted"].shape == (2, n_total)
+        assert samples["latent_infections"].shape == (2, n_total)
+
+    def test_prior_predictive_with_time_varying_ratio_baseline(self) -> None:
+        """Test ratio sites persist beneath independently varying trajectories."""
+        import jax.random
+        from numpyro.infer import Predictive
+
+        baseline = RatioLinkedAscertainment(
+            name="he_baseline",
+            base_signal="ed",
+            linked_signal="hospital",
+            base_rate_rv=DistributionalVariable("iedr", dist.Beta(2, 98)),
+            ratio_rv=DistributionalVariable(
+                "ihr_rel_iedr",
+                dist.Beta(2, 2),
+            ),
+        )
+        ascertainment = TimeVaryingAscertainment(
+            "he_ascertainment",
+            baseline,
+            {
+                "hospital": fixed_random_walk(innovation_sd=0.05),
+                "ed": fixed_random_walk(innovation_sd=0.05),
+            },
+        )
+        model = _builder_with_time_varying_ascertainment(ascertainment).build()
+        n_days_post_init = 10
+        n_total = model.latent.n_initialization_points + n_days_post_init
+
+        samples = Predictive(model.sample, num_samples=2)(
+            jax.random.PRNGKey(42),
+            n_days_post_init=n_days_post_init,
+            population_size=1_000_000,
+            subpop_fractions=SUBPOP_FRACTIONS,
+            hospital={"obs": None},
+            ed={"obs": None},
+        )
+
+        assert samples["iedr"].shape == (2,)
+        assert samples["ihr_rel_iedr"].shape == (2,)
+        assert jnp.allclose(samples["he_baseline_ed"], samples["iedr"])
+        assert jnp.allclose(
+            samples["he_baseline_hospital"],
+            samples["iedr"] * samples["ihr_rel_iedr"],
+        )
+        assert samples["he_ascertainment_hospital"].shape == (2, n_total)
+        assert samples["he_ascertainment_ed"].shape == (2, n_total)
+        assert not jnp.allclose(
+            samples["he_ascertainment_hospital"] / samples["he_ascertainment_ed"],
+            samples["ihr_rel_iedr"][:, None],
+        )
+        assert samples["latent_infections"].shape == (2, n_total)
+
     def test_prior_predictive_reuses_same_ascertainment_signal(self):
         """Test two observations can reuse one signal accessor without site conflicts."""
         import jax.random
@@ -596,6 +774,228 @@ class TestMultiSignalModelSampling:
                 observations=model.observations,
                 ascertainment_models={"wrong_name": ascertainment},
             )
+
+    def test_rejects_registering_time_varying_baseline_object(
+        self,
+        simple_builder: PyrenewBuilder,
+    ) -> None:
+        """Test a wrapped baseline object cannot also be registered."""
+        built = simple_builder.build()
+        baseline = RecordingAscertainmentModel("baseline", {"hospital": 0.2})
+        outer = TimeVaryingAscertainment(
+            "outer",
+            baseline,
+            {"hospital": fixed_random_walk(innovation_sd=0.1)},
+        )
+
+        with pytest.raises(ValueError, match=r"outer.*baseline.*also be registered"):
+            MultiSignalModel(
+                latent_process=built.latent,
+                observations=built.observations,
+                ascertainment_models={"outer": outer, "baseline": baseline},
+            )
+
+    def test_rejects_registered_model_with_wrapped_baseline_name(
+        self,
+        simple_builder: PyrenewBuilder,
+    ) -> None:
+        """Test distinct registered and baseline objects cannot share a name."""
+        built = simple_builder.build()
+        baseline = RecordingAscertainmentModel("baseline", {"hospital": 0.2})
+        outer = TimeVaryingAscertainment(
+            "outer",
+            baseline,
+            {"hospital": fixed_random_walk(innovation_sd=0.1)},
+        )
+        registered = RecordingAscertainmentModel("baseline", {"ed": 0.3})
+
+        with pytest.raises(
+            ValueError,
+            match=r"namespace 'baseline'.*baseline model.*outer.*registered",
+        ):
+            MultiSignalModel(
+                latent_process=built.latent,
+                observations=built.observations,
+                ascertainment_models={"outer": outer, "baseline": registered},
+            )
+
+    def test_rejects_two_wrapped_baselines_with_the_same_name(
+        self,
+        simple_builder: PyrenewBuilder,
+    ) -> None:
+        """Test independently wrapped baselines need distinct namespaces."""
+        built = simple_builder.build()
+        first_baseline = RecordingAscertainmentModel(
+            "shared_baseline",
+            {"hospital": 0.2},
+        )
+        second_baseline = RecordingAscertainmentModel(
+            "shared_baseline",
+            {"ed": 0.3},
+        )
+        first = TimeVaryingAscertainment(
+            "first_outer",
+            first_baseline,
+            {"hospital": fixed_random_walk(innovation_sd=0.1)},
+        )
+        second = TimeVaryingAscertainment(
+            "second_outer",
+            second_baseline,
+            {"ed": fixed_random_walk(innovation_sd=0.1)},
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=r"shared_baseline.*first_outer.*second_outer",
+        ):
+            MultiSignalModel(
+                latent_process=built.latent,
+                observations=built.observations,
+                ascertainment_models={
+                    "first_outer": first,
+                    "second_outer": second,
+                },
+            )
+
+    def test_rejects_outer_name_colliding_with_another_baseline(
+        self,
+        simple_builder: PyrenewBuilder,
+    ) -> None:
+        """Test outer and owned baseline namespaces are globally unique."""
+        built = simple_builder.build()
+        first = TimeVaryingAscertainment(
+            "second_baseline",
+            RecordingAscertainmentModel("first_baseline", {"hospital": 0.2}),
+            {"hospital": fixed_random_walk(innovation_sd=0.1)},
+        )
+        second = TimeVaryingAscertainment(
+            "second_outer",
+            RecordingAscertainmentModel("second_baseline", {"ed": 0.3}),
+            {"ed": fixed_random_walk(innovation_sd=0.1)},
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=r"second_baseline.*registered.*second_outer",
+        ):
+            MultiSignalModel(
+                latent_process=built.latent,
+                observations=built.observations,
+                ascertainment_models={
+                    "second_baseline": first,
+                    "second_outer": second,
+                },
+            )
+
+    def test_forwards_full_axis_length_and_padded_axis_weekday(
+        self,
+        simple_builder: PyrenewBuilder,
+    ) -> None:
+        """Test ascertainment sampling receives the shared padded-axis context."""
+        built = simple_builder.build()
+        ascertainment = RecordingAscertainmentModel(
+            "recording",
+            {"hospital": 0.2},
+        )
+        model = MultiSignalModel(
+            latent_process=built.latent,
+            observations=built.observations,
+            ascertainment_models={"recording": ascertainment},
+        )
+        first_day_dow = 4
+        obs_start_date = _obs_date_for_dow(
+            first_day_dow,
+            model.latent.n_initialization_points,
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            model.sample(
+                n_days_post_init=5,
+                population_size=1_000_000,
+                subpop_fractions=SUBPOP_FRACTIONS,
+                obs_start_date=obs_start_date,
+                hospital={"obs": None},
+            )
+
+        assert ascertainment.sample_calls == [
+            (model.latent.n_initialization_points + 5, first_day_dow)
+        ]
+
+    def test_calendar_ascertainment_fails_early_and_names_model(
+        self,
+        simple_builder: PyrenewBuilder,
+    ) -> None:
+        """Test registered calendar-aligned ascertainment requires a date."""
+        built = simple_builder.build()
+        ascertainment = RecordingAscertainmentModel(
+            "weekly_ascertainment",
+            {"hospital": 0.2},
+            requires_calendar_anchor=True,
+        )
+        model = MultiSignalModel(
+            latent_process=built.latent,
+            observations=built.observations,
+            ascertainment_models={"weekly_ascertainment": ascertainment},
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=r"obs_start_date.*weekly_ascertainment",
+        ):
+            model.sample(
+                n_days_post_init=5,
+                population_size=1_000_000,
+                subpop_fractions=SUBPOP_FRACTIONS,
+                hospital={"obs": None},
+            )
+
+    def test_unregistered_calendar_ascertainment_does_not_require_date(
+        self,
+        simple_builder: PyrenewBuilder,
+    ) -> None:
+        """Test only registered ascertainment contributes date requirements."""
+        built = simple_builder.build()
+        RecordingAscertainmentModel(
+            "unregistered_weekly",
+            {"hospital": 0.2},
+            requires_calendar_anchor=True,
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            built.sample(
+                n_days_post_init=5,
+                population_size=1_000_000,
+                subpop_fractions=SUBPOP_FRACTIONS,
+                hospital={"obs": None},
+            )
+
+    def test_malformed_ascertainment_fails_before_observation_sampling(
+        self,
+        simple_builder: PyrenewBuilder,
+    ) -> None:
+        """Test output validation completes before any observation runs."""
+        built = simple_builder.build()
+        malformed = RecordingAscertainmentModel(
+            "malformed",
+            {"hospital": jnp.ones((2, 1))},
+        )
+        model = MultiSignalModel(
+            latent_process=built.latent,
+            observations=built.observations,
+            ascertainment_models={"malformed": malformed},
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                with pytest.raises(ValueError, match=r"malformed.*hospital.*shape"):
+                    model.sample(
+                        n_days_post_init=5,
+                        population_size=1_000_000,
+                        subpop_fractions=SUBPOP_FRACTIONS,
+                        hospital={"obs": None},
+                    )
+
+        assert "hospital_obs" not in trace
 
     def test_first_day_dow_reaches_calendar_aligned_latent_process(self):
         """MultiSignalModel forwards model-axis day of week to the latent process."""

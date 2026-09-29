@@ -299,8 +299,8 @@ class Wastewater(MeasurementObservation):
 
         # Convolve each site's infections with shedding kinetics
         def convolve_site(site_infections):
-            convolved, _ = self._convolve_with_alignment(
-                site_infections, shedding_pmf, p_observed=1.0
+            convolved, _ = self._convolve_delay_with_alignment(
+                site_infections, shedding_pmf
             )
             return convolved
 

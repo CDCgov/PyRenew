@@ -454,8 +454,8 @@ class Wastewater(MeasurementObservation):
         log10_genome = self.log10_genome_per_infection_rv()
 
         def convolve_site(site_infections):
-            convolved, _ = self._convolve_with_alignment(
-                site_infections, shedding_pmf, p_observed=1.0
+            convolved, _ = self._convolve_delay_with_alignment(
+                site_infections, shedding_pmf
             )
             return convolved
 

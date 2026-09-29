@@ -162,8 +162,10 @@ class PyrenewBuilder:
         process as ordinary ``RandomVariable`` objects.
 
         A registered ascertainment model is sampled once per model execution,
-        before observation processes run. Observation processes receive
-        signal-specific accessors from ``ascertainment_model.for_signal(...)``:
+        before observation processes run. It may return a scalar rate for each
+        signal or a trajectory spanning the full padded model axis.
+        Observation processes receive signal-specific accessors from
+        ``ascertainment_model.for_signal(...)``:
 
         ```python
         ascertainment = JointAscertainment(
@@ -183,6 +185,10 @@ class PyrenewBuilder:
         )
         ```
 
+        ``TimeVaryingAscertainment`` owns and samples its scalar baseline
+        model. Register only the outer time-varying model, and use that outer
+        model's ``for_signal(...)`` accessors in observation processes.
+
         The ascertainment model's ``name`` attribute is used as the unique
         identifier in the built ``MultiSignalModel``.
 
@@ -190,7 +196,7 @@ class PyrenewBuilder:
         ----------
         ascertainment_model
             Configured ascertainment model instance, such as
-            ``JointAscertainment``.
+            ``JointAscertainment`` or ``TimeVaryingAscertainment``.
 
         Returns
         -------

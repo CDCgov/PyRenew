@@ -24,8 +24,13 @@ jupyter:
 import jax.numpy as jnp
 import numpyro.distributions as dist
 
-from pyrenew.ascertainment import JointAscertainment, RatioLinkedAscertainment
+from pyrenew.ascertainment import (
+    JointAscertainment,
+    RatioLinkedAscertainment,
+    TimeVaryingAscertainment,
+)
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.latent import RandomWalk, WeeklyTemporalProcess
 from pyrenew.model import PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import DistributionalVariable
@@ -51,13 +56,14 @@ where $s$ identifies the signal, $\alpha_s$ is its ascertainment rate, and $\pi_
 If a model treats the ascertainment rates for different signals as unrelated, each observation process can receive its own `RandomVariable` directly.
 An ascertainment component is needed when the model represents a relationship between the ascertainment rates of multiple observation processes.
 
-PyRenew provides two such components:
+PyRenew provides two scalar models and one time-varying wrapper:
 
 - `JointAscertainment` specifies a joint prior for two or more rates.
 - `RatioLinkedAscertainment` specifies one rate as a multiple of another rate.
+- `TimeVaryingAscertainment` uses either scalar model as a baseline and adds an independent temporal deviation for each signal.
 
-The choice between them is part of the statistical model, not only an API choice.
-Each component expresses a different assumption about how information is shared across signals.
+The choice among them is part of the statistical model, not only an API choice.
+Each component expresses a different assumption about how information is shared across signals and over time.
 
 ## Independent ascertainment rates
 
@@ -206,7 +212,127 @@ Unlike `JointAscertainment`, this component does not automatically constrain the
 If both rates should be $<1$ (for instance because both are probabilities), make sure to choose priors that make $\alpha_{\mathrm{base}}\rho > 1$ negligibly likely.
 The component does not clip an invalid linked rate, because clipping would change the specified statistical model.
 
-## Building a model an ascertainment component
+## Related baselines with time-varying rates
+
+`TimeVaryingAscertainment` combines a scalar baseline model with one temporal process per signal.
+If $b_s$ is the sampled baseline for signal $s$ and $z_s(t)$ is its temporal deviation, the rate trajectory is
+
+$$
+  \alpha_s(t)
+  =
+  \operatorname{logit}^{-1}
+  \left(\operatorname{logit}(b_s) + z_s(t)\right).
+$$
+
+The baseline is the rate obtained when the deviation is zero.
+It is not necessarily the first trajectory value: some temporal processes, including `AR1`, sample their initial state around zero.
+
+The baseline model relates only the scalar reference rates.
+After those rates are sampled, each signal receives its own temporal process.
+A joint covariance or a baseline ratio is therefore not reimposed at every timepoint.
+This lets hospital and ED ascertainment trajectories move independently around related reference levels.
+
+The time-varying rate applies on the potential-observation date, after the infection-to-observation delay:
+
+```python
+baseline_rates = baseline_model.sample()
+
+potential_counts = convolve_delay(
+    infections,
+    clinical_delay_pmf,
+)
+
+rate_trajectory = sigmoid(
+    logit(baseline_rates[signal])
+    + temporal_deviation[signal]
+)
+
+predicted_counts = potential_counts * rate_trajectory
+```
+
+This is different from multiplying infections by a changing rate before convolution.
+It represents ascertainment conditions on the day an event could be observed.
+
+### Joint scalar baselines
+
+```python
+baseline = JointAscertainment(
+    name="he_baseline",
+    signals=("hospital", "ed_visits"),
+    baseline_rates=jnp.array([0.01, 0.02]),
+    scale_tril=jnp.array([[0.3, 0.0], [0.15, 0.26]]),
+)
+
+ascertainment = TimeVaryingAscertainment(
+    name="he_ascertainment",
+    baseline_model=baseline,
+    processes={
+        "hospital": RandomWalk(
+            DeterministicVariable("hospital_ascertainment_sd", 0.05)
+        ),
+        "ed_visits": RandomWalk(
+            DeterministicVariable("ed_ascertainment_sd", 0.05)
+        ),
+    },
+)
+```
+
+### Ratio-linked scalar baselines
+
+```python
+baseline = RatioLinkedAscertainment(
+    name="he_baseline",
+    base_signal="ed_visits",
+    linked_signal="hospital",
+    base_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
+    ratio_rv=DistributionalVariable(
+        "ihr_rel_iedr",
+        dist.LogNormal(jnp.log(0.5), 0.35),
+    ),
+)
+
+ascertainment = TimeVaryingAscertainment(
+    name="he_ascertainment",
+    baseline_model=baseline,
+    processes={
+        "ed_visits": RandomWalk(
+            DeterministicVariable("ed_ascertainment_sd", 0.05)
+        ),
+        "hospital": RandomWalk(
+            DeterministicVariable("hospital_ascertainment_sd", 0.05)
+        ),
+    },
+)
+```
+
+Register only the outer model, because it owns and samples its baseline.
+Use the outer accessors in observation processes:
+
+```python
+builder.add_ascertainment(ascertainment)
+
+hospital_obs = PopulationCounts(
+    name="hospital",
+    ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+    ...
+)
+```
+
+Daily temporal processes such as `RandomWalk` do not require a date.
+Calendar-aligned processes do.
+For example, wrap a process in `WeeklyTemporalProcess` when deviations should be shared within calendar weeks:
+
+```python
+weekly_hospital_process = WeeklyTemporalProcess(
+    RandomWalk(DeterministicVariable("hospital_weekly_sd", 0.05)),
+    start_dow=MMWR_WEEK,
+)
+```
+
+When any registered ascertainment model contains a weekly process, supply `obs_start_date` when sampling or fitting the model.
+PyRenew uses it to align weekly blocks to the padded shared model axis.
+
+## Building a model with an ascertainment component
 
 The complete builder pattern is the same for either ascertainment component - here we use a `RatioLinkedAscertainment` but the sequence of definitions is the same for `JointAscertainment`.
 
@@ -257,9 +383,9 @@ model = builder.build()
 
 ## Shared assumptions and limitations
 
-Both ascertainment components produce one scalar ascertainment rate for each signal over the entire model period.
-Consequently, neither component allows the rates or their implied relationship to change over time.
-Whether this assumption is reasonable should be evaluated in the context of the observation processes and study period.
+`JointAscertainment` and `RatioLinkedAscertainment` each produce one scalar rate per signal over the entire model period.
+`TimeVaryingAscertainment` adds signal-specific deviations to scalar rates from either model.
+Its baseline relationship is not a claim that the same covariance or ratio holds pointwise.
 
 The choice of ascertainment model should consider:
 
@@ -267,8 +393,8 @@ The choice of ascertainment model should consider:
 - whether a covariance structure or a relative multiplier is easier to justify
 - whether the priors keep all rates, including derived linked rates, within scientifically plausible ranges
 - whether treating ascertainment rates as constant over the model period is scientifically reasonable
+- whether daily, stepwise, or calendar-week deviations match the scientific question
 
 Ascertainment rates are generally difficult to distinguish from the scale of latent infections using surveillance counts alone.
-Allowing the rates to vary over time introduces additional confounding unless external information or strong structural assumptions identify that variation.
-The built-in ascertainment components therefore use scalar rates over the model period.
-When this assumption is questionable, shorter modeling windows and sensitivity analyses may be more appropriate than introducing a weakly identified time-varying process.
+Flexible infection and ascertainment trajectories can be weakly identified without informative priors, external information, or strong structural assumptions.
+Use time variation only when the available information can support it, and assess sensitivity to both baseline and temporal-process priors.

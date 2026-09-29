@@ -7,9 +7,12 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pytest
+from jax.typing import ArrayLike
 from numpyro.infer.util import log_density
 
+from pyrenew.convolve import compute_delay_incidence
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
+from pyrenew.metaclass import RandomVariable
 from pyrenew.observation import (
     NegativeBinomialNoise,
     PoissonNoise,
@@ -19,6 +22,27 @@ from pyrenew.observation import (
 from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 from test.test_helpers import create_mock_infections
+
+
+class CountingVariable(RandomVariable):
+    """Return a fixed value while counting calls for sampling-order tests."""
+
+    def __init__(self, name: str, value: ArrayLike) -> None:
+        """Initialize a fixed counting random variable."""
+        super().__init__(name=name)
+        self.value = value
+        self.n_calls = 0
+
+    def sample(self, **kwargs: object) -> ArrayLike:
+        """Return the fixed value and increment the call count.
+
+        Returns
+        -------
+        ArrayLike
+            Configured value.
+        """
+        self.n_calls += 1
+        return self.value
 
 
 class TestCountsBasics:
@@ -143,6 +167,149 @@ class TestCountsBasics:
 
         # When obs is provided, observed values should equal obs
         assert jnp.allclose(result.observed, known_obs)
+
+
+class TestTimeVaryingAscertainment:
+    """Test ascertainment applied on the potential-observation date."""
+
+    def test_delay_precedes_time_varying_ascertainment(self) -> None:
+        """Test a rate trajectory scales delayed rather than incident counts."""
+        infections = jnp.array([0.0, 10.0, 30.0, 0.0, 0.0])
+        delay_pmf = jnp.array([0.25, 0.75])
+        rate = jnp.array([0.1, 0.2, 0.3, 0.4, 0.5])
+        process = PopulationCounts(
+            name="hospital",
+            ascertainment_rate_rv=DeterministicVariable("rate", rate),
+            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
+            noise=PoissonNoise(),
+        )
+
+        predicted = process._predicted_obs(infections)
+        potential_counts, _ = compute_delay_incidence(
+            infections,
+            delay_pmf,
+            pad=True,
+        )
+        incident_date_counts, _ = compute_delay_incidence(
+            infections * rate,
+            delay_pmf,
+            pad=True,
+        )
+
+        assert jnp.allclose(predicted, potential_counts * rate, equal_nan=True)
+        assert not jnp.allclose(predicted, incident_date_counts, equal_nan=True)
+
+    def test_scalar_rate_is_sampled_once_and_matches_old_calculation(self) -> None:
+        """Test scalar ascertainment preserves prior results and samples once."""
+        rate = CountingVariable("rate", 0.25)
+        infections = jnp.array([1.0, 2.0, 4.0, 8.0])
+        delay_pmf = jnp.array([0.2, 0.8])
+        process = PopulationCounts(
+            name="hospital",
+            ascertainment_rate_rv=rate,
+            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
+            noise=PoissonNoise(),
+        )
+
+        predicted = process._predicted_obs(infections)
+        old_calculation, _ = compute_delay_incidence(
+            infections * 0.25,
+            delay_pmf,
+            pad=True,
+        )
+
+        assert rate.n_calls == 1
+        assert jnp.allclose(predicted, old_calculation, equal_nan=True)
+
+    @pytest.mark.parametrize(
+        "rate",
+        [
+            jnp.ones(1),
+            jnp.ones(3),
+            jnp.ones((4, 1)),
+            jnp.ones((4, 2)),
+            jnp.ones((4, 1, 1)),
+        ],
+    )
+    def test_rejects_malformed_rate_trajectories(self, rate: ArrayLike) -> None:
+        """Test a trajectory must exactly match the shared time axis."""
+        process = PopulationCounts(
+            name="hospital",
+            ascertainment_rate_rv=DeterministicVariable("rate", 0.2),
+            delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
+            noise=PoissonNoise(),
+        )
+
+        with pytest.raises(ValueError, match=r"shape \(\) or \(4,\)"):
+            process._apply_ascertainment(jnp.ones(4), rate)
+
+    def test_trajectory_is_shared_across_subpopulations(self) -> None:
+        """Test one full-axis trajectory broadcasts across all columns."""
+        potential_counts = jnp.array(
+            [
+                [1.0, 3.0],
+                [2.0, 6.0],
+                [4.0, 12.0],
+            ]
+        )
+        rate = jnp.array([0.1, 0.2, 0.4])
+        process = SubpopulationCounts(
+            name="hospital",
+            ascertainment_rate_rv=DeterministicVariable("rate", rate),
+            delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
+            noise=PoissonNoise(),
+        )
+
+        predicted = process._apply_ascertainment(potential_counts, rate)
+
+        assert jnp.allclose(predicted, potential_counts * rate[:, None])
+        assert jnp.allclose(predicted[:, 1] / predicted[:, 0], 3.0)
+
+    def test_delay_padding_is_preserved(self) -> None:
+        """Test ascertainment leaves leading delay-padding values as NaN."""
+        process = PopulationCounts(
+            name="hospital",
+            ascertainment_rate_rv=DeterministicVariable(
+                "rate",
+                jnp.linspace(0.1, 0.5, 5),
+            ),
+            delay_distribution_rv=DeterministicPMF(
+                "delay",
+                jnp.array([0.2, 0.3, 0.5]),
+            ),
+            noise=PoissonNoise(),
+        )
+
+        predicted = process._predicted_obs(jnp.ones(5))
+
+        assert jnp.all(jnp.isnan(predicted[:2]))
+        assert jnp.all(jnp.isfinite(predicted[2:]))
+
+    def test_delay_padding_does_not_create_nan_rate_gradients(self) -> None:
+        """Test padded potential counts have a finite ascertainment gradient."""
+        process = PopulationCounts(
+            name="hospital",
+            ascertainment_rate_rv=DeterministicVariable("rate", 0.2),
+            delay_distribution_rv=DeterministicPMF("delay", jnp.array([1.0])),
+            noise=PoissonNoise(),
+        )
+        potential_counts = jnp.array([jnp.nan, 2.0, 4.0])
+
+        def finite_sum(rate: ArrayLike) -> ArrayLike:
+            """Return the sum after replacing padding with a finite value.
+
+            Returns
+            -------
+            ArrayLike
+                Sum of finite scaled counts.
+            """
+            scaled = process._apply_ascertainment(potential_counts, rate)
+            return jnp.sum(jnp.where(jnp.isnan(scaled), 0.0, scaled))
+
+        gradient = jax.grad(finite_sum)(jnp.array(0.2))
+
+        assert jnp.isfinite(gradient)
+        assert jnp.isclose(gradient, 6.0)
 
 
 class TestCountsWithPriors:
