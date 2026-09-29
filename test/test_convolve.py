@@ -456,3 +456,71 @@ def test_compute_prop_already_reported(
     )
     assert result.shape == (n_timepoints,)
     assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    ["reporting_delay_pmf", "n_timepoints", "right_truncation_offset", "expected"],
+    [
+        # PMF [0.2, 0.3, 0.5] has CDF [0.2, 0.5, 1.0].
+        # offset=0: tail = flip(CDF[0:]) = [1.0, 0.5, 0.2]
+        # Short windows keep the trailing (most recent) entries.
+        [
+            jnp.array([0.2, 0.3, 0.5]),
+            2,
+            0,
+            jnp.array([0.5, 0.2]),
+        ],
+        [
+            jnp.array([0.2, 0.3, 0.5]),
+            1,
+            0,
+            jnp.array([0.2]),
+        ],
+        # offset=1: tail = flip(CDF[1:]) = [1.0, 0.5]
+        [
+            jnp.array([0.2, 0.3, 0.5]),
+            1,
+            1,
+            jnp.array([0.5]),
+        ],
+        # Boundary: window exactly as long as the tail.
+        [
+            jnp.array([0.2, 0.3, 0.5]),
+            3,
+            0,
+            jnp.array([1.0, 0.5, 0.2]),
+        ],
+    ],
+)
+def test_compute_prop_already_reported_short_window(
+    reporting_delay_pmf,
+    n_timepoints,
+    right_truncation_offset,
+    expected,
+):
+    """
+    Short observation windows (n_timepoints below the delay PMF
+    support) return the trailing slice of the reported-proportion
+    tail instead of raising.
+    """
+    result = pc.compute_prop_already_reported(
+        reporting_delay_pmf, n_timepoints, right_truncation_offset
+    )
+    assert result.shape == (n_timepoints,)
+    assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize("n_timepoints", [1, 2, 3, 4, 5])
+@pytest.mark.parametrize("right_truncation_offset", [0, 1])
+def test_compute_prop_already_reported_short_window_matches_full(
+    n_timepoints, right_truncation_offset
+):
+    """
+    A short window's result must equal the last n_timepoints entries
+    of the full-support result: truncation only affects recent
+    timepoints, and a short window covers exactly those.
+    """
+    pmf = jnp.array([0.2, 0.3, 0.5])
+    full = pc.compute_prop_already_reported(pmf, 5, right_truncation_offset)
+    short = pc.compute_prop_already_reported(pmf, n_timepoints, right_truncation_offset)
+    assert_array_equal(short, full[-n_timepoints:])

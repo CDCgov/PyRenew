@@ -524,8 +524,8 @@ class TestRightTruncation:
         with pytest.raises(ValueError, match="must sum to 1.0"):
             process.validate()
 
-    def test_short_observation_window_raises(self, simple_delay_pmf):
-        """Test that observation window shorter than delay support raises."""
+    def test_short_observation_window_supported(self, simple_delay_pmf):
+        """Short observation windows use the trailing tail slice, not an error."""
         rt_pmf = jnp.array([0.2, 0.3, 0.5])
         process = PopulationCounts(
             name="test",
@@ -537,12 +537,18 @@ class TestRightTruncation:
         infections = jnp.ones(2) * 100
 
         with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(ValueError, match="Observation window length"):
+            with numpyro.handlers.trace() as trace:
                 process.sample(
                     infections=infections,
                     obs=None,
                     right_truncation_offset=0,
                 )
+
+        # PMF [0.2, 0.3, 0.5] has CDF [0.2, 0.5, 1.0]; a 2-day window
+        # keeps the trailing (most recent) tail entries [0.5, 0.2].
+        prop = trace["test_prop_already_reported"]["value"]
+        assert prop.shape == (2,)
+        assert jnp.all(jnp.isclose(prop, jnp.array([0.5, 0.2])))
 
     def test_counts_by_subpop_2d_broadcasting(self):
         """Test right-truncation with SubpopulationCounts 2D infections."""
