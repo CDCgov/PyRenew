@@ -15,7 +15,7 @@ import numpyro
 import numpyro.handlers
 from jax.typing import ArrayLike
 
-from pyrenew.ascertainment import AscertainmentModel, TimeVaryingAscertainment
+from pyrenew.ascertainment import AscertainmentModel
 from pyrenew.ascertainment.context import ascertainment_context
 from pyrenew.latent.base import BaseLatentInfectionProcess
 from pyrenew.metaclass import Model
@@ -123,39 +123,6 @@ class MultiSignalModel(Model):
                 raise ValueError(
                     f"Ascertainment model dictionary key {name!r} must match "
                     f"the model name {ascertainment_model.name!r}."
-                )
-
-        namespace_owners: dict[str, list[str]] = {}
-        for name, ascertainment_model in self.ascertainment_models.items():
-            namespace_owners.setdefault(name, []).append(
-                f"registered ascertainment model {name!r}"
-            )
-            if not isinstance(ascertainment_model, TimeVaryingAscertainment):
-                continue
-
-            baseline = ascertainment_model.baseline_model
-            registered_baseline_names = [
-                registered_name
-                for registered_name, registered_model in self.ascertainment_models.items()
-                if registered_model is baseline
-            ]
-            if registered_baseline_names:
-                raise ValueError(
-                    f"Time-varying ascertainment model {name!r} owns baseline "
-                    f"model {baseline.name!r}; that baseline object must not "
-                    f"also be registered as {registered_baseline_names[0]!r}."
-                )
-            namespace_owners.setdefault(baseline.name, []).append(
-                f"baseline model {baseline.name!r} owned by time-varying "
-                f"ascertainment model {name!r}"
-            )
-
-        for namespace, owners in namespace_owners.items():
-            if len(owners) > 1:
-                raise ValueError(
-                    f"Ascertainment NumPyro namespace {namespace!r} is used by "
-                    f"{' and '.join(owners)}. Registered models and wrapped "
-                    "baselines must have unique names."
                 )
 
     def _validate_run_args(

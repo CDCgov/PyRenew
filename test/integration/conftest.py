@@ -12,7 +12,11 @@ import numpyro.distributions as dist
 import polars as pl
 import pytest
 
-from pyrenew.ascertainment import JointAscertainment, RatioLinkedAscertainment
+from pyrenew.ascertainment import (
+    IndependentAscertainment,
+    JointAscertainment,
+    RatioLinkedAscertainment,
+)
 from pyrenew.datasets import (
     load_example_infection_admission_interval,
     load_synthetic_daily_ed_visits,
@@ -172,6 +176,15 @@ def _build_he_population_model(  # numpydoc ignore=RT01
         infection_process=infection_process,
     )
 
+    ascertainment = IndependentAscertainment(
+        name="he_ascertainment",
+        rate_rvs={
+            "hospital": DistributionalVariable("ihr", dist.Beta(1, 100)),
+            "ed": DistributionalVariable("iedr", dist.Beta(1, 100)),
+        },
+    )
+    builder.add_ascertainment(ascertainment)
+
     hospital_kwargs = {}
     if hospital_weekly:
         hospital_kwargs = {
@@ -183,7 +196,7 @@ def _build_he_population_model(  # numpydoc ignore=RT01
     builder.add_observation(
         PopulationCounts(
             name="hospital",
-            ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(1, 100)),
+            ascertainment_rate_rv=ascertainment.for_signal("hospital"),
             delay_distribution_rv=DeterministicPMF("hosp_delay", hosp_delay_pmf),
             noise=NegativeBinomialNoise(
                 DistributionalVariable("hosp_conc", dist.LogNormal(5.0, 1.0))
@@ -194,7 +207,7 @@ def _build_he_population_model(  # numpydoc ignore=RT01
     builder.add_observation(
         PopulationCounts(
             name="ed",
-            ascertainment_rate_rv=DistributionalVariable("iedr", dist.Beta(1, 100)),
+            ascertainment_rate_rv=ascertainment.for_signal("ed"),
             delay_distribution_rv=DeterministicPMF("ed_delay", ed_delay_pmf),
             noise=NegativeBinomialNoise(
                 DistributionalVariable("ed_conc", dist.LogNormal(4.0, 1.0))

@@ -53,6 +53,12 @@ $$
 
 where $s$ identifies the signal, $\alpha_s$ is its ascertainment rate, and $\pi_{s,d}$ is its delay distribution.
 
+## Individual and related ascertainment rates for multi-signal models
+
+## Fixed and time-varying ascertainment
+
+******** stopped here ******
+
 If a model treats the ascertainment rates for different signals as unrelated, each observation process can receive its own `RandomVariable` directly.
 An ascertainment component is needed when the model represents a relationship between the ascertainment rates of multiple observation processes.
 
@@ -60,7 +66,7 @@ PyRenew provides two scalar models and one time-varying wrapper:
 
 - `JointAscertainment` specifies a joint prior for two or more rates.
 - `RatioLinkedAscertainment` specifies one rate as a multiple of another rate.
-- `TimeVaryingAscertainment` uses either scalar model as a baseline and adds an independent temporal deviation for each signal.
+
 
 The choice among them is part of the statistical model, not only an API choice.
 Each component expresses a different assumption about how information is shared across signals and over time.

@@ -153,41 +153,44 @@ class PyrenewBuilder:
         self,
         ascertainment_model: AscertainmentModel,
     ) -> PyrenewBuilder:
-        """
-        Add shared ascertainment structure to the model.
+        """Add ascertainment rates for one or more observation signals.
 
-        Use this method when observation probabilities are related across
-        signals. Independent scalar ascertainment rates do not require an
-        ascertainment model; those can be passed directly to an observation
-        process as ordinary ``RandomVariable`` objects.
+        Choose the ascertainment class based on the relationship among scalar
+        baseline rates. ``IndependentAscertainment`` is the usual choice for a
+        single signal or independent baselines. ``JointAscertainment`` and
+        ``RatioLinkedAscertainment`` provide related baselines. Any class can
+        receive optional temporal processes for selected signals.
 
         A registered ascertainment model is sampled once per model execution,
-        before observation processes run. It may return a scalar rate for each
-        signal or a trajectory spanning the full padded model axis.
+        before observation processes run. Signals without a temporal process
+        provide a scalar rate; signals with one provide a trajectory spanning
+        the full padded model axis.
+
+        Fixed and time-varying models use the same registration and observation
+        wiring. For example, omit ``temporal_processes`` for a fixed ED rate or
+        supply it as shown for a time-varying rate:
+
+        ```python
+        ascertainment = IndependentAscertainment(
+            name="ed_ascertainment",
+            rate_rvs={"ed_visits": iedr_rv},
+            temporal_processes={"ed_visits": ed_temporal_process},
+        )
+        builder.add_ascertainment(ascertainment)
+        ```
+
         Observation processes receive signal-specific accessors from
         ``ascertainment_model.for_signal(...)``:
 
         ```python
-        ascertainment = JointAscertainment(
-            name="he_ascertainment",
-            signals=("hospital", "ed_visits"),
-            baseline_rates=...,
-            scale_tril=...,
-        )
-        builder.add_ascertainment(ascertainment)
-
         builder.add_observation(
             PopulationCounts(
-                name="hospital",
-                ascertainment_rate_rv=ascertainment.for_signal("hospital"),
+                name="ed_visits",
+                ascertainment_rate_rv=ascertainment.for_signal("ed_visits"),
                 ...
             )
         )
         ```
-
-        ``TimeVaryingAscertainment`` owns and samples its scalar baseline
-        model. Register only the outer time-varying model, and use that outer
-        model's ``for_signal(...)`` accessors in observation processes.
 
         The ascertainment model's ``name`` attribute is used as the unique
         identifier in the built ``MultiSignalModel``.
@@ -196,7 +199,8 @@ class PyrenewBuilder:
         ----------
         ascertainment_model
             Configured ascertainment model instance, such as
-            ``JointAscertainment`` or ``TimeVaryingAscertainment``.
+            ``IndependentAscertainment``, ``JointAscertainment``, or
+            ``RatioLinkedAscertainment``.
 
         Returns
         -------

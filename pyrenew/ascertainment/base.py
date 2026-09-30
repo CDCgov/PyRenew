@@ -8,10 +8,16 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 
+import jax.nn as jnn
 import jax.numpy as jnp
+import numpyro
+from jax import Array
+from jax.scipy.special import logit
 from jax.typing import ArrayLike
+from numpyro.util import not_jax_tracer
 
 from pyrenew.ascertainment.context import get_ascertainment_value
+from pyrenew.latent import TemporalProcess
 from pyrenew.metaclass import RandomVariable
 
 
@@ -101,15 +107,21 @@ class AscertainmentModel(metaclass=ABCMeta):
     )
     ```
 
-    Subclasses own any NumPyro sites needed for the shared structure.
-    Accessors returned by ``for_signal()`` read the sampled values from the
-    active model context and do not sample independently.
+    The model samples one scalar baseline rate per signal and can add an
+    optional signal-specific temporal deviation on the logit scale. Subclasses
+    implement ``_sample_baseline_rates()`` to define relationships among the
+    scalar baselines. The base class owns validation, temporal sampling, and
+    the standard deterministic sites.
+
+    Accessors returned by ``for_signal()`` read the final sampled values from
+    the active model context and do not sample independently.
     """
 
     def __init__(
         self,
         name: str,
         signals: tuple[str, ...],
+        temporal_processes: Mapping[str, TemporalProcess] | None = None,
     ) -> None:
         """
         Initialize an ascertainment model.
@@ -120,6 +132,17 @@ class AscertainmentModel(metaclass=ABCMeta):
             A non-empty string identifying the ascertainment model.
         signals
             Unique signal names produced by this model.
+        temporal_processes
+            Optional temporal processes keyed by signal name. Signals without
+            a process retain their scalar baseline rate.
+
+        Raises
+        ------
+        TypeError
+            If ``temporal_processes`` is not a mapping or a configured process
+            does not satisfy the ``TemporalProcess`` protocol.
+        ValueError
+            If a temporal process is configured for an unknown signal.
         """
         if not isinstance(name, str) or len(name) == 0:
             raise ValueError(
@@ -134,6 +157,37 @@ class AscertainmentModel(metaclass=ABCMeta):
 
         self.name = name
         self.signals = signals
+
+        if temporal_processes is None:
+            temporal_processes = {}
+        if not isinstance(temporal_processes, Mapping):
+            raise TypeError(
+                "temporal_processes must be a mapping, "
+                f"got {type(temporal_processes).__name__}."
+            )
+
+        expected_signals = set(signals)
+        unknown_signals = tuple(
+            signal for signal in temporal_processes if signal not in expected_signals
+        )
+        if unknown_signals:
+            raise ValueError(
+                f"temporal_processes contains unknown signals {unknown_signals} for "
+                f"ascertainment model {name!r}. Available signals: {signals}."
+            )
+
+        ordered_processes: dict[str, TemporalProcess] = {}
+        for signal in signals:
+            if signal not in temporal_processes:
+                continue
+            process = temporal_processes[signal]
+            if not isinstance(process, TemporalProcess):
+                raise TypeError(
+                    f"temporal process for signal {signal!r} must satisfy the "
+                    f"TemporalProcess protocol, got {type(process).__name__}."
+                )
+            ordered_processes[signal] = process
+        self.temporal_processes = ordered_processes
 
     def for_signal(self, signal_name: str) -> AscertainmentSignal:
         """
@@ -170,7 +224,7 @@ class AscertainmentModel(metaclass=ABCMeta):
         )
 
     def requires_calendar_anchor(self) -> bool:
-        """Return whether sampling requires the model-axis day-of-week.
+        """Return whether any temporal process requires a calendar anchor.
 
         Returns
         -------
@@ -178,7 +232,165 @@ class AscertainmentModel(metaclass=ABCMeta):
             ``True`` when the model needs a calendar anchor; otherwise
             ``False``.
         """
-        return False
+        return any(
+            getattr(process, "requires_calendar_anchor", False)
+            for process in self.temporal_processes.values()
+        )
+
+    def _validate_baseline_rates(
+        self,
+        baseline_rates: Mapping[str, ArrayLike],
+    ) -> dict[str, Array]:
+        """Validate and convert scalar baseline ascertainment rates.
+
+        Parameters
+        ----------
+        baseline_rates
+            Sampled scalar baseline rates keyed by signal name.
+
+        Returns
+        -------
+        dict[str, Array]
+            Validated scalar arrays in signal order.
+
+        Raises
+        ------
+        TypeError
+            If ``baseline_rates`` is not a mapping.
+        ValueError
+            If signal names do not match, a baseline is not scalar, or a
+            concrete baseline is non-finite or outside its allowed interval.
+        """
+        if not isinstance(baseline_rates, Mapping):
+            raise TypeError(
+                f"Ascertainment model {self.name!r} must return baseline rates "
+                f"as a mapping, got {type(baseline_rates).__name__}."
+            )
+
+        expected_signals = set(self.signals)
+        actual_signals = set(baseline_rates)
+        if actual_signals != expected_signals:
+            missing = tuple(
+                signal for signal in self.signals if signal not in baseline_rates
+            )
+            extra = tuple(
+                signal for signal in baseline_rates if signal not in expected_signals
+            )
+            raise ValueError(
+                f"Ascertainment model {self.name!r} must return baseline rates for "
+                f"exactly signals {self.signals}. Missing: {missing}. Extra: {extra}."
+            )
+
+        validated_rates: dict[str, Array] = {}
+        for signal in self.signals:
+            baseline_rate = jnp.asarray(baseline_rates[signal])
+            if baseline_rate.shape != ():
+                raise ValueError(
+                    f"Ascertainment model {self.name!r}, signal {signal!r}, "
+                    f"returned baseline shape {baseline_rate.shape}; required shape "
+                    "is ()."
+                )
+
+            if signal in self.temporal_processes:
+                invalid_rate = (
+                    ~jnp.isfinite(baseline_rate)
+                    | (baseline_rate <= 0)
+                    | (baseline_rate >= 1)
+                )
+                allowed_interval = "strictly inside (0, 1)"
+            else:
+                invalid_rate = (
+                    ~jnp.isfinite(baseline_rate)
+                    | (baseline_rate < 0)
+                    | (baseline_rate > 1)
+                )
+                allowed_interval = "inside [0, 1]"
+
+            if not_jax_tracer(invalid_rate) and bool(invalid_rate):
+                raise ValueError(
+                    f"Ascertainment model {self.name!r} requires the baseline for "
+                    f"signal {signal!r} to be finite and {allowed_interval}; got "
+                    f"{baseline_rate}."
+                )
+            validated_rates[signal] = baseline_rate
+
+        return validated_rates
+
+    def sample(
+        self,
+        n_timepoints: int,
+        first_day_dow: int | None = None,
+    ) -> Mapping[str, ArrayLike]:
+        """Sample baseline rates and optional temporal rate trajectories.
+
+        Parameters
+        ----------
+        n_timepoints
+            Positive number of timepoints on the shared model axis.
+        first_day_dow
+            Day of week for the first model-axis timepoint. Calendar-aligned
+            temporal processes use this value.
+
+        Returns
+        -------
+        Mapping[str, ArrayLike]
+            Final scalar rates or full-axis trajectories in signal order.
+
+        Raises
+        ------
+        TypeError
+            If ``n_timepoints`` is not a built-in integer.
+        ValueError
+            If ``n_timepoints`` is less than one, baseline rates are invalid,
+            or a temporal process returns an unexpected shape.
+        """
+        if type(n_timepoints) is not int:
+            raise TypeError(
+                "n_timepoints must be a positive integer, "
+                f"got {type(n_timepoints).__name__}."
+            )
+        if n_timepoints < 1:
+            raise ValueError(
+                f"n_timepoints must be a positive integer, got {n_timepoints}."
+            )
+
+        baseline_rates = self._validate_baseline_rates(self._sample_baseline_rates())
+
+        result: dict[str, ArrayLike] = {}
+        for signal in self.signals:
+            baseline_rate = baseline_rates[signal]
+            numpyro.deterministic(
+                f"{self.name}_baseline_{signal}",
+                baseline_rate,
+            )
+
+            process = self.temporal_processes.get(signal)
+            if process is None:
+                rate = baseline_rate
+            else:
+                deviation = jnp.asarray(
+                    process.sample(
+                        n_timepoints=n_timepoints,
+                        initial_value=0.0,
+                        n_processes=1,
+                        name_prefix=f"{self.name}_{signal}",
+                        first_day_dow=first_day_dow,
+                    )
+                )
+                required_shape = (n_timepoints, 1)
+                if deviation.shape != required_shape:
+                    raise ValueError(
+                        f"Ascertainment model {self.name!r}, signal {signal!r}, "
+                        f"received temporal-process shape {deviation.shape}; "
+                        f"required shape is {required_shape}."
+                    )
+                deviation = jnp.squeeze(deviation, axis=-1)
+                rate = jnn.sigmoid(logit(baseline_rate) + deviation)
+
+            numpyro.deterministic(f"{self.name}_{signal}", rate)
+            result[signal] = rate
+
+        return result
 
     def validate_sampled_values(
         self,
@@ -229,19 +441,18 @@ class AscertainmentModel(metaclass=ABCMeta):
                 )
 
     @abstractmethod
-    def sample(self, **kwargs: object) -> Mapping[str, ArrayLike]:
-        """
-        Sample all signal-specific ascertainment values owned by this model.
-
-        Parameters
-        ----------
-        **kwargs
-            Additional model-context arguments supplied by ``MultiSignalModel``.
-            Subclasses may ignore unused values.
+    def _sample_baseline_rates(self) -> Mapping[str, ArrayLike]:
+        """Sample one scalar baseline ascertainment rate per signal.
 
         Returns
         -------
         Mapping[str, ArrayLike]
-            Mapping from signal name to sampled ascertainment rate.
+            Scalar baseline rates keyed by the model's signal names.
+
+        Notes
+        -----
+        Custom subclasses should implement only baseline sampling here. The
+        base ``sample()`` method validates baselines, applies any configured
+        temporal processes, and records the standard deterministic sites.
         """
         pass  # pragma: no cover
