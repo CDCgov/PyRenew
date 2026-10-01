@@ -340,7 +340,9 @@ class TestAscertainmentModelContract:
         model = FixedAscertainmentModel("ascertainment", {"hospital": 0.2})
 
         @jax.jit
-        def validate(value: ArrayLike) -> ArrayLike:
+        def validate(  # numpydoc ignore=RT01
+            value: ArrayLike,
+        ) -> ArrayLike:
             """Validate and return a traced baseline value."""
             return model._validate_baseline_rates({"hospital": value})["hospital"]
 
@@ -469,7 +471,7 @@ class TestAscertainmentModelContract:
             model.validate_sampled_values({"hospital": value}, n_timepoints=4)
 
 
-def _make_public_ascertainment(
+def _make_public_ascertainment(  # numpydoc ignore=RT01
     model_kind: str,
     temporal_processes: Mapping[str, TemporalProcess] | None,
 ) -> AscertainmentModel:

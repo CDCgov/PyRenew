@@ -84,17 +84,32 @@ class AscertainmentSignal(RandomVariable):
 
 class AscertainmentModel(metaclass=ABCMeta):
     """
-    Base class for shared ascertainment structure.
+    An ``AscertainmentModel`` is a component of a PyRenew renewal process
+    model. It provides an ascertainment rate for one or more observation signals.
 
-    An ascertainment rate is the probability that latent incidence is observed
-    in a particular data stream. Examples include an infection-hospitalization
-    ratio for hospital admissions or an infection-ED-visit ratio for emergency
-    department visits.
+    Each signal has a scalar baseline rate. If a temporal process is specified
+    for that signal, the component combines the baseline rate with the temporal
+    process to produce a rate trajectory over the model period. Otherwise, the
+    baseline rate applies throughout the model period.
 
-    ``AscertainmentModel`` objects make shared structure explicit in a model
-    specification. A user defines the shared model once, registers it with
-    ``PyrenewBuilder.add_ascertainment(...)``, and passes signal-specific
-    accessors into observation processes:
+    The model samples one scalar baseline rate per signal and can add an
+    optional signal-specific temporal deviation on the logit scale. Subclasses
+    implement ``_sample_baseline_rates()`` to define relationships among the
+    scalar baselines. The base class owns validation, temporal sampling, and
+    the standard deterministic sites.
+
+    Concrete subclasses determine how the baseline rates are specified.
+    ``IndependentAscertainment`` specifies each baseline separately,
+    ``JointAscertainment`` assigns the baselines a joint distribution, and
+    ``RatioLinkedAscertainment`` defines one baseline relative to another.
+    Both ``IndependentAscertainment`` and ``JointAscertainment`` may be used
+    with a single signal.
+
+    Register the component with ``PyrenewBuilder.add_ascertainment(...)``.
+    Use ``for_signal(...)`` to obtain the signal-specific accessor passed
+    to an observation process as ``ascertainment_rate_rv``. Accessors
+    returned by ``for_signal()`` read the final sampled values from
+    the active model context and do not sample independently.
 
     ```python
     ascertainment = JointAscertainment(...)
@@ -106,15 +121,6 @@ class AscertainmentModel(metaclass=ABCMeta):
         ...
     )
     ```
-
-    The model samples one scalar baseline rate per signal and can add an
-    optional signal-specific temporal deviation on the logit scale. Subclasses
-    implement ``_sample_baseline_rates()`` to define relationships among the
-    scalar baselines. The base class owns validation, temporal sampling, and
-    the standard deterministic sites.
-
-    Accessors returned by ``for_signal()`` read the final sampled values from
-    the active model context and do not sample independently.
     """
 
     def __init__(

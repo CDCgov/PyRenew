@@ -101,7 +101,9 @@ class MalformedAscertainmentModel(AscertainmentModel):
         """Initialize a deliberately nonconforming ascertainment model."""
         super().__init__(name=name, signals=("hospital",))
 
-    def _sample_baseline_rates(self) -> Mapping[str, ArrayLike]:
+    def _sample_baseline_rates(  # numpydoc ignore=RT01
+        self,
+    ) -> Mapping[str, ArrayLike]:
         """Return a valid baseline that the overridden sampler does not use."""
         return {"hospital": 0.2}
 
