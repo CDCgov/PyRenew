@@ -56,16 +56,19 @@ Observed data can be aggregated or available as subpopulation-level counts, whic
 
 ### Observation equation
 
-The deterministic transformation is given by the observation equation:
+First convolve infections with the delay distribution to calculate potential observations, then apply ascertainment on the potential-observation date:
 
 $$
-  \mu(t) = \alpha \sum_{d=0}^{D} I(t-d)\, \pi_d
+  C(t) = \sum_{d=0}^{D} I(t-d)\, \pi_d,
+  \qquad
+  \mu(t) = \alpha(t) C(t)
 $$
 
 where:
 
 - $I(t-d)$ is the number of incident (new) infections on day $t-d$
-- $\alpha$ is the **ascertainment rate**, the probability that an infection results in an observed event (e.g., hospitalization)
+- $C(t)$ is the number of potential observations on day $t$
+- $\alpha(t)$ is the **ascertainment rate** on day $t$, the probability that a potential event is observed (e.g., a hospitalization is recorded)
 - $\pi_d$ is the delay distribution from infection to observation, conditional on an infection leading to an observed event
 
 The delay distribution has finite support over lags $d = 0, \dots, D$ and satisfies
@@ -75,6 +78,27 @@ $$
 $$
 
 This equation is a discrete convolution: observations at time $t$ arise from infections that occurred $d$ days earlier, weighted by the delay distribution.
+A scalar ascertainment rate is the special case where $\alpha(t)=\alpha$ for the full model period.
+With a scalar rate, multiplication before and after the convolution is numerically equivalent.
+With a time-varying rate, PyRenew uses the ordering above; it does not multiply incident infections by the trajectory before convolution.
+
+For a time-varying component with related scalar baselines, the computation is:
+
+```python
+baseline_rates = baseline_model.sample()
+
+potential_counts = convolve_delay(
+    infections,
+    clinical_delay_pmf,
+)
+
+rate_trajectory = sigmoid(logit(baseline_rates[signal]) + temporal_deviation[signal])
+
+predicted_counts = potential_counts * rate_trajectory
+```
+
+Flexible infection and ascertainment trajectories can be weakly identified from count data alone.
+Use informative priors or external information when estimating both over time.
 
 ### Stochastic observation model
 
@@ -306,22 +330,19 @@ This gives the predicted number of observations $\mu(t)$.
 ```{python}
 #| label: predicted-no-noise
 
-# Compute predicted admissions (convolution only, no observation noise)
-from pyrenew.convolve import compute_delay_ascertained_incidence
+# Compute predicted admissions (convolution and ascertainment, no noise)
+from pyrenew.convolve import compute_delay_incidence
 
-# Scale infections by IHR (ascertainment rate)
-infections_scaled = infections * float(ihr_rv.sample())
-
-predicted_admissions, offset = compute_delay_ascertained_incidence(
-    p_observed_given_incident=1.0,
-    latent_incidence=infections_scaled,
+potential_admissions, offset = compute_delay_incidence(
+    latent_incidence=infections,
     delay_incidence_to_observation_pmf=hosp_delay_pmf,
     pad=True,
 )
+predicted_admissions = potential_admissions * float(ihr_rv.sample())
 ```
 
-*Note:* in the above implementation, the ascertainment rate is applied by scaling infections before convolution.
-This is equivalent to applying $\alpha$ after the convolution in the observation equation.
+The rate is applied after convolution.
+This ordering works for both scalar and time-varying ascertainment and makes the rate correspond to the potential-observation date.
 
 ```{python}
 #| label: plot-predicted-no-noise
@@ -500,16 +521,15 @@ ihr_values = [0.005, 0.025]
 peak_value = 3000  # Peak infections
 infections_decay = peak_value * jnp.exp(-jnp.arange(n_days) / 20.0)
 
-# Compute predicted hospital admissions (no noise) for each IHR
+# Compute potential hospital admissions once, then apply each scalar IHR
+potential_hosp, _ = compute_delay_incidence(
+    latent_incidence=infections_decay,
+    delay_incidence_to_observation_pmf=hosp_delay_pmf,
+    pad=True,
+)
 results_list = []
 for ihr_val in ihr_values:
-    infections_scaled = infections_decay * ihr_val
-    predicted_hosp, _ = compute_delay_ascertained_incidence(
-        p_observed_given_incident=1.0,
-        latent_incidence=infections_scaled,
-        delay_incidence_to_observation_pmf=hosp_delay_pmf,
-        pad=True,
-    )
+    predicted_hosp = potential_hosp * ihr_val
 
     for i, admit in enumerate(predicted_hosp[day_one:]):
         results_list.append(

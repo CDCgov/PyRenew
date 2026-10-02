@@ -7,6 +7,7 @@ Combines a latent infection process with multiple observation processes.
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Mapping
 
 import jax.numpy as jnp
 import numpy as np
@@ -240,6 +241,13 @@ class MultiSignalModel(Model):
                     f"obs_start_date is required when any observation uses "
                     f"a day-of-week effect; observation '{name}' does."
                 )
+        for name, ascertainment_model in self.ascertainment_models.items():
+            if ascertainment_model.requires_calendar_anchor():
+                raise ValueError(
+                    "obs_start_date is required when a registered ascertainment "
+                    f"model uses a calendar-aligned temporal process; "
+                    f"ascertainment model {name!r} does."
+                )
         if self.latent.requires_calendar_anchor():
             raise ValueError(
                 "obs_start_date is required when the latent process uses a "
@@ -299,9 +307,10 @@ class MultiSignalModel(Model):
             Date of the first observation day. Required when any
             observation uses ``aggregation="weekly"`` or a day-of-week
             effect, or when a latent temporal process uses
-            calendar-week alignment. Converted once to the axis-origin
-            ``first_day_dow`` and forwarded to the latent process and
-            every observation.
+            calendar-week alignment, including a registered ascertainment
+            model. Converted once to the axis-origin ``first_day_dow`` and
+            forwarded to the latent process, ascertainment models, and every
+            observation.
         **observation_data
             Data for each observation process, keyed by observation name.
             Each value should be a dict of kwargs for that observation's sample().
@@ -344,6 +353,40 @@ class MultiSignalModel(Model):
                 **obs_data,
             )
 
+    def _sample_ascertainment_models(
+        self,
+        n_timepoints: int,
+        first_day_dow: int | None,
+    ) -> dict[str, Mapping[str, ArrayLike]]:
+        """Sample and validate every registered ascertainment model.
+
+        Parameters
+        ----------
+        n_timepoints
+            Length of the padded shared model axis.
+        first_day_dow
+            Day-of-week for the first point on that axis, or ``None`` when no
+            calendar anchor was supplied.
+
+        Returns
+        -------
+        dict[str, Mapping[str, ArrayLike]]
+            Sampled ascertainment values keyed first by registered model name
+            and then by signal name.
+        """
+        sampled_values: dict[str, Mapping[str, ArrayLike]] = {}
+        for name, ascertainment_model in self.ascertainment_models.items():
+            values = ascertainment_model.sample(
+                n_timepoints=n_timepoints,
+                first_day_dow=first_day_dow,
+            )
+            ascertainment_model.validate_sampled_values(
+                values,
+                n_timepoints=n_timepoints,
+            )
+            sampled_values[name] = values
+        return sampled_values
+
     def sample(
         self,
         n_days_post_init: int,
@@ -374,7 +417,8 @@ class MultiSignalModel(Model):
             to the latent process and every observation. Required when
             any observation uses ``aggregation="weekly"`` or a
             day-of-week effect, or when a latent temporal process uses
-            calendar-week alignment.
+            calendar-week alignment, including a registered ascertainment
+            model.
         **observation_data
             Data for each observation process, keyed by observation name
             (the ``name`` attribute of each observation process).
@@ -412,10 +456,11 @@ class MultiSignalModel(Model):
             "subpop": inf_all,
         }
 
-        ascertainment_values = {
-            name: ascertainment_model.sample()
-            for name, ascertainment_model in self.ascertainment_models.items()
-        }
+        n_timepoints = self.latent.n_initialization_points + n_days_post_init
+        ascertainment_values = self._sample_ascertainment_models(
+            n_timepoints=n_timepoints,
+            first_day_dow=first_day_dow,
+        )
 
         with ascertainment_context(ascertainment_values):
             # Apply each observation process

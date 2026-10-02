@@ -195,7 +195,7 @@ class CountObservation(BaseObservationProcess):
         infections: ArrayLike,
     ) -> ArrayLike:
         """
-        Compute predicted counts via ascertainment x delay convolution.
+        Compute predicted counts using delay then ascertainment.
 
         Parameters
         ----------
@@ -212,19 +212,74 @@ class CountObservation(BaseObservationProcess):
             First len(delay_pmf)-1 days are NaN.
         """
         delay_pmf = self.temporal_pmf_rv()
-        ascertainment_rate = self.ascertainment_rate_rv()
 
         if infections.ndim == 1:
-            return self._convolve_with_alignment(
-                infections, delay_pmf, ascertainment_rate
+            potential_counts = self._convolve_delay_with_alignment(
+                infections,
+                delay_pmf,
             )[0]
-        return jax.vmap(
-            lambda col: self._convolve_with_alignment(
-                col, delay_pmf, ascertainment_rate
-            )[0],
-            in_axes=1,
-            out_axes=1,
-        )(infections)
+        else:
+            potential_counts = jax.vmap(
+                lambda col: self._convolve_delay_with_alignment(
+                    col,
+                    delay_pmf,
+                )[0],
+                in_axes=1,
+                out_axes=1,
+            )(infections)
+
+        ascertainment_rate = self.ascertainment_rate_rv()
+        return self._apply_ascertainment(potential_counts, ascertainment_rate)
+
+    def _apply_ascertainment(
+        self,
+        potential_counts: ArrayLike,
+        ascertainment_rate: ArrayLike,
+    ) -> ArrayLike:
+        """Scale potential counts by scalar or shared time-varying ascertainment.
+
+        Parameters
+        ----------
+        potential_counts
+            Delayed potential counts with shape ``(n_timepoints,)`` or
+            ``(n_timepoints, n_subpopulations)``.
+        ascertainment_rate
+            A scalar rate or one shared rate per timepoint.
+
+        Returns
+        -------
+        ArrayLike
+            Ascertainment-scaled counts with the same shape as
+            ``potential_counts``.
+
+        Raises
+        ------
+        ValueError
+            If counts are not one- or two-dimensional or the rate is neither a
+            scalar nor an exact full-axis trajectory.
+        """
+        potential_counts_array = jnp.asarray(potential_counts)
+        if potential_counts_array.ndim not in (1, 2):
+            raise ValueError(
+                "potential_counts must have shape (n_timepoints,) or "
+                "(n_timepoints, n_subpopulations); got shape "
+                f"{potential_counts_array.shape}."
+            )
+
+        rate = jnp.asarray(ascertainment_rate)
+        expected_shape = (potential_counts_array.shape[0],)
+        if rate.shape not in ((), expected_shape):
+            raise ValueError(
+                f"ascertainment_rate must have shape () or {expected_shape}; "
+                f"got shape {rate.shape}."
+            )
+        if rate.shape == expected_shape and potential_counts_array.ndim == 2:
+            rate = rate[:, None]
+
+        finite_counts = ~jnp.isnan(potential_counts_array)
+        safe_counts = jnp.where(finite_counts, potential_counts_array, 0.0)
+        scaled_counts = safe_counts * rate
+        return jnp.where(finite_counts, scaled_counts, potential_counts_array)
 
     def _apply_right_truncation(
         self,
