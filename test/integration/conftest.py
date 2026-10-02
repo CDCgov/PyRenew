@@ -12,6 +12,7 @@ import numpyro.distributions as dist
 import polars as pl
 import pytest
 
+import pyrenew.transformation as transformation
 from pyrenew.ascertainment import (
     IndependentAscertainment,
     JointAscertainment,
@@ -26,12 +27,17 @@ from pyrenew.datasets import (
     load_synthetic_weekly_hospital_admissions,
 )
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import InfectionsWithFeedback, WeeklyTemporalProcess
+from pyrenew.latent import (
+    AR1,
+    InfectionsWithFeedback,
+    RandomWalk,
+    WeeklyTemporalProcess,
+)
 from pyrenew.latent.infection_process import InfectionProcess
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
-from pyrenew.randomvariable import DistributionalVariable
+from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
 from pyrenew.time import MMWR_WEEK
 from test.test_helpers import fixed_ar1, fixed_ar1_state, fixed_differenced_ar1_state
 
@@ -154,6 +160,127 @@ def ed_day_of_week_effects(true_params: dict) -> jnp.ndarray:
         Seven-element day-of-week multiplier vector.
     """
     return jnp.array(true_params["ed_visits"]["day_of_week_effects"])
+
+
+@pytest.fixture(scope="module")
+def e_rtdaily_rw_timevary_model(
+    ed_delay_pmf: jnp.ndarray,
+) -> MultiSignalModel:
+    """Build an ED model with daily Rt and time-varying ascertainment.
+
+    This fixture reproduces the PyRenew structure of the
+    ``e_rtdaily_rw_timevary`` model without depending on the external ARM
+    model builder. The ascertainment baseline is sampled independently and a
+    calendar-aligned weekly AR(1) process supplies logit-scale deviations.
+
+    Parameters
+    ----------
+    ed_delay_pmf
+        Infection-to-ED-visit delay PMF from the synthetic dataset.
+
+    Returns
+    -------
+    MultiSignalModel
+        ED-only model ready for integration testing.
+    """
+    rt_process = RandomWalk(
+        innovation_sd_rv=DistributionalVariable(
+            "eta_sd",
+            dist.TruncatedNormal(
+                0.15 / jnp.sqrt(7.0),
+                0.05 / jnp.sqrt(7.0),
+                low=0,
+            ),
+        ),
+        parameterization="innovation",
+    )
+    infection_process = InfectionsWithFeedback(
+        name="infections_with_feedback",
+        infection_feedback_strength=TransformedVariable(
+            "inf_feedback",
+            DistributionalVariable(
+                "inf_feedback_raw",
+                dist.LogNormal(jnp.log(50.0), jnp.log(1.5)),
+            ),
+            transforms=transformation.AffineTransform(loc=0, scale=-1),
+        ),
+        infection_feedback_pmf=DeterministicPMF(
+            "infection_feedback_pmf",
+            _GEN_INT_PMF,
+        ),
+    )
+    ascertainment = IndependentAscertainment(
+        name="ed_ascertainment",
+        rate_rvs={
+            "ed": TransformedVariable(
+                "p_ed_visit",
+                DistributionalVariable(
+                    "p_ed_visit_mean",
+                    dist.Normal(
+                        transformation.SigmoidTransform().inv(0.005),
+                        0.3,
+                    ),
+                ),
+                transforms=transformation.SigmoidTransform(),
+            )
+        },
+        temporal_processes={
+            "ed": WeeklyTemporalProcess(
+                AR1(
+                    autoreg_rv=DistributionalVariable(
+                        "autoreg_p_ed_visit",
+                        dist.Beta(1, 100),
+                    ),
+                    innovation_sd_rv=DistributionalVariable(
+                        "p_ed_visit_w_sd",
+                        dist.TruncatedNormal(0.0, 0.01, low=0),
+                    ),
+                    parameterization="innovation",
+                ),
+                start_dow=MMWR_WEEK,
+            )
+        },
+    )
+
+    builder = PyrenewBuilder()
+    builder.configure_latent(
+        PopulationInfections,
+        gen_int_rv=DeterministicPMF("generation_interval_pmf", _GEN_INT_PMF),
+        I0_rv=DistributionalVariable("i0_first_obs_n_rv", dist.Beta(1, 10)),
+        log_rt_time_0_rv=DistributionalVariable(
+            "log_r_mu_intercept_rv",
+            dist.Normal(jnp.log(1.2), jnp.log(jnp.sqrt(2.0))),
+        ),
+        single_rt_process=rt_process,
+        infection_process=infection_process,
+    )
+    builder.add_ascertainment(ascertainment)
+    builder.add_observation(
+        PopulationCounts(
+            name="ed",
+            ascertainment_rate_rv=ascertainment.for_signal("ed"),
+            delay_distribution_rv=DeterministicPMF("inf_to_ed", ed_delay_pmf),
+            noise=NegativeBinomialNoise(
+                DistributionalVariable(
+                    "ed_visit_neg_bin_concentration",
+                    dist.LogNormal(4.0, 1.0),
+                )
+            ),
+            right_truncation_rv=DeterministicPMF(
+                "right_truncation_pmf",
+                jnp.array([1.0]),
+            ),
+            day_of_week_rv=TransformedVariable(
+                "ed_visit_wday_effect",
+                DistributionalVariable(
+                    "ed_visit_wday_effect_raw",
+                    dist.Dirichlet(jnp.full(7, 5.0)),
+                ),
+                transforms=transformation.AffineTransform(loc=0, scale=7),
+            ),
+        )
+    )
+    return builder.build()
 
 
 def _build_he_population_model(  # numpydoc ignore=RT01

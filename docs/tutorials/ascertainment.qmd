@@ -60,7 +60,7 @@ A time-varying ascertainment component combines a scalar baseline rate with a te
 $\mathrm{b}_{\mathrm{s}}$ is the baseline rate for signal $\mathrm{s}$, $\mathrm{z}_{\mathrm{s}}(\mathrm{t})$ is its temporal deviation, and
 
 $$
-  \alpha\_s(t) = \operatorname{logit}^{-1} \left(\operatorname{logit}(b\_s) + z\_s(t)\right)
+  \alpha_s(t) = \operatorname{logit}^{-1} \left(\operatorname{logit}(\mathrm{b}_{\mathrm{s}}) + \mathrm{z}_{\mathrm{s}}(t)\right)
 $$
 
 Thus, $\mathrm{b}_{\mathrm{s}}$ is the ascertainment rate when the temporal deviation is zero while $\mathrm{z}_{\mathrm{s}}(\mathrm{t})$ determines how the rate changes during the observation period.
@@ -75,9 +75,11 @@ These components reflect fundamental modeling assumptions about how information 
 
 ## Independent ascertainment rates
 
-The `IndependentAscertainment` component models a signal baseline in the case where the ascertainment rate is constant, or a signal baseline plus temporal process is the ascertainment rate varies over time.
+The `IndependentAscertainment` component models a signal baseline in the case where the ascertainment rate is constant, or a signal baseline plus temporal process if the ascertainment rate varies over time.
 
-If the model has one or more signals which measure unrelated phenomena and whose ascertainment rate is constant, then an `AscertainmentModel` component is equivalent to a `RandomVariable` which can be specified directly on the observation process component's `ascertainment_rate_rv`.
+An `AscertainmentModel` component is a subclass of a [Random Variable](random_variables.md).
+If modeling a single signal with a constant ascertainment rate or some number of independent signals with constant ascertainment rates,
+instead of using an `IndependentAscertainment` component, it is possible to use a `RandomVariable` directly.
 
 ```python
 hospital_obs = PopulationCounts(
@@ -264,17 +266,17 @@ model = builder.build()
 
 ## Shared assumptions and limitations
 
-`JointAscertainment` and `RatioLinkedAscertainment` each produce one scalar rate per signal over the entire model period.
-`TimeVaryingAscertainment` adds signal-specific deviations to scalar rates from either model.
-Its baseline relationship is not a claim that the same covariance or ratio holds pointwise.
-
+- Ascertainment models produce one scalar baseline rate per signal.
+- Supplying `temporal_processes` adds signal-specific deviations to selected baselines to model time-varying ascertainment rates.
+- For `JointAscertainment` and `RatioLinkedAscertainemt` models, the temporal deviations do not preserve the baseline covariance or ratio pointwise over time.
+ 
 The choice of ascertainment model should consider:
 
-- whether the rates should be related at all
-- whether a covariance structure or a relative multiplier is easier to justify
 - whether the priors keep all rates, including derived linked rates, within scientifically plausible ranges
 - whether treating ascertainment rates as constant over the model period is scientifically reasonable
 - whether daily, stepwise, or calendar-week deviations match the scientific question
+- whether the rates should be related at all
+- whether a covariance structure or a relative multiplier is easier to justify
 
 Ascertainment rates are generally difficult to distinguish from the scale of latent infections using surveillance counts alone.
 Flexible infection and ascertainment trajectories can be weakly identified without informative priors, external information, or strong structural assumptions.

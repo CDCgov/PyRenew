@@ -102,8 +102,6 @@ class AscertainmentModel(metaclass=ABCMeta):
     ``IndependentAscertainment`` specifies each baseline separately,
     ``JointAscertainment`` assigns the baselines a joint distribution, and
     ``RatioLinkedAscertainment`` defines one baseline relative to another.
-    Both ``IndependentAscertainment`` and ``JointAscertainment`` may be used
-    with a single signal.
 
     Register the component with ``PyrenewBuilder.add_ascertainment(...)``.
     Use ``for_signal(...)`` to obtain the signal-specific accessor passed
