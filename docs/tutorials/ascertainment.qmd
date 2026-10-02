@@ -78,8 +78,7 @@ These components reflect fundamental modeling assumptions about how information 
 The `IndependentAscertainment` component models a signal baseline in the case where the ascertainment rate is constant, or a signal baseline plus temporal process if the ascertainment rate varies over time.
 
 An `AscertainmentModel` component is a subclass of a [Random Variable](random_variables.md).
-If modeling a single signal with a constant ascertainment rate or some number of independent signals with constant ascertainment rates,
-instead of using an `IndependentAscertainment` component, it is possible to use a `RandomVariable` directly.
+If modeling a single signal with a constant ascertainment rate or some number of independent signals with constant ascertainment rates, instead of using an `IndependentAscertainment` component, it is possible to use a `RandomVariable` directly.
 
 ```python
 hospital_obs = PopulationCounts(
@@ -88,7 +87,6 @@ hospital_obs = PopulationCounts(
     delay_distribution_rv=hosp_delay_rv,
     noise=hosp_noise,
 )
-
 ```
 
 ## Ascertainment components and the builder
@@ -269,7 +267,7 @@ model = builder.build()
 - Ascertainment models produce one scalar baseline rate per signal.
 - Supplying `temporal_processes` adds signal-specific deviations to selected baselines to model time-varying ascertainment rates.
 - For `JointAscertainment` and `RatioLinkedAscertainemt` models, the temporal deviations do not preserve the baseline covariance or ratio pointwise over time.
- 
+
 The choice of ascertainment model should consider:
 
 - whether the priors keep all rates, including derived linked rates, within scientifically plausible ranges

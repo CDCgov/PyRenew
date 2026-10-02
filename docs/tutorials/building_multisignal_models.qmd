@@ -786,7 +786,7 @@ obs_data_90 = {
 
 The observation dictionary has the following structure:
 
-```python
+```text
 {
     "obs_start_date": ...,
     "hospital": {

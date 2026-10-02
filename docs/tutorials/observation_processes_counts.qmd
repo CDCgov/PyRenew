@@ -92,10 +92,7 @@ potential_counts = convolve_delay(
     clinical_delay_pmf,
 )
 
-rate_trajectory = sigmoid(
-    logit(baseline_rates[signal])
-    + temporal_deviation[signal]
-)
+rate_trajectory = sigmoid(logit(baseline_rates[signal]) + temporal_deviation[signal])
 
 predicted_counts = potential_counts * rate_trajectory
 ```
