@@ -11,6 +11,7 @@ dependencies = [
     "numpy>=2.4.6",
     "polars>=1.2.1",
     "numpyro>=0.21.0",
+    "jaxtyping>=0.3.11",
 ]
 
 [dependency-groups]
