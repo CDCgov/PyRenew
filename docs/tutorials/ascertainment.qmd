@@ -41,9 +41,7 @@ For emergency department visits, it can be called the infection-to-ED-visit rate
 For a count observation process, the ascertainment rate scales delayed latent infections to obtain the expected number of observed events:
 
 $$
-  \mu_s(t)
-  =
-  \alpha_s \sum_{d=0}^{D_s} I(t-d)\,\pi_{s,d},
+  \mu_s(t) = \alpha_s \sum_{d=0}^{D_s} I(t - d)\,\pi_{s,d},
 $$
 
 where $s$ identifies the signal, $\alpha_s$ is its ascertainment rate, and $\pi_{s,d}$ is its delay distribution.
@@ -132,12 +130,7 @@ Use `RatioLinkedAscertainment` when the relative quantity, such as IHR / IEDR, i
 
 $$
   \boldsymbol{\eta}
-  \sim
-  \operatorname{MultivariateNormal}
-  \left(
-    \operatorname{logit}(\boldsymbol{\alpha}_0),
-    \boldsymbol{\Sigma}
-  \right),
+  \sim \operatorname{MultivariateNormal} \left( \operatorname{logit}(\boldsymbol{\alpha}_0), \boldsymbol{\Sigma} \right),
   \qquad
   \boldsymbol{\alpha} = \operatorname{logit}^{-1}(\boldsymbol{\eta}).
 $$
@@ -170,13 +163,9 @@ During model execution, this component creates one vector sample site, `he_ascer
 `RatioLinkedAscertainment` samples a base rate and a ratio of the linked rate to the base rate:
 
 $$
-  \alpha_{\mathrm{linked}}
-  =
-  \alpha_{\mathrm{base}}\rho,
+  \alpha_{\mathrm{linked}} = \alpha_{\mathrm{base}}\rho,
   \qquad
-  \rho
-  =
-  \frac{\alpha_{\mathrm{linked}}}{\alpha_{\mathrm{base}}}.
+  \rho = \frac{\alpha_{\mathrm{linked}}}{\alpha_{\mathrm{base}}}.
 $$
 
 For a hospital and ED model, the IEDR can be the base rate and the ratio can represent IHR / IEDR.
@@ -203,7 +192,7 @@ The priors are assigned to the base rate and the ratio, and together they induce
 
 The ratio may be any positive value.
 Unlike `JointAscertainment`, this component does not automatically constrain the derived linked rate to the unit interval.
-If both rates should be $<1$ (for instance because both are probabilities), make sure to choose priors that make $\alpha_{\mathrm{base}}\rho > 1$ negligibly likely.
+If both rates should be $< 1$ (for instance because both are probabilities), make sure to choose priors that make $\alpha_{\mathrm{base}}\rho > 1$ negligibly likely.
 The component does not clip an invalid linked rate, because clipping would change the specified statistical model.
 
 ## Building a model an ascertainment component
