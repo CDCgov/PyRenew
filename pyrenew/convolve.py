@@ -275,8 +275,20 @@ def compute_prop_already_reported(
         proportion of events already reported at that timepoint.
         Earlier timepoints are 1.0 (fully reported); recent
         timepoints approach reporting_delay_pmf[0] (minimally reported).
+
+    Notes
+    -----
+    When ``n_timepoints`` is shorter than the delay distribution's
+    support (minus ``right_truncation_offset``), the window covers
+    only the most recent timepoints, so the trailing slice of the
+    reported-proportion tail is returned rather than padding with
+    ones. This equals the last ``n_timepoints`` entries of the
+    full-support result.
     """
     cdf = jnp.cumsum(reporting_delay_pmf)
     tail = jnp.flip(cdf[right_truncation_offset:])
+    if n_timepoints <= tail.shape[0]:
+        # Short observation window: keep the most recent timepoints.
+        return tail[tail.shape[0] - n_timepoints :]
     n_pad = n_timepoints - tail.shape[0]
     return jnp.concatenate([jnp.ones(n_pad), tail])
