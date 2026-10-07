@@ -107,7 +107,7 @@ class TestSyntheticExecution:
         trajectory = trace["ed_ascertainment_ed"]["value"]
         predicted = trace["ed_predicted"]["value"]
 
-        assert trace["p_ed_visit_mean"]["type"] == "sample"
+        assert trace["logit_p_ed_visit"]["type"] == "sample"
         assert baseline.shape == ()
         assert weekly.ndim == 2
         assert weekly.shape[1] == 1
@@ -147,7 +147,7 @@ class TestSyntheticExecution:
         jax.block_until_ready(samples)
 
         required_sites = {
-            "p_ed_visit_mean",
+            "logit_p_ed_visit",
             "autoreg_p_ed_visit",
             "p_ed_visit_w_sd",
             "ed_ascertainment_ed",

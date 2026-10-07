@@ -37,7 +37,11 @@ from pyrenew.latent.infection_process import InfectionProcess
 from pyrenew.latent.population_infections import PopulationInfections
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
-from pyrenew.randomvariable import DistributionalVariable, TransformedVariable
+from pyrenew.randomvariable import (
+    DistributionalVariable,
+    LogitNormalVariable,
+    TransformedVariable,
+)
 from pyrenew.time import MMWR_WEEK
 from test.test_helpers import fixed_ar1, fixed_ar1_state, fixed_differenced_ar1_state
 
@@ -212,16 +216,10 @@ def e_rtdaily_rw_timevary_model(
     ascertainment = IndependentAscertainment(
         name="ed_ascertainment",
         rate_rvs={
-            "ed": TransformedVariable(
-                "p_ed_visit",
-                DistributionalVariable(
-                    "p_ed_visit_mean",
-                    dist.Normal(
-                        transformation.SigmoidTransform().inv(0.005),
-                        0.3,
-                    ),
-                ),
-                transforms=transformation.SigmoidTransform(),
+            "ed": LogitNormalVariable(
+                name="p_ed_visit",
+                median=0.005,
+                scale=0.3,
             )
         },
         temporal_processes={

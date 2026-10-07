@@ -17,28 +17,6 @@ jupyter:
     name: python3
 ---
 
-```{python}
-#| label: setup
-#| output: false
-
-import jax.numpy as jnp
-import numpyro.distributions as dist
-
-from pyrenew.ascertainment import (
-    AscertainmentModel,
-    AscertainmentSignal,
-    IndependentAscertainment,
-    JointAscertainment,
-    RatioLinkedAscertainment,
-)
-from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import RandomWalk, WeeklyTemporalProcess
-from pyrenew.model import PyrenewBuilder
-from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
-from pyrenew.randomvariable import DistributionalVariable
-from pyrenew.time import MMWR_WEEK
-```
-
 ## Overview
 
 An ascertainment rate is the rate at which an infection results in an observed event.
@@ -52,42 +30,32 @@ $$
   \alpha_s \sum_{d=0}^{D_s} I(t-d)\,\pi_{s,d},
 $$
 
-where $s$ identifies the signal, $\alpha_s$ is its ascertainment rate, and $\pi_{s,d}$ is its delay distribution.
+where $s$ identifies the signal, $\alpha_s$ is its ascertainment rate and $\pi_{s,d}$ is its delay distribution.
 
 From a modeling perspective, an ascertainment rate may be considered constant over the observation period or allowed to vary over time.
 A time-varying ascertainment component combines a scalar baseline rate with a temporal process that describes deviations from that baseline over time as follows:
 
-$\mathrm{b}_{\mathrm{s}}$ is the baseline rate for signal $\mathrm{s}$, $\mathrm{z}_{\mathrm{s}}(\mathrm{t})$ is its temporal deviation, and
+$b_s$ is the baseline rate for signal $s$, $z_s(t)$ is its temporal deviation, and
 
 $$
-  \alpha_s(t) = \operatorname{logit}^{-1} \left(\operatorname{logit}(\mathrm{b}_{\mathrm{s}}) + \mathrm{z}_{\mathrm{s}}(t)\right)
+  \alpha_s(t) = \operatorname{logit}^{-1} \left(\operatorname{logit}(b_s) + z_s(t)\right)
 $$
 
-Thus, $\mathrm{b}_{\mathrm{s}}$ is the ascertainment rate when the temporal deviation is zero while $\mathrm{z}_{\mathrm{s}}(\mathrm{t})$ determines how the rate changes during the observation period.
+Thus, $b_s$ is the ascertainment rate when the temporal deviation is zero while $z_s(t)$ determines how the rate changes during the observation period.
 
-The `AscertainmentModel` component of a PyRenew renewal process model provides the ascertainment rate for one or more observation signals, which can either be constant or time-varying.
+We use `AscertainmentModel` classes to assign ascertainment rates to each signal in a PyRenew model.
+These components reflect fundamental modeling assumptions about how information is shared across signals and over time:
 
-- For a renewal process model for a single signal or for a multisignal model where the signals measure unrelated phenomena, the `IndependentAscertainment` component models the signal baseline and optional temporal process.
+When a signal's ascertainment rate has little to do with ascertainment rates for other signals, it can be modeled as statistically *independent* of other ascertainment rates.
+PyRenew provides an `IndependentAscertainment` class.
+Alternatively, PyRenew allows the user to use a raw `RandomVariable` to specify any independent ascertainment rates.
 
-- For a multisignal model where the signals are measuring a related phenomenon, such as hospitalizations and ED visits, which provide 2 views on health-care seeking behaviors, these signals can be modeled either by a `JointAscertainment` component which assigns the baseline rates a joint prior or as a `RatioLinkedAscertainment` which expresses one baseline rate relative to another.
-
-These components reflect fundamental modeling assumptions about how information is shared across signals and over time.
-
-## Independent ascertainment rates
-
-The `IndependentAscertainment` component models a signal baseline in the case where the ascertainment rate is constant, or a signal baseline plus temporal process if the ascertainment rate varies over time.
-
-An `AscertainmentModel` component is a subclass of a [Random Variable](random_variables.md).
-If modeling a single signal with a constant ascertainment rate or some number of independent signals with constant ascertainment rates, instead of using an `IndependentAscertainment` component, it is possible to use a `RandomVariable` directly.
-
-```python
-hospital_obs = PopulationCounts(
-    name="hospital",
-    ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
-    delay_distribution_rv=hosp_delay_rv,
-    noise=hosp_noise,
-)
-```
+Sometimes, however, ascertainment rates for two or more signals in a multi-signal model should be modeled as statistically *dependent*.
+For example, hospital admissions and emergency department visits both reflect the degree to which infected individuals need to and are able to obtain care.
+The two rates might be expected to scale up or down together.
+In PyRenew, use the `JointAscertainment` and `RatioLinkedAscertainment` classes to model dependent ascertainment rates.
+The `JointAscertainment` class assigns the baseline rates a joint prior.
+The `RatioLinkedAscertainment` expresses one baseline rate relative to another.
 
 ## Ascertainment components and the builder
 
@@ -123,15 +91,43 @@ It does not have to match the observation-process name, but matching names usual
 
 ## Choosing an ascertainment model
 
-`JointAscertainment` and `RatioLinkedAscertainment` both relate signal rates, but they represent the relationship differently.
+All three ascertainment components can produce constant rates or add signal-specific temporal processes.
+They differ primarily in how the scalar baseline rates are specified and whether relationships are imposed among signals.
 
-  | Model                      | Parameters with priors                | Relationship represented                                 | Probability bounds                                                   |
-  | -------------------------- | ------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------------------- |
-  | `JointAscertainment`       | A vector of logit-scale rates         | Prior covariance controls how the rates vary together    | Every rate is transformed to `(0, 1)`                                |
-  | `RatioLinkedAscertainment` | A base rate and a relative multiplier | The linked rate is the base rate multiplied by the ratio | The derived linked rate is not automatically constrained to `(0, 1)` |
+  | Component                                                         | Baseline                                                       | Relationship                         | Probability bounds                                     |
+  | ----------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------ |
+  | <code style="white-space: nowrap">IndependentAscertainment</code> | One `RandomVariable` per signal                                | No relationship imposed              | Rates must be valid probabilities                      |
+  | `JointAscertainment`                                              | Logit-scale multivariate normal                                | Prior covariance                     | Inverse logit keeps every rate in `(0, 1)`             |
+  | `RatioLinkedAscertainment`                                        | A base rate `RandomVariable` <br> and a ratio `RandomVariable` | Linked rate = base rate x multiplier | The derived linked rate is not bounded by construction |
 
-Use `JointAscertainment` when prior dependence between the rates is most naturally described through a covariance structure.
-Use `RatioLinkedAscertainment` when the relative quantity, such as IHR / IEDR, is itself meaningful and can be assigned an interpretable prior.
+Use `IndependentAscertainment` when signal rates are not related through a joint prior or deterministic relationship.
+It is particularly useful when one or more signals need temporal processes or when a named model-level component makes the model easier to organize.
+
+Use `JointAscertainment` when prior dependence among baseline rates is naturally represented by a covariance structure on the logit scale.
+
+Use `RatioLinkedAscertainment` when a relative quantity, such as IHR / IEDR, is scientifically meaningful and can be assigned an interpretable prior.
+
+For constant, unrelated rates that do not otherwise need an ascertainment component, each observation process can instead receive a RandomVariable directly, as described in the next section.
+
+## Independent ascertainment rates
+
+The `IndependentAscertainment` component models a signal baseline in the case where the ascertainment rate is constant, or a signal baseline plus temporal process if the ascertainment rate varies over time.
+Use `IndependentAscertainment` when a signal needs a temporal process or when representing the rates through a named model-level component makes the model easier to organize.
+
+For constant rate that is not related to another signal's rate, an ascertainment component is not required.
+In this situation, the ascertainment component would only be used once, when specifying the `ascertainment_rate_rv` on the observation process corresponding to that signal via `ascertainment.for_signal()` method.
+Since the `ascertainment.for_signal()` method returns a `RandomVariable` accessor, specifying the `RandomVariable` directly, simplifies the model specification:
+
+```
+hospital_obs = PopulationCounts(
+    name="hospital",
+    ascertainment_rate_rv=DistributionalVariable("ihr", dist.Beta(2, 198)),
+    delay_distribution_rv=hosp_delay_rv,
+    noise=hosp_noise,
+)
+```
+
+For multiple independent signals with constant rates, each observation process can similarly receive its own `RandomVariable`.
 
 ## Joint ascertainment
 
@@ -211,7 +207,105 @@ The priors are assigned to the base rate and the ratio, and together they induce
 The ratio may be any positive value.
 Unlike `JointAscertainment`, this component does not automatically constrain the derived linked rate to the unit interval.
 If both rates should be $<1$ (for instance because both are probabilities), make sure to choose priors that make $\alpha_{\mathrm{base}}\rho > 1$ negligibly likely.
-The component does not clip an invalid linked rate, because clipping would change the specified statistical model.
+
+## Time-varying ascertainment
+
+Any ascertainment component can add a temporal process to one or more signals.
+The temporal process generates the deviation $z_s(t)$, and the ascertainment component combines it with the signal's baseline rate: Because this calculation takes the logit of $b_s$, a time-varying signal requires $0 < b_s < 1$.
+A constant ascertainment rate may equal $0$ or $1$, but those endpoints cannot be combined with a temporal process because their logits are infinite and thus a finite temporal deviation would leave the rate fixed at the endpoint.
+
+$$
+  \alpha_s(t)
+  =
+  \operatorname{logit}^{-1}
+  \left(
+    \operatorname{logit}(b_s) + z_s(t)
+  \right).
+$$
+
+For example, the following component gives the ED ascertainment rate a logit-normal baseline and a weekly AR(1) deviation.
+
+First, define the scalar baseline rate:
+
+```python
+ed_baseline_rv = LogitNormalVariable(
+    name="p_ed_visit",
+    median=0.005,
+    scale=0.3,
+)
+```
+
+The baseline has median 0.005 on the probability scale.
+Its `scale` parameter is the standard deviation on the logit scale.
+
+Next, define a temporal process for deviations from that baseline:
+
+```python
+ed_deviation_process = WeeklyTemporalProcess(
+    inner=AR1(
+        autoreg_rv=DistributionalVariable(
+            "autoreg_p_ed_visit",
+            dist.Beta(1, 100),
+        ),
+        innovation_sd_rv=DistributionalVariable(
+            "p_ed_visit_w_sd",
+            dist.TruncatedNormal(0.0, 0.01, low=0),
+        ),
+        parameterization="innovation",
+    ),
+    start_dow=MMWR_WEEK,
+)
+```
+
+The `AR1` process describes how the deviation evolves from one week to the next.
+The autoregressive coefficient controls its persistence, and the innovation standard deviation controls the size of weekly changes.
+`WeeklyTemporalProcess` aligns those changes with MMWR weeks and expands the weekly values over the model's daily time axis.
+
+Finally, associate both objects with the ED signal:
+
+```python
+ascertainment = IndependentAscertainment(
+    name="ed_ascertainment",
+    rate_rvs={"ed": ed_baseline_rv},
+    temporal_processes={"ed": ed_deviation_process},
+)
+```
+
+The keys in `rate_rvs` and `temporal_processes` identify the signal to which each object applies.
+For a constant ascertainment rate, omit the `temporal_processes` argument.
+For a component with multiple signals, include entries only for the signals whose rates should vary over time.
+For example:
+
+```
+# Constant rate
+IndependentAscertainment(
+    name="ed_ascertainment",
+    rate_rvs={"ed": ed_baseline_rv},
+)
+```
+
+```
+# Time-varying ED rate
+IndependentAscertainment(
+    name="ed_ascertainment",
+    rate_rvs={"ed": ed_baseline_rv},
+    temporal_processes={"ed": ed_deviation_process},
+)
+```
+
+Register and connect the component using the same builder pattern as for a constant ascertainment component:
+
+```python
+builder.add_ascertainment(ascertainment)
+
+ed_obs = PopulationCounts(
+    name="ed",
+    ascertainment_rate_rv=ascertainment.for_signal("ed"),
+    ...
+)
+```
+
+The same pattern applies to temporal processes supplied to `JointAscertainment` and `RatioLinkedAscertainment`.
 
 ## Building a model with an ascertainment component
 

@@ -92,6 +92,12 @@ class AscertainmentModel(metaclass=ABCMeta):
     process to produce a rate trajectory over the model period. Otherwise, the
     baseline rate applies throughout the model period.
 
+    A baseline rate may lie in [0, 1] when no temporal process is configured.
+    A signal with a temporal process requires a baseline rate strictly inside
+    (0, 1), because the temporal deviation is added on the logit scale.
+    At either endpoint, the logit is infinite and finite deviations cannot
+    change the rate.
+
     The model samples one scalar baseline rate per signal and can add an
     optional signal-specific temporal deviation on the logit scale. Subclasses
     implement ``_sample_baseline_rates()`` to define relationships among the
