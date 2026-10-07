@@ -310,8 +310,7 @@ The same pattern applies to temporal processes supplied to `JointAscertainment` 
 
 ## Building a model with an ascertainment component
 
-The complete builder pattern is the same for any ascertainment component - here we use a `RatioLinkedAscertainment`
-but the sequence of definitions is the same for `JointAscertainment` or `IndividualAscertainment`.
+The complete builder pattern is the same for any ascertainment component - here we use a `RatioLinkedAscertainment` but the sequence of definitions is the same for `JointAscertainment` or `IndividualAscertainment`.
 
 ```python
 builder = PyrenewBuilder()
