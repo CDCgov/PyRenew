@@ -27,7 +27,7 @@ For a count observation process, the ascertainment rate scales delayed latent in
 $$
   \mu_s(t)
   =
-  \alpha_s \sum_{d=0}^{D_s} I(t-d)\,\pi_{s,d},
+  \alpha_s \sum_{d=0}^{D_s} I(t-d)\,\pi_{s,d}
 $$
 
 where $s$ identifies the signal, $\alpha_s$ is its ascertainment rate and $\pi_{s,d}$ is its delay distribution.
@@ -211,7 +211,8 @@ If both rates should be $<1$ (for instance because both are probabilities), make
 ## Time-varying ascertainment
 
 Any ascertainment component can add a temporal process to one or more signals.
-The temporal process generates the deviation $z_s(t)$, and the ascertainment component combines it with the signal's baseline rate: Because this calculation takes the logit of $b_s$, a time-varying signal requires $0 < b_s < 1$.
+The temporal process generates the deviation $z_s(t)$, and the ascertainment component combines it with the signal's baseline rate.
+Because this calculation takes the logit of $b_s$, a time-varying signal requires $0 < b_s < 1$.
 A constant ascertainment rate may equal $0$ or $1$, but those endpoints cannot be combined with a temporal process because their logits are infinite and thus a finite temporal deviation would leave the rate fixed at the endpoint.
 
 $$
@@ -309,7 +310,8 @@ The same pattern applies to temporal processes supplied to `JointAscertainment` 
 
 ## Building a model with an ascertainment component
 
-The complete builder pattern is the same for either ascertainment component - here we use a `RatioLinkedAscertainment` but the sequence of definitions is the same for `JointAscertainment`.
+The complete builder pattern is the same for any ascertainment component - here we use a `RatioLinkedAscertainment`
+but the sequence of definitions is the same for `JointAscertainment` or `IndividualAscertainment`.
 
 ```python
 builder = PyrenewBuilder()

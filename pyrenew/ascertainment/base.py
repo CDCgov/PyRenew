@@ -8,12 +8,11 @@ from __future__ import annotations
 from abc import ABCMeta, abstractmethod
 from collections.abc import Mapping
 
-import jax.nn as jnn
 import jax.numpy as jnp
 import numpyro
 from jax import Array
-from jax.scipy.special import logit
 from jax.typing import ArrayLike
+from numpyro.distributions.transforms import SigmoidTransform
 from numpyro.util import not_jax_tracer
 
 from pyrenew.ascertainment.context import get_ascertainment_value
@@ -365,6 +364,7 @@ class AscertainmentModel(metaclass=ABCMeta):
             )
 
         baseline_rates = self._validate_baseline_rates(self._sample_baseline_rates())
+        logit_transform = SigmoidTransform().inv
 
         result: dict[str, ArrayLike] = {}
         for signal in self.signals:
@@ -395,7 +395,7 @@ class AscertainmentModel(metaclass=ABCMeta):
                         f"required shape is {required_shape}."
                     )
                 deviation = jnp.squeeze(deviation, axis=-1)
-                rate = jnn.sigmoid(logit(baseline_rate) + deviation)
+                rate = logit_transform.inv(logit_transform(baseline_rate) + deviation)
 
             numpyro.deterministic(f"{self.name}_{signal}", rate)
             result[signal] = rate

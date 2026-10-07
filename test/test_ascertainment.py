@@ -399,6 +399,23 @@ class TestAscertainmentModelContract:
         expected_ed = jax.nn.sigmoid(logit(0.3) + 0.2 * jnp.arange(4))
         assert jnp.allclose(values["ed"], expected_ed)
 
+    def test_extreme_temporal_deviations_remain_inside_open_interval(self) -> None:
+        """Test transformed temporal rates do not reach probability endpoints."""
+        model = FixedAscertainmentModel(
+            "ascertainment",
+            {"hospital": 0.5},
+            temporal_processes={
+                "hospital": DeterministicTemporalProcess(
+                    result=jnp.array([[-100.0], [100.0]])
+                )
+            },
+        )
+
+        rates = model.sample(n_timepoints=2)["hospital"]
+
+        assert jnp.all(rates > 0.0)
+        assert jnp.all(rates < 1.0)
+
     def test_rejects_malformed_temporal_output(self) -> None:
         """Test temporal output keeps its singleton process dimension."""
         model = FixedAscertainmentModel(
