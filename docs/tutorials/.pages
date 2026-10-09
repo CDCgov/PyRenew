@@ -1,6 +1,7 @@
 nav:
   - random_variables.md
   - building_multisignal_models.md
+  - scenario_projections.md
   - latent_infections.md
   - latent_subpopulation_infections.md
   - observation_processes_counts.md
