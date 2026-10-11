@@ -4,19 +4,20 @@ Shared pytest fixtures for PyRenew tests.
 This module provides reusable fixtures for creating observation processes,
 test data, and common configurations used across multiple test files.
 
-The module also sets two JAX environment variables before any jax import so
-that all tests (unit and integration) run with 64-bit precision and with
-four logical host devices available for parallel MCMC chains. JAX reads
-these variables at import time, so they must be set before the first
-``import jax`` anywhere in the test process; placing them at the top of
-this file (loaded by pytest before any test module) satisfies that
-requirement. The ``setdefault`` form respects any value the caller already
-set at the shell level (e.g., a CI with different configuration).
+All tests (unit and integration) run with 64-bit floats. The module sets
+``JAX_ENABLE_X64`` before any jax import, overriding any shell value, and
+the autouse fixture ``require_float64`` fails any test that runs without
+64-bit floats. It also makes four logical host devices available for
+parallel MCMC chains, unless the caller already set ``XLA_FLAGS``. JAX
+reads these variables at import time, so they must be set before the
+first ``import jax`` anywhere in the test process; placing them at the
+top of this file (loaded by pytest before any test module) satisfies that
+requirement.
 """
 
 import os
 
-os.environ.setdefault("JAX_ENABLE_X64", "true")
+os.environ["JAX_ENABLE_X64"] = "true"
 os.environ.setdefault("XLA_FLAGS", "--xla_force_host_platform_device_count=4")
 
 import jax.numpy as jnp
@@ -38,6 +39,21 @@ from pyrenew.observation import (
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from pyrenew.time import MMWR_WEEK
 from test.test_helpers import fixed_ar1, fixed_random_walk
+
+
+@pytest.fixture(autouse=True)
+def require_float64() -> None:
+    """
+    Fail any test that would run without 64-bit floats.
+
+    Raises
+    ------
+    pytest.fail.Exception
+        If JAX creates 32-bit floating point arrays by default.
+    """
+    if jnp.asarray(0.0).dtype != jnp.float64:
+        pytest.fail("Tests must run with 64-bit floats; JAX_ENABLE_X64 is off.")
+
 
 # =============================================================================
 # PMF Fixtures

@@ -170,10 +170,11 @@ flowchart TB
 Different observation processes observe different levels of the model hierarchy.
 Each observation process declares an **infection resolution** that determines what infection data it receives:
 
-  | Resolution    | Receives                                                            | Example signals                        |
-  | ------------- | ------------------------------------------------------------------- | -------------------------------------- |
-  | `"aggregate"` | Aggregated infections (sum across all subpopulations), shape `(T,)` | Hospital admissions, case counts       |
-  | `"subpop"`    | Infection matrix for all subpopulations, shape `(T, n_subpops)`     | Wastewater, site-specific surveillance |
+  | Resolution            | Receives                                                              | Example signals                  |
+  | --------------------- | --------------------------------------------------------------------- | -------------------------------- |
+  | `"aggregate"`         | Infection counts for the whole jurisdiction, shape `(T,)`             | Hospital admissions, case counts |
+  | `"subpop"`            | Infection counts in each subpopulation, shape `(T, n_subpops)`        | Regional case counts             |
+  | `"subpop_per_capita"` | Infections per resident of each subpopulation, shape `(T, n_subpops)` | Wastewater concentrations        |
 
 The `PyrenewBuilder` routes latent infections to observation processes based on each process's declared resolution.
 
@@ -297,7 +298,7 @@ Observation processes transform latent infections into observable signals and de
 Each observation process:
 
 - Has a unique **name** that identifies the signal in model outputs
-- Declares what **infection resolution** it needs (`"aggregate"` or `"subpop"`)
+- Declares what **infection resolution** it needs (`"aggregate"`, `"subpop"`, or `"subpop_per_capita"`)
 - Applies signal-specific transformations (ascertainment, delay convolution, shedding kinetics)
 - Defines the noise model
 
@@ -425,8 +426,9 @@ class Wastewater(MeasurementObservation):
     """
     Wastewater viral concentration observation process.
 
-    Transforms site-level infections into predicted log-concentrations
-    via shedding kinetics convolution and genome/volume scaling.
+    Transforms infections per resident of each subpopulation into
+    predicted log-concentrations via shedding kinetics convolution and
+    genome/volume scaling.
     """
 
     def __init__(
@@ -524,7 +526,7 @@ shedding_pmf = shedding_pmf / shedding_pmf.sum()  # normalize
 shedding_rv = DeterministicPMF("shedding_kinetics", shedding_pmf)
 
 # Log10 genomes shed per infection
-log10_genome_rv = DeterministicVariable("log10_genome_per_inf", 9.0)
+log10_genome_rv = DeterministicVariable("log10_genome_per_inf", 4.1)
 
 # Wastewater volume per person per day (mL)
 ml_per_person_per_day = 1000.0
