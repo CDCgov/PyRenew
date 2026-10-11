@@ -975,7 +975,7 @@ class SubpopulationCounts(CountObservation):
         Parameters
         ----------
         infections
-            Subpopulation-level infections from the infection process.
+            Infection counts in each subpopulation.
             Shape ``(n_total, n_subpops)``.
         obs
             Observed counts. For ``reporting_schedule="regular"``:

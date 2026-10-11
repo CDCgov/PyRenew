@@ -39,7 +39,8 @@ class BaseObservationProcess(RandomVariable):
     Subclasses must implement:
 
     - ``lookback_days()``: Return PMF length for initialization
-    - ``infection_resolution()``: Return ``"aggregate"`` or ``"subpop"``
+    - ``infection_resolution()``: Return ``"aggregate"``, ``"subpop"``,
+      or ``"subpop_per_capita"``
     - ``_predicted_obs()``: Transform infections to predicted values
     - ``sample()``: Apply noise model to predicted observations
 
@@ -107,19 +108,22 @@ class BaseObservationProcess(RandomVariable):
     @abstractmethod
     def infection_resolution(self) -> str:
         """
-        Return whether this observation uses aggregate or subpop infections.
+        Return which infections this observation receives.
 
         Returns one of:
 
-        - ``"aggregate"``: Uses a single aggregated infection trajectory.
-          Shape: ``(n_days,)``
-        - ``"subpop"``: Uses subpopulation-level infection trajectories.
-          Shape: ``(n_days, n_subpops)``, indexed via ``subpop_indices``.
+        - ``"aggregate"``: infection counts for the whole jurisdiction.
+          Shape: ``(n_total,)``
+        - ``"subpop"``: infection counts in each subpopulation.
+          Shape: ``(n_total, n_subpops)``, indexed via ``subpop_indices``.
+        - ``"subpop_per_capita"``: infections per resident of each
+          subpopulation. Shape: ``(n_total, n_subpops)``, indexed via
+          ``subpop_indices``.
 
         Returns
         -------
         str
-            Either ``"aggregate"`` or ``"subpop"``
+            ``"aggregate"``, ``"subpop"``, or ``"subpop_per_capita"``
 
         Notes
         -----

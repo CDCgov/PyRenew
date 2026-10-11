@@ -13,50 +13,13 @@ import pytest
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.observation import (
     HierarchicalNormalNoise,
-    MeasurementObservation,
     PoissonNoise,
     PopulationCounts,
     SubpopulationCounts,
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from pyrenew.time import MMWR_WEEK, daily_to_weekly
-
-# ---------------------------------------------------------------------------
-# Helpers – minimal concrete subclass of MeasurementObservation for testing
-# ---------------------------------------------------------------------------
-
-
-class StubMeasurementObservation(MeasurementObservation):
-    """Minimal concrete MeasurementObservation for testing validate_data()."""
-
-    def validate(self) -> None:
-        """
-        Validate parameters.
-
-        Raises
-        ------
-        ValueError
-            If PMF is invalid.
-        """
-        pmf = self.temporal_pmf_rv()
-        self._validate_pmf(pmf, "temporal_pmf_rv")
-
-    def _predicted_obs(self, infections):
-        """
-        Return infections unchanged (identity transform).
-
-        Parameters
-        ----------
-        infections : ArrayLike
-            Input infections.
-
-        Returns
-        -------
-        ArrayLike
-            Same as input.
-        """
-        return infections
-
+from test.test_helpers import StubMeasurementObservation
 
 # ---------------------------------------------------------------------------
 # Fixtures
