@@ -146,8 +146,7 @@ Two temporal processes define the evolution of $\log \mathcal{R}_k(t)$:
 Together, these define the full set of reproduction numbers:
 
 $$
-  \log \mathcal{R}_k(t)
-  = \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t),
+  \log \mathcal{R}_k(t) = \log \mathcal{R}_{\text{baseline}}(t) + \delta_k(t),
   \qquad
   \mathcal{R}_k(t) = \exp\big(\log \mathcal{R}_k(t)\big).
 $$

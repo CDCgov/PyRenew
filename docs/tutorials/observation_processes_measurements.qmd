@@ -198,12 +198,12 @@ The concentration is determined by:
 The predicted concentration at time $t$ is given by
 
 $$
-  \mu(t) = \frac{G}{V} \sum_{d=0}^{D} I(t-d)\, \pi_d,
+  \mu(t) = \frac{G}{V} \sum_{d=0}^{D} I(t - d)\, \pi_d,
 $$
 
 where:
 
-- $I(t-d)$ is the number of infections on day $t-d$
+- $I(t - d)$ is the number of infections on day $t - d$
 - $\pi_d$ is the shedding kinetics PMF, giving the fraction of total shedding occurring $d$ days after infection, analogous to the delay distribution in count observation models
 - $G$ is the number of genome copies shed per infection
 - $V$ is the wastewater volume per person per day
@@ -213,7 +213,8 @@ This has the same convolution structure as the observation equation for count da
 We model the observed **log-concentration** as
 
 $$
-  Y(t) \sim \text{Normal}\big(\log(\mu(t)) + \text{sensor\_mode}, \ \text{sensor\_sd}\big),
+  Y(t)
+  \sim \text{Normal}\big(\log(\mu(t)) + \text{sensor\_mode}, \ \text{sensor\_sd}\big),
 $$
 
 where:
@@ -437,8 +438,8 @@ print(f"Required lookback: {ww_process.lookback_days()} days")
 ### Timeline alignment
 
 The observation process maintains alignment: day $t$ in output corresponds to day $t$ in input.
-A temporal PMF of length $L$ covers lags 0 to $L-1$, requiring $L-1$ days of prior history.
-The method `lookback_days()` returns $L-1$; the first valid observation day is at index `lookback_days()`.
+A temporal PMF of length $L$ covers lags 0 to $L - 1$, requiring $L - 1$ days of prior history.
+The method `lookback_days()` returns $L - 1$; the first valid observation day is at index `lookback_days()`.
 
 ```{python}
 #| label: helper-function
