@@ -280,6 +280,59 @@ def subpopulation_infections_factory(
 
 
 @pytest.fixture
+def subpop_log_rt_time_0() -> jnp.ndarray:
+    """
+    Distinct starting log Rt for three subpopulations.
+
+    Returns
+    -------
+    jnp.ndarray
+        Values in increasing order whose mean is not equal to any entry.
+    """
+    return jnp.array([-0.2, 0.0, 0.3])
+
+
+@pytest.fixture
+def random_walk_subpopulation_infections_factory(
+    gen_int_rv: DeterministicPMF,
+) -> Callable[[RandomVariable], SubpopulationInfections]:
+    """
+    Factory for SubpopulationInfections with random walk baseline and deviations.
+
+    Returns
+    -------
+    Callable[[RandomVariable], SubpopulationInfections]
+        Function that builds the configuration with the given starting log Rt.
+    """
+
+    def make(log_rt_time_0_rv: RandomVariable) -> SubpopulationInfections:
+        """
+        Build SubpopulationInfections with the given starting log Rt.
+
+        Parameters
+        ----------
+        log_rt_time_0_rv
+            Starting log Rt, a scalar or one value per subpopulation.
+
+        Returns
+        -------
+        SubpopulationInfections
+            Configured infection process.
+        """
+        return SubpopulationInfections(
+            name="subpopulation",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=log_rt_time_0_rv,
+            baseline_rt_process=fixed_random_walk(innovation_sd=0.05),
+            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
+            n_initialization_points=7,
+        )
+
+    return make
+
+
+@pytest.fixture
 def population_infections_factory(
     gen_int_rv: DeterministicPMF,
 ) -> Callable[..., PopulationInfections]:
