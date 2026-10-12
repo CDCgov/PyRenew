@@ -53,6 +53,7 @@ In the renewal modeling framework, observations are generated in two steps:
 2. A **stochastic observation model**, where observed counts are drawn from a distribution with that predicted value.
 
 Observed data can be aggregated or available as subpopulation-level counts, which are modeled by the classes `PopulationCounts` and `SubpopulationCounts`, respectively.
+See [Infection Resolution](building_multisignal_models.md#infection-resolution) for how a multi-signal model converts latent infections to counts for each.
 
 ### Observation equation
 

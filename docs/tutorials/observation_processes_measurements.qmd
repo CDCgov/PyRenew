@@ -90,7 +90,7 @@ The core convolution structure is shared with count observations, but key aspect
   | Output space     | Linear (expected counts)              | Often log-transformed          |
   | Noise model      | Poisson or Negative Binomial          | Normal (often on log scale)    |
   | Scaling          | Ascertainment rate $\alpha \in [0,1]$ | Domain-specific                |
-  | Subpop structure | Optional (`CountsBySubpop`)           | Inherent (sensor/site effects) |
+  | Subpop structure | Optional (`SubpopulationCounts`)      | Inherent (sensor/site effects) |
 
 ### The noise model
 
@@ -203,7 +203,7 @@ $$
 
 where:
 
-- $I(t-d)$ is the number of infections per resident on day $t-d$
+- $I(t-d)$ is the number of infections per resident on day $t-d$ (see [Infection Resolution](building_multisignal_models.md#infection-resolution))
 - $\pi_d$ is the shedding kinetics PMF, giving the fraction of total shedding occurring $d$ days after infection, analogous to the delay distribution in count observation models
 - $G$ is the number of genome copies shed per infection
 - $V$ is the wastewater volume per person per day
