@@ -29,12 +29,11 @@ from pyrenew.datasets import (
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
     AR1,
-    InfectionsWithFeedback,
     RandomWalk,
     WeeklyTemporalProcess,
 )
-from pyrenew.latent.infection_process import InfectionProcess
 from pyrenew.latent.population_infections import PopulationInfections
+from pyrenew.metaclass import RandomVariable
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import NegativeBinomialNoise, PopulationCounts
 from pyrenew.randomvariable import (
@@ -198,20 +197,17 @@ def e_rtdaily_rw_timevary_model(
         ),
         parameterization="innovation",
     )
-    infection_process = InfectionsWithFeedback(
-        name="infections_with_feedback",
-        infection_feedback_strength=TransformedVariable(
-            "inf_feedback",
-            DistributionalVariable(
-                "inf_feedback_raw",
-                dist.LogNormal(jnp.log(50.0), jnp.log(1.5)),
-            ),
-            transforms=transformation.AffineTransform(loc=0, scale=-1),
+    infection_feedback_strength_rv = TransformedVariable(
+        "inf_feedback",
+        DistributionalVariable(
+            "inf_feedback_raw",
+            dist.LogNormal(jnp.log(50.0), jnp.log(1.5)),
         ),
-        infection_feedback_pmf=DeterministicPMF(
-            "infection_feedback_pmf",
-            _GEN_INT_PMF,
-        ),
+        transforms=transformation.AffineTransform(loc=0, scale=-1),
+    )
+    infection_feedback_pmf_rv = DeterministicPMF(
+        "infection_feedback_pmf",
+        _GEN_INT_PMF,
     )
     ascertainment = IndependentAscertainment(
         name="ed_ascertainment",
@@ -250,7 +246,8 @@ def e_rtdaily_rw_timevary_model(
             dist.Normal(jnp.log(1.2), jnp.log(jnp.sqrt(2.0))),
         ),
         single_rt_process=rt_process,
-        infection_process=infection_process,
+        infection_feedback_strength_rv=infection_feedback_strength_rv,
+        infection_feedback_pmf_rv=infection_feedback_pmf_rv,
     )
     builder.add_ascertainment(ascertainment)
     builder.add_observation(
@@ -288,7 +285,8 @@ def _build_he_population_model(  # numpydoc ignore=RT01
     ed_delay_pmf: jnp.ndarray,
     ed_day_of_week_effects: jnp.ndarray,
     hospital_weekly: bool = False,
-    infection_process: InfectionProcess | None = None,
+    infection_feedback_strength_rv: RandomVariable | None = None,
+    infection_feedback_pmf_rv: RandomVariable | None = None,
 ) -> MultiSignalModel:
     """Build the shared hospital + ED PopulationInfections test model."""
     builder = PyrenewBuilder()
@@ -298,7 +296,8 @@ def _build_he_population_model(  # numpydoc ignore=RT01
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
         single_rt_process=single_rt_process,
-        infection_process=infection_process,
+        infection_feedback_strength_rv=infection_feedback_strength_rv,
+        infection_feedback_pmf_rv=infection_feedback_pmf_rv,
     )
 
     ascertainment = IndependentAscertainment(
@@ -353,7 +352,7 @@ def he_model_with_infection_feedback(
     """
     Build a PopulationInfections H+E model with infection feedback enabled.
 
-    This fixture exercises the ``infection_process`` option passed through
+    This fixture exercises the infection feedback options passed through
     ``PyrenewBuilder.configure_latent``.
 
     Parameters
@@ -370,23 +369,19 @@ def he_model_with_infection_feedback(
     MultiSignalModel
         Built model ready for prior predictive checks.
     """
-    infection_process = InfectionsWithFeedback(
-        name="infections",
-        infection_feedback_strength=DeterministicVariable(
-            "infection_feedback_strength",
-            -1000.0,
-        ),
-        infection_feedback_pmf=DeterministicPMF(
-            "infection_feedback_pmf",
-            _GEN_INT_PMF,
-        ),
-    )
     return _build_he_population_model(
         single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
         hosp_delay_pmf=hosp_delay_pmf,
         ed_delay_pmf=ed_delay_pmf,
         ed_day_of_week_effects=ed_day_of_week_effects,
-        infection_process=infection_process,
+        infection_feedback_strength_rv=DeterministicVariable(
+            "infection_feedback_strength",
+            -1000.0,
+        ),
+        infection_feedback_pmf_rv=DeterministicPMF(
+            "infection_feedback_pmf",
+            _GEN_INT_PMF,
+        ),
     )
 
 

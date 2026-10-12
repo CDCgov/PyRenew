@@ -24,7 +24,7 @@ from pyrenew.latent.infection_initialization_method import (
 from pyrenew.latent.infection_initialization_process import (
     InfectionInitializationProcess,
 )
-from pyrenew.latent.infection_process import InfectionProcess, InfectionProcessSample
+from pyrenew.latent.infection_process import InfectionProcessSample
 from pyrenew.latent.infections import Infections
 from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
 from pyrenew.latent.population_infections import PopulationInfections
@@ -43,7 +43,6 @@ __all__ = [
     "logistic_susceptibility_adjustment",
     "compute_infections_from_rt",
     "compute_infections_from_rt_with_feedback",
-    "InfectionProcess",
     "InfectionProcessSample",
     "InfectionInitializationMethod",
     "InitializeInfectionsExponentialGrowth",
