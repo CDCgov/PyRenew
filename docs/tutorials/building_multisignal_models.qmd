@@ -611,7 +611,7 @@ print(f"  Latent process: {type(model.latent).__name__}")
 print(f"  Observation processes: {list(model.observations.keys())}")
 ```
 
-### Model  Identifiability.
+### Model Identifiability.
 
 The renewal equation is linear in the initial infections `I0_rv`, so scaling `I0_rv` by a factor $c$ scales the entire infection trajectory by $c$.
 In practice, `I0_rv` is weakly identified because each observation process links infections to data through a signal-specific ascertainment rate $\alpha_s$ --- the probability that an infection is observed as an event in signal $s$.
@@ -619,7 +619,7 @@ Doubling `I0_rv` while halving all ascertainment rates produces identical expect
 Without external information to anchor either the ascertainment rates or the absolute infection level, the data cannot distinguish "more infections, lower ascertainment" from "fewer infections, higher ascertainment."
 The priors on `I0_rv` and on the ascertainment rates resolve this ambiguity.
 
-## Fitting the Model to Data:  `model.run()`
+## Fitting the Model to Data: `model.run()`
 
 When you call `model.run()`, you supply three types of information:
 
