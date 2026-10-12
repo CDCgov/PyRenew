@@ -12,6 +12,10 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 from numpyro.util import not_jax_tracer
 
+from pyrenew.latent.infection_functions import (
+    compute_infections_from_rt,
+    compute_infections_from_rt_with_feedback,
+)
 from pyrenew.latent.temporal_processes import TemporalProcess
 from pyrenew.metaclass import RandomVariable
 
@@ -59,6 +63,113 @@ class PopulationStructure:
             The number of subpopulations.
         """
         return len(self.fractions)
+
+
+def _validate_feedback_options(
+    infection_feedback_strength_rv: RandomVariable | None,
+    infection_feedback_pmf_rv: RandomVariable | None,
+) -> None:
+    """
+    Check that the infection feedback options are given together.
+
+    Parameters
+    ----------
+    infection_feedback_strength_rv
+        Infection feedback strength, or None.
+    infection_feedback_pmf_rv
+        Infection feedback PMF, or None.
+
+    Raises
+    ------
+    ValueError
+        If exactly one of the two is None.
+    """
+    if (infection_feedback_strength_rv is None) != (infection_feedback_pmf_rv is None):
+        given = (
+            "infection_feedback_strength_rv"
+            if infection_feedback_pmf_rv is None
+            else "infection_feedback_pmf_rv"
+        )
+        raise ValueError(
+            "infection_feedback_strength_rv and infection_feedback_pmf_rv must "
+            f"be given together or both left out; got only {given}."
+        )
+
+
+def _compute_renewal(
+    I0: ArrayLike,
+    rt_raw: ArrayLike,
+    gen_int: ArrayLike,
+    infection_feedback_strength_rv: RandomVariable | None,
+    infection_feedback_pmf_rv: RandomVariable | None,
+) -> tuple[ArrayLike, ArrayLike]:
+    """
+    Compute post-initialization infections and the adjusted Rt used to generate them.
+
+    Parameters
+    ----------
+    I0
+        Infections during the initialization period, shape ``(n_init,)``
+        or ``(n_init, n_subpops)``. Only the last ``gen_int.size`` days
+        are used.
+    rt_raw
+        Raw reproduction number after the initialization period, from the
+        temporal processes. Shape ``(n_days,)`` or ``(n_days, n_subpops)``.
+    gen_int
+        Generation interval PMF.
+    infection_feedback_strength_rv
+        Infection feedback strength, or None for plain renewal.
+    infection_feedback_pmf_rv
+        Infection feedback PMF, or None for plain renewal.
+
+    Returns
+    -------
+    tuple[ArrayLike, ArrayLike]
+        Post-initialization infections and the adjusted Rt used to
+        generate them, both with the shape of ``rt_raw``. Without
+        feedback, the adjusted Rt is ``rt_raw``.
+
+    Raises
+    ------
+    ValueError
+        If the feedback strength does not broadcast to the shape of
+        ``rt_raw``, or the feedback PMF length differs from the generation
+        interval length.
+    """
+    recent_I0 = I0[-gen_int.size :]
+    reversed_gen_int = jnp.flip(gen_int)
+    if infection_feedback_strength_rv is None or infection_feedback_pmf_rv is None:
+        infections = compute_infections_from_rt(
+            I0=recent_I0,
+            Rt=rt_raw,
+            reversed_generation_interval_pmf=reversed_gen_int,
+        )
+        return infections, rt_raw
+
+    strength = jnp.atleast_1d(infection_feedback_strength_rv())
+    try:
+        strength = jnp.broadcast_to(strength, rt_raw.shape)
+    except ValueError as e:
+        raise ValueError(
+            f"infection_feedback_strength_rv returned shape {strength.shape}, "
+            f"which does not broadcast to the shape of Rt, {rt_raw.shape}."
+        ) from e
+
+    feedback_pmf = jnp.asarray(infection_feedback_pmf_rv())
+    if feedback_pmf.shape != gen_int.shape:
+        raise ValueError(
+            "infection_feedback_pmf_rv must return an array with the same "
+            f"length as the generation interval, {gen_int.size}; got shape "
+            f"{feedback_pmf.shape}."
+        )
+
+    return compute_infections_from_rt_with_feedback(
+        I0=recent_I0,
+        Rt_raw=rt_raw,
+        infection_feedback_strength=strength,
+        reversed_generation_interval_pmf=reversed_gen_int,
+        reversed_infection_feedback_pmf=jnp.flip(feedback_pmf),
+    )
 
 
 class BaseLatentInfectionProcess(RandomVariable):
