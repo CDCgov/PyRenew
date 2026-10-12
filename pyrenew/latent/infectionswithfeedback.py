@@ -28,10 +28,11 @@ class InfectionsWithFeedback(RandomVariable):
     [`pyrenew.latent.infection_functions.compute_infections_from_rt_with_feedback`][]):
 
     ```math
-    I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau)
-
-    \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(-\gamma(t)\
-    \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+    \begin{aligned}
+    I(t) & = \mathcal{R}(t)\sum_{\tau=1}^{T_g}I(t - \tau)g(\tau) \\
+    \mathcal{R}(t) & = \mathcal{R}^u(t)\exp\left(\gamma(t)\
+        \sum_{\tau=1}^{T_f}I(t - \tau)f(\tau)\right)
+    \end{aligned}
     ```
 
     where $\mathcal{R}(t)$ is the reproductive number, $\gamma(t)$
