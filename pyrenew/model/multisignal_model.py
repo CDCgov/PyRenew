@@ -240,6 +240,13 @@ class MultiSignalModel(Model):
                     f"obs_start_date is required when any observation uses "
                     f"a day-of-week effect; observation '{name}' does."
                 )
+        for name, ascertainment_model in self.ascertainment_models.items():
+            if ascertainment_model.requires_calendar_anchor():
+                raise ValueError(
+                    "obs_start_date is required when a registered ascertainment "
+                    f"model uses a calendar-aligned temporal process; "
+                    f"ascertainment model {name!r} does."
+                )
         if self.latent.requires_calendar_anchor():
             raise ValueError(
                 "obs_start_date is required when the latent process uses a "
@@ -299,9 +306,10 @@ class MultiSignalModel(Model):
             Date of the first observation day. Required when any
             observation uses ``aggregation="weekly"`` or a day-of-week
             effect, or when a latent temporal process uses
-            calendar-week alignment. Converted once to the axis-origin
-            ``first_day_dow`` and forwarded to the latent process and
-            every observation.
+            calendar-week alignment, including a registered ascertainment
+            model. Converted once to the axis-origin ``first_day_dow`` and
+            forwarded to the latent process, ascertainment models, and every
+            observation.
         **observation_data
             Data for each observation process, keyed by observation name.
             Each value should be a dict of kwargs for that observation's sample().
@@ -374,7 +382,8 @@ class MultiSignalModel(Model):
             to the latent process and every observation. Required when
             any observation uses ``aggregation="weekly"`` or a
             day-of-week effect, or when a latent temporal process uses
-            calendar-week alignment.
+            calendar-week alignment, including a registered ascertainment
+            model.
         **observation_data
             Data for each observation process, keyed by observation name
             (the ``name`` attribute of each observation process).
@@ -412,8 +421,12 @@ class MultiSignalModel(Model):
             "subpop": inf_all,
         }
 
+        n_timepoints = self.latent.n_initialization_points + n_days_post_init
         ascertainment_values = {
-            name: ascertainment_model.sample()
+            name: ascertainment_model.sample(
+                n_timepoints=n_timepoints,
+                first_day_dow=first_day_dow,
+            )
             for name, ascertainment_model in self.ascertainment_models.items()
         }
 

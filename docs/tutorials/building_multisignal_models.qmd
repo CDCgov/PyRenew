@@ -454,8 +454,8 @@ class Wastewater(MeasurementObservation):
         log10_genome = self.log10_genome_per_infection_rv()
 
         def convolve_site(site_infections):
-            convolved, _ = self._convolve_with_alignment(
-                site_infections, shedding_pmf, p_observed=1.0
+            convolved, _ = self._convolve_delay_with_alignment(
+                site_infections, shedding_pmf
             )
             return convolved
 
@@ -786,7 +786,7 @@ obs_data_90 = {
 
 The observation dictionary has the following structure:
 
-```python
+```text
 {
     "obs_start_date": ...,
     "hospital": {
@@ -1086,3 +1086,4 @@ That same edge uncertainty is what carries forward when the model is used for fo
 - Explore different temporal processes for $\mathcal{R}(t)$ in the [Latent Infections](latent_infections.md) and [Latent Subpopulation Infections](latent_subpopulation_infections.md) tutorials
 - Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.md)
 - Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.md)
+- Learn about ascertainment models in [Ascertainment Models for Related Observation Processes](ascertainment.md)

@@ -3,5 +3,3 @@ flavor = "gfm"
 wrap = "sentence"
 [formatters]
 python = "ruff"
-[linters]
-python = "ruff"

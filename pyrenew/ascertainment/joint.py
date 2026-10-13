@@ -15,11 +15,11 @@ from jax.scipy.special import expit, logit
 from jax.typing import ArrayLike
 
 from pyrenew.ascertainment.base import AscertainmentModel
+from pyrenew.latent import TemporalProcess
 
 
 class JointAscertainment(AscertainmentModel):
-    """
-    Joint prior for scalar ascertainment rates across multiple signals.
+    """Joint prior for baseline ascertainment rates across multiple signals.
 
     This model is useful when multiple observation streams have distinct but
     related probabilities of observing latent incidence. For example, hospital
@@ -35,7 +35,8 @@ class JointAscertainment(AscertainmentModel):
     ascertainment_rate_j = sigmoid(eta_j)
     ```
 
-    Each returned rate is scalar and constant over the model time axis.
+    Each sampled baseline is scalar. Optional temporal processes can vary any
+    subset of the final rates over the model time axis.
     """
 
     def __init__(
@@ -46,6 +47,7 @@ class JointAscertainment(AscertainmentModel):
         scale_tril: ArrayLike | None = None,
         covariance_matrix: ArrayLike | None = None,
         precision_matrix: ArrayLike | None = None,
+        temporal_processes: Mapping[str, TemporalProcess] | None = None,
     ) -> None:
         """
         Initialize a joint scalar ascertainment model.
@@ -72,8 +74,15 @@ class JointAscertainment(AscertainmentModel):
         precision_matrix
             Precision matrix for the multivariate normal on the logit scale.
             Exactly one covariance parameter must be supplied.
+        temporal_processes
+            Optional temporal processes keyed by signal name. Signals without
+            a process retain their scalar baseline rate.
         """
-        super().__init__(name=name, signals=signals)
+        super().__init__(
+            name=name,
+            signals=signals,
+            temporal_processes=temporal_processes,
+        )
         baseline_rates_array = jnp.asarray(baseline_rates)
         scale_tril_array = self._optional_array(scale_tril)
         covariance_matrix_array = self._optional_array(covariance_matrix)
@@ -126,23 +135,17 @@ class JointAscertainment(AscertainmentModel):
             )
         if jnp.any(baseline_rates <= 0) or jnp.any(baseline_rates >= 1):
             raise ValueError(
-                "baseline_rates must contain probabilities in [0, 1], "
+                "baseline_rates must contain probabilities in (0, 1), "
                 f"got {baseline_rates}."
             )
 
-    def sample(self, **kwargs: object) -> Mapping[str, ArrayLike]:
-        """
-        Sample jointly distributed scalar ascertainment rates.
-
-        Parameters
-        ----------
-        **kwargs
-            Additional model-context arguments, ignored.
+    def _sample_baseline_rates(self) -> Mapping[str, ArrayLike]:
+        """Sample jointly distributed scalar baseline rates.
 
         Returns
         -------
         Mapping[str, ArrayLike]
-            Mapping from signal name to sampled scalar ascertainment rate.
+            Sampled scalar baseline rates keyed by signal name.
         """
         eta = numpyro.sample(
             f"{self.name}_eta",
@@ -150,9 +153,8 @@ class JointAscertainment(AscertainmentModel):
         )
         rates = expit(eta)
 
-        result = {}
+        result: dict[str, ArrayLike] = {}
         for signal, rate in zip(self.signals, rates):
-            numpyro.deterministic(f"{self.name}_{signal}", rate)
             result[signal] = rate
 
         return result

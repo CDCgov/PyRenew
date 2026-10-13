@@ -7,6 +7,7 @@ For pytest fixtures, see conftest.py.
 
 import jax
 import jax.numpy as jnp
+from jax.typing import ArrayLike
 
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent import AR1, DifferencedAR1, RandomWalk
@@ -135,7 +136,7 @@ class ConcreteMeasurementObservation(MeasurementObservation):
         pmf = self.temporal_pmf_rv()
         self._validate_pmf(pmf, "temporal_pmf_rv")
 
-    def _predicted_obs(self, infections):
+    def _predicted_obs(self, infections: ArrayLike) -> ArrayLike:
         """
         Simple predicted signal: log(convolution * scale).
 
@@ -149,8 +150,8 @@ class ConcreteMeasurementObservation(MeasurementObservation):
         if infections.ndim == 1:
             infections = infections[:, jnp.newaxis]
 
-        def convolve_col(col):  # numpydoc ignore=GL08
-            return self._convolve_with_alignment(col, pmf, 1.0)[0]
+        def convolve_col(col: ArrayLike) -> ArrayLike:  # numpydoc ignore=GL08
+            return self._convolve_delay_with_alignment(col, pmf)[0]
 
         predicted = jax.vmap(convolve_col, in_axes=1, out_axes=1)(infections)
 

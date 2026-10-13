@@ -139,15 +139,27 @@ class TestRatioLinkedModelExecution:
 
         base_rate = trace["iedr"]["value"]
         ratio = trace["ihr_rel_iedr"]["value"]
+        ed_baseline = trace["he_ascertainment_baseline_ed_visits"]["value"]
+        hospital_baseline = trace["he_ascertainment_baseline_hospital"]["value"]
         ed_rate = trace["he_ascertainment_ed_visits"]["value"]
         hospital_rate = trace["he_ascertainment_hospital"]["value"]
 
         assert trace["iedr"]["type"] == "sample"
+        assert base_rate.shape == ()
         assert trace["ihr_rel_iedr"]["type"] == "sample"
+        assert ratio.shape == ()
+        assert trace["he_ascertainment_baseline_ed_visits"]["type"] == "deterministic"
+        assert ed_baseline.shape == ()
+        assert trace["he_ascertainment_baseline_hospital"]["type"] == "deterministic"
+        assert hospital_baseline.shape == ()
         assert trace["he_ascertainment_ed_visits"]["type"] == "deterministic"
+        assert ed_rate.shape == ()
         assert trace["he_ascertainment_hospital"]["type"] == "deterministic"
-        assert jnp.allclose(ed_rate, base_rate)
-        assert jnp.allclose(hospital_rate, base_rate * ratio)
+        assert hospital_rate.shape == ()
+        assert jnp.allclose(ed_baseline, base_rate)
+        assert jnp.allclose(hospital_baseline, base_rate * ratio)
+        assert jnp.allclose(ed_rate, ed_baseline)
+        assert jnp.allclose(hospital_rate, hospital_baseline)
 
         n_total = model.latent.n_initialization_points + N_DAYS_FIT
         hospital = model.observations["hospital"]

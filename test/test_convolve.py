@@ -407,6 +407,34 @@ def test_compute_delay_ascertained_incidence_manual(
     assert_array_equal(result_padded, expected_padded)
 
 
+def test_compute_delay_incidence_delegates_without_ascertainment() -> None:
+    """Test delay-only convolution, offset, and aligned NaN padding."""
+    latent_incidence = jnp.array([1.0, 2.0, 3.0])
+    delay_pmf = jnp.array([0.25, 0.75])
+
+    result, offset = pc.compute_delay_incidence(
+        latent_incidence,
+        delay_pmf,
+    )
+    padded, padded_offset = pc.compute_delay_incidence(
+        latent_incidence,
+        delay_pmf,
+        pad=True,
+    )
+    existing, existing_offset = pc.compute_delay_ascertained_incidence(
+        latent_incidence,
+        delay_pmf,
+        p_observed_given_incident=1,
+    )
+
+    assert_array_equal(result, jnp.array([1.25, 2.25]))
+    assert offset == 1
+    assert_array_equal(padded, jnp.array([jnp.nan, 1.25, 2.25]))
+    assert padded_offset == 0
+    assert_array_equal(result, existing)
+    assert offset == existing_offset
+
+
 @pytest.mark.parametrize(
     ["reporting_delay_pmf", "n_timepoints", "right_truncation_offset", "expected"],
     [
