@@ -501,7 +501,7 @@ def test_compute_prop_already_reported_short_window(
     """
     Short observation windows (n_timepoints below the delay PMF
     support) return the trailing slice of the reported-proportion
-    tail instead of raising.
+    tail.
     """
     result = pc.compute_prop_already_reported(
         reporting_delay_pmf, n_timepoints, right_truncation_offset

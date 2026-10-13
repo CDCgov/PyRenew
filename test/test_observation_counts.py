@@ -525,7 +525,7 @@ class TestRightTruncation:
             process.validate()
 
     def test_short_observation_window_supported(self, simple_delay_pmf):
-        """Short observation windows use the trailing tail slice, not an error."""
+        """Short observation windows use the trailing tail slice."""
         rt_pmf = jnp.array([0.2, 0.3, 0.5])
         process = PopulationCounts(
             name="test",
