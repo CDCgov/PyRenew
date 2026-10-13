@@ -4,6 +4,8 @@ Hierarchical latent infection process with subpopulation-specific renewal models
 
 from __future__ import annotations
 
+from abc import abstractmethod
+
 import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
@@ -23,18 +25,381 @@ from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
 
 
-class SubpopulationInfections(BaseLatentInfectionProcess):
+class BaseSubpopulationInfections(BaseLatentInfectionProcess):
+    r"""
+    Base class for subpopulation renewal models with hierarchical $\mathcal{R}(t)$.
+
+    Subpopulations share a baseline $\mathcal{R}(t)$. The log
+    $\mathcal{R}(t)$ of each subpopulation is the log of the baseline plus
+    a deviation, and the deviations sum to zero on each day, so the
+    baseline is the geometric mean of the subpopulation values.
+
+    The starting log $\mathcal{R}(t)$ and the initial infections are each
+    either one value for all subpopulations or one value per subpopulation.
+    Initial infections grow exponentially over the initialization period
+    at the rate implied by each subpopulation's starting $\mathcal{R}(t)$.
+
+    Each subclass defines how infections are generated from
+    $\mathcal{R}(t)$.
+
+    Notes
+    -----
+    ``rt_baseline`` and ``rt_subpop`` are raw reproduction numbers generated
+    by the temporal-process hierarchy. ``rt_subpop_adjusted`` is the
+    reproduction number used to generate infections, as each subclass
+    defines it.
+    """
+
+    def __init__(
+        self,
+        *,
+        name: str,
+        gen_int_rv: RandomVariable,
+        n_initialization_points: int,
+        I0_rv: RandomVariable,
+        baseline_rt_process: TemporalProcess,
+        subpop_rt_deviation_process: TemporalProcess,
+        log_rt_time_0_rv: RandomVariable,
+    ) -> None:
+        """
+        Initialize the shared subpopulation structure.
+
+        Parameters
+        ----------
+        name
+            Name prefix for numpyro sample sites. All deterministic
+            quantities are recorded under this scope (e.g.,
+            ``"{name}::rt_baseline"``, ``"{name}::rt_subpop"``, and
+            ``"{name}::rt_subpop_adjusted"``).
+        gen_int_rv
+            Generation interval PMF
+        n_initialization_points
+            Number of initialization days before day 0.
+        I0_rv
+            New infections per resident on the first day of the
+            initialization period, the earliest day on the time axis. This
+            is not prevalence. Returns either a scalar, one value for all
+            subpopulations, or an array of shape ``(n_subpops,)``, one value
+            per subpopulation in the order of ``subpop_fractions``.
+        baseline_rt_process
+            Temporal process for baseline $\\mathcal{R}(t)$ dynamics
+        subpop_rt_deviation_process
+            Temporal process for subpopulation deviations
+        log_rt_time_0_rv
+            Starting log($\\mathcal{R}(t)$) on the first day of the
+            initialization period. Returns either a scalar, one value for all
+            subpopulations, or an array of shape ``(n_subpops,)``, one value per
+            subpopulation in the order of ``subpop_fractions``.
+
+        Raises
+        ------
+        ValueError
+            If required parameters are missing or invalid.
+        """
+        super().__init__(
+            name=name,
+            gen_int_rv=gen_int_rv,
+            n_initialization_points=n_initialization_points,
+        )
+
+        if I0_rv is None:
+            raise ValueError("I0_rv is required")
+        self.I0_rv = I0_rv
+
+        if isinstance(I0_rv, DeterministicVariable):
+            self._validate_I0(I0_rv.value)
+
+        if log_rt_time_0_rv is None:
+            raise ValueError("log_rt_time_0_rv is required")
+        self.log_rt_time_0_rv = log_rt_time_0_rv
+
+        if baseline_rt_process is None:
+            raise ValueError("baseline_rt_process is required")
+        self.baseline_rt_process = baseline_rt_process
+
+        if subpop_rt_deviation_process is None:
+            raise ValueError("subpop_rt_deviation_process is required")
+        self.subpop_rt_deviation_process = subpop_rt_deviation_process
+
+    def _validate_and_prepare_I0(
+        self,
+        I0: ArrayLike,
+        pop: PopulationStructure,
+    ) -> ArrayLike:
+        """
+        Validate I0 and broadcast scalar to per-subpopulation array.
+
+        Accepts either a scalar (applied uniformly to all subpopulations)
+        or a 1D array of length ``n_subpops``.
+
+        Parameters
+        ----------
+        I0
+            New infections per resident on the first day of the
+            initialization period, from I0_rv, as a JAX array.
+        pop
+            Parsed population structure.
+
+        Returns
+        -------
+        ArrayLike
+            Per-subpopulation I0 array of shape ``(n_subpops,)``.
+
+        Raises
+        ------
+        ValueError
+            If I0 values are not in the interval (0, 1], or if I0 is neither
+            a scalar nor of shape ``(n_subpops,)``.
+        """
+        super()._validate_and_prepare_I0(I0, pop)
+        if I0.ndim == 0:
+            return jnp.full(pop.n_subpops, I0)
+        if I0.shape != (pop.n_subpops,):
+            raise ValueError(
+                "I0_rv must return a scalar or an array of shape "
+                f"({pop.n_subpops},), one value per subpopulation; "
+                f"got shape {I0.shape}."
+            )
+        return I0
+
+    def _split_initial_log_rt(
+        self,
+        initial_log_rt: ArrayLike,
+        pop: PopulationStructure,
+    ) -> tuple[ArrayLike, ArrayLike]:
+        """
+        Split the starting log Rt into baseline and deviation starting values.
+
+        Parameters
+        ----------
+        initial_log_rt
+            Starting log Rt from log_rt_time_0_rv, as a JAX array. Either a
+            scalar or one value per subpopulation.
+        pop
+            Parsed population structure.
+
+        Returns
+        -------
+        tuple[ArrayLike, ArrayLike]
+            Starting value of the baseline (scalar) and starting values of
+            the deviations, shape ``(n_subpops,)``.
+
+        Raises
+        ------
+        ValueError
+            If initial_log_rt is neither a scalar nor of shape ``(n_subpops,)``.
+        """
+        if initial_log_rt.ndim == 0:
+            return initial_log_rt, jnp.zeros(pop.n_subpops)
+        if initial_log_rt.shape == (pop.n_subpops,):
+            baseline_start = jnp.mean(initial_log_rt)
+            return baseline_start, initial_log_rt - baseline_start
+        raise ValueError(
+            "log_rt_time_0_rv must return a scalar or an array of shape "
+            f"({pop.n_subpops},), one value per subpopulation; "
+            f"got shape {initial_log_rt.shape}."
+        )
+
+    def validate(self) -> None:
+        """
+        Validate hierarchical infections parameters.
+
+        Checks that the generation interval is a valid PMF.
+
+        Raises
+        ------
+        ValueError
+            If gen_int_rv does not return a valid discrete distribution
+        """
+        validate_discrete_dist_vector(self.gen_int_rv())
+
+    @abstractmethod
+    def _infections_from_rt(
+        self,
+        rt_raw: ArrayLike,
+        I0: ArrayLike,
+        gen_int: ArrayLike,
+        pop: PopulationStructure,
+    ) -> tuple[ArrayLike, ArrayLike]:
+        """
+        Compute post-initialization infections and adjusted Rt for all subpopulations.
+
+        Parameters
+        ----------
+        rt_raw
+            Raw subpopulation Rt after the initialization period,
+            shape ``(n_days_post_init, n_subpops)``.
+        I0
+            Infections per resident on every initialization day,
+            shape ``(n_initialization_points, n_subpops)``.
+        gen_int
+            Generation interval PMF.
+        pop
+            Parsed population structure.
+
+        Returns
+        -------
+        tuple[ArrayLike, ArrayLike]
+            Post-initialization infections per resident and the adjusted Rt
+            used to generate them, both with the shape of ``rt_raw``.
+        """
+        pass  # pragma: no cover
+
+    def sample(
+        self,
+        n_days_post_init: int,
+        subpop_fractions: ArrayLike | None = None,
+        first_day_dow: int | None = None,
+        **kwargs: object,
+    ) -> LatentSample:
+        """
+        Sample infections for all subpopulations.
+
+        Generates daily baseline $\\mathcal{R}(t)$, daily subpopulation
+        deviations with a sum-to-zero constraint, and initial infections,
+        then computes infections after the initialization period with the
+        subclass's renewal. The temporal processes may sample parameters at
+        any supported cadence (for example daily or weekly/stepwise), but
+        they must return daily-length trajectories before the renewal is
+        evaluated. The raw subpopulation Rt is recorded as ``rt_subpop``;
+        the Rt used to generate infections is recorded as
+        ``rt_subpop_adjusted``.
+
+        Parameters
+        ----------
+        n_days_post_init
+            Number of days to simulate after initialization period
+        subpop_fractions
+            Population fractions for all subpopulations. Shape: (n_subpops,).
+            Must sum to 1.0.
+        first_day_dow
+            Forwarded to ``baseline_rt_process`` and
+            ``subpop_rt_deviation_process``. See
+            [pyrenew.latent.TemporalProcess][].
+        **kwargs
+            Additional keyword arguments (unused).
+
+        Returns
+        -------
+        LatentSample
+            Named tuple with fields:
+            - aggregate: shape (n_total_days,)
+            - all_subpops: shape (n_total_days, n_subpops)
+
+        Raises
+        ------
+        ValueError
+            If ``subpop_fractions`` is invalid, or if ``log_rt_time_0_rv``
+            or ``I0_rv`` returns neither a scalar nor an array of shape
+            ``(n_subpops,)``. A subclass may raise for its own inputs.
+        """
+        pop = self._parse_and_validate_fractions(
+            subpop_fractions=subpop_fractions,
+        )
+
+        n_total_days = self.n_initialization_points + n_days_post_init
+
+        baseline_start, deviations_start = self._split_initial_log_rt(
+            jnp.asarray(self.log_rt_time_0_rv()), pop
+        )
+
+        log_rt_baseline = self.baseline_rt_process.sample(
+            n_timepoints=n_total_days,
+            initial_value=baseline_start,
+            name_prefix="log_rt_baseline",
+            first_day_dow=first_day_dow,
+        )
+        require_shape(log_rt_baseline, (n_total_days, 1), "baseline_rt_process")
+
+        deviations_raw = self.subpop_rt_deviation_process.sample(
+            n_timepoints=n_total_days,
+            n_processes=pop.n_subpops,
+            initial_value=deviations_start,
+            name_prefix="subpop_deviations",
+            first_day_dow=first_day_dow,
+        )
+        require_shape(
+            deviations_raw,
+            (n_total_days, pop.n_subpops),
+            "subpop_rt_deviation_process",
+        )
+
+        # Sum-to-zero constraint ensures identifiability
+        mean_deviation = jnp.mean(deviations_raw, axis=1, keepdims=True)
+        deviations = deviations_raw - mean_deviation
+
+        log_rt_subpop = log_rt_baseline + deviations
+        rt_subpop = jnp.exp(log_rt_subpop)
+
+        gen_int = self.gen_int_rv()
+
+        I0_subpop = self._validate_and_prepare_I0(jnp.asarray(self.I0_rv()), pop)
+
+        initial_r_subpop = r_approx_from_R(
+            R=rt_subpop[0, :], g=gen_int, n_newton_steps=4
+        )
+
+        time_indices = jnp.arange(self.n_initialization_points)
+        I0_all = I0_subpop[jnp.newaxis, :] * jnp.exp(
+            initial_r_subpop[jnp.newaxis, :] * time_indices[:, jnp.newaxis]
+        )
+
+        post_init_infections_all, rt_adjusted = self._infections_from_rt(
+            rt_raw=rt_subpop[self.n_initialization_points :, :],
+            I0=I0_all,
+            gen_int=gen_int,
+            pop=pop,
+        )
+        rt_subpop_adjusted = jnp.vstack(
+            [rt_subpop[: self.n_initialization_points, :], rt_adjusted]
+        )
+
+        infections_all = jnp.vstack([I0_all, post_init_infections_all])
+
+        infections_aggregate = jnp.sum(
+            infections_all * pop.fractions[jnp.newaxis, :], axis=1
+        )
+
+        self._validate_output_shapes(
+            infections_aggregate,
+            infections_all,
+            n_total_days,
+            pop,
+        )
+
+        with numpyro.handlers.scope(prefix=self.name, divider="::"):
+            numpyro.deterministic("I0_init_all_subpops", I0_all)
+            numpyro.deterministic("log_rt_baseline", log_rt_baseline)
+            numpyro.deterministic("rt_baseline", jnp.exp(log_rt_baseline))
+            numpyro.deterministic("rt_subpop", rt_subpop)
+            numpyro.deterministic("rt_subpop_adjusted", rt_subpop_adjusted)
+            numpyro.deterministic("subpop_deviations", deviations)
+            numpyro.deterministic("infections_aggregate", infections_aggregate)
+
+        return LatentSample(
+            aggregate=infections_aggregate,
+            all_subpops=infections_all,
+        )
+
+
+class SubpopulationInfections(BaseSubpopulationInfections):
     r"""
     Multi-subpopulation renewal model with hierarchical $\mathcal{R}(t)$ structure.
 
     Each subpopulation has its own renewal equation with $\mathcal{R}(t)$ deviating from a
     shared baseline. Suitable when transmission dynamics vary substantially
-    across subpopulations.
+    across subpopulations. Each subpopulation renews independently:
+    infections in one subpopulation do not depend on infections in any other.
 
     Mathematical form:
     - Baseline $\mathcal{R}(t)$: log[R_baseline(t)] ~ TemporalProcess
     - Subpopulation $\mathcal{R}(t)$: log R_k(t) = log[R_baseline(t)] + delta_k(t)
     - Deviations: delta_k(t) ~ TemporalProcess with sum-to-zero constraint
+    - Starting values on the first day of the initialization period, from
+      log_rt_time_0_rv: a scalar s gives log[R_baseline(0)] = s and
+      delta_k(0) = 0; one value v_k per subpopulation gives
+      log[R_baseline(0)] = mean(v) and delta_k(0) = v_k - mean(v), so
+      log R_k(0) = v_k.
     - Renewal per subpop: I_k(t) = R_k(t) * sum_tau I_k(t-tau) * g(tau)
     - Aggregate total: I_aggregate(t) = sum_k p_k * I_k(t)
 
@@ -56,7 +421,10 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
     $\mathcal{R}^{\mathrm{adj}}_k(t)$ in place of $\mathcal{R}_k(t)$.
     Negative strength lowers $\mathcal{R}_k(t)$ when recent infections are
     high, and positive strength raises it. With both arguments left out,
-    infections follow the plain renewal equation.
+    infections follow the plain renewal equation. Sampling raises
+    ``ValueError`` if the feedback strength does not broadcast to shape
+    ``(n_days_post_init, n_subpops)``, or if the feedback PMF length
+    differs from the generation interval length.
 
     The constructor specifies model structure (priors, temporal processes).
     Population structure (subpop_fractions) is provided at sample time,
@@ -100,13 +468,26 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
         n_initialization_points
             Number of initialization days before day 0.
         I0_rv
-            Initial infection prevalence (proportion of population)
+            New infections per resident on the first day of the
+            initialization period, the earliest day on the time axis. This
+            is not prevalence. Returns either a scalar, one value for all
+            subpopulations, or an array of shape ``(n_subpops,)``, one value
+            per subpopulation in the order of ``subpop_fractions``.
         baseline_rt_process
             Temporal process for baseline $\\mathcal{R}(t)$ dynamics
         subpop_rt_deviation_process
             Temporal process for subpopulation deviations
         log_rt_time_0_rv
-            Initial value for log($\\mathcal{R}(t)$) at time 0.
+            Starting log($\\mathcal{R}(t)$) on the first day of the
+            initialization period. Returns either a scalar, one value for all
+            subpopulations, or an array of shape ``(n_subpops,)``, one value per
+            subpopulation in the order of ``subpop_fractions``. Per-subpopulation
+            values also give each subpopulation its own initial growth rate.
+            The baseline starts at the mean of the per-subpopulation values, so
+            giving every subpopulation the same prior narrows the prior on the
+            baseline's starting value: with
+            ``dist.Normal(0.0, s).expand([n_subpops])``, its standard deviation
+            is ``s / sqrt(n_subpops)``, not ``s``.
         infection_feedback_strength_rv
             Infection feedback strength $\\gamma$. Returns an array that
             broadcasts to ``(n_days_post_init, n_subpops)``:
@@ -137,26 +518,11 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
             name=name,
             gen_int_rv=gen_int_rv,
             n_initialization_points=n_initialization_points,
+            I0_rv=I0_rv,
+            baseline_rt_process=baseline_rt_process,
+            subpop_rt_deviation_process=subpop_rt_deviation_process,
+            log_rt_time_0_rv=log_rt_time_0_rv,
         )
-
-        if I0_rv is None:
-            raise ValueError("I0_rv is required")
-        self.I0_rv = I0_rv
-
-        if isinstance(I0_rv, DeterministicVariable):
-            self._validate_I0(I0_rv.value)
-
-        if log_rt_time_0_rv is None:
-            raise ValueError("log_rt_time_0_rv is required")
-        self.log_rt_time_0_rv = log_rt_time_0_rv
-
-        if baseline_rt_process is None:
-            raise ValueError("baseline_rt_process is required")
-        self.baseline_rt_process = baseline_rt_process
-
-        if subpop_rt_deviation_process is None:
-            raise ValueError("subpop_rt_deviation_process is required")
-        self.subpop_rt_deviation_process = subpop_rt_deviation_process
 
         _validate_feedback_options(
             infection_feedback_strength_rv, infection_feedback_pmf_rv
@@ -164,184 +530,37 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
         self.infection_feedback_strength_rv = infection_feedback_strength_rv
         self.infection_feedback_pmf_rv = infection_feedback_pmf_rv
 
-    def _validate_and_prepare_I0(
+    def _infections_from_rt(
         self,
+        rt_raw: ArrayLike,
         I0: ArrayLike,
+        gen_int: ArrayLike,
         pop: PopulationStructure,
-    ) -> ArrayLike:
+    ) -> tuple[ArrayLike, ArrayLike]:
         """
-        Validate I0 and broadcast scalar to per-subpopulation array.
-
-        Accepts either a scalar (applied uniformly to all subpopulations)
-        or a 1D array of length ``n_subpops``.
+        Compute post-initialization infections and adjusted Rt for each subpopulation independently.
 
         Parameters
         ----------
+        rt_raw
+            Raw subpopulation Rt after the initialization period.
         I0
-            Initial infection prevalence from I0_rv, as a JAX array.
+            Infections per resident on every initialization day.
+        gen_int
+            Generation interval PMF.
         pop
-            Parsed population structure.
+            Parsed population structure (unused).
 
         Returns
         -------
-        ArrayLike
-            Per-subpopulation I0 array of shape ``(n_subpops,)``.
-
-        Raises
-        ------
-        ValueError
-            If I0 values are not in the interval (0, 1].
+        tuple[ArrayLike, ArrayLike]
+            Post-initialization infections per resident and the adjusted Rt,
+            with infection feedback if it is on.
         """
-        super()._validate_and_prepare_I0(I0, pop)
-        if I0.ndim == 0:
-            return jnp.full(pop.n_subpops, I0)
-        return I0
-
-    def validate(self) -> None:
-        """
-        Validate hierarchical infections parameters.
-
-        Checks that the generation interval is a valid PMF.
-
-        Raises
-        ------
-        ValueError
-            If gen_int_rv does not return a valid discrete distribution
-        """
-        validate_discrete_dist_vector(self.gen_int_rv())
-
-    def sample(
-        self,
-        n_days_post_init: int,
-        subpop_fractions: ArrayLike | None = None,
-        first_day_dow: int | None = None,
-        **kwargs: object,
-    ) -> LatentSample:
-        """
-        Sample hierarchical infections for all subpopulations.
-
-        Generates daily baseline $\\mathcal{R}(t)$, daily subpopulation
-        deviations with a sum-to-zero constraint, initial infections, and
-        computes infections with the renewal equations, with infection
-        feedback if it is on. The temporal processes may sample parameters at
-        any supported cadence (for example daily or weekly/stepwise), but they
-        must return daily-length trajectories before the renewal equations are
-        evaluated. The raw subpopulation Rt is recorded as ``rt_subpop``; the
-        adjusted Rt used to generate infections is recorded as
-        ``rt_subpop_adjusted``.
-
-        Parameters
-        ----------
-        n_days_post_init
-            Number of days to simulate after initialization period
-        subpop_fractions
-            Population fractions for all subpopulations. Shape: (n_subpops,).
-            Must sum to 1.0.
-        first_day_dow
-            Forwarded to ``baseline_rt_process`` and
-            ``subpop_rt_deviation_process``. See
-            [pyrenew.latent.TemporalProcess][].
-        **kwargs
-            Additional keyword arguments (unused).
-
-        Returns
-        -------
-        LatentSample
-            Named tuple with fields:
-            - aggregate: shape (n_total_days,)
-            - all_subpops: shape (n_total_days, n_subpops)
-
-        Raises
-        ------
-        ValueError
-            If ``subpop_fractions`` is invalid, if the infection feedback
-            strength does not broadcast to shape
-            ``(n_days_post_init, n_subpops)``, or if the feedback PMF length
-            differs from the generation interval length.
-        """
-        pop = self._parse_and_validate_fractions(
-            subpop_fractions=subpop_fractions,
-        )
-
-        n_total_days = self.n_initialization_points + n_days_post_init
-
-        initial_log_rt = self.log_rt_time_0_rv()
-
-        log_rt_baseline = self.baseline_rt_process.sample(
-            n_timepoints=n_total_days,
-            initial_value=initial_log_rt,
-            name_prefix="log_rt_baseline",
-            first_day_dow=first_day_dow,
-        )
-        require_shape(log_rt_baseline, (n_total_days, 1), "baseline_rt_process")
-
-        deviations_raw = self.subpop_rt_deviation_process.sample(
-            n_timepoints=n_total_days,
-            n_processes=pop.n_subpops,
-            initial_value=jnp.zeros(pop.n_subpops),
-            name_prefix="subpop_deviations",
-            first_day_dow=first_day_dow,
-        )
-        require_shape(
-            deviations_raw,
-            (n_total_days, pop.n_subpops),
-            "subpop_rt_deviation_process",
-        )
-
-        # Sum-to-zero constraint ensures identifiability
-        mean_deviation = jnp.mean(deviations_raw, axis=1, keepdims=True)
-        deviations = deviations_raw - mean_deviation
-
-        log_rt_subpop = log_rt_baseline + deviations
-        rt_subpop = jnp.exp(log_rt_subpop)
-
-        gen_int = self.gen_int_rv()
-
-        I0_subpop = self._validate_and_prepare_I0(jnp.asarray(self.I0_rv()), pop)
-
-        initial_r_subpop = r_approx_from_R(
-            R=rt_subpop[0, :], g=gen_int, n_newton_steps=4
-        )
-
-        time_indices = jnp.arange(self.n_initialization_points)
-        I0_all = I0_subpop[jnp.newaxis, :] * jnp.exp(
-            initial_r_subpop[jnp.newaxis, :] * time_indices[:, jnp.newaxis]
-        )
-
-        post_init_infections_all, rt_adjusted = _compute_renewal(
-            I0=I0_all,
-            rt_raw=rt_subpop[self.n_initialization_points :, :],
+        return _compute_renewal(
+            I0=I0,
+            rt_raw=rt_raw,
             gen_int=gen_int,
             infection_feedback_strength_rv=self.infection_feedback_strength_rv,
             infection_feedback_pmf_rv=self.infection_feedback_pmf_rv,
-        )
-        rt_subpop_adjusted = jnp.vstack(
-            [rt_subpop[: self.n_initialization_points, :], rt_adjusted]
-        )
-
-        infections_all = jnp.vstack([I0_all, post_init_infections_all])
-
-        infections_aggregate = jnp.sum(
-            infections_all * pop.fractions[jnp.newaxis, :], axis=1
-        )
-
-        self._validate_output_shapes(
-            infections_aggregate,
-            infections_all,
-            n_total_days,
-            pop,
-        )
-
-        with numpyro.handlers.scope(prefix=self.name, divider="::"):
-            numpyro.deterministic("I0_init_all_subpops", I0_all)
-            numpyro.deterministic("log_rt_baseline", log_rt_baseline)
-            numpyro.deterministic("rt_baseline", jnp.exp(log_rt_baseline))
-            numpyro.deterministic("rt_subpop", rt_subpop)
-            numpyro.deterministic("rt_subpop_adjusted", rt_subpop_adjusted)
-            numpyro.deterministic("subpop_deviations", deviations)
-            numpyro.deterministic("infections_aggregate", infections_aggregate)
-
-        return LatentSample(
-            aggregate=infections_aggregate,
-            all_subpops=infections_all,
         )

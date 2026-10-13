@@ -131,7 +131,7 @@ See [Latent Infections](latent_infections.md) for that background.
 
 - **`gen_int_rv`**: Generation interval distribution $w_\tau$
 - **`I0_rv`**: Initial infection level (shared by default across subpopulations, but can be specified per subpopulation)
-- **`log_rt_time_0_rv`**: Initial value of $\log \mathcal{R}_{\text{baseline}}(t)$ at time $0$
+- **`log_rt_time_0_rv`**: Starting value of $\log \mathcal{R}(t)$, either one value shared by all subpopulations or one value per subpopulation
 
 ### Temporal processes
 
@@ -207,6 +207,41 @@ model = SubpopulationInfections(
 )
 ```
 
+To give each subpopulation its own starting $\mathcal{R}(t)$, `log_rt_time_0_rv` returns one value per subpopulation, in the order of `subpop_fractions`.
+
+```{python}
+#| label: per-subpop-start
+
+log_rt_time_0_by_subpop = jnp.array([0.4, 0.3, 0.2, 0.1, 0.0, -0.1])
+
+per_subpop_model = SubpopulationInfections(
+    name="SubpopulationInfections",
+    gen_int_rv=gen_int_rv,
+    I0_rv=DeterministicVariable("I0", I0_val),
+    log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", log_rt_time_0_by_subpop),
+    baseline_rt_process=model.baseline_rt_process,
+    subpop_rt_deviation_process=RandomWalk(
+        innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+    ),
+    n_initialization_points=n_init,
+)
+
+with numpyro.handlers.seed(rng_seed=42):
+    with numpyro.handlers.trace() as start_trace:
+        per_subpop_model.sample(
+            n_days_post_init=n_days,
+            subpop_fractions=subpop_fractions,
+        )
+
+first_day_rt = start_trace["SubpopulationInfections::rt_subpop"]["value"][0]
+print(f"exp(log_rt_time_0):  {np.round(np.exp(log_rt_time_0_by_subpop), 2)}")
+print(f"Rt on the first day: {np.round(np.array(first_day_rt), 2)}")
+```
+
+With `RandomWalk` deviations, each subpopulation starts exactly at its own value; an `AR1` deviation process, as in `model` above, draws its first value around it.
+In a fitted model, the per-subpopulation form is usually a prior, for example `DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5).expand([n_subpops]))`.
+The baseline then starts at the mean of the six draws, so its prior standard deviation is $0.5 / \sqrt{6} \approx 0.20$, not $0.5$, and each subpopulation's starting difference from the baseline has standard deviation $0.5 \sqrt{5/6} \approx 0.46$.
+
 ## The Sum-to-Zero Constraint
 
 Without a constraint, the baseline and deviations are not identifiable: shifting the baseline up by some amount $c$ and all deviations down by $c$ produces the same subpopulation $\mathcal{R}_k(t)$ values.
@@ -265,7 +300,7 @@ Two parameters matter most when tuning these processes:
 The deviation process controls how subpopulation $\mathcal{R}_k(t)$ values move relative to the baseline $\mathcal{R}_{\text{baseline}}(t)$, not the overall trend itself.
 How $\delta_k(t)$ behaves at $t = 0$ depends on the process.
 `AR1` draws its initial value from the stationary distribution, so the prior spread of $\delta_k(0)$ already matches the stationary standard deviation and stays at that width throughout.
-`RandomWalk` starts at exactly $\delta_k(0) = 0$ and its spread grows over time.
+With one starting value for all subpopulations, `RandomWalk` starts at exactly $\delta_k(0) = 0$ and its spread grows over time.
 
 The key question: **are local differences transient or persistent?** This determines whether subpopulations quickly return to the baseline or can diverge and remain different over time.
 
@@ -767,3 +802,5 @@ To learn how to build complete models with observation processes, see:
 - [Observation Processes: Counts](observation_processes_counts.md)
 - [Observation Processes: Measurements](observation_processes_measurements.md)
 - [Building Multi-Signal Models](building_multisignal_models.md)
+
+For subpopulations linked by mobility, where residents spend part of each day in other regions, see [Latent Mobility Infections](latent_mobility_infections.md).
