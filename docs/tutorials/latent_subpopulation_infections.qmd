@@ -802,3 +802,5 @@ To learn how to build complete models with observation processes, see:
 - [Observation Processes: Counts](observation_processes_counts.md)
 - [Observation Processes: Measurements](observation_processes_measurements.md)
 - [Building Multi-Signal Models](building_multisignal_models.md)
+
+For subpopulations linked by mobility, where residents spend part of each day in other regions, see [Latent Mobility Infections](latent_mobility_infections.md).
