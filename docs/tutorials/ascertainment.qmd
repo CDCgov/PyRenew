@@ -115,7 +115,7 @@ Use `IndependentAscertainment` when a signal needs a temporal process or when re
 
 For constant rate that is not related to another signal's rate, an ascertainment component is not required.
 In this situation, the ascertainment component would only be used once, when specifying the `ascertainment_rate_rv` on the observation process corresponding to that signal via `ascertainment.for_signal()` method.
-Since the `ascertainment.for_signal()` method returns a `RandomVariable` accessor specifying the `RandomVariable` directly, simplifies the model specification:
+Since the `ascertainment.for_signal()` method returns a `RandomVariable` accessor, specifying the `RandomVariable` directly simplifies the model specification:
 
 ```
 hospital_obs = PopulationCounts(
