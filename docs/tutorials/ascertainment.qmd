@@ -106,7 +106,7 @@ Use `JointAscertainment` when prior dependence among baseline rates is naturally
 
 Use `RatioLinkedAscertainment` when a relative quantity, such as IHR / IEDR, is scientifically meaningful and can be assigned an interpretable prior.
 
-For constant, unrelated rates that do not otherwise need an ascertainment component, each observation process can instead receive a `RandomVariable` directly, as described in the next section.
+For constant, unrelated rates that do not otherwise need an ascertainment component each observation process can instead receive a `RandomVariable` directly, as described in the next section.
 
 ## Independent ascertainment rates
 
