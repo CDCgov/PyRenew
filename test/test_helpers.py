@@ -175,7 +175,7 @@ class StubMeasurementObservation(MeasurementObservation):
         pmf = self.temporal_pmf_rv()
         self._validate_pmf(pmf, "temporal_pmf_rv")
 
-    def _predicted_obs(self, infections):
+    def _predicted_obs(self, infections: ArrayLike) -> ArrayLike:
         """
         Return infections unchanged (identity transform).
 

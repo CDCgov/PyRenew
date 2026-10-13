@@ -360,7 +360,7 @@ model = builder.build()
 
 - Ascertainment models produce one scalar baseline rate per signal.
 - Supplying `temporal_processes` adds signal-specific deviations to selected baselines to model time-varying ascertainment rates.
-- For `JointAscertainment` and `RatioLinkedAscertainemt` models, the temporal deviations do not preserve the baseline covariance or ratio pointwise over time.
+- For `JointAscertainment` and `RatioLinkedAscertainment` models, the temporal deviations do not preserve the baseline covariance or ratio pointwise over time.
 
 The choice of ascertainment model should consider:
 
