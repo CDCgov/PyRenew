@@ -7,7 +7,6 @@ Combines a latent infection process with multiple observation processes.
 from __future__ import annotations
 
 import datetime as dt
-from collections.abc import Mapping
 
 import jax.numpy as jnp
 import numpy as np
@@ -353,40 +352,6 @@ class MultiSignalModel(Model):
                 **obs_data,
             )
 
-    def _sample_ascertainment_models(
-        self,
-        n_timepoints: int,
-        first_day_dow: int | None,
-    ) -> dict[str, Mapping[str, ArrayLike]]:
-        """Sample and validate every registered ascertainment model.
-
-        Parameters
-        ----------
-        n_timepoints
-            Length of the padded shared model axis.
-        first_day_dow
-            Day-of-week for the first point on that axis, or ``None`` when no
-            calendar anchor was supplied.
-
-        Returns
-        -------
-        dict[str, Mapping[str, ArrayLike]]
-            Sampled ascertainment values keyed first by registered model name
-            and then by signal name.
-        """
-        sampled_values: dict[str, Mapping[str, ArrayLike]] = {}
-        for name, ascertainment_model in self.ascertainment_models.items():
-            values = ascertainment_model.sample(
-                n_timepoints=n_timepoints,
-                first_day_dow=first_day_dow,
-            )
-            ascertainment_model.validate_sampled_values(
-                values,
-                n_timepoints=n_timepoints,
-            )
-            sampled_values[name] = values
-        return sampled_values
-
     def sample(
         self,
         n_days_post_init: int,
@@ -457,10 +422,13 @@ class MultiSignalModel(Model):
         }
 
         n_timepoints = self.latent.n_initialization_points + n_days_post_init
-        ascertainment_values = self._sample_ascertainment_models(
-            n_timepoints=n_timepoints,
-            first_day_dow=first_day_dow,
-        )
+        ascertainment_values = {
+            name: ascertainment_model.sample(
+                n_timepoints=n_timepoints,
+                first_day_dow=first_day_dow,
+            )
+            for name, ascertainment_model in self.ascertainment_models.items()
+        }
 
         with ascertainment_context(ascertainment_values):
             # Apply each observation process

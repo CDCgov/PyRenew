@@ -172,9 +172,7 @@ def e_rtdaily_rw_timevary_model(
 ) -> MultiSignalModel:
     """Build an ED model with daily Rt and time-varying ascertainment.
 
-    This fixture reproduces the PyRenew structure of the
-    ``e_rtdaily_rw_timevary`` model without depending on the external ARM
-    model builder. The ascertainment baseline is sampled independently and a
+    The ascertainment baseline is sampled independently and a
     calendar-aligned weekly AR(1) process supplies logit-scale deviations.
 
     Parameters

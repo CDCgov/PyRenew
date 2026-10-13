@@ -432,61 +432,6 @@ class TestAscertainmentModelContract:
         ):
             model.sample(n_timepoints=4)
 
-    def test_accepts_scalar_and_full_axis_values(self) -> None:
-        """Test scalar and exact full-axis trajectories are valid."""
-        model = FixedAscertainmentModel(
-            "ascertainment",
-            {"hospital": 0.2, "ed": 0.3},
-        )
-
-        model.validate_sampled_values(
-            {"hospital": jnp.array(0.2), "ed": jnp.arange(4)},
-            n_timepoints=4,
-        )
-
-    def test_rejects_non_mapping_values(self) -> None:
-        """Test sampled values must be returned as a mapping."""
-        model = FixedAscertainmentModel("ascertainment", {"hospital": 0.2})
-
-        with pytest.raises(TypeError, match="ascertainment.*mapping"):
-            model.validate_sampled_values([0.2], n_timepoints=4)  # type: ignore[arg-type]
-
-    @pytest.mark.parametrize(
-        "values",
-        [
-            {},
-            {"hospital": 0.2, "ed": 0.3},
-        ],
-    )
-    def test_rejects_missing_or_extra_signals(
-        self,
-        values: Mapping[str, ArrayLike],
-    ) -> None:
-        """Test sampled signal names must exactly match the model signals."""
-        model = FixedAscertainmentModel("ascertainment", {"hospital": 0.2})
-
-        with pytest.raises(ValueError, match="ascertainment.*signals"):
-            model.validate_sampled_values(values, n_timepoints=4)
-
-    @pytest.mark.parametrize(
-        "value",
-        [
-            jnp.ones(1),
-            jnp.ones(3),
-            jnp.ones((4, 1)),
-            jnp.ones((4, 1, 1)),
-        ],
-    )
-    def test_rejects_invalid_sample_shapes(self, value: ArrayLike) -> None:
-        """Test only scalar or exact full-axis values are accepted."""
-        model = FixedAscertainmentModel("ascertainment", {"hospital": 0.2})
-
-        with pytest.raises(
-            ValueError,
-            match=r"ascertainment.*hospital.*shape.*\(\).*\(4,\)",
-        ):
-            model.validate_sampled_values({"hospital": value}, n_timepoints=4)
-
 
 def _make_public_ascertainment(  # numpydoc ignore=RT01
     model_kind: str,

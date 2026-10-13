@@ -48,7 +48,7 @@ These components reflect fundamental modeling assumptions about how information 
 
 When a signal's ascertainment rate has little to do with ascertainment rates for other signals, it can be modeled as statistically *independent* of other ascertainment rates.
 PyRenew provides an `IndependentAscertainment` class.
-Alternatively, PyRenew allows the user to use a raw `RandomVariable` to specify any independent ascertainment rates.
+Alternatively, PyRenew allows the user to use a raw `RandomVariable` to specify any independent ascertainment rate.
 
 Sometimes, however, ascertainment rates for two or more signals in a multi-signal model should be modeled as statistically *dependent*.
 For example, hospital admissions and emergency department visits both reflect the degree to which infected individuals need to and are able to obtain care.
@@ -100,14 +100,13 @@ They differ primarily in how the scalar baseline rates are specified and whether
   | `JointAscertainment`                                              | Logit-scale multivariate normal                                | Prior covariance                     | Inverse logit keeps every rate in `(0, 1)`             |
   | `RatioLinkedAscertainment`                                        | A base rate `RandomVariable` <br> and a ratio `RandomVariable` | Linked rate = base rate x multiplier | The derived linked rate is not bounded by construction |
 
-Use `IndependentAscertainment` when signal rates are not related through a joint prior or deterministic relationship.
-It is particularly useful when one or more signals need temporal processes or when a named model-level component makes the model easier to organize.
+Use `IndependentAscertainment` when a signal or signals have time-varying ascertainment rates that are not related through a joint prior or deterministic relationship.
 
 Use `JointAscertainment` when prior dependence among baseline rates is naturally represented by a covariance structure on the logit scale.
 
 Use `RatioLinkedAscertainment` when a relative quantity, such as IHR / IEDR, is scientifically meaningful and can be assigned an interpretable prior.
 
-For constant, unrelated rates that do not otherwise need an ascertainment component, each observation process can instead receive a RandomVariable directly, as described in the next section.
+For constant, unrelated rates that do not otherwise need an ascertainment component, each observation process can instead receive a `RandomVariable` directly, as described in the next section.
 
 ## Independent ascertainment rates
 
@@ -116,7 +115,7 @@ Use `IndependentAscertainment` when a signal needs a temporal process or when re
 
 For constant rate that is not related to another signal's rate, an ascertainment component is not required.
 In this situation, the ascertainment component would only be used once, when specifying the `ascertainment_rate_rv` on the observation process corresponding to that signal via `ascertainment.for_signal()` method.
-Since the `ascertainment.for_signal()` method returns a `RandomVariable` accessor, specifying the `RandomVariable` directly, simplifies the model specification:
+Since the `ascertainment.for_signal()` method returns a `RandomVariable` accessor specifying the `RandomVariable` directly, simplifies the model specification:
 
 ```
 hospital_obs = PopulationCounts(

@@ -286,7 +286,14 @@ class TestTimeVaryingAscertainment:
         assert jnp.all(jnp.isfinite(predicted[2:]))
 
     def test_delay_padding_does_not_create_nan_rate_gradients(self) -> None:
-        """Test padded potential counts have a finite ascertainment gradient."""
+        """Test padded counts stay NaN and have a finite ascertainment gradient.
+
+        The gradient is finite because ``_apply_ascertainment`` multiplies the
+        rate only by NaN-free counts. The ``jnp.where`` in ``finite_sum`` only
+        removes NaN values from the summed output; it would not prevent a NaN
+        gradient if ``_apply_ascertainment`` multiplied the rate by the padded
+        counts directly.
+        """
         process = PopulationCounts(
             name="hospital",
             ascertainment_rate_rv=DeterministicVariable("rate", 0.2),
@@ -306,8 +313,11 @@ class TestTimeVaryingAscertainment:
             scaled = process._apply_ascertainment(potential_counts, rate)
             return jnp.sum(jnp.where(jnp.isnan(scaled), 0.0, scaled))
 
+        scaled = process._apply_ascertainment(potential_counts, jnp.array(0.2))
         gradient = jax.grad(finite_sum)(jnp.array(0.2))
 
+        assert jnp.isnan(scaled[0])
+        assert jnp.all(jnp.isfinite(scaled[1:]))
         assert jnp.isfinite(gradient)
         assert jnp.isclose(gradient, 6.0)
 

@@ -2,7 +2,6 @@
 Tests for PyrenewBuilder and MultiSignalModel.
 """
 
-from collections.abc import Mapping
 from datetime import date, timedelta
 
 import jax.numpy as jnp
@@ -92,41 +91,6 @@ class RecordingTemporalProcess:
             }
         )
         return jnp.zeros((n_timepoints, n_processes))
-
-
-class MalformedAscertainmentModel(AscertainmentModel):
-    """Override the common sampler with malformed output for boundary tests."""
-
-    def __init__(self, name: str) -> None:
-        """Initialize a deliberately nonconforming ascertainment model."""
-        super().__init__(name=name, signals=("hospital",))
-
-    def _sample_baseline_rates(  # numpydoc ignore=RT01
-        self,
-    ) -> Mapping[str, ArrayLike]:
-        """Return a valid baseline that the overridden sampler does not use."""
-        return {"hospital": 0.2}
-
-    def sample(
-        self,
-        n_timepoints: int,
-        first_day_dow: int | None = None,
-    ) -> Mapping[str, ArrayLike]:
-        """Return an invalid two-dimensional final ascertainment value.
-
-        Parameters
-        ----------
-        n_timepoints
-            Shared-axis length, ignored.
-        first_day_dow
-            Shared-axis day of week, ignored.
-
-        Returns
-        -------
-        Mapping[str, ArrayLike]
-            Malformed signal output.
-        """
-        return {"hospital": jnp.ones((2, 1))}
 
 
 def _obs_date_for_dow(target_first_day_dow: int, n_init: int) -> date:
@@ -1005,31 +969,6 @@ class TestMultiSignalModelSampling:
             )
 
         assert process.sample_calls[0]["first_day_dow"] is None
-
-    def test_malformed_ascertainment_fails_before_observation_sampling(
-        self,
-        simple_builder: PyrenewBuilder,
-    ) -> None:
-        """Test output validation completes before any observation runs."""
-        built = simple_builder.build()
-        malformed = MalformedAscertainmentModel("malformed")
-        model = MultiSignalModel(
-            latent_process=built.latent,
-            observations=built.observations,
-            ascertainment_models={"malformed": malformed},
-        )
-
-        with numpyro.handlers.seed(rng_seed=42):
-            with numpyro.handlers.trace() as trace:
-                with pytest.raises(ValueError, match=r"malformed.*hospital.*shape"):
-                    model.sample(
-                        n_days_post_init=5,
-                        population_size=1_000_000,
-                        subpop_fractions=SUBPOP_FRACTIONS,
-                        hospital={"obs": None},
-                    )
-
-        assert "hospital_obs" not in trace
 
     def test_first_day_dow_reaches_calendar_aligned_latent_process(self):
         """MultiSignalModel forwards model-axis day of week to the latent process."""

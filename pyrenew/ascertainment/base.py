@@ -252,6 +252,11 @@ class AscertainmentModel(metaclass=ABCMeta):
     ) -> dict[str, Array]:
         """Validate and convert scalar baseline ascertainment rates.
 
+        A signal without a temporal process may have a baseline in [0, 1].
+        A signal with a temporal process requires a baseline strictly inside
+        (0, 1), because the temporal deviation is added on the logit scale
+        and the logit of 0 or 1 is infinite.
+
         Parameters
         ----------
         baseline_rates
@@ -401,54 +406,6 @@ class AscertainmentModel(metaclass=ABCMeta):
             result[signal] = rate
 
         return result
-
-    def validate_sampled_values(
-        self,
-        values: Mapping[str, ArrayLike],
-        n_timepoints: int,
-    ) -> None:
-        """Validate sampled signal names and output shapes.
-
-        Parameters
-        ----------
-        values
-            Sampled ascertainment values keyed by signal name.
-        n_timepoints
-            Length of the shared model time axis.
-
-        Raises
-        ------
-        TypeError
-            If ``values`` is not a mapping.
-        ValueError
-            If signal names do not match this model or a value is neither a
-            scalar nor a full-axis trajectory.
-        """
-        if not isinstance(values, Mapping):
-            raise TypeError(
-                f"Ascertainment model {self.name!r} must return a mapping, "
-                f"got {type(values).__name__}."
-            )
-
-        actual_signals = set(values)
-        expected_signals = set(self.signals)
-        if actual_signals != expected_signals:
-            missing = tuple(signal for signal in self.signals if signal not in values)
-            extra = tuple(signal for signal in values if signal not in expected_signals)
-            raise ValueError(
-                f"Ascertainment model {self.name!r} must return exactly signals "
-                f"{self.signals}. Missing: {missing}. Extra: {extra}."
-            )
-
-        allowed_shapes = ((), (n_timepoints,))
-        for signal in self.signals:
-            actual_shape = jnp.asarray(values[signal]).shape
-            if actual_shape not in allowed_shapes:
-                raise ValueError(
-                    f"Ascertainment model {self.name!r}, signal {signal!r}, "
-                    f"returned shape {actual_shape}; allowed shapes are () and "
-                    f"({n_timepoints},)."
-                )
 
     @abstractmethod
     def _sample_baseline_rates(self) -> Mapping[str, ArrayLike]:
