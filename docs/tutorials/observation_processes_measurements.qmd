@@ -203,7 +203,7 @@ $$
 
 where:
 
-- $I(t-d)$ is the number of infections per resident on day $t-d$ (see [Infection Resolution](building_multisignal_models.md#infection-resolution))
+- $I(t-d)$ is the number of infections per subpopulation member on day $t-d$ (see [Infection Resolution](building_multisignal_models.md#infection-resolution))
 - $\pi_d$ is the shedding kinetics PMF, giving the fraction of total shedding occurring $d$ days after infection, analogous to the delay distribution in count observation models
 - $G$ is the number of genome copies shed per infection
 - $V$ is the wastewater volume per person per day
@@ -245,7 +245,7 @@ class Wastewater(MeasurementObservation):
     """
     Wastewater viral concentration observation process.
 
-    Transforms infections per resident of each subpopulation into
+    Transforms infections per member of each subpopulation into
     predicted log-concentrations via shedding kinetics convolution and
     genome/volume scaling.
     """
@@ -507,7 +507,11 @@ plot_infections = (
         linetype="dashed",
         alpha=0.5,
     )
-    + p9.labs(x="Day", y="Daily Infections per Resident", title="Infections (Input)")
+    + p9.labs(
+        x="Day",
+        y="Daily Infections per Subpopulation member",
+        title="Infections (Input)",
+    )
     + theme_tutorial
     + p9.annotate(
         "text",

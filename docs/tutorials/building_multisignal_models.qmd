@@ -170,20 +170,20 @@ flowchart TB
 Different observation processes observe different levels of the model hierarchy.
 Each observation process declares an **infection resolution** that determines what infection data it receives:
 
-  | Resolution            | Receives                                                              | Example signals                  |
-  | --------------------- | --------------------------------------------------------------------- | -------------------------------- |
-  | `"aggregate"`         | Infection counts for the whole jurisdiction, shape `(T,)`             | Hospital admissions, case counts |
-  | `"subpop"`            | Infection counts in each subpopulation, shape `(T, n_subpops)`        | Regional case counts             |
-  | `"subpop_per_capita"` | Infections per resident of each subpopulation, shape `(T, n_subpops)` | Wastewater concentrations        |
+  | Resolution            | Receives                                                            | Example signals                  |
+  | --------------------- | ------------------------------------------------------------------- | -------------------------------- |
+  | `"aggregate"`         | Infection counts for the whole jurisdiction, shape `(T,)`           | Hospital admissions, case counts |
+  | `"subpop"`            | Infection counts in each subpopulation, shape `(T, n_subpops)`      | Regional case counts             |
+  | `"subpop_per_capita"` | Infections per member of each subpopulation, shape `(T, n_subpops)` | Wastewater concentrations        |
 
 The model routes latent infections to observation processes based on each process's declared resolution.
 
-The latent infection process generates infections per resident: $I_k(t)$ is the number of new infections among residents of subpopulation $k$ on day $t$, divided by the number of residents of $k$.
+The latent infection process generates infections per individual: $I_k(t)$ is the number of new infections among members of subpopulation $k$ on day $t$, divided by the number of members of $k$.
 The model converts these to the scale each kind of signal needs, using `population_size` ($N$) and `subpop_fractions` ($p_k$):
 
 - **Count signals** need infection counts.
-  Subpopulation $k$ has $N p_k$ residents, so it has $N p_k I_k(t)$ infections, and these counts sum to the jurisdiction total $N \sum_k p_k I_k(t)$.
-- **Some measurement signals** reflection information about infections per resident.
+  Subpopulation $k$ has $N p_k$ members, so it has $N p_k I_k(t)$ infections, and these counts sum to the jurisdiction total $N \sum_k p_k I_k(t)$.
+- **Some measurement signals** provide information about infections per member of the subpopulation.
   For example, the number genomes shed into wastewater scales with the number of infected individuals, and the total volume of wastewater scales with the total population, so it can be reasonable to model wastewater concentrations purely as a function of per-capita incidence $I_k(t)$.
 
 For subpopulation-level observations, the observation process selects which subpopulations it observes using `subpop_indices` provided at sample/fit time.
@@ -434,7 +434,7 @@ class Wastewater(MeasurementObservation):
     """
     Wastewater viral concentration observation process.
 
-    Transforms infections per resident of each subpopulation into
+    Transforms infections per member of each subpopulation into
     predicted log-concentrations via shedding kinetics convolution and
     genome/volume scaling.
     """
