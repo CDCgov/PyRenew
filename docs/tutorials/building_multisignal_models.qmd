@@ -183,7 +183,7 @@ The model converts these to the scale each kind of signal needs, using `populati
 
 - **Count signals** need infection counts.
   Subpopulation $k$ has $N p_k$ residents, so it has $N p_k I_k(t)$ infections, and these counts sum to the jurisdiction total $N \sum_k p_k I_k(t)$.
-- **Concentration signals** need infections per resident.
+- **Some measurement signals** reflection information about infections per resident.
   The amount of virus shed in a catchment area and the volume of wastewater that dilutes it both grow with the number of residents, so the number of residents cancels and the concentration depends only on $I_k(t)$.
 
 For subpopulation-level observations, the observation process selects which subpopulations it observes using `subpop_indices` provided at sample/fit time.
