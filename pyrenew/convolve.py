@@ -279,7 +279,7 @@ def compute_prop_already_reported(
     Notes
     -----
     When ``n_timepoints`` is shorter than the delay distribution's
-    support (minus ``right_truncation_offset``), returns the final ``n_timepoints`` 
+    support (minus ``right_truncation_offset``), returns the final ``n_timepoints``
     entries of the full-support result.
     """
     cdf = jnp.cumsum(reporting_delay_pmf)
