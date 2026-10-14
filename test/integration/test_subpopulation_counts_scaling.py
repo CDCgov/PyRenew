@@ -90,7 +90,7 @@ def _simulate(n_init: int) -> dict[str, np.ndarray]:
         r_approx_from_R(R=jnp.asarray(rt[0]), g=jnp.asarray(GEN_INT), n_newton_steps=4)
     )
     infections = np.zeros(n_total)
-    infections[:n_init] = I0_PER_RESIDENT * np.exp(
+    infections[:n_init] = I0_PER_CAPITA * np.exp(
         initial_growth_rate * np.arange(n_init)
     )
     reversed_gen_int = GEN_INT[::-1]
@@ -135,7 +135,7 @@ def scaling_model() -> MultiSignalModel:
         SubpopulationInfections,
         name="latent",
         gen_int_rv=DeterministicPMF("gen_int", jnp.asarray(GEN_INT)),
-        I0_rv=DeterministicVariable("I0", jnp.full(N_SUBPOPS, I0_PER_RESIDENT)),
+        I0_rv=DeterministicVariable("I0", jnp.full(N_SUBPOPS, I0_PER_CAPITA)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
         baseline_rt_process=RandomWalk(DeterministicVariable("baseline_sd", 0.05)),
         subpop_rt_deviation_process=RandomWalk(
