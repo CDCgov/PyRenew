@@ -51,8 +51,16 @@ class MultiSignalModel(Model):
     -----
     The model automatically routes latent infections to observations based on
     each observation's infection_resolution() method:
-    - "aggregate" → receives aggregate infections from latent process
-    - "subpop" → receives all subpopulation infections; observation selects via indices
+
+    - ``"aggregate"``: infection counts for the whole jurisdiction,
+      shape ``(n_total,)``.
+    - ``"subpop"``: infection counts in each subpopulation,
+      shape ``(n_total, n_subpops)``.
+    - ``"subpop_per_capita"``: infections per member of each
+      subpopulation, shape ``(n_total, n_subpops)``.
+
+    Subpopulation observations select their subpopulations via
+    ``subpop_indices``.
     """
 
     def __init__(
@@ -86,7 +94,7 @@ class MultiSignalModel(Model):
         self.ascertainment_models = ascertainment_models
         self.validate()
 
-    _SUPPORTED_RESOLUTIONS = {"aggregate", "subpop"}
+    _SUPPORTED_RESOLUTIONS = {"aggregate", "subpop", "subpop_per_capita"}
 
     def validate(self) -> None:
         """
@@ -371,8 +379,9 @@ class MultiSignalModel(Model):
         n_days_post_init
             Number of days to simulate after initialization period
         population_size
-            Total population size. Used to convert infection proportions
-            (from latent process) to infection counts (for observation processes).
+            Total population size. Aggregate infections are multiplied by
+            ``population_size``; infections in subpopulation ``k`` are
+            multiplied by ``population_size * subpop_fractions[k]``.
         subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
         obs_start_date
@@ -400,25 +409,27 @@ class MultiSignalModel(Model):
         self._check_obs_start_date(obs_start_date)
         first_day_dow = self._resolve_first_day_dow(obs_start_date)
 
-        # Generate latent infections (proportions)
         latent_sample = self.latent.sample(
             n_days_post_init=n_days_post_init,
             subpop_fractions=subpop_fractions,
             first_day_dow=first_day_dow,
         )
+        pop = self.latent._parse_and_validate_fractions(
+            subpop_fractions=subpop_fractions,
+        )
 
-        # Scale from proportions to counts
         inf_aggregate = latent_sample.aggregate * population_size
-        inf_all = latent_sample.all_subpops * population_size
+        inf_subpop = (
+            latent_sample.all_subpops * population_size * pop.fractions[jnp.newaxis, :]
+        )
 
-        # Record scaled infections for posterior analysis
         numpyro.deterministic("latent_infections", inf_aggregate)
-        numpyro.deterministic("latent_infections_by_subpop", inf_all)
+        numpyro.deterministic("latent_infections_by_subpop", inf_subpop)
 
-        # Map infection resolution to infection arrays
         latent_map = {
             "aggregate": inf_aggregate,
-            "subpop": inf_all,
+            "subpop": inf_subpop,
+            "subpop_per_capita": latent_sample.all_subpops,
         }
 
         n_timepoints = self.latent.n_initialization_points + n_days_post_init

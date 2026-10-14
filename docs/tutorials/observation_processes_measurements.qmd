@@ -90,7 +90,7 @@ The core convolution structure is shared with count observations, but key aspect
   | Output space     | Linear (expected counts)              | Often log-transformed          |
   | Noise model      | Poisson or Negative Binomial          | Normal (often on log scale)    |
   | Scaling          | Ascertainment rate $\alpha \in [0,1]$ | Domain-specific                |
-  | Subpop structure | Optional (`CountsBySubpop`)           | Inherent (sensor/site effects) |
+  | Subpop structure | Optional (`SubpopulationCounts`)      | Inherent (sensor/site effects) |
 
 ### The noise model
 
@@ -203,7 +203,7 @@ $$
 
 where:
 
-- $I(t-d)$ is the number of infections on day $t-d$
+- $I(t-d)$ is the number of infections per subpopulation member on day $t-d$ (see [Infection Resolution](building_multisignal_models.md#infection-resolution))
 - $\pi_d$ is the shedding kinetics PMF, giving the fraction of total shedding occurring $d$ days after infection, analogous to the delay distribution in count observation models
 - $G$ is the number of genome copies shed per infection
 - $V$ is the wastewater volume per person per day
@@ -245,8 +245,9 @@ class Wastewater(MeasurementObservation):
     """
     Wastewater viral concentration observation process.
 
-    Transforms site-level infections into predicted log-concentrations
-    via shedding kinetics convolution and genome/volume scaling.
+    Transforms infections per member of each subpopulation into
+    predicted log-concentrations via shedding kinetics convolution and
+    genome/volume scaling.
     """
 
     def __init__(
@@ -461,7 +462,7 @@ day_one = first_valid_observation_day(ww_process)
 # Create infections with a spike (shape: n_days x n_subpops)
 infection_spike_day = day_one + 10
 infections = jnp.zeros((n_days, 1))  # 1 subpopulation
-infections = infections.at[infection_spike_day, 0].set(2000.0)
+infections = infections.at[infection_spike_day, 0].set(0.002)
 
 # For plotting
 rel_spike_day = infection_spike_day - day_one
@@ -506,7 +507,11 @@ plot_infections = (
         linetype="dashed",
         alpha=0.5,
     )
-    + p9.labs(x="Day", y="Daily Infections", title="Infections (Input)")
+    + p9.labs(
+        x="Day",
+        y="Daily Infections per Subpopulation member",
+        title="Infections (Input)",
+    )
     + theme_tutorial
     + p9.annotate(
         "text",
@@ -714,8 +719,8 @@ The observed concentrations reflect both the underlying infection differences AN
 
 # Two subpopulations with different infection patterns
 n_days_mp = 40
-infections_subpop1 = 1000.0 * jnp.exp(-jnp.arange(n_days_mp) / 20.0)  # Slow decay
-infections_subpop2 = 2000.0 * jnp.exp(-jnp.arange(n_days_mp) / 10.0)  # Fast decay
+infections_subpop1 = 0.001 * jnp.exp(-jnp.arange(n_days_mp) / 20.0)  # Slow decay
+infections_subpop2 = 0.002 * jnp.exp(-jnp.arange(n_days_mp) / 10.0)  # Fast decay
 infections_multi = jnp.stack([infections_subpop1, infections_subpop2], axis=1)
 
 # Two sensors, each observing a different subpopulation

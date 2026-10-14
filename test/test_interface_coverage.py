@@ -193,9 +193,9 @@ def test_counts_by_subpop_infection_resolution():
 
 
 def test_measurements_infection_resolution():
-    """ConcreteMeasurementObservation.infection_resolution() returns 'subpop'."""
+    """ConcreteMeasurementObservation.infection_resolution() returns 'subpop_per_capita'."""
     m = _make_measurements()
-    assert m.infection_resolution() == "subpop"
+    assert m.infection_resolution() == "subpop_per_capita"
 
 
 def test_base_count_observation_infection_resolution_raises():

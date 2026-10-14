@@ -160,6 +160,38 @@ class ConcreteMeasurementObservation(MeasurementObservation):
         return log_predicted
 
 
+class StubMeasurementObservation(MeasurementObservation):
+    """Minimal concrete MeasurementObservation whose predicted values are its infections."""
+
+    def validate(self) -> None:
+        """
+        Validate parameters.
+
+        Raises
+        ------
+        ValueError
+            If PMF is invalid.
+        """
+        pmf = self.temporal_pmf_rv()
+        self._validate_pmf(pmf, "temporal_pmf_rv")
+
+    def _predicted_obs(self, infections: ArrayLike) -> ArrayLike:
+        """
+        Return infections unchanged (identity transform).
+
+        Parameters
+        ----------
+        infections : ArrayLike
+            Input infections.
+
+        Returns
+        -------
+        ArrayLike
+            Same as input.
+        """
+        return infections
+
+
 def create_mock_infections(
     n_days: int,
     peak_day: int = 10,

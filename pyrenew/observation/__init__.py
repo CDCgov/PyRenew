@@ -11,7 +11,10 @@ Observation processes for connecting infections to observed data.
 All observation processes implement:
 
 - ``sample()``: Sample observations given infections
-- ``infection_resolution()``: returns ``"aggregate"`` or ``"subpop"``
+- ``infection_resolution()``: returns ``"aggregate"`` (infection counts for
+  the whole jurisdiction), ``"subpop"`` (infection counts in each
+  subpopulation), or ``"subpop_per_capita"`` (infections per member of
+  each subpopulation)
 - ``lookback_days()``: returns required infection history length
 
 Noise models (``CountNoise``, ``MeasurementNoise``) are composable—pass them
