@@ -66,7 +66,7 @@ def _simulate(n_init: int) -> dict[str, np.ndarray]:
     Simulate per-capita infections and observed counts for each subpopulation.
 
     Initialization-period infections grow exponentially from
-    ``I0_PER_RESIDENT`` at the rate implied by the first day's Rt, as in
+    ``I0_PER_CAPITA`` at the rate implied by the first day's Rt, as in
     ``SubpopulationInfections``. Counts in subpopulation ``k`` are
     infections per resident times ``POPULATION_SIZE * SUBPOP_FRACTIONS[k]``,
     delayed by ``DELAY``, scaled by ``ASCERTAINMENT``, and drawn from a
