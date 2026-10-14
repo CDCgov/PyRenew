@@ -63,7 +63,7 @@ def _true_rt(n_total: int) -> np.ndarray:
 
 def _simulate(n_init: int) -> dict[str, np.ndarray]:
     """
-    Simulate infections per resident and observed counts for each subpopulation.
+    Simulate per-capita infections and observed counts for each subpopulation.
 
     Initialization-period infections grow exponentially from
     ``I0_PER_RESIDENT`` at the rate implied by the first day's Rt, as in
