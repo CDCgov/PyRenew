@@ -95,7 +95,7 @@ class MeasurementObservation(BaseObservationProcess):
         """
         Return "subpop_per_capita" for measurement observations.
 
-        Measurement observations receive infections per resident of each
+        Measurement observations receive infections per member of each
         subpopulation, because each measurement corresponds to a specific
         catchment area and depends on infections per resident.
 
