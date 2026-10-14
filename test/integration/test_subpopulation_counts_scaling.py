@@ -3,7 +3,7 @@ Integration test: subpopulation count scaling in MultiSignalModel (issue 903).
 
 Four subpopulations share the same true Rt and the same initial infections
 per resident, so they differ only in population size. Counts are simulated
-as infections per resident times the subpopulation population. A
+as infections per capita times the subpopulation population. A
 SubpopulationInfections model fitted to these counts should recover Rt in
 every subpopulation, with no dependence on subpopulation size, and its
 recorded subpopulation counts should sum to the aggregate count.
