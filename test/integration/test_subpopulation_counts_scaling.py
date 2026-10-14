@@ -19,8 +19,10 @@ import numpyro.distributions as dist
 import pytest
 
 from pyrenew.ascertainment import IndependentAscertainment
+from pyrenew.convolve import compute_delay_ascertained_incidence
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import RandomWalk, SubpopulationInfections
+from pyrenew.latent.infection_functions import compute_infections_from_rt
 from pyrenew.math import r_approx_from_R
 from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import PoissonNoise, SubpopulationCounts
@@ -89,19 +91,23 @@ def _simulate(n_init: int) -> dict[str, np.ndarray]:
     initial_growth_rate = float(
         r_approx_from_R(R=jnp.asarray(rt[0]), g=jnp.asarray(GEN_INT), n_newton_steps=4)
     )
-    infections = np.zeros(n_total)
-    infections[:n_init] = I0_PER_CAPITA * np.exp(
-        initial_growth_rate * np.arange(n_init)
+    initial_infections = I0_PER_CAPITA * np.exp(initial_growth_rate * np.arange(n_init))
+    post_initialization_infections = compute_infections_from_rt(
+        I0=jnp.asarray(initial_infections[-GEN_INT.size :]),
+        Rt=jnp.asarray(rt[n_init:]),
+        reversed_generation_interval_pmf=jnp.asarray(GEN_INT[::-1]),
     )
-    reversed_gen_int = GEN_INT[::-1]
-    for t in range(n_init, n_total):
-        infections[t] = rt[t] * reversed_gen_int @ infections[t - GEN_INT.size : t]
-    counts = POPULATION_SIZE * np.outer(infections, SUBPOP_FRACTIONS)
-    predicted = np.zeros_like(counts)
-    for d, weight in enumerate(DELAY):
-        predicted[d:] += ASCERTAINMENT * weight * counts[: n_total - d]
+    infections = jnp.concatenate(
+        [jnp.asarray(initial_infections), post_initialization_infections]
+    )
+    predicted_per_capita, offset = compute_delay_ascertained_incidence(
+        latent_incidence=infections,
+        delay_incidence_to_observation_pmf=jnp.asarray(DELAY),
+        p_observed_given_incident=ASCERTAINMENT,
+    )
+    predicted = POPULATION_SIZE * np.outer(predicted_per_capita, SUBPOP_FRACTIONS)
     rng = np.random.default_rng(DATA_SEED)
-    observed = rng.poisson(predicted[n_init:])
+    observed = rng.poisson(predicted[n_init - offset :])
     return {"rt": rt, "observed": observed}
 
 
