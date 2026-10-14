@@ -3,7 +3,7 @@ Integration test: subpopulation count scaling in MultiSignalModel (issue 903).
 
 Four subpopulations share the same true Rt and the same initial infections
 per resident, so they differ only in population size. Counts are simulated
-as infections per resident times the subpopulation population. A
+as infections per capita times the subpopulation population. A
 SubpopulationInfections model fitted to these counts should recover Rt in
 every subpopulation, with no dependence on subpopulation size, and its
 recorded subpopulation counts should sum to the aggregate count.
@@ -33,7 +33,7 @@ SUBPOP_FRACTIONS = np.array([0.5, 0.25, 0.15, 0.10])
 N_SUBPOPS = len(SUBPOP_FRACTIONS)
 GEN_INT = np.array([0.2, 0.35, 0.25, 0.15, 0.05])
 DELAY = np.array([0.1, 0.3, 0.3, 0.2, 0.1])
-I0_PER_RESIDENT = 2e-5
+I0_PER_CAPITA = 2e-5
 ASCERTAINMENT = 0.3
 N_DAYS_FIT = 70
 N_DAYS_EARLY = 21

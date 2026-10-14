@@ -37,7 +37,7 @@ class MeasurementObservation(BaseObservationProcess):
     Subclasses must implement ``_predicted_obs()`` according to their
     specific signal processing (e.g., wastewater shedding kinetics,
     dilution factors, etc.). ``_predicted_obs()`` receives infections
-    per resident of each subpopulation.
+    per member of each subpopulation.
 
     See Also
     --------
@@ -95,9 +95,8 @@ class MeasurementObservation(BaseObservationProcess):
         """
         Return "subpop_per_capita" for measurement observations.
 
-        Measurement observations receive infections per resident of each
-        subpopulation, because each measurement corresponds to a specific
-        catchment area and depends on infections per resident.
+        Measurement observations receive infections per member of each
+        subpopulation.
 
         Returns
         -------
@@ -177,7 +176,7 @@ class MeasurementObservation(BaseObservationProcess):
         Parameters
         ----------
         infections
-            Infections per resident of each subpopulation.
+            Infections per member of each subpopulation.
             Shape: (n_total, n_subpops).
         times
             Day index for each observation on the shared time axis.
