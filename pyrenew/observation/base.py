@@ -116,7 +116,7 @@ class BaseObservationProcess(RandomVariable):
           Shape: ``(n_total,)``
         - ``"subpop"``: infection counts in each subpopulation.
           Shape: ``(n_total, n_subpops)``, indexed via ``subpop_indices``.
-        - ``"subpop_per_capita"``: infections per resident of each
+        - ``"subpop_per_capita"``: infections per member of each
           subpopulation. Shape: ``(n_total, n_subpops)``, indexed via
           ``subpop_indices``.
 
