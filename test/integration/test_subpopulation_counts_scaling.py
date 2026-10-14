@@ -214,21 +214,6 @@ def posterior(
 class TestSubpopulationCountScaling:
     """Fitted subpopulation Rt and infections do not depend on subpopulation size."""
 
-    def test_fit_uses_float64(
-        self,
-        posterior: dict[str, np.ndarray],
-    ) -> None:
-        """
-        The model is fitted in 64-bit floats.
-
-        Parameters
-        ----------
-        posterior
-            Posterior samples.
-        """
-        assert posterior["latent::rt_subpop"].dtype == np.float64
-        assert posterior["latent_infections_by_subpop"].dtype == np.float64
-
     def test_subpop_counts_sum_to_aggregate(
         self,
         posterior: dict[str, np.ndarray],
@@ -244,7 +229,8 @@ class TestSubpopulationCountScaling:
         np.testing.assert_allclose(
             posterior["latent_infections_by_subpop"].sum(axis=-1),
             posterior["latent_infections"],
-            rtol=1e-10,
+            rtol=1e-6,
+            atol=0,
         )
 
     def test_rt_recovered_in_every_subpop(

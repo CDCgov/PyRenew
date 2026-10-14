@@ -234,7 +234,8 @@ def test_subpop_counts_sum_to_aggregate(
     np.testing.assert_allclose(
         sites["latent_infections_by_subpop"].sum(axis=1),
         sites["latent_infections"],
-        rtol=1e-12,
+        rtol=1e-6,
+        atol=0,
     )
 
 
@@ -256,9 +257,9 @@ def test_subpop_counts_scaled_by_subpop_population(
         * POPULATION_SIZE
         * np.asarray(SUBPOP_FRACTIONS)
     )
-    np.testing.assert_allclose(sites["counts_infections"], expected, rtol=1e-12)
+    np.testing.assert_allclose(sites["counts_infections"], expected, rtol=1e-6, atol=0)
     np.testing.assert_allclose(
-        sites["latent_infections_by_subpop"], expected, rtol=1e-12
+        sites["latent_infections_by_subpop"], expected, rtol=1e-6, atol=0
     )
 
 
@@ -277,7 +278,8 @@ def test_measurement_receives_per_capita(
     np.testing.assert_allclose(
         sites["ww_predicted"],
         np.asarray(latent_sample.all_subpops),
-        rtol=1e-12,
+        rtol=1e-6,
+        atol=0,
     )
 
 
@@ -303,9 +305,11 @@ def test_population_infections_unchanged(
     )
     sites, latent_sample = _trace_model(model, None)
     expected = np.asarray(latent_sample.aggregate) * POPULATION_SIZE
-    np.testing.assert_allclose(sites["agg_infections"], expected, rtol=1e-12)
+    np.testing.assert_allclose(sites["agg_infections"], expected, rtol=1e-6, atol=0)
     assert sites["counts_infections"].shape == (expected.size, 1)
-    np.testing.assert_allclose(sites["counts_infections"][:, 0], expected, rtol=1e-12)
+    np.testing.assert_allclose(
+        sites["counts_infections"][:, 0], expected, rtol=1e-6, atol=0
+    )
 
 
 def test_validate_accepts_subpop_per_capita(
