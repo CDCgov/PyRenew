@@ -170,12 +170,21 @@ flowchart TB
 Different observation processes observe different levels of the model hierarchy.
 Each observation process declares an **infection resolution** that determines what infection data it receives:
 
-  | Resolution    | Receives                                                            | Example signals                        |
-  | ------------- | ------------------------------------------------------------------- | -------------------------------------- |
-  | `"aggregate"` | Aggregated infections (sum across all subpopulations), shape `(T,)` | Hospital admissions, case counts       |
-  | `"subpop"`    | Infection matrix for all subpopulations, shape `(T, n_subpops)`     | Wastewater, site-specific surveillance |
+  | Resolution            | Receives                                                            | Example signals                  |
+  | --------------------- | ------------------------------------------------------------------- | -------------------------------- |
+  | `"aggregate"`         | Infection counts for the whole jurisdiction, shape `(T,)`           | Hospital admissions, case counts |
+  | `"subpop"`            | Infection counts in each subpopulation, shape `(T, n_subpops)`      | Regional case counts             |
+  | `"subpop_per_capita"` | Infections per member of each subpopulation, shape `(T, n_subpops)` | Wastewater concentrations        |
 
-The `PyrenewBuilder` routes latent infections to observation processes based on each process's declared resolution.
+The model routes latent infections to observation processes based on each process's declared resolution.
+
+The latent infection process generates infections per individual: $I_k(t)$ is the number of new infections among members of subpopulation $k$ on day $t$, divided by the number of members of $k$.
+The model converts these to the scale each kind of signal needs, using `population_size` ($N$) and `subpop_fractions` ($p_k$):
+
+- **Count signals** need infection counts.
+  Subpopulation $k$ has $N p_k$ members, so it has $N p_k I_k(t)$ infections, and these counts sum to the jurisdiction total $N \sum_k p_k I_k(t)$.
+- **Some measurement signals** provide information about infections per member of the subpopulation.
+  For example, the number genomes shed into wastewater scales with the number of infected individuals, and the total volume of wastewater scales with the total population, so it can be reasonable to model wastewater concentrations purely as a function of per-capita incidence $I_k(t)$.
 
 For subpopulation-level observations, the observation process selects which subpopulations it observes using `subpop_indices` provided at sample/fit time.
 This allows flexible observation patterns---for example, wastewater samples might only cover 5 of 6 subpopulations (catchment areas), while the 6th represents areas without wastewater monitoring.
@@ -297,7 +306,7 @@ Observation processes transform latent infections into observable signals and de
 Each observation process:
 
 - Has a unique **name** that identifies the signal in model outputs
-- Declares what **infection resolution** it needs (`"aggregate"` or `"subpop"`)
+- Declares what **infection resolution** it needs (`"aggregate"`, `"subpop"`, or `"subpop_per_capita"`)
 - Applies signal-specific transformations (ascertainment, delay convolution, shedding kinetics)
 - Defines the noise model
 
@@ -425,8 +434,9 @@ class Wastewater(MeasurementObservation):
     """
     Wastewater viral concentration observation process.
 
-    Transforms site-level infections into predicted log-concentrations
-    via shedding kinetics convolution and genome/volume scaling.
+    Transforms infections per member of each subpopulation into
+    predicted log-concentrations via shedding kinetics convolution and
+    genome/volume scaling.
     """
 
     def __init__(
@@ -454,8 +464,8 @@ class Wastewater(MeasurementObservation):
         log10_genome = self.log10_genome_per_infection_rv()
 
         def convolve_site(site_infections):
-            convolved, _ = self._convolve_with_alignment(
-                site_infections, shedding_pmf, p_observed=1.0
+            convolved, _ = self._convolve_delay_with_alignment(
+                site_infections, shedding_pmf
             )
             return convolved
 
@@ -524,7 +534,7 @@ shedding_pmf = shedding_pmf / shedding_pmf.sum()  # normalize
 shedding_rv = DeterministicPMF("shedding_kinetics", shedding_pmf)
 
 # Log10 genomes shed per infection
-log10_genome_rv = DeterministicVariable("log10_genome_per_inf", 9.0)
+log10_genome_rv = DeterministicVariable("log10_genome_per_inf", 4.1)
 
 # Wastewater volume per person per day (mL)
 ml_per_person_per_day = 1000.0
@@ -786,7 +796,7 @@ obs_data_90 = {
 
 The observation dictionary has the following structure:
 
-```python
+```text
 {
     "obs_start_date": ...,
     "hospital": {
@@ -1086,3 +1096,4 @@ That same edge uncertainty is what carries forward when the model is used for fo
 - Explore different temporal processes for $\mathcal{R}(t)$ in the [Latent Infections](latent_infections.md) and [Latent Subpopulation Infections](latent_subpopulation_infections.md) tutorials
 - Learn about count-based observation models in [Observation Processes: Counts](observation_processes_counts.md)
 - Learn about continuous measurement models in [Observation Processes: Measurements](observation_processes_measurements.md)
+- Learn about ascertainment models in [Ascertainment Models for Related Observation Processes](ascertainment.md)

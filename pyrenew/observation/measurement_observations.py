@@ -36,7 +36,8 @@ class MeasurementObservation(BaseObservationProcess):
     -----
     Subclasses must implement ``_predicted_obs()`` according to their
     specific signal processing (e.g., wastewater shedding kinetics,
-    dilution factors, etc.).
+    dilution factors, etc.). ``_predicted_obs()`` receives infections
+    per member of each subpopulation.
 
     See Also
     --------
@@ -92,17 +93,17 @@ class MeasurementObservation(BaseObservationProcess):
 
     def infection_resolution(self) -> str:
         """
-        Return "subpop" for measurement observations.
+        Return "subpop_per_capita" for measurement observations.
 
-        Measurement observations require subpopulation-level infections
-        because each measurement corresponds to a specific catchment area.
+        Measurement observations receive infections per member of each
+        subpopulation.
 
         Returns
         -------
         str
-            ``"subpop"``
+            ``"subpop_per_capita"``
         """
-        return "subpop"
+        return "subpop_per_capita"
 
     def validate_data(
         self,
@@ -175,8 +176,8 @@ class MeasurementObservation(BaseObservationProcess):
         Parameters
         ----------
         infections
-            Infections from the infection process.
-            Shape: (n_total, n_subpops)
+            Infections per member of each subpopulation.
+            Shape: (n_total, n_subpops).
         times
             Day index for each observation on the shared time axis.
             Must be in range [0, n_total). Shape: (n_obs,)

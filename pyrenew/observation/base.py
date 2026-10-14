@@ -15,7 +15,7 @@ import numpyro
 from jax.typing import ArrayLike
 
 from pyrenew.arrayutils import require_shape
-from pyrenew.convolve import compute_delay_ascertained_incidence
+from pyrenew.convolve import compute_delay_incidence
 from pyrenew.metaclass import RandomVariable
 from pyrenew.time import validate_dow
 
@@ -39,7 +39,8 @@ class BaseObservationProcess(RandomVariable):
     Subclasses must implement:
 
     - ``lookback_days()``: Return PMF length for initialization
-    - ``infection_resolution()``: Return ``"aggregate"`` or ``"subpop"``
+    - ``infection_resolution()``: Return ``"aggregate"``, ``"subpop"``,
+      or ``"subpop_per_capita"``
     - ``_predicted_obs()``: Transform infections to predicted values
     - ``sample()``: Apply noise model to predicted observations
 
@@ -51,7 +52,7 @@ class BaseObservationProcess(RandomVariable):
 
     See Also
     --------
-    pyrenew.convolve.compute_delay_ascertained_incidence :
+    pyrenew.convolve.compute_delay_incidence :
         Underlying convolution function
     pyrenew.metaclass.RandomVariable :
         Base class for all random variables
@@ -107,19 +108,22 @@ class BaseObservationProcess(RandomVariable):
     @abstractmethod
     def infection_resolution(self) -> str:
         """
-        Return whether this observation uses aggregate or subpop infections.
+        Return which infections this observation receives.
 
         Returns one of:
 
-        - ``"aggregate"``: Uses a single aggregated infection trajectory.
-          Shape: ``(n_days,)``
-        - ``"subpop"``: Uses subpopulation-level infection trajectories.
-          Shape: ``(n_days, n_subpops)``, indexed via ``subpop_indices``.
+        - ``"aggregate"``: infection counts for the whole population.
+          Shape: ``(n_total,)``
+        - ``"subpop"``: infection counts in each subpopulation.
+          Shape: ``(n_total, n_subpops)``, indexed via ``subpop_indices``.
+        - ``"subpop_per_capita"``: infections per member of each
+          subpopulation. Shape: ``(n_total, n_subpops)``, indexed via
+          ``subpop_indices``.
 
         Returns
         -------
         str
-            Either ``"aggregate"`` or ``"subpop"``
+            ``"aggregate"``, ``"subpop"``, or ``"subpop_per_capita"``
 
         Notes
         -----
@@ -270,16 +274,14 @@ class BaseObservationProcess(RandomVariable):
             raise ValueError("first_day_dow is required when start_dow is not None")
         return (start_dow - first_day_dow) % 7
 
-    def _convolve_with_alignment(
+    def _convolve_delay_with_alignment(
         self,
         latent_incidence: ArrayLike,
         pmf: ArrayLike,
-        p_observed: float = 1.0,
     ) -> tuple[ArrayLike, int]:
-        """
-        Convolve latent incidence with PMF while maintaining timeline alignment.
+        """Apply delay-only convolution while preserving timeline alignment.
 
-        This is a wrapper around ``compute_delay_ascertained_incidence`` that
+        This is a wrapper around ``compute_delay_incidence`` that
         always uses ``pad=True`` to ensure day t in the output corresponds to
         day t in the input. The first ``len(pmf) - 1`` days will be NaN.
 
@@ -290,8 +292,6 @@ class BaseObservationProcess(RandomVariable):
             Shape: (n_days,)
         pmf
             Delay or shedding PMF. Shape: (n_pmf,)
-        p_observed
-            Observation probability multiplier. Scales the convolution result.
 
         Returns
         -------
@@ -309,13 +309,12 @@ class BaseObservationProcess(RandomVariable):
 
         See Also
         --------
-        pyrenew.convolve.compute_delay_ascertained_incidence :
+        pyrenew.convolve.compute_delay_incidence :
             Underlying function
         """
-        return compute_delay_ascertained_incidence(
+        return compute_delay_incidence(
             latent_incidence=latent_incidence,
             delay_incidence_to_observation_pmf=pmf,
-            p_observed_given_incident=p_observed,
             pad=True,  # Maintains timeline alignment
         )
 

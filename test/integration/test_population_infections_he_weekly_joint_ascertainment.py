@@ -190,8 +190,17 @@ class TestPriorPredictiveStructure:
 
         assert trace["he_ascertainment_eta"]["type"] == "sample"
         assert trace["he_ascertainment_eta"]["value"].shape == (2,)
-        assert trace["he_ascertainment_hospital"]["type"] == "deterministic"
-        assert trace["he_ascertainment_ed_visits"]["type"] == "deterministic"
+
+        for signal in ("hospital", "ed_visits"):
+            baseline_site = trace[f"he_ascertainment_baseline_{signal}"]
+            final_site = trace[f"he_ascertainment_{signal}"]
+
+            assert baseline_site["type"] == "deterministic"
+            assert baseline_site["value"].shape == ()
+            assert final_site["type"] == "deterministic"
+            assert final_site["value"].shape == ()
+            assert jnp.allclose(final_site["value"], baseline_site["value"])
+
         assert trace["hospital_predicted"]["value"].shape == (n_periods,)
         assert trace["hospital_predicted_daily"]["value"].shape == (n_total,)
         assert trace["ed_visits_predicted"]["value"].shape == (n_total,)

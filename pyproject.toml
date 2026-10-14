@@ -31,6 +31,7 @@ dev = [
     "pre-commit>=4.6.0",
     "pytest>=9.0.3",
     "pytest-cov>=6.3.0",
+    "pytest-env>=1.2.0",
     "ruff>=0.15.16",
     "scipy>=1.16.1",
 ]
@@ -76,9 +77,14 @@ known_first_party = ["pyrenew", "test"]
 DEP004 = ["arviz", "pytest", "scipy", "bs4"]
 
 [tool.pytest.ini_options]
+required_plugins = ["pytest-env"]
 markers = [
     "integration: integration tests that fit models via MCMC (deselect with '-m \"not integration\"')",
 ]
+
+[tool.pytest_env]
+JAX_ENABLE_X64 = { value = "true", skip_if_set = true }
+XLA_FLAGS = { value = "--xla_force_host_platform_device_count=4", skip_if_set = true }
 
 [tool.ruff]
 fix = true

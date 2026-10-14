@@ -107,8 +107,6 @@ $$
   I_{\text{aggregate}}(t) = \sum_{k=1}^{K} p_k \, I_k(t).
 $$
 
-The aggregate trajectory $I_{\text{aggregate}}(t)$ is then passed to observation processes, which transform it into expected observations as described in the observation model tutorials.
-
 ### Relationship to the single-population model
 
 This model generalizes the single-population renewal model:
@@ -759,7 +757,7 @@ Each observation process selects a subset of subpopulations (via `subpop_indices
 The `PyrenewBuilder` handles the wiring:
 
 1. **`configure_latent()`** sets the hierarchical infection process (called once)
-2. **`add_observation()`** adds an observation process, specifying which subpopulations it observes (called once per data stream)
+2. **`add_observation()`** adds an observation process (called once per data stream)
 3. **`build()`** computes `n_initialization_points` from all delay distributions and produces a model ready for inference
 
 To learn how to build complete models with observation processes, see:

@@ -51,8 +51,16 @@ class MultiSignalModel(Model):
     -----
     The model automatically routes latent infections to observations based on
     each observation's infection_resolution() method:
-    - "aggregate" → receives aggregate infections from latent process
-    - "subpop" → receives all subpopulation infections; observation selects via indices
+
+    - ``"aggregate"``: infection counts for the whole jurisdiction,
+      shape ``(n_total,)``.
+    - ``"subpop"``: infection counts in each subpopulation,
+      shape ``(n_total, n_subpops)``.
+    - ``"subpop_per_capita"``: infections per member of each
+      subpopulation, shape ``(n_total, n_subpops)``.
+
+    Subpopulation observations select their subpopulations via
+    ``subpop_indices``.
     """
 
     def __init__(
@@ -86,7 +94,7 @@ class MultiSignalModel(Model):
         self.ascertainment_models = ascertainment_models
         self.validate()
 
-    _SUPPORTED_RESOLUTIONS = {"aggregate", "subpop"}
+    _SUPPORTED_RESOLUTIONS = {"aggregate", "subpop", "subpop_per_capita"}
 
     def validate(self) -> None:
         """
@@ -240,6 +248,13 @@ class MultiSignalModel(Model):
                     f"obs_start_date is required when any observation uses "
                     f"a day-of-week effect; observation '{name}' does."
                 )
+        for name, ascertainment_model in self.ascertainment_models.items():
+            if ascertainment_model.requires_calendar_anchor():
+                raise ValueError(
+                    "obs_start_date is required when a registered ascertainment "
+                    f"model uses a calendar-aligned temporal process; "
+                    f"ascertainment model {name!r} does."
+                )
         if self.latent.requires_calendar_anchor():
             raise ValueError(
                 "obs_start_date is required when the latent process uses a "
@@ -299,9 +314,10 @@ class MultiSignalModel(Model):
             Date of the first observation day. Required when any
             observation uses ``aggregation="weekly"`` or a day-of-week
             effect, or when a latent temporal process uses
-            calendar-week alignment. Converted once to the axis-origin
-            ``first_day_dow`` and forwarded to the latent process and
-            every observation.
+            calendar-week alignment, including a registered ascertainment
+            model. Converted once to the axis-origin ``first_day_dow`` and
+            forwarded to the latent process, ascertainment models, and every
+            observation.
         **observation_data
             Data for each observation process, keyed by observation name.
             Each value should be a dict of kwargs for that observation's sample().
@@ -363,8 +379,9 @@ class MultiSignalModel(Model):
         n_days_post_init
             Number of days to simulate after initialization period
         population_size
-            Total population size. Used to convert infection proportions
-            (from latent process) to infection counts (for observation processes).
+            Total population size. Aggregate infections are multiplied by
+            ``population_size``; infections in subpopulation ``k`` are
+            multiplied by ``population_size * subpop_fractions[k]``.
         subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
         obs_start_date
@@ -374,7 +391,8 @@ class MultiSignalModel(Model):
             to the latent process and every observation. Required when
             any observation uses ``aggregation="weekly"`` or a
             day-of-week effect, or when a latent temporal process uses
-            calendar-week alignment.
+            calendar-week alignment, including a registered ascertainment
+            model.
         **observation_data
             Data for each observation process, keyed by observation name
             (the ``name`` attribute of each observation process).
@@ -391,29 +409,35 @@ class MultiSignalModel(Model):
         self._check_obs_start_date(obs_start_date)
         first_day_dow = self._resolve_first_day_dow(obs_start_date)
 
-        # Generate latent infections (proportions)
         latent_sample = self.latent.sample(
             n_days_post_init=n_days_post_init,
             subpop_fractions=subpop_fractions,
             first_day_dow=first_day_dow,
         )
+        pop = self.latent._parse_and_validate_fractions(
+            subpop_fractions=subpop_fractions,
+        )
 
-        # Scale from proportions to counts
         inf_aggregate = latent_sample.aggregate * population_size
-        inf_all = latent_sample.all_subpops * population_size
+        inf_subpop = (
+            latent_sample.all_subpops * population_size * pop.fractions[jnp.newaxis, :]
+        )
 
-        # Record scaled infections for posterior analysis
         numpyro.deterministic("latent_infections", inf_aggregate)
-        numpyro.deterministic("latent_infections_by_subpop", inf_all)
+        numpyro.deterministic("latent_infections_by_subpop", inf_subpop)
 
-        # Map infection resolution to infection arrays
         latent_map = {
             "aggregate": inf_aggregate,
-            "subpop": inf_all,
+            "subpop": inf_subpop,
+            "subpop_per_capita": latent_sample.all_subpops,
         }
 
+        n_timepoints = self.latent.n_initialization_points + n_days_post_init
         ascertainment_values = {
-            name: ascertainment_model.sample()
+            name: ascertainment_model.sample(
+                n_timepoints=n_timepoints,
+                first_day_dow=first_day_dow,
+            )
             for name, ascertainment_model in self.ascertainment_models.items()
         }
 
