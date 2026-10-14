@@ -37,7 +37,7 @@ class MeasurementObservation(BaseObservationProcess):
     Subclasses must implement ``_predicted_obs()`` according to their
     specific signal processing (e.g., wastewater shedding kinetics,
     dilution factors, etc.). ``_predicted_obs()`` receives infections
-    per resident of each subpopulation.
+    per member of each subpopulation.
 
     See Also
     --------
