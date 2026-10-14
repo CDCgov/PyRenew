@@ -176,7 +176,7 @@ class MeasurementObservation(BaseObservationProcess):
         Parameters
         ----------
         infections
-            Infections per resident of each subpopulation.
+            Infections per member of each subpopulation.
             Shape: (n_total, n_subpops).
         times
             Day index for each observation on the shared time axis.
