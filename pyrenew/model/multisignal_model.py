@@ -56,7 +56,7 @@ class MultiSignalModel(Model):
       shape ``(n_total,)``.
     - ``"subpop"``: infection counts in each subpopulation,
       shape ``(n_total, n_subpops)``.
-    - ``"subpop_per_capita"``: infections per resident of each
+    - ``"subpop_per_capita"``: infections per member of each
       subpopulation, shape ``(n_total, n_subpops)``.
 
     Subpopulation observations select their subpopulations via
