@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 import pyrenew.latent.infection_functions as inf
-from pyrenew.latent.infection_process import InfectionProcessSample
+from pyrenew.latent.infections import InfectionProcessSample
 from pyrenew.metaclass import RandomVariable
 
 
