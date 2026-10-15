@@ -10,6 +10,8 @@ Existing environment values take precedence; set ``JAX_ENABLE_X64=false``
 to run tests with 32-bit floats.
 """
 
+from collections.abc import Callable
+
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import pytest
@@ -19,6 +21,7 @@ from pyrenew.latent import (
     PopulationInfections,
     SubpopulationInfections,
 )
+from pyrenew.metaclass import RandomVariable
 from pyrenew.observation import (
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
@@ -163,7 +166,146 @@ def hierarchical_normal_noise_tight():
 
 
 @pytest.fixture
-def subpopulation_infections(gen_int_rv):
+def subpop_fractions() -> jnp.ndarray:
+    """
+    Population fractions for three subpopulations.
+
+    Returns
+    -------
+    jnp.ndarray
+        Fractions that sum to 1.
+    """
+    return jnp.array([0.3, 0.25, 0.45])
+
+
+@pytest.fixture
+def infection_feedback_strength_rv() -> DeterministicVariable:
+    """
+    Constant negative infection feedback strength.
+
+    Returns
+    -------
+    DeterministicVariable
+        Feedback strength that lowers adjusted Rt below raw Rt.
+    """
+    return DeterministicVariable("infection_feedback_strength", -100.0)
+
+
+@pytest.fixture
+def infection_feedback_pmf_rv() -> DeterministicPMF:
+    """
+    Infection feedback PMF with the same length as ``gen_int_rv``.
+
+    Returns
+    -------
+    DeterministicPMF
+        Feedback PMF whose values differ from the generation interval.
+    """
+    return DeterministicPMF(
+        "infection_feedback_pmf",
+        jnp.array([0.4, 0.3, 0.15, 0.08, 0.04, 0.02, 0.01]),
+    )
+
+
+@pytest.fixture
+def subpopulation_infections_factory(
+    gen_int_rv: DeterministicPMF,
+) -> Callable[..., SubpopulationInfections]:
+    """
+    Factory for SubpopulationInfections with optional infection feedback.
+
+    Returns
+    -------
+    Callable[..., SubpopulationInfections]
+        Function that builds the standard configuration with the given
+        feedback options.
+    """
+
+    def make(
+        infection_feedback_strength_rv: RandomVariable | None = None,
+        infection_feedback_pmf_rv: RandomVariable | None = None,
+    ) -> SubpopulationInfections:
+        """
+        Build SubpopulationInfections with the given feedback options.
+
+        Parameters
+        ----------
+        infection_feedback_strength_rv
+            Infection feedback strength, or None.
+        infection_feedback_pmf_rv
+            Infection feedback PMF, or None.
+
+        Returns
+        -------
+        SubpopulationInfections
+            Configured infection process.
+        """
+        return SubpopulationInfections(
+            name="subpopulation",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            baseline_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
+            n_initialization_points=7,
+            infection_feedback_strength_rv=infection_feedback_strength_rv,
+            infection_feedback_pmf_rv=infection_feedback_pmf_rv,
+        )
+
+    return make
+
+
+@pytest.fixture
+def population_infections_factory(
+    gen_int_rv: DeterministicPMF,
+) -> Callable[..., PopulationInfections]:
+    """
+    Factory for PopulationInfections with optional infection feedback.
+
+    Returns
+    -------
+    Callable[..., PopulationInfections]
+        Function that builds the standard configuration with the given
+        feedback options.
+    """
+
+    def make(
+        infection_feedback_strength_rv: RandomVariable | None = None,
+        infection_feedback_pmf_rv: RandomVariable | None = None,
+    ) -> PopulationInfections:
+        """
+        Build PopulationInfections with the given feedback options.
+
+        Parameters
+        ----------
+        infection_feedback_strength_rv
+            Infection feedback strength, or None.
+        infection_feedback_pmf_rv
+            Infection feedback PMF, or None.
+
+        Returns
+        -------
+        PopulationInfections
+            Configured infection process.
+        """
+        return PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
+            single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
+            n_initialization_points=7,
+            infection_feedback_strength_rv=infection_feedback_strength_rv,
+            infection_feedback_pmf_rv=infection_feedback_pmf_rv,
+        )
+
+    return make
+
+
+@pytest.fixture
+def subpopulation_infections(
+    subpopulation_infections_factory: Callable[..., SubpopulationInfections],
+) -> SubpopulationInfections:
     """
     Pre-configured SubpopulationInfections instance.
 
@@ -172,19 +314,13 @@ def subpopulation_infections(gen_int_rv):
     SubpopulationInfections
         Configured infection process with realistic parameters.
     """
-    return SubpopulationInfections(
-        name="subpopulation",
-        gen_int_rv=gen_int_rv,
-        I0_rv=DeterministicVariable("I0", 0.001),
-        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        baseline_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
-        subpop_rt_deviation_process=fixed_random_walk(innovation_sd=0.025),
-        n_initialization_points=7,
-    )
+    return subpopulation_infections_factory()
 
 
 @pytest.fixture
-def population_infections(gen_int_rv):
+def population_infections(
+    population_infections_factory: Callable[..., PopulationInfections],
+) -> PopulationInfections:
     """
     Pre-configured PopulationInfections instance.
 
@@ -193,14 +329,7 @@ def population_infections(gen_int_rv):
     PopulationInfections
         Configured infection process with realistic parameters.
     """
-    return PopulationInfections(
-        name="population",
-        gen_int_rv=gen_int_rv,
-        I0_rv=DeterministicVariable("I0", 0.001),
-        log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", 0.0),
-        single_rt_process=fixed_ar1(autoreg=0.9, innovation_sd=0.05),
-        n_initialization_points=7,
-    )
+    return population_infections_factory()
 
 
 # =============================================================================

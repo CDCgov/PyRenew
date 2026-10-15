@@ -2,12 +2,30 @@
 
 from __future__ import annotations
 
+from typing import NamedTuple
+
 import jax.numpy as jnp
 from jax.typing import ArrayLike
 
 import pyrenew.latent.infection_functions as inf
-from pyrenew.latent.infection_process import InfectionProcessSample
 from pyrenew.metaclass import RandomVariable
+
+
+class InfectionProcessSample(NamedTuple):
+    """
+    Infections and the reproduction number used to compute them.
+
+    Attributes
+    ----------
+    post_initialization_infections
+        The estimated latent infections after the initialization period.
+    rt
+        The reproduction number used in the renewal equation. This is the
+        input Rt for plain renewal and the adjusted Rt when feedback is used.
+    """
+
+    post_initialization_infections: ArrayLike
+    rt: ArrayLike
 
 
 class Infections(RandomVariable):
