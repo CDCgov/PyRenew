@@ -3,13 +3,16 @@
 Unit tests for SubpopulationInfections.
 """
 
+import re
+from collections.abc import Callable
+
 import jax.numpy as jnp
 import numpyro
 import pytest
 
-from pyrenew.deterministic import DeterministicVariable
+from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import Infections, InfectionsWithFeedback, SubpopulationInfections
-from pyrenew.latent.infection_process import InfectionProcessSample
+from pyrenew.model import PyrenewBuilder
 from test.test_helpers import fixed_random_walk
 
 
@@ -44,8 +47,8 @@ class TestSubpopulationInfectionsSample:
 
         assert jnp.allclose(deviation_sums, 0.0, atol=1e-6)
 
-    def test_default_effective_rt_matches_rt_subpop(self, subpopulation_infections):
-        """Plain renewal records effective Rt equal to raw subpopulation Rt."""
+    def test_default_adjusted_rt_matches_rt_subpop(self, subpopulation_infections):
+        """Plain renewal records adjusted Rt equal to raw subpopulation Rt."""
         with numpyro.handlers.seed(rng_seed=42):
             with numpyro.handlers.trace() as trace:
                 subpopulation_infections.sample(
@@ -54,10 +57,10 @@ class TestSubpopulationInfectionsSample:
                 )
 
         rt = trace["subpopulation::rt_subpop"]["value"]
-        rt_effective = trace["subpopulation::rt_subpop_effective"]["value"]
+        rt_adjusted = trace["subpopulation::rt_subpop_adjusted"]["value"]
 
-        assert rt_effective.shape == rt.shape
-        assert jnp.allclose(rt_effective, rt, atol=1e-6)
+        assert rt_adjusted.shape == rt.shape
+        assert jnp.allclose(rt_adjusted, rt, atol=1e-6)
 
     def test_infections_are_positive(self, subpopulation_infections):
         """Test that all infections are positive (epidemiological invariant)."""
@@ -146,172 +149,145 @@ class TestSubpopulationInfectionsSample:
                 subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
             )
 
-    def test_explicit_infections_process_matches_default(self, gen_int_rv):
-        """Default infection process is equivalent to explicit Infections."""
-        fractions = jnp.array([0.3, 0.25, 0.45])
-        default_process = SubpopulationInfections(
-            name="subpopulation",
-            gen_int_rv=gen_int_rv,
-            I0_rv=DeterministicVariable("I0", 0.001),
-            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
-            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
-            n_initialization_points=7,
+    def test_feedback_lowers_adjusted_rt(
+        self,
+        subpopulation_infections_factory: Callable[..., SubpopulationInfections],
+        infection_feedback_strength_rv: DeterministicVariable,
+        infection_feedback_pmf_rv: DeterministicPMF,
+        subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """Negative feedback strength lowers adjusted Rt after initialization."""
+        process = subpopulation_infections_factory(
+            infection_feedback_strength_rv=infection_feedback_strength_rv,
+            infection_feedback_pmf_rv=infection_feedback_pmf_rv,
         )
-        explicit_process = SubpopulationInfections(
-            name="subpopulation",
-            gen_int_rv=gen_int_rv,
-            I0_rv=DeterministicVariable("I0", 0.001),
-            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
-            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
-            n_initialization_points=7,
-            infection_process=Infections(name="infections"),
-        )
-
-        with numpyro.handlers.seed(rng_seed=42):
-            default_sample = default_process.sample(
-                n_days_post_init=30,
-                subpop_fractions=fractions,
-            )
-        with numpyro.handlers.seed(rng_seed=42):
-            explicit_sample = explicit_process.sample(
-                n_days_post_init=30,
-                subpop_fractions=fractions,
-            )
-
-        assert jnp.allclose(default_sample.aggregate, explicit_sample.aggregate)
-        assert jnp.allclose(default_sample.all_subpops, explicit_sample.all_subpops)
-
-    def test_supports_infections_with_feedback_process(self, gen_int_rv):
-        """SubpopulationInfections can delegate to InfectionsWithFeedback."""
-        fractions = jnp.array([0.3, 0.25, 0.45])
-        process = SubpopulationInfections(
-            name="subpopulation",
-            gen_int_rv=gen_int_rv,
-            I0_rv=DeterministicVariable("I0", 0.001),
-            log_rt_time_0_rv=DeterministicVariable("initial_log_rt", 0.0),
-            baseline_rt_process=fixed_random_walk(innovation_sd=1.0),
-            subpop_rt_deviation_process=fixed_random_walk(innovation_sd=1.0),
-            n_initialization_points=7,
-            infection_process=InfectionsWithFeedback(
-                name="infections",
-                infection_feedback_strength=DeterministicVariable(
-                    "infection_feedback_strength",
-                    0.1,
-                ),
-                infection_feedback_pmf=gen_int_rv,
-            ),
-        )
-
-        with numpyro.handlers.seed(rng_seed=42):
-            sample = process.sample(
-                n_days_post_init=30,
-                subpop_fractions=fractions,
-            )
-
-        n_total = process.n_initialization_points + 30
-        assert sample.aggregate.shape == (n_total,)
-        assert sample.all_subpops.shape == (n_total, len(fractions))
-        assert jnp.all(sample.aggregate > 0)
-        assert jnp.all(sample.all_subpops > 0)
-
-    def test_forwards_kwargs_to_infection_process(self, subpopulation_infections):
-        """Additional sample kwargs are forwarded to infection_process."""
-
-        class KwargRequiredInfectionProcess:
-            """Infection process that requires forwarded kwargs, for testing"""
-
-            def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
-                scale = kwargs["infection_scale"]
-                return InfectionProcessSample(
-                    post_initialization_infections=Rt * scale,
-                    rt=Rt,
-                )
-
-        fractions = jnp.array([0.3, 0.25, 0.45])
-        infection_scale = 0.5
-        subpopulation_infections.infection_process = KwargRequiredInfectionProcess()
 
         with numpyro.handlers.seed(rng_seed=42):
             with numpyro.handlers.trace() as trace:
-                sample = subpopulation_infections.sample(
+                sample = process.sample(
                     n_days_post_init=30,
-                    subpop_fractions=fractions,
-                    infection_scale=infection_scale,
+                    subpop_fractions=subpop_fractions,
                 )
 
-        assert sample.all_subpops.shape == (
-            subpopulation_infections.n_initialization_points + 30,
-            len(fractions),
+        n_init = process.n_initialization_points
+        n_total = n_init + 30
+        rt = trace["subpopulation::rt_subpop"]["value"]
+        rt_adjusted = trace["subpopulation::rt_subpop_adjusted"]["value"]
+        assert sample.aggregate.shape == (n_total,)
+        assert sample.all_subpops.shape == (n_total, len(subpop_fractions))
+        assert jnp.all(sample.aggregate > 0)
+        assert jnp.all(sample.all_subpops > 0)
+        assert jnp.array_equal(rt_adjusted[:n_init], rt[:n_init])
+        assert jnp.all(rt_adjusted[n_init:] < rt[n_init:])
+
+    def test_feedback_matches_infections_with_feedback(
+        self,
+        subpopulation_infections_factory: Callable[..., SubpopulationInfections],
+        infection_feedback_strength_rv: DeterministicVariable,
+        infection_feedback_pmf_rv: DeterministicPMF,
+        gen_int_rv: DeterministicPMF,
+        subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """Feedback gives the same infections and adjusted Rt as InfectionsWithFeedback."""
+        process = subpopulation_infections_factory(
+            infection_feedback_strength_rv=infection_feedback_strength_rv,
+            infection_feedback_pmf_rv=infection_feedback_pmf_rv,
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                sample = process.sample(
+                    n_days_post_init=30,
+                    subpop_fractions=subpop_fractions,
+                )
+
+        n_init = process.n_initialization_points
+        reference = InfectionsWithFeedback(
+            name="infections",
+            infection_feedback_strength=infection_feedback_strength_rv,
+            infection_feedback_pmf=infection_feedback_pmf_rv,
+        ).sample(
+            Rt=trace["subpopulation::rt_subpop"]["value"][n_init:, :],
+            I0=trace["subpopulation::I0_init_all_subpops"]["value"],
+            gen_int=gen_int_rv(),
         )
         assert jnp.allclose(
-            sample.all_subpops[subpopulation_infections.n_initialization_points :],
-            (
-                trace["subpopulation::rt_subpop_effective"]["value"][
-                    subpopulation_infections.n_initialization_points :
-                ]
-                * infection_scale
+            sample.all_subpops[n_init:], reference.post_initialization_infections
+        )
+        assert jnp.allclose(
+            trace["subpopulation::rt_subpop_adjusted"]["value"][n_init:],
+            reference.rt,
+        )
+
+    def test_zero_feedback_strength_matches_plain_renewal(
+        self,
+        subpopulation_infections_factory: Callable[..., SubpopulationInfections],
+        infection_feedback_pmf_rv: DeterministicPMF,
+        subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """Feedback with strength 0 gives the same results as no feedback."""
+        plain = subpopulation_infections_factory()
+        zero = subpopulation_infections_factory(
+            infection_feedback_strength_rv=DeterministicVariable(
+                "infection_feedback_strength", 0.0
             ),
+            infection_feedback_pmf_rv=infection_feedback_pmf_rv,
         )
-
-
-class MissingPostInitInfectionProcess:
-    """Infection process that omits post_initialization_infections, for testing"""
-
-    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
-        return InfectionProcessSample(
-            post_initialization_infections=None,
-            rt=Rt,
-        )
-
-
-class MissingRtInfectionProcess:
-    """Infection process that omits rt, for testing"""
-
-    def sample(self, Rt, I0, gen_int, **kwargs):  # numpydoc ignore=GL08
-        return InfectionProcessSample(
-            post_initialization_infections=Rt,
-            rt=None,
-        )
-
-
-class TestSubpopulationInfectionsMissingFields:
-    """Test rejection of infection process samples missing required fields."""
-
-    def test_rejects_missing_post_initialization_infections(
-        self,
-        subpopulation_infections,
-    ):
-        """Custom infection processes must return post_initialization_infections."""
-        subpopulation_infections.infection_process = MissingPostInitInfectionProcess()
 
         with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(
-                ValueError,
-                match="must return both post_initialization_infections and rt",
-            ):
-                subpopulation_infections.sample(
+            with numpyro.handlers.trace() as plain_trace:
+                plain_sample = plain.sample(
                     n_days_post_init=30,
-                    subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
+                    subpop_fractions=subpop_fractions,
+                )
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as zero_trace:
+                zero_sample = zero.sample(
+                    n_days_post_init=30,
+                    subpop_fractions=subpop_fractions,
                 )
 
-    def test_rejects_missing_rt(
+        assert jnp.allclose(zero_sample.aggregate, plain_sample.aggregate)
+        assert jnp.allclose(zero_sample.all_subpops, plain_sample.all_subpops)
+        assert jnp.allclose(
+            zero_trace["subpopulation::rt_subpop_adjusted"]["value"],
+            plain_trace["subpopulation::rt_subpop_adjusted"]["value"],
+        )
+
+    def test_per_subpopulation_feedback_strength(
         self,
-        subpopulation_infections,
-    ):
-        """Custom infection processes must return rt."""
-        subpopulation_infections.infection_process = MissingRtInfectionProcess()
+        subpopulation_infections_factory: Callable[..., SubpopulationInfections],
+        infection_feedback_pmf_rv: DeterministicPMF,
+        subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """A strength of shape (n_subpops,) applies each value to its subpopulation."""
+        strengths = jnp.array([0.0, -100.0, -1000.0])
+        per_subpop = subpopulation_infections_factory(
+            infection_feedback_strength_rv=DeterministicVariable(
+                "infection_feedback_strength", strengths
+            ),
+            infection_feedback_pmf_rv=infection_feedback_pmf_rv,
+        )
 
         with numpyro.handlers.seed(rng_seed=42):
-            with pytest.raises(
-                ValueError,
-                match="must return both post_initialization_infections and rt",
-            ):
-                subpopulation_infections.sample(
+            sample = per_subpop.sample(
+                n_days_post_init=30,
+                subpop_fractions=subpop_fractions,
+            )
+
+        for k, strength in enumerate(strengths):
+            shared = subpopulation_infections_factory(
+                infection_feedback_strength_rv=DeterministicVariable(
+                    "infection_feedback_strength", strength
+                ),
+                infection_feedback_pmf_rv=infection_feedback_pmf_rv,
+            )
+            with numpyro.handlers.seed(rng_seed=42):
+                reference = shared.sample(
                     n_days_post_init=30,
-                    subpop_fractions=jnp.array([0.3, 0.25, 0.45]),
+                    subpop_fractions=subpop_fractions,
                 )
+            assert jnp.allclose(sample.all_subpops[:, k], reference.all_subpops[:, k])
 
 
 class TestSubpopulationInfectionsValidation:
@@ -405,6 +381,86 @@ class TestSubpopulationInfectionsValidation:
                     n_days_post_init=30,
                     subpop_fractions=jnp.array([0.3, 0.25, 0.40]),
                 )
+
+    @pytest.mark.parametrize("given", ["strength", "pmf"])
+    def test_rejects_feedback_strength_without_pmf(
+        self,
+        subpopulation_infections_factory: Callable[..., SubpopulationInfections],
+        infection_feedback_strength_rv: DeterministicVariable,
+        infection_feedback_pmf_rv: DeterministicPMF,
+        given: str,
+    ) -> None:
+        """One infection feedback argument without the other is rejected."""
+        options = (
+            {"infection_feedback_strength_rv": infection_feedback_strength_rv}
+            if given == "strength"
+            else {"infection_feedback_pmf_rv": infection_feedback_pmf_rv}
+        )
+        with pytest.raises(ValueError, match="must be given together"):
+            subpopulation_infections_factory(**options)
+
+    def test_rejects_feedback_pmf_length_mismatch(
+        self,
+        subpopulation_infections_factory: Callable[..., SubpopulationInfections],
+        infection_feedback_strength_rv: DeterministicVariable,
+        subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """A feedback PMF shorter than the generation interval is rejected at sample time."""
+        process = subpopulation_infections_factory(
+            infection_feedback_strength_rv=infection_feedback_strength_rv,
+            infection_feedback_pmf_rv=DeterministicPMF(
+                "infection_feedback_pmf", jnp.array([0.5, 0.3, 0.2])
+            ),
+        )
+
+        with pytest.raises(ValueError, match="same length as the generation interval"):
+            with numpyro.handlers.seed(rng_seed=42):
+                process.sample(n_days_post_init=30, subpop_fractions=subpop_fractions)
+
+    @pytest.mark.parametrize("strength_shape", [(2,), (30,)])
+    def test_rejects_unbroadcastable_feedback_strength(
+        self,
+        subpopulation_infections_factory: Callable[..., SubpopulationInfections],
+        infection_feedback_pmf_rv: DeterministicPMF,
+        subpop_fractions: jnp.ndarray,
+        strength_shape: tuple[int, ...],
+    ) -> None:
+        """A feedback strength that does not broadcast to Rt names both shapes."""
+        process = subpopulation_infections_factory(
+            infection_feedback_strength_rv=DeterministicVariable(
+                "infection_feedback_strength", jnp.ones(strength_shape)
+            ),
+            infection_feedback_pmf_rv=infection_feedback_pmf_rv,
+        )
+
+        with pytest.raises(
+            ValueError,
+            match=re.escape(f"shape {strength_shape}") + ".*" + re.escape("(30, 3)"),
+        ):
+            with numpyro.handlers.seed(rng_seed=42):
+                process.sample(n_days_post_init=30, subpop_fractions=subpop_fractions)
+
+    def test_rejects_infection_process_argument(
+        self, gen_int_rv: DeterministicPMF
+    ) -> None:
+        """The removed infection_process argument is rejected, directly and at build()."""
+        params = {
+            "gen_int_rv": gen_int_rv,
+            "I0_rv": DeterministicVariable("I0", 0.001),
+            "log_rt_time_0_rv": DeterministicVariable("log_rt_time_0", 0.0),
+            "baseline_rt_process": fixed_random_walk(innovation_sd=1.0),
+            "subpop_rt_deviation_process": fixed_random_walk(innovation_sd=1.0),
+            "infection_process": Infections(name="infections"),
+        }
+        with pytest.raises(TypeError, match="infection_process"):
+            SubpopulationInfections(
+                name="subpopulation", n_initialization_points=7, **params
+            )
+
+        builder = PyrenewBuilder()
+        builder.configure_latent(SubpopulationInfections, **params)
+        with pytest.raises(TypeError, match="infection_process"):
+            builder.build()
 
 
 class TestSubpopulationInfectionsPerSubpopI0:
