@@ -8,7 +8,7 @@ From this, it infers $\mathcal{R}(t)$, the time-varying reproduction number, whi
 The core renewal equation is:
 
 $$
-  I(t) = \mathcal{R}(t) \sum_{s} I(t-s) \, w(s)
+  I(t) = \mathcal{R}(t) \sum_{s} I(t - s) \, w(s)
 $$
 
 where $w(s)$ is the generation interval distribution: the probability that $s$ time units separate infection in an index case and a secondary case.
@@ -17,7 +17,7 @@ However inference is complicated by the fact that observational data require the
 The observation equation links infections to expected observations:
 
 $$
-  \mu(t) = \alpha \sum_{s} I(t-s) \, \pi(s)
+  \mu(t) = \alpha \sum_{s} I(t - s) \, \pi(s)
 $$
 
 where $\alpha$ is the ascertainment rate and $\pi(s)$ is the delay distribution from infection to observation.
@@ -49,8 +49,8 @@ pip install git+https://github.com/CDCgov/PyRenew@main
 
 - [The PyRenew documentation suite](https://cdcgov.github.io/PyRenew) provides API reference documentation and tutorials on implementing multisignal renewal models with PyRenew.
 - Additional reading on renewal processes in epidemiology
-  - [_Semi-mechanistic Bayesian modelling of COVID-19 with renewal processes_](https://academic.oup.com/jrsssa/article-pdf/186/4/601/54770289/qnad030.pdf)
-  - [_Unifying incidence and prevalence under a time-varying general branching process_](https://link.springer.com/content/pdf/10.1007/s00285-023-01958-w.pdf)
+  - [*Semi-mechanistic Bayesian modelling of COVID-19 with renewal processes*](https://academic.oup.com/jrsssa/article-pdf/186/4/601/54770289/qnad030.pdf)
+  - [*Unifying incidence and prevalence under a time-varying general branching process*](https://link.springer.com/content/pdf/10.1007/s00285-023-01958-w.pdf)
 
 ## General Disclaimer
 

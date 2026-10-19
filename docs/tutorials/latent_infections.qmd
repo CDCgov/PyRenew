@@ -156,17 +156,17 @@ Let $\tau = 0, 1, \ldots, n_{\text{init}} - 1$ index positions in the initializa
 Then:
 
 $$
-  I_{\text{init}}(\tau) = I_0 \cdot e^{r \cdot \tau}, \quad \tau = 0, 1,
-  \ldots, n_{\text{init}} - 1
+  I_{\text{init}}(\tau) = I_0 \cdot e^{r \cdot \tau},
+  \quad \tau = 0, 1, \ldots, n_{\text{init}} - 1
 $$
 
-where $r$ is the asymptotic growth rate implied by the reproduction number at the start of the observation period, $\mathcal{R}(t=0) = e^{\text{log\_rt\_time\_0}}$, and the generation interval.
-The function `r_approx_from_R` converts $\mathcal{R}(t=0)$ and the generation interval into $r$ using Newton's method.
+where $r$ is the asymptotic growth rate implied by the reproduction number at the start of the observation period, $\mathcal{R}(t = 0) = e^{\text{log\_rt\_time\_0}}$, and the generation interval.
+The function `r_approx_from_R` converts $\mathcal{R}(t = 0)$ and the generation interval into $r$ using Newton's method.
 
 - **The level is set by `I0`**.</br> `I0` is the infection prevalence at the earliest point in the initialization period, $n_{\text{init}} - 1$ time points before $t = 0$.
   It sets the scale of the entire initialization vector: $I_{\text{init}}(0) = I_0$, with subsequent entries growing or declining exponentially toward $t = 0$.
 
-- **The shape is set by `log_rt_time_0`**.<br> `log_rt_time_0` enters the model in two places: it is the starting point of the $\mathcal{R}(t)$ trajectory ($\mathcal{R}(t=0) = e^{\text{log\_rt\_time\_0}}$), and it determines the exponential growth rate $r$ used to construct the initialization vector.
+- **The shape is set by `log_rt_time_0`**.<br> `log_rt_time_0` enters the model in two places: it is the starting point of the $\mathcal{R}(t)$ trajectory ($\mathcal{R}(t = 0) = e^{\text{log\_rt\_time\_0}}$), and it determines the exponential growth rate $r$ used to construct the initialization vector.
   When `log_rt_time_0 = 0`, $r = 0$ and the initialization vector is flat at level `I0`.
   When `log_rt_time_0 > 0`, infections are growing exponentially at $t = 0$; when `log_rt_time_0 < 0`, they are declining.
 
@@ -232,7 +232,7 @@ init_df = pd.DataFrame(init_data)
 )
 ```
 
-The initialization vector matters because the renewal equation is a convolution: infections on day 0 depend on infections from days $-1$ through $-(K-1)$, weighted by the generation interval.
+The initialization vector matters because the renewal equation is a convolution: infections on day 0 depend on infections from days $-1$ through $-(K - 1)$, weighted by the generation interval.
 A flat initialization (stable) means the renewal equation starts with uniform recent history.
 A growing initialization means the most recent days have disproportionately more infections, which amplifies the effect of the generation interval's short-lag weights.
 
@@ -362,7 +362,7 @@ The variance of $x_t$ grows linearly with time: $\text{Var}(x_t) = \sigma^2 t$.
 The further into the future, the less constrained the process is.
 
 **Hyperparameter:** `innovation_sd` ($\sigma$) is the standard deviation of each daily step on the log scale.
-With `innovation_sd = 0.05`, each day's $\log \mathcal{R}$ changes by roughly $\pm 0.05$, which corresponds to roughly $\pm 5\%$ multiplicative change in $\mathcal{R}$.
+With `innovation_sd = 0.05`, each day's $\log \mathcal{R}$ changes by roughly $\pm0.05$, which corresponds to roughly $\pm5\%$ multiplicative change in $\mathcal{R}$.
 
 ```{python}
 #| label: rw-sample
@@ -408,7 +408,7 @@ If $\mathcal{R}(t)$ drifts above 1, the $\phi$ coefficient pulls it back; if it 
 - `innovation_sd` ($\sigma$): standard deviation of daily noise.
 
 The two hyperparameters jointly determine the **stationary standard deviation** $\sigma_{\text{stat}} = \sigma / \sqrt{1 - \phi^2}$, which is the long-run spread of $\log \mathcal{R}(t)$.
-For example, `autoreg = 0.9` and `innovation_sd = 0.05` give $\sigma_{\text{stat}} \approx 0.115$, meaning 95% of long-run $\log \mathcal{R}$ values fall within $\pm 0.23$ of zero, or equivalently $\mathcal{R} \in [0.79, 1.26]$.
+For example, `autoreg = 0.9` and `innovation_sd = 0.05` give $\sigma_{\text{stat}} \approx 0.115$, meaning 95% of long-run $\log \mathcal{R}$ values fall within $\pm0.23$ of zero, or equivalently $\mathcal{R} \in [0.79, 1.26]$.
 
 ```{python}
 #| label: ar1-sample
@@ -441,7 +441,8 @@ DifferencedAR1 models *changes* in $\mathcal{R}(t)$ as an autoregressive process
 In terms of increments,
 
 $$
-  \Delta x_t = \texttt{autoreg} \cdot \Delta x_{t-1} + \varepsilon_t, \quad x_t = x_{t-1} + \Delta x_t,
+  \Delta x_t = \texttt{autoreg} \cdot \Delta x_{t-1} + \varepsilon_t,
+  \quad x_t = x_{t-1} + \Delta x_t,
 $$
 
 so the autoregressive structure applies to the *rate of change* rather than the level.
