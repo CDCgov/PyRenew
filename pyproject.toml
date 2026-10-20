@@ -7,7 +7,7 @@ license = "Apache-2.0"
 authors = [{name = "CFA"}]
 requires-python = ">= 3.13"
 dependencies = [
-    "jax>=0.7.0",
+    "jax>=0.12.0",
     "numpy>=2.4.6",
     "polars>=1.2.1",
     "numpyro>=0.21.0",
@@ -33,7 +33,7 @@ dev = [
     "pytest-cov>=6.3.0",
     "pytest-env>=1.2.0",
     "ruff>=0.15.16",
-    "scipy>=1.16.1",
+    "scipy>=1.18.0",
 ]
 
 [build-system]
