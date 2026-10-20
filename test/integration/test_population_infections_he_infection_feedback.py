@@ -1,8 +1,8 @@
 """
 Integration test: PopulationInfections H+E model with infection feedback.
 
-Checks that a builder-configured infection process is used inside the full
-PopulationInfections + hospital + ED model graph.
+Checks that infection feedback configured through the builder is used inside
+the full PopulationInfections + hospital + ED model graph.
 """
 
 from __future__ import annotations
@@ -14,7 +14,6 @@ import numpyro
 import polars as pl
 import pytest
 
-from pyrenew.latent import InfectionsWithFeedback
 from pyrenew.model import MultiSignalModel
 
 pytestmark = pytest.mark.integration
@@ -27,7 +26,7 @@ OBS_START_DATE = date(2023, 11, 6)
 class TestPriorPredictiveStructure:
     """Verify infection feedback is wired through the H+E model graph."""
 
-    def test_infection_feedback_effective_rt_site(
+    def test_infection_feedback_adjusted_rt_site(
         self,
         he_model_with_infection_feedback: MultiSignalModel,
         daily_hosp: pl.DataFrame,
@@ -39,7 +38,7 @@ class TestPriorPredictiveStructure:
         Parameters
         ----------
         he_model_with_infection_feedback : MultiSignalModel
-            Built H+E model configured with ``InfectionsWithFeedback``.
+            Built H+E model configured with infection feedback.
         daily_hosp : pl.DataFrame
             Daily hospital admissions.
         daily_ed : pl.DataFrame
@@ -67,13 +66,13 @@ class TestPriorPredictiveStructure:
         n_init = model.latent.n_initialization_points
         n_total = n_init + N_DAYS_FIT
         rt_raw = trace["PopulationInfections::rt_single"]["value"]
-        rt_effective = trace["PopulationInfections::rt_single_effective"]["value"]
+        rt_adjusted = trace["PopulationInfections::rt_single_adjusted"]["value"]
 
-        assert isinstance(model.latent.infection_process, InfectionsWithFeedback)
+        assert model.latent.infection_feedback_strength_rv is not None
         assert rt_raw.shape == (n_total, 1)
-        assert rt_effective.shape == (n_total, 1)
-        assert jnp.allclose(rt_effective[:n_init], rt_raw[:n_init])
-        assert jnp.max(jnp.abs(rt_effective[n_init:] - rt_raw[n_init:])) > 1e-8
+        assert rt_adjusted.shape == (n_total, 1)
+        assert jnp.allclose(rt_adjusted[:n_init], rt_raw[:n_init])
+        assert jnp.max(jnp.abs(rt_adjusted[n_init:] - rt_raw[n_init:])) > 1e-8
         assert trace["latent_infections"]["value"].shape == (n_total,)
         assert trace["hospital_predicted"]["value"].shape == (n_total,)
         assert trace["ed_predicted"]["value"].shape == (n_total,)
