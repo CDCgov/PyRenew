@@ -40,6 +40,11 @@ from pyrenew.observation import (
 )
 from pyrenew.randomvariable import DistributionalVariable, VectorizedVariable
 from pyrenew.deterministic import DeterministicVariable, DeterministicPMF
+
+numpyro.enable_validation(False)
+# with argument validation enabled (now the default), NumPyro Normal
+# distributions reject `-inf` means, which we have in this tutorial.
+# Pending a larger rewrite, we render this tutorial with validation off.
 ```
 
 ## The MeasurementObservation Class
