@@ -1,5 +1,7 @@
 # numpydoc ignore=GL08
 
+from contextlib import nullcontext
+
 import jax
 import jax.numpy as jnp
 import numpyro
@@ -13,46 +15,65 @@ from numpy.testing import (
 from pyrenew.distributions import CensoredNormal
 
 
+@pytest.mark.parametrize("validate", [True, False])
 @pytest.mark.parametrize(
-    ["loc", "scale", "lower_limit", "upper_limit", "in_val", "l_val", "h_val"],
+    ["loc", "scale"],
     [
-        [
-            jnp.array([0]),
-            jnp.array([2.0, 1.0]),
-            -1,
-            1,
-            jnp.array([0, 0.5]),
-            -2,
-            2,
-        ],
+        [jnp.array([0]), jnp.array([2.5, 1.0])],
         [
             jnp.array([0, 1]),
             jnp.array([1.0]),
-            -1,
-            2,
-            jnp.array([0, 0.5]),
-            -2,
-            3,
         ],
     ],
 )
-def test_interval_censored_normal_distribution(
-    loc,
-    scale,
-    lower_limit,
-    upper_limit,
-    in_val,
-    l_val,
-    h_val,
+@pytest.mark.parametrize(
+    ["lower_limit", "upper_limit", "inbounds_test_val"],
+    [
+        [
+            -1.5552,
+            1.0235235,
+            jnp.array([0, 0.5]),
+        ],
+        [
+            -1,
+            2,
+            jnp.array([0, 0.5]),
+        ],
+    ],
+)
+def test_censored_normal_distribution(
+    loc, scale, lower_limit, upper_limit, inbounds_test_val, validate
 ):
     """
-    Tests the censored normal distribution samples
-    within the limit and calculation of log probability
+    Test forward sampling, support, and log probability calculations
+    for the CensoredNormal, with and without validation.
     """
     censored_dist = CensoredNormal(
-        loc=loc, scale=scale, lower_limit=lower_limit, upper_limit=upper_limit
+        loc=loc,
+        scale=scale,
+        lower_limit=lower_limit,
+        upper_limit=upper_limit,
+        validate_args=validate,
     )
     normal_dist = numpyro.distributions.Normal(loc=loc, scale=scale)
+
+    lb_vals = jnp.full_like(inbounds_test_val, lower_limit)
+    ub_vals = jnp.full_like(inbounds_test_val, upper_limit)
+
+    oob_vals_lower = jnp.nextafter(lb_vals, -jnp.inf)
+    oob_vals_upper = jnp.nextafter(ub_vals, jnp.inf)
+
+    expected_lp_inbounds = normal_dist.log_prob(inbounds_test_val)
+    expected_lp_lb = jax.scipy.special.log_ndtr((lb_vals - loc) / scale)
+    expected_lp_ub = jax.scipy.special.log_ndtr(-(ub_vals - loc) / scale)
+    if validate:
+        expected_lp_oob_low = jnp.full_like(expected_lp_lb, -jnp.inf)
+        expected_lp_oob_high = jnp.full_like(expected_lp_ub, -jnp.inf)
+        oob_context = pytest.warns(match="Out-of-support")
+    else:
+        expected_lp_oob_low = expected_lp_lb
+        expected_lp_oob_high = expected_lp_ub
+        oob_context = nullcontext()
 
     # test samples within the bounds
     samp = censored_dist.sample(jax.random.PRNGKey(0), sample_shape=(100,))
@@ -60,19 +81,45 @@ def test_interval_censored_normal_distribution(
     assert jnp.all(samp <= upper_limit)
 
     # test log prob of values within bounds
-    assert_array_equal(censored_dist.log_prob(in_val), normal_dist.log_prob(in_val))
+    assert_array_equal(censored_dist.log_prob(inbounds_test_val), expected_lp_inbounds)
 
-    # test log prob of values lower than the limit
-    assert_array_almost_equal(
-        censored_dist.log_prob(l_val),
-        jax.scipy.special.log_ndtr((lower_limit - loc) / scale),
+    # test log prob of values at the lower limit
+    assert_array_almost_equal(censored_dist.log_prob(lb_vals), expected_lp_lb)
+
+    # test log prob of values at the upper limit
+    assert_array_almost_equal(censored_dist.log_prob(ub_vals), expected_lp_ub)
+
+    # out of bounds values should return -inf log prob
+    # with a warning if validation enabled, otherwise
+    # should return limit values
+
+    with oob_context:
+        assert_array_almost_equal(
+            censored_dist.log_prob(oob_vals_lower), expected_lp_oob_low
+        )
+
+    with oob_context:
+        assert_array_almost_equal(
+            censored_dist.log_prob(oob_vals_upper), expected_lp_oob_high
+        )
+
+    # log prob of a mix of in, at, and oob values should mix -infs
+    # and correct inbounds values, with a warning
+    test_vals = jnp.vstack(
+        [oob_vals_lower, jnp.array(inbounds_test_val), lb_vals, oob_vals_upper, ub_vals]
+    )
+    expected_lps = jnp.vstack(
+        [
+            expected_lp_oob_low,
+            expected_lp_inbounds,
+            expected_lp_lb,
+            expected_lp_oob_high,
+            expected_lp_ub,
+        ],
     )
 
-    # test log prob of values higher than the limit
-    assert_array_almost_equal(
-        censored_dist.log_prob(h_val),
-        jax.scipy.special.log_ndtr(-(upper_limit - loc) / scale),
-    )
+    with oob_context:
+        assert_array_almost_equal(censored_dist.log_prob(test_vals), expected_lps)
 
     # test_broadcasting
     assert_equal(samp.shape[-1], max(loc.shape[0], scale.shape[0]))
@@ -83,80 +130,38 @@ def test_interval_censored_normal_distribution(
 
 
 @pytest.mark.parametrize(
-    ["loc", "scale", "lower_limit", "in_val", "l_val"],
+    ["loc", "scale", "lower_limit"],
     [
-        [0, 1, -5, jnp.array([-2, 1]), -6],
+        [0, 1, -5.000001],
     ],
 )
 def test_left_censored_normal_distribution(
     loc,
     scale,
     lower_limit,
-    in_val,
-    l_val,
 ):
     """
-    Tests the lower censored normal distribution samples
-    within the limit and calculation of log probability
+    If only lower (left) limit provided, upper (right) limit is inf
     """
     censored_dist = CensoredNormal(
         loc=loc,
         scale=scale,
         lower_limit=lower_limit,
     )
-    normal_dist = numpyro.distributions.Normal(loc=loc, scale=scale)
-
-    # test samples within the bounds
-    samp = censored_dist.sample(jax.random.PRNGKey(0), sample_shape=(100,))
-    assert jnp.all(samp >= lower_limit)
-
-    # test log prob of values within bounds
-    assert_array_equal(censored_dist.log_prob(in_val), normal_dist.log_prob(in_val))
-
-    # test log prob of values lower than the limit
-    assert_array_almost_equal(
-        censored_dist.log_prob(l_val),
-        jax.scipy.special.log_ndtr((lower_limit - loc) / scale),
-    )
-
-    # test support of the distribution
     assert_equal(censored_dist.support.lower_bound, lower_limit)
     assert censored_dist.support.upper_bound == jnp.inf
 
 
 @pytest.mark.parametrize(
-    ["loc", "scale", "upper_limit", "in_val", "h_val"],
+    ["loc", "scale", "upper_limit"],
     [
-        [0, 1, 3, jnp.array([1, 2]), 5],
+        [0, 1, jnp.array([1.0353, 2.52])],
     ],
 )
-def test_right_censored_normal_distribution(
-    loc,
-    scale,
-    upper_limit,
-    in_val,
-    h_val,
-):
+def test_right_censored_normal_distribution(loc, scale, upper_limit):
     """
-    Tests the upper censored normal distribution samples
-    within the limit and calculation of log probability
+    If only upper (right) limit provided, the lower (left) limit is -inf
     """
     censored_dist = CensoredNormal(loc=loc, scale=scale, upper_limit=upper_limit)
-    normal_dist = numpyro.distributions.Normal(loc=loc, scale=scale)
-
-    # test samples within the bounds
-    samp = censored_dist.sample(jax.random.PRNGKey(0), sample_shape=(100,))
-    assert jnp.all(samp <= upper_limit)
-
-    # test log prob of values within bounds
-    assert_array_equal(censored_dist.log_prob(in_val), normal_dist.log_prob(in_val))
-
-    # test log prob of values higher than the limit
-    assert_array_almost_equal(
-        censored_dist.log_prob(h_val),
-        jax.scipy.special.log_ndtr(-(upper_limit - loc) / scale),
-    )
-
-    # test support of the distribution
-    assert_equal(censored_dist.support.upper_bound, upper_limit)
+    assert_array_equal(censored_dist.support.upper_bound, upper_limit)
     assert censored_dist.support.lower_bound == -jnp.inf

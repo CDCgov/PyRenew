@@ -94,6 +94,16 @@ class CensoredNormal(numpyro.distributions.Distribution):
         Computes the log probability density of a given value(s) under
         the censored normal distribution.
 
+        With validation enabled (default), values outside the censoring limits
+        return a `log_prob` of `-inf` and issue a warning. With validation disabled,
+        values outside the censoring limits are treated identically to values
+        at the corresponding limit (i.e. values above the upper limit are treated
+        as upper limit values).
+
+        To evaluate the log_prob of a censored value, input the appropriate
+        censoring limit as the observed value. So for a value above the
+        upper censoring limit, input the upper censoring limit.
+
         Returns
         -------
         Array
