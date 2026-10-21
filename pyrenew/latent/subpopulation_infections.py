@@ -122,7 +122,7 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
             Each subpopulation's growth rate for infection seeding will
             be calculated from its initial $\mathcal{R}(t))$ value.
             The first value for the baseline time-varying $\\mathcal{R}(t)$
-            (from which subpopulation-specific values deviation) is set as
+            (from which subpopulation-specific values deviate) is set as
             the mean of the initial per-subpopulation values.
         infection_feedback_strength_rv
             Infection feedback strength $\\gamma$. Returns an array that
