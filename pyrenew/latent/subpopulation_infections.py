@@ -119,11 +119,9 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
             subpopulations, or an array of shape ``(n_subpops,)``, one value per
             subpopulation in the order of ``subpop_fractions``. Per-subpopulation
             values also give each subpopulation its own initial growth rate.
-            The baseline starts at the mean of the per-subpopulation values, so
-            giving every subpopulation the same prior narrows the prior on the
-            baseline's starting value: with
-            ``dist.Normal(0.0, s).expand([n_subpops])``, its standard deviation
-            is ``s / sqrt(n_subpops)``, not ``s``.
+            The first value for the baseline time-varying $\\mathcal{R}(t)$ 
+            (from which subpopulation-specific values deviation) is set as
+            the mean of the initial per-subpopulation values.
         infection_feedback_strength_rv
             Infection feedback strength $\\gamma$. Returns an array that
             broadcasts to ``(n_days_post_init, n_subpops)``:
