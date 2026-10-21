@@ -207,7 +207,7 @@ model = SubpopulationInfections(
 
 To give each subpopulation its own starting $\mathcal{R}(t)$, `log_rt_time_0_rv` returns one value per subpopulation, in the order of `subpop_fractions`.
 With `RandomWalk` deviations, each subpopulation's $\mathcal{R}(t)$ starts exactly at the corresponding value given by `log_rt_time_0_rv`.
-With an `AR1` deviation process, the values are instead used as prior means (so that the overall process can be initialized at stationarity).
+With an `AR1` deviation process, the values are instead used as prior means.
 
 ```{python}
 #| label: per-subpop-start
