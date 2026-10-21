@@ -288,8 +288,8 @@ def compute_infections_from_rt_with_mobility(
     Notes
     -----
     This is Equation 2 of Roy, Clapham, and Mishra (2025),
-    <https://doi.org/10.1371/journal.pcbi.1013642>, divided by the number
-    of residents of region $i$:
+    <https://doi.org/10.1371/journal.pcbi.1013642>. In infection counts (before
+    converting to infections per resident), the equation is:
 
     ```math
     I_{t,i} = \sum_{j=1}^{n} \frac{m_{ji} S_{t,i}}{\sum_{l=1}^{n} m_{jl} N_l}
