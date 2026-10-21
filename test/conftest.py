@@ -15,13 +15,16 @@ from collections.abc import Callable
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import pytest
+from jax.typing import ArrayLike
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
+    MobilitySubpopulationInfections,
     PopulationInfections,
     SubpopulationInfections,
 )
 from pyrenew.metaclass import RandomVariable
+from pyrenew.model import MultiSignalModel, PyrenewBuilder
 from pyrenew.observation import (
     HierarchicalNormalNoise,
     NegativeBinomialNoise,
@@ -306,6 +309,248 @@ def random_walk_subpopulation_infections_factory(
         )
 
     return make
+
+
+# =============================================================================
+# Mobility Fixtures
+# =============================================================================
+
+
+@pytest.fixture
+def roy_mobility_matrix() -> jnp.ndarray:
+    """
+    Mobility matrix of Roy et al. (2025) Fig 2b.
+
+    Returns
+    -------
+    jnp.ndarray
+        Column-stochastic matrix; entry [j, k] is the fraction of
+        residents of region k present at location j.
+    """
+    return jnp.array([[0.9, 0.07, 0.21], [0.05, 0.85, 0.09], [0.05, 0.08, 0.7]])
+
+
+@pytest.fixture
+def roy_subpop_fractions() -> jnp.ndarray:
+    """
+    Population fractions of the three regions of Roy et al. (2025) Fig 2.
+
+    Returns
+    -------
+    jnp.ndarray
+        Fractions for populations of 20, 10, and 15 million.
+    """
+    return jnp.array([20.0, 10.0, 15.0]) / 45.0
+
+
+@pytest.fixture
+def mobility_initial_infections() -> jnp.ndarray:
+    """
+    Initialization-period infections per resident for three regions.
+
+    Returns
+    -------
+    jnp.ndarray
+        Shape (10, 3): ten days, longer than the 7-day generation
+        interval, with values that differ by region.
+    """
+    return jnp.tile(jnp.array([1e-5, 2e-5, 5e-6]), (10, 1))
+
+
+@pytest.fixture
+def mobility_rt_raw() -> jnp.ndarray:
+    """
+    Unequal random-walk Rt for three locations over 150 days.
+
+    Returns
+    -------
+    jnp.ndarray
+        Shape (150, 3), starting at 2.0, 1.6, and 1.4.
+    """
+    steps = 0.01 * jax.random.normal(jax.random.key(901), (150, 3))
+    return jnp.exp(jnp.log(jnp.array([2.0, 1.6, 1.4])) + jnp.cumsum(steps, axis=0))
+
+
+def _mobility_latent_params(
+    gen_int_rv: DeterministicPMF,
+    mobility_matrix: ArrayLike,
+    log_rt_time_0_rv: RandomVariable,
+    susceptible_depletion: bool,
+) -> dict[str, object]:
+    """
+    Constructor arguments shared by the mobility latent-process fixtures.
+
+    Matches random_walk_subpopulation_infections_factory in name, initial
+    infections, and temporal processes.
+
+    Parameters
+    ----------
+    gen_int_rv
+        Generation interval PMF.
+    mobility_matrix
+        Mobility matrix value.
+    log_rt_time_0_rv
+        Starting log Rt, a scalar or one value per region.
+    susceptible_depletion
+        Whether susceptible depletion is on.
+
+    Returns
+    -------
+    dict[str, object]
+        Keyword arguments for MobilitySubpopulationInfections, without
+        n_initialization_points.
+    """
+    return {
+        "name": "subpopulation",
+        "gen_int_rv": gen_int_rv,
+        "I0_rv": DeterministicVariable("I0", 0.001),
+        "log_rt_time_0_rv": log_rt_time_0_rv,
+        "baseline_rt_process": fixed_random_walk(innovation_sd=0.05),
+        "subpop_rt_deviation_process": fixed_random_walk(innovation_sd=0.025),
+        "mobility_matrix_rv": DeterministicVariable("mobility_matrix", mobility_matrix),
+        "susceptible_depletion": susceptible_depletion,
+    }
+
+
+@pytest.fixture
+def mobility_subpopulation_infections_factory(
+    gen_int_rv: DeterministicPMF,
+) -> Callable[..., MobilitySubpopulationInfections]:
+    """
+    Factory for MobilitySubpopulationInfections.
+
+    Returns
+    -------
+    Callable[..., MobilitySubpopulationInfections]
+        Function that builds the process with the given matrix, starting
+        log Rt, and depletion switch.
+    """
+
+    def make(
+        mobility_matrix: ArrayLike,
+        log_rt_time_0_rv: RandomVariable,
+        susceptible_depletion: bool = True,
+    ) -> MobilitySubpopulationInfections:
+        """
+        Build MobilitySubpopulationInfections.
+
+        Parameters
+        ----------
+        mobility_matrix
+            Mobility matrix value.
+        log_rt_time_0_rv
+            Starting log Rt, a scalar or one value per region.
+        susceptible_depletion
+            Whether susceptible depletion is on.
+
+        Returns
+        -------
+        MobilitySubpopulationInfections
+            Configured infection process.
+        """
+        return MobilitySubpopulationInfections(
+            n_initialization_points=7,
+            **_mobility_latent_params(
+                gen_int_rv,
+                mobility_matrix,
+                log_rt_time_0_rv,
+                susceptible_depletion,
+            ),
+        )
+
+    return make
+
+
+@pytest.fixture
+def mobility_subpopulation_infections(
+    mobility_subpopulation_infections_factory: Callable[
+        ..., MobilitySubpopulationInfections
+    ],
+    roy_mobility_matrix: jnp.ndarray,
+) -> MobilitySubpopulationInfections:
+    """
+    MobilitySubpopulationInfections with the Fig 2b matrix.
+
+    Returns
+    -------
+    MobilitySubpopulationInfections
+        Process with a scalar starting log Rt of 0 and depletion on.
+    """
+    return mobility_subpopulation_infections_factory(
+        roy_mobility_matrix, DeterministicVariable("log_rt_time_0", 0.0)
+    )
+
+
+@pytest.fixture
+def mobility_model_factory(
+    gen_int_rv: DeterministicPMF,
+) -> Callable[[ArrayLike], MultiSignalModel]:
+    """
+    Factory for a builder-constructed model with mobility coupling.
+
+    Returns
+    -------
+    Callable[[ArrayLike], MultiSignalModel]
+        Function that builds the model with the given mobility matrix.
+    """
+
+    def make(mobility_matrix: ArrayLike) -> MultiSignalModel:
+        """
+        Build a model with one subpopulation count observation.
+
+        Parameters
+        ----------
+        mobility_matrix
+            Mobility matrix value.
+
+        Returns
+        -------
+        MultiSignalModel
+            Model with the latent configuration of the mobility factory
+            and a SubpopulationCounts observation named "hospital_subpop".
+        """
+        builder = PyrenewBuilder()
+        builder.configure_latent(
+            MobilitySubpopulationInfections,
+            **_mobility_latent_params(
+                gen_int_rv,
+                mobility_matrix,
+                DeterministicVariable("log_rt_time_0", 0.0),
+                True,
+            ),
+        )
+        builder.add_observation(
+            SubpopulationCounts(
+                name="hospital_subpop",
+                ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+                delay_distribution_rv=DeterministicPMF(
+                    "delay", jnp.array([0.1, 0.3, 0.4, 0.2])
+                ),
+                noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+            )
+        )
+        return builder.build()
+
+    return make
+
+
+@pytest.fixture
+def mobility_model_args(roy_subpop_fractions: jnp.ndarray) -> dict[str, object]:
+    """
+    Keyword arguments for sampling the mobility model.
+
+    Returns
+    -------
+    dict[str, object]
+        Arguments for model.sample: 30 days, the Fig 2 populations, and
+        prior predictive counts for all three regions.
+    """
+    return {
+        "n_days_post_init": 30,
+        "population_size": 45_000_000,
+        "subpop_fractions": roy_subpop_fractions,
+        "hospital_subpop": {"obs": None, "subpop_indices": jnp.arange(3)},
+    }
 
 
 @pytest.fixture

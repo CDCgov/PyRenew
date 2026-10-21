@@ -24,6 +24,7 @@ from pyrenew.latent import (
     HierarchicalNormalPrior,
     Infections,
     InfectionsWithFeedback,
+    MobilitySubpopulationInfections,
     StudentTGroupModePrior,
     SubpopulationInfections,
 )
@@ -241,6 +242,16 @@ def test_get_required_lookback(gen_int_rv):
     assert infections.get_required_lookback() == expected_length
 
 
+def test_mobility_get_required_lookback(
+    mobility_subpopulation_infections: MobilitySubpopulationInfections,
+    gen_int_rv: DeterministicPMF,
+) -> None:
+    """MobilitySubpopulationInfections lookback is the generation interval length."""
+    assert mobility_subpopulation_infections.get_required_lookback() == len(
+        gen_int_rv()
+    )
+
+
 # =============================================================================
 # SubpopulationInfections.validate() coverage
 # =============================================================================
@@ -258,6 +269,13 @@ def test_subpopulation_infections_validate(gen_int_rv):
         n_initialization_points=7,
     )
     infections.validate()
+
+
+def test_mobility_subpopulation_infections_validate(
+    mobility_subpopulation_infections: MobilitySubpopulationInfections,
+) -> None:
+    """MobilitySubpopulationInfections.validate() runs without error on valid PMF."""
+    mobility_subpopulation_infections.validate()
 
 
 # =============================================================================
@@ -449,6 +467,13 @@ def test_subpopulation_infections_name(gen_int_rv):
         n_initialization_points=7,
     )
     assert infections.name == "test_hi"
+
+
+def test_mobility_subpopulation_infections_name(
+    mobility_subpopulation_infections: MobilitySubpopulationInfections,
+) -> None:
+    """MobilitySubpopulationInfections.name is correctly set during construction."""
+    assert mobility_subpopulation_infections.name == "subpopulation"
 
 
 # =============================================================================
