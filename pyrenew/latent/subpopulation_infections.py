@@ -114,11 +114,13 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
         subpop_rt_deviation_process
             Temporal process for subpopulation deviations
         log_rt_time_0_rv
-            Starting log($\\mathcal{R}(t)$) on the first day of the
-            initialization period. Returns either a scalar, one value for all
-            subpopulations, or an array of shape ``(n_subpops,)``, one value per
-            subpopulation in the order of ``subpop_fractions``. Per-subpopulation
-            values also give each subpopulation its own initial growth rate.
+            Value(s) for subpopulation-level $\\log(\\mathcal{R}_i(t))$ on the first day of the
+            initialization period. Should return either a scalar (which will be
+            broadcast to all subpopulations) or an array of shape ``(n_subpops,)`` 
+            containing subpopultion-specific $\log(\\mathcal{R}_i(t))$ values,
+            assigned in order of ``subpop_fractions``.
+            Each subpopulation's growth rate for infection seeding will
+            be calculated from its initial $\mathcal{R}(t))$ value.
             The first value for the baseline time-varying $\\mathcal{R}(t)$ 
             (from which subpopulation-specific values deviation) is set as
             the mean of the initial per-subpopulation values.
