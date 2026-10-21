@@ -5,14 +5,26 @@ Unit tests for SubpopulationInfections.
 
 import re
 from collections.abc import Callable
+from typing import Literal
 
+import jax
 import jax.numpy as jnp
 import numpyro
+import numpyro.distributions as dist
 import pytest
+from numpyro.infer import Predictive
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import Infections, InfectionsWithFeedback, SubpopulationInfections
+from pyrenew.latent import (
+    AR1,
+    DifferencedAR1,
+    Infections,
+    InfectionsWithFeedback,
+    SubpopulationInfections,
+)
+from pyrenew.math import r_approx_from_R
 from pyrenew.model import PyrenewBuilder
+from pyrenew.randomvariable import DistributionalVariable
 from test.test_helpers import fixed_random_walk
 
 
@@ -492,6 +504,246 @@ class TestSubpopulationInfectionsPerSubpopI0:
         assert jnp.all(inf_all > 0)
 
 
+class TestSubpopulationInfectionsStartingRt:
+    """Test scalar and per-subpopulation starting log Rt."""
+
+    @pytest.mark.parametrize("parameterization", ["innovation", "state"])
+    def test_differenced_ar1_preserves_starting_rt(
+        self,
+        gen_int_rv: DeterministicPMF,
+        subpop_log_rt_time_0: jnp.ndarray,
+        subpop_fractions: jnp.ndarray,
+        parameterization: Literal["innovation", "state"],
+    ) -> None:
+        """DifferencedAR1 samples initial rates but preserves starting log Rt."""
+        v = subpop_log_rt_time_0
+        temporal_process = DifferencedAR1(
+            autoreg_rv=DeterministicVariable("autoreg", 0.8),
+            innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+            parameterization=parameterization,
+        )
+        process = SubpopulationInfections(
+            name="subpopulation",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", v),
+            baseline_rt_process=temporal_process,
+            subpop_rt_deviation_process=temporal_process,
+            n_initialization_points=7,
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                process.sample(n_days_post_init=10, subpop_fractions=subpop_fractions)
+
+        assert jnp.allclose(trace["subpopulation::rt_subpop"]["value"][0], jnp.exp(v))
+        assert jnp.allclose(
+            trace["subpopulation::rt_baseline"]["value"][0, 0], jnp.exp(jnp.mean(v))
+        )
+        assert jnp.allclose(
+            trace["subpopulation::subpop_deviations"]["value"][0], v - jnp.mean(v)
+        )
+
+    @pytest.mark.parametrize("parameterization", ["innovation", "state"])
+    @pytest.mark.parametrize("ar1_role", ["baseline", "deviations", "both"])
+    def test_ar1_starting_rt_uses_draws_around_supplied_means(
+        self,
+        gen_int_rv: DeterministicPMF,
+        subpop_log_rt_time_0: jnp.ndarray,
+        subpop_fractions: jnp.ndarray,
+        parameterization: Literal["innovation", "state"],
+        ar1_role: Literal["baseline", "deviations", "both"],
+    ) -> None:
+        """AR1 initial draws determine centered starting Rt and infection growth."""
+        v = subpop_log_rt_time_0
+        autoreg, innovation_sd = 0.8, 0.05
+        kwargs = {
+            "autoreg_rv": DeterministicVariable("autoreg", autoreg),
+            "innovation_sd_rv": DeterministicVariable("innovation_sd", innovation_sd),
+        }
+        ar1 = AR1(**kwargs, parameterization=parameterization)
+        differenced_ar1 = DifferencedAR1(**kwargs, parameterization=parameterization)
+        process = SubpopulationInfections(
+            name="subpopulation",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", v),
+            baseline_rt_process=ar1 if ar1_role != "deviations" else differenced_ar1,
+            subpop_rt_deviation_process=ar1
+            if ar1_role != "baseline"
+            else differenced_ar1,
+            n_initialization_points=7,
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                process.sample(n_days_post_init=10, subpop_fractions=subpop_fractions)
+
+        baseline_start = jnp.mean(v)
+        deviations_start = v - baseline_start
+        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
+        if ar1_role != "deviations":
+            baseline_init = trace["log_rt_baseline_init"]
+            assert jnp.allclose(baseline_init["fn"].mean, baseline_start)
+            assert jnp.allclose(baseline_init["fn"].variance, stationary_sd**2)
+            baseline_start = baseline_init["value"][0]
+        if ar1_role != "baseline":
+            deviations_init = trace["subpop_deviations_init"]
+            assert jnp.allclose(deviations_init["fn"].mean, deviations_start)
+            assert jnp.allclose(deviations_init["fn"].variance, stationary_sd**2)
+            deviations_start = deviations_init["value"] - jnp.mean(
+                deviations_init["value"]
+            )
+
+        expected_rt = jnp.exp(baseline_start + deviations_start)
+        assert jnp.allclose(
+            trace["subpopulation::rt_baseline"]["value"][0, 0], jnp.exp(baseline_start)
+        )
+        assert jnp.allclose(
+            trace["subpopulation::subpop_deviations"]["value"][0], deviations_start
+        )
+        assert jnp.allclose(trace["subpopulation::rt_subpop"]["value"][0], expected_rt)
+        assert not jnp.allclose(expected_rt, jnp.exp(v))
+
+        initial_infections = trace["subpopulation::I0_init_all_subpops"]["value"]
+        growth = jnp.log(initial_infections[1:] / initial_infections[:-1])
+        expected_growth = r_approx_from_R(
+            R=expected_rt, g=gen_int_rv(), n_newton_steps=4
+        )
+        assert jnp.allclose(growth, expected_growth[jnp.newaxis, :])
+
+    def test_vector_log_rt_time_0_sets_starting_rt(
+        self,
+        random_walk_subpopulation_infections_factory: Callable[
+            ..., SubpopulationInfections
+        ],
+        subpop_log_rt_time_0: jnp.ndarray,
+        subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """Per-subpopulation starting log Rt sets day-0 subpopulation and baseline Rt."""
+        v = subpop_log_rt_time_0
+        process = random_walk_subpopulation_infections_factory(
+            DeterministicVariable("log_rt_time_0", v)
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                process.sample(n_days_post_init=30, subpop_fractions=subpop_fractions)
+
+        assert jnp.allclose(trace["subpopulation::rt_subpop"]["value"][0], jnp.exp(v))
+        assert jnp.allclose(
+            trace["subpopulation::rt_baseline"]["value"][0, 0], jnp.exp(jnp.mean(v))
+        )
+        assert jnp.allclose(
+            trace["subpopulation::subpop_deviations"]["value"][0], v - jnp.mean(v)
+        )
+
+    def test_equal_vector_log_rt_time_0_matches_scalar(
+        self,
+        random_walk_subpopulation_infections_factory: Callable[
+            ..., SubpopulationInfections
+        ],
+        subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """A vector of equal starting values gives the same results as the scalar."""
+        scalar = random_walk_subpopulation_infections_factory(
+            DeterministicVariable("log_rt_time_0", 0.3)
+        )
+        vector = random_walk_subpopulation_infections_factory(
+            DeterministicVariable("log_rt_time_0", jnp.full(3, 0.3))
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as scalar_trace:
+                scalar_sample = scalar.sample(
+                    n_days_post_init=30, subpop_fractions=subpop_fractions
+                )
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as vector_trace:
+                vector_sample = vector.sample(
+                    n_days_post_init=30, subpop_fractions=subpop_fractions
+                )
+
+        assert list(scalar_trace) == list(vector_trace)
+        for name, site in scalar_trace.items():
+            if site["type"] == "deterministic":
+                assert jnp.allclose(site["value"], vector_trace[name]["value"])
+        assert jnp.allclose(scalar_sample.aggregate, vector_sample.aggregate)
+        assert jnp.allclose(scalar_sample.all_subpops, vector_sample.all_subpops)
+
+    def test_vector_log_rt_time_0_gives_distinct_initial_growth(
+        self,
+        random_walk_subpopulation_infections_factory: Callable[
+            ..., SubpopulationInfections
+        ],
+        subpop_log_rt_time_0: jnp.ndarray,
+        subpop_fractions: jnp.ndarray,
+        gen_int_rv: DeterministicPMF,
+    ) -> None:
+        """Each subpopulation's initial growth rate follows its own starting Rt."""
+        v = subpop_log_rt_time_0
+        process = random_walk_subpopulation_infections_factory(
+            DeterministicVariable("log_rt_time_0", v)
+        )
+
+        with numpyro.handlers.seed(rng_seed=42):
+            with numpyro.handlers.trace() as trace:
+                process.sample(n_days_post_init=30, subpop_fractions=subpop_fractions)
+
+        I0_all = trace["subpopulation::I0_init_all_subpops"]["value"]
+        growth = jnp.log(I0_all[1:] / I0_all[:-1])
+        growth_from_rt = r_approx_from_R(R=jnp.exp(v), g=gen_int_rv(), n_newton_steps=4)
+        assert jnp.allclose(growth, growth_from_rt[jnp.newaxis, :])
+        assert jnp.all(jnp.diff(growth[0]) > 0)
+
+    @pytest.mark.parametrize("shape", [(1,), (2,), (4,), (3, 1), (1, 3)])
+    def test_rejects_wrong_shape_log_rt_time_0(
+        self,
+        random_walk_subpopulation_infections_factory: Callable[
+            ..., SubpopulationInfections
+        ],
+        subpop_fractions: jnp.ndarray,
+        shape: tuple[int, ...],
+    ) -> None:
+        """A starting log Rt that is neither scalar nor one per subpopulation is rejected."""
+        process = random_walk_subpopulation_infections_factory(
+            DeterministicVariable("log_rt_time_0", jnp.zeros(shape))
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            with numpyro.handlers.seed(rng_seed=42):
+                process.sample(n_days_post_init=30, subpop_fractions=subpop_fractions)
+
+        message = str(excinfo.value)
+        assert "log_rt_time_0_rv" in message
+        assert "(3,)" in message
+        assert str(shape) in message
+
+    def test_vector_log_rt_time_0_under_predictive(
+        self,
+        random_walk_subpopulation_infections_factory: Callable[
+            ..., SubpopulationInfections
+        ],
+        subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """Each Predictive draw starts at its own per-subpopulation starting Rt."""
+        process = random_walk_subpopulation_infections_factory(
+            DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5).expand([3]))
+        )
+
+        def sampler() -> None:
+            """Sample the latent process for Predictive."""
+            process.sample(n_days_post_init=30, subpop_fractions=subpop_fractions)
+
+        samples = Predictive(sampler, num_samples=10)(jax.random.PRNGKey(0))
+
+        assert samples["log_rt_time_0"].shape == (10, 3)
+        assert jnp.allclose(
+            samples["subpopulation::rt_subpop"][:, 0, :],
+            jnp.exp(samples["log_rt_time_0"]),
+        )
+
+
 class TestSubpopulationValidateAndPrepareI0:
     """Test _validate_and_prepare_I0 for SubpopulationInfections."""
 
@@ -532,6 +784,28 @@ class TestSubpopulationValidateAndPrepareI0:
         I0 = jnp.array(1.5)
         with pytest.raises(ValueError, match="I0 must be <= 1"):
             subpopulation_infections._validate_and_prepare_I0(I0, pop)
+
+    @pytest.mark.parametrize("shape", [(1,), (2,), (4,), (3, 1), (1, 3)])
+    def test_rejects_wrong_shape_I0(
+        self,
+        subpopulation_infections: SubpopulationInfections,
+        subpop_fractions: jnp.ndarray,
+        shape: tuple[int, ...],
+    ) -> None:
+        """An I0 that is neither scalar nor one per subpopulation is rejected."""
+        pop = subpopulation_infections._parse_and_validate_fractions(
+            subpop_fractions=subpop_fractions
+        )
+
+        with pytest.raises(ValueError) as excinfo:
+            subpopulation_infections._validate_and_prepare_I0(
+                jnp.full(shape, 0.001), pop
+            )
+
+        message = str(excinfo.value)
+        assert "I0_rv" in message
+        assert "(3,)" in message
+        assert str(shape) in message
 
 
 if __name__ == "__main__":
