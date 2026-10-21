@@ -12,6 +12,7 @@ to run tests with 32-bit floats.
 
 from collections.abc import Callable
 
+import jax
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import pytest
