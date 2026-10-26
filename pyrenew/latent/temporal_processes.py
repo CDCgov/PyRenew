@@ -28,8 +28,6 @@ using the process parameters to construct the trajectory. The ``"state"``
 parameterization is centered: it samples each state conditionally on the
 preceding state. Both parameterizations define the same statistical model
 and support replaying fitted trajectories and extending them for forecasts.
-Non-centering can improve posterior sampling when process scales are
-inferred; its efficiency depends on the model and the observations.
 
 **When to use which:**
 
