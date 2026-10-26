@@ -22,18 +22,14 @@ low-level building blocks in [pyrenew.process][]. The key differences:
 
 ``AR1``, ``DifferencedAR1``, and ``RandomWalk`` expose a common public
 interface for two equivalent parameterizations. The ``"innovation"``
-parameterization is non-centered: it samples independent standardized
-innovations and constructs the state trajectory deterministically using the
-lower-level [pyrenew.process][] implementations. The ``"state"``
+parameterization is non-centered: it samples independent ``Normal(0, 1)``
+variables for innovations and random starting values, then transforms them
+using the process parameters to construct the trajectory. The ``"state"``
 parameterization is centered: it samples each state conditionally on the
-preceding state using a local NumPyro scan.
-
-This implementation asymmetry is intentional. The existing
-[pyrenew.process][] abstractions naturally represent innovation-driven
-processes. State-centered transitions remain local to the public temporal
-processes so that the state itself is the scanned NumPyro sample site, which
-supports replaying a fitted trajectory and extending it during posterior
-prediction.
+preceding state. Both parameterizations define the same statistical model
+and support replaying fitted trajectories and extending them for forecasts.
+Non-centering can improve posterior sampling when process scales are
+inferred; its efficiency depends on the model and the observations.
 
 **When to use which:**
 
@@ -43,13 +39,13 @@ prediction.
 
 - Use this module's classes (``AR1``, ``DifferencedAR1``, ``RandomWalk``)
   when modeling Rt trajectories in hierarchical infection models. These
-  provide a consistent interface, automatic vectorization, and enforce
-  epidemiologically-sensible constraints.
+  provide a consistent interface, automatic vectorization, and validation
+  of statically known innovation scales.
 
 **Temporal processes provided:**
 
-- ``AR1``: Autoregressive process with mean reversion. Keeps Rt bounded
-  near a baseline. Wraps [pyrenew.process.ARProcess][].
+- ``AR1``: Autoregressive process with reversion toward zero and finite
+  long-run variance when ``abs(autoreg) < 1``. Wraps [pyrenew.process.ARProcess][].
 - ``DifferencedAR1``: AR(1) on first differences. Allows persistent trends
   while stabilizing the growth rate. Wraps [pyrenew.process.DifferencedProcess][].
 - ``RandomWalk``: No mean reversion. Rt can drift without bound.
@@ -75,6 +71,7 @@ import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
+from numpyro.infer.reparam import LocScaleReparam
 
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.metaclass import RandomVariable
@@ -205,19 +202,25 @@ class AR1(TemporalProcess):
     AR(1) process.
 
     Each value depends on the previous value plus noise, with reversion
-    toward a mean level. Keeps Rt bounded near a baseline — values that
-    drift away are "pulled back" over time.
+    toward zero. When used for log Rt, this corresponds to reversion toward
+    Rt = 1. For ``abs(autoreg) < 1``, the long-run variance is finite, but
+    individual trajectories have no hard bounds. ``initial_value`` sets the
+    initial prior mean, not the long-run mean.
 
     The ``parameterization`` argument selects between a non-centered
-    ``"innovation"`` parameterization, which samples independent standardized
-    innovations, and a centered ``"state"`` parameterization, which samples
+    ``"innovation"`` parameterization, which samples independent standard
+    normals for the initial state and subsequent innovations, and a centered
+    ``"state"`` parameterization, which samples
     each state conditionally on the preceding state. Both produce the same
     prior distribution over the state path but can have different posterior
     sampling geometry.
 
-    The innovation branch uses [pyrenew.process.ARProcess][] to construct the
-    trajectory from sampled innovations. The state branch uses local scanned
-    conditional transitions.
+    With ``stationary_sd = innovation_sd / sqrt(1 - autoreg**2)``, the
+    innovation parameterization starts at
+    ``x[0] = initial_value + stationary_sd * z0`` and continues with
+    ``x[t] = autoreg * x[t - 1] + innovation_sd * z[t]``. Each ``z`` is an
+    independent ``Normal(0, 1)`` draw. ``innovation_sd`` scales the resulting
+    innovations; it does not change the standard deviation of these draws.
 
     Parameters
     ----------
@@ -300,8 +303,9 @@ class AR1(TemporalProcess):
         n_timepoints
             Number of time points to generate
         initial_value
-            Mean of the initial-state prior. The first returned value is sampled
-            as ``Normal(initial_value, innovation_sd / sqrt(1 - autoreg**2))``.
+            Mean of the initial-state prior. The first returned value has
+            distribution ``Normal(initial_value, innovation_sd / sqrt(1 - autoreg**2))``
+            in both parameterizations. Subsequent means revert toward zero.
             Scalar values are broadcast to all processes; arrays must have
             shape ``(n_processes,)``. Defaults to 0.0.
         n_processes
@@ -323,9 +327,18 @@ class AR1(TemporalProcess):
         autoreg_broadcast = jnp.broadcast_to(autoreg, (n_processes,))
 
         stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-        with numpyro.plate(f"{name_prefix}_init_plate", n_processes):
+        init_name = f"{name_prefix}_init"
+        reparam_config = (
+            {init_name: LocScaleReparam(0)}
+            if self.parameterization == "innovation"
+            else {}
+        )
+        with (
+            numpyro.handlers.reparam(config=reparam_config),
+            numpyro.plate(f"{name_prefix}_init_plate", n_processes),
+        ):
             init_states = numpyro.sample(
-                f"{name_prefix}_init",
+                init_name,
                 dist.Normal(initial_value, stationary_sd),
             )
 
@@ -369,42 +382,39 @@ class AR1(TemporalProcess):
 
 
 class DifferencedAR1(TemporalProcess):
-    r"""
+    """
     AR(1) process on first differences.
 
     Each *change* in value depends on the previous change plus noise, with
-    the rate of change reverting toward a mean. Unlike AR(1), this allows
-    Rt to trend persistently upward or downward while the growth rate stabilizes.
+    the rate of change reverting toward zero. When used for log Rt, this
+    allows persistent upward or downward trends in Rt.
 
     The ``parameterization`` argument selects between a non-centered
     ``"innovation"`` parameterization, which samples independent standardized
-    innovations on the differences, and a centered ``"state"``
-    parameterization, which samples the state path
-    $[x_1, \ldots, x_{T-1}]$ conditionally under the priors
+    innovations and a standardized initial rate of change, and a centered
+    ``"state"`` parameterization, which samples states conditionally on their
+    predecessors. Both produce the same prior over the state path but can
+    have different posterior sampling geometry.
 
-    $$
-    x_1 \sim \mathrm{Normal}(x_0, \sigma / \sqrt{1 - \phi^2})
-    $$
+    The first state is deterministic: ``x[0] = initial_value``. With
+    ``stationary_sd = innovation_sd / sqrt(1 - autoreg**2)``, the innovation
+    parameterization draws ``rate = stationary_sd * z0`` and sets
+    ``x[1] = x[0] + rate``. Each subsequent step updates
+    ``rate = autoreg * rate + innovation_sd * z[t]`` and
+    ``x[t] = x[t - 1] + rate``. Each ``z`` is an independent ``Normal(0, 1)``
+    draw; ``innovation_sd`` scales shocks to the rate of change.
 
-    $$
-    x_t \sim \mathrm{Normal}(x_{t-1} + \phi \, (x_{t-1} - x_{t-2}), \sigma),
-    \quad t \geq 2
-    $$
-
-    where $\phi$ is ``autoreg`` and $\sigma$ is ``innovation_sd``. The initial
-    state $x_0$ is supplied deterministically as ``initial_value``. Both produce
-    the same prior over the state path but can have different posterior
-    sampling geometry.
-
-    The innovation branch uses [pyrenew.process.DifferencedProcess][] with
-    [pyrenew.process.ARProcess][] as its fundamental process. The state branch
-    uses local scanned conditional transitions.
+    In the state parameterization, ``x[1]`` has conditional distribution
+    ``Normal(x[0], stationary_sd)``. Later states have conditional mean
+    ``x[t - 1] + autoreg * (x[t - 1] - x[t - 2])`` and standard deviation
+    ``innovation_sd``. The stationary distribution describes the differences,
+    not the accumulated levels.
 
     Parameters
     ----------
     autoreg_rv
         RandomVariable that returns the autoregressive coefficient for
-        differences. For stationarity, |autoreg| < 1, but this is not
+        differences. For stationary differences, |autoreg| < 1, but this is not
         enforced (use priors to constrain if needed).
     innovation_sd_rv
         RandomVariable that returns the standard deviation of noise added to
@@ -430,7 +440,7 @@ class DifferencedAR1(TemporalProcess):
         ----------
         autoreg_rv
             RandomVariable that returns the autoregressive coefficient for
-            differences. For stationarity, |autoreg| < 1, but this is not
+            differences. For stationary differences, |autoreg| < 1, but this is not
             enforced (use priors to constrain if needed).
         innovation_sd_rv
             RandomVariable that returns the standard deviation of innovations.
@@ -507,11 +517,23 @@ class DifferencedAR1(TemporalProcess):
         autoreg_broadcast = jnp.broadcast_to(autoreg, (n_processes,))
 
         stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-        with numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes):
+        init_name = f"{name_prefix}_init_rate"
+        reparam_config = (
+            {init_name: LocScaleReparam(0)}
+            if self.parameterization == "innovation"
+            else {}
+        )
+        with (
+            numpyro.handlers.reparam(config=reparam_config),
+            numpyro.plate(f"{name_prefix}_init_rate_plate", n_processes),
+        ):
             init_rates = numpyro.sample(
-                f"{name_prefix}_init_rate",
+                init_name,
                 dist.Normal(0, stationary_sd),
             )
+
+        if n_timepoints == 1:
+            return initial_value[jnp.newaxis, :]
 
         if self.parameterization == "innovation":
             return self.process(
@@ -522,9 +544,6 @@ class DifferencedAR1(TemporalProcess):
                 fundamental_process_init_vals=init_rates[jnp.newaxis, :],
                 noise_name=f"{name_prefix}_noise",
             )
-
-        if n_timepoints == 1:
-            return initial_value[jnp.newaxis, :]
 
         x1 = initial_value + init_rates
 
@@ -579,9 +598,10 @@ class RandomWalk(TemporalProcess):
     the same prior over the state path but can have different posterior
     sampling geometry.
 
-    The innovation branch uses [pyrenew.process.RandomWalk][] to construct the
-    trajectory from sampled innovations. The state branch uses local scanned
-    conditional transitions.
+    The innovation parameterization draws independent ``z[t] ~ Normal(0, 1)``
+    and constructs ``x[t] = x[t - 1] + innovation_sd * z[t]`` for ``t >= 1``.
+    Thus ``innovation_sd`` is the standard deviation of the steps, while the
+    sampled standardized variables always have standard deviation one.
 
     Parameters
     ----------
@@ -597,7 +617,7 @@ class RandomWalk(TemporalProcess):
     -----
     Unlike AR(1), variance grows over time — the process can wander arbitrarily
     far from its starting point. For long time horizons, consider AR(1) if you
-    want Rt to stay bounded near a baseline.
+    want finite long-run variance on the log scale.
     """
 
     step_size: int = 1
@@ -675,6 +695,9 @@ class RandomWalk(TemporalProcess):
 
         innovation_sd = jnp.asarray(self.innovation_sd_rv())
 
+        if n_timepoints == 1:
+            return initial_value[jnp.newaxis, :]
+
         if self.parameterization == "innovation":
             rw = ProcessRandomWalk(
                 name=f"{name_prefix}_random_walk",
@@ -684,6 +707,7 @@ class RandomWalk(TemporalProcess):
                         jnp.zeros(n_processes),
                         innovation_sd,
                     ),
+                    reparam=LocScaleReparam(0),
                 ),
             )
 
@@ -691,9 +715,6 @@ class RandomWalk(TemporalProcess):
                 init_vals=initial_value[jnp.newaxis, :],
                 n=n_timepoints,
             )
-
-        if n_timepoints == 1:
-            return initial_value[jnp.newaxis, :]
 
         def transition(
             previous_state: jax.Array, unused: None

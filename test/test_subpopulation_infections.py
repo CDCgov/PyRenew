@@ -584,13 +584,30 @@ class TestSubpopulationInfectionsStartingRt:
         stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
         if ar1_role != "deviations":
             baseline_init = trace["log_rt_baseline_init"]
-            assert jnp.allclose(baseline_init["fn"].mean, baseline_start)
-            assert jnp.allclose(baseline_init["fn"].variance, stationary_sd**2)
+            if parameterization == "state":
+                assert jnp.allclose(baseline_init["fn"].mean, baseline_start)
+                assert jnp.allclose(baseline_init["fn"].variance, stationary_sd**2)
+            else:
+                assert baseline_init["type"] == "deterministic"
+                assert jnp.allclose(
+                    baseline_init["value"],
+                    baseline_start
+                    + stationary_sd * trace["log_rt_baseline_init_decentered"]["value"],
+                )
             baseline_start = baseline_init["value"][0]
         if ar1_role != "baseline":
             deviations_init = trace["subpop_deviations_init"]
-            assert jnp.allclose(deviations_init["fn"].mean, deviations_start)
-            assert jnp.allclose(deviations_init["fn"].variance, stationary_sd**2)
+            if parameterization == "state":
+                assert jnp.allclose(deviations_init["fn"].mean, deviations_start)
+                assert jnp.allclose(deviations_init["fn"].variance, stationary_sd**2)
+            else:
+                assert deviations_init["type"] == "deterministic"
+                assert jnp.allclose(
+                    deviations_init["value"],
+                    deviations_start
+                    + stationary_sd
+                    * trace["subpop_deviations_init_decentered"]["value"],
+                )
             deviations_start = deviations_init["value"] - jnp.mean(
                 deviations_init["value"]
             )
