@@ -259,8 +259,6 @@ ed_deviation_process = WeeklyTemporalProcess(
 
 The `AR1` process describes how the deviation evolves from one week to the next.
 The autoregressive coefficient controls its persistence, and the innovation standard deviation controls the size of weekly changes.
-With `parameterization="innovation"`, both the initial deviation and subsequent innovations are constructed from standard normal draws.
-This can improve sampling when the innovation scale is inferred, while preserving the same prior distribution for the deviations.
 `WeeklyTemporalProcess` aligns those changes with MMWR weeks and expands the weekly values over the model's daily time axis.
 
 Finally, associate both objects with the ED signal:
