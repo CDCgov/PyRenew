@@ -92,7 +92,7 @@ def _make_forecast_process(
 def _state_forecast_posterior(
     process_name: ProcessName,
     fitted_states: jax.Array,
-) -> tuple[dict[str, jax.Array], jax.Array, int]:
+) -> tuple[dict[str, jax.Array], jax.Array | None, int]:
     """
     Build posterior samples and trajectory metadata for a state process.
 
@@ -111,7 +111,7 @@ def _state_forecast_posterior(
                 "forecast_init": init_states,
                 "forecast_state": fitted_states,
             },
-            initial_value,
+            None,
             1,
         )
 
@@ -150,6 +150,7 @@ def _transition_mean(
 def _forecast_sample_sites(
     process_name: ProcessName,
     parameterization: Parameterization,
+    stationary_init: bool,
 ) -> tuple[str, ...]:
     """
     Return the fitted latent sites required to replay a trajectory.
@@ -165,13 +166,17 @@ def _forecast_sample_sites(
         transition_site = "state" if parameterization == "state" else "step_decentered"
         return (f"forecast_{transition_site}",)
     if process_name == "ar1":
+        if not stationary_init:
+            return (f"forecast_{transition_site}",)
         return (f"forecast_init{init_suffix}", f"forecast_{transition_site}")
     return (f"forecast_init_rate{init_suffix}", f"forecast_{transition_site}")
 
 
-DETERMINISTIC_INIT_PROCESS_PARAMS = [
-    (DifferencedAR1, fixed_ar1_kwargs()),
-    (RandomWalk, fixed_rw_kwargs()),
+PROCESS_INITIALIZATION_PARAMS = [
+    ("ar1", False),
+    ("ar1", True),
+    ("differenced_ar1", False),
+    ("random_walk", False),
 ]
 
 
@@ -224,7 +229,7 @@ class TestDeterministicInitialStateProcesses:
     """Processes with a deterministic initial state preserve ``initial_value``."""
 
     @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
-    @pytest.mark.parametrize("process_cls,kwargs", DETERMINISTIC_INIT_PROCESS_PARAMS)
+    @pytest.mark.parametrize("process_cls,kwargs", INNER_PROCESS_PARAMS)
     def test_initial_row_equals_initial_value_array(
         self, process_cls, kwargs, parameterization
     ):
@@ -243,7 +248,7 @@ class TestDeterministicInitialStateProcesses:
         assert jnp.allclose(trajectories[0, :], init)
 
     @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
-    @pytest.mark.parametrize("process_cls,kwargs", DETERMINISTIC_INIT_PROCESS_PARAMS)
+    @pytest.mark.parametrize("process_cls,kwargs", INNER_PROCESS_PARAMS)
     def test_initial_row_equals_scalar_initial_value(
         self, process_cls, kwargs, parameterization
     ):
@@ -682,13 +687,16 @@ def _make_parameterized_process(
 class TestStandardizedInnovations:
     """Innovation coordinates have unit scale while paths retain their priors."""
 
-    @pytest.mark.parametrize("process_name", ["ar1", "differenced_ar1", "random_walk"])
+    @pytest.mark.parametrize(
+        "process_name,stationary_init", PROCESS_INITIALIZATION_PARAMS
+    )
     @pytest.mark.parametrize("n_timepoints", [1, 2, 8])
     @pytest.mark.parametrize("vector_parameters", [False, True])
     @pytest.mark.parametrize("stochastic_parameters", [False, True])
     def test_standard_normal_sites_and_transformed_paths(
         self,
         process_name: ProcessName,
+        stationary_init: bool,
         n_timepoints: int,
         vector_parameters: bool,
         stochastic_parameters: bool,
@@ -715,7 +723,7 @@ class TestStandardizedInnovations:
                 "path",
                 process.sample(
                     n_timepoints,
-                    initial_value=initial_value,
+                    initial_value=None if stationary_init else initial_value,
                     n_processes=2,
                     name_prefix="test",
                 ),
@@ -728,16 +736,18 @@ class TestStandardizedInnovations:
             numpyro.handlers.seed(conditioned, rng_seed=42)
         ).get_trace()
         expected_sites: set[str] = set()
-        if process_name != "random_walk":
+        if process_name == "differenced_ar1" or stationary_init:
             init_site = "test_init" if process_name == "ar1" else "test_init_rate"
             expected_sites.add(f"{init_site}_decentered")
             stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-            init_loc = initial_value if process_name == "ar1" else jnp.zeros(2)
             assert traced[init_site]["type"] == "deterministic"
             assert jnp.allclose(
                 traced[init_site]["value"],
-                init_loc + stationary_sd * traced[f"{init_site}_decentered"]["value"],
+                stationary_sd * traced[f"{init_site}_decentered"]["value"],
             )
+        elif process_name == "ar1":
+            assert "test_init" not in traced
+            assert "test_init_decentered" not in traced
         n_start = 2 if process_name == "differenced_ar1" else 1
         if n_timepoints > n_start:
             noise_site = "test_step" if process_name == "random_walk" else "test_noise"
@@ -764,7 +774,10 @@ class TestStandardizedInnovations:
         path = traced["path"]["value"]
         assert path.shape == (n_timepoints, 2)
         if process_name == "ar1":
-            assert jnp.allclose(path[0], traced["test_init"]["value"])
+            expected_start = (
+                traced["test_init"]["value"] if stationary_init else initial_value
+            )
+            assert jnp.allclose(path[0], expected_start)
             residuals = path[1:] - autoreg * path[:-1]
         else:
             assert jnp.allclose(path[0], initial_value)
@@ -780,10 +793,15 @@ class TestStandardizedInnovations:
         if n_timepoints > n_start:
             assert jnp.allclose(residuals, traced[noise_site]["value"])
 
-    @pytest.mark.parametrize("process_name", ["ar1", "differenced_ar1", "random_walk"])
+    @pytest.mark.parametrize(
+        "process_name,stationary_init", PROCESS_INITIALIZATION_PARAMS
+    )
     @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
     def test_analytic_trajectory_mean_and_covariance(
-        self, process_name: ProcessName, parameterization: Parameterization
+        self,
+        process_name: ProcessName,
+        stationary_init: bool,
+        parameterization: Parameterization,
     ) -> None:
         """Both parameterizations preserve temporal covariance and initial moments."""
         autoreg = jnp.array([0.6, -0.4])
@@ -801,7 +819,11 @@ class TestStandardizedInnovations:
             """Record prior trajectories for moment comparisons."""
             numpyro.deterministic(
                 "path",
-                process.sample(n_timepoints, initial_value, n_processes=2),
+                process.sample(
+                    n_timepoints,
+                    None if stationary_init else initial_value,
+                    n_processes=2,
+                ),
             )
 
         paths = Predictive(model, num_samples=n_samples)(jax.random.PRNGKey(921))[
@@ -812,8 +834,15 @@ class TestStandardizedInnovations:
         lag = jnp.abs(times[:, None] - times[None, :])
         stationary_var = innovation_sd**2 / (1 - autoreg**2)
         if process_name == "ar1":
-            expected_mean = autoreg ** times[:, None] * initial_value
             expected_cov = stationary_var * autoreg ** lag[:, :, None]
+            if stationary_init:
+                expected_mean = jnp.zeros((n_timepoints, 2))
+            else:
+                expected_mean = autoreg ** times[:, None] * initial_value
+                expected_cov -= (
+                    stationary_var
+                    * autoreg ** (times[:, None] + times[None, :])[:, :, None]
+                )
         elif process_name == "differenced_ar1":
             difference_cov = stationary_var * autoreg ** lag[:-1, :-1, None]
             expected_cov = jnp.pad(
@@ -943,6 +972,25 @@ class TestStateCenteredRandomWalk:
         )
 
 
+class TestAR1InitialState:
+    """An explicit starting state requires no additional initial draw."""
+
+    @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
+    @pytest.mark.parametrize("initial_value", [0.0, 0.5, jnp.array([0.2, -0.4])])
+    def test_one_timepoint_preserves_supplied_state(
+        self,
+        parameterization: Parameterization,
+        initial_value: float | jax.Array,
+    ) -> None:
+        """Explicit zero, scalar, and vector starts are returned without sampling."""
+        process = AR1(**fixed_ar1_kwargs(), parameterization=parameterization)
+        with numpyro.handlers.trace() as trace:
+            path = process.sample(1, initial_value=initial_value, n_processes=2)
+
+        assert jnp.array_equal(path, jnp.broadcast_to(initial_value, (1, 2)))
+        assert not any(site["type"] == "sample" for site in trace.values())
+
+
 class TestStateCenteredAR1:
     """Behavior unique to AR1 ``parameterization="state"``."""
 
@@ -953,7 +1001,6 @@ class TestStateCenteredAR1:
             path = ar1.sample(
                 n_timepoints=1,
                 n_processes=2,
-                initial_value=jnp.array([0.0, 1.0]),
                 name_prefix="ar1",
             )
         assert path.shape == (1, 2)
@@ -1298,12 +1345,13 @@ class TestForecastHorizonParity:
 
     @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
     @pytest.mark.parametrize(
-        "process_name",
-        ["random_walk", "ar1", "differenced_ar1"],
+        "process_name,stationary_init",
+        PROCESS_INITIALIZATION_PARAMS,
     )
     def test_equal_longer_and_shorter_forecast_horizons(
         self,
         process_name: ProcessName,
+        stationary_init: bool,
         parameterization: Parameterization,
     ) -> None:
         """Fitted paths replay or extend, while unsliced shorter paths fail."""
@@ -1319,7 +1367,7 @@ class TestForecastHorizonParity:
             trajectory = process.sample(
                 n_timepoints=n_timepoints,
                 n_processes=n_processes,
-                initial_value=initial_value,
+                initial_value=None if stationary_init else initial_value,
                 name_prefix="forecast",
             )
             numpyro.deterministic("trajectory", trajectory)
@@ -1329,7 +1377,9 @@ class TestForecastHorizonParity:
         )
         posterior_samples = {
             site_name: fitted[site_name]
-            for site_name in _forecast_sample_sites(process_name, parameterization)
+            for site_name in _forecast_sample_sites(
+                process_name, parameterization, stationary_init
+            )
         }
         posterior_predictive = Predictive(
             model,

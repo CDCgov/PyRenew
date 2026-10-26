@@ -5,21 +5,65 @@ Unit tests for PopulationInfections.
 
 import re
 from collections.abc import Callable
+from typing import Literal
 
 import jax.numpy as jnp
 import numpyro
+import numpyro.distributions as dist
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import Infections, InfectionsWithFeedback, WeeklyTemporalProcess
+from pyrenew.latent import (
+    AR1,
+    Infections,
+    InfectionsWithFeedback,
+    WeeklyTemporalProcess,
+)
 from pyrenew.latent.population_infections import PopulationInfections
+from pyrenew.math import r_approx_from_R
 from pyrenew.model import PyrenewBuilder
+from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 from test.test_helpers import fixed_ar1, fixed_random_walk
 
 
 class TestPopulationInfectionsSample:
     """Test sample method for PopulationInfections."""
+
+    @pytest.mark.parametrize("parameterization", ["innovation", "state"])
+    def test_ar1_uses_sampled_initial_rt(
+        self,
+        gen_int_rv: DeterministicPMF,
+        parameterization: Literal["innovation", "state"],
+    ) -> None:
+        """The sampled initial log Rt sets the first state and infection growth."""
+        process = PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DistributionalVariable(
+                "log_rt_time_0", dist.Normal(0, 0.5)
+            ),
+            single_rt_process=AR1(
+                autoreg_rv=DeterministicVariable("autoreg", 0.9),
+                innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+                parameterization=parameterization,
+            ),
+            n_initialization_points=7,
+        )
+        trace = numpyro.handlers.trace(
+            numpyro.handlers.seed(process.sample, rng_seed=42)
+        ).get_trace(n_days_post_init=10)
+
+        initial_log_rt = trace["log_rt_time_0"]["value"]
+        assert trace["population::log_rt_single"]["value"][0, 0] == initial_log_rt
+        assert "log_rt_single_init" not in trace
+        assert "log_rt_single_init_decentered" not in trace
+        initial_infections = trace["population::I0_init"]["value"]
+        expected_growth = r_approx_from_R(jnp.exp(initial_log_rt), gen_int_rv(), 4)
+        assert jnp.allclose(
+            jnp.log(initial_infections[1:] / initial_infections[:-1]), expected_growth
+        )
 
     def test_output_shapes(self, population_infections):
         """Test that output shapes are correct for a single-population model."""

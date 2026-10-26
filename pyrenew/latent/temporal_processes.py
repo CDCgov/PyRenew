@@ -29,6 +29,11 @@ parameterization is centered: it samples each state conditionally on the
 preceding state. Both parameterizations define the same statistical model
 and support replaying fitted trajectories and extending them for forecasts.
 
+All three processes use a supplied ``initial_value`` as their exact first
+state. With ``initial_value=None``, ``AR1`` samples its first state from
+``Normal(0, innovation_sd / sqrt(1 - autoreg**2))``; ``DifferencedAR1`` and
+``RandomWalk`` start at zero. These choices apply to both parameterizations.
+
 **When to use which:**
 
 - Use ``pyrenew.process`` classes (``ARProcess``, ``DifferencedProcess``,
@@ -120,11 +125,11 @@ class TemporalProcess(Protocol):
         n_timepoints
             Number of time points to generate
         initial_value
-            Per-process starting value or initial-location parameter. Processes
-            with a deterministic initial state return this value at the first
-            timepoint. ``AR1`` uses it as the mean of the initial-state prior.
+            Exact first state for each process when supplied.
             Scalar values are broadcast to all processes; arrays must have
-            shape ``(n_processes,)``. Defaults to 0.0.
+            shape ``(n_processes,)``. Defaults to ``None``: ``AR1`` samples a
+            zero-mean stationary initial state, while ``DifferencedAR1`` and
+            ``RandomWalk`` start at zero.
         n_processes
             Number of parallel processes.
         name_prefix
@@ -202,23 +207,29 @@ class AR1(TemporalProcess):
     Each value depends on the previous value plus noise, with reversion
     toward zero. When used for log Rt, this corresponds to reversion toward
     Rt = 1. For ``abs(autoreg) < 1``, the long-run variance is finite, but
-    individual trajectories have no hard bounds. ``initial_value`` sets the
-    initial prior mean, not the long-run mean.
+    individual trajectories have no hard bounds. A supplied ``initial_value``
+    is the exact first state. If omitted or ``None``, the first state is
+    sampled from the zero-mean stationary distribution.
 
     The ``parameterization`` argument selects between a non-centered
     ``"innovation"`` parameterization, which samples independent standard
-    normals for the initial state and subsequent innovations, and a centered
+    normals for innovations and any sampled initial state, and a centered
     ``"state"`` parameterization, which samples
     each state conditionally on the preceding state. Both produce the same
     prior distribution over the state path but can have different posterior
     sampling geometry.
 
-    With ``stationary_sd = innovation_sd / sqrt(1 - autoreg**2)``, the
-    innovation parameterization starts at
-    ``x[0] = initial_value + stationary_sd * z0`` and continues with
+    With a supplied initial value, both parameterizations start at
+    ``x[0] = initial_value`` without another initial draw. Otherwise, with
+    ``stationary_sd = innovation_sd / sqrt(1 - autoreg**2)``, the innovation
+    parameterization starts at ``x[0] = stationary_sd * z0``. It continues with
     ``x[t] = autoreg * x[t - 1] + innovation_sd * z[t]``. Each ``z`` is an
     independent ``Normal(0, 1)`` draw. ``innovation_sd`` scales the resulting
     innovations; it does not change the standard deviation of these draws.
+
+    Passing ``initial_value=0.0`` fixes the first state at zero; omitting it
+    retains uncertainty in the first state. A supplied value may itself be
+    sampled from a caller's prior, as in the latent infection models.
 
     Parameters
     ----------
@@ -301,11 +312,12 @@ class AR1(TemporalProcess):
         n_timepoints
             Number of time points to generate
         initial_value
-            Mean of the initial-state prior. The first returned value has
-            distribution ``Normal(initial_value, innovation_sd / sqrt(1 - autoreg**2))``
-            in both parameterizations. Subsequent means revert toward zero.
+            Exact first state, with no additional initial draw when supplied.
             Scalar values are broadcast to all processes; arrays must have
-            shape ``(n_processes,)``. Defaults to 0.0.
+            shape ``(n_processes,)``. Defaults to ``None``, which samples the
+            first state from
+            ``Normal(0, innovation_sd / sqrt(1 - autoreg**2))`` and requires
+            ``abs(autoreg) < 1``. Applies to both parameterizations.
         n_processes
             Number of parallel processes.
         name_prefix
@@ -318,27 +330,28 @@ class AR1(TemporalProcess):
         ArrayLike
             Trajectories of shape (n_timepoints, n_processes)
         """
-        initial_value = _prepare_initial_value(initial_value, n_processes)
-
         autoreg = jnp.asarray(self.autoreg_rv())
         innovation_sd = jnp.asarray(self.innovation_sd_rv())
         autoreg_broadcast = jnp.broadcast_to(autoreg, (n_processes,))
 
-        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-        init_name = f"{name_prefix}_init"
-        reparam_config = (
-            {init_name: LocScaleReparam(0)}
-            if self.parameterization == "innovation"
-            else {}
-        )
-        with (
-            numpyro.handlers.reparam(config=reparam_config),
-            numpyro.plate(f"{name_prefix}_init_plate", n_processes),
-        ):
-            init_states = numpyro.sample(
-                init_name,
-                dist.Normal(initial_value, stationary_sd),
+        if initial_value is None:
+            stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
+            init_name = f"{name_prefix}_init"
+            reparam_config = (
+                {init_name: LocScaleReparam(0)}
+                if self.parameterization == "innovation"
+                else {}
             )
+            with (
+                numpyro.handlers.reparam(config=reparam_config),
+                numpyro.plate(f"{name_prefix}_init_plate", n_processes),
+            ):
+                init_states = numpyro.sample(
+                    init_name,
+                    dist.Normal(0, stationary_sd),
+                )
+        else:
+            init_states = _prepare_initial_value(initial_value, n_processes)
 
         if self.parameterization == "innovation":
             return self.ar_process(
@@ -833,7 +846,8 @@ class StepwiseTemporalProcess(TemporalProcess):
         n_timepoints
             Number of per-timepoint outputs to produce.
         initial_value
-            Initial value(s) for the inner process. Defaults to 0.0.
+            Initial value(s) forwarded to the inner process. Defaults to
+            ``None``, preserving the inner process's initialization behavior.
         n_processes
             Number of parallel processes.
         name_prefix
@@ -948,7 +962,8 @@ class WeeklyTemporalProcess(TemporalProcess):
         n_timepoints
             Number of per-timepoint outputs to produce.
         initial_value
-            Initial value(s) for the inner process. Defaults to 0.0.
+            Initial value(s) forwarded to the inner process. Defaults to
+            ``None``, preserving the inner process's initialization behavior.
         n_processes
             Number of parallel processes.
         name_prefix
