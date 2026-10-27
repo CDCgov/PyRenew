@@ -295,7 +295,7 @@ Two parameters matter most when tuning these processes:
 ## Choosing the Deviation Temporal Process
 
 The deviation process controls how subpopulation $\mathcal{R}_k(t)$ values move relative to the baseline $\mathcal{R}_{\text{baseline}}(t)$, not the overall trend itself.
-With one starting log Rt shared by all subpopulations, all three processes start at exactly zero deviation on the first initialization day.
+With one starting $\log(\mathcal{R}(t)$ shared by all subpopulations, all three processes start at exactly zero deviation on the first initialization day.
 With separate starting values, each deviation starts at its supplied log Rt minus the mean across subpopulations.
 AR1's variance approaches a finite limit, while RandomWalk's variance grows without bound.
 Calling `AR1.sample()` without `initial_value` would instead sample a stationary initial state, but `SubpopulationInfections` supplies initial values to both processes.
