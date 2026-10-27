@@ -7,7 +7,6 @@ from __future__ import annotations
 import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
-from numpyro.util import not_jax_tracer
 
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.latent.base import PopulationStructure
@@ -62,7 +61,8 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
     - ``rt_subpop_adjusted`` is
       ``rt_subpop * (share_present @ susceptible_fraction)`` after the
       initialization period: new infections caused per unit of
-      infectiousness present at each location, after depletion.
+      infectiousness present at each location, after depletion. It is 0 at
+      a location with no one present.
     - ``susceptible_fraction[t, i]`` is the share of residents of home
       region ``i`` not infected before day ``t``.
 
@@ -173,8 +173,7 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
         ------
         ValueError
             If the matrix is not square and two-dimensional, has non-finite
-            or negative entries, has a column that does not sum to 1, or has
-            a row with no positive entry.
+            or negative entries, or has a column that does not sum to 1.
         """
         if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
             raise ValueError(
@@ -197,12 +196,6 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
                     "fraction of residents of k present at j. Did you mean to pass the transpose?"
                 )
             raise ValueError(message)
-        empty_rows = jnp.flatnonzero(jnp.sum(matrix, axis=1) == 0).tolist()
-        if empty_rows:
-            raise ValueError(
-                f"Locations {empty_rows} have no residents of any region "
-                "present: their rows of mobility_matrix_rv are all zero."
-            )
 
     def _parse_and_validate_fractions(
         self,
@@ -224,9 +217,8 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
         Raises
         ------
         ValueError
-            If the fractions are invalid, if the matrix does not have one row
-            and one column per subpopulation, or if a location has no
-            population present.
+            If the fractions are invalid, or if the matrix does not have one
+            row and one column per subpopulation.
         """
         pop = super()._parse_and_validate_fractions(subpop_fractions)
         matrix = jnp.asarray(self.mobility_matrix_rv.value)
@@ -235,14 +227,6 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
                 f"mobility_matrix_rv has shape {matrix.shape}, but "
                 f"subpop_fractions has {pop.n_subpops} entries; the matrix "
                 f"must have shape ({pop.n_subpops}, {pop.n_subpops})."
-            )
-        present = matrix @ pop.fractions
-        empty_check = jnp.any(present <= 0)
-        if not_jax_tracer(empty_check) and empty_check:
-            empty = jnp.flatnonzero(present <= 0).tolist()
-            raise ValueError(
-                f"Locations {empty} have no population present: "
-                "mobility_matrix @ subpop_fractions must be positive."
             )
         return pop
 

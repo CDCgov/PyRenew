@@ -268,6 +268,57 @@ def test_mobility_identity_with_depletion_matches_eq1(
     assert_allclose(infections, expected, rtol=1e-10)
 
 
+def test_mobility_empty_location(
+    empty_location_mobility: tuple[jnp.ndarray, jnp.ndarray],
+    gen_int_rv: DeterministicPMF,
+    mobility_initial_infections: jnp.ndarray,
+    mobility_rt_raw: jnp.ndarray,
+) -> None:
+    """A location with no one present adds no infections, whatever its Rt, and its adjusted Rt is 0."""
+    mobility_matrix, subpop_fractions = empty_location_mobility
+    infections, rt_adjusted = inf.compute_infections_from_rt_with_mobility(
+        I0=mobility_initial_infections,
+        Rt_raw=mobility_rt_raw,
+        reversed_generation_interval_pmf=jnp.flip(gen_int_rv()),
+        mobility_matrix=mobility_matrix,
+        subpop_fractions=subpop_fractions,
+    )
+    infections_other_rt, _ = inf.compute_infections_from_rt_with_mobility(
+        I0=mobility_initial_infections,
+        Rt_raw=mobility_rt_raw.at[:, 2].multiply(3.0),
+        reversed_generation_interval_pmf=jnp.flip(gen_int_rv()),
+        mobility_matrix=mobility_matrix,
+        subpop_fractions=subpop_fractions,
+    )
+
+    assert jnp.all(jnp.isfinite(infections))
+    assert_array_equal(infections_other_rt, infections)
+    assert_array_equal(rt_adjusted[:, 2], 0.0)
+
+
+def test_mobility_zero_population_region_matches_eq1(
+    gen_int_rv: DeterministicPMF,
+    mobility_initial_infections: jnp.ndarray,
+    mobility_rt_raw: jnp.ndarray,
+) -> None:
+    """With the identity matrix, a region with no population leaves the others at Eq 1 and has no new infections."""
+    infections, _ = inf.compute_infections_from_rt_with_mobility(
+        I0=mobility_initial_infections,
+        Rt_raw=mobility_rt_raw,
+        reversed_generation_interval_pmf=jnp.flip(gen_int_rv()),
+        mobility_matrix=jnp.eye(3),
+        subpop_fractions=jnp.array([0.5, 0.5, 0.0]),
+    )
+    expected = _eq1_loop(
+        np.asarray(mobility_initial_infections),
+        np.asarray(mobility_rt_raw),
+        np.asarray(gen_int_rv()),
+    )
+
+    assert_allclose(infections[:, :2], expected[:, :2], rtol=1e-10)
+    assert_array_equal(infections[:, 2], 0.0)
+
+
 def test_mobility_adjusted_rt_without_depletion(
     gen_int_rv: DeterministicPMF,
     roy_mobility_matrix: jnp.ndarray,

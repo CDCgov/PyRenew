@@ -314,14 +314,18 @@ def compute_infections_from_rt_with_mobility(
     ``j`` who live in region ``k``. ``cumulative`` counts every day of
     ``I0`` and every earlier day of the result.
 
+    A location with no one present contributes no infections, and its
+    reproduction number after depletion is 0.
+
     The susceptible fraction is floored at zero. On a day with extreme
     reproduction numbers, new infections can exceed the residents still
     susceptible. That day is not capped, but later days stay non-negative.
     """
+    present = mobility_matrix @ subpop_fractions
     share_present = (
         mobility_matrix
         * subpop_fractions[jnp.newaxis, :]
-        / (mobility_matrix @ subpop_fractions)[:, jnp.newaxis]
+        / jnp.where(present > 0, present, 1.0)[:, jnp.newaxis]
     )
     n_gen = reversed_generation_interval_pmf.size
     initial_state = (I0[-n_gen:], jnp.sum(I0, axis=0))

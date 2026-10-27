@@ -372,6 +372,32 @@ def mobility_rt_raw() -> jnp.ndarray:
     return jnp.exp(jnp.log(jnp.array([2.0, 1.6, 1.4])) + jnp.cumsum(steps, axis=0))
 
 
+@pytest.fixture(params=["empty_row", "zero_population"])
+def empty_location_mobility(
+    request: pytest.FixtureRequest,
+) -> tuple[jnp.ndarray, jnp.ndarray]:
+    """
+    Mobility matrix and population fractions with no one present at location 2.
+
+    Parameters
+    ----------
+    request
+        Selects the case: row 2 of the matrix is zero, or the only people
+        at location 2 live in region 2, which has no population.
+
+    Returns
+    -------
+    tuple[jnp.ndarray, jnp.ndarray]
+        The mobility matrix and the population fractions.
+    """
+    if request.param == "empty_row":
+        return (
+            jnp.array([[1.0, 0.0, 0.5], [0.0, 1.0, 0.5], [0.0, 0.0, 0.0]]),
+            jnp.array([0.4, 0.3, 0.3]),
+        )
+    return jnp.eye(3), jnp.array([0.5, 0.5, 0.0])
+
+
 def _mobility_latent_params(
     gen_int_rv: DeterministicPMF,
     mobility_matrix: ArrayLike,

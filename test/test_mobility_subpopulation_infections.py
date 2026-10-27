@@ -195,7 +195,6 @@ class TestMobilityValidation:
             ("nan", "finite"),
             ("row_stochastic", "transpose"),
             ("columns_not_one", "sum to 1"),
-            ("empty_row", "no residents"),
         ],
     )
     def test_rejects_invalid_matrix(
@@ -215,7 +214,6 @@ class TestMobilityValidation:
             "nan": roy_mobility_matrix.at[0, 0].set(jnp.nan),
             "row_stochastic": roy_mobility_matrix.T,
             "columns_not_one": 0.5 * jnp.eye(3),
-            "empty_row": jnp.array([[1.0, 1.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]),
         }
 
         with pytest.raises(ValueError, match=match):
@@ -288,19 +286,24 @@ class TestMobilityValidation:
         assert "(3, 3)" in message
         assert "2 entries" in message
 
-    def test_rejects_location_without_population(
+    def test_accepts_location_without_population(
         self,
+        empty_location_mobility: tuple[jnp.ndarray, jnp.ndarray],
         mobility_subpopulation_infections_factory: Callable[
             ..., MobilitySubpopulationInfections
         ],
     ) -> None:
-        """A location with no population present is rejected."""
+        """A location with no one present samples finite infections and adjusted Rt 0 there."""
+        mobility_matrix, subpop_fractions = empty_location_mobility
         process = mobility_subpopulation_infections_factory(
-            jnp.eye(3), DeterministicVariable("log_rt_time_0", 0.0)
+            mobility_matrix, DeterministicVariable("log_rt_time_0", 0.0)
         )
+        trace, latent = _sample_with_trace(process, subpop_fractions)
+        n_init = process.n_initialization_points
+        rt_subpop_adjusted = trace["subpopulation::rt_subpop_adjusted"]["value"]
 
-        with pytest.raises(ValueError, match=r"Locations \[2\]"):
-            process._parse_and_validate_fractions(jnp.array([0.5, 0.5, 0.0]))
+        assert jnp.all(jnp.isfinite(latent.all_subpops))
+        assert_array_equal(rt_subpop_adjusted[n_init:, 2], 0.0)
 
 
 class TestMobilityModel:
@@ -323,28 +326,18 @@ class TestMobilityModel:
         assert jnp.all(samples["latent_infections_by_subpop"] > 0)
         assert samples["subpopulation::susceptible_fraction"].shape == (5, n_total, 3)
 
-    @pytest.mark.parametrize(
-        ("case", "fractions", "match"),
-        [
-            ("roy", jnp.array([0.5, 0.5]), r"\(3, 3\)"),
-            ("identity", jnp.array([0.5, 0.5, 0.0]), r"Locations \[2\]"),
-        ],
-    )
     def test_validate_data_rejects_before_mcmc(
         self,
-        case: str,
-        fractions: jnp.ndarray,
-        match: str,
         mobility_model_factory: Callable[[jnp.ndarray], MultiSignalModel],
         roy_mobility_matrix: jnp.ndarray,
     ) -> None:
-        """Size mismatches and empty locations are rejected before MCMC starts."""
-        matrices = {"roy": roy_mobility_matrix, "identity": jnp.eye(3)}
-        model = mobility_model_factory(matrices[case])
+        """A matrix that does not match the number of subpopulations is rejected before MCMC starts."""
+        model = mobility_model_factory(roy_mobility_matrix)
+        fractions = jnp.array([0.5, 0.5])
 
-        with pytest.raises(ValueError, match=match):
+        with pytest.raises(ValueError, match=r"\(3, 3\)"):
             model.validate_data(n_days_post_init=30, subpop_fractions=fractions)
-        with pytest.raises(ValueError, match=match):
+        with pytest.raises(ValueError, match=r"\(3, 3\)"):
             model.run(
                 num_warmup=10,
                 num_samples=10,
