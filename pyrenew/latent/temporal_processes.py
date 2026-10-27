@@ -608,7 +608,7 @@ class RandomWalk(TemporalProcess):
     The innovation parameterization draws independent ``z[t] ~ Normal(0, 1)``
     and constructs ``x[t] = x[t - 1] + innovation_sd * z[t]`` for ``t >= 1``.
     Thus ``innovation_sd`` is the standard deviation of the steps, while the
-    sampled standardized variables always have standard deviation one.
+    sampled standardized values `z[t]` always have standard deviation one.
 
     Parameters
     ----------
