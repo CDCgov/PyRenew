@@ -119,8 +119,8 @@ A matrix with home regions in its rows, so that each row sums to 1, must be tran
 Regions must be in the same order in the matrix, in `subpop_fractions`, in a vector-valued `I0_rv` or `log_rt_time_0_rv`, and in every observation's `subpop_indices`.
 A matrix stored as a data frame must be converted with `.to_numpy()`, with rows and columns in that order.
 
-A matrix for part of a larger area needs one more step.
-After dropping the flows to places outside the area, the columns no longer sum to 1, so each column is renormalized.
+You may want to model only some of the areas represented in your raw mobility matrix, or your matrix may include an "everywhere else" bin.
+To use it in this model, drop any flows to un-modeled locations, then renormalize by columns, so columns once again sum to 1.
 Roy et al.
 do this for the twelve local authorities of North East England.
 
@@ -145,8 +145,7 @@ print(f"Column sums after renormalizing: {M_area.sum(axis=0)}")
 The latent process takes the matrix as a `DeterministicVariable`.
 The matrix is data: it is fixed when the process is constructed and is never estimated.
 
-`I0_rv` is the number of new infections per resident on the first day of the initialization period, the earliest day on the time axis.
-It is not prevalence.
+`I0_rv` is the number of new incident infections per resident on the first day of the initialization period, the earliest day on the time axis.
 Infections grow from that value over the initialization period, and every initialization day counts toward susceptible depletion.
 
 Each region starts at its own $\mathcal{R}(t)$, given as one value per region by `log_rt_time_0_rv`.
@@ -301,7 +300,7 @@ With `susceptible_depletion=False`, the $S_{t,i}$ factor is left out, and over a
 
 `susceptible_fraction[t, i]` is the share of residents of region `i` not infected before day `t`.
 It is recorded with depletion on or off.
-With depletion off, the renewal does not use it, and it shows how much depletion the model leaves out.
+With `susceptible_depletion=False`, the renewal equation does not consider it, and the epidemic rapidly reaches 100% of the population infected.
 
 ```{python}
 #| label: depletion
@@ -343,8 +342,7 @@ Roy et al.
 - **incoming**: residents infected at home by infectious visitors from other regions;
 - **outgoing**: residents infected while visiting other regions.
 
-PyRenew has no function for this split.
-It can be computed from recorded values, the matrix, the population fractions, and the generation interval.
+PyRenew does not provide a built-in function to compute this split, but It can be computed from recorded values, the matrix, the population fractions, and the generation interval.
 The generation interval must be fixed, because a sampled one is not recorded.
 In this simulation of the latent process alone, the infections per resident are the values the process returns.
 After fitting a model, they are `latent_infections_by_subpop / (population_size * p)`.
