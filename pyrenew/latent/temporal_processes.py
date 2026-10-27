@@ -415,11 +415,7 @@ class DifferencedAR1(TemporalProcess):
     ``x[t] = x[t - 1] + rate``. Each ``z`` is an independent ``Normal(0, 1)``
     draw; ``innovation_sd`` scales shocks to the rate of change.
 
-    In the state parameterization, ``x[1]`` has conditional distribution
-    ``Normal(x[0], stationary_sd)``. Later states have conditional mean
-    ``x[t - 1] + autoreg * (x[t - 1] - x[t - 2])`` and standard deviation
-    ``innovation_sd``. The stationary distribution describes the differences,
-    not the accumulated levels.
+    In the state parameterization ``x[1]`` is drawn from a Normal distribution with mean ``x[0]`` and s.d. ``stationary_sd``. Later states `x[t]`, `t>1` are drawn from a Normal distribution with mean ``x[t - 1] + autoreg * (x[t - 1] - x[t - 2])`` and s.d. ``innovation_sd``.
 
     Parameters
     ----------
