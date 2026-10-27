@@ -342,8 +342,7 @@ Roy et al.
 - **incoming**: residents infected at home by infectious visitors from other regions;
 - **outgoing**: residents infected while visiting other regions.
 
-PyRenew does not provide a built-in function to compute this split, but
-It can be computed from recorded values, the matrix, the population fractions, and the generation interval.
+PyRenew does not provide a built-in function to compute this split, but It can be computed from recorded values, the matrix, the population fractions, and the generation interval.
 The generation interval must be fixed, because a sampled one is not recorded.
 In this simulation of the latent process alone, the infections per resident are the values the process returns.
 After fitting a model, they are `latent_infections_by_subpop / (population_size * p)`.
