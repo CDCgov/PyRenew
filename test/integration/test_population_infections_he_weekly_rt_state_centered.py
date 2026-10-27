@@ -52,9 +52,9 @@ def _expected_n_weekly(  # numpydoc ignore=RT01
     model: MultiSignalModel, first_day_dow: int
 ) -> int:
     """Expected number of weekly R(t) samples for calendar-week alignment."""
-    n_total = model.latent.n_initialization_points + N_DAYS_FIT
-    trim = (first_day_dow - WEEK_START_DOW) % 7
-    return (n_total + trim + 6) // 7
+    rt_first_day_dow = (first_day_dow + model.latent.n_initialization_points) % 7
+    trim = (rt_first_day_dow - WEEK_START_DOW) % 7
+    return (N_DAYS_FIT + trim + 6) // 7
 
 
 class TestModelFit:

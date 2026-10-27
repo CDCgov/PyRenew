@@ -89,7 +89,7 @@ PyRenew provides two latent infection classes:
 
 1. Generation interval distribution $w_\tau$ (`gen_int_rv`)
 2. Infection prevalence at the start of initialization as a proportion of the population (`I0_rv`)
-3. Value for $\log(\mathcal{R}(t))$ at the start of initialization (`log_rt_time_0_rv`)
+3. Value for $\log(\mathcal{R}(t))$ on the first post-initialization day (`log_rt_time_0_rv`)
 4. A temporal process for $\mathcal{R}(t)$ dynamics (`single_rt_process`)
 
 All inputs are **RandomVariables**, a quantity that is either known (observed, conditioned on) or unknown (to be inferred).
@@ -150,8 +150,8 @@ The generation interval length determines the minimum initialization period: wit
 These two parameters jointly define the infection history before the observation period begins.
 Understanding their interaction requires knowing how the latent infections process initializes the renewal equation.
 
-**The backprojection mechanism.** The renewal equation at time $0$ needs a vector of recent infections to convolve with the generation interval.
-The latent infections process constructs this initialization vector via exponential backprojection.
+**Exponential initialization.** The renewal equation at time $0$ needs a vector of recent infections to convolve with the generation interval.
+The latent infections process constructs this initialization vector by growing or declining exponentially from `I0`.
 Let $\tau = 0, 1, \ldots, n_{\text{init}} - 1$ index positions in the initialization vector, where $\tau = 0$ is the earliest time point and $\tau = n_{\text{init}} - 1$ is the time point immediately before the observation period begins.
 Then:
 
@@ -160,7 +160,7 @@ $$
   \ldots, n_{\text{init}} - 1
 $$
 
-where $r$ is the asymptotic growth rate implied by the reproduction number at the start of the initialization period, `exp(log_rt_time_0)`, and the generation interval.
+where $r$ is the asymptotic growth rate implied by the reproduction number on the first post-initialization day, `exp(log_rt_time_0)`, and the generation interval.
 The function `r_approx_from_R` converts that reproduction number and the generation interval into $r$ using Newton's method.
 The model samples the starting log Rt and uses it to construct the exponential infection history; it does not fit an independent exponential curve to estimate Rt.
 
@@ -171,9 +171,20 @@ The model samples the starting log Rt and uses it to construct the exponential i
   When `log_rt_time_0 = 0`, $r = 0$ and the initialization vector is flat at level `I0`.
   When `log_rt_time_0 > 0`, the initialization curve grows exponentially; when `log_rt_time_0 < 0`, it declines.
 
-The Rt trajectory spans both initialization and observation days.
-Its first array element, `rt[0]`, determines initialization growth; the renewal calculation uses `rt[n_init:]`.
-The sampled transitions during initialization therefore separate the starting Rt from the first observed-period Rt.
+The sampled Rt process starts on the first post-initialization day and covers `n_days_post_init` days, including any requested forecast days.
+Its first value determines both initialization growth and the first renewal calculation.
+The model requires `n_days_post_init >= 1`.
+Daily records such as `rt_single` and `log_rt_single` retain the full infection axis: their first `n_init` entries repeat the first post-initialization value.
+Thus, the recorded `rt[n_init]` equals `exp(log_rt_time_0)`, and the initialization entries describe the constant Rt assumed for exponential initialization.
+Initialization adds no sampled Rt states or innovations; weekly Rt records also cover only the requested post-initialization period.
+The first recorded Rt week is the calendar week containing the first renewal day; its start date may precede that day, but no initialization-only weeks are sampled.
+
+When sampling directly with a calendar-aligned Rt process, `first_day_dow` still describes the beginning of the full infection history.
+The infection class shifts that weekday by `n_init` before passing it to the Rt process.
+When using `MultiSignalModel`, continue supplying the first observation date as `obs_start_date`.
+
+With infection feedback enabled, initialization growth uses raw Rt and the recorded adjusted Rt equals raw Rt during initialization.
+Feedback first changes the Rt used for renewal on the first post-initialization day.
 
 The initialization vector is what the renewal equation "sees" as recent infection history at time $0$.
 We can compute it directly for three values of `log_rt_time_0`:
@@ -216,7 +227,7 @@ init_df = pd.DataFrame(init_data)
 ```{python}
 #| label: fig-backprojection
 #| fig-cap: Initialization vectors for three values of log_rt_time_0.
-#|   Days are numbered relative to day 0, when the renewal calculation begins; the Rt process also spans the initialization days.
+#|   Days are numbered relative to day 0, when the renewal calculation begins; the sampled Rt process starts on day 0, and that first Rt determines initialization growth.
 #|   When log_rt_time_0 = 0 (stable), the vector is flat.
 #|   Nonzero values produce exponential growth or decay in the pre-observation period.
 
@@ -259,8 +270,8 @@ The innovation parameterization can improve sampling when scales are inferred, a
 To evaluate what a given process implies, we use **prior predictive checks**: drawing many samples from the model *before seeing any data* and examining the distribution of trajectories.
 A single sample tells you little (the trajectory depends on the random seed), but the envelope of many samples reveals the structural constraints built into the process.
 We set `log_rt_time_0 = 0.5` and `I0 = 0.001` to represent a growing epidemic.
-All three processes start at exactly 0.5 on the first initialization day, giving Rt approximately 1.65 there.
-The plots below show only the observed period, after the process has evolved through `n_init` days, so their first plotted values can already differ from 1.65.
+All three processes start at exactly 0.5 on the first post-initialization day, giving Rt approximately 1.65 there.
+The plots below show the post-initialization period, so every trajectory begins at that supplied value. Variance accumulates only through subsequent transitions.
 Starting well above equilibrium rather than near it makes the behavioral differences between temporal processes visible: the median trajectory of a mean-reverting process drifts back toward $\mathcal{R} = 1$, while a non-reverting process does not.
 
 This section is primarily **modeling guidance for prior specification in PyRenew**, not a claim that epidemiologic theory uniquely determines one temporal process choice.
@@ -687,7 +698,7 @@ hp_df["config"] = pd.Categorical(
 
 ```{python}
 #| label: fig-hyperparam-effect
-#| fig-cap: 'Effect of DifferencedAR1 hyperparameters on prior $\mathcal{R}(t)$ distribution. Lower autoreg and innovation_sd (left) produce a tighter envelope; higher values (right) allow wider drift. All start at Rt = 1.65 on the first initialization day; the plots show the subsequent observed period.'
+#| fig-cap: 'Effect of DifferencedAR1 hyperparameters on prior $\mathcal{R}(t)$ distribution. Lower autoreg and innovation_sd (left) produce a tighter envelope; higher values (right) allow wider drift. All start at Rt = 1.65 on the first displayed post-initialization day; variance accumulates through subsequent transitions.'
 
 (
     p9.ggplot(hp_df, p9.aes(x="day", y="rt", group="sample"))

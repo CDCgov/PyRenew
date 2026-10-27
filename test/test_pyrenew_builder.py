@@ -863,8 +863,10 @@ class TestMultiSignalModelSampling:
         self,
         simple_builder: PyrenewBuilder,
     ) -> None:
-        """Test temporal sampling receives full padded-axis context."""
+        """Only latent Rt receives the post-initialization axis and weekday."""
         built = simple_builder.build()
+        rt_process = RecordingTemporalProcess()
+        built.latent.baseline_rt_process = rt_process
         process = RecordingTemporalProcess()
         ascertainment = IndependentAscertainment(
             name="recording",
@@ -900,6 +902,9 @@ class TestMultiSignalModelSampling:
                 "first_day_dow": first_day_dow,
             }
         ]
+
+        assert rt_process.sample_calls[0]["n_timepoints"] == 5
+        assert rt_process.sample_calls[0]["first_day_dow"] == obs_start_date.weekday()
 
     def test_calendar_ascertainment_fails_early_and_names_model(
         self,

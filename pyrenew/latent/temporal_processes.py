@@ -135,7 +135,7 @@ class TemporalProcess(Protocol):
         name_prefix
             Prefix for numpyro sample site names to avoid collisions
         first_day_dow
-            Day of week for element 0 of the shared model time axis
+            Day of week for element 0 of the requested trajectory
             (0=Monday, ..., 6=Sunday). Standard temporal processes ignore
             this value; calendar-aligned wrappers may use it.
 
@@ -965,7 +965,7 @@ class WeeklyTemporalProcess(TemporalProcess):
         name_prefix
             Prefix for numpyro sample sites; forwarded to the inner process.
         first_day_dow
-            Day of week for element 0 of the shared model time axis
+            Day of week for element 0 of the requested trajectory
             (0=Monday, ..., 6=Sunday). Required.
 
         Returns

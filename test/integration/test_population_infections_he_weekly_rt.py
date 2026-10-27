@@ -81,11 +81,11 @@ def _expected_n_weekly(model: MultiSignalModel, first_day_dow: int) -> int:
     Returns
     -------
     int
-        Number of weekly Rt samples covering the daily model axis.
+        Number of weekly Rt values covering post-initialization days.
     """
-    n_total = model.latent.n_initialization_points + N_DAYS_FIT
-    trim = (first_day_dow - WEEK_START_DOW) % 7
-    return (n_total + trim + 6) // 7
+    rt_first_day_dow = (first_day_dow + model.latent.n_initialization_points) % 7
+    trim = (rt_first_day_dow - WEEK_START_DOW) % 7
+    return (N_DAYS_FIT + trim + 6) // 7
 
 
 class TestPriorPredictiveStructure:
@@ -144,7 +144,11 @@ class TestPriorPredictiveStructure:
 
         # Each block of 7 daily values past the leading partial week should be
         # constant (the calendar-week broadcast invariant).
-        partial_len = (WEEK_START_DOW - first_day_dow) % 7
+        n_init = he_weekly_rt_model.latent.n_initialization_points
+        assert jnp.allclose(daily[:n_init], daily[n_init])
+        daily = daily[n_init:]
+        rt_first_day_dow = (first_day_dow + n_init) % 7
+        partial_len = (WEEK_START_DOW - rt_first_day_dow) % 7
         if partial_len > 0:
             assert jnp.allclose(daily[:partial_len], daily[0])
         first_full = partial_len

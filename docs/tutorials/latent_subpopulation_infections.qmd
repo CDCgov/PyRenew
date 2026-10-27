@@ -128,8 +128,8 @@ See [Latent Infections](latent_infections.md) for that background.
 ### Core inputs (shared across subpopulations)
 
 - **`gen_int_rv`**: Generation interval distribution $w_\tau$
-- **`I0_rv`**: Initial infection level (shared by default across subpopulations, but can be specified per subpopulation)
-- **`log_rt_time_0_rv`**: Starting value of $\log \mathcal{R}(t)$, either one value shared by all subpopulations or one value per subpopulation
+- **`I0_rv`**: Infection prevalence at the beginning of initialization (shared by default across subpopulations, but can be specified per subpopulation)
+- **`log_rt_time_0_rv`**: Value of $\log \mathcal{R}(t)$ on the first post-initialization day, either one value shared by all subpopulations or one value per subpopulation
 
 ### Temporal processes
 
@@ -182,7 +182,7 @@ rt_cap = 3.0
 
 print(f"Subpopulations: {n_subpops}")
 print(f"Population fractions: {np.array(subpop_fractions)}")
-print(f"Log Rt at time 0: {np.exp(log_rt_time_0):.2f}")
+print(f"Rt on the first renewal day: {np.exp(log_rt_time_0):.2f}")
 ```
 
 ```{python}
@@ -208,7 +208,14 @@ model = SubpopulationInfections(
 To give each subpopulation its own starting $\mathcal{R}(t)$, `log_rt_time_0_rv` returns one value per subpopulation, in the order of `subpop_fractions`.
 With `AR1`, `DifferencedAR1`, or `RandomWalk` as the baseline and deviation processes, each subpopulation's initial log Rt is exactly its corresponding supplied value.
 The baseline starts at the mean of those log Rt values, and the deviations start at each value minus that mean.
-These are starting values on the first initialization day, before the observation period.
+These are starting values on the first post-initialization day, when renewal begins.
+Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` remains its prevalence at the beginning of initialization.
+The baseline and deviation processes sample only `n_days_post_init` days, which must be at least 1.
+Daily baseline, deviation, and Rt records retain the full infection axis by prepending copies of their first values.
+Initialization therefore adds no sampled states or innovations, and weekly records cover only the post-initialization period.
+The first recorded Rt week is the calendar week containing the first renewal day; its start date may precede that day, but no initialization-only weeks are sampled.
+With infection feedback, initialization still uses raw Rt; feedback begins with the first renewal calculation.
+For calendar-aligned processes, the class shifts `first_day_dow` from the beginning of the full infection history to the first renewal day before passing it to both processes.
 
 ```{python}
 #| label: per-subpop-start
@@ -234,9 +241,9 @@ with numpyro.handlers.seed(rng_seed=42):
             subpop_fractions=subpop_fractions,
         )
 
-first_day_rt = start_trace["SubpopulationInfections::rt_subpop"]["value"][0]
+first_day_rt = start_trace["SubpopulationInfections::rt_subpop"]["value"][n_init]
 print(f"exp(log_rt_time_0):  {np.round(np.exp(log_rt_time_0_by_subpop), 2)}")
-print(f"Rt on the first day: {np.round(np.array(first_day_rt), 2)}")
+print(f"Rt on the first renewal day: {np.round(np.array(first_day_rt), 2)}")
 ```
 
 ## The Sum-to-Zero Constraint
@@ -295,11 +302,11 @@ Two parameters matter most when tuning these processes:
 ## Choosing the Deviation Temporal Process
 
 The deviation process controls how subpopulation $\mathcal{R}_k(t)$ values move relative to the baseline $\mathcal{R}_{\text{baseline}}(t)$, not the overall trend itself.
-With one starting log Rt shared by all subpopulations, all three processes start at exactly zero deviation on the first initialization day.
+With one starting log Rt shared by all subpopulations, all three processes start at exactly zero deviation on the first post-initialization day.
 With separate starting values, each deviation starts at its supplied log Rt minus the mean across subpopulations.
 AR1's variance approaches a finite limit, while RandomWalk's variance grows without bound.
 Calling `AR1.sample()` without `initial_value` would instead sample a stationary initial state, but `SubpopulationInfections` supplies initial values to both processes.
-The plots below omit initialization days, so their first displayed deviations may already be nonzero.
+The plots below start at the first post-initialization day, so their first displayed deviations are exactly zero for the shared starting value used here.
 
 The key question: **are local differences transient or persistent?** This determines whether subpopulations quickly return to the baseline or can diverge and remain different over time.
 
@@ -359,7 +366,7 @@ For `autoreg = 0.8` and `innovation_sd = 0.05`, the limiting standard deviation 
 The `autoreg` coefficient still matters: if a subpopulation drifts away from zero by chance, $\phi$ controls how quickly it is pulled back.
 Values near 1 produce slow pullback (local differences linger), values near 0 produce fast pullback (subpopulations snap back to the baseline).
 The prior interval widens from zero and approaches a stable width.
-Because these plots start after initialization, much of that initial widening has already occurred before the first displayed day.
+The first displayed day has zero deviation variance; widening begins with the next sampled transition.
 
 ```{python}
 #| label: ar1-deviations-sample
@@ -423,8 +430,7 @@ ar1_dev_summary = deviation_summary_df(ar1_dev_samples)
 #| label: fig-ar1-deviations
 #| fig-cap: >-
 #|   AR(1) deviation trajectories (50 samples, all 6 subpopulations).
-#|   Deviations start at zero during initialization and their variance approaches a finite limit.
-#|   The displayed observed period begins after seven transitions, when the variance is already close to that limit.
+#|   Deviations start at zero on the first displayed post-initialization day; their variance then approaches a finite limit.
 #|   Compare the y-axis scale to fig-rw-deviations below.
 
 (
@@ -463,9 +469,9 @@ ar1_dev_summary = deviation_summary_df(ar1_dev_samples)
 ### RandomWalk Deviations
 
 RandomWalk deviations have **unbounded variance**.
-Before centering, the variance grows linearly with the number of transitions from initialization as `innovation_sd**2 * t`.
+Before centering, the variance grows linearly with the number of transitions since the first post-initialization day as `innovation_sd**2 * t`.
 Subtracting the subpopulation mean multiplies this variance by `1 - 1 / n_subpops` for independent draws with shared process parameters.
-The plotted interval includes variance accumulated during initialization as well as during the observed period.
+The plotted interval starts with zero deviation variance and widens as post-initialization transitions accumulate.
 There is no pullback toward zero: subpopulations that drift away from the baseline stay drifted, and differences that emerge early persist and can grow.
 The visual signature is a **fanning-out cloud** rather than a constant-width band.
 
@@ -492,7 +498,7 @@ rw_dev_summary = deviation_summary_df(rw_dev_samples)
 #| label: fig-rw-deviations
 #| fig-cap: >-
 #|   RandomWalk deviation trajectories (50 samples, 6 subpopulations).
-#|   The envelope widens continuously over the 28-day observed period, adding to the variance accumulated during initialization.
+#|   The envelope starts at zero width on the first displayed day and widens as transitions accumulate over the 28-day post-initialization period.
 #|   The y-axis matches fig-ar1-deviations above for direct comparison.
 
 (
