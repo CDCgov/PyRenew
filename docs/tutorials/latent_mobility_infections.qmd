@@ -145,7 +145,7 @@ print(f"Column sums after renormalizing: {M_area.sum(axis=0)}")
 The latent process takes the matrix as a `DeterministicVariable`.
 The matrix is data: it is fixed when the process is constructed and is never estimated.
 
-`I0_rv` is the number of new infections per resident on the first day of the initialization period, the earliest day on the time axis.
+`I0_rv` is the number of new incident infections per resident on the first day of the initialization period, the earliest day on the time axis.
 Infections grow from that value over the initialization period, and every initialization day counts toward susceptible depletion.
 
 Each region starts at its own $\mathcal{R}(t)$, given as one value per region by `log_rt_time_0_rv`.
