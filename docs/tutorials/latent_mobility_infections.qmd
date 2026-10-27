@@ -249,16 +249,6 @@ Linked to the other regions, it has an outbreak: its residents are infected whil
 Roy et al.
 show the same effect in their S2 Fig.
 
-This comparison is a counterfactual: the same $\mathcal{R}(t)$ under two matrices.
-A fitted model gives one the same way.
-Build a second model with the other matrix and pass the fitted posterior draws to NumPyro's `Predictive`:
-
-```python
-Predictive(model2.model, posterior_samples=model1.mcmc.get_samples())
-```
-
-`model2.posterior_predictive()` does not work for this, because `model2` has not been fitted.
-
 ## Where $\mathcal{R}(t)$ Applies
 
 `rt_subpop[t, j]` is the reproduction number at location `j`, where transmission happens.
@@ -296,7 +286,6 @@ rt_df = pd.concat(
 ## Susceptible Depletion
 
 Susceptible depletion is on by default, as in Eq 2.
-With `susceptible_depletion=False`, the $S_{t,i}$ factor is left out, and over a long epidemic `rt_subpop` absorbs the depletion instead.
 
 `susceptible_fraction[t, i]` is the share of residents of region `i` not infected before day `t`.
 It is recorded with depletion on or off.
@@ -342,10 +331,8 @@ Roy et al.
 - **incoming**: residents infected at home by infectious visitors from other regions;
 - **outgoing**: residents infected while visiting other regions.
 
-PyRenew does not provide a built-in function to compute this split, but It can be computed from recorded values, the matrix, the population fractions, and the generation interval.
+PyRenew does not provide a built-in function to compute this split, but it can be computed from recorded values, the matrix, the population fractions, and the generation interval.
 The generation interval must be fixed, because a sampled one is not recorded.
-In this simulation of the latent process alone, the infections per resident are the values the process returns.
-After fitting a model, they are `latent_infections_by_subpop / (population_size * p)`.
 
 ```{python}
 #| label: sources
