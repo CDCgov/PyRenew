@@ -162,7 +162,6 @@ $$
 
 where $r$ is the asymptotic growth rate implied by the reproduction number at the start of the initialization period, `exp(log_rt_time_0)`, and the generation interval.
 The function `r_approx_from_R` converts that reproduction number and the generation interval into $r$ using Newton's method.
-The model samples the starting log Rt and uses it to construct the exponential infection history; it does not fit an independent exponential curve to estimate Rt.
 
 - **The level is set by `I0`**.</br> `I0` is the infection prevalence at the earliest point in the initialization period, $n_{\text{init}}$ time points before the observation period starts.
   It sets the scale of the entire initialization vector: $I_{\text{init}}(0) = I_0$, with subsequent entries growing or declining exponentially toward $t = 0$.
