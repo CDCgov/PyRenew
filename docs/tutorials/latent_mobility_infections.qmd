@@ -300,7 +300,7 @@ With `susceptible_depletion=False`, the $S_{t,i}$ factor is left out, and over a
 
 `susceptible_fraction[t, i]` is the share of residents of region `i` not infected before day `t`.
 It is recorded with depletion on or off.
-With depletion off, the renewal does not use it, and it shows how much depletion the model leaves out.
+With `susceptible_depletion=False`, the renewal equation does not consider it, and the epidemic rapidly reaches 100% of the population infected.
 
 ```{python}
 #| label: depletion
