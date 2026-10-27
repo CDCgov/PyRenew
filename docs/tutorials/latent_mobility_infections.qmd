@@ -61,7 +61,7 @@ $$
 
 where:
 
-- $I_{t,i} is the infection count (a non-negative integer)
+- $I_{t,i}$ is the infection count (a non-negative integer)
 - $m_{jk}$ is the fraction of residents of home region $k$ present at location $j$
 - $N_k$ is the number of residents of region $k$
 - $S_{t,i}$ is the number of residents of region $i$ not infected before day $t$
@@ -74,11 +74,15 @@ With `M` the mobility matrix and `p` the population fractions, one day of the co
 ```python
 share_present = M * p[None, :] / (M @ p)[:, None]
 infectiousness = reversed_gen_int @ history
-susceptible = 1 - cumulative
+susceptible = jnp.maximum(1 - cumulative, 0)
 new_infections = susceptible * (M.T @ (rt * (share_present @ infectiousness)))
 ```
 
 `share_present[j, k]` is the share of the people present at location `j` who live in region `k`.
+`reversed_gen_int` is the generation interval in reverse order.
+`history` holds the new infections per resident on each of the last `len(reversed_gen_int)` days, oldest first, with one column per home region.
+`cumulative` is the share of each region's residents infected before today, summed over every earlier day starting with the first day of the initialization period.
+`susceptible` is floored at zero, so that a day of extreme infections cannot exceed the remaining susceptibles.
 `rt` multiplies at each location, because $R_{t,j}$ describes transmission where it happens.
 `M.T` assigns infections acquired at each location back to the home region of the person infected.
 `susceptible` multiplies last, because residents of a region lose susceptibility wherever they were infected.
