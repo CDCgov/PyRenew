@@ -225,7 +225,7 @@ class AR1(TemporalProcess):
     parameterization starts at ``x[0] = stationary_sd * z0``. It continues with
     ``x[t] = autoreg * x[t - 1] + innovation_sd * z[t]``. Each ``z`` is an
     independent ``Normal(0, 1)`` draw. ``innovation_sd`` scales the resulting
-    innovations; it does not change the standard deviation of these draws.
+    innovations.
 
     Passing ``initial_value=0.0`` fixes the first state at zero; omitting it
     retains uncertainty in the first state. A supplied value may itself be
