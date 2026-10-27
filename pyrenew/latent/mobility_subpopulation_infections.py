@@ -194,7 +194,7 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
             if jnp.all(jnp.isclose(jnp.sum(matrix, axis=1), 1.0, atol=1e-6)):
                 message += (
                     " The rows sum to 1; mobility_matrix[j, k] must be the "
-                    "fraction of residents of k present at j. Pass the transpose."
+                    "fraction of residents of k present at j. Did you mean to pass the transpose?"
                 )
             raise ValueError(message)
         empty_rows = jnp.flatnonzero(jnp.sum(matrix, axis=1) == 0).tolist()
