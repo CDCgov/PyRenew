@@ -67,8 +67,8 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
       region ``i`` not infected before day ``t``.
 
     Susceptible depletion is on by default, as in Eq 2. With it off,
-    ``susceptible`` is 1 and ``rt_subpop`` absorbs depletion. There is no
-    infection feedback option: Eq 2 accounts for depletion directly.
+    ``susceptible`` is 1 and inferred raw values of ``rt_subpop`` will need to directly absorb
+    any reductions in transmission due to susceptible depletion.
 
     The matrix is fixed. Fitting and prediction use the matrix the model
     was built with; it is available as ``mobility_matrix_rv.value``.
