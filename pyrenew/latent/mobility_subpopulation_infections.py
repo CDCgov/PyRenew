@@ -67,8 +67,8 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
       region ``i`` not infected before day ``t``.
 
     Susceptible depletion is on by default, as in Eq 2. With it off,
-    ``susceptible`` is 1 and ``rt_subpop`` absorbs depletion. There is no
-    infection feedback option: Eq 2 accounts for depletion directly.
+    ``susceptible`` is 1 and inferred raw values of ``rt_subpop`` will need to directly absorb
+    any reductions in transmission due to susceptible depletion.
 
     The matrix is fixed. Fitting and prediction use the matrix the model
     was built with; it is available as ``mobility_matrix_rv.value``.
@@ -194,7 +194,7 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
             if jnp.all(jnp.isclose(jnp.sum(matrix, axis=1), 1.0, atol=1e-6)):
                 message += (
                     " The rows sum to 1; mobility_matrix[j, k] must be the "
-                    "fraction of residents of k present at j. Pass the transpose."
+                    "fraction of residents of k present at j. Did you mean to pass the transpose?"
                 )
             raise ValueError(message)
         empty_rows = jnp.flatnonzero(jnp.sum(matrix, axis=1) == 0).tolist()
