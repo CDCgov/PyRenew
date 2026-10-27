@@ -119,7 +119,8 @@ A matrix with home regions in its rows, so that each row sums to 1, must be tran
 Regions must be in the same order in the matrix, in `subpop_fractions`, in a vector-valued `I0_rv` or `log_rt_time_0_rv`, and in every observation's `subpop_indices`.
 A matrix stored as a data frame must be converted with `.to_numpy()`, with rows and columns in that order.
 
-You may want to model only some of the areas represented in your raw mobility matrix, or your matrix may include an "everywhere else" bin. To use it in this model, drop any flows to un-modeled locations, then renormalize by columns, so columns once again sum to 1.
+You may want to model only some of the areas represented in your raw mobility matrix, or your matrix may include an "everywhere else" bin.
+To use it in this model, drop any flows to un-modeled locations, then renormalize by columns, so columns once again sum to 1.
 Roy et al.
 do this for the twelve local authorities of North East England.
 
