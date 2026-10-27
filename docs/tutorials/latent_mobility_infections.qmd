@@ -61,6 +61,7 @@ $$
 
 where:
 
+- $I_{t,i} is the infection count (a non-negative integer)
 - $m_{jk}$ is the fraction of residents of home region $k$ present at location $j$
 - $N_k$ is the number of residents of region $k$
 - $S_{t,i}$ is the number of residents of region $i$ not infected before day $t$
