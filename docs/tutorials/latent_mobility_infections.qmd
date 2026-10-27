@@ -105,19 +105,47 @@ M = np.array(
 p = np.array([20.0, 10.0, 15.0]) / 45.0
 region_names = ["Region 1", "Region 2", "Region 3"]
 
-print(f"Column sums: {M.sum(axis=0)}")
-print(f"Row sums:    {M.sum(axis=1)}")
+matrix_df = pd.DataFrame(
+    {
+        "location": np.repeat(region_names, len(region_names)),
+        "home_region": np.tile(region_names, len(region_names)),
+        "fraction": M.ravel(),
+    }
+)
+
+(
+    p9.ggplot(matrix_df, p9.aes(x="home_region", y="location", fill="fraction"))
+    + p9.geom_tile(color="white", size=1)
+    + p9.geom_text(
+        p9.aes(label="fraction", color="fraction > 0.5"),
+        format_string="{:.2f}",
+        size=12,
+        show_legend=False,
+    )
+    + p9.scale_fill_cmap(cmap_name="Blues", limits=(0, 1))
+    + p9.scale_color_manual(values=["black", "white"])
+    + p9.scale_y_discrete(limits=region_names[::-1])
+    + p9.coord_equal()
+    + p9.labs(
+        x="Home region",
+        y="Daytime location",
+        fill="Fraction of residents",
+        title="Mobility Matrix",
+    )
+    + theme_tutorial
+)
 ```
 
+A mobility matrix is a square matrix with one row and one column per region.
 `M[j, k]` is the fraction of residents of home region `k` present at location `j`.
-Columns are home regions, rows are locations, and each column sums to 1.
+Columns are home regions and each column sums to $1$.
+Rows are the same regions, viewed as the locations where residents spend the day; the diagonal is the fraction of residents who stay home.
 In region 3, 70% of residents stay home on a typical day, 21% spend it in region 1, and 9% in region 2.
 
-A matrix with home regions in its rows, so that each row sums to 1, must be transposed before use.
-`MobilitySubpopulationInfections` rejects it, and the error message says to pass the transpose.
-
-Regions must be in the same order in the matrix, in `subpop_fractions`, in a vector-valued `I0_rv` or `log_rt_time_0_rv`, and in every observation's `subpop_indices`.
-A matrix stored as a data frame must be converted with `.to_numpy()`, with rows and columns in that order.
+- The matrix must represent home regions by column, not rows.
+  A matrix with home regions in its rows, so that each row sums to 1, must be transposed before use, otherwise `MobilitySubpopulationInfections` rejects it which an error message that says to pass the transpose.
+- A matrix stored as a data frame must be converted with `.to_numpy()`, with rows and columns in that order.
+- Regions must be in the same order in the matrix, in `subpop_fractions`, in a vector-valued `I0_rv` or `log_rt_time_0_rv`, and in every observation's `subpop_indices`.
 
 You may want to model only some of the areas represented in your raw mobility matrix, or your matrix may include an "everywhere else" bin.
 To use it in this model, drop any flows to un-modeled locations, then renormalize by columns, so columns once again sum to 1.
