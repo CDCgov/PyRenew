@@ -26,25 +26,33 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
     at other locations. Transmission happens at each location, at that
     location's reproduction number, among the people present there, and
     each infection is assigned to the home region of the person infected.
-    This is Equation 2 of Roy, Clapham, and Mishra (2025),
+    This implements Equation 2 of Roy, Clapham, and Mishra (2025),
     [Incorporating human mobility to enhance epidemic response and estimate
     real-time reproduction numbers](https://doi.org/10.1371/journal.pcbi.1013642).
+    With depletion enabled, PyRenew additionally caps each day's new
+    infections at the remaining susceptible population.
 
     Infections are per resident: ``infections[t, k]`` is new infections
     among residents of home region ``k`` on day ``t``, divided by the number
     of residents of ``k``. With ``M`` the mobility matrix and
-    ``p = subpop_fractions``, one day is:
+    ``p = subpop_fractions``, one day with depletion enabled is:
 
     ```python
-    share_present = M * p[None, :] / (M @ p)[:, None]
+    present = M @ p
+    share_present = M * p[None, :] / jnp.where(present > 0, present, 1.0)[:, None]
     infectiousness = reversed_gen_int @ history
-    susceptible = 1 - cumulative
-    new_infections = susceptible * (M.T @ (rt * (share_present @ infectiousness)))
+    susceptible = 1.0 - cumulative
+    new_infections_raw = M.T @ (rt * (share_present @ infectiousness))
+    new_infections = jnp.minimum(susceptible * new_infections_raw, susceptible)
     ```
 
     ``share_present[j, k]`` is the share of the people present at location
     ``j`` who live in region ``k``, and ``cumulative`` counts every infection
-    since the first day of the initialization period.
+    since the first day of the initialization period. Initial infections
+    must be finite and non-negative. With depletion enabled, their sum
+    over all initialization days must be at most 1 per resident in each
+    region. Concrete invalid values raise ``ValueError``; during JAX
+    tracing, callers must ensure sampled initialization meets these bounds.
 
     ``M[j, k]`` is the fraction of residents of home region ``k`` present at
     location ``j``: columns are home regions, rows are locations, and each
@@ -60,14 +68,17 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
       where transmission happens, when everyone is susceptible.
     - ``rt_subpop_adjusted`` is
       ``rt_subpop * (share_present @ susceptible_fraction)`` after the
-      initialization period: new infections caused per unit of
-      infectiousness present at each location, after depletion. It is 0 at
-      a location with no one present.
+      initialization period, with depletion enabled. This adjusts for
+      susceptibility but does not account for the incidence ceiling. It
+      equals new infections per unit of infectiousness present only when
+      the ceiling does not bind. It is 0 at a location with no one present.
     - ``susceptible_fraction[t, i]`` is the share of residents of home
-      region ``i`` not infected before day ``t``.
+      region ``i`` not infected before day ``t``. It is recorded as 1 minus
+      cumulative infections and can become negative with depletion off.
 
     Susceptible depletion is on by default, as in Eq 2. With it off,
-    ``susceptible`` is 1 and inferred raw values of ``rt_subpop`` will need to directly absorb
+    neither susceptibility scaling nor the incidence ceiling is applied,
+    and inferred raw values of ``rt_subpop`` will need to directly absorb
     any reductions in transmission due to susceptible depletion.
 
     The matrix is fixed. Fitting and prediction use the matrix the model
@@ -107,7 +118,9 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
             is not prevalence. Returns either a scalar, one value for all
             regions, or an array of shape ``(n_subpops,)``, one value per
             region in the order of ``subpop_fractions``. Every
-            initialization day counts toward susceptible depletion.
+            initialization day counts toward susceptible depletion. With
+            depletion enabled, the sum over all initialization days must
+            be at most 1 per resident in each region.
         baseline_rt_process
             Temporal process for baseline $\\mathcal{R}(t)$ dynamics
         subpop_rt_deviation_process
@@ -129,8 +142,9 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
         susceptible_depletion
             If True (default), new infections among residents of each region
             are scaled by the fraction of those residents not yet infected,
-            as in Roy et al. Eq 2. If False, that factor is left out and
-            ``rt_subpop`` absorbs depletion.
+            as in Roy et al. Eq 2, and capped at that fraction. If False,
+            neither scaling nor the ceiling is applied, and ``rt_subpop``
+            absorbs depletion.
 
         Raises
         ------
@@ -255,7 +269,8 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
         -------
         tuple[ArrayLike, ArrayLike]
             Post-initialization infections per resident and the reproduction
-            number at each location after depletion.
+            number at each location after susceptibility adjustment,
+            before the incidence ceiling.
         """
         post_init_infections, rt_adjusted = compute_infections_from_rt_with_mobility(
             I0=I0,
@@ -272,7 +287,7 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
                 jnp.cumsum(infections_all, axis=0)[:-1],
             ]
         )
-        susceptible_fraction = jnp.maximum(1.0 - infected_before, 0.0)
+        susceptible_fraction = 1.0 - infected_before
         with numpyro.handlers.scope(prefix=self.name, divider="::"):
             numpyro.deterministic("susceptible_fraction", susceptible_fraction)
         return post_init_infections, rt_adjusted

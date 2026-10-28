@@ -127,12 +127,17 @@ class TestMobilitySample:
             DeterministicVariable("log_rt_time_0", 0.0),
             susceptible_depletion=susceptible_depletion,
         )
-        trace, _ = _sample_with_trace(process, roy_subpop_fractions)
+        trace, latent = _sample_with_trace(process, roy_subpop_fractions)
         susceptible_fraction = trace["subpopulation::susceptible_fraction"]["value"]
 
         assert susceptible_fraction.shape == (process.n_initialization_points + 30, 3)
         assert jnp.all(susceptible_fraction[0] == 1.0)
         assert jnp.all(jnp.diff(susceptible_fraction, axis=0) <= 0.0)
+        assert_allclose(
+            susceptible_fraction[1:],
+            1.0 - jnp.cumsum(latent.all_subpops, axis=0)[:-1],
+            atol=1e-12,
+        )
 
     def test_adjusted_rt_uses_susceptible_fraction(
         self,
@@ -161,6 +166,24 @@ class TestMobilitySample:
         )
         assert_array_equal(rt_subpop_adjusted[:n_init], rt_subpop[:n_init])
 
+    def test_susceptible_fraction_without_depletion_is_not_floored(
+        self,
+        mobility_subpopulation_infections: MobilitySubpopulationInfections,
+        roy_subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """Without depletion, the recorded fraction shows cumulative overshoot."""
+        process = mobility_subpopulation_infections
+        process.susceptible_depletion = False
+        process.I0_rv = DeterministicVariable("I0", 0.2)
+        trace, latent = _sample_with_trace(process, roy_subpop_fractions)
+        susceptible = trace["subpopulation::susceptible_fraction"]["value"]
+
+        assert jnp.any(susceptible < 0.0)
+        assert_allclose(
+            susceptible[1:],
+            1.0 - jnp.cumsum(latent.all_subpops, axis=0)[:-1],
+        )
+
     def test_adjusted_rt_without_depletion(
         self,
         mobility_subpopulation_infections_factory: Callable[
@@ -185,6 +208,16 @@ class TestMobilitySample:
 
 class TestMobilityValidation:
     """Test validation of the mobility matrix and its fit to the population."""
+
+    def test_rejects_excessive_initialization(
+        self,
+        mobility_subpopulation_infections: MobilitySubpopulationInfections,
+        roy_subpop_fractions: jnp.ndarray,
+    ) -> None:
+        """Sampling rejects initialization whose total exceeds a region's population."""
+        mobility_subpopulation_infections.I0_rv = DeterministicVariable("I0", 0.2)
+        with pytest.raises(ValueError, match="<= 1 in every region"):
+            _sample_with_trace(mobility_subpopulation_infections, roy_subpop_fractions)
 
     @pytest.mark.parametrize(
         ("case", "match"),

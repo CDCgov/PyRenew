@@ -61,7 +61,7 @@ $$
 
 where:
 
-- $I_{t,i}$ is the infection count (a non-negative integer)
+- $I_{t,i}$ is the modeled infection count
 - $m_{jk}$ is the fraction of residents of home region $k$ present at location $j$
 - $N_k$ is the number of residents of region $k$
 - $S_{t,i}$ is the number of residents of region $i$ not infected before day $t$
@@ -69,23 +69,26 @@ where:
 - $g$ is the generation interval
 
 PyRenew works with infections per resident.
-With `M` the mobility matrix and `p` the population fractions, one day of the computation is:
+With depletion enabled, PyRenew adds a ceiling to Equation 2: each day's new infections cannot exceed the remaining susceptible population.
+With `M` the mobility matrix and `p` the population fractions, one day of the computation with depletion enabled is:
 
 ```python
-share_present = M * p[None, :] / (M @ p)[:, None]
+present = M @ p
+share_present = M * p[None, :] / jnp.where(present > 0, present, 1.0)[:, None]
 infectiousness = reversed_gen_int @ history
-susceptible = jnp.maximum(1 - cumulative, 0)
-new_infections = susceptible * (M.T @ (rt * (share_present @ infectiousness)))
+susceptible = 1.0 - cumulative
+new_infections_raw = M.T @ (rt * (share_present @ infectiousness))
+new_infections = jnp.minimum(susceptible * new_infections_raw, susceptible)
 ```
 
 - `share_present[j, k]` is the share of the people present at location `j` who live in region `k`.
 - `reversed_gen_int` is the generation interval in reverse order and `history` holds the new infections per resident on each of the last `len(reversed_gen_int)` days, oldest first, with one column per home region.
   With this ordering, the vector-matrix product pairs each day's infections with the generation-interval probability for that many days back, so `infectiousness` is the per-region weighted sum of recent new infections per resident.
 - `cumulative` is the share of each region's residents infected before today, summed over every earlier day starting with the first day of the initialization period.
-- `susceptible` is floored at zero, so that a day of extreme infections cannot exceed the remaining susceptibles.
+- `new_infections` is capped at `susceptible`.
 - `rt` multiplies at each location, because $R_j(t)$ describes transmission where it happens.
 - `M.T` assigns infections acquired at each location back to the home region of the person infected.
-- `susceptible` multiplies last, because residents of a region lose susceptibility wherever they were infected.
+- `susceptible` scales infections after they are assigned to home regions, because residents of a region lose susceptibility wherever they were infected.
 
 ## The Mobility Matrix
 
@@ -282,7 +285,7 @@ show the same effect in their S2 Fig.
 `rt_subpop[t, j]` is the reproduction number at location `j`, where transmission happens.
 It is not the reproduction number of the residents of region `j`, who are also infected in the regions they visit.
 
-`rt_subpop_adjusted` is the reproduction number at each location after depletion: new infections caused per unit of infectiousness present there.
+With depletion enabled, `rt_subpop_adjusted` is the reproduction number at each location after susceptibility adjustment.
 After the initialization period it is `rt_subpop * (share_present @ susceptible_fraction)`.
 
 ```{python}
@@ -315,10 +318,6 @@ rt_df = pd.concat(
 
 Susceptible depletion is on by default, as in Eq 2.
 
-`susceptible_fraction[t, i]` is the share of residents of region `i` not infected before day `t`.
-It is recorded with depletion on or off.
-With `susceptible_depletion=False`, the renewal equation does not consider it, and the epidemic rapidly reaches 100% of the population infected.
-
 ```{python}
 #| label: depletion
 
@@ -335,19 +334,19 @@ susceptible_df = pd.concat(
 (
     p9.ggplot(susceptible_df, p9.aes(x="day", y="value", color="run"))
     + p9.geom_line(size=1)
-    + p9.facet_wrap("~ region", ncol=3)
+    + p9.facet_grid("run ~ region", scales="free_y")
     + p9.labs(
         x="Days",
-        y="Susceptible fraction",
-        title="Share of Residents Not Yet Infected",
-        color="",
+        y="1 - cumulative infections per resident",
+        title="Susceptibility With and Without Depletion",
     )
+    + p9.guides(color="none")
     + theme_tutorial
-    + p9.theme(legend_position="bottom")
+    + p9.theme(figure_size=(10, 7))
 )
 ```
 
-With depletion off, the susceptible fraction reaches zero, which means that the model infects more residents than there are.
+With depletion off, the recorded susceptible fraction becomes negative, indicating that cumulative infections exceed the population.
 All residents are susceptible at the start of the initialization period, as in Roy et al.
 
 ## Sources of Infection
@@ -370,7 +369,8 @@ rt_subpop = linked["rt_subpop"]
 susceptible_fraction = linked["susceptible_fraction"]
 reversed_gen_int = np.flip(np.asarray(gen_int_rv()))
 n_gen = reversed_gen_int.size
-share_present = M * p[None, :] / (M @ p)[:, None]
+present = M @ p
+share_present = M * p[None, :] / np.where(present > 0, present, 1.0)[:, None]
 
 sources = []
 for t in range(n_init, per_resident.shape[0]):
@@ -385,14 +385,16 @@ for t in range(n_init, per_resident.shape[0]):
         * infectiousness
     )
     incoming = susceptible * np.diag(M) * at_location - local
-    outgoing = susceptible * (M.T @ at_location) - local - incoming
-    sources.append(np.stack([local, incoming, outgoing]))
+    new_infections_raw = M.T @ at_location
+    outgoing = susceptible * new_infections_raw - local - incoming
+    ceiling_scale = 1.0 / np.maximum(new_infections_raw, 1.0)
+    sources.append(np.stack([local, incoming, outgoing]) * ceiling_scale)
 sources = np.stack(sources)
 
 total = sources.sum(axis=1)
 print(
-    "Largest relative difference between the summed sources and the infections: "
-    f"{np.max(np.abs(total - per_resident[n_init:]) / per_resident[n_init:]):.1e}"
+    "Largest absolute difference between the summed sources and the infections: "
+    f"{np.max(np.abs(total - per_resident[n_init:])):.1e}"
 )
 ```
 
@@ -402,7 +404,12 @@ The three sources add up to each day's new infections, to floating-point precisi
 #| label: plot-sources
 
 source_names = ["Local", "Incoming", "Outgoing"]
-share = sources / total[:, np.newaxis, :]
+share = np.divide(
+    sources,
+    total[:, np.newaxis, :],
+    out=np.zeros_like(sources),
+    where=total[:, np.newaxis, :] > 0,
+)
 n_days = share.shape[0]
 sources_df = pd.DataFrame(
     {
@@ -439,7 +446,8 @@ More than half of region 2's infections come from mobility: its residents are in
 The matrix is part of the model definition, not run-time data, so fitting and prediction use the same matrix, and no run-time argument can replace it.
 To model another jurisdiction, build a model with that jurisdiction's matrix.
 
-Before fitting, `run()` checks that the matrix has one row and one column per entry of `subpop_fractions`, and that every location has people present.
+Before fitting, `run()` checks that the matrix has one row and one column per entry of `subpop_fractions`.
+Empty locations are allowed and contribute no infections.
 
 For building complete models with observation processes, see:
 

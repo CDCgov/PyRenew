@@ -403,13 +403,13 @@ def test_mobility_counts_all_initialization_days(
     )
 
 
-def test_mobility_extreme_rt_nonnegative(
+def test_mobility_extreme_rt_caps_incidence(
     gen_int_rv: DeterministicPMF,
     roy_mobility_matrix: jnp.ndarray,
     roy_subpop_fractions: jnp.ndarray,
     mobility_initial_infections: jnp.ndarray,
 ) -> None:
-    """At extreme Rt, infections overshoot the susceptibles but stay non-negative and finite."""
+    """At extreme Rt, incidence stays within the remaining susceptible fraction."""
     infections, _ = inf.compute_infections_from_rt_with_mobility(
         I0=mobility_initial_infections,
         Rt_raw=jnp.full((60, 3), 30.0),
@@ -417,11 +417,83 @@ def test_mobility_extreme_rt_nonnegative(
         mobility_matrix=roy_mobility_matrix,
         subpop_fractions=roy_subpop_fractions,
     )
-    cumulative = mobility_initial_infections.sum(axis=0) + infections.sum(axis=0)
+    initial_cumulative = mobility_initial_infections.sum(axis=0)
+    cumulative = initial_cumulative + jnp.cumsum(infections, axis=0)
+    susceptible = 1.0 - jnp.vstack([initial_cumulative, cumulative[:-1]])
 
     assert jnp.all(infections >= 0)
     assert jnp.all(jnp.isfinite(infections))
-    assert jnp.any(cumulative > 1.0)
+    assert jnp.all(infections <= susceptible + 1e-12)
+    assert jnp.all(cumulative <= 1.0 + 1e-12)
+    assert_allclose(cumulative[-1], 1.0, atol=1e-12)
+
+
+@pytest.mark.parametrize("susceptible_depletion", [True, False])
+@pytest.mark.parametrize("rt", [0.0, 1.0, 10.0])
+@pytest.mark.parametrize("initial", [0.0, 0.2, 1.0])
+def test_mobility_incidence_boundary(
+    initial: float, rt: float, susceptible_depletion: bool
+) -> None:
+    """Jitted renewal caps only depleted incidence, including zero and full depletion."""
+    compute = jax.jit(
+        inf.compute_infections_from_rt_with_mobility,
+        static_argnames="susceptible_depletion",
+    )
+    infections, rt_adjusted = compute(
+        I0=jnp.array([[initial]]),
+        Rt_raw=jnp.full((2, 1), rt),
+        reversed_generation_interval_pmf=jnp.ones(1),
+        mobility_matrix=jnp.ones((1, 1)),
+        subpop_fractions=jnp.ones(1),
+        susceptible_depletion=susceptible_depletion,
+    )
+    first = rt * initial
+    if susceptible_depletion:
+        first = min((1.0 - initial) * first, 1.0 - initial)
+        susceptible = 1.0 - initial - first
+        second = min(susceptible * rt * first, susceptible)
+        expected_rt = [rt * (1.0 - initial), rt * susceptible]
+    else:
+        second = rt * first
+        expected_rt = [rt, rt]
+
+    assert_allclose(infections[:, 0], [first, second], atol=1e-12)
+    assert_allclose(rt_adjusted[:, 0], expected_rt, atol=1e-12)
+
+
+@pytest.mark.parametrize("susceptible_depletion", [True, False])
+@pytest.mark.parametrize("invalid", [-0.1, jnp.nan, jnp.inf])
+def test_mobility_rejects_invalid_initial_infections(
+    invalid: float, susceptible_depletion: bool
+) -> None:
+    """Initialization must contain only finite, non-negative incident infections."""
+    with pytest.raises(ValueError, match="finite, non-negative"):
+        inf.compute_infections_from_rt_with_mobility(
+            I0=jnp.array([[invalid], [0.1]]),
+            Rt_raw=jnp.ones((1, 1)),
+            reversed_generation_interval_pmf=jnp.ones(1),
+            mobility_matrix=jnp.ones((1, 1)),
+            subpop_fractions=jnp.ones(1),
+            susceptible_depletion=susceptible_depletion,
+        )
+
+
+def test_mobility_initialization_cannot_exceed_population() -> None:
+    """Every initialization day counts toward the per-region population bound."""
+    kwargs = {
+        "I0": jnp.array([[0.6, 0.1], [0.5, 0.1]]),
+        "Rt_raw": jnp.ones((1, 2)),
+        "reversed_generation_interval_pmf": jnp.ones(1),
+        "mobility_matrix": jnp.eye(2),
+        "subpop_fractions": jnp.full(2, 0.5),
+    }
+    with pytest.raises(ValueError, match="<= 1 in every region"):
+        inf.compute_infections_from_rt_with_mobility(**kwargs)
+
+    infections, _ = inf.compute_infections_from_rt_with_mobility(
+        **kwargs, susceptible_depletion=False
+    )
+    assert_allclose(infections, [[0.5, 0.1]])
 
 
 def test_mobility_gradient_finite(
@@ -430,7 +502,7 @@ def test_mobility_gradient_finite(
     roy_subpop_fractions: jnp.ndarray,
     mobility_initial_infections: jnp.ndarray,
 ) -> None:
-    """Gradients with respect to Rt stay finite when the susceptible floor is reached."""
+    """Gradients with respect to Rt stay finite when the incidence ceiling binds."""
 
     def total_infections(rt: jnp.ndarray) -> jnp.ndarray:
         """
