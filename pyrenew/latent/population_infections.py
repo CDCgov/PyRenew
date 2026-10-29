@@ -86,7 +86,11 @@ class PopulationInfections(BaseLatentInfectionProcess):
         single_rt_process
             Temporal process for single $\\mathcal{R}(t)$ dynamics
         log_rt_time_0_rv
-            Initial value for log($\\mathcal{R}(t)$) at time 0.
+            Log reproduction number on the first day of the initialization
+            period. The sampled value is passed as the exact starting state
+            to the temporal process and determines initialization growth.
+            The temporal process spans initialization and post-initialization
+            days, so this is not necessarily the first observed-period value.
         infection_feedback_strength_rv
             Infection feedback strength $\\gamma$. Returns a scalar, or an
             array of shape ``(n_days_post_init,)`` for a strength that varies

@@ -894,7 +894,7 @@ class TestMultiSignalModelSampling:
         assert process.sample_calls == [
             {
                 "n_timepoints": model.latent.n_initialization_points + 5,
-                "initial_value": 0.0,
+                "initial_value": None,
                 "n_processes": 1,
                 "name_prefix": "recording_hospital",
                 "first_day_dow": first_day_dow,
