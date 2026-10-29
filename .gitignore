@@ -332,3 +332,5 @@ replay_pid*
 
 /.quarto/
 *_files
+
+**/*.quarto_ipynb

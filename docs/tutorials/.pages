@@ -3,6 +3,7 @@ nav:
   - building_multisignal_models.md
   - latent_infections.md
   - latent_subpopulation_infections.md
+  - latent_mobility_infections.md
   - observation_processes_counts.md
   - observation_processes_measurements.md
   - right_truncation.md
