@@ -270,7 +270,8 @@ To evaluate what a given process implies, we use **prior predictive checks**: dr
 A single sample tells you little (the trajectory depends on the random seed), but the envelope of many samples reveals the structural constraints built into the process.
 We set `log_rt_time_0 = 0.5` and `I0 = 0.001` to represent a growing epidemic.
 All three processes start at exactly 0.5 on the first post-initialization day, giving Rt approximately 1.65 there.
-The plots below show the post-initialization period, so every trajectory begins at that supplied value. Variance accumulates only through subsequent transitions.
+The plots below show the post-initialization period, so every trajectory begins at that supplied value.
+Variance accumulates only through subsequent transitions.
 Starting well above equilibrium rather than near it makes the behavioral differences between temporal processes visible: the median trajectory of a mean-reverting process drifts back toward $\mathcal{R} = 1$, while a non-reverting process does not.
 
 This section is primarily **modeling guidance for prior specification in PyRenew**, not a claim that epidemiologic theory uniquely determines one temporal process choice.
