@@ -128,7 +128,7 @@ See [Latent Infections](latent_infections.md) for that background.
 ### Core inputs (shared across subpopulations)
 
 - **`gen_int_rv`**: Generation interval distribution $w_\tau$
-- **`I0_rv`**: Infection prevalence at the beginning of initialization (shared by default across subpopulations, but can be specified per subpopulation)
+- **`I0_rv`**: New infections per resident on the first initialization day (shared by default across subpopulations, but can be specified per subpopulation)
 - **`log_rt_time_0_rv`**: Value of $\log \mathcal{R}(t)$ on the first post-initialization day, either one value shared by all subpopulations or one value per subpopulation
 
 ### Temporal processes
@@ -209,7 +209,7 @@ To give each subpopulation its own starting $\mathcal{R}(t)$, `log_rt_time_0_rv`
 With `AR1`, `DifferencedAR1`, or `RandomWalk` as the baseline and deviation processes, each subpopulation's initial log Rt is exactly its corresponding supplied value.
 The baseline starts at the mean of those log Rt values, and the deviations start at each value minus that mean.
 These are starting values on the first post-initialization day, when renewal begins.
-Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` remains its prevalence at the beginning of initialization.
+Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` gives its new infections per resident on the first initialization day.
 The baseline and deviation processes sample only `n_days_post_init` days, which must be at least 1.
 Daily baseline, deviation, and Rt records retain the full infection axis by prepending copies of their first values.
 Initialization therefore adds no sampled states or innovations, and weekly records cover only the post-initialization period.
@@ -813,3 +813,5 @@ To learn how to build complete models with observation processes, see:
 - [Observation Processes: Counts](observation_processes_counts.md)
 - [Observation Processes: Measurements](observation_processes_measurements.md)
 - [Building Multi-Signal Models](building_multisignal_models.md)
+
+For subpopulations linked by mobility, where residents spend part of each day in other regions, see [Latent Mobility Infections](latent_mobility_infections.md).

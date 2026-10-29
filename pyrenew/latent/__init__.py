@@ -13,6 +13,7 @@ from pyrenew.latent.hierarchical_priors import (
 from pyrenew.latent.infection_functions import (
     compute_infections_from_rt,
     compute_infections_from_rt_with_feedback,
+    compute_infections_from_rt_with_mobility,
     logistic_susceptibility_adjustment,
 )
 from pyrenew.latent.infection_initialization_method import (
@@ -26,8 +27,14 @@ from pyrenew.latent.infection_initialization_process import (
 )
 from pyrenew.latent.infections import InfectionProcessSample, Infections
 from pyrenew.latent.infectionswithfeedback import InfectionsWithFeedback
+from pyrenew.latent.mobility_subpopulation_infections import (
+    MobilitySubpopulationInfections,
+)
 from pyrenew.latent.population_infections import PopulationInfections
-from pyrenew.latent.subpopulation_infections import SubpopulationInfections
+from pyrenew.latent.subpopulation_infections import (
+    BaseSubpopulationInfections,
+    SubpopulationInfections,
+)
 from pyrenew.latent.temporal_processes import (
     AR1,
     DifferencedAR1,
@@ -42,6 +49,7 @@ __all__ = [
     "logistic_susceptibility_adjustment",
     "compute_infections_from_rt",
     "compute_infections_from_rt_with_feedback",
+    "compute_infections_from_rt_with_mobility",
     "InfectionProcessSample",
     "InfectionInitializationMethod",
     "InitializeInfectionsExponentialGrowth",
@@ -51,9 +59,11 @@ __all__ = [
     "InfectionsWithFeedback",
     # Base classes and types
     "BaseLatentInfectionProcess",
+    "BaseSubpopulationInfections",
     "LatentSample",
     "PopulationStructure",
     "SubpopulationInfections",
+    "MobilitySubpopulationInfections",
     "PopulationInfections",
     # Hierarchical priors
     "HierarchicalNormalPrior",

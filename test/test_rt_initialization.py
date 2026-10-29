@@ -1,4 +1,4 @@
-"""Shared initialization and forecast contracts for both infection classes."""
+"""Shared initialization and forecast contracts for all infection classes."""
 
 from typing import Any, Literal
 
@@ -13,6 +13,7 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
     AR1,
     DifferencedAR1,
+    MobilitySubpopulationInfections,
     PopulationInfections,
     RandomWalk,
     SubpopulationInfections,
@@ -23,7 +24,11 @@ from pyrenew.randomvariable import DistributionalVariable
 
 Parameterization = Literal["state", "innovation"]
 ProcessType = type[AR1] | type[DifferencedAR1] | type[RandomWalk]
-InfectionType = type[PopulationInfections] | type[SubpopulationInfections]
+InfectionType = (
+    type[PopulationInfections]
+    | type[SubpopulationInfections]
+    | type[MobilitySubpopulationInfections]
+)
 
 
 def make_process(
@@ -58,13 +63,13 @@ def make_infections(
     deviation_start_dow: int | None = None,
     unequal: bool = False,
     feedback: bool = False,
-) -> PopulationInfections | SubpopulationInfections:
+) -> PopulationInfections | SubpopulationInfections | MobilitySubpopulationInfections:
     """
     Build a small infection model with an inferred starting log Rt.
 
     Returns
     -------
-    PopulationInfections or SubpopulationInfections
+    PopulationInfections or SubpopulationInfections or MobilitySubpopulationInfections
         Configured infection model.
     """
     start = jnp.array([-0.1, 0.2, 0.5]) if unequal else jnp.array(0.2)
@@ -83,7 +88,12 @@ def make_infections(
     process = make_process(process_type, parameterization, start_dow)
     if infection_type is PopulationInfections:
         return PopulationInfections(single_rt_process=process, **kwargs)
-    return SubpopulationInfections(
+    if infection_type is MobilitySubpopulationInfections:
+        kwargs.update(
+            mobility_matrix_rv=DeterministicVariable("mobility", jnp.eye(3)),
+            susceptible_depletion=False,
+        )
+    return infection_type(
         baseline_rt_process=process,
         subpop_rt_deviation_process=make_process(
             process_type, parameterization, deviation_start_dow
@@ -146,6 +156,8 @@ def sampled_sites(trace: dict[str, Any]) -> dict[str, jax.Array]:
         (PopulationInfections, False),
         (SubpopulationInfections, False),
         (SubpopulationInfections, True),
+        (MobilitySubpopulationInfections, False),
+        (MobilitySubpopulationInfections, True),
     ],
 )
 @pytest.mark.parametrize("process_type", [RandomWalk, AR1, DifferencedAR1])
@@ -234,7 +246,8 @@ def test_feedback_starts_with_renewal(
 
 
 @pytest.mark.parametrize(
-    "infection_type", [PopulationInfections, SubpopulationInfections]
+    "infection_type",
+    [PopulationInfections, SubpopulationInfections, MobilitySubpopulationInfections],
 )
 @pytest.mark.parametrize("parameterization", ["state", "innovation"])
 @pytest.mark.parametrize(
@@ -314,7 +327,8 @@ def test_initialization_length_and_calendar(
 
 
 @pytest.mark.parametrize(
-    "infection_type", [PopulationInfections, SubpopulationInfections]
+    "infection_type",
+    [PopulationInfections, SubpopulationInfections, MobilitySubpopulationInfections],
 )
 @pytest.mark.parametrize("process_type", [RandomWalk, AR1, DifferencedAR1])
 @pytest.mark.parametrize("parameterization", ["state", "innovation"])
@@ -371,7 +385,8 @@ def test_weekly_forecast_boundaries(
 
 
 @pytest.mark.parametrize(
-    "infection_type", [PopulationInfections, SubpopulationInfections]
+    "infection_type",
+    [PopulationInfections, SubpopulationInfections, MobilitySubpopulationInfections],
 )
 @pytest.mark.parametrize("n_days,weekday", [(0, None), (-1, None), (3, -1), (3, 7)])
 def test_invalid_horizon_or_weekday(
@@ -388,7 +403,8 @@ def test_invalid_horizon_or_weekday(
 
 
 @pytest.mark.parametrize(
-    "infection_type", [PopulationInfections, SubpopulationInfections]
+    "infection_type",
+    [PopulationInfections, SubpopulationInfections, MobilitySubpopulationInfections],
 )
 def test_weekly_requires_weekday(infection_type: InfectionType) -> None:
     """Weekly Rt still requires a calendar origin."""
