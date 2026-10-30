@@ -128,7 +128,7 @@ See [Latent Infections](latent_infections.md) for that background.
 ### Core inputs (shared across subpopulations)
 
 - **`gen_int_rv`**: Generation interval distribution $w_\tau$
-- **`I0_rv`**: New infections per resident on the first initialization day (shared by default across subpopulations, but can be specified per subpopulation)
+- **`I0_rv`**: New infections per capita on the first initialization day (shared by default across subpopulations, but can be specified per subpopulation)
 - **`log_rt_time_0_rv`**: Value of $\log \mathcal{R}(t)$ on the first post-initialization day, either one value shared by all subpopulations or one value per subpopulation
 
 ### Temporal processes
