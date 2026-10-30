@@ -368,7 +368,7 @@ class BaseLatentInfectionProcess(RandomVariable):
     @staticmethod
     def _validate_I0(I0: ArrayLike) -> None:
         """
-        Validate initial infections per resident.
+        Validate initial infections per capita.
 
         I0 is new infections per resident on the first day of the
         initialization period. Values must be in the interval (0, 1].
