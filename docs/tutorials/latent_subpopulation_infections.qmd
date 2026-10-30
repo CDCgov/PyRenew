@@ -209,7 +209,7 @@ To give each subpopulation its own starting $\mathcal{R}(t)$, `log_rt_time_0_rv`
 With `AR1`, `DifferencedAR1`, or `RandomWalk` as the baseline and deviation processes, each subpopulation's initial log Rt is exactly its corresponding supplied value.
 The baseline starts at the mean of those log Rt values, and the deviations start at each value minus that mean.
 These are starting values on the first post-initialization day, when renewal begins.
-Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` gives its new infections per resident on the first initialization day.
+Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` gives its new infections per capita on the first initialization day.
 The baseline and deviation processes sample only `n_days_post_init` days, which must be at least 1.
 Daily baseline, deviation, and Rt records retain the full infection axis by prepending copies of their first values.
 Initialization therefore adds no sampled states or innovations, and weekly records cover only the post-initialization period.
