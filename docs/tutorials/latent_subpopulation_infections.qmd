@@ -206,7 +206,7 @@ model = SubpopulationInfections(
 ```
 
 To give each subpopulation its own starting $\mathcal{R}(t)$, `log_rt_time_0_rv` returns one value per subpopulation, in the order of `subpop_fractions`.
-With `AR1`, `DifferencedAR1`, or `RandomWalk` as the baseline and deviation processes, each subpopulation's initial log Rt is exactly its corresponding supplied value.
+With `AR1`, `DifferencedAR1`, or `RandomWalk` as the baseline and deviation processes, each subpopulation's initial $\log[\mathcal{R}(t)]$ is exactly its corresponding supplied value.
 The baseline starts at the mean of those log Rt values, and the deviations start at each value minus that mean.
 These are starting values on the first post-initialization day, when renewal begins.
 Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` gives its new infections per capita on the first initialization day.
