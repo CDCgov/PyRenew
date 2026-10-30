@@ -405,7 +405,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         if not_jax_tracer(max_check) and max_check:
             raise ValueError(
                 f"I0 must be <= 1 (got max={float(jnp.max(I0)):.6f}). "
-                "I0 is new infections per resident on the first day of "
+                "I0 is new infections per capita on the first day of "
                 "the initialization period."
             )
 
