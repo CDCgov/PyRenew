@@ -88,7 +88,7 @@ PyRenew provides two latent infection classes:
 `PopulationInfections` requires four inputs:
 
 1. Generation interval distribution $w_\tau$ (`gen_int_rv`)
-2. New infections per resident on the first day of the initialization period (`I0_rv`)
+2. New infections per capita on the first day of the initialization period (`I0_rv`)
 3. Value for $\log(\mathcal{R}(t))$ on the first post-initialization day (`log_rt_time_0_rv`)
 4. A temporal process for $\mathcal{R}(t)$ dynamics (`single_rt_process`)
 

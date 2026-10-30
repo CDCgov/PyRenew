@@ -128,7 +128,7 @@ See [Latent Infections](latent_infections.md) for that background.
 ### Core inputs (shared across subpopulations)
 
 - **`gen_int_rv`**: Generation interval distribution $w_\tau$
-- **`I0_rv`**: New infections per resident on the first initialization day (shared by default across subpopulations, but can be specified per subpopulation)
+- **`I0_rv`**: New infections per capita on the first initialization day (shared by default across subpopulations, but can be specified per subpopulation)
 - **`log_rt_time_0_rv`**: Value of $\log \mathcal{R}(t)$ on the first post-initialization day, either one value shared by all subpopulations or one value per subpopulation
 
 ### Temporal processes
@@ -206,10 +206,10 @@ model = SubpopulationInfections(
 ```
 
 To give each subpopulation its own starting $\mathcal{R}(t)$, `log_rt_time_0_rv` returns one value per subpopulation, in the order of `subpop_fractions`.
-With `AR1`, `DifferencedAR1`, or `RandomWalk` as the baseline and deviation processes, each subpopulation's initial log Rt is exactly its corresponding supplied value.
-The baseline starts at the mean of those log Rt values, and the deviations start at each value minus that mean.
+With `AR1`, `DifferencedAR1`, or `RandomWalk` as the baseline and deviation processes, each subpopulation's initial $\log[\mathcal{R}(t)]$ is exactly its corresponding supplied value.
+The baseline starts at the mean of those $\log[\mathcal{R}(t)]$ values, and the deviations start at each value minus that mean.
 These are starting values on the first post-initialization day, when renewal begins.
-Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` gives its new infections per resident on the first initialization day.
+Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` gives its new infections per capita on the first initialization day.
 The baseline and deviation processes sample only `n_days_post_init` days, which must be at least 1.
 Daily baseline, deviation, and Rt records retain the full infection axis by prepending copies of their first values.
 Initialization therefore adds no sampled states or innovations, and weekly records cover only the post-initialization period.
@@ -303,7 +303,7 @@ Two parameters matter most when tuning these processes:
 
 The deviation process controls how subpopulation $\mathcal{R}_k(t)$ values move relative to the baseline $\mathcal{R}_{\text{baseline}}(t)$, not the overall trend itself.
 With one starting $\log(\mathcal{R}(t))$ shared by all subpopulations, all three processes start at exactly zero deviation on the first post-initialization day.
-With separate starting values, each deviation starts at its supplied log Rt minus the mean across subpopulations.
+With separate starting values, each deviation starts at its supplied $\log(\mathcal{R}(t))$ minus the mean across subpopulations.
 AR1's variance approaches a finite limit, while RandomWalk's variance grows without bound.
 Calling `AR1.sample()` without `initial_value` would instead sample a stationary initial state, but `SubpopulationInfections` supplies initial values to both processes.
 The plots below start at the first post-initialization day, so their first displayed deviations are exactly zero for the shared starting value used here.
@@ -359,8 +359,6 @@ baseline_process = DifferencedAR1(
 
 AR(1) deviations have **bounded variance**.
 In this example, the shared starting $\log(\mathcal{R}(t))$ makes every initial deviation exactly zero.
-Before centering across subpopulations, the variance after `t` transitions is `innovation_sd**2 * (1 - autoreg**(2*t)) / (1 - autoreg**2)`.
-With independent draws and shared process parameters, subtracting the subpopulation mean multiplies that variance by `1 - 1 / n_subpops`.
 For `autoreg = 0.8` and `innovation_sd = 0.05`, the limiting standard deviation is approximately $0.083$ before centering, or $0.076$ for the six centered subpopulations here.
 
 The `autoreg` coefficient still matters: if a subpopulation drifts away from zero by chance, $\phi$ controls how quickly it is pulled back.
