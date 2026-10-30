@@ -3,10 +3,16 @@ Unit tests for the datagen_he_CA_126 helper functions.
 """
 
 import json
+import runpy
+import sys
 from datetime import date
+from pathlib import Path
+from typing import Literal
+from unittest.mock import patch
 
 import numpy as np
 import polars as pl
+import pytest
 
 import pyrenew.datasets.datagen_he_CA_126 as datagen_mod
 from pyrenew.datasets.datagen_he_CA_126 import (
@@ -21,6 +27,11 @@ from pyrenew.datasets.datagen_he_CA_126 import (
 
 class TestBuildTrueRt:
     """Tests for build_true_rt."""
+
+    def test_invalid_cadence(self) -> None:
+        """Reject a cadence other than daily or weekly."""
+        with pytest.raises(ValueError, match="rt_cadence must be 'daily' or 'weekly'"):
+            build_true_rt("monthly")  # type: ignore[arg-type]
 
     def test_length(self):
         """Test that the output has 126 days."""
@@ -210,3 +221,50 @@ class TestGenerate:
         df = pl.read_csv(tmp_path / "daily_ed_visits.csv")
         assert len(df) == 126
         assert "ed_visits" in df.columns
+
+
+class TestMain:
+    """Tests for command-line dataset generation."""
+
+    def test_defaults(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Use daily Rt, the default output directory, and the default seed."""
+        monkeypatch.setattr(sys, "argv", ["datagen_he_CA_126"])
+        with patch.object(datagen_mod, "generate") as generate_mock:
+            datagen_mod.main()
+
+        generate_mock.assert_called_once_with(
+            rt_cadence="daily", output_dir=None, seed=datagen_mod.RNG_SEED
+        )
+
+    @pytest.mark.parametrize("rt_cadence", ["daily", "weekly"])
+    def test_script_entry_point(
+        self,
+        rt_cadence: Literal["daily", "weekly"],
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """The script writes the selected cadence and seed to the requested directory."""
+        output_dir = tmp_path / "dataset"
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "datagen_he_CA_126",
+                "--rt-cadence",
+                rt_cadence,
+                "--output-dir",
+                str(output_dir),
+                "--seed",
+                "42",
+            ],
+        )
+
+        runpy.run_path(datagen_mod.__file__, run_name="__main__")
+
+        params = json.loads((output_dir / "true_parameters.json").read_text())
+        assert params["rng_seed"] == 42
+        daily = pl.read_csv(output_dir / "daily_infections.csv")
+        np.testing.assert_allclose(
+            daily["true_rt"].to_numpy(), build_true_rt(rt_cadence)
+        )
+        assert (output_dir / "weekly_rt.csv").exists() == (rt_cadence == "weekly")
