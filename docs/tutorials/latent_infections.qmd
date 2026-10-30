@@ -88,7 +88,7 @@ PyRenew provides two latent infection classes:
 `PopulationInfections` requires four inputs:
 
 1. Generation interval distribution $w_\tau$ (`gen_int_rv`)
-2. Infection prevalence at the start of initialization as a proportion of the population (`I0_rv`)
+2. New infections per resident on the first day of the initialization period (`I0_rv`)
 3. Value for $\log(\mathcal{R}(t))$ on the first post-initialization day (`log_rt_time_0_rv`)
 4. A temporal process for $\mathcal{R}(t)$ dynamics (`single_rt_process`)
 
@@ -163,7 +163,7 @@ $$
 where $r$ is the asymptotic growth rate implied by the reproduction number on the first post-initialization day, `exp(log_rt_time_0)`, and the generation interval.
 The function `r_approx_from_R` converts that reproduction number and the generation interval into $r$ using Newton's method.
 
-- **The level is set by `I0`**.</br> `I0` is the infection prevalence at the earliest point in the initialization period, $n_{\text{init}}$ time points before the observation period starts.
+- **The level is set by `I0`**.</br> `I0` is new infections per resident on the first day of the initialization period, $n_{\text{init}}$ days before the observation period starts.
   It sets the scale of the entire initialization vector: $I_{\text{init}}(0) = I_0$, with subsequent entries growing or declining exponentially toward $t = 0$.
 
 - **The shape is set by `log_rt_time_0`**.<br> Its sampled value is the exact first log Rt for `AR1`, `DifferencedAR1`, and `RandomWalk`, and it determines the exponential growth rate $r$ used to construct the initialization vector.

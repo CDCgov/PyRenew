@@ -352,6 +352,9 @@ class AR1(TemporalProcess):
                 )
         else:
             init_states = _prepare_initial_value(initial_value, n_processes)
+            init_states = init_states.astype(
+                jnp.result_type(init_states, autoreg, innovation_sd, float)
+            )
 
         if self.parameterization == "innovation":
             return self.ar_process(

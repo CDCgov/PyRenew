@@ -83,8 +83,9 @@ class PopulationInfections(BaseLatentInfectionProcess):
         n_initialization_points
             Number of initialization days before day 0.
         I0_rv
-            Infection prevalence at the beginning of initialization
-            (proportion of population).
+            New infections per resident on the first day of the
+            initialization period, the earliest day on the time axis. This
+            is not prevalence. Returns a scalar.
         single_rt_process
             Temporal process for single $\\mathcal{R}(t)$ dynamics
         log_rt_time_0_rv
@@ -154,7 +155,7 @@ class PopulationInfections(BaseLatentInfectionProcess):
         pop: PopulationStructure,
     ) -> ArrayLike:
         """
-        Validate that I0 is a scalar prevalence value.
+        Validate that initial infections per resident are given as a scalar.
 
         PopulationInfections operates on a single population, so I0 must be
         a scalar (0-dimensional array).
@@ -162,7 +163,8 @@ class PopulationInfections(BaseLatentInfectionProcess):
         Parameters
         ----------
         I0
-            Initial infection prevalence from I0_rv, as a JAX array.
+            New infections per resident on the first day of the
+            initialization period, from I0_rv, as a JAX array.
         pop
             Parsed population structure (unused, required by interface).
 
@@ -177,9 +179,7 @@ class PopulationInfections(BaseLatentInfectionProcess):
             If I0 is not scalar or not in the interval (0, 1].
         """
         if I0.ndim != 0:
-            raise ValueError(
-                "PopulationInfections requires I0_rv to return a scalar prevalence"
-            )
+            raise ValueError("PopulationInfections requires I0_rv to return a scalar")
         return super()._validate_and_prepare_I0(I0, pop)
 
     def validate(self) -> None:

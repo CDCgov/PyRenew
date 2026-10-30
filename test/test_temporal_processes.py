@@ -976,6 +976,27 @@ class TestAR1InitialState:
     """An explicit starting state requires no additional initial draw."""
 
     @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
+    @pytest.mark.parametrize("initial_value", [0, jnp.array([0, 1])])
+    def test_integer_initial_state_supports_multiple_timepoints(
+        self,
+        parameterization: Parameterization,
+        initial_value: int | jax.Array,
+    ) -> None:
+        """Integer starts produce the same trajectory as floating-point starts."""
+        process = AR1(**fixed_ar1_kwargs(), parameterization=parameterization)
+        with numpyro.handlers.seed(rng_seed=42):
+            path = process.sample(5, initial_value=initial_value, n_processes=2)
+        with numpyro.handlers.seed(rng_seed=42):
+            expected = process.sample(
+                5, initial_value=jnp.asarray(initial_value, dtype=float), n_processes=2
+            )
+
+        assert path.shape == (5, 2)
+        assert jnp.issubdtype(path.dtype, jnp.floating)
+        assert jnp.array_equal(path[0], jnp.broadcast_to(initial_value, (2,)))
+        assert jnp.array_equal(path, expected)
+
+    @pytest.mark.parametrize("parameterization", PARAMETERIZATIONS)
     @pytest.mark.parametrize("initial_value", [0.0, 0.5, jnp.array([0.2, -0.4])])
     def test_one_timepoint_preserves_supplied_state(
         self,

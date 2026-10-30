@@ -368,15 +368,16 @@ class BaseLatentInfectionProcess(RandomVariable):
     @staticmethod
     def _validate_I0(I0: ArrayLike) -> None:
         """
-        Validate that I0 values are valid infection prevalences.
+        Validate initial infections per resident.
 
-        I0 represents initial infection prevalence as a proportion of the
-        population. Values must be in the interval (0, 1].
+        I0 is new infections per resident on the first day of the
+        initialization period. Values must be in the interval (0, 1].
 
         Parameters
         ----------
         I0
-            Initial infection prevalence (scalar or array)
+            New infections per resident on the first day of the
+            initialization period (scalar or array).
 
         Raises
         ------
@@ -397,13 +398,15 @@ class BaseLatentInfectionProcess(RandomVariable):
         if not_jax_tracer(pos_check) and pos_check:
             raise ValueError(
                 f"I0 must be positive (got min={float(jnp.min(I0)):.6f}). "
-                "I0 represents infection prevalence as a proportion of the population."
+                "I0 is new infections per resident on the first day of "
+                "the initialization period."
             )
         max_check = jnp.any(I0 > 1)
         if not_jax_tracer(max_check) and max_check:
             raise ValueError(
                 f"I0 must be <= 1 (got max={float(jnp.max(I0)):.6f}). "
-                "I0 represents infection prevalence as a proportion of the population."
+                "I0 is new infections per resident on the first day of "
+                "the initialization period."
             )
 
     def _validate_and_prepare_I0(
@@ -422,7 +425,8 @@ class BaseLatentInfectionProcess(RandomVariable):
         Parameters
         ----------
         I0
-            Initial infection prevalence from I0_rv, as a JAX array.
+            New infections per resident on the first day of the
+            initialization period, from I0_rv, as a JAX array.
         pop
             Parsed population structure.
 

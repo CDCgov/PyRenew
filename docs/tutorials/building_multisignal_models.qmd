@@ -217,7 +217,7 @@ print(f"Generation interval: {gen_int_pmf}")
 
 ### I0: Initial Infections
 
-The initial infections RV `I0_rv` specifies the **proportion of the population infected** at the first observation time.
+The initial infections RV `I0_rv` specifies **new infections per resident on the first day of the initialization period**, the earliest day on the time axis.
 This must be a value in the interval (0, 1\].
 We use a Beta prior centered near a small value:
 

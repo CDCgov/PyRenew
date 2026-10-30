@@ -434,7 +434,7 @@ class TestPopulationInfectionsValidation:
 
         with pytest.raises(
             ValueError,
-            match="requires I0_rv to return a scalar prevalence",
+            match="requires I0_rv to return a scalar",
         ):
             with numpyro.handlers.seed(rng_seed=42):
                 process.sample(n_days_post_init=30)
@@ -537,7 +537,7 @@ class TestPopulationValidateAndPrepareI0:
         """Test that a vector I0 is rejected."""
         pop = population_infections._parse_and_validate_fractions()
         I0 = jnp.array([0.01, 0.02])
-        with pytest.raises(ValueError, match="scalar prevalence"):
+        with pytest.raises(ValueError, match="requires I0_rv to return a scalar"):
             population_infections._validate_and_prepare_I0(I0, pop)
 
     def test_rejects_negative(self, population_infections):
