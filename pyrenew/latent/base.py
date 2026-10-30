@@ -370,7 +370,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         """
         Validate initial infections per capita.
 
-        I0 is new infections per resident on the first day of the
+        I0 is new infections per capita on the first day of the
         initialization period. Values must be in the interval (0, 1].
 
         Parameters
