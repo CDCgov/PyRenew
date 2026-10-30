@@ -425,7 +425,7 @@ class BaseLatentInfectionProcess(RandomVariable):
         Parameters
         ----------
         I0
-            New infections per resident on the first day of the
+            New infections per capita on the first day of the
             initialization period, from I0_rv, as a JAX array.
         pop
             Parsed population structure.
