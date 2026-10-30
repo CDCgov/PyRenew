@@ -1,10 +1,9 @@
 """
 Integration test: PopulationInfections H+E model with WEEKLY R(t).
 
-Mirrors ``test_population_infections_he_weekly`` but parameterizes R(t)
-weekly via ``WeeklyTemporalProcess`` and broadcasts to the daily renewal axis.
-This is the production pyrenew-hew configuration: weekly hospital admissions +
-daily ED visits + weekly calendar-aligned R(t).
+Fits the dedicated weekly-Rt synthetic dataset using innovation-form AR1
+wrapped by ``WeeklyTemporalProcess``. Checks convergence and recovery of
+known weekly Rt from weekly hospital admissions and daily ED visits.
 """
 
 from __future__ import annotations
@@ -94,8 +93,8 @@ class TestPriorPredictiveStructure:
     def test_weekly_rt_recorded(
         self,
         he_weekly_rt_model: MultiSignalModel,
-        weekly_hosp: pl.DataFrame,
-        daily_ed: pl.DataFrame,
+        weekly_rt_weekly_hosp: pl.DataFrame,
+        weekly_rt_daily_ed: pl.DataFrame,
     ) -> None:
         """
         Single prior-predictive sample exposes ``log_rt_single_weekly`` at the
@@ -105,22 +104,22 @@ class TestPriorPredictiveStructure:
         ----------
         he_weekly_rt_model : MultiSignalModel
             Built model with calendar-aligned weekly Rt.
-        weekly_hosp : pl.DataFrame
+        weekly_rt_weekly_hosp : pl.DataFrame
             Weekly hospital admissions.
-        daily_ed : pl.DataFrame
+        weekly_rt_daily_ed : pl.DataFrame
             Daily ED visits.
         """
         first_day_dow = he_weekly_rt_model._resolve_first_day_dow(OBS_START_DATE)
         weekly_values = jnp.array(
-            weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
+            weekly_rt_weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
         )
         hosp_obs = _build_hospital_obs_on_period_grid(
             he_weekly_rt_model, weekly_values, first_day_dow
         )
         ed_obs = he_weekly_rt_model.pad_observations(
-            jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
+            jnp.array(weekly_rt_daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
         )
-        population_size = float(weekly_hosp["pop"][0])
+        population_size = float(weekly_rt_weekly_hosp["pop"][0])
 
         with numpyro.handlers.seed(rng_seed=0):
             with numpyro.handlers.trace() as trace:
@@ -162,8 +161,8 @@ class TestModelFit:
     def fitted_model(
         self,
         he_weekly_rt_model: MultiSignalModel,
-        weekly_hosp: pl.DataFrame,
-        daily_ed: pl.DataFrame,
+        weekly_rt_weekly_hosp: pl.DataFrame,
+        weekly_rt_daily_ed: pl.DataFrame,
     ) -> MultiSignalModel:
         """
         Fit the weekly-Rt H+E model to synthetic data via MCMC.
@@ -172,9 +171,9 @@ class TestModelFit:
         ----------
         he_weekly_rt_model : MultiSignalModel
             Built model with calendar-aligned weekly Rt.
-        weekly_hosp : pl.DataFrame
+        weekly_rt_weekly_hosp : pl.DataFrame
             Weekly hospital admissions.
-        daily_ed : pl.DataFrame
+        weekly_rt_daily_ed : pl.DataFrame
             Daily ED visits.
 
         Returns
@@ -185,17 +184,17 @@ class TestModelFit:
         first_day_dow = he_weekly_rt_model._resolve_first_day_dow(OBS_START_DATE)
 
         weekly_values = jnp.array(
-            weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
+            weekly_rt_weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
         )
         hosp_obs = _build_hospital_obs_on_period_grid(
             he_weekly_rt_model, weekly_values, first_day_dow
         )
 
         ed_obs = he_weekly_rt_model.pad_observations(
-            jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
+            jnp.array(weekly_rt_daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
         )
 
-        population_size = float(weekly_hosp["pop"][0])
+        population_size = float(weekly_rt_weekly_hosp["pop"][0])
 
         he_weekly_rt_model.run(
             num_warmup=NUM_WARMUP,
@@ -313,24 +312,28 @@ class TestModelFit:
     def test_rt_posterior_covers_truth(
         self,
         posterior_dt,
-        daily_infections: pl.DataFrame,
+        weekly_rt_daily_infections: pl.DataFrame,
     ) -> None:
         """
         Check that the 90% credible interval for R(t) covers the true value
         for at least 80% of time points.
 
+        Truth and posterior Rt are constant within each complete week, so
+        daily and weekly coverage fractions coincide. This is a recovery
+        check for a fixed dataset, not an interval-calibration test.
+
         Parameters
         ----------
         posterior_dt : xarray.DataTree
             ArviZ DataTree with posterior group.
-        daily_infections : pl.DataFrame
+        weekly_rt_daily_infections : pl.DataFrame
             True R(t) trajectory.
         """
         rt_posterior = posterior_dt.posterior["PopulationInfections::rt_single"]
         rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values
         rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values
 
-        true_rt = daily_infections["true_rt"].to_numpy()
+        true_rt = weekly_rt_daily_infections["true_rt"].to_numpy()
 
         if rt_q05.ndim > 1:
             rt_q05 = rt_q05.squeeze()
@@ -348,7 +351,7 @@ class TestModelFit:
     def test_ascertainment_rates_recover_order_of_magnitude(
         self,
         posterior_dt,
-        true_params: dict,
+        weekly_rt_true_params: dict,
     ) -> None:
         """
         Check that posterior median IHR and IEDR are within a factor
@@ -358,11 +361,11 @@ class TestModelFit:
         ----------
         posterior_dt : xarray.DataTree
             ArviZ DataTree with posterior group.
-        true_params : dict
+        weekly_rt_true_params : dict
             Ground-truth parameter dictionary.
         """
-        true_ihr = true_params["hospitalizations"]["ihr"]
-        true_iedr = true_params["ed_visits"]["iedr"]
+        true_ihr = weekly_rt_true_params["hospitalizations"]["ihr"]
+        true_iedr = weekly_rt_true_params["ed_visits"]["iedr"]
 
         ihr_median = float(
             posterior_dt.posterior["ihr"].median(dim=["chain", "draw"]).values

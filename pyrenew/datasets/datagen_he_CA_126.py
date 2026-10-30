@@ -22,14 +22,29 @@ Outputs (in pyrenew/datasets/synthetic_CA_126/):
 Run from repo root::
 
     python -m pyrenew.datasets.datagen_he_CA_126
+
+For a separate dataset with Rt constant within each Sunday-Saturday week::
+
+    python -m pyrenew.datasets.datagen_he_CA_126 --rt-cadence weekly
+
+The weekly option writes to ``synthetic_CA_126_weekly_rt/``. It additionally
+saves ``weekly_rt.csv``, ``initial_infections.csv``, and
+``expected_observations.csv``. Its I0 is new infections per resident on the
+first initialization day, matching PopulationInfections. Observation means
+are not floored. Weekly generation uses 64-bit arithmetic for reproducibility.
+Use ``--output-dir`` and ``--seed`` to generate additional realizations.
+The default daily option retains the original dataset generation behavior.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 from datetime import date, timedelta
 from pathlib import Path
+from typing import Any, Literal
 
+import jax
 import numpy as np
 import polars as pl
 
@@ -39,6 +54,7 @@ from pyrenew.time import daily_to_mmwr_epiweekly, get_sequential_day_of_week_ind
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_DIR = REPO_ROOT / "pyrenew" / "datasets" / "synthetic_CA_126"
+WEEKLY_OUTPUT_DIR = OUTPUT_DIR.with_name("synthetic_CA_126_weekly_rt")
 
 RNG_SEED = 20240101
 POPULATION = 39_512_223
@@ -127,6 +143,7 @@ ED_DELAY_PMF = np.array(
 IHR = 0.005
 IEDR = 0.0075
 I0_PER_CAPITA = 5e-4
+WEEKLY_I0_PER_CAPITA = 1e-6
 NEGBINOM_CONCENTRATION_HOSP = 350.0
 NEGBINOM_CONCENTRATION_HOSP_WEEKLY = 100.0
 NEGBINOM_CONCENTRATION_ED = 50.0
@@ -136,18 +153,32 @@ START_DATE = date(2023, 11, 5)
 N_INIT = max(50, len(HOSP_DELAY_PMF), len(ED_DELAY_PMF))
 
 
-def build_true_rt() -> np.ndarray:
+def build_true_rt(rt_cadence: Literal["daily", "weekly"] = "daily") -> np.ndarray:
     """
-    Build a piecewise-linear true R(t) trajectory.
+    Build a daily-length R(t) trajectory with daily or weekly changes.
 
     Phases: decline from 1.2 to 0.8 (63 d), rise from 0.8 to 1.1 (42 d),
     decline from 1.1 to 0.85 (21 d). Total 126 days = 18 weeks.
+    Weekly values use the start of each seven-day block of this trajectory.
+
+    Parameters
+    ----------
+    rt_cadence
+        ``"daily"`` for the original piecewise-linear trajectory, or
+        ``"weekly"`` to hold each week's starting value for seven days.
 
     Returns
     -------
     np.ndarray
         R(t) trajectory.
+
+    Raises
+    ------
+    ValueError
+        If the cadence is neither daily nor weekly.
     """
+    if rt_cadence not in ("daily", "weekly"):
+        raise ValueError("rt_cadence must be 'daily' or 'weekly'")
     segments = [
         (63, 1.2, 0.8),
         (42, 0.8, 1.1),
@@ -159,7 +190,7 @@ def build_true_rt() -> np.ndarray:
             for length, start, end in segments
         ]
     )
-    return rt
+    return rt if rt_cadence == "daily" else np.repeat(rt[::7], 7)
 
 
 def run_renewal(
@@ -167,6 +198,8 @@ def run_renewal(
     gen_int: np.ndarray,
     i0_total: float,
     n_init: int,
+    *,
+    i0_at_start: bool = False,
 ) -> np.ndarray:
     """
     Run a discrete renewal equation forward in time.
@@ -182,9 +215,13 @@ def run_renewal(
     gen_int : np.ndarray
         Generation interval PMF (sums to 1).
     i0_total : float
-        Infections on the last day of the seed period.
+        Infection count on the first initialization day when
+        ``i0_at_start=True``. Otherwise, the exponential seed curve's
+        extrapolated value at day 0, preserving the original convention.
     n_init : int
         Number of seed days before day 0.
+    i0_at_start : bool
+        Whether i0_total is the count at the beginning of initialization.
 
     Returns
     -------
@@ -196,7 +233,7 @@ def run_renewal(
     infections = np.zeros(n_total)
 
     r0_approx = r_approx_from_R(rt[0], gen_int, 8)
-    seed_times = np.arange(-n_init, 0)
+    seed_times = np.arange(n_init) if i0_at_start else np.arange(-n_init, 0)
     infections[:n_init] = i0_total * np.exp(r0_approx * seed_times)
 
     g = gen_int
@@ -294,29 +331,71 @@ def build_weekly_hosp_frame(
     )
 
 
-def generate() -> None:
-    """Generate all synthetic data files and true parameter JSON."""
-    rng = np.random.default_rng(RNG_SEED)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+def generate(
+    *,
+    rt_cadence: Literal["daily", "weekly"] = "daily",
+    output_dir: Path | None = None,
+    seed: int = RNG_SEED,
+) -> None:
+    """
+    Write synthetic observations and their generating parameters to disk.
 
-    true_rt = build_true_rt()
+    Parameters
+    ----------
+    rt_cadence
+        Frequency of Rt changes. The default retains the original daily
+        dataset; ``"weekly"`` generates constant Rt within each calendar week.
+    output_dir
+        Destination directory. Defaults to ``synthetic_CA_126`` for daily
+        Rt and ``synthetic_CA_126_weekly_rt`` for weekly Rt.
+    seed
+        Random seed for observation noise. Rt and expected counts are fixed.
+    """
+    if output_dir is None:
+        output_dir = WEEKLY_OUTPUT_DIR if rt_cadence == "weekly" else OUTPUT_DIR
+    with jax.enable_x64(rt_cadence == "weekly" or jax.config.x64_enabled):
+        _generate(rt_cadence, output_dir, seed)
+
+
+def _generate(
+    rt_cadence: Literal["daily", "weekly"], output_dir: Path, seed: int
+) -> None:
+    """Generate and save observations at the selected arithmetic precision."""
+    true_rt = build_true_rt(rt_cadence)
+    weekly_rt = rt_cadence == "weekly"
+    gen_int, hosp_delay, ed_delay = [
+        pmf / pmf.sum() if weekly_rt else pmf
+        for pmf in (GEN_INT_PMF, HOSP_DELAY_PMF, ED_DELAY_PMF)
+    ]
+    n_init = (
+        max(len(GEN_INT_PMF), len(HOSP_DELAY_PMF) - 1, len(ED_DELAY_PMF) - 1)
+        if weekly_rt
+        else N_INIT
+    )
+    i0_per_capita = WEEKLY_I0_PER_CAPITA if weekly_rt else I0_PER_CAPITA
+    rng = np.random.default_rng(seed)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     n_days = len(true_rt)
-    i0_total = I0_PER_CAPITA * POPULATION
+    i0_total = i0_per_capita * POPULATION
 
-    infections_full = run_renewal(true_rt, GEN_INT_PMF, i0_total, N_INIT)
-    infections_obs = infections_full[N_INIT:]
+    infections_full = run_renewal(
+        true_rt, gen_int, i0_total, n_init, i0_at_start=weekly_rt
+    )
+    infections_obs = infections_full[n_init:]
 
     obs_dates = [START_DATE + timedelta(days=i) for i in range(n_days)]
     first_day_dow = START_DATE.weekday()
 
     expected_hosp_daily, _ = compute_delay_ascertained_incidence(
         latent_incidence=infections_full,
-        delay_incidence_to_observation_pmf=HOSP_DELAY_PMF,
+        delay_incidence_to_observation_pmf=hosp_delay,
         p_observed_given_incident=IHR,
         pad=True,
     )
-    expected_hosp_daily = expected_hosp_daily[N_INIT:]
-    expected_hosp_daily = np.maximum(expected_hosp_daily, 1.0)
+    expected_hosp_daily = expected_hosp_daily[n_init:]
+    if not weekly_rt:
+        expected_hosp_daily = np.maximum(expected_hosp_daily, 1.0)
     hosp_daily_obs = sample_negbinom(
         expected_hosp_daily, NEGBINOM_CONCENTRATION_HOSP, rng
     )
@@ -328,7 +407,8 @@ def generate() -> None:
     expected_hosp_weekly = np.asarray(
         daily_to_mmwr_epiweekly(expected_hosp_daily, input_data_first_dow=first_day_dow)
     )
-    expected_hosp_weekly = np.maximum(expected_hosp_weekly, 1.0)
+    if not weekly_rt:
+        expected_hosp_weekly = np.maximum(expected_hosp_weekly, 1.0)
     hosp_weekly_obs = sample_negbinom(
         expected_hosp_weekly, NEGBINOM_CONCENTRATION_HOSP_WEEKLY, rng
     )
@@ -342,17 +422,18 @@ def generate() -> None:
             "pop": [POPULATION] * n_days,
         }
     )
-    hosp_daily_df.write_csv(OUTPUT_DIR / "daily_hospital_admissions.csv")
+    hosp_daily_df.write_csv(output_dir / "daily_hospital_admissions.csv")
 
     expected_ed, _ = compute_delay_ascertained_incidence(
         latent_incidence=infections_full,
-        delay_incidence_to_observation_pmf=ED_DELAY_PMF,
+        delay_incidence_to_observation_pmf=ed_delay,
         p_observed_given_incident=IEDR,
         pad=True,
     )
-    expected_ed = expected_ed[N_INIT:]
+    expected_ed = expected_ed[n_init:]
     expected_ed = apply_day_of_week_effects(expected_ed, DOW_EFFECTS, first_day_dow)
-    expected_ed = np.maximum(expected_ed, 1.0)
+    if not weekly_rt:
+        expected_ed = np.maximum(expected_ed, 1.0)
     ed_obs = sample_negbinom(expected_ed, NEGBINOM_CONCENTRATION_ED, rng)
 
     infections_df = pl.DataFrame(
@@ -362,7 +443,7 @@ def generate() -> None:
             "true_rt": true_rt.tolist(),
         }
     )
-    infections_df.write_csv(OUTPUT_DIR / "daily_infections.csv")
+    infections_df.write_csv(output_dir / "daily_infections.csv")
 
     ed_df = pl.DataFrame(
         {
@@ -372,15 +453,19 @@ def generate() -> None:
             "ed_visits": ed_obs.tolist(),
         }
     )
-    ed_df.write_csv(OUTPUT_DIR / "daily_ed_visits.csv")
+    ed_df.write_csv(output_dir / "daily_ed_visits.csv")
 
     weekly_hosp = weekly_hosp.with_columns(
         pl.lit("CA").alias("location"),
         pl.lit(POPULATION).alias("pop"),
     )
-    weekly_hosp.write_csv(OUTPUT_DIR / "weekly_hospital_admissions.csv")
+    if weekly_rt:
+        weekly_hosp = weekly_hosp.with_columns(
+            pl.Series("expected_weekly_hosp_admits", expected_hosp_weekly)
+        )
+    weekly_hosp.write_csv(output_dir / "weekly_hospital_admissions.csv")
 
-    true_params = {
+    true_params: dict[str, Any] = {
         "description": (
             "True parameters used to generate synthetic 120-day CA data. "
             "All values are known ground truth for posterior recovery checks."
@@ -388,10 +473,10 @@ def generate() -> None:
         "population": POPULATION,
         "start_date": str(START_DATE),
         "n_days": n_days,
-        "n_init": N_INIT,
-        "rng_seed": RNG_SEED,
-        "generation_interval_pmf": GEN_INT_PMF.tolist(),
-        "i0_per_capita": I0_PER_CAPITA,
+        "n_init": n_init,
+        "rng_seed": seed,
+        "generation_interval_pmf": gen_int.tolist(),
+        "i0_per_capita": i0_per_capita,
         "rt_trajectory": {
             "phase_1": {"days": 63, "start": 1.2, "end": 0.8},
             "phase_2": {"days": 42, "start": 0.8, "end": 1.1},
@@ -406,13 +491,44 @@ def generate() -> None:
         },
         "ed_visits": {
             "iedr": IEDR,
-            "delay_pmf": ED_DELAY_PMF.tolist(),
+            "delay_pmf": ed_delay.tolist(),
             "negbinom_concentration": NEGBINOM_CONCENTRATION_ED,
             "day_of_week_effects": DOW_EFFECTS.tolist(),
             "temporal_resolution": "daily",
         },
     }
-    with open(OUTPUT_DIR / "true_parameters.json", "w") as f:
+    if weekly_rt:
+        true_params.update(
+            description="Known weekly Rt and observations for 126-day posterior recovery tests.",
+            rt_cadence="weekly",
+            week_start_dow=START_DATE.weekday(),
+            initialization_start_date=str(START_DATE - timedelta(days=n_init)),
+            i0_definition="New infections per resident on the first initialization day.",
+            log_rt_time_0=float(np.log(true_rt[0])),
+            rt_trajectory={"weekly_values": true_rt[::7].tolist()},
+        )
+        true_params["hospitalizations"]["delay_pmf"] = hosp_delay.tolist()
+        pl.DataFrame(
+            {
+                "week_start": obs_dates[::7],
+                "week_end": obs_dates[6::7],
+                "true_rt": true_rt[::7],
+            }
+        ).write_csv(output_dir / "weekly_rt.csv")
+        pl.DataFrame(
+            {
+                "date": [START_DATE + timedelta(days=i) for i in range(-n_init, 0)],
+                "true_infections": infections_full[:n_init],
+            }
+        ).write_csv(output_dir / "initial_infections.csv")
+        pl.DataFrame(
+            {
+                "date": obs_dates,
+                "expected_hosp_admits": np.asarray(expected_hosp_daily),
+                "expected_ed_visits": np.asarray(expected_ed),
+            }
+        ).write_csv(output_dir / "expected_observations.csv")
+    with open(output_dir / "true_parameters.json", "w") as f:
         json.dump(true_params, f, indent=2)
         f.write("\n")
 
@@ -425,8 +541,27 @@ def generate() -> None:
     print(f"Wrote {n_days} daily ED visit rows (mean {mean_daily_ed:.0f}/day)")
     print(f"Wrote {n_weeks} weekly hospital rows (mean {mean_weekly_hosp:.0f}/week)")
     print(f"Weekly ED/hosp ratio: {mean_daily_ed * 7 / mean_weekly_hosp:.2f}")
-    print(f"Output directory: {OUTPUT_DIR}")
+    print(f"Output directory: {output_dir}")
+
+
+def main() -> None:
+    """Generate the selected dataset from command-line arguments."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--rt-cadence",
+        choices=("daily", "weekly"),
+        default="daily",
+        help="Frequency of Rt changes (default: daily).",
+    )
+    parser.add_argument(
+        "--output-dir", type=Path, help="Override the dataset output directory."
+    )
+    parser.add_argument(
+        "--seed", type=int, default=RNG_SEED, help="Random seed for observation noise."
+    )
+    args = parser.parse_args()
+    generate(rt_cadence=args.rt_cadence, output_dir=args.output_dir, seed=args.seed)
 
 
 if __name__ == "__main__":
-    generate()
+    main()

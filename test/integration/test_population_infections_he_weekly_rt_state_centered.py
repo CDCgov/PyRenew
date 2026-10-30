@@ -1,11 +1,11 @@
 """
 Integration test: PopulationInfections H+E model with state-centered weekly R(t).
 
-Mirrors ``test_population_infections_he_weekly_rt.py`` but configures the
-inner temporal process as ``DifferencedAR1(parameterization='state')``
-wrapped by ``WeeklyTemporalProcess``. Verifies that the state-centered
-path produces statistically equivalent posterior recovery to the
-innovation-form path under the same priors, MCMC settings, and data.
+Fits the dedicated weekly-Rt synthetic dataset using
+``DifferencedAR1(parameterization='state')`` wrapped by
+``WeeklyTemporalProcess``. Checks convergence and recovery of its known
+weekly trajectory. The companion innovation-form test uses AR1, so these
+tests exercise different temporal models rather than parameterization equivalence.
 """
 
 from __future__ import annotations
@@ -64,25 +64,25 @@ class TestModelFit:
     def fitted_model(  # numpydoc ignore=RT01
         self,
         he_weekly_rt_model_state_centered: MultiSignalModel,
-        weekly_hosp: pl.DataFrame,
-        daily_ed: pl.DataFrame,
+        weekly_rt_weekly_hosp: pl.DataFrame,
+        weekly_rt_daily_ed: pl.DataFrame,
     ) -> MultiSignalModel:
         """Fit the state-centered weekly-Rt H+E model via MCMC."""
         model = he_weekly_rt_model_state_centered
         first_day_dow = model._resolve_first_day_dow(OBS_START_DATE)
 
         weekly_values = jnp.array(
-            weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
+            weekly_rt_weekly_hosp["weekly_hosp_admits"].to_numpy(), dtype=jnp.float32
         )
         hosp_obs = _build_hospital_obs_on_period_grid(
             model, weekly_values, first_day_dow
         )
 
         ed_obs = model.pad_observations(
-            jnp.array(daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
+            jnp.array(weekly_rt_daily_ed["ed_visits"].to_numpy(), dtype=jnp.float32)
         )
 
-        population_size = float(weekly_hosp["pop"][0])
+        population_size = float(weekly_rt_weekly_hosp["pop"][0])
 
         model.run(
             num_warmup=NUM_WARMUP,
@@ -172,19 +172,19 @@ class TestModelFit:
     def test_rt_posterior_covers_truth(
         self,
         posterior_dt,
-        daily_infections: pl.DataFrame,
+        weekly_rt_daily_infections: pl.DataFrame,
     ) -> None:
         """Check that R(t) 90% intervals cover truth for at least 75% of days.
 
-        Weekly Rt gives only 18 independent week-level coverage outcomes,
-        so the per-seed binomial noise around a calibrated 90% CI is large
-        and an 80% threshold is unreliable at this n.
+        Truth and posterior Rt are constant within each of 18 complete
+        weeks, so daily and weekly coverage fractions coincide. The cutoff
+        is a recovery check for this fixed dataset, not a calibration test.
         """
         rt_posterior = posterior_dt.posterior["PopulationInfections::rt_single"]
         rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values
         rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values
 
-        true_rt = daily_infections["true_rt"].to_numpy()
+        true_rt = weekly_rt_daily_infections["true_rt"].to_numpy()
 
         if rt_q05.ndim > 1:
             rt_q05 = rt_q05.squeeze()
@@ -202,11 +202,11 @@ class TestModelFit:
     def test_ascertainment_rates_recover_order_of_magnitude(
         self,
         posterior_dt,
-        true_params: dict,
+        weekly_rt_true_params: dict,
     ) -> None:
         """Check posterior median IHR and IEDR are within 5x of truth."""
-        true_ihr = true_params["hospitalizations"]["ihr"]
-        true_iedr = true_params["ed_visits"]["iedr"]
+        true_ihr = weekly_rt_true_params["hospitalizations"]["ihr"]
+        true_iedr = weekly_rt_true_params["ed_visits"]["iedr"]
 
         ihr_median = float(
             posterior_dt.posterior["ihr"].median(dim=["chain", "draw"]).values
