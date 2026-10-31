@@ -269,7 +269,7 @@ with numpyro.handlers.seed(rng_seed=42):
 
 deviations = trace["SubpopulationInfections::subpop_deviations"]["value"]
 deviation_sums = jnp.sum(deviations, axis=1)
-print(f"Deviation shape: {deviations.shape}  (n_total_days, n_subpops)")
+print(f"Deviation shape: {deviations.shape}  (n_days_post_init, n_subpops)")
 print(
     f"Max |sum of deviations across subpops|: {float(jnp.max(jnp.abs(deviation_sums))):.2e}"
 )
