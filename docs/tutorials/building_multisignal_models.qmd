@@ -668,7 +668,7 @@ This means the model has two related time scales:
 
 On the model time axis, indices `0` through `n_init - 1` are initialization days.
 The first observed day is model index `n_init`, and the last observed day is model index `n_init + n_days - 1`.
-Daily Rt, baseline, and deviation records start on the first renewal day and omit initialization.
+Daily Rt, baseline, and deviation records start on the first renewal day.
 Their row `t` corresponds to infection row `n_init + t`.
 
 The model provides helper methods to convert observation data onto this model time axis:
@@ -874,7 +874,7 @@ print(f"Elapsed time: {elapsed_90:.1f} seconds")
 We use [ArviZ](https://python.arviz.org/en/stable/) to assess MCMC convergence and mixing via the $\hat{R}$ statistic and effective sample size (ESS).
 We summarize the period beginning with renewal.
 Infection and observation records include initialization, so we trim their first `n_init` time steps.
-Rt, baseline, and deviation records already start with renewal and need no trimming.
+Rt, baseline, and deviation records already start with renewal.
 
 ```{python}
 #| label: helper-trim-time
