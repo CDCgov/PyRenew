@@ -863,8 +863,10 @@ class TestMultiSignalModelSampling:
         self,
         simple_builder: PyrenewBuilder,
     ) -> None:
-        """Test temporal sampling receives full padded-axis context."""
+        """Only latent Rt receives the post-initialization axis and weekday."""
         built = simple_builder.build()
+        rt_process = RecordingTemporalProcess()
+        built.latent.baseline_rt_process = rt_process
         process = RecordingTemporalProcess()
         ascertainment = IndependentAscertainment(
             name="recording",
@@ -894,12 +896,15 @@ class TestMultiSignalModelSampling:
         assert process.sample_calls == [
             {
                 "n_timepoints": model.latent.n_initialization_points + 5,
-                "initial_value": 0.0,
+                "initial_value": None,
                 "n_processes": 1,
                 "name_prefix": "recording_hospital",
                 "first_day_dow": first_day_dow,
             }
         ]
+
+        assert rt_process.sample_calls[0]["n_timepoints"] == 5
+        assert rt_process.sample_calls[0]["first_day_dow"] == obs_start_date.weekday()
 
     def test_calendar_ascertainment_fails_early_and_names_model(
         self,
@@ -991,10 +996,10 @@ class TestMultiSignalModelSampling:
         log_rt = trace["PopulationInfections::log_rt_single"]["value"]
         weekly = trace["log_rt_single_weekly"]["value"]
 
-        assert log_rt.shape == (model.latent.n_initialization_points + 10, 1)
+        assert log_rt.shape == (10, 1)
         assert weekly.shape[0] < log_rt.shape[0]
-        assert jnp.allclose(log_rt[:3], log_rt[0])
-        assert jnp.allclose(log_rt[3:10], log_rt[3])
+        assert jnp.allclose(log_rt[:7], weekly[0])
+        assert jnp.allclose(log_rt[7:], weekly[1])
 
     def test_missing_obs_start_date_for_calendar_aligned_latent_process_raises(self):
         """Calendar-aligned latent temporal processes trigger the model-entry anchor check."""
@@ -1062,7 +1067,7 @@ class TestMultiSignalModelSampling:
 
         assert trace["log_rt_single_weekly"]["value"].shape == (5, 1)
         assert trace["PopulationInfections::log_rt_single"]["value"].shape == (
-            n_total,
+            n_days_post_init,
             1,
         )
         assert trace["ed_obs"]["value"].shape == (n_total,)

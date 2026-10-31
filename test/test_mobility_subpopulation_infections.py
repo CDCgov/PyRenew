@@ -159,12 +159,12 @@ class TestMobilitySample:
             / (roy_mobility_matrix @ roy_subpop_fractions)[:, jnp.newaxis]
         )
 
+        assert rt_subpop.shape == rt_subpop_adjusted.shape == (30, 3)
         assert_allclose(
-            rt_subpop_adjusted[n_init:],
-            rt_subpop[n_init:] * (susceptible_fraction[n_init:] @ share_present.T),
+            rt_subpop_adjusted,
+            rt_subpop * (susceptible_fraction[n_init:] @ share_present.T),
             rtol=1e-10,
         )
-        assert_array_equal(rt_subpop_adjusted[:n_init], rt_subpop[:n_init])
 
     def test_susceptible_fraction_without_depletion_is_not_floored(
         self,
@@ -332,11 +332,10 @@ class TestMobilityValidation:
             mobility_matrix, DeterministicVariable("log_rt_time_0", 0.0)
         )
         trace, latent = _sample_with_trace(process, subpop_fractions)
-        n_init = process.n_initialization_points
         rt_subpop_adjusted = trace["subpopulation::rt_subpop_adjusted"]["value"]
 
         assert jnp.all(jnp.isfinite(latent.all_subpops))
-        assert_array_equal(rt_subpop_adjusted[n_init:, 2], 0.0)
+        assert_array_equal(rt_subpop_adjusted[:, 2], 0.0)
 
 
 class TestMobilityModel:

@@ -43,7 +43,8 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["pyrenew"]
 include = [
-    "pyrenew/datasets/synthetic_CA_126/**"
+    "pyrenew/datasets/synthetic_CA_126/**",
+    "pyrenew/datasets/synthetic_CA_126_weekly_rt/**",
 ]
 
 [tool.numpydoc_validation]

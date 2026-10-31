@@ -260,6 +260,9 @@ ed_deviation_process = WeeklyTemporalProcess(
 The `AR1` process describes how the deviation evolves from one week to the next.
 The autoregressive coefficient controls its persistence, and the innovation standard deviation controls the size of weekly changes.
 `WeeklyTemporalProcess` aligns those changes with MMWR weeks and expands the weekly values over the model's daily time axis.
+Ascertainment leaves `initial_value` unset, so AR1 samples its first deviation from `Normal(0, innovation_sd / sqrt(1 - autoreg**2))`.
+The initial ascertainment rate can therefore differ from its baseline.
+This differs from the latent infection classes, which supply an exact starting value to their Rt processes.
 
 Finally, associate both objects with the ED signal:
 

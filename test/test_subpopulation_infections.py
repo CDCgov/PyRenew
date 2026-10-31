@@ -189,8 +189,8 @@ class TestSubpopulationInfectionsSample:
         assert sample.all_subpops.shape == (n_total, len(subpop_fractions))
         assert jnp.all(sample.aggregate > 0)
         assert jnp.all(sample.all_subpops > 0)
-        assert jnp.array_equal(rt_adjusted[:n_init], rt[:n_init])
-        assert jnp.all(rt_adjusted[n_init:] < rt[n_init:])
+        assert rt.shape == rt_adjusted.shape == (30, len(subpop_fractions))
+        assert jnp.all(rt_adjusted < rt)
 
     def test_feedback_matches_infections_with_feedback(
         self,
@@ -219,7 +219,7 @@ class TestSubpopulationInfectionsSample:
             infection_feedback_strength=infection_feedback_strength_rv,
             infection_feedback_pmf=infection_feedback_pmf_rv,
         ).sample(
-            Rt=trace["subpopulation::rt_subpop"]["value"][n_init:, :],
+            Rt=trace["subpopulation::rt_subpop"]["value"],
             I0=trace["subpopulation::I0_init_all_subpops"]["value"],
             gen_int=gen_int_rv(),
         )
@@ -227,7 +227,7 @@ class TestSubpopulationInfectionsSample:
             sample.all_subpops[n_init:], reference.post_initialization_infections
         )
         assert jnp.allclose(
-            trace["subpopulation::rt_subpop_adjusted"]["value"][n_init:],
+            trace["subpopulation::rt_subpop_adjusted"]["value"],
             reference.rt,
         )
 
@@ -546,16 +546,22 @@ class TestSubpopulationInfectionsStartingRt:
 
     @pytest.mark.parametrize("parameterization", ["innovation", "state"])
     @pytest.mark.parametrize("ar1_role", ["baseline", "deviations", "both"])
-    def test_ar1_starting_rt_uses_draws_around_supplied_means(
+    @pytest.mark.parametrize("scalar_start", [False, True])
+    def test_ar1_preserves_starting_rt(
         self,
         gen_int_rv: DeterministicPMF,
         subpop_log_rt_time_0: jnp.ndarray,
         subpop_fractions: jnp.ndarray,
         parameterization: Literal["innovation", "state"],
         ar1_role: Literal["baseline", "deviations", "both"],
+        scalar_start: bool,
     ) -> None:
-        """AR1 initial draws determine centered starting Rt and infection growth."""
-        v = subpop_log_rt_time_0
+        """AR1 preserves supplied starting Rt for baseline and deviation processes."""
+        v = (
+            jnp.full_like(subpop_log_rt_time_0, 0.2)
+            if scalar_start
+            else subpop_log_rt_time_0
+        )
         autoreg, innovation_sd = 0.8, 0.05
         kwargs = {
             "autoreg_rv": DeterministicVariable("autoreg", autoreg),
@@ -567,7 +573,9 @@ class TestSubpopulationInfectionsStartingRt:
             name="subpopulation",
             gen_int_rv=gen_int_rv,
             I0_rv=DeterministicVariable("I0", 0.001),
-            log_rt_time_0_rv=DeterministicVariable("log_rt_time_0", v),
+            log_rt_time_0_rv=DeterministicVariable(
+                "log_rt_time_0", 0.2 if scalar_start else v
+            ),
             baseline_rt_process=ar1 if ar1_role != "deviations" else differenced_ar1,
             subpop_rt_deviation_process=ar1
             if ar1_role != "baseline"
@@ -581,19 +589,9 @@ class TestSubpopulationInfectionsStartingRt:
 
         baseline_start = jnp.mean(v)
         deviations_start = v - baseline_start
-        stationary_sd = innovation_sd / jnp.sqrt(1 - autoreg**2)
-        if ar1_role != "deviations":
-            baseline_init = trace["log_rt_baseline_init"]
-            assert jnp.allclose(baseline_init["fn"].mean, baseline_start)
-            assert jnp.allclose(baseline_init["fn"].variance, stationary_sd**2)
-            baseline_start = baseline_init["value"][0]
-        if ar1_role != "baseline":
-            deviations_init = trace["subpop_deviations_init"]
-            assert jnp.allclose(deviations_init["fn"].mean, deviations_start)
-            assert jnp.allclose(deviations_init["fn"].variance, stationary_sd**2)
-            deviations_start = deviations_init["value"] - jnp.mean(
-                deviations_init["value"]
-            )
+        for prefix in ("log_rt_baseline", "subpop_deviations"):
+            assert f"{prefix}_init" not in trace
+            assert f"{prefix}_init_decentered" not in trace
 
         expected_rt = jnp.exp(baseline_start + deviations_start)
         assert jnp.allclose(
@@ -603,7 +601,7 @@ class TestSubpopulationInfectionsStartingRt:
             trace["subpopulation::subpop_deviations"]["value"][0], deviations_start
         )
         assert jnp.allclose(trace["subpopulation::rt_subpop"]["value"][0], expected_rt)
-        assert not jnp.allclose(expected_rt, jnp.exp(v))
+        assert jnp.allclose(expected_rt, jnp.exp(v))
 
         initial_infections = trace["subpopulation::I0_init_all_subpops"]["value"]
         growth = jnp.log(initial_infections[1:] / initial_infections[:-1])

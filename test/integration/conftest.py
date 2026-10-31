@@ -7,6 +7,10 @@ and ArviZ 1.0 posterior summary helpers.
 
 from __future__ import annotations
 
+import json
+from importlib.resources import files
+from typing import Any
+
 import jax.numpy as jnp
 import numpyro.distributions as dist
 import polars as pl
@@ -30,6 +34,7 @@ from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
 from pyrenew.latent import (
     AR1,
     RandomWalk,
+    TemporalProcess,
     WeeklyTemporalProcess,
 )
 from pyrenew.latent.population_infections import PopulationInfections
@@ -47,6 +52,59 @@ from test.test_helpers import fixed_ar1, fixed_ar1_state, fixed_differenced_ar1_
 _GEN_INT_PMF = jnp.array(
     [0.6326975, 0.2327564, 0.0856263, 0.03150015, 0.01158826, 0.00426308, 0.0015683]
 )
+_WEEKLY_RT_DATA = files("pyrenew.datasets") / "synthetic_CA_126_weekly_rt"
+
+
+@pytest.fixture(scope="module")
+def weekly_rt_true_params() -> dict[str, Any]:
+    """
+    Load the generating parameters for the weekly-Rt dataset.
+
+    Returns
+    -------
+    dict[str, Any]
+        Known weekly Rt values, ascertainment rates, delay PMFs, and dates.
+    """
+    return json.loads((_WEEKLY_RT_DATA / "true_parameters.json").read_text())
+
+
+@pytest.fixture(scope="module")
+def weekly_rt_daily_infections() -> pl.DataFrame:
+    """
+    Load daily infections and truth that is constant within each Rt week.
+
+    Returns
+    -------
+    pl.DataFrame
+        Daily dates, true infections, and true Rt.
+    """
+    return pl.read_csv(str(_WEEKLY_RT_DATA / "daily_infections.csv"))
+
+
+@pytest.fixture(scope="module")
+def weekly_rt_daily_ed() -> pl.DataFrame:
+    """
+    Load daily ED observations generated from the weekly Rt trajectory.
+
+    Returns
+    -------
+    pl.DataFrame
+        Daily ED visits and population size.
+    """
+    return pl.read_csv(str(_WEEKLY_RT_DATA / "daily_ed_visits.csv"))
+
+
+@pytest.fixture(scope="module")
+def weekly_rt_weekly_hosp() -> pl.DataFrame:
+    """
+    Load weekly hospital observations generated from the weekly Rt trajectory.
+
+    Returns
+    -------
+    pl.DataFrame
+        Week-ending dates, hospital admissions, and population size.
+    """
+    return pl.read_csv(str(_WEEKLY_RT_DATA / "weekly_hospital_admissions.csv"))
 
 
 @pytest.fixture(scope="module")
@@ -278,10 +336,11 @@ def e_rtdaily_rw_timevary_model(
 
 def _build_he_population_model(  # numpydoc ignore=RT01
     *,
-    single_rt_process: object,
+    single_rt_process: TemporalProcess,
     hosp_delay_pmf: jnp.ndarray,
     ed_delay_pmf: jnp.ndarray,
     ed_day_of_week_effects: jnp.ndarray,
+    gen_int_pmf: jnp.ndarray | None = None,
     hospital_weekly: bool = False,
     infection_feedback_strength_rv: RandomVariable | None = None,
     infection_feedback_pmf_rv: RandomVariable | None = None,
@@ -290,7 +349,9 @@ def _build_he_population_model(  # numpydoc ignore=RT01
     builder = PyrenewBuilder()
     builder.configure_latent(
         PopulationInfections,
-        gen_int_rv=DeterministicPMF("gen_int", _GEN_INT_PMF),
+        gen_int_rv=DeterministicPMF(
+            "gen_int", _GEN_INT_PMF if gen_int_pmf is None else gen_int_pmf
+        ),
         I0_rv=DistributionalVariable("I0", dist.Beta(1, 10)),
         log_rt_time_0_rv=DistributionalVariable("log_rt_time_0", dist.Normal(0.0, 0.5)),
         single_rt_process=single_rt_process,
@@ -414,44 +475,41 @@ def he_model(
     )
 
 
-@pytest.fixture(scope="module")
-def he_weekly_rt_model(
-    hosp_delay_pmf: jnp.ndarray,
-    ed_delay_pmf: jnp.ndarray,
-    ed_day_of_week_effects: jnp.ndarray,
+def _build_weekly_rt_population_model(  # numpydoc ignore=RT01
+    inner: TemporalProcess, true_params: dict[str, Any]
 ) -> MultiSignalModel:
-    """
-    Build a PopulationInfections model with weekly-parameterized R(t).
+    """Build a weekly-Rt model using the dataset's known delay and calendar settings."""
+    return _build_he_population_model(
+        single_rt_process=WeeklyTemporalProcess(
+            inner, start_dow=true_params["week_start_dow"]
+        ),
+        gen_int_pmf=jnp.array(true_params["generation_interval_pmf"]),
+        hosp_delay_pmf=jnp.array(true_params["hospitalizations"]["delay_pmf"]),
+        ed_delay_pmf=jnp.array(true_params["ed_visits"]["delay_pmf"]),
+        ed_day_of_week_effects=jnp.array(
+            true_params["ed_visits"]["day_of_week_effects"]
+        ),
+        hospital_weekly=True,
+    )
 
-    Same observation configuration as ``he_weekly_model`` (weekly hospital
-    admissions on the MMWR epiweek grid + daily ED visits with a day-of-week
-    effect), but R(t) is sampled weekly and broadcast to daily via
-    ``WeeklyTemporalProcess``. This mirrors the production pyrenew-hew
-    configuration.
+
+@pytest.fixture(scope="module")
+def he_weekly_rt_model(weekly_rt_true_params: dict[str, Any]) -> MultiSignalModel:
+    """
+    Build a weekly AR1 Rt model for the dedicated weekly-Rt dataset.
 
     Parameters
     ----------
-    hosp_delay_pmf : jnp.ndarray
-        Infection-to-hospitalization delay PMF.
-    ed_delay_pmf : jnp.ndarray
-        Infection-to-ED-visit delay PMF.
-    ed_day_of_week_effects : jnp.ndarray
-        Day-of-week multipliers used in synthetic ED generation.
+    weekly_rt_true_params
+        Generating parameters for the weekly-Rt dataset.
 
     Returns
     -------
     MultiSignalModel
-        Built model ready for fitting.
+        Weekly hospital and daily ED model ready for fitting.
     """
-    return _build_he_population_model(
-        single_rt_process=WeeklyTemporalProcess(
-            fixed_ar1(autoreg=0.9, innovation_sd=0.05),
-            start_dow=MMWR_WEEK,
-        ),
-        hosp_delay_pmf=hosp_delay_pmf,
-        ed_delay_pmf=ed_delay_pmf,
-        ed_day_of_week_effects=ed_day_of_week_effects,
-        hospital_weekly=True,
+    return _build_weekly_rt_population_model(
+        fixed_ar1(autoreg=0.9, innovation_sd=0.05), weekly_rt_true_params
     )
 
 
@@ -676,20 +734,12 @@ def he_model_state_centered(  # numpydoc ignore=RT01
 
 @pytest.fixture(scope="module")
 def he_weekly_rt_model_state_centered(  # numpydoc ignore=RT01
-    hosp_delay_pmf: jnp.ndarray,
-    ed_delay_pmf: jnp.ndarray,
-    ed_day_of_week_effects: jnp.ndarray,
+    weekly_rt_true_params: dict[str, Any],
 ) -> MultiSignalModel:
-    """Build the H+E model with state-centered weekly differenced AR1 Rt."""
-    return _build_he_population_model(
-        single_rt_process=WeeklyTemporalProcess(
-            fixed_differenced_ar1_state(autoreg=0.9, innovation_sd=0.05),
-            start_dow=MMWR_WEEK,
-        ),
-        hosp_delay_pmf=hosp_delay_pmf,
-        ed_delay_pmf=ed_delay_pmf,
-        ed_day_of_week_effects=ed_day_of_week_effects,
-        hospital_weekly=True,
+    """Build a state-centered weekly differenced AR1 model for the weekly-Rt dataset."""
+    return _build_weekly_rt_population_model(
+        fixed_differenced_ar1_state(autoreg=0.9, innovation_sd=0.05),
+        weekly_rt_true_params,
     )
 
 

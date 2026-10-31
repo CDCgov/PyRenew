@@ -256,7 +256,7 @@ class TestSubpopulationCountScaling:
             Posterior samples.
         """
         n_init = scaling_model.latent.n_initialization_points
-        rt_fit = np.median(posterior["latent::rt_subpop"], axis=0)[n_init:]
+        rt_fit = np.median(posterior["latent::rt_subpop"], axis=0)
         log_ratio = np.log(rt_fit / simulated["rt"][n_init:, np.newaxis])
         early_bias = log_ratio[:N_DAYS_EARLY].mean(axis=0)
         assert np.all(np.abs(early_bias) < 0.06), early_bias
@@ -280,8 +280,7 @@ class TestSubpopulationCountScaling:
         posterior
             Posterior samples.
         """
-        n_init = scaling_model.latent.n_initialization_points
         deviations = np.median(posterior["latent::subpop_deviations"], axis=0)
-        mean_deviation = deviations[n_init:].mean(axis=0)
+        mean_deviation = deviations.mean(axis=0)
         slope = np.polyfit(np.log(SUBPOP_FRACTIONS), mean_deviation, 1)[0]
         assert abs(slope) < 0.01, (slope, mean_deviation)

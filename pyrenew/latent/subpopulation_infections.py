@@ -23,6 +23,7 @@ from pyrenew.latent.base import (
 from pyrenew.latent.temporal_processes import TemporalProcess
 from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
+from pyrenew.time import validate_dow
 
 
 class BaseSubpopulationInfections(BaseLatentInfectionProcess):
@@ -36,6 +37,7 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
 
     The starting log $\mathcal{R}(t)$ and the initial infections are each
     either one value for all subpopulations or one value per subpopulation.
+    The temporal processes start on the first post-initialization day.
     Initial infections grow exponentially over the initialization period
     at the rate implied by each subpopulation's starting $\mathcal{R}(t)$.
 
@@ -86,10 +88,14 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         subpop_rt_deviation_process
             Temporal process for subpopulation deviations
         log_rt_time_0_rv
-            Starting log($\\mathcal{R}(t)$) on the first day of the
-            initialization period. Returns either a scalar, one value for all
+            Log reproduction number on the first post-initialization day.
+            Returns either a scalar, one value for all
             subpopulations, or an array of shape ``(n_subpops,)``, one value per
-            subpopulation in the order of ``subpop_fractions``.
+            subpopulation in the order of ``subpop_fractions``. Each
+            subpopulation's first combined Rt determines its exponential
+            initialization growth. The baseline starts at the arithmetic
+            mean of these log values; deviations start at their differences
+            from that mean.
 
         Raises
         ------
@@ -263,18 +269,28 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         they must return daily-length trajectories before the renewal is
         evaluated. The raw subpopulation Rt is recorded as ``rt_subpop``;
         the Rt used to generate infections is recorded as
-        ``rt_subpop_adjusted``.
+        ``rt_subpop_adjusted``. The temporal processes cover only
+        post-initialization days, including forecast days when requested.
+        Daily baseline records have shape ``(n_days_post_init, 1)``;
+        deviation, raw Rt, and adjusted Rt records have shape
+        ``(n_days_post_init, n_subpops)``. Their first row is the first
+        renewal day. Infections include initialization, so Rt row ``t``
+        corresponds to infection row ``n_initialization_points + t``.
+        Sampled states, innovations, and weekly records also cover only
+        the post-initialization period.
 
         Parameters
         ----------
         n_days_post_init
-            Number of days to simulate after initialization period
+            Number of days to simulate after initialization; must be at least 1.
         subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
             Must sum to 1.0.
         first_day_dow
-            Forwarded to ``baseline_rt_process`` and
-            ``subpop_rt_deviation_process``. See
+            Day of week for the start of the full infection history, including
+            initialization (0=Monday, ..., 6=Sunday). Shifted internally to
+            the first post-initialization day before passing it to
+            ``baseline_rt_process`` and ``subpop_rt_deviation_process``. See
             [pyrenew.latent.TemporalProcess][].
         **kwargs
             Additional keyword arguments (unused).
@@ -291,8 +307,16 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         ValueError
             If ``subpop_fractions`` is invalid, or if ``log_rt_time_0_rv``
             or ``I0_rv`` returns neither a scalar nor an array of shape
-            ``(n_subpops,)``. A subclass may raise for its own inputs.
+            ``(n_subpops,)``. Also raised for a nonpositive
+            post-initialization horizon or an invalid weekday. A subclass
+            may raise for its own inputs.
         """
+        if n_days_post_init < 1:
+            raise ValueError("n_days_post_init must be at least 1")
+        if first_day_dow is not None:
+            validate_dow(first_day_dow, "first_day_dow")
+            first_day_dow = (first_day_dow + self.n_initialization_points) % 7
+
         pop = self._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
         )
@@ -304,15 +328,15 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         )
 
         log_rt_baseline = self.baseline_rt_process.sample(
-            n_timepoints=n_total_days,
+            n_timepoints=n_days_post_init,
             initial_value=baseline_start,
             name_prefix="log_rt_baseline",
             first_day_dow=first_day_dow,
         )
-        require_shape(log_rt_baseline, (n_total_days, 1), "baseline_rt_process")
+        require_shape(log_rt_baseline, (n_days_post_init, 1), "baseline_rt_process")
 
         deviations_raw = self.subpop_rt_deviation_process.sample(
-            n_timepoints=n_total_days,
+            n_timepoints=n_days_post_init,
             n_processes=pop.n_subpops,
             initial_value=deviations_start,
             name_prefix="subpop_deviations",
@@ -320,7 +344,7 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         )
         require_shape(
             deviations_raw,
-            (n_total_days, pop.n_subpops),
+            (n_days_post_init, pop.n_subpops),
             "subpop_rt_deviation_process",
         )
 
@@ -345,13 +369,10 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         )
 
         post_init_infections_all, rt_adjusted = self._infections_from_rt(
-            rt_raw=rt_subpop[self.n_initialization_points :, :],
+            rt_raw=rt_subpop,
             I0=I0_all,
             gen_int=gen_int,
             pop=pop,
-        )
-        rt_subpop_adjusted = jnp.vstack(
-            [rt_subpop[: self.n_initialization_points, :], rt_adjusted]
         )
 
         infections_all = jnp.vstack([I0_all, post_init_infections_all])
@@ -372,7 +393,7 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
             numpyro.deterministic("log_rt_baseline", log_rt_baseline)
             numpyro.deterministic("rt_baseline", jnp.exp(log_rt_baseline))
             numpyro.deterministic("rt_subpop", rt_subpop)
-            numpyro.deterministic("rt_subpop_adjusted", rt_subpop_adjusted)
+            numpyro.deterministic("rt_subpop_adjusted", rt_adjusted)
             numpyro.deterministic("subpop_deviations", deviations)
             numpyro.deterministic("infections_aggregate", infections_aggregate)
 
@@ -395,7 +416,7 @@ class SubpopulationInfections(BaseSubpopulationInfections):
     - Baseline $\mathcal{R}(t)$: log[R_baseline(t)] ~ TemporalProcess
     - Subpopulation $\mathcal{R}(t)$: log R_k(t) = log[R_baseline(t)] + delta_k(t)
     - Deviations: delta_k(t) ~ TemporalProcess with sum-to-zero constraint
-    - Starting values on the first day of the initialization period, from
+    - Starting values on the first post-initialization day, from
       log_rt_time_0_rv: a scalar s gives log[R_baseline(0)] = s and
       delta_k(0) = 0; one value v_k per subpopulation gives
       log[R_baseline(0)] = mean(v) and delta_k(0) = v_k - mean(v), so
@@ -478,8 +499,8 @@ class SubpopulationInfections(BaseSubpopulationInfections):
         subpop_rt_deviation_process
             Temporal process for subpopulation deviations
         log_rt_time_0_rv
-            Starting log($\\mathcal{R}(t)$) on the first day of the
-            initialization period. Returns either a scalar, one value for all
+            Log reproduction number on the first post-initialization day.
+            Returns either a scalar, one value for all
             subpopulations, or an array of shape ``(n_subpops,)``, one value per
             subpopulation in the order of ``subpop_fractions``. Per-subpopulation
             values also give each subpopulation its own initial growth rate.

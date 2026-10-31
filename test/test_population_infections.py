@@ -5,21 +5,65 @@ Unit tests for PopulationInfections.
 
 import re
 from collections.abc import Callable
+from typing import Literal
 
 import jax.numpy as jnp
 import numpyro
+import numpyro.distributions as dist
 import pytest
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
-from pyrenew.latent import Infections, InfectionsWithFeedback, WeeklyTemporalProcess
+from pyrenew.latent import (
+    AR1,
+    Infections,
+    InfectionsWithFeedback,
+    WeeklyTemporalProcess,
+)
 from pyrenew.latent.population_infections import PopulationInfections
+from pyrenew.math import r_approx_from_R
 from pyrenew.model import PyrenewBuilder
+from pyrenew.randomvariable import DistributionalVariable
 from pyrenew.time import MMWR_WEEK
 from test.test_helpers import fixed_ar1, fixed_random_walk
 
 
 class TestPopulationInfectionsSample:
     """Test sample method for PopulationInfections."""
+
+    @pytest.mark.parametrize("parameterization", ["innovation", "state"])
+    def test_ar1_uses_sampled_initial_rt(
+        self,
+        gen_int_rv: DeterministicPMF,
+        parameterization: Literal["innovation", "state"],
+    ) -> None:
+        """The sampled initial log Rt sets the first state and infection growth."""
+        process = PopulationInfections(
+            name="population",
+            gen_int_rv=gen_int_rv,
+            I0_rv=DeterministicVariable("I0", 0.001),
+            log_rt_time_0_rv=DistributionalVariable(
+                "log_rt_time_0", dist.Normal(0, 0.5)
+            ),
+            single_rt_process=AR1(
+                autoreg_rv=DeterministicVariable("autoreg", 0.9),
+                innovation_sd_rv=DeterministicVariable("innovation_sd", 0.05),
+                parameterization=parameterization,
+            ),
+            n_initialization_points=7,
+        )
+        trace = numpyro.handlers.trace(
+            numpyro.handlers.seed(process.sample, rng_seed=42)
+        ).get_trace(n_days_post_init=10)
+
+        initial_log_rt = trace["log_rt_time_0"]["value"]
+        assert trace["population::log_rt_single"]["value"][0, 0] == initial_log_rt
+        assert "log_rt_single_init" not in trace
+        assert "log_rt_single_init_decentered" not in trace
+        initial_infections = trace["population::I0_init"]["value"]
+        expected_growth = r_approx_from_R(jnp.exp(initial_log_rt), gen_int_rv(), 4)
+        assert jnp.allclose(
+            jnp.log(initial_infections[1:] / initial_infections[:-1]), expected_growth
+        )
 
     def test_output_shapes(self, population_infections):
         """Test that output shapes are correct for a single-population model."""
@@ -146,7 +190,7 @@ class TestPopulationInfectionsSample:
         assert "my_infections::rt_single" in trace
 
     def test_first_day_dow_reaches_calendar_aligned_rt_process(self, gen_int_rv):
-        """Weekly Rt receives model-axis day of week."""
+        """Weekly Rt receives the weekday shifted past initialization."""
         process = PopulationInfections(
             name="population",
             gen_int_rv=gen_int_rv,
@@ -156,7 +200,7 @@ class TestPopulationInfectionsSample:
                 fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=MMWR_WEEK,
             ),
-            n_initialization_points=7,
+            n_initialization_points=9,
         )
 
         with numpyro.handlers.seed(rng_seed=42):
@@ -166,11 +210,11 @@ class TestPopulationInfectionsSample:
         log_rt = trace["population::log_rt_single"]["value"]
         weekly = trace["log_rt_single_weekly"]["value"]
 
-        assert log_rt.shape == (17, 1)
+        assert log_rt.shape == (10, 1)
         assert weekly.shape == (3, 1)
-        assert jnp.allclose(log_rt[:3], log_rt[0])
-        assert jnp.allclose(log_rt[3:10], log_rt[3])
-        assert jnp.allclose(log_rt[10:17], log_rt[10])
+        assert jnp.allclose(log_rt[:1], weekly[0])
+        assert jnp.allclose(log_rt[1:8], weekly[1])
+        assert jnp.allclose(log_rt[8:], weekly[2])
 
     def test_wrong_rt_shape_raises(self, gen_int_rv, wrong_shape_temporal_process_cls):
         """Temporal processes must return daily-length single-process Rt."""
@@ -210,8 +254,8 @@ class TestPopulationInfectionsSample:
         assert sample.all_subpops.shape == (n_total, 1)
         assert jnp.all(sample.aggregate > 0)
         assert jnp.all(sample.all_subpops > 0)
-        assert jnp.array_equal(rt_adjusted[:n_init], rt[:n_init])
-        assert jnp.all(rt_adjusted[n_init:] < rt[n_init:])
+        assert rt.shape == rt_adjusted.shape == (30, 1)
+        assert jnp.all(rt_adjusted < rt)
 
     def test_feedback_matches_infections_with_feedback(
         self,
@@ -236,7 +280,7 @@ class TestPopulationInfectionsSample:
             infection_feedback_strength=infection_feedback_strength_rv,
             infection_feedback_pmf=infection_feedback_pmf_rv,
         ).sample(
-            Rt=trace["population::rt_single"]["value"][n_init:, 0],
+            Rt=trace["population::rt_single"]["value"][:, 0],
             I0=trace["population::I0_init"]["value"],
             gen_int=gen_int_rv(),
         )
@@ -244,7 +288,7 @@ class TestPopulationInfectionsSample:
             sample.aggregate[n_init:], reference.post_initialization_infections
         )
         assert jnp.allclose(
-            trace["population::rt_single_adjusted"]["value"][n_init:, 0],
+            trace["population::rt_single_adjusted"]["value"][:, 0],
             reference.rt,
         )
 
@@ -390,7 +434,7 @@ class TestPopulationInfectionsValidation:
 
         with pytest.raises(
             ValueError,
-            match="requires I0_rv to return a scalar prevalence",
+            match="requires I0_rv to return a scalar",
         ):
             with numpyro.handlers.seed(rng_seed=42):
                 process.sample(n_days_post_init=30)
@@ -493,7 +537,7 @@ class TestPopulationValidateAndPrepareI0:
         """Test that a vector I0 is rejected."""
         pop = population_infections._parse_and_validate_fractions()
         I0 = jnp.array([0.01, 0.02])
-        with pytest.raises(ValueError, match="scalar prevalence"):
+        with pytest.raises(ValueError, match="requires I0_rv to return a scalar"):
             population_infections._validate_and_prepare_I0(I0, pop)
 
     def test_rejects_negative(self, population_infections):
