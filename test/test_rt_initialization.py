@@ -180,8 +180,9 @@ def test_initialization_and_first_renewal(
         )
     rt = trace[rt_site(infection_type)]["value"]
     first_rt = jnp.exp(trace["start"]["value"])
-    assert rt.shape == (4 + n_days, len(fractions(infection_type)))
-    assert jnp.allclose(rt[:5], first_rt)
+    assert rt.shape == (n_days, len(fractions(infection_type)))
+    assert infections.all_subpops.shape == (4 + n_days, rt.shape[1])
+    assert jnp.allclose(rt[0], first_rt)
     init_name = (
         "latent::I0_init"
         if infection_type is PopulationInfections
@@ -192,7 +193,7 @@ def test_initialization_and_first_renewal(
     growth = -jnp.log((-0.4 + jnp.sqrt(0.16 + 2.4 / first_rt)) / 1.2)
     expected_init = 0.001 * jnp.exp(jnp.arange(4)[:, None] * growth)
     assert jnp.allclose(initial, expected_init, rtol=1e-5)
-    expected_first = rt[4] * jnp.sum(
+    expected_first = rt[0] * jnp.sum(
         initial[-2:] * jnp.array([0.6, 0.4])[:, None], axis=0
     )
     assert jnp.allclose(infections.all_subpops[4], expected_first)
@@ -200,12 +201,18 @@ def test_initialization_and_first_renewal(
     assert jnp.allclose(
         trace["latent::infections_aggregate"]["value"][4], expected_aggregate
     )
-    assert jnp.allclose(trace[rt_site(infection_type) + "_adjusted"]["value"], rt)
+    adjusted = trace[rt_site(infection_type) + "_adjusted"]["value"]
+    assert adjusted.shape == rt.shape
+    assert jnp.allclose(adjusted, rt)
     if infection_type is PopulationInfections:
+        assert trace["latent::log_rt_single"]["value"].shape == rt.shape
         assert jnp.allclose(rt, jnp.exp(trace["latent::log_rt_single"]["value"]))
     else:
         baseline = trace["latent::log_rt_baseline"]["value"]
         deviations = trace["latent::subpop_deviations"]["value"]
+        assert baseline.shape == (n_days, 1)
+        assert deviations.shape == rt.shape
+        assert trace["latent::rt_baseline"]["value"].shape == baseline.shape
         assert jnp.allclose(deviations.sum(axis=1), 0.0, atol=1e-12)
         assert jnp.allclose(rt, jnp.exp(baseline + deviations))
         assert jnp.allclose(trace["latent::rt_baseline"]["value"], jnp.exp(baseline))
@@ -226,14 +233,14 @@ def test_initialization_and_first_renewal(
 def test_feedback_starts_with_renewal(
     infection_type: InfectionType, parameterization: Parameterization
 ) -> None:
-    """Feedback changes first renewal Rt while initialization retains raw Rt."""
+    """Adjusted Rt starts with the feedback applied on the first renewal day."""
     model = make_infections(infection_type, RandomWalk, parameterization, feedback=True)
     trace = numpyro.handlers.trace(
         numpyro.handlers.seed(model.sample, rng_seed=4)
     ).get_trace(n_days_post_init=3, subpop_fractions=fractions(infection_type))
     raw = trace[rt_site(infection_type)]["value"]
     adjusted = trace[rt_site(infection_type) + "_adjusted"]["value"]
-    assert jnp.allclose(adjusted[:4], raw[:4])
+    assert raw.shape == adjusted.shape == (3, len(fractions(infection_type)))
     init_name = (
         "latent::I0_init"
         if infection_type is PopulationInfections
@@ -241,8 +248,8 @@ def test_feedback_starts_with_renewal(
     )
     initial = jnp.reshape(trace[init_name]["value"], (4, -1))
     pressure = jnp.sum(initial[-2:] * jnp.array([0.6, 0.4])[:, None], axis=0)
-    assert jnp.allclose(adjusted[4], raw[4] * jnp.exp(-3.0 * pressure))
-    assert jnp.all(adjusted[4] < raw[4])
+    assert jnp.allclose(adjusted[0], raw[0] * jnp.exp(-3.0 * pressure))
+    assert jnp.all(adjusted[0] < raw[0])
 
 
 @pytest.mark.parametrize(
@@ -289,7 +296,8 @@ def test_initialization_length_and_calendar(
             ]
         )
         for prefix, week_start, daily_name in processes:
-            daily = trace[daily_name]["value"][n_init:]
+            daily = trace[daily_name]["value"]
+            assert daily.shape[0] == 15
             if week_start is None:
                 continue
             weekly = trace[prefix + "_weekly"]["value"]
@@ -319,8 +327,8 @@ def test_initialization_length_and_calendar(
                 direct_result -= direct_result.mean(axis=1, keepdims=True)
             assert jnp.allclose(daily, direct_result)
     assert jnp.array_equal(
-        traces[0][rt_site(infection_type)]["value"][4:],
-        traces[1][rt_site(infection_type)]["value"][9:],
+        traces[0][rt_site(infection_type)]["value"],
+        traces[1][rt_site(infection_type)]["value"],
     )
     for name, value in sampled_sites(traces[0]).items():
         assert jnp.array_equal(value, sampled_sites(traces[1])[name])
@@ -361,18 +369,17 @@ def test_weekly_forecast_boundaries(
         days = fit_days + extension
         result = predictive(jax.random.key(12), n_days_post_init=days, **kwargs)
         rt = result[site][0]
-        assert rt.shape == (4 + days, len(fractions(infection_type)))
+        assert rt.shape == (days, len(fractions(infection_type)))
         assert result["latent::infections_aggregate"].shape == (1, 4 + days)
-        assert jnp.allclose(rt[: 4 + fit_days], fitted_trace[site]["value"])
+        assert jnp.allclose(rt[:fit_days], fitted_trace[site]["value"])
         assert jnp.allclose(
             result["latent::infections_aggregate"][0, : 4 + fit_days],
             fitted_trace["latent::infections_aggregate"]["value"],
         )
-        assert jnp.allclose(rt[:4], rt[4])
         if new_week:
-            assert not jnp.allclose(rt[-1], rt[4 + fit_days - 1])
+            assert not jnp.allclose(rt[-1], rt[fit_days - 1])
         else:
-            assert jnp.allclose(rt[-1], rt[4 + fit_days - 1])
+            assert jnp.allclose(rt[-1], rt[fit_days - 1])
         for prefix in (
             ["log_rt_single"]
             if infection_type is PopulationInfections

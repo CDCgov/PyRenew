@@ -194,10 +194,11 @@ class BaseLatentInfectionProcess(RandomVariable):
         Generation interval PMF
     n_initialization_points
         Number of initialization days before the first observation day.
-        Latent and observation arrays use a shared padded time axis with
-        element 0 at the start of this initialization period. In observation
-        natural coordinates, day 0 is the first observed data day; on the
-        shared padded axis, that same day is index ``n_initialization_points``.
+        Infection histories and dense daily observation arrays include
+        this period, with element 0 at its start. In observation natural
+        coordinates, day 0 is the first observed data day; on the infection
+        axis, that same day is index ``n_initialization_points``. Daily Rt
+        records start on the first renewal day and omit initialization.
         Must be at least ``len(gen_int_rv())`` to provide enough history for
         the renewal equation convolution.
 

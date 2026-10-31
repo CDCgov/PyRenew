@@ -10,7 +10,7 @@ import jax.numpy as jnp
 import numpyro
 from jax.typing import ArrayLike
 
-from pyrenew.arrayutils import _prepend_first_row, require_shape
+from pyrenew.arrayutils import require_shape
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.latent.base import (
@@ -271,11 +271,13 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         the Rt used to generate infections is recorded as
         ``rt_subpop_adjusted``. The temporal processes cover only
         post-initialization days, including forecast days when requested.
-        Daily baseline, deviation, and Rt records prepend copies of their
-        first values for initialization. Adjusted Rt uses the raw Rt during
-        initialization; the subclass's adjustments apply during renewal.
-        Sampled states, innovations, and weekly records cover only
-        post-initialization days.
+        Daily baseline records have shape ``(n_days_post_init, 1)``;
+        deviation, raw Rt, and adjusted Rt records have shape
+        ``(n_days_post_init, n_subpops)``. Their first row is the first
+        renewal day. Infections include initialization, so Rt row ``t``
+        corresponds to infection row ``n_initialization_points + t``.
+        Sampled states, innovations, and weekly records also cover only
+        the post-initialization period.
 
         Parameters
         ----------
@@ -372,14 +374,6 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
             gen_int=gen_int,
             pop=pop,
         )
-        log_rt_baseline = _prepend_first_row(
-            log_rt_baseline, self.n_initialization_points
-        )
-        deviations = _prepend_first_row(deviations, self.n_initialization_points)
-        rt_subpop = _prepend_first_row(rt_subpop, self.n_initialization_points)
-        rt_subpop_adjusted = jnp.vstack(
-            [rt_subpop[: self.n_initialization_points, :], rt_adjusted]
-        )
 
         infections_all = jnp.vstack([I0_all, post_init_infections_all])
 
@@ -399,7 +393,7 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
             numpyro.deterministic("log_rt_baseline", log_rt_baseline)
             numpyro.deterministic("rt_baseline", jnp.exp(log_rt_baseline))
             numpyro.deterministic("rt_subpop", rt_subpop)
-            numpyro.deterministic("rt_subpop_adjusted", rt_subpop_adjusted)
+            numpyro.deterministic("rt_subpop_adjusted", rt_adjusted)
             numpyro.deterministic("subpop_deviations", deviations)
             numpyro.deterministic("infections_aggregate", infections_aggregate)
 

@@ -668,6 +668,8 @@ This means the model has two related time scales:
 
 On the model time axis, indices `0` through `n_init - 1` are initialization days.
 The first observed day is model index `n_init`, and the last observed day is model index `n_init + n_days - 1`.
+Daily Rt, baseline, and deviation records start on the first renewal day and omit initialization.
+Their row `t` corresponds to infection row `n_init + t`.
 
 The model provides helper methods to convert observation data onto this model time axis:
 
@@ -870,8 +872,9 @@ print(f"Elapsed time: {elapsed_90:.1f} seconds")
 ```
 
 We use [ArviZ](https://python.arviz.org/en/stable/) to assess MCMC convergence and mixing via the $\hat{R}$ statistic and effective sample size (ESS).
-Before running these diagnostics, we trim the first `n_init` time steps from all time-series variables.
-Since the model cannot estimate latent infections until it has seen a full generation interval's worth of data, these early time steps have no meaningful epidemiological interpretation and therefore should be excluded from summaries and visualizations.
+We summarize the period beginning with renewal.
+Infection and observation records include initialization, so we trim their first `n_init` time steps.
+Rt, baseline, and deviation records already start with renewal and need no trimming.
 
 ```{python}
 #| label: helper-trim-time
@@ -884,8 +887,8 @@ def trim_time(ds):
     return ds
 ```
 
-We first label the time axis of all time-series variables using the dims argument to [az.from_numpyro](https://python.arviz.org/projects/base/en/latest/api/generated/arviz_base.from_numpyro.html).
-Then we trim the first `n_init` time steps from all time-series variables.
+We label the full infection and observation axis `time`, and the renewal-only Rt axis `rt_time`, using the dims argument to [az.from_numpyro](https://python.arviz.org/projects/base/en/latest/api/generated/arviz_base.from_numpyro.html).
+Then we trim the first `n_init` entries from `time` and number the remaining days from 0, matching `rt_time`.
 Finally we call the [az.summary](https://python.arviz.org/projects/stats/en/latest/api/generated/arviz_stats.summary.html) report.
 
 ```{python}
@@ -896,10 +899,11 @@ idata_90 = az.from_numpyro(
     dims={
         "latent_infections": ["time"],
         "SubpopulationInfections::infections_aggregate": ["time"],
-        "SubpopulationInfections::log_rt_baseline": ["time", "dummy"],
-        "SubpopulationInfections::rt_baseline": ["time", "dummy"],
-        "SubpopulationInfections::rt_subpop": ["time", "subpop"],
-        "SubpopulationInfections::subpop_deviations": ["time", "subpop"],
+        "SubpopulationInfections::log_rt_baseline": ["rt_time", "dummy"],
+        "SubpopulationInfections::rt_baseline": ["rt_time", "dummy"],
+        "SubpopulationInfections::rt_subpop": ["rt_time", "subpop"],
+        "SubpopulationInfections::rt_subpop_adjusted": ["rt_time", "subpop"],
+        "SubpopulationInfections::subpop_deviations": ["rt_time", "subpop"],
         "latent_infections_by_subpop": ["time", "subpop"],
         "hospital_predicted": ["time"],
         "wastewater_predicted": ["time", "subpop"],

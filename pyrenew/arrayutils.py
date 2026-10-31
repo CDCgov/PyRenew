@@ -3,28 +3,7 @@ Utility functions for processing arrays.
 """
 
 import jax.numpy as jnp
-from jax import Array
 from jax.typing import ArrayLike
-
-
-def _prepend_first_row(data: ArrayLike, n_rows: int) -> Array:
-    """
-    Prepend copies of the first row along the time axis.
-
-    Parameters
-    ----------
-    data
-        Nonempty array with time on its first axis.
-    n_rows
-        Number of copies to prepend.
-
-    Returns
-    -------
-    Array
-        Padded array with the remaining dimensions preserved.
-    """
-    values = jnp.asarray(data)
-    return jnp.concatenate([jnp.repeat(values[:1], n_rows, axis=0), values])
 
 
 def require_shape(arr: ArrayLike, expected: tuple[int, ...], label: str) -> None:

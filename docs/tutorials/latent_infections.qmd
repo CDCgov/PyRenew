@@ -173,8 +173,9 @@ The function `r_approx_from_R` converts that reproduction number and the generat
 The sampled Rt process starts on the first post-initialization day and covers `n_days_post_init` days, including any requested forecast days.
 Its first value determines both initialization growth and the first renewal calculation.
 The model requires `n_days_post_init >= 1`.
-Daily records such as `rt_single` and `log_rt_single` retain the full infection axis: their first `n_init` entries repeat the first post-initialization value.
-Thus, the recorded `rt[n_init]` equals `exp(log_rt_time_0)`, and the initialization entries describe the constant Rt assumed for exponential initialization.
+Daily records such as `rt_single`, `log_rt_single`, and `rt_single_adjusted` have `n_days_post_init` rows, starting on the first renewal day.
+The first raw Rt, `rt[0]`, equals `exp(log_rt_time_0)`.
+Infections retain the initialization period, so `rt[t]` corresponds to `infections[n_init + t]`.
 Initialization adds no sampled Rt states or innovations; weekly Rt records also cover only the requested post-initialization period.
 The first recorded Rt week is the calendar week containing the first renewal day; its start date may precede that day, but no initialization-only weeks are sampled.
 
@@ -182,8 +183,8 @@ When sampling directly with a calendar-aligned Rt process, `first_day_dow` still
 The infection class shifts that weekday by `n_init` before passing it to the Rt process.
 When using `MultiSignalModel`, continue supplying the first observation date as `obs_start_date`.
 
-With infection feedback enabled, initialization growth uses raw Rt and the recorded adjusted Rt equals raw Rt during initialization.
-Feedback first changes the Rt used for renewal on the first post-initialization day.
+With infection feedback enabled, initialization growth uses raw Rt.
+The first recorded adjusted Rt includes the feedback applied on the first renewal day.
 
 The initialization vector is what the renewal equation "sees" as recent infection history at time $0$.
 We can compute it directly for three values of `log_rt_time_0`:
@@ -305,7 +306,7 @@ def sample_process(rt_process, label):
 
     samples = Predictive(sampler, num_samples=n_samples)(random.PRNGKey(42))
     return {
-        "rt": np.array(samples["PopulationInfections::rt_single"])[:, n_init:, 0],
+        "rt": np.array(samples["PopulationInfections::rt_single"])[:, :, 0],
         "infections": np.array(samples["PopulationInfections::infections_aggregate"])[
             :, n_init:
         ],

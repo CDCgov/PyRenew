@@ -211,7 +211,8 @@ The baseline starts at the mean of those $\log[\mathcal{R}(t)]$ values, and the 
 These are starting values on the first post-initialization day, when renewal begins.
 Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` gives its new infections per capita on the first initialization day.
 The baseline and deviation processes sample only `n_days_post_init` days, which must be at least 1.
-Daily baseline, deviation, and Rt records retain the full infection axis by prepending copies of their first values.
+Daily baseline, deviation, raw Rt, and adjusted Rt records have `n_days_post_init` rows, starting on the first renewal day.
+Infections retain the initialization period, so Rt row `t` corresponds to infection row `n_init + t`.
 Initialization therefore adds no sampled states or innovations, and weekly records cover only the post-initialization period.
 The first recorded Rt week is the calendar week containing the first renewal day; its start date may precede that day, but no initialization-only weeks are sampled.
 With infection feedback, initialization still uses raw Rt; feedback begins with the first renewal calculation.
@@ -241,7 +242,7 @@ with numpyro.handlers.seed(rng_seed=42):
             subpop_fractions=subpop_fractions,
         )
 
-first_day_rt = start_trace["SubpopulationInfections::rt_subpop"]["value"][n_init]
+first_day_rt = start_trace["SubpopulationInfections::rt_subpop"]["value"][0]
 print(f"exp(log_rt_time_0):  {np.round(np.exp(log_rt_time_0_by_subpop), 2)}")
 print(f"Rt on the first renewal day: {np.round(np.array(first_day_rt), 2)}")
 ```
@@ -335,14 +336,10 @@ def sample_hierarchical(baseline_process, deviation_process, label):
     samples = Predictive(sampler, num_samples=n_samples)(random.PRNGKey(42))
     return {
         "rt_baseline": np.array(samples["SubpopulationInfections::rt_baseline"])[
-            :, n_init:, 0
+            :, :, 0
         ],
-        "rt_subpop": np.array(samples["SubpopulationInfections::rt_subpop"])[
-            :, n_init:, :
-        ],
-        "deviations": np.array(samples["SubpopulationInfections::subpop_deviations"])[
-            :, n_init:, :
-        ],
+        "rt_subpop": np.array(samples["SubpopulationInfections::rt_subpop"]),
+        "deviations": np.array(samples["SubpopulationInfections::subpop_deviations"]),
         "infections": np.array(
             samples["SubpopulationInfections::infections_aggregate"]
         )[:, n_init:],

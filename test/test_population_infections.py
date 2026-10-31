@@ -56,7 +56,7 @@ class TestPopulationInfectionsSample:
         ).get_trace(n_days_post_init=10)
 
         initial_log_rt = trace["log_rt_time_0"]["value"]
-        assert trace["population::log_rt_single"]["value"][7, 0] == initial_log_rt
+        assert trace["population::log_rt_single"]["value"][0, 0] == initial_log_rt
         assert "log_rt_single_init" not in trace
         assert "log_rt_single_init_decentered" not in trace
         initial_infections = trace["population::I0_init"]["value"]
@@ -210,11 +210,11 @@ class TestPopulationInfectionsSample:
         log_rt = trace["population::log_rt_single"]["value"]
         weekly = trace["log_rt_single_weekly"]["value"]
 
-        assert log_rt.shape == (19, 1)
+        assert log_rt.shape == (10, 1)
         assert weekly.shape == (3, 1)
-        assert jnp.allclose(log_rt[:10], weekly[0])
-        assert jnp.allclose(log_rt[10:17], weekly[1])
-        assert jnp.allclose(log_rt[17:], weekly[2])
+        assert jnp.allclose(log_rt[:1], weekly[0])
+        assert jnp.allclose(log_rt[1:8], weekly[1])
+        assert jnp.allclose(log_rt[8:], weekly[2])
 
     def test_wrong_rt_shape_raises(self, gen_int_rv, wrong_shape_temporal_process_cls):
         """Temporal processes must return daily-length single-process Rt."""
@@ -254,8 +254,8 @@ class TestPopulationInfectionsSample:
         assert sample.all_subpops.shape == (n_total, 1)
         assert jnp.all(sample.aggregate > 0)
         assert jnp.all(sample.all_subpops > 0)
-        assert jnp.array_equal(rt_adjusted[:n_init], rt[:n_init])
-        assert jnp.all(rt_adjusted[n_init:] < rt[n_init:])
+        assert rt.shape == rt_adjusted.shape == (30, 1)
+        assert jnp.all(rt_adjusted < rt)
 
     def test_feedback_matches_infections_with_feedback(
         self,
@@ -280,7 +280,7 @@ class TestPopulationInfectionsSample:
             infection_feedback_strength=infection_feedback_strength_rv,
             infection_feedback_pmf=infection_feedback_pmf_rv,
         ).sample(
-            Rt=trace["population::rt_single"]["value"][n_init:, 0],
+            Rt=trace["population::rt_single"]["value"][:, 0],
             I0=trace["population::I0_init"]["value"],
             gen_int=gen_int_rv(),
         )
@@ -288,7 +288,7 @@ class TestPopulationInfectionsSample:
             sample.aggregate[n_init:], reference.post_initialization_infections
         )
         assert jnp.allclose(
-            trace["population::rt_single_adjusted"]["value"][n_init:, 0],
+            trace["population::rt_single_adjusted"]["value"][:, 0],
             reference.rt,
         )
 

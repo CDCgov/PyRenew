@@ -154,7 +154,7 @@ def test_known_parameters_reproduce_model_predictions(weekly_dataset: Path) -> N
         trace["latent_infections"]["value"], full_infections, rtol=1e-10
     )
     np.testing.assert_allclose(
-        trace["PopulationInfections::rt_single"]["value"][n_init:, 0],
+        trace["PopulationInfections::rt_single"]["value"][:, 0],
         daily["true_rt"].to_numpy(),
         rtol=1e-12,
     )

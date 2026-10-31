@@ -64,17 +64,21 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
     [pyrenew.latent.SubpopulationInfections][], plus
     ``susceptible_fraction``. Under mobility:
 
-    - ``rt_subpop[t, j]`` is the reproduction number at location ``j``,
-      where transmission happens, when everyone is susceptible.
+    - ``rt_subpop[t, j]`` is the reproduction number at location ``j`` on
+      renewal day ``t``, where transmission happens, when everyone is
+      susceptible. Raw and adjusted Rt records omit initialization.
     - ``rt_subpop_adjusted`` is
-      ``rt_subpop * (share_present @ susceptible_fraction)`` after the
-      initialization period, with depletion enabled. This adjusts for
+      ``rt_subpop * (susceptible_fraction[n_initialization_points:] @ share_present.T)``
+      with depletion enabled. This adjusts for
       susceptibility but does not account for the incidence ceiling. It
       equals new infections per unit of infectiousness present only when
       the ceiling does not bind. It is 0 at a location with no one present.
-    - ``susceptible_fraction[t, i]`` is the share of residents of home
-      region ``i`` not infected before day ``t``. It is recorded as 1 minus
-      cumulative infections and can become negative with depletion off.
+    - ``susceptible_fraction[s, i]`` is the share of residents of home
+      region ``i`` not infected before infection-history day ``s``. This
+      record includes initialization, so its row
+      ``n_initialization_points + t`` corresponds to Rt row ``t``. It is
+      recorded as 1 minus cumulative infections and can become negative
+      with depletion off.
 
     Susceptible depletion is on by default, as in Eq 2. With it off,
     neither susceptibility scaling nor the incidence ceiling is applied,
@@ -132,8 +136,8 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
             region in the order of ``subpop_fractions``, which gives each
             region its own starting $\\mathcal{R}(t)$. Each region's starting
             Rt determines its exponential initialization growth. Temporal
-            processes cover only post-initialization days; daily Rt records
-            prepend copies of the starting values for initialization.
+            processes and daily Rt records cover only post-initialization
+            days, starting with the first renewal day.
         mobility_matrix_rv
             The mobility matrix used on every day, as a
             ``DeterministicVariable`` whose value has shape

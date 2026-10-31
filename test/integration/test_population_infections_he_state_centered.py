@@ -79,8 +79,9 @@ class TestModelFit:
             dims={
                 "latent_infections": ["time"],
                 "PopulationInfections::infections_aggregate": ["time"],
-                "PopulationInfections::log_rt_single": ["time", "dummy"],
-                "PopulationInfections::rt_single": ["time", "dummy"],
+                "PopulationInfections::log_rt_single": ["rt_time", "dummy"],
+                "PopulationInfections::rt_single": ["rt_time", "dummy"],
+                "PopulationInfections::rt_single_adjusted": ["rt_time", "dummy"],
                 "hospital_predicted": ["time"],
                 "ed_predicted": ["time"],
             },
@@ -129,6 +130,10 @@ class TestModelFit:
     ) -> None:
         """Check that R(t) 90% intervals cover truth for at least 80% of days."""
         rt_posterior = posterior_dt.posterior["PopulationInfections::rt_single"]
+        assert rt_posterior.sizes["rt_time"] == N_DAYS_FIT
+        np.testing.assert_array_equal(
+            rt_posterior.coords["rt_time"], np.arange(N_DAYS_FIT)
+        )
         rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values
         rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values
 

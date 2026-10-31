@@ -181,7 +181,8 @@ Infections grow from that value over the initialization period, and every initia
 
 On the first post-initialization day, each region starts at its own $\mathcal{R}(t)$, given as one value per region by `log_rt_time_0_rv`.
 These starting values also determine each region's exponential growth during initialization.
-The temporal processes run only over post-initialization days, including forecasts; recorded daily Rt arrays prepend copies of the starting values for the initialization days.
+The temporal processes and recorded daily Rt arrays cover only post-initialization days, including forecasts.
+Infections and susceptible fractions retain initialization, so Rt row `t` corresponds to row `n_init + t` in those arrays.
 Region 2 starts below 1.
 The random walks have a very small step size, so $\mathcal{R}(t)$ stays close to its starting value in every region.
 
@@ -226,9 +227,8 @@ def simulate(matrix, susceptible_depletion=True, n_days=120):
     }
 
 
-def to_long(values, run):
-    """Convert a (days, regions) array to a long data frame, after initialization."""
-    values = values[n_init:]
+def to_long(values: np.ndarray, run: str) -> pd.DataFrame:
+    """Convert an array of renewal-day values by region to a long data frame."""
     n_days = values.shape[0]
     return pd.DataFrame(
         {
@@ -256,8 +256,8 @@ linked = simulate(M)
 
 infections_df = pd.concat(
     [
-        to_long(isolated["infections"], "Identity matrix"),
-        to_long(linked["infections"], "Fig 2b matrix"),
+        to_long(isolated["infections"][n_init:], "Identity matrix"),
+        to_long(linked["infections"][n_init:], "Fig 2b matrix"),
     ]
 )
 
@@ -288,7 +288,7 @@ show the same effect in their S2 Fig.
 It is not the reproduction number of the residents of region `j`, who are also infected in the regions they visit.
 
 With depletion enabled, `rt_subpop_adjusted` is the reproduction number at each location after susceptibility adjustment.
-After the initialization period it is `rt_subpop * (share_present @ susceptible_fraction)`.
+On renewal day `t`, it is `rt_subpop[t] * (share_present @ susceptible_fraction[n_init + t])`.
 
 ```{python}
 #| label: rt-at-location
@@ -328,8 +328,8 @@ not_depleted = simulate(M, susceptible_depletion=False, n_days=250)
 
 susceptible_df = pd.concat(
     [
-        to_long(depleted["susceptible_fraction"], "Depletion on"),
-        to_long(not_depleted["susceptible_fraction"], "Depletion off"),
+        to_long(depleted["susceptible_fraction"][n_init:], "Depletion on"),
+        to_long(not_depleted["susceptible_fraction"][n_init:], "Depletion off"),
     ]
 )
 
@@ -377,12 +377,12 @@ share_present = M * p[None, :] / np.where(present > 0, present, 1.0)[:, None]
 sources = []
 for t in range(n_init, per_resident.shape[0]):
     infectiousness = reversed_gen_int @ per_resident[t - n_gen : t]
-    at_location = rt_subpop[t] * (share_present @ infectiousness)
+    at_location = rt_subpop[t - n_init] * (share_present @ infectiousness)
     susceptible = susceptible_fraction[t]
     local = (
         susceptible
         * np.diag(M)
-        * rt_subpop[t]
+        * rt_subpop[t - n_init]
         * np.diag(share_present)
         * infectiousness
     )

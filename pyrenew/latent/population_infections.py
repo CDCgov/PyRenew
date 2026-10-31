@@ -9,7 +9,7 @@ import numpyro
 from jax.typing import ArrayLike
 from numpyro.util import not_jax_tracer
 
-from pyrenew.arrayutils import _prepend_first_row, require_shape
+from pyrenew.arrayutils import require_shape
 from pyrenew.deterministic import DeterministicVariable
 from pyrenew.distutil import validate_discrete_dist_vector
 from pyrenew.latent.base import (
@@ -212,10 +212,12 @@ class PopulationInfections(BaseLatentInfectionProcess):
         example daily or weekly/stepwise), but it must return a daily-length
         trajectory before the renewal equation is evaluated. The raw Rt is
         recorded as ``rt_single``; the adjusted Rt used to generate infections
-        is recorded as ``rt_single_adjusted``. Daily Rt records include
-        initialization entries equal to the first raw Rt (or its log).
-        Sampled states, innovations, and weekly records cover only the
-        post-initialization trajectory.
+        is recorded as ``rt_single_adjusted``. Daily Rt and log Rt records
+        have shape ``(n_days_post_init, 1)`` and start on the first renewal
+        day. Infections include initialization, so Rt row ``t`` corresponds
+        to infection row ``n_initialization_points + t``. Sampled states,
+        innovations, and weekly records also cover only the
+        post-initialization trajectory, including requested forecast days.
 
         Parameters
         ----------
@@ -302,11 +304,7 @@ class PopulationInfections(BaseLatentInfectionProcess):
             infection_feedback_strength_rv=self.infection_feedback_strength_rv,
             infection_feedback_pmf_rv=self.infection_feedback_pmf_rv,
         )
-        log_rt_single = _prepend_first_row(log_rt_single, self.n_initialization_points)
-        rt_single = _prepend_first_row(rt_single, self.n_initialization_points)
-        rt_single_adjusted = jnp.concatenate(
-            [rt_single[: self.n_initialization_points, 0], rt_adjusted]
-        )[:, jnp.newaxis]
+        rt_single_adjusted = rt_adjusted[:, jnp.newaxis]
 
         infections_1d = jnp.concatenate([I0_init, post_init_infections])
         infections_all = infections_1d[:, jnp.newaxis]

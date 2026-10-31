@@ -131,21 +131,18 @@ class TestPriorPredictiveStructure:
                     ed={"obs": ed_obs},
                 )
 
-        n_total = he_weekly_rt_model.latent.n_initialization_points + N_DAYS_FIT
         n_weekly = _expected_n_weekly(he_weekly_rt_model, first_day_dow)
 
         weekly = trace["log_rt_single_weekly"]["value"]
         daily = trace["PopulationInfections::log_rt_single"]["value"]
 
         assert weekly.shape == (n_weekly, 1)
-        assert daily.shape == (n_total, 1)
-        assert n_weekly < n_total
+        assert daily.shape == (N_DAYS_FIT, 1)
+        assert n_weekly < N_DAYS_FIT
 
         # Each block of 7 daily values past the leading partial week should be
         # constant (the calendar-week broadcast invariant).
         n_init = he_weekly_rt_model.latent.n_initialization_points
-        assert jnp.allclose(daily[:n_init], daily[n_init])
-        daily = daily[n_init:]
         rt_first_day_dow = (first_day_dow + n_init) % 7
         partial_len = (WEEK_START_DOW - rt_first_day_dow) % 7
         if partial_len > 0:
@@ -236,8 +233,9 @@ class TestModelFit:
             dims={
                 "latent_infections": ["time"],
                 "PopulationInfections::infections_aggregate": ["time"],
-                "PopulationInfections::log_rt_single": ["time", "dummy"],
-                "PopulationInfections::rt_single": ["time", "dummy"],
+                "PopulationInfections::log_rt_single": ["rt_time", "dummy"],
+                "PopulationInfections::rt_single": ["rt_time", "dummy"],
+                "PopulationInfections::rt_single_adjusted": ["rt_time", "dummy"],
                 "log_rt_single_weekly": ["rt_week", "dummy"],
                 "hospital_predicted_daily": ["time"],
                 "hospital_predicted": ["week"],
@@ -330,6 +328,10 @@ class TestModelFit:
             True R(t) trajectory.
         """
         rt_posterior = posterior_dt.posterior["PopulationInfections::rt_single"]
+        assert rt_posterior.sizes["rt_time"] == N_DAYS_FIT
+        np.testing.assert_array_equal(
+            rt_posterior.coords["rt_time"], np.arange(N_DAYS_FIT)
+        )
         rt_q05 = rt_posterior.quantile(0.05, dim=["chain", "draw"]).values
         rt_q95 = rt_posterior.quantile(0.95, dim=["chain", "draw"]).values
 

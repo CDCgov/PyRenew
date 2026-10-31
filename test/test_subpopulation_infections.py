@@ -189,8 +189,8 @@ class TestSubpopulationInfectionsSample:
         assert sample.all_subpops.shape == (n_total, len(subpop_fractions))
         assert jnp.all(sample.aggregate > 0)
         assert jnp.all(sample.all_subpops > 0)
-        assert jnp.array_equal(rt_adjusted[:n_init], rt[:n_init])
-        assert jnp.all(rt_adjusted[n_init:] < rt[n_init:])
+        assert rt.shape == rt_adjusted.shape == (30, len(subpop_fractions))
+        assert jnp.all(rt_adjusted < rt)
 
     def test_feedback_matches_infections_with_feedback(
         self,
@@ -219,7 +219,7 @@ class TestSubpopulationInfectionsSample:
             infection_feedback_strength=infection_feedback_strength_rv,
             infection_feedback_pmf=infection_feedback_pmf_rv,
         ).sample(
-            Rt=trace["subpopulation::rt_subpop"]["value"][n_init:, :],
+            Rt=trace["subpopulation::rt_subpop"]["value"],
             I0=trace["subpopulation::I0_init_all_subpops"]["value"],
             gen_int=gen_int_rv(),
         )
@@ -227,7 +227,7 @@ class TestSubpopulationInfectionsSample:
             sample.all_subpops[n_init:], reference.post_initialization_infections
         )
         assert jnp.allclose(
-            trace["subpopulation::rt_subpop_adjusted"]["value"][n_init:],
+            trace["subpopulation::rt_subpop_adjusted"]["value"],
             reference.rt,
         )
 
