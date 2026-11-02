@@ -227,9 +227,6 @@ class AR1(TemporalProcess):
     independent ``Normal(0, 1)`` draw. ``innovation_sd`` scales the resulting
     innovations.
 
-    Passing ``initial_value=0.0`` fixes the first state at zero; omitting it
-    retains uncertainty in the first state. A supplied value may itself be
-    sampled from a caller's prior, as in the latent infection models.
 
     Parameters
     ----------
