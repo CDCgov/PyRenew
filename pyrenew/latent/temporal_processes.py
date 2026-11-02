@@ -205,8 +205,8 @@ class AR1(TemporalProcess):
     AR(1) process.
 
     Each value depends on the previous value plus noise, with reversion
-    toward zero. When used for log Rt, this corresponds to reversion toward
-    Rt = 1. For ``abs(autoreg) < 1``, the long-run variance is finite, but
+    toward zero. When used for $\\log\\mathcal{R}(t)$, this corresponds to reversion toward
+    $\\mathcal{R}(t) = 1$. For ``abs(autoreg) < 1``, the long-run variance is finite, but
     individual trajectories have no hard bounds. A supplied ``initial_value``
     is the exact first state. If omitted or ``None``, the first state is
     sampled from the zero-mean stationary distribution.
