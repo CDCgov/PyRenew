@@ -397,8 +397,8 @@ class DifferencedAR1(TemporalProcess):
     AR(1) process on first differences.
 
     Each *change* in value depends on the previous change plus noise, with
-    the rate of change reverting toward zero. When used for log Rt, this
-    allows persistent upward or downward trends in Rt.
+    the rate of change reverting toward zero. When used for $\\log(\\mathcal{R}(t)}$, this
+    allows persistent upward or downward trends in $\\mathcal{R}(t)$.
 
     The ``parameterization`` argument selects between a non-centered
     ``"innovation"`` parameterization, which samples independent standardized
