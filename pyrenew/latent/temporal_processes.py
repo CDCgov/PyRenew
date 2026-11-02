@@ -103,7 +103,7 @@ class TemporalProcess(Protocol):
         Defaults to ``1`` for the standard processes (one independent sample
         per timepoint). Wrapper processes like ``StepwiseTemporalProcess`` and
         ``WeeklyTemporalProcess`` expose a larger value so that model builders
-        can inspect R(t) parametrization cadence.
+        can inspect $\\mathcal{R}(t)$ parametrization cadence.
     """
 
     step_size: int
@@ -393,7 +393,7 @@ class DifferencedAR1(TemporalProcess):
     AR(1) process on first differences.
 
     Each *change* in value depends on the previous change plus noise, with
-    the rate of change reverting toward zero. When used for $\\log(\\mathcal{R}(t)}$, this
+    the rate of change reverting toward zero. When used for $\\log(\\mathcal{R}(t))$, this
     allows persistent upward or downward trends in $\\mathcal{R}(t)$.
 
     The ``parameterization`` argument selects between a non-centered
@@ -872,8 +872,8 @@ class WeeklyTemporalProcess(TemporalProcess):
     Each output timepoint in the same calendar week shares a single sampled
     value from the inner process. Use when a parameter should be estimated once
     per week while downstream model components still need one value per
-    evaluation timepoint. For example, a weekly-parameterized R(t) process can
-    return daily R(t) values for a daily deterministic renewal equation.
+    evaluation timepoint. For example, a weekly-parameterized $\\mathcal{R}(t)$ process can
+    return daily $\\mathcal{R}(t)$ values for a daily deterministic renewal equation.
 
     Parameters
     ----------
