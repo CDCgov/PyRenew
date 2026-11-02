@@ -1971,5 +1971,112 @@ class TestDayOfWeekNanGradientSafety:
         assert jnp.all(jnp.isfinite(grad))
 
 
+class TestRightTruncationNanGradientSafety:
+    """
+    Tests for gradient-safe right-truncation over the delay-tail NaN region.
+
+    Companion to :class:`TestDayOfWeekNanGradientSafety`. A multi-day
+    delay PMF leaves ``predicted[:len(delay_pmf)-1]`` as NaN before
+    right-truncation scaling is applied. When the observation window is
+    short enough that ``compute_prop_already_reported`` returns
+    parameter-dependent entries at those positions, multiplying NaN by
+    the reported proportion sends a NaN cotangent back to the
+    right-truncation PMF under autodiff. The joint log-density stays
+    finite, so the failure is visible only in the gradient.
+    """
+
+    @staticmethod
+    def _overlapping_shapes() -> tuple[jnp.ndarray, int, int]:
+        """
+        Return shapes whose NaN delay-tail reaches the parameter-dependent prop.
+
+        ``compute_prop_already_reported`` pads with constant ones only
+        for ``n_total - len(trunc_pmf)`` leading entries, so a delay
+        tail longer than that pad overlaps entries that carry gradient.
+
+        Returns
+        -------
+        tuple[jnp.ndarray, int, int]
+            The delay PMF, the truncation PMF length, and ``n_total``.
+        """
+        return jnp.array([0.4, 0.3, 0.2, 0.1]), 8, 10
+
+    def test_delay_tail_nan_preserved_through_truncation(self):
+        """``predicted`` NaN entries remain NaN after truncation scaling."""
+        delay_pmf, n_trunc, n_total = self._overlapping_shapes()
+        n_tail = delay_pmf.shape[0] - 1
+        process = PopulationCounts(
+            name="test",
+            ascertainment_rate_rv=DeterministicVariable("ihr", 1.0),
+            delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
+            noise=PoissonNoise(),
+            right_truncation_rv=DeterministicPMF(
+                "rt_delay", jnp.full(n_trunc, 1.0 / n_trunc)
+            ),
+        )
+        infections = jnp.ones(n_total) * 1000.0
+
+        with numpyro.handlers.seed(rng_seed=0):
+            result = process.sample(
+                infections=infections,
+                obs=None,
+                right_truncation_offset=0,
+            )
+
+        assert jnp.all(jnp.isnan(result.predicted[:n_tail]))
+        assert jnp.all(jnp.isfinite(result.predicted[n_tail:]))
+
+    def test_truncation_gradient_finite_with_delay_tail_nan(self):
+        """
+        Gradients wrt the truncation PMF are finite despite the NaN delay-tail.
+
+        Without the double-where pattern in ``_apply_right_truncation``
+        the delay-tail positions contribute ``0 * NaN`` cotangents and
+        every entry of the returned gradient is NaN, while the joint
+        log-density remains finite.
+        """
+        delay_pmf, n_trunc, n_total = self._overlapping_shapes()
+        infections = jnp.ones(n_total) * 1000.0
+        obs = jnp.full(n_total, 5.0, dtype=jnp.float32)
+
+        def model(trunc_value: jnp.ndarray) -> None:
+            """Sample with the given right-truncation PMF."""
+            process = PopulationCounts(
+                name="test",
+                ascertainment_rate_rv=DeterministicVariable("ihr", 0.01),
+                delay_distribution_rv=DeterministicPMF("delay", delay_pmf),
+                noise=NegativeBinomialNoise(DeterministicVariable("conc", 10.0)),
+                right_truncation_rv=DeterministicVariable("rt_delay", trunc_value),
+            )
+            process.sample(
+                infections=infections,
+                obs=obs,
+                right_truncation_offset=0,
+            )
+
+        def log_p(trunc_value: jnp.ndarray) -> jnp.ndarray:
+            """
+            Return the joint log-density of the model at ``trunc_value``.
+
+            Parameters
+            ----------
+            trunc_value
+                Right-truncation PMF at which to evaluate.
+
+            Returns
+            -------
+            jnp.ndarray
+                Scalar joint log-density.
+            """
+            value, _ = log_density(model, (trunc_value,), {}, params={})
+            return value
+
+        trunc_value = jnp.full(n_trunc, 1.0 / n_trunc)
+        assert jnp.isfinite(log_p(trunc_value))
+
+        grad = jax.grad(log_p)(trunc_value)
+        assert jnp.all(jnp.isfinite(grad))
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
