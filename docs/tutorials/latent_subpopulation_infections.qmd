@@ -352,7 +352,7 @@ baseline_process = DifferencedAR1(
 
 AR(1) deviations have **bounded variance**.
 In this example, the shared starting $\log(\mathcal{R}(t)$ makes every initial deviation exactly zero.
-The autoreg coefficient controls how quickly a subpopulation’s deviation is pulled back toward zero.
+The autoreg coefficient controls how quickly a subpopulation's deviation is pulled back toward zero.
 Values near 1 produce slow pullback (local differences linger), values near 0 produce fast pullback (subpopulations snap back to the baseline).
 The prior interval widens from zero and approaches a stable width.
 Because these plots start after initialization, much of that initial widening has already occurred before the first displayed day.

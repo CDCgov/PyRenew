@@ -227,7 +227,6 @@ class AR1(TemporalProcess):
     independent ``Normal(0, 1)`` draw. ``innovation_sd`` scales the resulting
     innovations.
 
-
     Parameters
     ----------
     autoreg_rv

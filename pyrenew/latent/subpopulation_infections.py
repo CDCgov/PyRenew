@@ -117,7 +117,7 @@ class SubpopulationInfections(BaseLatentInfectionProcess):
             Value(s) for subpopulation-level $\\log(\\mathcal{R}_i(t))$ on the first day of the
             initialization period. Should return either a scalar (which will be
             broadcast to all subpopulations) or an array of shape ``(n_subpops,)``
-            containing subpopultion-specific $\log(\\mathcal{R}_i(t))$ values,
+            containing subpopultion-specific $\\log(\\mathcal{R}_i(t))$ values,
             assigned in order of ``subpop_fractions``.
             Each subpopulation's growth rate for infection seeding will
             be calculated from its initial $\mathcal{R}(t))$ value.
