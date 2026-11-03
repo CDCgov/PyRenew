@@ -355,10 +355,8 @@ baseline_process = DifferencedAR1(
 ### AR(1) Deviations
 
 AR(1) deviations have **bounded variance**.
-In this example, the shared starting $\log(\mathcal{R}(t))$ makes every initial deviation exactly zero.
-For `autoreg = 0.8` and `innovation_sd = 0.05`, the limiting standard deviation is approximately $0.083$ before centering, or $0.076$ for the six centered subpopulations here.
-
-The `autoreg` coefficient still matters: if a subpopulation drifts away from zero by chance, $\phi$ controls how quickly it is pulled back.
+In this example, the shared starting $\log(\mathcal{R}(t)$ makes every initial deviation exactly zero.
+The autoreg coefficient controls how quickly a subpopulation's deviation is pulled back toward zero.
 Values near 1 produce slow pullback (local differences linger), values near 0 produce fast pullback (subpopulations snap back to the baseline).
 The prior interval widens from zero and approaches a stable width.
 The first displayed day has zero deviation variance; widening begins with the next sampled transition.

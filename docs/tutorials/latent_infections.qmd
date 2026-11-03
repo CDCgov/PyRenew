@@ -425,9 +425,6 @@ $$
 $$
 
 When $|\phi| < 1$, the process has a stationary distribution with variance $\sigma^2 / (1 - \phi^2)$.
-With a fixed `initial_value`, the initial variance is zero.
-After `t` transitions, the mean is `autoreg**t * initial_value` and the variance is `innovation_sd**2 * (1 - autoreg**(2*t)) / (1 - autoreg**2)`.
-The mean decays toward zero and the variance approaches the stationary variance, without hard bounds on individual trajectories.
 If `initial_value` is omitted or `None`, AR1 instead samples its first state from `Normal(0, innovation_sd / sqrt(1 - autoreg**2))`; with fixed process parameters, the trajectory is then stationary from the start.
 Passing `initial_value=0.0` sets the first state to exactly zero and differs from omitting the argument.
 These initialization rules apply to both `"innovation"` and `"state"` parameterizations.

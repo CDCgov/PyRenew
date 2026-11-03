@@ -103,7 +103,7 @@ class TemporalProcess(Protocol):
         Defaults to ``1`` for the standard processes (one independent sample
         per timepoint). Wrapper processes like ``StepwiseTemporalProcess`` and
         ``WeeklyTemporalProcess`` expose a larger value so that model builders
-        can inspect R(t) parametrization cadence.
+        can inspect $\\mathcal{R}(t)$ parametrization cadence.
     """
 
     step_size: int
@@ -205,8 +205,8 @@ class AR1(TemporalProcess):
     AR(1) process.
 
     Each value depends on the previous value plus noise, with reversion
-    toward zero. When used for log Rt, this corresponds to reversion toward
-    Rt = 1. For ``abs(autoreg) < 1``, the long-run variance is finite, but
+    toward zero. When used for $\\log\\mathcal{R}(t)$, this corresponds to reversion toward
+    $\\mathcal{R}(t) = 1$. For ``abs(autoreg) < 1``, the long-run variance is finite, but
     individual trajectories have no hard bounds. A supplied ``initial_value``
     is the exact first state. If omitted or ``None``, the first state is
     sampled from the zero-mean stationary distribution.
@@ -226,10 +226,6 @@ class AR1(TemporalProcess):
     ``x[t] = autoreg * x[t - 1] + innovation_sd * z[t]``. Each ``z`` is an
     independent ``Normal(0, 1)`` draw. ``innovation_sd`` scales the resulting
     innovations.
-
-    Passing ``initial_value=0.0`` fixes the first state at zero; omitting it
-    retains uncertainty in the first state. A supplied value may itself be
-    sampled from a caller's prior, as in the latent infection models.
 
     Parameters
     ----------
@@ -400,8 +396,8 @@ class DifferencedAR1(TemporalProcess):
     AR(1) process on first differences.
 
     Each *change* in value depends on the previous change plus noise, with
-    the rate of change reverting toward zero. When used for log Rt, this
-    allows persistent upward or downward trends in Rt.
+    the rate of change reverting toward zero. When used for $\\log(\\mathcal{R}(t))$, this
+    allows persistent upward or downward trends in $\\mathcal{R}(t)$.
 
     The ``parameterization`` argument selects between a non-centered
     ``"innovation"`` parameterization, which samples independent standardized
@@ -879,8 +875,8 @@ class WeeklyTemporalProcess(TemporalProcess):
     Each output timepoint in the same calendar week shares a single sampled
     value from the inner process. Use when a parameter should be estimated once
     per week while downstream model components still need one value per
-    evaluation timepoint. For example, a weekly-parameterized R(t) process can
-    return daily R(t) values for a daily deterministic renewal equation.
+    evaluation timepoint. For example, a weekly-parameterized $\\mathcal{R}(t)$ process can
+    return daily $\\mathcal{R}(t)$ values for a daily deterministic renewal equation.
 
     Parameters
     ----------
