@@ -297,14 +297,14 @@ class PopulationInfections(BaseLatentInfectionProcess):
         time_indices = jnp.arange(self.n_initialization_points)
         I0_init = I0 * jnp.exp(initial_r * time_indices)
 
-        post_init_infections, rt_adjusted = _compute_renewal(
+        post_init_infections, rt_single_adjusted = _compute_renewal(
             I0=I0_init,
             rt_raw=rt_single[:, 0],
             gen_int=gen_int,
             infection_feedback_strength_rv=self.infection_feedback_strength_rv,
             infection_feedback_pmf_rv=self.infection_feedback_pmf_rv,
         )
-        rt_single_adjusted = rt_adjusted[:, jnp.newaxis]
+        rt_single_adjusted = rt_single_adjusted[:, jnp.newaxis]
 
         infections_1d = jnp.concatenate([I0_init, post_init_infections])
         infections_all = infections_1d[:, jnp.newaxis]
