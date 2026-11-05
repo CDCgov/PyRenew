@@ -262,7 +262,6 @@ The temporal process governs how $\log \mathcal{R}(t)$ evolves day to day.
 All three processes default to `parameterization="innovation"`.
 This samples independent standard normal variables and transforms them using the process parameters: for example, a random-walk step is `innovation_sd * z`, where `z` has distribution `Normal(0, 1)`.
 DifferencedAR1's random initial rate of change is also constructed from a standard normal draw.
-AR1 uses a supplied `initial_value` exactly; it samples a stationary initial state from a standard normal draw only when `initial_value` is omitted or `None`.
 The alternative, `parameterization="state"`, samples states conditionally on preceding states.
 Both choices give the same distribution of trajectories; they change the coordinates used by the sampler.
 The innovation parameterization can improve sampling when scales are inferred, although efficiency depends on the model and observations.
