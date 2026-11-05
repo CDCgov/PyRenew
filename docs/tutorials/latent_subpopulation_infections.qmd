@@ -215,7 +215,7 @@ Daily baseline, deviation, raw Rt, and adjusted Rt records have `n_days_post_ini
 Infections retain the initialization period, so Rt row `t` corresponds to infection row `n_init + t`.
 Initialization therefore adds no sampled states or innovations, and weekly records cover only the post-initialization period.
 The first recorded Rt week is the calendar week containing the first renewal day; its start date may precede that day, but no initialization-only weeks are sampled.
-With infection feedback, initialization still uses raw Rt; feedback begins with the first renewal calculation.
+With infection feedback, initialization uses raw Rt; feedback begins with the first renewal calculation.
 For calendar-aligned processes, the class shifts `first_day_dow` from the beginning of the full infection history to the first renewal day before passing it to both processes.
 
 ```{python}
