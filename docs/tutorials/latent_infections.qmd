@@ -252,7 +252,7 @@ The initialization vector matters because the renewal equation is a convolution:
 A flat initialization (stable) means the renewal equation starts with uniform recent history.
 A growing initialization means the most recent days have disproportionately more infections, which amplifies the effect of the generation interval's short-lag weights.
 
-After day 0, the renewal calculation uses the corresponding values of the Rt trajectory.
+After day 0, the renewal calculation uses the corresponding values of the $\mathcal{R}(t)$ trajectory.
 How quickly the trajectory departs from its initial behavior depends on the temporal process choice and its hyperparameters, which we examine in the next section.
 
 ## Temporal Process Choice
