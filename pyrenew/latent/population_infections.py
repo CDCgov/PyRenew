@@ -83,7 +83,7 @@ class PopulationInfections(BaseLatentInfectionProcess):
         n_initialization_points
             Number of initialization days before day 0.
         I0_rv
-            New infections per resident on the first day of the
+            New incident infections per resident on the first day of the
             initialization period, the earliest day on the time axis. Returns a scalar.
         single_rt_process
             Temporal process for single $\\mathcal{R}(t)$ dynamics
