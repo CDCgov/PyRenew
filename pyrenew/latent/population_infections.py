@@ -209,9 +209,9 @@ class PopulationInfections(BaseLatentInfectionProcess):
         example daily or weekly/stepwise), but it must return a daily-length
         trajectory before the renewal equation is evaluated. The raw Rt is
         recorded as ``rt_single``; the adjusted Rt used to generate infections
-        is recorded as ``rt_single_adjusted``. Daily Rt and log Rt records
-        have shape ``(n_days_post_init, 1)`` and start on the first renewal
-        day. Infections include initialization, so Rt row ``t`` corresponds
+        is recorded as ``rt_single_adjusted``. Daily $\\mathcal{R}(t)$ and $\\log\[\\mathcal{R}(t)\]$ records
+        have shape ``(n_days_post_init, 1)`` and start on the first post-initialization
+        day. Infections include initialization, so $\\mathcal{R}(t)$ row ``t`` corresponds
         to infection row ``n_initialization_points + t``. Sampled states,
         innovations, and weekly records also cover only the
         post-initialization trajectory, including requested forecast days.
