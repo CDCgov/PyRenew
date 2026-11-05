@@ -208,14 +208,14 @@ model = SubpopulationInfections(
 To give each subpopulation its own starting $\mathcal{R}(t)$, `log_rt_time_0_rv` returns one value per subpopulation, in the order of `subpop_fractions`.
 With `AR1`, `DifferencedAR1`, or `RandomWalk` as the baseline and deviation processes, each subpopulation's initial $\log[\mathcal{R}(t)]$ is exactly its corresponding supplied value.
 The baseline starts at the mean of those $\log[\mathcal{R}(t)]$ values, and the deviations start at each value minus that mean.
-These are starting values on the first post-initialization day, when renewal begins.
+These are starting values on the first post-initialization day, when renewal process computation begins.
 Each subpopulation's first combined Rt also determines its exponential initialization curve; `I0` gives its new infections per capita on the first initialization day.
 The baseline and deviation processes sample only `n_days_post_init` days, which must be at least 1.
 Daily baseline, deviation, raw Rt, and adjusted Rt records have `n_days_post_init` rows, starting on the first renewal day.
 Infections retain the initialization period, so Rt row `t` corresponds to infection row `n_init + t`.
 Initialization therefore adds no sampled states or innovations, and weekly records cover only the post-initialization period.
 The first recorded Rt week is the calendar week containing the first renewal day; its start date may precede that day, but no initialization-only weeks are sampled.
-With infection feedback, initialization still uses raw Rt; feedback begins with the first renewal calculation.
+With infection feedback, initialization uses raw Rt; feedback begins with the first renewal calculation.
 For calendar-aligned processes, the class shifts `first_day_dow` from the beginning of the full infection history to the first renewal day before passing it to both processes.
 
 ```{python}
@@ -306,7 +306,6 @@ The deviation process controls how subpopulation $\mathcal{R}_k(t)$ values move 
 With one starting $\log(\mathcal{R}(t))$ shared by all subpopulations, all three processes start at exactly zero deviation on the first post-initialization day.
 With separate starting values, each deviation starts at its supplied $\log(\mathcal{R}(t))$ minus the mean across subpopulations.
 AR1's variance approaches a finite limit, while RandomWalk's variance grows without bound.
-Calling `AR1.sample()` without `initial_value` would instead sample a stationary initial state, but `SubpopulationInfections` supplies initial values to both processes.
 The plots below start at the first post-initialization day, so their first displayed deviations are exactly zero for the shared starting value used here.
 
 The key question: **are local differences transient or persistent?** This determines whether subpopulations quickly return to the baseline or can diverge and remain different over time.

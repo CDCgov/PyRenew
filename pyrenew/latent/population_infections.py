@@ -83,17 +83,14 @@ class PopulationInfections(BaseLatentInfectionProcess):
         n_initialization_points
             Number of initialization days before day 0.
         I0_rv
-            New infections per resident on the first day of the
-            initialization period, the earliest day on the time axis. This
-            is not prevalence. Returns a scalar.
+            New incident infections per resident on the first day of the
+            initialization period, the earliest day on the time axis. Returns a scalar.
         single_rt_process
             Temporal process for single $\\mathcal{R}(t)$ dynamics
         log_rt_time_0_rv
             Log reproduction number on the first post-initialization day.
             The sampled value is the exact starting state of the temporal
             process and determines initialization growth.
-            The temporal process covers only post-initialization days,
-            including forecast days when requested.
         infection_feedback_strength_rv
             Infection feedback strength $\\gamma$. Returns a scalar, or an
             array of shape ``(n_days_post_init,)`` for a strength that varies
@@ -212,9 +209,9 @@ class PopulationInfections(BaseLatentInfectionProcess):
         example daily or weekly/stepwise), but it must return a daily-length
         trajectory before the renewal equation is evaluated. The raw Rt is
         recorded as ``rt_single``; the adjusted Rt used to generate infections
-        is recorded as ``rt_single_adjusted``. Daily Rt and log Rt records
-        have shape ``(n_days_post_init, 1)`` and start on the first renewal
-        day. Infections include initialization, so Rt row ``t`` corresponds
+        is recorded as ``rt_single_adjusted``. Daily $\\mathcal{R}(t)$ and $\\log\[\\mathcal{R}(t)\]$ records
+        have shape ``(n_days_post_init, 1)`` and start on the first post-initialization
+        day. Infections include initialization, so $\\mathcal{R}(t)$ row ``t`` corresponds
         to infection row ``n_initialization_points + t``. Sampled states,
         innovations, and weekly records also cover only the
         post-initialization trajectory, including requested forecast days.
