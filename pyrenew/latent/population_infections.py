@@ -91,8 +91,6 @@ class PopulationInfections(BaseLatentInfectionProcess):
             Log reproduction number on the first post-initialization day.
             The sampled value is the exact starting state of the temporal
             process and determines initialization growth.
-            The temporal process covers only post-initialization days,
-            including forecast days when requested.
         infection_feedback_strength_rv
             Infection feedback strength $\\gamma$. Returns a scalar, or an
             array of shape ``(n_days_post_init,)`` for a strength that varies
