@@ -886,7 +886,7 @@ def trim_time(ds):
     return ds
 ```
 
-We label the full infection and observation axis `time`, and the renewal-only Rt axis `rt_time`, using the dims argument to [az.from_numpyro](https://python.arviz.org/projects/base/en/latest/api/generated/arviz_base.from_numpyro.html).
+We label the full infection and observation axis `time`, and the renewal-only $\mathcal{R}(t)$ axis `rt_time`, using the dims argument to [az.from_numpyro](https://python.arviz.org/projects/base/en/latest/api/generated/arviz_base.from_numpyro.html).
 Then we trim the first `n_init` entries from `time` and number the remaining days from 0, matching `rt_time`.
 Finally we call the [az.summary](https://python.arviz.org/projects/stats/en/latest/api/generated/arviz_stats.summary.html) report.
 
