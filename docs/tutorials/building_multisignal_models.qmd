@@ -874,7 +874,6 @@ print(f"Elapsed time: {elapsed_90:.1f} seconds")
 We use [ArviZ](https://python.arviz.org/en/stable/) to assess MCMC convergence and mixing via the $\hat{R}$ statistic and effective sample size (ESS).
 We summarize the period beginning with renewal.
 Infection and observation records include initialization, so we trim their first `n_init` time steps.
-$\mathcal{R}(t)$ baseline and deviation records start post-initialization.
 
 ```{python}
 #| label: helper-trim-time
