@@ -194,10 +194,12 @@ With this structure in mind, we'll now define each component following the gener
 ## Latent Infection Process
 
 Latent infection processes implement the renewal equation to generate infection trajectories.
+We call the first day of the observation window **day 0** ($t = 0$).
+The model constructs infections for the earlier days `-n_init` through `-1` to account for transmission and observation delays.
 All latent processes share common components:
 
 - **Generation interval**: PMF for secondary infection timing
-- **Initial infections ($I(0)$)**: Starting condition for the renewal process
+- **Initial infections (`I0`)**: Infection level on day `-n_init`, before observations begin
 - **Temporal dynamics**: How $\mathcal{R}(t)$ evolves over time
 
 ### Generation Interval
@@ -217,7 +219,7 @@ print(f"Generation interval: {gen_int_pmf}")
 
 ### I0: Initial Infections
 
-The initial infections RV `I0_rv` specifies the **proportion of the population infected** at the first observation time.
+The initial infections RV `I0_rv` specifies **new infections per capita on day `-n_init`**, the beginning of the infection history before observations.
 This must be a value in the interval (0, 1\].
 We use a Beta prior centered near a small value:
 
@@ -229,7 +231,7 @@ I0_rv = DistributionalVariable("I0", dist.Beta(1, 100))
 
 ### Log Rt at time $0$
 
-We place a prior on the log $\mathcal{R}(t)$ at time $0$, centered at $0.0$ ($\mathcal{R}(t) = 1.0$) with moderate uncertainty:
+We place a prior on log $\mathcal{R}(t)$ on the first day of data ($t = 0$), centered at $0.0$ ($\mathcal{R}(t) = 1.0$) with moderate uncertainty:
 
 ```{python}
 #| label: log-rt-time-0
@@ -295,10 +297,10 @@ weekly_baseline_rt_process = WeeklyTemporalProcess(
 Use `WeeklyTemporalProcess` when the weekly Rt blocks should align to a calendar week.
 The `start_dow` parameter is the day of week on which the calendar-week cycle begins (0=Monday, 6=Sunday, ISO convention).
 `pyrenew.time` exports `MMWR_WEEK = 6` (Sunday-Saturday epiweeks) and `ISO_WEEK = 0` (Monday-Sunday); pass any integer in `[0, 6]` for other conventions.
-At sample or run time, pass the date of the first observation day as `obs_start_date`.
+At sample or run time, pass the start date of the observation window as `obs_start_date`, the common day 0 for all signals.
 Argument `obs_start_date` is required whenever any component performs calendar-aligned work: a `WeeklyTemporalProcess`, a count observation with `aggregation="weekly"`, or any observation with a day-of-week effect.
 For `StepwiseTemporalProcess` and daily observations with no day-of-week effect, `obs_start_date` can be omitted.
-The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it.
+The model passes that day's weekday to the infection process and the weekday `n_init` days earlier to observations and ascertainment.
 
 ## Observation Processes
 
@@ -658,20 +660,29 @@ The keys of the observation dictionaries are the names registered on the builder
 
 ### Model Time vs. Observation Time
 
-In the raw data, day 0 is the first day with observations.
-PyRenew adds an initialization period before this date so the renewal process has enough past infections to generate infections during the observed period.
+The first day of the observation window is **day 0**, not day 1; its date is `obs_start_date`.
+For daily data, this is the date of the first observation, including an observed count of zero.
+PyRenew constructs `n_init` earlier days of infections to supply the renewal equation and observation delay distributions.
+Infection arrays include this history; daily $\mathcal{R}(t)$ records start at day 0.
 
-This means the model has two related time scales:
+  | Day relative to `obs_start_date` | Infection array index | Daily Rt array index |
+  | -------------------------------- | --------------------- | -------------------- |
+  | `-n_init`                        | `0`                   | —                    |
+  | `-1`                             | `n_init - 1`          | —                    |
+  | `0`                              | `n_init`              | `0`                  |
+  | `t >= 0`                         | `n_init + t`          | `t`                  |
 
-- **Observation time** starts at the first day in the data.
-- **Model time** starts `n_init` days earlier.
-
-On the model time axis, indices `0` through `n_init - 1` are initialization days.
-The first observed day is model index `n_init`, and the last observed day is model index `n_init + n_days - 1`.
+All signals share these calendar dates, even when their observations start on different days.
+Each signal's first available observation keeps its position relative to the common day 0.
+For daily data, represent unobserved days with `NaN`; express sparse observation times relative to the common day 0.
+Weekly counts sum daily predictions over each signal's reporting weeks; their array positions count weeks, while `period_end_times` uses daily infection-array indices.
+For weekly data, distinguish the start of the observation window from the date labeling a weekly total, which may be the week-ending date.
+Weekly Rt changes parameter cadence but leaves the infection time axis daily.
 
 The model provides helper methods to convert observation data onto this model time axis:
 
-- `model.pad_observations(obs)` prepends `n_init` NaN values to dense daily observation vectors.
+- `model.pad_observations(obs)` prepends `n_init` NaN values to dense daily observation vectors already aligned to the common day 0.
+  Use this helper only for daily observations.
 - `model.shift_times(times)` adds `n_init` to sparse observation time indices.
 
 The hospital admissions signal is dense: it has one value per observation day, so we pad it.
@@ -870,8 +881,8 @@ print(f"Elapsed time: {elapsed_90:.1f} seconds")
 ```
 
 We use [ArviZ](https://python.arviz.org/en/stable/) to assess MCMC convergence and mixing via the $\hat{R}$ statistic and effective sample size (ESS).
-Before running these diagnostics, we trim the first `n_init` time steps from all time-series variables.
-Since the model cannot estimate latent infections until it has seen a full generation interval's worth of data, these early time steps have no meaningful epidemiological interpretation and therefore should be excluded from summaries and visualizations.
+We summarize the period beginning with renewal.
+Infection and observation records include initialization, so we trim their first `n_init` time steps.
 
 ```{python}
 #| label: helper-trim-time
@@ -884,8 +895,8 @@ def trim_time(ds):
     return ds
 ```
 
-We first label the time axis of all time-series variables using the dims argument to [az.from_numpyro](https://python.arviz.org/projects/base/en/latest/api/generated/arviz_base.from_numpyro.html).
-Then we trim the first `n_init` time steps from all time-series variables.
+We label the full infection and observation axis `time`, and the renewal-only $\mathcal{R}(t)$ axis `rt_time`, using the dims argument to [az.from_numpyro](https://python.arviz.org/projects/base/en/latest/api/generated/arviz_base.from_numpyro.html).
+Then we trim the first `n_init` entries from `time` and number the remaining days from 0, matching `rt_time`.
 Finally we call the [az.summary](https://python.arviz.org/projects/stats/en/latest/api/generated/arviz_stats.summary.html) report.
 
 ```{python}
@@ -896,10 +907,11 @@ idata_90 = az.from_numpyro(
     dims={
         "latent_infections": ["time"],
         "SubpopulationInfections::infections_aggregate": ["time"],
-        "SubpopulationInfections::log_rt_baseline": ["time", "dummy"],
-        "SubpopulationInfections::rt_baseline": ["time", "dummy"],
-        "SubpopulationInfections::rt_subpop": ["time", "subpop"],
-        "SubpopulationInfections::subpop_deviations": ["time", "subpop"],
+        "SubpopulationInfections::log_rt_baseline": ["rt_time", "dummy"],
+        "SubpopulationInfections::rt_baseline": ["rt_time", "dummy"],
+        "SubpopulationInfections::rt_subpop": ["rt_time", "subpop"],
+        "SubpopulationInfections::rt_subpop_adjusted": ["rt_time", "subpop"],
+        "SubpopulationInfections::subpop_deviations": ["rt_time", "subpop"],
         "latent_infections_by_subpop": ["time", "subpop"],
         "hospital_predicted": ["time"],
         "wastewater_predicted": ["time", "subpop"],

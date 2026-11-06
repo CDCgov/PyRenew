@@ -194,10 +194,11 @@ class BaseLatentInfectionProcess(RandomVariable):
         Generation interval PMF
     n_initialization_points
         Number of initialization days before the first observation day.
-        Latent and observation arrays use a shared padded time axis with
-        element 0 at the start of this initialization period. In observation
-        natural coordinates, day 0 is the first observed data day; on the
-        shared padded axis, that same day is index ``n_initialization_points``.
+        Infection histories and dense daily observation arrays include
+        this period, with element 0 at its start. In observation natural
+        coordinates, day 0 is the first observed data day; on the infection
+        axis, that same day is index ``n_initialization_points``. Daily Rt
+        records start on the first renewal day and omit initialization.
         Must be at least ``len(gen_int_rv())`` to provide enough history for
         the renewal equation convolution.
 
@@ -368,15 +369,16 @@ class BaseLatentInfectionProcess(RandomVariable):
     @staticmethod
     def _validate_I0(I0: ArrayLike) -> None:
         """
-        Validate that I0 values are valid infection prevalences.
+        Validate initial infections per capita.
 
-        I0 represents initial infection prevalence as a proportion of the
-        population. Values must be in the interval (0, 1].
+        I0 is new infections per capita on the first day of the
+        initialization period. Values must be in the interval (0, 1].
 
         Parameters
         ----------
         I0
-            Initial infection prevalence (scalar or array)
+            New infections per capita on the first day of the
+            initialization period (scalar or array).
 
         Raises
         ------
@@ -397,13 +399,15 @@ class BaseLatentInfectionProcess(RandomVariable):
         if not_jax_tracer(pos_check) and pos_check:
             raise ValueError(
                 f"I0 must be positive (got min={float(jnp.min(I0)):.6f}). "
-                "I0 represents infection prevalence as a proportion of the population."
+                "I0 is new infections per capita on the first day of "
+                "the initialization period."
             )
         max_check = jnp.any(I0 > 1)
         if not_jax_tracer(max_check) and max_check:
             raise ValueError(
                 f"I0 must be <= 1 (got max={float(jnp.max(I0)):.6f}). "
-                "I0 represents infection prevalence as a proportion of the population."
+                "I0 is new infections per capita on the first day of "
+                "the initialization period."
             )
 
     def _validate_and_prepare_I0(
@@ -422,7 +426,8 @@ class BaseLatentInfectionProcess(RandomVariable):
         Parameters
         ----------
         I0
-            Initial infection prevalence from I0_rv, as a JAX array.
+            New infections per capita on the first day of the
+            initialization period, from I0_rv, as a JAX array.
         pop
             Parsed population structure.
 

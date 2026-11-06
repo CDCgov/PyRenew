@@ -22,6 +22,7 @@ from pyrenew.latent.base import (
 from pyrenew.latent.temporal_processes import TemporalProcess
 from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
+from pyrenew.time import validate_dow
 
 
 class PopulationInfections(BaseLatentInfectionProcess):
@@ -82,11 +83,14 @@ class PopulationInfections(BaseLatentInfectionProcess):
         n_initialization_points
             Number of initialization days before day 0.
         I0_rv
-            Initial infection prevalence (proportion of population)
+            New incident infections per resident on the first day of the
+            initialization period, the earliest day on the time axis. Returns a scalar.
         single_rt_process
             Temporal process for single $\\mathcal{R}(t)$ dynamics
         log_rt_time_0_rv
-            Initial value for log($\\mathcal{R}(t)$) at time 0.
+            Log reproduction number on the first post-initialization day.
+            The sampled value is the exact starting state of the temporal
+            process and determines initialization growth.
         infection_feedback_strength_rv
             Infection feedback strength $\\gamma$. Returns a scalar, or an
             array of shape ``(n_days_post_init,)`` for a strength that varies
@@ -148,7 +152,7 @@ class PopulationInfections(BaseLatentInfectionProcess):
         pop: PopulationStructure,
     ) -> ArrayLike:
         """
-        Validate that I0 is a scalar prevalence value.
+        Validate that initial infections per resident are given as a scalar.
 
         PopulationInfections operates on a single population, so I0 must be
         a scalar (0-dimensional array).
@@ -156,7 +160,8 @@ class PopulationInfections(BaseLatentInfectionProcess):
         Parameters
         ----------
         I0
-            Initial infection prevalence from I0_rv, as a JAX array.
+            New infections per resident on the first day of the
+            initialization period, from I0_rv, as a JAX array.
         pop
             Parsed population structure (unused, required by interface).
 
@@ -171,9 +176,7 @@ class PopulationInfections(BaseLatentInfectionProcess):
             If I0 is not scalar or not in the interval (0, 1].
         """
         if I0.ndim != 0:
-            raise ValueError(
-                "PopulationInfections requires I0_rv to return a scalar prevalence"
-            )
+            raise ValueError("PopulationInfections requires I0_rv to return a scalar")
         return super()._validate_and_prepare_I0(I0, pop)
 
     def validate(self) -> None:
@@ -200,28 +203,34 @@ class PopulationInfections(BaseLatentInfectionProcess):
         Sample population infections using a single renewal process.
 
         Generates a single daily $\\mathcal{R}(t)$ trajectory, computes initial
-        infections via exponential backprojection, and computes infections
+        infections via exponential growth from ``I0_rv``, and computes infections
         with the renewal equation, with infection feedback if it is on. The
         temporal process may sample parameters at any supported cadence (for
         example daily or weekly/stepwise), but it must return a daily-length
-        trajectory before the renewal equation is evaluated. The raw Rt is
-        recorded as ``rt_single``; the adjusted Rt used to generate infections
-        is recorded as ``rt_single_adjusted``.
+        trajectory before the renewal equation is evaluated. The raw
+        $\\mathcal{R}(t)$ is recorded as ``rt_single``; the adjusted
+        $\\mathcal{R}(t)$ used to generate infections is recorded as
+        ``rt_single_adjusted``. Daily $\\mathcal{R}(t)$ and
+        $\\log[\\mathcal{R}(t)]$ records
+        have shape ``(n_days_post_init, 1)`` and start on the first post-initialization
+        day. Infections include initialization, so $\\mathcal{R}(t)$ row ``t`` corresponds
+        to infection row ``n_initialization_points + t``. Sampled states,
+        innovations, and weekly records also cover only the
+        post-initialization trajectory, including requested forecast days.
 
         Parameters
         ----------
         n_days_post_init
-            Number of days to simulate after initialization period
+            Number of days to simulate after initialization; must be at least 1.
         subpop_fractions
             Population fractions. Defaults to ``[1.0]`` (single population).
             Must be ``[1.0]`` if provided.
         first_day_dow
-            Day of week for element 0 of the full latent infection time axis,
-            including initialization days. When this latent process is used
-            inside MultiSignalModel, the caller passes obs_start_date to the
-            model and it converts the first observation day to this axis-origin
-            day of week by subtracting n_initialization_points. Forwarded to
-            ``single_rt_process``. See [pyrenew.latent.TemporalProcess][].
+            Day of week of the first post-initialization day (0=Monday,
+            ..., 6=Sunday), when the $\\mathcal{R}(t)$ trajectory and renewal
+            calculation begin. Required for a calendar-aligned
+            $\\mathcal{R}(t)$ process. When using MultiSignalModel, this is
+            derived from ``obs_start_date``.
         **kwargs
             Additional keyword arguments (unused).
 
@@ -239,8 +248,14 @@ class PopulationInfections(BaseLatentInfectionProcess):
             with fraction ``[1.0]`` or if ``I0_rv`` does not return a scalar,
             or if the infection feedback strength does not broadcast to shape
             ``(n_days_post_init,)``, or the feedback PMF length differs from
-            the generation interval length.
+            the generation interval length. Also raised for a nonpositive
+            post-initialization horizon or an invalid weekday.
         """
+        if n_days_post_init < 1:
+            raise ValueError("n_days_post_init must be at least 1")
+        if first_day_dow is not None:
+            validate_dow(first_day_dow, "first_day_dow")
+
         pop = self._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
         )
@@ -256,12 +271,12 @@ class PopulationInfections(BaseLatentInfectionProcess):
         initial_log_rt = self.log_rt_time_0_rv()
 
         log_rt_single = self.single_rt_process.sample(
-            n_timepoints=n_total_days,
+            n_timepoints=n_days_post_init,
             initial_value=initial_log_rt,
             name_prefix="log_rt_single",
             first_day_dow=first_day_dow,
         )
-        require_shape(log_rt_single, (n_total_days, 1), "single_rt_process")
+        require_shape(log_rt_single, (n_days_post_init, 1), "single_rt_process")
 
         rt_single = jnp.exp(log_rt_single)
 
@@ -278,16 +293,14 @@ class PopulationInfections(BaseLatentInfectionProcess):
         time_indices = jnp.arange(self.n_initialization_points)
         I0_init = I0 * jnp.exp(initial_r * time_indices)
 
-        post_init_infections, rt_adjusted = _compute_renewal(
+        post_init_infections, rt_single_adjusted = _compute_renewal(
             I0=I0_init,
-            rt_raw=rt_single[self.n_initialization_points :, 0],
+            rt_raw=rt_single[:, 0],
             gen_int=gen_int,
             infection_feedback_strength_rv=self.infection_feedback_strength_rv,
             infection_feedback_pmf_rv=self.infection_feedback_pmf_rv,
         )
-        rt_single_adjusted = jnp.concatenate(
-            [rt_single[: self.n_initialization_points, 0], rt_adjusted]
-        )[:, jnp.newaxis]
+        rt_single_adjusted = rt_single_adjusted[:, jnp.newaxis]
 
         infections_1d = jnp.concatenate([I0_init, post_init_infections])
         infections_all = infections_1d[:, jnp.newaxis]

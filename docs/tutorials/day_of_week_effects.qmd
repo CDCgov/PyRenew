@@ -126,7 +126,7 @@ process_with_dow = PopulationCounts(
 ```
 
 We simulate a growing epidemic and generate predicted counts from both processes.
-The `first_day_dow` parameter tells PyRenew which day of the week corresponds to element 0 of the time axis.
+For an observation process, `first_day_dow` is the weekday of `infections[0]`, including initialization if present.
 Here we set `first_day_dow=0` (Monday).
 
 ```{python}
@@ -261,8 +261,10 @@ offset_df["offset"] = pd.Categorical(
 The two curves have the same shape but are phase-shifted: their weekend dips fall on different days.
 Getting `first_day_dow` right matters --- a misaligned offset would attribute Monday's high to Sunday or vice versa.
 
-When using `MultiSignalModel`, pass `obs_start_date` (the date of the first observation day) to `model.sample()` or `model.run()`.
-The model handles the calendar bookkeeping and forwards the day-of-week information to every component that needs it.
+When using `MultiSignalModel`, pass the start date of the observation window as `obs_start_date` to `model.sample()` or `model.run()`.
+This is day 0 for all signals, even if some start observing later.
+The model derives the earlier weekday of `infections[0]` for observation effects and weekly aggregation.
+Direct calls to an infection class take `first_day_dow` as the weekday of day 0, when the observation window and Rt trajectory start.
 
 ## Sampled observations
 
@@ -418,7 +420,7 @@ Day-of-week adjustment is enabled by passing a `day_of_week_rv` at construction 
   | Parameter        | Where       | Purpose                                               |
   | ---------------- | ----------- | ----------------------------------------------------- |
   | `day_of_week_rv` | Constructor | 7-element multiplicative effect vector (0=Mon, 6=Sun) |
-  | `first_day_dow`  | `sample()`  | Day of the week for element 0 of the time axis        |
+  | `first_day_dow`  | `sample()`  | Weekday of `infections[0]`, including initialization  |
 
 When either is `None`, the adjustment is disabled and the process behaves identically to one without day-of-week effects.
 

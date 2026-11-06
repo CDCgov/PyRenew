@@ -3,6 +3,7 @@ Tests for ascertainment models.
 """
 
 from collections.abc import Mapping
+from typing import Literal
 
 import jax
 import jax.numpy as jnp
@@ -24,7 +25,7 @@ from pyrenew.ascertainment.context import (
     get_ascertainment_value,
 )
 from pyrenew.deterministic import DeterministicVariable
-from pyrenew.latent import TemporalProcess, WeeklyTemporalProcess
+from pyrenew.latent import AR1, TemporalProcess, WeeklyTemporalProcess
 from pyrenew.metaclass import RandomVariable
 from pyrenew.randomvariable import DistributionalVariable
 
@@ -390,7 +391,7 @@ class TestAscertainmentModelContract:
         assert process.sample_calls == [
             {
                 "n_timepoints": 4,
-                "initial_value": 0.0,
+                "initial_value": None,
                 "n_processes": 1,
                 "name_prefix": "ascertainment_ed",
                 "first_day_dow": 3,
@@ -398,6 +399,45 @@ class TestAscertainmentModelContract:
         ]
         expected_ed = jax.nn.sigmoid(logit(0.3) + 0.2 * jnp.arange(4))
         assert jnp.allclose(values["ed"], expected_ed)
+
+    @pytest.mark.parametrize("parameterization", ["innovation", "state"])
+    @pytest.mark.parametrize("weekly", [False, True])
+    def test_ar1_deviations_keep_stationary_initial_draw(
+        self,
+        parameterization: Literal["innovation", "state"],
+        weekly: bool,
+    ) -> None:
+        """Ascertainment retains random stationary AR1 starts at either cadence."""
+        process: TemporalProcess = AR1(
+            autoreg_rv=DeterministicVariable("autoreg", 0.8),
+            innovation_sd_rv=DeterministicVariable("innovation_sd", 0.2),
+            parameterization=parameterization,
+        )
+        if weekly:
+            process = WeeklyTemporalProcess(process, start_dow=0)
+        model = FixedAscertainmentModel(
+            "ascertainment",
+            {"ed": 0.3},
+            temporal_processes={"ed": process},
+        )
+        trace = numpyro.handlers.trace(
+            numpyro.handlers.seed(model.sample, rng_seed=42)
+        ).get_trace(n_timepoints=14, first_day_dow=3)
+
+        initial = trace["ascertainment_ed_init"]["value"][0]
+        if parameterization == "state":
+            distribution = trace["ascertainment_ed_init"]["fn"]
+            assert jnp.allclose(distribution.mean, 0)
+            assert jnp.allclose(distribution.variance, 0.2**2 / (1 - 0.8**2))
+        else:
+            standardized = trace["ascertainment_ed_init_decentered"]
+            assert standardized["type"] == "sample"
+            assert jnp.allclose(
+                initial, 0.2 / jnp.sqrt(1 - 0.8**2) * standardized["value"][0]
+            )
+        assert jnp.allclose(
+            trace["ascertainment_ed"]["value"][0], jax.nn.sigmoid(logit(0.3) + initial)
+        )
 
     def test_extreme_temporal_deviations_remain_inside_open_interval(self) -> None:
         """Test transformed temporal rates do not reach probability endpoints."""
