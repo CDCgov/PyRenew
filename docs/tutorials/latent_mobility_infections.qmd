@@ -176,12 +176,14 @@ print(f"Column sums after renormalizing: {M_area.sum(axis=0)}")
 The latent process takes the matrix as a `DeterministicVariable`.
 The matrix is data: it is fixed when the process is constructed and is never estimated.
 
-`I0_rv` is the number of new incident infections per resident on the first day of the initialization period, the earliest day on the time axis.
+Day 0 ($t = 0$) is the first day of the observation window, shared by all regions and signals.
+The model constructs an earlier infection history for days `-n_init` through `-1`, called the initialization period.
+`I0_rv` is the number of new incident infections per resident on day `-n_init`.
 Infections grow from that value over the initialization period, and every initialization day counts toward susceptible depletion.
 
-On the first post-initialization day, each region starts at its own $\mathcal{R}(t)$, given as one value per region by `log_rt_time_0_rv`.
+On day 0, each region starts at its own $\mathcal{R}(t)$, given as one value per region by `log_rt_time_0_rv`.
 These starting values also determine each region's exponential growth during initialization.
-The temporal processes and recorded daily Rt arrays cover only post-initialization days, including forecasts.
+The temporal processes and recorded daily Rt arrays start at day 0 and include any requested forecasts.
 Infections and susceptible fractions retain initialization, so Rt row `t` corresponds to row `n_init + t` in those arrays.
 Region 2 starts below 1.
 The random walks have a very small step size, so $\mathcal{R}(t)$ stays close to its starting value in every region.
@@ -288,7 +290,7 @@ show the same effect in their S2 Fig.
 It is not the reproduction number of the residents of region `j`, who are also infected in the regions they visit.
 
 With depletion enabled, `rt_subpop_adjusted` is the reproduction number at each location after susceptibility adjustment.
-On renewal day `t`, it is `rt_subpop[t] * (share_present @ susceptible_fraction[n_init + t])`.
+On day `t` of the observation window, it is `rt_subpop[t] * (share_present @ susceptible_fraction[n_init + t])`.
 
 ```{python}
 #| label: rt-at-location

@@ -189,8 +189,10 @@ class TestPopulationInfectionsSample:
 
         assert "my_infections::rt_single" in trace
 
-    def test_first_day_dow_reaches_calendar_aligned_rt_process(self, gen_int_rv):
-        """Weekly Rt receives the weekday shifted past initialization."""
+    def test_first_day_dow_reaches_calendar_aligned_rt_process(
+        self, gen_int_rv: DeterministicPMF
+    ) -> None:
+        """Weekly $\\mathcal{R}(t)$ starts on the supplied first renewal weekday."""
         process = PopulationInfections(
             name="population",
             gen_int_rv=gen_int_rv,
@@ -205,7 +207,7 @@ class TestPopulationInfectionsSample:
 
         with numpyro.handlers.seed(rng_seed=42):
             with numpyro.handlers.trace() as trace:
-                process.sample(n_days_post_init=10, first_day_dow=3)
+                process.sample(n_days_post_init=10, first_day_dow=5)
 
         log_rt = trace["population::log_rt_single"]["value"]
         weekly = trace["log_rt_single_weekly"]["value"]

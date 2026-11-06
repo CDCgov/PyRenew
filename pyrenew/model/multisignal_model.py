@@ -189,15 +189,14 @@ class MultiSignalModel(Model):
         """
         Derive the axis-origin day-of-week from ``obs_start_date``.
 
-        The shared daily time axis begins ``n_init`` days before the
-        first observation. This method converts a user-supplied
-        first-observation date into the day-of-week of element 0 of
-        that axis, accounting for the initialization-period offset.
+        The full infection history begins ``n_init`` days before
+        ``obs_start_date``. Observations and ascertainment use this
+        earlier weekday to align their daily trajectories.
 
         Parameters
         ----------
         obs_start_date
-            Date of the first observation day, or ``None``.
+            Date of the first post-initialization day, or ``None``.
 
         Returns
         -------
@@ -311,13 +310,13 @@ class MultiSignalModel(Model):
         subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
         obs_start_date
-            Date of the first observation day. Required when any
+            Date of the first post-initialization day, the common day 0
+            for observation times. Required when any
             observation uses ``aggregation="weekly"`` or a day-of-week
             effect, or when a latent temporal process uses
             calendar-week alignment, including a registered ascertainment
-            model. Converted once to the axis-origin ``first_day_dow`` and
-            forwarded to the latent process, ascertainment models, and every
-            observation.
+            model. Observation validation uses the weekday ``n_init`` days
+            earlier, at the start of the full infection history.
         **observation_data
             Data for each observation process, keyed by observation name.
             Each value should be a dict of kwargs for that observation's sample().
@@ -385,11 +384,12 @@ class MultiSignalModel(Model):
         subpop_fractions
             Population fractions for all subpopulations. Shape: (n_subpops,).
         obs_start_date
-            Date of the first observation day. Converted once to the
-            axis-origin ``first_day_dow`` (day-of-week of element 0 of
-            the padded axis, after subtracting ``n_init``) and forwarded
-            to the latent process and every observation. Required when
-            any observation uses ``aggregation="weekly"`` or a
+            Date of the first post-initialization day, the common day 0
+            for observation times. Its weekday anchors the latent $\\mathcal{R}(t)$
+            process. Observations and ascertainment use the weekday
+            ``n_init`` days earlier, at the start of the full infection
+            history. Individual signals may begin observing later.
+            Required when any observation uses ``aggregation="weekly"`` or a
             day-of-week effect, or when a latent temporal process uses
             calendar-week alignment, including a registered ascertainment
             model.
@@ -407,12 +407,15 @@ class MultiSignalModel(Model):
             sampling.
         """
         self._check_obs_start_date(obs_start_date)
-        first_day_dow = self._resolve_first_day_dow(obs_start_date)
+        renewal_first_day_dow = (
+            None if obs_start_date is None else convert_date(obs_start_date).weekday()
+        )
+        history_first_day_dow = self._resolve_first_day_dow(obs_start_date)
 
         latent_sample = self.latent.sample(
             n_days_post_init=n_days_post_init,
             subpop_fractions=subpop_fractions,
-            first_day_dow=first_day_dow,
+            first_day_dow=renewal_first_day_dow,
         )
         pop = self.latent._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
@@ -436,7 +439,7 @@ class MultiSignalModel(Model):
         ascertainment_values = {
             name: ascertainment_model.sample(
                 n_timepoints=n_timepoints,
-                first_day_dow=first_day_dow,
+                first_day_dow=history_first_day_dow,
             )
             for name, ascertainment_model in self.ascertainment_models.items()
         }
@@ -460,7 +463,7 @@ class MultiSignalModel(Model):
                 # Sample from observation process
                 obs_process.sample(
                     infections=latent_infections,
-                    first_day_dow=first_day_dow,
+                    first_day_dow=history_first_day_dow,
                     **obs_data,
                 )
 

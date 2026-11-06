@@ -284,7 +284,7 @@ def test_initialization_length_and_calendar(
         ).get_trace(
             n_days_post_init=15,
             subpop_fractions=fractions(infection_type),
-            first_day_dow=(renewal_dow - n_init) % 7,
+            first_day_dow=renewal_dow,
         )
         traces.append(trace)
         processes = (
@@ -355,8 +355,8 @@ def test_weekly_forecast_boundaries(
         start_dow=6,
         deviation_start_dow=6,
     )
-    kwargs = {"subpop_fractions": fractions(infection_type), "first_day_dow": 5}
-    # Initialization starts Saturday; renewal starts Wednesday, partway through a week.
+    kwargs = {"subpop_fractions": fractions(infection_type), "first_day_dow": 2}
+    # Renewal starts Wednesday, partway through a week.
     fitted_trace = numpyro.handlers.trace(
         numpyro.handlers.seed(model.sample, rng_seed=9)
     ).get_trace(n_days_post_init=fit_days, **kwargs)

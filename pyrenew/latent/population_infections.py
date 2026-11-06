@@ -207,9 +207,11 @@ class PopulationInfections(BaseLatentInfectionProcess):
         with the renewal equation, with infection feedback if it is on. The
         temporal process may sample parameters at any supported cadence (for
         example daily or weekly/stepwise), but it must return a daily-length
-        trajectory before the renewal equation is evaluated. The raw Rt is
-        recorded as ``rt_single``; the adjusted Rt used to generate infections
-        is recorded as ``rt_single_adjusted``. Daily $\\mathcal{R}(t)$ and $\\log\[\\mathcal{R}(t)\]$ records
+        trajectory before the renewal equation is evaluated. The raw
+        $\\mathcal{R}(t)$ is recorded as ``rt_single``; the adjusted
+        $\\mathcal{R}(t)$ used to generate infections is recorded as
+        ``rt_single_adjusted``. Daily $\\mathcal{R}(t)$ and
+        $\\log[\\mathcal{R}(t)]$ records
         have shape ``(n_days_post_init, 1)`` and start on the first post-initialization
         day. Infections include initialization, so $\\mathcal{R}(t)$ row ``t`` corresponds
         to infection row ``n_initialization_points + t``. Sampled states,
@@ -224,13 +226,11 @@ class PopulationInfections(BaseLatentInfectionProcess):
             Population fractions. Defaults to ``[1.0]`` (single population).
             Must be ``[1.0]`` if provided.
         first_day_dow
-            Day of week for element 0 of the full latent infection time axis,
-            including initialization days. When this latent process is used
-            inside MultiSignalModel, the caller passes obs_start_date to the
-            model and it converts the first observation day to this axis-origin
-            day of week by subtracting n_initialization_points. This class
-            shifts it to the first post-initialization day before passing it
-            to ``single_rt_process``. See [pyrenew.latent.TemporalProcess][].
+            Day of week of the first post-initialization day (0=Monday,
+            ..., 6=Sunday), when the $\\mathcal{R}(t)$ trajectory and renewal
+            calculation begin. Required for a calendar-aligned
+            $\\mathcal{R}(t)$ process. When using MultiSignalModel, this is
+            derived from ``obs_start_date``.
         **kwargs
             Additional keyword arguments (unused).
 
@@ -255,7 +255,6 @@ class PopulationInfections(BaseLatentInfectionProcess):
             raise ValueError("n_days_post_init must be at least 1")
         if first_day_dow is not None:
             validate_dow(first_day_dow, "first_day_dow")
-            first_day_dow = (first_day_dow + self.n_initialization_points) % 7
 
         pop = self._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,

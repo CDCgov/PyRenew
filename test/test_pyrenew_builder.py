@@ -969,8 +969,8 @@ class TestMultiSignalModelSampling:
 
         assert process.sample_calls[0]["first_day_dow"] is None
 
-    def test_first_day_dow_reaches_calendar_aligned_latent_process(self):
-        """MultiSignalModel forwards model-axis day of week to the latent process."""
+    def test_first_day_dow_reaches_calendar_aligned_latent_process(self) -> None:
+        """MultiSignalModel anchors latent $\\mathcal{R}(t)$ at the first renewal day."""
         latent = PopulationInfections(
             name="PopulationInfections",
             gen_int_rv=DeterministicPMF("gen_int", jnp.array([0.2, 0.5, 0.3])),
@@ -1024,21 +1024,26 @@ class TestMultiSignalModelSampling:
                     ed={"obs": None},
                 )
 
-    def test_builder_mixed_cadence_weekly_rt_samples(self):
+    def test_builder_mixed_cadence_weekly_rt_samples(self) -> None:
         """
-        Mixed daily/weekly observations can use weekly-parameterized Rt.
+        Mixed daily/weekly observations can use weekly-parameterized $\\mathcal{R}(t)$.
 
-        The latent temporal process records a coarse Rt trajectory, the latent
-        process records daily Rt values, ED remains on the daily likelihood
-        scale, and hospital observations are scored on the weekly likelihood
-        scale.
+        The latent temporal process records a coarse $\\mathcal{R}(t)$
+        trajectory, the latent process records daily $\\mathcal{R}(t)$ values,
+        ED remains on the daily likelihood scale, and hospital observations
+        are scored on the weekly likelihood scale. Calendar weekdays align
+        $\\mathcal{R}(t)$, ED effects, and hospital sums even when the signals
+        start observing on different days.
         """
+        ed = _daily_ed_counts()
+        dow_effect = jnp.arange(1.0, 8.0) / 4.0
+        ed.day_of_week_rv = DeterministicVariable("ed_dow", dow_effect)
         builder = _coherence_builder(
             single_rt_process=WeeklyTemporalProcess(
                 fixed_ar1(autoreg=0.9, innovation_sd=0.05),
                 start_dow=MMWR_WEEK,
             ),
-            observations=[_weekly_hosp_counts(), _daily_ed_counts()],
+            observations=[_weekly_hosp_counts(), ed],
         )
         model = builder.build()
         n_days_post_init = 28
@@ -1050,8 +1055,8 @@ class TestMultiSignalModelSampling:
         hospital_obs = jnp.array([jnp.nan, 5.0, 7.0, 6.0], dtype=float)
         ed_obs = jnp.concatenate(
             [
-                jnp.full(model.latent.n_initialization_points, jnp.nan),
-                jnp.ones(n_days_post_init) * 3.0,
+                jnp.full(model.latent.n_initialization_points + 2, jnp.nan),
+                jnp.ones(n_days_post_init - 2) * 3.0,
             ]
         )
 
@@ -1074,6 +1079,22 @@ class TestMultiSignalModelSampling:
         assert trace["hospital_obs"]["value"].shape == hospital_obs.shape
         assert trace["hospital_predicted_daily"]["value"].shape == (n_total,)
         assert trace["hospital_predicted"]["value"].shape == hospital_obs.shape
+        infections = trace["latent_infections"]["value"]
+        history_start = obs_start_date - timedelta(
+            days=model.latent.n_initialization_points
+        )
+        weekdays = jnp.array(
+            [(history_start + timedelta(days=i)).weekday() for i in range(n_total)]
+        )
+        assert jnp.allclose(
+            trace["ed_predicted"]["value"], infections * 0.01 * dow_effect[weekdays]
+        )
+        expected_weekly = (infections[:28] * 0.01).reshape(4, 7).sum(axis=1)
+        assert jnp.allclose(trace["hospital_predicted"]["value"], expected_weekly)
+        daily_rt = trace["PopulationInfections::log_rt_single"]["value"]
+        weekly_rt = trace["log_rt_single_weekly"]["value"]
+        assert jnp.allclose(daily_rt[:4], weekly_rt[0])
+        assert jnp.allclose(daily_rt[4:11], weekly_rt[1])
 
 
 class TestMultiSignalModelValidation:

@@ -541,6 +541,11 @@ class DifferencedAR1(TemporalProcess):
         if n_timepoints == 1:
             return initial_value[jnp.newaxis, :]
 
+        x1 = initial_value + init_rates
+
+        if n_timepoints == 2:
+            return jnp.stack([initial_value, x1], axis=0)
+
         if self.parameterization == "innovation":
             return self.process(
                 n=n_timepoints,
@@ -550,11 +555,6 @@ class DifferencedAR1(TemporalProcess):
                 fundamental_process_init_vals=init_rates[jnp.newaxis, :],
                 noise_name=f"{name_prefix}_noise",
             )
-
-        x1 = initial_value + init_rates
-
-        if n_timepoints == 2:
-            return jnp.stack([initial_value, x1], axis=0)
 
         def transition(
             carry: tuple[jax.Array, jax.Array], unused: None

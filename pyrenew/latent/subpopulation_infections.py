@@ -267,14 +267,15 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         subclass's renewal. The temporal processes may sample parameters at
         any supported cadence (for example daily or weekly/stepwise), but
         they must return daily-length trajectories before the renewal is
-        evaluated. The raw subpopulation Rt is recorded as ``rt_subpop``;
-        the Rt used to generate infections is recorded as
+        evaluated. The raw subpopulation $\\mathcal{R}(t)$ is recorded as
+        ``rt_subpop``;
+        the $\\mathcal{R}(t)$ used to generate infections is recorded as
         ``rt_subpop_adjusted``. The temporal processes cover only
         post-initialization days, including forecast days when requested.
         Daily baseline records have shape ``(n_days_post_init, 1)``;
-        deviation, raw Rt, and adjusted Rt records have shape
-        ``(n_days_post_init, n_subpops)``. Their first row is the first
-        renewal day. Infections include initialization, so Rt row ``t``
+        deviation, raw $\\mathcal{R}(t)$, and adjusted $\\mathcal{R}(t)$ records
+        have shape ``(n_days_post_init, n_subpops)``. Their first row is the first
+        renewal day. Infections include initialization, so $\\mathcal{R}(t)$ row ``t``
         corresponds to infection row ``n_initialization_points + t``.
         Sampled states, innovations, and weekly records also cover only
         the post-initialization period.
@@ -287,11 +288,11 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
             Population fractions for all subpopulations. Shape: (n_subpops,).
             Must sum to 1.0.
         first_day_dow
-            Day of week for the start of the full infection history, including
-            initialization (0=Monday, ..., 6=Sunday). Shifted internally to
-            the first post-initialization day before passing it to
-            ``baseline_rt_process`` and ``subpop_rt_deviation_process``. See
-            [pyrenew.latent.TemporalProcess][].
+            Day of week of the first post-initialization day (0=Monday,
+            ..., 6=Sunday), when the baseline and deviation $\\mathcal{R}(t)$
+            trajectories and renewal calculation begin. Required for
+            calendar-aligned $\\mathcal{R}(t)$ processes. When using
+            MultiSignalModel, this is derived from ``obs_start_date``.
         **kwargs
             Additional keyword arguments (unused).
 
@@ -315,7 +316,6 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
             raise ValueError("n_days_post_init must be at least 1")
         if first_day_dow is not None:
             validate_dow(first_day_dow, "first_day_dow")
-            first_day_dow = (first_day_dow + self.n_initialization_points) % 7
 
         pop = self._parse_and_validate_fractions(
             subpop_fractions=subpop_fractions,
