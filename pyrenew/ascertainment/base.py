@@ -97,6 +97,11 @@ class AscertainmentModel(metaclass=ABCMeta):
     At either endpoint, the logit is infinite and finite deviations cannot
     change the rate.
 
+    Temporal deviations use the process's default initialization. ``AR1``
+    samples a zero-mean stationary initial deviation; ``RandomWalk`` and
+    ``DifferencedAR1`` start at zero. Thus, an AR1-based rate need not equal
+    its baseline on the first day.
+
     The model samples one scalar baseline rate per signal and can add an
     optional signal-specific temporal deviation on the logit scale. Subclasses
     implement ``_sample_baseline_rates()`` to define relationships among the
@@ -386,7 +391,6 @@ class AscertainmentModel(metaclass=ABCMeta):
                 deviation = jnp.asarray(
                     process.sample(
                         n_timepoints=n_timepoints,
-                        initial_value=0.0,
                         n_processes=1,
                         name_prefix=f"{self.name}_{signal}",
                         first_day_dow=first_day_dow,

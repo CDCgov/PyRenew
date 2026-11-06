@@ -69,10 +69,9 @@ class TestPriorPredictiveStructure:
         rt_adjusted = trace["PopulationInfections::rt_single_adjusted"]["value"]
 
         assert model.latent.infection_feedback_strength_rv is not None
-        assert rt_raw.shape == (n_total, 1)
-        assert rt_adjusted.shape == (n_total, 1)
-        assert jnp.allclose(rt_adjusted[:n_init], rt_raw[:n_init])
-        assert jnp.max(jnp.abs(rt_adjusted[n_init:] - rt_raw[n_init:])) > 1e-8
+        assert rt_raw.shape == (N_DAYS_FIT, 1)
+        assert rt_adjusted.shape == (N_DAYS_FIT, 1)
+        assert jnp.max(jnp.abs(rt_adjusted - rt_raw)) > 1e-8
         assert trace["latent_infections"]["value"].shape == (n_total,)
         assert trace["hospital_predicted"]["value"].shape == (n_total,)
         assert trace["ed_predicted"]["value"].shape == (n_total,)

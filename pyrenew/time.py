@@ -10,10 +10,12 @@ Calendar concepts used elsewhere in pyrenew
 Two day-of-week concepts appear across the codebase. They name distinct
 things; do not conflate them.
 
-- ``first_day_dow`` — day-of-week of element 0 of a model's shared
-  daily time axis. Sample-time data fact (depends on the dataset
-  being fit). Threaded through ``MultiSignalModel.sample`` and the
-  ``TemporalProcess.sample`` protocol.
+- ``first_day_dow`` — weekday anchoring a component's daily trajectory.
+  Infection classes take the weekday of the first post-initialization
+  day, when $\\mathcal{R}(t)$ and renewal begin. Observation and ascertainment
+  classes take the weekday of the first day of the full infection history.
+  ``MultiSignalModel`` derives both from ``obs_start_date``.
+  A ``TemporalProcess`` takes the weekday of its first output row.
 
 - ``start_dow`` — day-of-week on which a calendar-week cycle begins
   (0=Monday, 6=Sunday, ISO convention). Construction-time modeling
@@ -23,16 +25,16 @@ things; do not conflate them.
   components can use different cycles; each performs its own trimming
   and aggregation relative to the shared daily axis.
 
-Worked example: ``first_day_dow=3`` (Thursday), ``start_dow=6``
+Weekly $\\mathcal{R}(t)$ example: ``first_day_dow=3`` (Thursday), ``start_dow=6``
 (Sunday-start MMWR week), 17-day axis::
 
     model index:    0  1  2 | 3  4  5  6  7  8  9 | 10 11 12 13 14 15 16
     weekday:        Th Fr Sa | Su Mo Tu We Th Fr Sa | Su Mo Tu We Th Fr Sa
-    weekly Rt:      [ c0   ] [        c1         ] [        c2         ]
+    weekly values:  [ c0   ] [        c1         ] [        c2         ]
 
 The first three indices fall in the leading partial week (``c0``);
 each subsequent block of 7 days falls in one full Sunday-Saturday
-week and shares one Rt sample.
+week and shares one $\\mathcal{R}(t)$ sample.
 
 The low-level functions :func:`daily_to_weekly` and
 :func:`weekly_to_daily` take integer day-of-week parameters
