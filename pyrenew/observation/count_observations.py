@@ -312,6 +312,10 @@ class CountObservation(BaseObservationProcess):
         Observation windows shorter than the truncation PMF support are
         supported: they are scaled by the trailing (most recent)
         entries of the reported-proportion tail.
+        The delay-tail ``NaN`` entries are preserved through the same
+        double-where idiom used in ``_apply_day_of_week``, so the
+        scaling does not send a ``NaN`` cotangent back to the
+        truncation PMF under autodiff.
         """
         trunc_pmf = self.right_truncation_rv()
         n_timepoints = predicted.shape[0]
@@ -321,7 +325,9 @@ class CountObservation(BaseObservationProcess):
         self._deterministic("prop_already_reported", prop)
         if predicted.ndim == 2:
             prop = prop[:, None]
-        return predicted * prop
+        finite_pred = ~jnp.isnan(predicted)
+        safe_predicted = jnp.where(finite_pred, predicted, 0.0)
+        return jnp.where(finite_pred, safe_predicted * prop, predicted)
 
     def _apply_day_of_week(
         self,
