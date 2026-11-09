@@ -56,7 +56,8 @@ The class implements Equation 2 of Roy, Clapham, and Mishra (2025), [Incorporati
 For home region $i$ on day $t$:
 
 $$
-  I_{t,i} = \sum_{j=1}^{n} \frac{m_{ji}\, S_{t,i}}{\sum_{l=1}^{n} m_{jl} N_l}\; \mathcal{R}_j(t) \left[ \sum_{k=1}^{n} m_{jk} \sum_{\tau} I_{\tau,k}\, g_{t-\tau} \right]
+  I_{t,i}
+  = \sum_{j=1}^{n} \frac{m_{ji}\, S_{t,i}}{\sum_{l=1}^{n} m_{jl} N_l}\; \mathcal{R}_j(t) \left[ \sum_{k=1}^{n} m_{jk} \sum_{\tau} I_{\tau,k}\, g_{t-\tau} \right]
 $$
 
 where:
