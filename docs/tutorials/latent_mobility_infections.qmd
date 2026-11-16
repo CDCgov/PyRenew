@@ -56,7 +56,8 @@ The class implements Equation 2 of Roy, Clapham, and Mishra (2025), [Incorporati
 For home region $i$ on day $t$:
 
 $$
-  I_{t,i} = \sum_{j=1}^{n} \frac{m_{ji}\, S_{t,i}}{\sum_{l=1}^{n} m_{jl} N_l}\; \mathcal{R}_j(t) \left[ \sum_{k=1}^{n} m_{jk} \sum_{\tau} I_{\tau,k}\, g_{t-\tau} \right]
+  I_{t,i}
+  = \sum_{j=1}^{n} \frac{m_{ji}\, S_{t,i}}{\sum_{l=1}^{n} m_{jl} N_l}\; \mathcal{R}_j(t) \left[ \sum_{k=1}^{n} m_{jk} \sum_{\tau} I_{\tau,k}\, g_{t-\tau} \right]
 $$
 
 where:
@@ -92,8 +93,7 @@ new_infections = jnp.minimum(susceptible * new_infections_raw, susceptible)
 
 ## The Mobility Matrix
 
-This tutorial uses the three regions of Roy et al.
-(Fig 2), with populations of 20, 10, and 15 million, and the mobility matrix of their Fig 2b.
+This tutorial uses the three regions of Roy et al. (Fig 2), with populations of 20, 10, and 15 million, and the mobility matrix of their Fig 2b.
 
 ```{python}
 #| label: matrix
@@ -152,8 +152,7 @@ In region 3, 70% of residents stay home on a typical day, 21% spend it in region
 
 You may want to model only some of the areas represented in your raw mobility matrix, or your matrix may include an "everywhere else" bin.
 To use it in this model, drop any flows to un-modeled locations, then renormalize by columns, so columns once again sum to 1.
-Roy et al.
-do this for the twelve local authorities of North East England.
+Roy et al. do this for the twelve local authorities of North East England.
 
 ```{python}
 #| label: partial-area
@@ -247,8 +246,7 @@ Every call to `simulate` uses the same random key, so the $\mathcal{R}(t)$ traje
 ## Mobility Versus No Mobility
 
 With the identity matrix, every resident stays home, and each region follows its own renewal equation.
-With depletion on, this is the model Roy et al.
-compare against for regions not linked by mobility.
+With depletion on, this is the model Roy et al. compare against for regions not linked by mobility.
 
 ```{python}
 #| label: compare-matrices
@@ -281,8 +279,7 @@ infections_df = pd.concat(
 
 On its own, region 2, with $\mathcal{R}(t)$ below 1, has a declining epidemic.
 Linked to the other regions, it has an outbreak: its residents are infected while visiting regions 1 and 3, and infectious visitors from those regions bring infections to region 2.
-Roy et al.
-show the same effect in their S2 Fig.
+Roy et al. show the same effect in their S2 Fig.
 
 ## Where $\mathcal{R}(t)$ Applies
 
@@ -355,8 +352,7 @@ All residents are susceptible at the start of the initialization period, as in R
 
 ## Sources of Infection
 
-Roy et al.
-(Eqs 3 to 5) split each region's new infections into three sources:
+Roy et al. (Eqs 3 to 5) split each region's new infections into three sources:
 
 - **local**: residents infected at home by infectious residents of the same region;
 - **incoming**: residents infected at home by infectious visitors from other regions;

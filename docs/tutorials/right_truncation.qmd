@@ -47,7 +47,7 @@ Ignoring this produces a spurious decline in recent counts.
 PyRenew's observation equation defines the expected observation count as:
 
 $$
-  \mu(t) = \alpha \sum_{s} I(t-s) \, \pi(s)
+  \mu(t) = \alpha \sum_{s} I(t - s) \, \pi(s)
 $$
 
 where $\alpha$ is the ascertainment rate and $\pi(s)$ is the infection-to-observation delay distribution.
@@ -65,7 +65,8 @@ Concretely, let $T$ denote the last observation day and let $\text{offset} = \te
 Then:
 
 $$
-  k_t = (T - t) + \text{offset} = (T - t) + (\text{data pull date} - T) = \text{data pull date} - t
+  k_t = (T - t) + \text{offset} = (T - t) + (\text{data pull date} - T)
+      = \text{data pull date} - t
 $$
 
 Because $k_t$ depends only on the data pull date and the timepoint $t$, its behavior is straightforward: timepoints far in the past (small $t$) have large $k_t$, so $F(k_t) \approx 1$ and counts are fully reported.
