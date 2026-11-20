@@ -20,7 +20,7 @@ from pyrenew.latent.base import (
     _compute_renewal,
     _validate_feedback_options,
 )
-from pyrenew.latent.temporal_processes import TemporalProcess
+from pyrenew.latent.temporal_processes import TemporalProcess, _zero_sum_deviations
 from pyrenew.math import r_approx_from_R
 from pyrenew.metaclass import RandomVariable
 from pyrenew.time import validate_dow
@@ -86,7 +86,11 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         baseline_rt_process
             Temporal process for baseline $\\mathcal{R}(t)$ dynamics
         subpop_rt_deviation_process
-            Temporal process for subpopulation deviations
+            AR1, DifferencedAR1, or RandomWalk for subpopulation deviations,
+            optionally wrapped in WeeklyTemporalProcess or StepwiseTemporalProcess.
+            Autoregressive coefficients and innovation scales must be shared
+            scalars. Both state and innovation parameterizations are supported.
+            Samples K - 1 coordinates to produce K zero-sum deviations.
         log_rt_time_0_rv
             Log reproduction number on the first post-initialization day.
             Returns either a scalar, one value for all
@@ -125,7 +129,9 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
 
         if subpop_rt_deviation_process is None:
             raise ValueError("subpop_rt_deviation_process is required")
-        self.subpop_rt_deviation_process = subpop_rt_deviation_process
+        self.subpop_rt_deviation_process = _zero_sum_deviations(
+            subpop_rt_deviation_process
+        )
 
     def _validate_and_prepare_I0(
         self,
@@ -335,7 +341,7 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
         )
         require_shape(log_rt_baseline, (n_days_post_init, 1), "baseline_rt_process")
 
-        deviations_raw = self.subpop_rt_deviation_process.sample(
+        deviations = self.subpop_rt_deviation_process.sample(
             n_timepoints=n_days_post_init,
             n_processes=pop.n_subpops,
             initial_value=deviations_start,
@@ -343,14 +349,10 @@ class BaseSubpopulationInfections(BaseLatentInfectionProcess):
             first_day_dow=first_day_dow,
         )
         require_shape(
-            deviations_raw,
+            deviations,
             (n_days_post_init, pop.n_subpops),
             "subpop_rt_deviation_process",
         )
-
-        # Sum-to-zero constraint ensures identifiability
-        mean_deviation = jnp.mean(deviations_raw, axis=1, keepdims=True)
-        deviations = deviations_raw - mean_deviation
 
         log_rt_subpop = log_rt_baseline + deviations
         rt_subpop = jnp.exp(log_rt_subpop)
@@ -497,7 +499,11 @@ class SubpopulationInfections(BaseSubpopulationInfections):
         baseline_rt_process
             Temporal process for baseline $\\mathcal{R}(t)$ dynamics
         subpop_rt_deviation_process
-            Temporal process for subpopulation deviations
+            AR1, DifferencedAR1, or RandomWalk for subpopulation deviations,
+            optionally wrapped in WeeklyTemporalProcess or StepwiseTemporalProcess.
+            Autoregressive coefficients and innovation scales must be shared
+            scalars. Both state and innovation parameterizations are supported.
+            Samples K - 1 coordinates to produce K zero-sum deviations.
         log_rt_time_0_rv
             Log reproduction number on the first post-initialization day.
             Returns either a scalar, one value for all

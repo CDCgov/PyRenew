@@ -128,7 +128,11 @@ class MobilitySubpopulationInfections(BaseSubpopulationInfections):
         baseline_rt_process
             Temporal process for baseline $\\mathcal{R}(t)$ dynamics
         subpop_rt_deviation_process
-            Temporal process for subpopulation deviations
+            AR1, DifferencedAR1, or RandomWalk for subpopulation deviations,
+            optionally wrapped in WeeklyTemporalProcess or StepwiseTemporalProcess.
+            Autoregressive coefficients and innovation scales must be shared
+            scalars. Both state and innovation parameterizations are supported.
+            Samples K - 1 coordinates to produce K zero-sum deviations.
         log_rt_time_0_rv
             Log reproduction number on the first post-initialization day.
             Returns either a scalar, one value for

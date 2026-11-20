@@ -66,6 +66,7 @@ used interchangeably in hierarchical infection models.
 
 from __future__ import annotations
 
+from copy import copy
 from typing import Literal, Protocol, runtime_checkable
 
 import jax
@@ -74,6 +75,7 @@ import numpyro
 import numpyro.distributions as dist
 from jax.typing import ArrayLike
 from numpyro.contrib.control_flow import scan
+from numpyro.distributions.transforms import ZeroSumTransform
 from numpyro.infer.reparam import LocScaleReparam
 
 from pyrenew.deterministic import DeterministicVariable
@@ -988,3 +990,103 @@ class WeeklyTemporalProcess(TemporalProcess):
             week_start_dow=self.start_dow,
             output_data_first_dow=first_day_dow,
         )[:n_timepoints]
+
+
+class _ScalarParameter(RandomVariable):
+    """Check a deviation parameter when its value is sampled."""
+
+    def __init__(self, inner: RandomVariable, parameter: str) -> None:
+        """Keep the original random variable and its parameter label."""
+        super().__init__(inner.name)
+        self.inner = inner
+        self.parameter = parameter
+
+    def sample(self, **kwargs: object) -> jax.Array:
+        """Sample once and require a shared scalar value.
+
+        Returns
+        -------
+        jax.Array
+            The sampled scalar parameter.
+        """
+        value = jnp.asarray(self.inner(**kwargs))
+        if value.ndim != 0:
+            raise ValueError(
+                "subpop_rt_deviation_process requires shared scalar parameters; "
+                f"{self.parameter} returned shape {value.shape}."
+            )
+        return value
+
+
+class _ZeroSumProcess(TemporalProcess):
+    """Sample independent coordinates and return zero-sum regional deviations."""
+
+    step_size = 1
+
+    def __init__(self, inner: AR1 | DifferencedAR1 | RandomWalk) -> None:
+        """Wrap parameter validation without changing the supplied process."""
+        self.inner = copy(inner)
+        self.inner.innovation_sd_rv = _ScalarParameter(
+            inner.innovation_sd_rv, "innovation_sd_rv"
+        )
+        if isinstance(self.inner, (AR1, DifferencedAR1)):
+            self.inner.autoreg_rv = _ScalarParameter(
+                self.inner.autoreg_rv, "autoreg_rv"
+            )
+
+    def sample(
+        self,
+        n_timepoints: int,
+        initial_value: float | ArrayLike | None = None,
+        n_processes: int = 1,
+        name_prefix: str = "subpop_deviations",
+        *,
+        first_day_dow: int | None = None,
+    ) -> jax.Array:
+        """Return K regional deviations from K - 1 coordinate trajectories.
+
+        Returns
+        -------
+        jax.Array
+            Zero-sum deviations with shape (n_timepoints, n_processes).
+        """
+        if n_processes == 1:
+            return jnp.zeros((n_timepoints, 1))
+        initial = jnp.broadcast_to(
+            jnp.asarray(0.0 if initial_value is None else initial_value),
+            (n_processes,),
+        )
+        transform = ZeroSumTransform()
+        coordinates = self.inner.sample(
+            n_timepoints=n_timepoints,
+            initial_value=transform.inv(initial),
+            n_processes=n_processes - 1,
+            name_prefix=f"{name_prefix}_coordinates",
+            first_day_dow=first_day_dow,
+        )
+        return transform(coordinates)
+
+
+def _zero_sum_deviations(process: TemporalProcess) -> TemporalProcess:
+    """Adapt a supported deviation process, preserving its outer time wrapper.
+
+    Returns
+    -------
+    TemporalProcess
+        A process returning regional zero-sum deviations.
+    """
+    if isinstance(process, WeeklyTemporalProcess):
+        return WeeklyTemporalProcess(
+            _zero_sum_deviations(process.inner), start_dow=process.start_dow
+        )
+    if isinstance(process, StepwiseTemporalProcess):
+        return StepwiseTemporalProcess(
+            _zero_sum_deviations(process.inner), step_size=process.step_size
+        )
+    if not isinstance(process, (AR1, DifferencedAR1, RandomWalk)):
+        raise TypeError(
+            "subpop_rt_deviation_process must be AR1, DifferencedAR1, or "
+            "RandomWalk, optionally wrapped in WeeklyTemporalProcess or "
+            f"StepwiseTemporalProcess; got {type(process).__name__}."
+        )
+    return _ZeroSumProcess(process)

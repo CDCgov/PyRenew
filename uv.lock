@@ -2011,6 +2011,8 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "arviz" },
+    { name = "arviz-base" },
+    { name = "arviz-stats", extra = ["xarray"] },
     { name = "beautifulsoup4" },
     { name = "deptry" },
     { name = "ipykernel" },
@@ -2029,6 +2031,7 @@ dev = [
     { name = "pytest-env" },
     { name = "ruff" },
     { name = "scipy" },
+    { name = "xarray" },
 ]
 
 [package.metadata]
@@ -2042,6 +2045,8 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "arviz", specifier = ">=1.0.0" },
+    { name = "arviz-base", specifier = ">=1.0.0" },
+    { name = "arviz-stats", extras = ["xarray"], specifier = ">=1.0.0" },
     { name = "beautifulsoup4", specifier = ">=4.13.5" },
     { name = "deptry", specifier = ">=0.23.1" },
     { name = "ipykernel", specifier = ">=6.30.1" },
@@ -2060,6 +2065,7 @@ dev = [
     { name = "pytest-env", specifier = ">=1.8.5" },
     { name = "ruff", specifier = ">=0.17.4" },
     { name = "scipy", specifier = ">=1.18.0" },
+    { name = "xarray", specifier = ">=2024.11.0" },
 ]
 
 [[package]]
