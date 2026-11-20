@@ -283,11 +283,6 @@ The deviation process supports `AR1`, `DifferencedAR1`, and `RandomWalk` with sh
 Weekly and stepwise wrappers retain regional trajectories in their public records.
 Regional initial values are preserved; with one subpopulation, deviations are zero and no deviation parameters or trajectories are sampled.
 
-This representation preserves the prior distribution of the previous mean-subtraction construction, including its spatial and temporal covariance.
-The baseline, information pooling, and mobility calculations are unchanged.
-Internal deviation sample sites now contain coordinates rather than raw regional trajectories.
-Saved fits from the previous representation must be rerun.
-
 ## Choosing the Baseline Temporal Process
 
 The baseline process governs the jurisdiction-level trend in $\mathcal{R}(t)$.
