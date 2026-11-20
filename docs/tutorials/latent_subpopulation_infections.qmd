@@ -254,7 +254,7 @@ print(f"Rt on day 0: {np.round(np.array(first_day_rt), 2)}")
 ## The Sum-to-Zero Constraint
 
 Without a constraint, the baseline and deviations are not identifiable: shifting the baseline up by some amount $c$ and all deviations down by $c$ produces the same subpopulation $\mathcal{R}_k(t)$ values.
-`SubpopulationInfections` enforces $\sum_k \delta_k(t) = 0$ at every time step by centering the raw deviation trajectories.
+`SubpopulationInfections` enforces $\sum_k \delta_k(t) = 0$ at every time step by sampling `K - 1` coordinate trajectories and applying NumPyro's `ZeroSumTransform` to obtain `K` regional deviations.
 This ensures $\mathcal{R}_{\text{baseline}}(t)$ is the *unweighted* geometric mean of the subpopulation $\mathcal{R}_k(t)$ values, so the baseline represents the typical transmission level across subpopulations.
 
 Note that this is the unweighted mean across subpopulations, not population-weighted by $p_k$.
@@ -278,6 +278,15 @@ print(
     f"Max |sum of deviations across subpops|: {float(jnp.max(jnp.abs(deviation_sums))):.2e}"
 )
 ```
+
+The deviation process supports `AR1`, `DifferencedAR1`, and `RandomWalk` with shared scalar autoregressive coefficients and innovation scales, in either the `"state"` or `"innovation"` parameterization.
+Weekly and stepwise wrappers retain regional trajectories in their public records.
+Regional initial values are preserved; with one subpopulation, deviations are zero and no deviation parameters or trajectories are sampled.
+
+This representation preserves the prior distribution of the previous mean-subtraction construction, including its spatial and temporal covariance.
+The baseline, information pooling, and mobility calculations are unchanged.
+Internal deviation sample sites now contain coordinates rather than raw regional trajectories.
+Saved fits from the previous representation must be rerun.
 
 ## Choosing the Baseline Temporal Process
 
@@ -465,8 +474,7 @@ ar1_dev_summary = deviation_summary_df(ar1_dev_samples)
 ### RandomWalk Deviations
 
 RandomWalk deviations have **unbounded variance**.
-Before centering, the variance grows linearly with the number of transitions since day 0 as `innovation_sd**2 * t`.
-Subtracting the subpopulation mean multiplies this variance by `1 - 1 / n_subpops` for independent draws with shared process parameters.
+Each regional deviation has variance `innovation_sd**2 * t * (1 - 1 / n_subpops)` after `t` transitions since day 0, the same variance as the previous mean-subtraction construction.
 The plotted interval starts with zero deviation variance and widens as days pass.
 There is no pullback toward zero: subpopulations that drift away from the baseline stay drifted, and differences that emerge early persist and can grow.
 The visual signature is a **fanning-out cloud** rather than a constant-width band.
