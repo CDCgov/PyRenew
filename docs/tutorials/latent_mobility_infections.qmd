@@ -54,7 +54,6 @@ Infections among residents of a region then depend on transmission in the region
 
 Deviations use the same `K - 1` coordinate representation and shared scalar process parameters as [SubpopulationInfections](latent_subpopulation_infections.md).
 Both temporal parameterizations are supported, and mobility calculations are unchanged.
-Fits saved before this representation change must be rerun.
 
 The class implements Equation 2 of Roy, Clapham, and Mishra (2025), [Incorporating human mobility to enhance epidemic response and estimate real-time reproduction numbers](https://doi.org/10.1371/journal.pcbi.1013642).
 For home region $i$ on day $t$:
