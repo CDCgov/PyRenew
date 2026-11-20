@@ -279,10 +279,6 @@ print(
 )
 ```
 
-The deviation process supports `AR1`, `DifferencedAR1`, and `RandomWalk` with shared scalar autoregressive coefficients and innovation scales, in either the `"state"` or `"innovation"` parameterization.
-Weekly and stepwise wrappers retain regional trajectories in their public records.
-Regional initial values are preserved; with one subpopulation, deviations are zero and no deviation parameters or trajectories are sampled.
-
 ## Choosing the Baseline Temporal Process
 
 The baseline process governs the jurisdiction-level trend in $\mathcal{R}(t)$.
