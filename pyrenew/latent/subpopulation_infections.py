@@ -415,6 +415,7 @@ class SubpopulationInfections(BaseSubpopulationInfections):
     infections in one subpopulation do not depend on infections in any other.
 
     Mathematical form:
+
     - Baseline $\mathcal{R}(t)$: log[R_baseline(t)] ~ TemporalProcess
     - Subpopulation $\mathcal{R}(t)$: log R_k(t) = log[R_baseline(t)] + delta_k(t)
     - Deviations: delta_k(t) ~ TemporalProcess with sum-to-zero constraint
