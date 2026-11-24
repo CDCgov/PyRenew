@@ -7,6 +7,7 @@ import jax.numpy as jnp
 import numpyro
 import numpyro.distributions as dist
 import pytest
+from numpyro.distributions.transforms import ZeroSumTransform
 from numpyro.infer import Predictive
 
 from pyrenew.deterministic import DeterministicPMF, DeterministicVariable
@@ -221,7 +222,7 @@ def test_initialization_and_first_renewal(
             continue
         expected_length = max(n_days - (2 if process_type is DifferencedAR1 else 1), 0)
         if "init_rate" in name:
-            assert value.shape == (rt.shape[1] if name.startswith("subpop") else 1,)
+            assert value.shape == (rt.shape[1] - 1 if name.startswith("subpop") else 1,)
         else:
             assert value.shape[0] == expected_length
 
@@ -304,13 +305,11 @@ def test_initialization_length_and_calendar(
             trim = (renewal_dow - week_start) % 7
             assert weekly.shape[0] == (15 + trim + 6) // 7
             expected = weekly[(jnp.arange(15) + trim) // 7]
-            if prefix == "subpop_deviations":
-                expected = expected - expected.mean(axis=1, keepdims=True)
             assert jnp.allclose(daily, expected)
             initial = (
                 trace["start"]["value"]
                 if prefix != "subpop_deviations"
-                else jnp.zeros(3)
+                else jnp.zeros(2)
             )
             direct = numpyro.handlers.condition(
                 make_process(RandomWalk, parameterization, week_start).sample,
@@ -319,12 +318,18 @@ def test_initialization_length_and_calendar(
             direct_result = numpyro.handlers.seed(direct, rng_seed=99)(
                 n_timepoints=15,
                 initial_value=initial,
-                n_processes=weekly.shape[1],
-                name_prefix=prefix,
+                n_processes=(
+                    weekly.shape[1] - 1
+                    if prefix == "subpop_deviations"
+                    else weekly.shape[1]
+                ),
+                name_prefix=(
+                    prefix + "_coordinates" if prefix == "subpop_deviations" else prefix
+                ),
                 first_day_dow=renewal_dow,
             )
             if prefix == "subpop_deviations":
-                direct_result -= direct_result.mean(axis=1, keepdims=True)
+                direct_result = ZeroSumTransform()(direct_result)
             assert jnp.allclose(daily, direct_result)
     assert jnp.array_equal(
         traces[0][rt_site(infection_type)]["value"],
